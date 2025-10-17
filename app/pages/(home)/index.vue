@@ -1,15 +1,18 @@
 <script setup lang="ts">
-
 </script>
 
 <template>
   <BackgroundDecorationsVariant1 />
-  <div class="">
+  <div class="px-3">
     <LogoIcon class="mb-6" />
 
     <LogoMain class="mb-6" />
 
     <LogoLarge class="mb-6" />
+
+    <SectionTitle class="mb-6" hydrate-on-visible >This is Section title</SectionTitle>
+    <SectionTitle class="mb-6" type="secondary" hydrate-on-visible >This is Section title</SectionTitle>
+    <SectionTitle class="mb-6" type="tertiary" hydrate-on-visible >This is Section title</SectionTitle>
 
     <h1 class="text-3xl">Hello Fly Live</h1>
     <p class="muted">
@@ -47,6 +50,7 @@
         neutral
       </UButton>
     </div>
+
   </div>
 </template>
 
