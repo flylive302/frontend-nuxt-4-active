@@ -2,17 +2,22 @@
 </script>
 
 <template>
-  <BackgroundDecorationsVariant1 />
   <div class="px-3">
+    <BackgroundDecorationsVariant1 />
+
     <LogoIcon class="mb-6" />
 
     <LogoMain class="mb-6" />
 
     <LogoLarge class="mb-6" />
 
+    <USeparator label="OR" color="primary" type="solid" class="my-4" />
+
     <SectionTitle class="mb-6" hydrate-on-visible >This is Section title</SectionTitle>
     <SectionTitle class="mb-6" type="secondary" hydrate-on-visible >This is Section title</SectionTitle>
     <SectionTitle class="mb-6" type="tertiary" hydrate-on-visible >This is Section title</SectionTitle>
+
+    <USeparator label="OR" color="secondary" type="solid" class="my-4" />
 
     <h1 class="text-3xl">Hello Fly Live</h1>
     <p class="muted">
@@ -20,6 +25,8 @@
       ipsum dolor sit amet
       ipsum dolor sit amet
     </p>
+
+    <USeparator label="OR" color="tertiary" type="solid" class="my-4" />
 
     <div class="py-4 flex-wrap flex gap-4">
       <UButton color="primary" variant="subtle" class="shadow-lg/50 shadow-primary">
