@@ -13,9 +13,9 @@
 
     <USeparator label="OR" color="primary" type="solid" class="my-4" />
 
-    <SectionTitle class="mb-6" hydrate-on-visible >This is Section title</SectionTitle>
-    <SectionTitle class="mb-6" type="secondary" hydrate-on-visible >This is Section title</SectionTitle>
-    <SectionTitle class="mb-6" type="tertiary" hydrate-on-visible >This is Section title</SectionTitle>
+    <SectionTitle class="mb-6">This is Section title</SectionTitle>
+    <SectionTitle class="mb-6" type="secondary">This is Section title</SectionTitle>
+    <SectionTitle class="mb-6" type="tertiary">This is Section title</SectionTitle>
 
     <USeparator label="OR" color="secondary" type="solid" class="my-4" />
 
