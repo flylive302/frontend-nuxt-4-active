@@ -3,8 +3,8 @@
 </script>
 
 <template>
-  <BackgroundDecorationsVariant1 />
-  <div class="">
+  <div class="mx-auto p-2 bg-neutral-950">
+
     <LogoIcon class="mb-6" />
 
     <LogoMain class="mb-6" />
