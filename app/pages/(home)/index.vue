@@ -5,6 +5,10 @@
   <div class="px-3">
     <BackgroundDecorationsVariant1 />
 
+    <LazySvgaPlayer hydrate-on-visible name="frames/9" width="100%" height="auto" />
+
+    <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" width="100%" height="auto" />
+
     <LogoIcon class="mb-6" />
 
     <LogoMain class="mb-6" />

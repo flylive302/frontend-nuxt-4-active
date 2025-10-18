@@ -11,17 +11,19 @@ export default defineNuxtConfig({
             colors: ['primary', 'secondary', 'tertiary', 'info', 'success', 'warning', 'error']
         }
     },
-    // app: {
-    //     head: {
-    //         link: [
-    //             // Early connection to ImageKit (and CORS if you serve images cross-origin)
-    //             { rel: 'preconnect', href: 'https://ik.imagekit.io/flylive' },
-    //         ]
-    //     }
-    // },
     image: {
         imagekit: {
             baseURL: 'https://ik.imagekit.io/flylive'
         }
     },
+
+    spaLoadingTemplate: 'app/spa-loading-template.html',
+    vite: {
+        optimizeDeps: { include: ['svga/dist/index.esm.min.js'] },
+        build: {
+            rollupOptions: {
+                output: { manualChunks: { svga: ['svga/dist/index.esm.min.js'] } }
+            }
+        }
+    }
 })
