@@ -5,9 +5,28 @@
   <div class="px-3">
     <BackgroundDecorationsVariant1 />
 
-    <LazySvgaPlayer hydrate-on-visible name="frames/9" width="100%" height="auto" />
+    <div class="flex w-full mx-auto my-8">
+      <LazyAvatarAnimated
+          frame="frames/5"
+          class="w-30 mx-auto"
+          hydrate-on-visible
+      />
 
-    <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" width="100%" height="auto" />
+      <LazyAvatarAnimated
+          frame="frames/19"
+          class="w-25 mx-auto"
+          :top="50"
+          :left="50"
+          :frame_overflow="150"
+          :frame_girth="20"
+          hydrate-on-visible
+      />
+    </div>
+
+
+    <LazySvgaPlayer hydrate-on-visible name="frames/9" />
+
+    <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" />
 
     <LogoIcon class="mb-6" />
 
