@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import BgGlass from "~/components/bg-glass.vue";
 </script>
 
 <template>
-  <div class="p-3 max-w-screen">
+  <div class="px-3 pt-12 max-w-screen">
     <BackgroundDecorationsVariant1 />
+
+    <Homeheader />
+
+    <Footer />
 
     <div class="flex w-full mx-auto my-8">
       <LazyAvatar
@@ -85,7 +88,6 @@ import BgGlass from "~/components/bg-glass.vue";
       </UButton>
     </div>
 
-    <Footer />
   </div>
 </template>
 

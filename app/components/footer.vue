@@ -1,6 +1,9 @@
 <template>
-  <div class="fixed z-50 bottom-3 left-2 right-2">
-    <BgGlass :blur="12">
+  <div class="fixed z-50 bottom-2 left-2 right-2">
+    <BgGlass
+        class="border border-white/20 shadow-lg rounded-lg overflow-hidden"
+        frostBlurRadius="blur(2px)" :noiseFrequency="0.004" :noiseStrength="150"
+    >
       <div class="flex justify-between items-center px-3 py-2">
         <UButton icon="i-lucide-house" size="xl" color="primary" variant="solid" />
         <UButton icon="i-lucide-contact-round" size="xl" color="primary" variant="subtle" />
@@ -10,3 +13,5 @@
     </BgGlass>
   </div>
 </template>
+<script setup lang="ts">
+</script>
