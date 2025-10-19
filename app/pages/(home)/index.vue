@@ -1,34 +1,38 @@
 <script setup lang="ts">
+import BgGlass from "~/components/bg-glass.vue";
 </script>
 
 <template>
-  <div class="px-3">
+  <div class="p-3 max-w-screen">
     <BackgroundDecorationsVariant1 />
 
     <div class="flex w-full mx-auto my-8">
-      <LazyAvatarAnimated
-          frame="frames/5"
+      <LazyAvatar
+          frame_name="frames/5"
           class="w-30 mx-auto"
-          hydrate-on-visible
+          :animated="true"
       />
 
-      <LazyAvatarAnimated
-          frame="frames/19"
+      <LazyAvatar
+          frame_name="frames/19"
           class="w-25 mx-auto"
           :top="50"
           :left="50"
           :frame_overflow="150"
           :frame_girth="20"
-          hydrate-on-visible
+          :animated="true"
       />
     </div>
-
 
     <LazySvgaPlayer hydrate-on-visible name="frames/9" />
 
     <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" />
 
-    <LogoIcon class="mb-6" />
+    <BgGlass>
+      <h1 class="text-xl">Hello World</h1>
+    </BgGlass>
+
+    <LogoIcon class="my-6" />
 
     <LogoMain class="mb-6" />
 
@@ -81,6 +85,7 @@
       </UButton>
     </div>
 
+    <Footer />
   </div>
 </template>
 
