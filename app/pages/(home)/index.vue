@@ -2,8 +2,39 @@
 </script>
 
 <template>
-  <div class="px-3 pt-12 max-w-screen">
+  <div class="px-3 pt-18 max-w-screen">
     <BackgroundDecorationsVariant1 />
+
+    <EventsBanners lFrameName="frames/6" class="mb-8">
+      <span class="pl-5">Weekly CP</span>
+    </EventsBanners>
+
+    <EventsBanners
+      type="country"
+      lUserName="First Winner"
+      lFrameName="frames/9"
+      :lOverFlow="160"
+      rUserName="Second Winner"
+      rFrameName="frames/6"
+      :rOverFlow="160"
+      :rtop="46"
+      class="mb-8"
+    >
+      <span class="text-base">Country Event</span>
+    </EventsBanners>
+
+    <EventsBanners
+      type="recharge_tycoon"
+      lUserName="First Winner"
+      lFrameName="frames/admin/admin"
+      :lOverFlow="200"
+      rUserName="Second Winner"
+      rFrameName="frames/admin/bd"
+      :rOverFlow="190"
+      :rtop="46"
+    >
+      <span class="text-sm">Recharge Tycoon</span>
+    </EventsBanners>
 
     <Homeheader />
 
