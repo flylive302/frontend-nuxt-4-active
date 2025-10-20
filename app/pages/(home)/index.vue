@@ -13,11 +13,9 @@
       type="country"
       lUserName="First Winner"
       lFrameName="frames/9"
-      :lOverFlow="160"
       rUserName="Second Winner"
-      rFrameName="frames/6"
-      :rOverFlow="160"
-      :rtop="46"
+      rFrameName="frames/10"
+      :rOverFlow="170"
       class="mb-8"
     >
       <span class="text-base">Country Event</span>
@@ -27,11 +25,11 @@
       type="recharge_tycoon"
       lUserName="First Winner"
       lFrameName="frames/admin/admin"
-      :lOverFlow="200"
+      :lOverFlow="170"
       rUserName="Second Winner"
       rFrameName="frames/admin/bd"
-      :rOverFlow="190"
-      :rtop="46"
+      :rOverFlow="180"
+      :rTop="45"
     >
       <span class="text-sm">Recharge Tycoon</span>
     </EventsBanners>
