@@ -5,31 +5,35 @@
   <div class="px-3 pt-18 max-w-screen">
     <BackgroundDecorationsVariant1 />
 
-    <EventsBanners lFrameName="frames/6" class="mb-8">
+    <RoomCard class="mb-12" image-src="siteAssets/room/room-card-top.webp">
+      Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
+    </RoomCard>
+
+    <RoomCard class="mb-12 w-2/4" image-src="siteAssets/room/room-card.webp">
+      Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
+    </RoomCard>
+
+    <EventsBanners class="mb-8">
       <span class="pl-5">Weekly CP</span>
     </EventsBanners>
 
     <EventsBanners
-      type="country"
-      lUserName="First Winner"
-      lFrameName="frames/9"
-      rUserName="Second Winner"
-      rFrameName="frames/10"
-      :rOverFlow="170"
-      class="mb-8"
+        type="country"
+        lUserName="First Winner"
+        lFrameName="frames/9"
+        rUserName="Second Winner"
+        rFrameName="frames/9"
+        class="mb-8"
     >
       <span class="text-base">Country Event</span>
     </EventsBanners>
 
     <EventsBanners
       type="recharge_tycoon"
-      lUserName="First Winner"
-      lFrameName="frames/admin/admin"
-      :lOverFlow="170"
-      rUserName="Second Winner"
-      rFrameName="frames/admin/bd"
-      :rOverFlow="180"
-      :rTop="45"
+      lFrameName="frames/admin/super_admin"
+      rFrameName="frames/admin/cs_leader"
+      :lFrameGirth="50"
+      :rFrameGirth="50"
     >
       <span class="text-sm">Recharge Tycoon</span>
     </EventsBanners>
@@ -43,15 +47,13 @@
           frame_name="frames/5"
           class="w-30 mx-auto"
           :animated="true"
+          :frame_girth="60"
       />
 
       <LazyAvatar
           frame_name="frames/19"
           class="w-25 mx-auto"
-          :top="50"
-          :left="50"
-          :frame_overflow="150"
-          :frame_girth="20"
+          :frame_girth="65"
           :animated="true"
       />
     </div>

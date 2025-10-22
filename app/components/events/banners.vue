@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+defineOptions({ name: 'DuelEventCard' })
+
+// ---- Types
 type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
 
 interface Props {
@@ -8,30 +11,17 @@ interface Props {
   lUserName?: string
   lAvatar?: string
   lFrameName?: string
-  lOverFlow?: number
+  lFrameGirth?: number
   lTop?: number
   rUserName?: string
   rAvatar?: string
   rFrameName?: string
-  rOverFlow?: number
+  rFrameGirth?: number
   rTop?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  type: 'cp',
-  lUserName: 'Male User',
-  lAvatar: '',
-  lFrameName: 'frames/events/cp',
-  lOverFlow: 150,
-  lTop: 50,
-  rUserName: 'Female User',
-  rAvatar: '',
-  rFrameName: 'frames/5',
-  rOverFlow: 150,
-  rTop: 50
-})
-
-const typeConfig = {
+// ---- Static config (frozen for perf)
+const TYPE_CONFIG = Object.freeze({
   cp: {
     banner: '/siteAssets/banners/cp.webp',
     header: '/siteAssets/banners/cp-header.webp',
@@ -67,21 +57,37 @@ const typeConfig = {
     shadowClass: 'shadow-secondary/30',
     textShadow: 'text-shadow-secondary'
   }
-} as const satisfies Record<CardType, {
-  banner: string
-  header: string
-  decor: string
-  shadowClass: string
-  textShadow: string
-}>
+} as const satisfies Record<
+    CardType,
+    { banner: string; header: string; decor: string; shadowClass: string; textShadow: string }
+>)
 
-const config = computed(() => typeConfig[props.type])
+const props = withDefaults(defineProps<Props>(), {
+  type: 'cp',
+  lUserName: 'Male User',
+  lAvatar: '',
+  lFrameName: 'frames/events/cp_1',
+  lFrameGirth: 70,
+  lTop: 50,
+  rUserName: 'Female User',
+  rAvatar: '',
+  rFrameName: 'frames/events/cp_2',
+  rFrameGirth: 70,
+  rTop: 50
+})
+
+// Compute once per prop change; auto-unwrapped in template
+const config = computed(() => TYPE_CONFIG[props.type])
+
+// a11y: link heading to article
+const headingId = `duel-card-title-${props.type}`
 </script>
 
 <template>
   <article
-      class="relative rounded-lg border border-white/50 shadow-lg"
+      class="relative"
       :class="config.shadowClass"
+      :aria-labelledby="headingId"
   >
     <!-- Decorative banner background -->
     <NuxtImg
@@ -89,13 +95,15 @@ const config = computed(() => typeConfig[props.type])
         :src="config.banner"
         alt=""
         aria-hidden="true"
-        class="absolute inset-0 rounded-lg object-cover h-full w-full"
+        class="pointer-events-none select-none absolute inset-0 h-full w-full object-cover rounded-lg border border-white/50 shadow-lg"
         sizes="(max-width: 640px) 100vw, 640px"
+        decoding="async"
+        loading="lazy"
     />
 
     <div class="relative">
       <!-- Header -->
-      <header class="flex items-center justify-center">
+      <header class="relative flex items-center justify-center">
         <NuxtImg
             provider="imagekit"
             :src="config.header"
@@ -103,8 +111,11 @@ const config = computed(() => typeConfig[props.type])
             aria-hidden="true"
             class="h-8 -mt-3"
             sizes="(max-width: 640px) 50vw, 320px"
+            decoding="async"
+            loading="lazy"
         />
         <h2
+            :id="headingId"
             class="absolute inset-0 -mt-3 text-center text-lg font-bold text-shadow-lg"
             :class="config.textShadow"
         >
@@ -113,45 +124,51 @@ const config = computed(() => typeConfig[props.type])
       </header>
 
       <!-- Main content -->
-      <main class="flex items-center justify-center p-2">
+      <main class="grid grid-cols-7 items-center">
         <!-- Left user -->
-        <figure class="flex items-center">
+        <figure class="col-span-3 grid grid-cols-2">
           <Avatar
               :animated="true"
-              :frame_overflow="props.lOverFlow"
+              :frame_girth="props.lFrameGirth"
               :top="props.lTop"
               :frame_name="props.lFrameName"
-              class="w-14"
+              class="col-span-1"
           />
-          <figcaption class="text-center text-sm font-bold text-shadow-md" :class="config.textShadow">
+          <figcaption class="text-xs font-bold text-shadow-md w-full col-span-1" :class="config.textShadow">
             {{ props.lUserName || 'User Name' }}
           </figcaption>
         </figure>
-
         <!-- Decor element -->
         <NuxtImg
             provider="imagekit"
             :src="config.decor"
             alt=""
             aria-hidden="true"
-            class="w-16"
-            sizes="48px"
+            sizes="64px"
+            class="col-span-1"
+            decoding="async"
+            loading="lazy"
         />
-
         <!-- Right user -->
-        <figure class="flex items-center">
-          <figcaption class="text-center text-sm font-bold text-shadow-md" :class="config.textShadow">
+        <figure class="col-span-3 grid grid-cols-2">
+          <figcaption class="text-right text-xs font-bold text-shadow-md col-span-1" :class="config.textShadow">
             {{ props.rUserName || 'User Name' }}
           </figcaption>
           <Avatar
               :animated="true"
-              :frame_overflow="props.rOverFlow"
+              :frame_girth="props.rFrameGirth"
               :top="props.rTop"
               :frame_name="props.rFrameName"
-              class="w-14"
+              class="col-span-1"
           />
         </figure>
       </main>
     </div>
   </article>
 </template>
+
+<style scoped>
+  main > * {
+    align-items: center;
+  }
+</style>

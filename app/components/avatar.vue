@@ -4,7 +4,6 @@ const props = withDefaults(defineProps<{
   img?: string          // avatar url
   top?: number          // % for absolute center point
   left?: number         // % for absolute center point
-  frame_overflow?: number        // % frame overflow of frame around the avatar
   frame_girth?: number
   animated?: boolean
   static_src?: string
@@ -13,8 +12,7 @@ const props = withDefaults(defineProps<{
   img: '/avatars/placeholder',
   top: 50,
   left: 50,
-  frame_overflow: 150,
-  frame_girth: 20,
+  frame_girth: 70,
   animated: false,
   static_src: 'siteAssets/frames/ladies-frame.webp'
 });
@@ -22,26 +20,26 @@ const props = withDefaults(defineProps<{
 
 <template>
   <div>
-    <div class="relative aspect-square mx-auto cursor-pointer" :style="{ width: `${100 - props.frame_girth}%` }">
+    <div class="relative aspect-square cursor-pointer">
       <!-- Avatar Image -->
       <NuxtImg
           provider="imagekit"
-          class="w-full aspect-square rounded-full object-cover"
+          class="absolute-middle aspect-square rounded-full object-cover"
           :src="props.img"
           alt="avatar"
+          :style="{
+            top: `${props.top}%`,
+            left: `${props.left}%`,
+            width: `${props.frame_girth}%`,
+          }"
       />
       <!-- Frame layer (on top) -->
       <LazySvgaPlayer
           v-if="animated"
           hydrate-on-visible
-          class="absolute-middle z-10"
+          class="relative min-w-full z-10"
           :name="props.frame_name"
           height="auto"
-          :style="{
-            top: `${props.top}%`,
-            left: `${props.left}%`,
-            width: `${props.frame_overflow}%`,
-          }"
       />
 
       <NuxtImg
@@ -49,13 +47,8 @@ const props = withDefaults(defineProps<{
           provider="imagekit"
           :src="props.static_src"
           alt="avatar"
-          class="absolute-middle z-10"
+          class="relative min-w-full z-10"
           height="auto"
-          :style="{
-            top: `${props.top}%`,
-            left: `${props.left}%`,
-            minWidth: `${props.frame_overflow}%`,
-          }"
       />
     </div>
   </div>
