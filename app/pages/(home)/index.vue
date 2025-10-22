@@ -1,19 +1,43 @@
 <script setup lang="ts">
+const items = [
+  'siteAssets/room/room-card-top.webp',
+  'siteAssets/room/room-card-top.webp',
+  'siteAssets/room/room-card-top.webp',
+  'siteAssets/room/room-card-top.webp',
+  'siteAssets/room/room-card-top.webp',
+  'siteAssets/room/room-card-top.webp'
+]
 </script>
 
 <template>
-  <div class="px-3 pt-18 max-w-screen">
+  <div class="flex flex-col gap-8 px-3 py-18 max-w-screen">
     <BackgroundDecorationsVariant1 />
 
-    <RoomCard class="mb-12" image-src="siteAssets/room/room-card-top.webp">
+    <UCarousel
+        v-slot="{ item }"
+        loop
+        class-names
+        :items="items"
+        :autoplay="{ delay: 3000 }"
+        :ui="{
+          item: 'basis-2/3 transition duration-300 ease-in-out [&:not(.is-snapped)]:scale-90'
+        }"
+        class=""
+    >
+      <RoomCard :image-src="item">
+        Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
+      </RoomCard>
+    </UCarousel>
+
+    <RoomCard image-src="siteAssets/room/room-card-top.webp">
       Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
     </RoomCard>
 
-    <RoomCard class="mb-12 w-2/4" image-src="siteAssets/room/room-card.webp">
+    <RoomCard class="w-2/4" image-src="siteAssets/room/room-card.webp">
       Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
     </RoomCard>
 
-    <EventsBanners class="mb-8">
+    <EventsBanners>
       <span class="pl-5">Weekly CP</span>
     </EventsBanners>
 
@@ -23,7 +47,6 @@
         lFrameName="frames/9"
         rUserName="Second Winner"
         rFrameName="frames/9"
-        class="mb-8"
     >
       <span class="text-base">Country Event</span>
     </EventsBanners>
@@ -42,7 +65,7 @@
 
     <Footer />
 
-    <div class="flex w-full mx-auto my-8">
+    <div class="flex w-full mx-auto">
       <LazyAvatar
           frame_name="frames/5"
           class="w-30 mx-auto"
@@ -58,27 +81,27 @@
       />
     </div>
 
-    <LazySvgaPlayer hydrate-on-visible name="frames/9" />
+    <LazySvgaPlayer hydrate-on-visible name="frames/9" class="w-2/4" />
 
-    <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" />
+    <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" class="w-2/4" />
 
     <BgGlass>
       <h1 class="text-xl">Hello World</h1>
     </BgGlass>
 
-    <LogoIcon class="my-6" />
+    <LogoIcon />
 
-    <LogoMain class="mb-6" />
+    <LogoMain />
 
-    <LogoLarge class="mb-6" />
+    <LogoLarge />
 
-    <USeparator label="OR" color="primary" type="solid" class="my-4" />
+    <USeparator label="OR" color="primary" type="solid" />
 
-    <SectionTitle class="mb-6">This is Section title</SectionTitle>
-    <SectionTitle class="mb-6" type="secondary">This is Section title</SectionTitle>
-    <SectionTitle class="mb-6" type="tertiary">This is Section title</SectionTitle>
+    <SectionTitle>This is Section title</SectionTitle>
+    <SectionTitle type="secondary">This is Section title</SectionTitle>
+    <SectionTitle type="tertiary">This is Section title</SectionTitle>
 
-    <USeparator label="OR" color="secondary" type="solid" class="my-4" />
+    <USeparator label="OR" color="secondary" type="solid" />
 
     <h1 class="text-3xl">Hello Fly Live</h1>
     <p class="muted">
@@ -87,7 +110,7 @@
       ipsum dolor sit amet
     </p>
 
-    <USeparator label="OR" color="tertiary" type="solid" class="my-4" />
+    <USeparator label="OR" color="tertiary" type="solid" />
 
     <div class="py-4 flex-wrap flex gap-4">
       <UButton color="primary" variant="subtle" class="shadow-lg/50 shadow-primary">
