@@ -5,15 +5,15 @@
       :style="{ paddingTop: 'env(safe-area-inset-top, 0px)' }"
   >
     <BgGlass
-        class="shadow-xl border-b border-white/30"
+        class="shadow-lg border-b border-white/60"
         frostBlurRadius="blur(2px)"
-        :noiseFrequency="0.004"
-        :noiseStrength="150"
+        :noiseFrequency="0.006"
+        :noiseStrength="50"
         rounded="rounded-none"
     >
       <nav class="flex items-center justify-between px-2">
         <!-- Brand -->
-        <LogoMain class="w-14 shrink-0" />
+        <LogoMain class="w-18" />
 
         <!-- Actions -->
         <div class="flex items-center gap-1.5">

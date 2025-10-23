@@ -16,8 +16,6 @@ export default defineNuxtConfig({
             baseURL: 'https://ik.imagekit.io/flylive'
         }
     },
-
-    spaLoadingTemplate: 'app/spa-loading-template.html',
     vite: {
         optimizeDeps: { include: ['svga/dist/index.esm.min.js'] },
         build: {

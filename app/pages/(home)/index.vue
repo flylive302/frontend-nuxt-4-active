@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {number} from "#nuxt-scripts/validation/mock";
+
 const items = [
   'siteAssets/room/room-card-top.webp',
   'siteAssets/room/room-card-top.webp',
@@ -7,15 +9,153 @@ const items = [
   'siteAssets/room/room-card-top.webp',
   'siteAssets/room/room-card-top.webp'
 ]
+
+// ---- Types
+type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
+interface Banner {
+  type: CardType
+
+  lUserName?: string
+  lFrameName?: string
+  lAvatar?: string
+  lFrameGirth?: number
+  lTop?: number
+
+  rUserName?: string
+  rFrameName?: string
+  rAvatar?: string
+  rFrameGirth?: number
+  rTop?: number
+
+  textClass?: string
+  text?: string
+}
+
+const banners: Banner[] = [
+  {
+    type: 'cp',
+    lUserName: 'Noah',
+    lFrameName: '',
+    lAvatar: '',
+    lFrameGirth: 70,
+    lTop: 50,
+
+    rUserName: 'Luna',
+    rFrameName: '',
+    rAvatar: '',
+    rFrameGirth: 70,
+    rTop: 50,
+
+    textClass: 'pl-5',
+    text: 'Weekly Cp'
+  },
+  {
+    type: 'country',
+    lUserName: 'Ali',
+    lFrameName: 'frames/9',
+    lAvatar: '',
+    lFrameGirth: 70,
+    lTop: 50,
+
+    rUserName: 'Nora',
+    rFrameName: 'frames/9',
+    rAvatar: '',
+    rFrameGirth: 70,
+    rTop: 50,
+
+    textClass: 'text-base',
+    text: 'Country Event'
+  },
+  {
+    type: 'recharge_tycoon',
+
+    lUserName: 'Darwaish',
+    lFrameName: 'frames/6',
+    lAvatar: '',
+    lFrameGirth: 70,
+    lTop: 50,
+
+    rUserName: 'Hori',
+    rFrameName: 'frames/6',
+    rAvatar: '',
+    rFrameGirth: 70,
+    rTop: 50,
+
+    textClass: 'text-sm',
+    text: 'Recharge tycoon'
+  },
+  {
+    type: 'supreme_recharge',
+
+    lUserName: 'Aria',
+    lFrameName: 'frames/12',
+    lAvatar: '',
+    lFrameGirth: 70,
+    lTop: 50,
+
+    rUserName: 'Junie',
+    rFrameName: 'frames/12',
+    rAvatar: '',
+    rFrameGirth: 70,
+    rTop: 50,
+
+    textClass: 'text-base',
+    text: 'Supreme'
+  },
+  {
+    type: 'pretty_id',
+
+    lUserName: 'Mina',
+    lFrameName: 'frames/16',
+    lAvatar: '',
+    lFrameGirth: 70,
+    lTop: 50,
+
+    rUserName: 'Aniya',
+    rFrameName: 'frames/16',
+    rAvatar: '',
+    rFrameGirth: 70,
+    rTop: 50,
+
+    textClass: 'text-sm',
+    text: 'Pretty ID 💖'
+  },
+]
 </script>
 
 <template>
-  <div class="flex flex-col gap-8 px-3 py-18 max-w-screen">
+  <div class="flex flex-col gap-8 px-3 py-14 max-w-screen">
     <BackgroundDecorationsVariant1 />
 
     <UCarousel
+        class-names
+        :autoplay="{ delay: 4000 }"
+        :items="banners"
+        :ui="{
+          container: 'pt-4',
+          item: 'basis-1/1 transition duration-500 ease-in-out [&:not(.is-snapped)]:scale-50'
+        }"
+        class="w-full"
+    >
+      <template #default="{ item }">
+        <EventsBanners
+            v-bind="{
+              ...(item.lUserName ? { lUserName: item.lUserName } : {}),
+              ...(item.lFrameName ? { lFrameName: item.lFrameName } : {}),
+              ...(item.lFrameGirth ? { lFrameGirth: item.lFrameGirth } : {}),
+              ...(item.rUserName ? { rUserName: item.rUserName } : {}),
+              ...(item.rFrameName ? { rFrameName: item.rFrameName } : {}),
+              ...(item.rFrameGirth ? { rFrameGirth: item.rFrameGirth } : {})
+            }"
+            :type="item.type"
+        >
+          <span :class="item.textClass">{{ item.text }}</span>
+        </EventsBanners>
+      </template>
+    </UCarousel>
+
+    <UCarousel
         v-slot="{ item }"
-        loop
         class-names
         :items="items"
         :autoplay="{ delay: 3000 }"
@@ -24,7 +164,7 @@ const items = [
         }"
         class=""
     >
-      <RoomCard :image-src="item">
+      <RoomCard :imageSrc="item">
         Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
       </RoomCard>
     </UCarousel>
@@ -36,30 +176,6 @@ const items = [
     <RoomCard class="w-2/4" image-src="siteAssets/room/room-card.webp">
       Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
     </RoomCard>
-
-    <EventsBanners>
-      <span class="pl-5">Weekly CP</span>
-    </EventsBanners>
-
-    <EventsBanners
-        type="country"
-        lUserName="First Winner"
-        lFrameName="frames/9"
-        rUserName="Second Winner"
-        rFrameName="frames/9"
-    >
-      <span class="text-base">Country Event</span>
-    </EventsBanners>
-
-    <EventsBanners
-      type="recharge_tycoon"
-      lFrameName="frames/admin/super_admin"
-      rFrameName="frames/admin/cs_leader"
-      :lFrameGirth="50"
-      :rFrameGirth="50"
-    >
-      <span class="text-sm">Recharge Tycoon</span>
-    </EventsBanners>
 
     <Homeheader />
 

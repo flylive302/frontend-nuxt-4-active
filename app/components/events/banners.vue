@@ -7,7 +7,7 @@ defineOptions({ name: 'DuelEventCard' })
 type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
 
 interface Props {
-  type?: CardType
+  type: CardType
   lUserName?: string
   lAvatar?: string
   lFrameName?: string
@@ -51,7 +51,7 @@ const TYPE_CONFIG = Object.freeze({
     textShadow: 'text-shadow-tertiary'
   },
   supreme_recharge: {
-    banner: '/siteAssets/banners/supreme_recharge.webp',
+    banner: '/siteAssets/banners/supreme-recharge.webp',
     header: '/siteAssets/banners/country-header.svg',
     decor: '/siteAssets/banners/decor-recharge-tycoon.webp',
     shadowClass: 'shadow-secondary/30',
