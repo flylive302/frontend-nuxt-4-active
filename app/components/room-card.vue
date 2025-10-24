@@ -75,7 +75,7 @@ const ariaLabel = computed(() => props.alt || 'Room')
 
             <!-- Text (slot overrideable) -->
             <p class="text-sm font-bold">
-              <slot name="badge">{{ props.badgeText }}</slot>
+              <slot>{{ props.badgeText }}</slot>
             </p>
           </BgGlass>
         </template>

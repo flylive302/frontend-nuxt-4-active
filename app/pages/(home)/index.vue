@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {number} from "#nuxt-scripts/validation/mock";
+import InfiniteScroll from "~/components/infinite-scroll.vue";
 
 const items = [
   'siteAssets/room/room-card-top.webp',
@@ -124,8 +125,11 @@ const banners: Banner[] = [
 </script>
 
 <template>
-  <div class="flex flex-col gap-8 px-3 py-14 max-w-screen">
+  <div>
+
     <BackgroundDecorationsVariant1 />
+    <Homeheader />
+    <div class="h-14"></div>
 
     <UCarousel
         class-names
@@ -135,7 +139,7 @@ const banners: Banner[] = [
           container: 'pt-4',
           item: 'basis-1/1 transition duration-500 ease-in-out [&:not(.is-snapped)]:scale-50'
         }"
-        class="w-full"
+        class="mx-3 mb-5"
     >
       <template #default="{ item }">
         <EventsBanners
@@ -162,102 +166,17 @@ const banners: Banner[] = [
         :ui="{
           item: 'basis-2/3 transition duration-300 ease-in-out [&:not(.is-snapped)]:scale-90'
         }"
-        class=""
+        class="mb-6"
     >
       <RoomCard :imageSrc="item">
         Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
       </RoomCard>
     </UCarousel>
 
-    <RoomCard image-src="siteAssets/room/room-card-top.webp">
-      Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
-    </RoomCard>
+    <InfiniteScroll />
 
-    <RoomCard class="w-2/4" image-src="siteAssets/room/room-card.webp">
-      Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
-    </RoomCard>
-
-    <Homeheader />
-
+    <div class="h-14"></div>
     <Footer />
-
-    <div class="flex w-full mx-auto">
-      <LazyAvatar
-          frame_name="frames/5"
-          class="w-30 mx-auto"
-          :animated="true"
-          :frame_girth="60"
-      />
-
-      <LazyAvatar
-          frame_name="frames/19"
-          class="w-25 mx-auto"
-          :frame_girth="65"
-          :animated="true"
-      />
-    </div>
-
-    <LazySvgaPlayer hydrate-on-visible name="frames/9" class="w-2/4" />
-
-    <LazySvgaPlayer hydrate-on-visible name="frames/gifts/castle" class="w-2/4" />
-
-    <BgGlass>
-      <h1 class="text-xl">Hello World</h1>
-    </BgGlass>
-
-    <LogoIcon />
-
-    <LogoMain />
-
-    <LogoLarge />
-
-    <USeparator label="OR" color="primary" type="solid" />
-
-    <SectionTitle>This is Section title</SectionTitle>
-    <SectionTitle type="secondary">This is Section title</SectionTitle>
-    <SectionTitle type="tertiary">This is Section title</SectionTitle>
-
-    <USeparator label="OR" color="secondary" type="solid" />
-
-    <h1 class="text-3xl">Hello Fly Live</h1>
-    <p class="muted">
-      ipsum dolor sit amet
-      ipsum dolor sit amet
-      ipsum dolor sit amet
-    </p>
-
-    <USeparator label="OR" color="tertiary" type="solid" />
-
-    <div class="py-4 flex-wrap flex gap-4">
-      <UButton color="primary" variant="subtle" class="shadow-lg/50 shadow-primary">
-        Primary
-      </UButton>
-
-      <UButton color="secondary" class="shadow-lg/50 shadow-secondary" variant="subtle">
-        Secondary
-      </UButton>
-
-      <UButton color="tertiary" class="shadow-lg/50 shadow-tertiary" variant="subtle">
-        Tertiary
-      </UButton>
-
-      <UButton color="info" class="shadow-lg/50 shadow-info" variant="subtle">
-        info
-      </UButton>
-
-      <UButton color="warning" class="shadow-lg/50 shadow-warning" variant="subtle">
-        warning
-      </UButton>
-
-      <UButton color="error" class="shadow-lg/50 shadow-error" variant="subtle">
-        error
-      </UButton>
-
-      <UButton color="neutral" class="shadow-lg/50 shadow-neutral-50" variant="subtle">
-        neutral
-      </UButton>
-    </div>
-
   </div>
 </template>
 
