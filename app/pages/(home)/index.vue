@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import {number} from "#nuxt-scripts/validation/mock";
-import InfiniteScroll from "~/components/infinite-scroll.vue";
-
 const items = [
   'siteAssets/room/room-card-top.webp',
   'siteAssets/room/room-card-top.webp',
@@ -129,7 +126,7 @@ const banners: Banner[] = [
 
     <BackgroundDecorationsVariant1 />
     <Homeheader />
-    <div class="h-14"></div>
+    <div class="h-14"/>
 
     <UCarousel
         class-names
@@ -168,14 +165,14 @@ const banners: Banner[] = [
         }"
         class="mb-6"
     >
-      <RoomCard :imageSrc="item">
+      <RoomCard :image-src="item">
         Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
       </RoomCard>
     </UCarousel>
 
-    <InfiniteScroll />
+    <InfiniteScroll class="mx-3" />
 
-    <div class="h-14"></div>
+    <div class="h-14"/>
     <Footer />
   </div>
 </template>
