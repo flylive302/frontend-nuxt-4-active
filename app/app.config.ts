@@ -41,6 +41,66 @@ export default defineAppConfig({
                     color: 'primary',
                     variant: 'link',
                     class: 'text-white'
+                },
+                {
+                    color: 'secondary',
+                    variant: 'solid',
+                    class: 'text-white'
+                },
+                {
+                    color: 'secondary',
+                    variant: 'outline',
+                    class: 'text-white'
+                },
+                {
+                    color: 'secondary',
+                    variant: 'soft',
+                    class: 'text-white'
+                },
+                {
+                    color: 'secondary',
+                    variant: 'subtle',
+                    class: 'text-white'
+                },
+                {
+                    color: 'secondary',
+                    variant: 'ghost',
+                    class: 'text-white'
+                },
+                {
+                    color: 'secondary',
+                    variant: 'link',
+                    class: 'text-white'
+                },
+                {
+                    color: 'tertiary',
+                    variant: 'solid',
+                    class: 'text-white'
+                },
+                {
+                    color: 'tertiary',
+                    variant: 'outline',
+                    class: 'text-white'
+                },
+                {
+                    color: 'tertiary',
+                    variant: 'soft',
+                    class: 'text-white'
+                },
+                {
+                    color: 'tertiary',
+                    variant: 'subtle',
+                    class: 'text-white'
+                },
+                {
+                    color: 'tertiary',
+                    variant: 'ghost',
+                    class: 'text-white'
+                },
+                {
+                    color: 'tertiary',
+                    variant: 'link',
+                    class: 'text-white'
                 }
             ]
         }

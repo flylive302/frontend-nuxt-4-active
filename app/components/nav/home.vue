@@ -1,14 +1,10 @@
 <template>
-  <!-- Top app header -->
-  <header
-      class="fixed inset-x-0 top-0 z-50"
-      :style="{ paddingTop: 'env(safe-area-inset-top, 0px)' }"
-  >
+  <header class="fixed inset-x-0 top-0 z-50">
     <BgGlass
         class="shadow-lg border-b border-white/60"
-        frostBlurRadius="blur(2px)"
-        :noiseFrequency="0.006"
-        :noiseStrength="50"
+        frost-blur-radius="blur(2px)"
+        :noise-frequency="0.006"
+        :noise-strength="50"
         rounded="rounded-none"
     >
       <nav class="flex items-center justify-between px-2">
@@ -18,7 +14,7 @@
         <!-- Actions -->
         <div class="flex items-center gap-1.5">
           <UButton
-              aria-label="Language"
+              aria-label="discover-events"
               icon="i-lucide-earth"
               size="xl"
               color="primary"
@@ -28,7 +24,6 @@
               aria-label="Leaderboard"
               size="md"
               variant="ghost"
-              class="flex items-center justify-center"
           >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -55,7 +50,3 @@
     </BgGlass>
   </header>
 </template>
-
-<script setup lang="ts">
-// static header, no script needed
-</script>

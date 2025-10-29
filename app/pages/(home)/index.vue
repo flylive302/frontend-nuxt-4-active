@@ -123,9 +123,10 @@ const banners: Banner[] = [
 
 <template>
   <div>
-
     <BackgroundDecorationsVariant1 />
-    <Homeheader />
+
+    <NavHome />
+
     <div class="h-14"/>
 
     <UCarousel
@@ -170,10 +171,12 @@ const banners: Banner[] = [
       </RoomCard>
     </UCarousel>
 
-    <InfiniteScroll class="mx-3" />
+    <div class="mx-3">
+      <InfiniteScroll />
+    </div>
 
     <div class="h-14"/>
-    <Footer />
+    <NavHomeFooter />
   </div>
 </template>
 
