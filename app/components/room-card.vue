@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
   alt: 'Room preview',
   to: '/room',
   provider: 'imagekit',
-  quality: 70,
+  quality: 100,
   rounded: 'rounded-xl',
   aspect: 'aspect-[9/12]',
   badgeText: 'Live / 24',
@@ -34,13 +34,7 @@ const ariaLabel = computed(() => props.alt || 'Room')
       v-bind="props.to ? { to: props.to, 'aria-label': ariaLabel } : {}"
       class="group block"
   >
-    <article
-        class="relative overflow-hidden border border-white/50 transition-shadow duration-200
-             hover:shadow-lg focus-visible:shadow-lg
-             focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30
-             bg-black/5"
-        :class="[props.rounded, props.aspect]"
-    >
+    <article class="relative overflow-hidden border border-white/50" :class="[props.rounded, props.aspect]">
       <figure class="h-full w-full">
         <NuxtImg
             :provider="props.provider"
@@ -48,9 +42,8 @@ const ariaLabel = computed(() => props.alt || 'Room')
             :alt="props.alt"
             :quality="props.quality"
             class="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
             placeholder="blur"
+            preload
         />
         <figcaption class="sr-only">{{ props.alt }}</figcaption>
       </figure>
@@ -61,13 +54,12 @@ const ariaLabel = computed(() => props.alt || 'Room')
           <BgGlass
               frost-blur-radius="blur(4px)"
               rounded="rounded-full"
-              class="pointer-events-auto flex items-center gap-1 px-1 w-fit rounded-full
-                   border border-white/60 shadow-sm"
+              class="flex items-center gap-1 px-1 w-fit rounded-full border border-white/60"
           >
             <!-- Live dot -->
             <span class="relative inline-flex">
               <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
-              <span class="relative inline-block size-2 rounded-full bg-success border border-white/50"/>
+              <span class="relative inline-block size-2 rounded-full bg-success"/>
             </span>
 
             <!-- Text (slot overrideable) -->

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-// type colors = "primary" | "secondary" | "tertiary" | "success" | "info" | "warning" | "danger";
+type colors = "primary" | "secondary" | "tertiary" | "success" | "info" | "warning" | "danger";
 // type variants = "ghost" | "soft" | "subtle" | "solid" | "link";
 
 const props = withDefaults(defineProps<{
@@ -52,7 +52,7 @@ const props = withDefaults(defineProps<{
             class="w-full justify-center"
             :to="props.currentTo"
         >
-          {{props.current}}
+          {{ props.current }}
         </UButton>
         <UButton
             v-if="props.linksTo !== undefined"
@@ -61,7 +61,7 @@ const props = withDefaults(defineProps<{
             variant="ghost"
             class="w-full justify-center"
         >
-          {{props.links}}
+          {{ props.links }}
         </UButton>
       </div>
       <div class="col-span-1 flex justify-end">

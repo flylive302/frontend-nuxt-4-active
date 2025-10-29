@@ -7,7 +7,7 @@ defineOptions({ name: 'DuelEventCard' })
 type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
 
 interface Props {
-  type: CardType
+  type?: CardType
   lUserName?: string
   lAvatar?: string
   lFrameName?: string
@@ -96,9 +96,7 @@ const headingId = `duel-card-title-${props.type}`
         alt=""
         aria-hidden="true"
         class="pointer-events-none select-none absolute inset-0 h-full w-full object-cover rounded-lg border border-white/50 shadow-lg"
-        sizes="(max-width: 640px) 100vw, 640px"
-        decoding="async"
-        loading="lazy"
+        preload
     />
 
     <div class="relative">
@@ -110,9 +108,7 @@ const headingId = `duel-card-title-${props.type}`
             alt=""
             aria-hidden="true"
             class="h-8 -mt-3"
-            sizes="(max-width: 640px) 50vw, 320px"
-            decoding="async"
-            loading="lazy"
+            preload
         />
         <h2
             :id="headingId"
@@ -146,8 +142,7 @@ const headingId = `duel-card-title-${props.type}`
             aria-hidden="true"
             sizes="64px"
             class="col-span-1"
-            decoding="async"
-            loading="lazy"
+            preload
         />
         <!-- Right user -->
         <figure class="col-span-3 grid grid-cols-2">
