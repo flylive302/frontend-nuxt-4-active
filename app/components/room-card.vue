@@ -13,7 +13,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   imageSrc: '/siteAssets/room/room-card-top.webp',
   alt: 'Room preview',
-  to: '/room',
+  to: '/',
   provider: 'imagekit',
   quality: 80,
   rounded: 'rounded-xl',

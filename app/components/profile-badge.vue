@@ -10,7 +10,7 @@ withDefaults(defineProps<{
   imgAlt?: string
 }>(), {
   color: "primary",
-  badgeSrc: "/badges/badge-profile-1.webp",
+  badgeSrc: "/siteAssets/badges/badge-profile-1.webp",
   txt: "UserSignature",
   imgAlt: "User badge"
 })
@@ -28,6 +28,7 @@ const variantMap: Record<Color, string> = {
 <template>
   <div class="flex items-center w-fit">
     <NuxtImg
+        provider="imagekit"
         :src="badgeSrc"
         :alt="imgAlt"
         class="w-7 relative z-10 shrink-0"
