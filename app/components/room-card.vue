@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
   alt: 'Room preview',
   to: '/room',
   provider: 'imagekit',
-  quality: 100,
+  quality: 80,
   rounded: 'rounded-xl',
   aspect: 'aspect-[9/12]',
   badgeText: 'Live / 24',
@@ -72,7 +72,3 @@ const ariaLabel = computed(() => props.alt || 'Room')
     </article>
   </component>
 </template>
-
-<style scoped>
-/* Tailwind handles layout; minimal scoped CSS on purpose */
-</style>
