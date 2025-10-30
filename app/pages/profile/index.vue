@@ -1,6 +1,27 @@
+<script setup lang="ts">
+const items = [
+  {
+    label: 'Gifts',
+    icon: 'i-lucide-gift',
+    slot: 'gifts'
+  },
+  {
+    label: 'Entries',
+    icon: 'i-lucide-door-open',
+    slot: 'entries'
+  },
+  {
+    label: 'Frames',
+    icon: 'i-lucide-frame',
+    slot: 'frames'
+  }
+]
+</script>
+
 <template>
   <main>
     <NavAlt color="primary" links-to="/" links="Some Page" sub-menu-to="/" />
+
     <AltHero class="z-20">
       <div class="px-3 py-9 flex bg-gradient-to-br to-primary/30">
         <Avatar :animated="true" class="w-24" />
@@ -17,6 +38,31 @@
 
     <UserStats class="mt-1"/>
 
+    <SectionTitle class="my-2 mx-3">Agency</SectionTitle>
+    <div class="mx-3 grid grid-cols-12 bg-gradient-to-br to-primary/30 rounded-md border border-primary">
+      <div class="col-span-3">
+        <Avatar :animated="true" />
+      </div>
+
+      <div class="col-span-6 flex flex-col justify-around">
+        <p class="text-sm !text-muted font-semibold truncate">Agency Annotations</p>
+        <p class="text-md font-bold truncate">Agency Name</p>
+      </div>
+
+      <div class="col-span-3 flex flex-col justify-between py-2">
+
+        <div class="flex gap-1 items-center">
+          <UBadge icon="i-lucide-sparkles" :square="true" class="rounded-full p-1" />
+          <p class="text-xs font-bold leading-none">1 <br> Level</p>
+        </div>
+
+        <div class="flex gap-1 items-center">
+          <UBadge icon="i-lucide-users" :square="true" class="rounded-full" />
+          <p class="text-xs font-bold leading-none truncate">42 <br> Members</p>
+        </div>
+      </div>
+    </div>
+
     <SectionTitle class="my-2 mx-3">Cp RelationShips</SectionTitle>
 
     <EventsProfileCard />
@@ -27,11 +73,37 @@
       <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
 
-      <div class="grid mt-4 grid-cols-3 gap-2">
-        <ProfileHistoryCard />
-        <ProfileHistoryCard badge-src="/siteAssets/badges/badge-wealth-level-3.webp" item-name="wealth Badge" />
-        <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
-      </div>
+      <SectionTitle class="mt-4">History</SectionTitle>
+
+      <UTabs class="w-full" variant="link" :items="items">
+        <template #gifts>
+          <div class="grid grid-cols-3 gap-2">
+            <ProfileHistoryCard />
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-wealth-level-3.webp" item-name="wealth Badge" />
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+          </div>
+        </template>
+
+        <template #entries>
+          <div class="grid grid-cols-3 gap-2">
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-wealth-level-3.webp" item-name="wealth Badge" />
+            <ProfileHistoryCard />
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+          </div>
+        </template>
+
+        <template #frames>
+          <div class="grid grid-cols-3 gap-2">
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+            <ProfileHistoryCard />
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-wealth-level-3.webp" item-name="wealth Badge" />
+            <ProfileHistoryCard badge-src="/siteAssets/badges/badge-charm-level-1.webp" item-name="Charm Badge"/>
+          </div>
+        </template>
+      </UTabs>
     </div>
 
     <AltHero image-src="/siteAssets/alt-hero/tertiary.webp">
@@ -78,5 +150,3 @@
     </footer>
   </main>
 </template>
-<script setup lang="ts">
-</script>
