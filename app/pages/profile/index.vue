@@ -1,5 +1,6 @@
 <script setup lang="ts">
 
+import ProfileCard from "../../components/events/profile-card.vue";
 </script>
 
 <template>
@@ -22,7 +23,9 @@
 
     <UserStats class="mt-1"/>
 
-    <SectionTitle class="mt-2 mx-3">Cp RelationShips</SectionTitle>
+    <SectionTitle class="my-2 mx-3">Cp RelationShips</SectionTitle>
+
+    <ProfileCard />
 
     <AltHero class="z-10 mt-12" image-src="/siteAssets/alt-hero/secondary.webp">
       <div class="px-3 py-9 flex">
