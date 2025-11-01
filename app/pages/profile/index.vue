@@ -20,7 +20,7 @@ const items = [
 
 <template>
   <main>
-    <NavAlt color="primary" links-to="/" links="Some Page" sub-menu-to="/" />
+    <NavAlt current="My Profile" sub-menu-to="/" />
 
     <AltHero class="z-20">
       <div class="px-3 py-9 flex bg-gradient-to-br to-primary/30">
@@ -68,7 +68,7 @@ const items = [
     <EventsProfileCard />
 
     <div class="p-3 mb-12">
-      <NavProfileItem to="/" icon="i-lucide-wallet" txt="Wallet" />
+      <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
@@ -105,21 +105,6 @@ const items = [
         </template>
       </UTabs>
     </div>
-
-    <AltHero image-src="/siteAssets/alt-hero/tertiary.webp">
-      <div class="flex p-2 bg-gradient-to-br to-tertiary/30">
-        <div class="flex flex-col justify-end">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/prop-recharge.webp" class="transform -scale-x-100 w-20" />
-        </div>
-        <div class="flex-auto flex flex-col justify-between items-center">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/flylive_coin.webp" class="w-full mb-2" />
-          <UButton color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
-        </div>
-        <div class="flex flex-col justify-end">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/prop-recharge.webp" class="w-20" />
-        </div>
-      </div>
-    </AltHero>
 
     <AltHero class="z-10 mt-12" image-src="/siteAssets/alt-hero/secondary.webp">
       <div class="flex p-2 bg-gradient-to-br to-secondary/30">

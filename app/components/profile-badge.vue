@@ -17,10 +17,10 @@ withDefaults(defineProps<{
 
 // Tailwind-safe variants
 const variantMap: Record<Color, string> = {
-  primary:   "bg-primary/40   border-primary/70   text-primary-950",
-  secondary: "bg-secondary/40 border-secondary/70 text-secondary-950",
-  tertiary:  "bg-tertiary/40  border-tertiary/70  text-tertiary-950",
-  success:   "bg-success/40   border-success/70   text-success-950",
+  primary:   "bg-primary/30   border-primary/70",
+  secondary: "bg-secondary/30 border-secondary/70",
+  tertiary:  "bg-tertiary/30  border-tertiary/70",
+  success:   "bg-success/30   border-success/70",
 }
 
 </script>

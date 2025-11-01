@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
 
 type colors = "primary" | "secondary" | "tertiary" | "success" | "info" | "warning" | "danger";
-// type variants = "ghost" | "soft" | "subtle" | "solid" | "link";
 
 const props = withDefaults(defineProps<{
   color?: colors,
   backTo?: string,
   subMenuTo?: string | undefined,
-  currentTo?: string,
   current?: string,
   linksTo?: string | undefined,
   links?: string | undefined,
@@ -15,11 +15,18 @@ const props = withDefaults(defineProps<{
   color: 'primary',
   backTo: '/',
   subMenuTo: undefined,
-  currentTo: '/',
   current: 'Page Name',
   linksTo: undefined,
   links: "Page Name 2",
 })
+const route = useRoute();
+const variants = computed(() => {
+  const isActive = props.linksTo && route.path === props.linksTo
+  return {
+    current: isActive ? 'link' : 'subtle',
+    link: isActive ? 'subtle' : 'link'
+  }
+});
 </script>
 <template>
   <header
@@ -29,28 +36,27 @@ const props = withDefaults(defineProps<{
     <BgGlass
         frost-blur-radius="blur(4px)"
         :noise-frequency="0.009"
-        :noise-strength="200"
+        :noise-strength="10"
         rounded="rounded-none"
-        class="grid grid-cols-8 px-2 py-1 border border-white/40"
+        class="grid grid-cols-8 border-b border-white/50"
     >
-      <div class="col-span-1">
-        <UButton
-            aria-label="back-navigation-link"
-            icon="i-lucide-chevron-left"
-            size="md"
-            variant="soft"
-            :color="props.color"
-            :to="props.backTo"
-        />
-      </div>
+      <UButton
+          aria-label="back-navigation-link"
+          icon="i-lucide-chevron-left"
+          size="md"
+          variant="subtle"
+          :color="props.color"
+          :to="props.backTo"
+          class="w-full justify-center rounded-none"
+      />
 
       <div class="col-span-6 flex gap-2">
         <UButton
             aria-label="current-page-link"
             size="md"
-            variant="ghost"
-            class="w-full justify-center"
-            :to="props.currentTo"
+            :variant="variants.current"
+            :color="props.color"
+            class="w-full justify-center rounded-none"
         >
           {{ props.current }}
         </UButton>
@@ -58,23 +64,22 @@ const props = withDefaults(defineProps<{
             v-if="props.linksTo !== undefined"
             aria-label="Notifications"
             size="md"
-            variant="ghost"
-            class="w-full justify-center"
+            :variant="variants.link"
+            :color="props.color"
+            class="w-full justify-center rounded-none"
         >
           {{ props.links }}
         </UButton>
       </div>
-      <div class="col-span-1 flex justify-end">
-        <UButton
-            v-if="props.subMenuTo !== undefined"
-            aria-label="Notifications"
-            icon="i-lucide-menu"
-            size="md"
-            :color="props.color"
-            variant="soft"
-        />
-      </div>
-
+      <UButton
+          v-if="props.subMenuTo !== undefined"
+          aria-label="Notifications"
+          icon="i-lucide-menu"
+          size="md"
+          :color="props.color"
+          variant="soft"
+          class="w-full justify-center rounded-none"
+      />
     </BgGlass>
   </header>
 </template>

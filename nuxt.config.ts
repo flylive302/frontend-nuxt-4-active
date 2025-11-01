@@ -5,6 +5,11 @@ export default defineNuxtConfig({
     devtools: { enabled: true },
     css: ['~/assets/css/main.css'],
     modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt'],
+    app: {
+        head: {
+            htmlAttrs: { class: 'dark' }
+        }
+    },
     ui: {
         colorMode: false,
         theme: {
