@@ -28,5 +28,10 @@ export default defineNuxtConfig({
                 output: { manualChunks: { svga: ['svga/dist/index.esm.min.js'] } }
             }
         }
+    },
+    runtimeConfig: {
+        public: {
+            apiBase: 'https://www.laravel-backend.com/api'
+        }
     }
 })

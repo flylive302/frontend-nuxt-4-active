@@ -20,8 +20,9 @@
       <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
       <p class="text-sm !text-muted">Keep your default reseller or select a Different One</p>
       <ChoseDefaultReseller color="tertiary" />
+
+      <FromConversionRequest class="mt-4" />
     </div>
+    <div class="h-14" />
   </div>
 </template>
-<script setup lang="ts">
-</script>
