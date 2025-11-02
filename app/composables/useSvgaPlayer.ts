@@ -11,6 +11,8 @@ export const useSvgaPlayer = (
     if (!import.meta.client) return { player: null };
 
     const player = shallowRef<
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         Awaited<ReturnType<App['$svga']['createSvgaPlayer']>> | null
     >(null);
     const nuxtApp = useNuxtApp();

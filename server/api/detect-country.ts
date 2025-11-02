@@ -1,0 +1,23 @@
+// server/api/detect-country.ts
+export default defineEventHandler(async (event) => {
+    try {
+        // Get the client's IP address from the request
+        const ip = getRequestIP(event, { xForwardedFor: true })
+
+        // For development, you might get localhost IPs
+        if (!ip || ip === '127.0.0.1' || ip === '::1') {
+            // Return a default or use a test IP
+            return { country_code: null }
+        }
+
+        // Use a free geolocation service
+        const response = await $fetch<{ country: string }>(`https://get.geojs.io/v1/ip/country/${ip}.json`)
+
+        return {
+            country_code: response.country
+        }
+    } catch (error) {
+        console.error('Geolocation error:', error)
+        return { country_code: null }
+    }
+})

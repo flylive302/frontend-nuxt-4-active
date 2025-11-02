@@ -15,7 +15,7 @@ export default defineAppConfig({
                 {
                     color: 'primary',
                     variant: 'solid',
-                    class: 'text-white'
+                    class: 'text-white border border-white/40 shadow-lg shadow-primary/50'
                 },
                 {
                     color: 'primary',
