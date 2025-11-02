@@ -1,18 +1,12 @@
-// composables/useGeolocation.ts
 export const useGeolocation = () => {
     const detectCountry = async (): Promise<string | null> => {
         try {
-            // Using a free IP geolocation API
-            const response = await fetch('https://ipapi.co/json/')
-            const data = await response.json()
-            return data.country // Returns country code like 'US', 'GB', etc.
+            const { country_code } = await $fetch<{ country_code: string | null }>('/api/detect-country')
+            return country_code
         } catch (error) {
             console.error('Failed to detect country:', error)
             return null
         }
     }
-
-    return {
-        detectCountry
-    }
+    return { detectCountry }
 }

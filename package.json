@@ -19,6 +19,7 @@
     "@unhead/vue": "^2.0.19",
     "@vueuse/nuxt": "^14.0.0",
     "eslint": "^9.37.0",
+    "libphonenumber-js": "^1.12.25",
     "nuxt": "^4.1.3",
     "svga": "2.1.1",
     "typescript": "^5.9.3",
