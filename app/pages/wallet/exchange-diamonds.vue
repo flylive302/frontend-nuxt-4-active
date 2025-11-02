@@ -73,7 +73,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <USeparator color="secondary" class="my-4" label="OR" />
 
       <h2 class="text-lg font-bold leading-tight">Request Payout of your Diamonds in <span class="text-success">Real Money</span>.</h2>
-      <ChoseDefaultReseller color="secondary" />
+      <ChooseDefaultReseller color="secondary" />
       <FromConversionRequest color="secondary" class="mb-18 mt-4" />
     </section>
   </div>

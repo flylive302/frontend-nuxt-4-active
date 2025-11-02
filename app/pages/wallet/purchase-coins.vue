@@ -19,7 +19,7 @@
     <section class="px-3">
       <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
       <p class="text-sm !text-muted">Keep your default reseller or select a Different One</p>
-      <ChoseDefaultReseller color="tertiary" />
+      <ChooseDefaultReseller color="tertiary" />
 
       <FromConversionRequest class="mt-4" />
       <USeparator color="tertiary" class="my-4" label="OR" />
