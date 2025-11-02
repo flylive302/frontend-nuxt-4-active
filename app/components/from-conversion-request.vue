@@ -133,14 +133,14 @@ onBeforeUnmount(() => abort())
           :schema="schema"
           :state="state"
           :ui="{ wrapper: 'space-y-4' }"
-          :class="`border-${color}`"
-          class="space-y-4 rounded-lg border-2 p-3"
+          :class="`border-${color} shadow-${color}/50`"
+          class="space-y-4 rounded-lg shadow-lg border-2 p-3"
           @submit="onSubmit"
       >
         <UAlert
             v-if="formError"
             icon="i-lucide-alert-triangle"
-            color="danger"
+            color="error"
             variant="subtle"
             :description="formError"
             class="mb-2"
@@ -157,6 +157,7 @@ onBeforeUnmount(() => abort())
               placeholder="500"
               orientation="vertical"
               class="w-full"
+              required
           />
           <p v-if="serverFieldErrors['number']" class="mt-1 text-xs text-error">
             {{ serverFieldErrors['number'][0] }}

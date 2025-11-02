@@ -106,21 +106,6 @@ const items = [
       </UTabs>
     </div>
 
-    <AltHero class="z-10 mt-12" image-src="/siteAssets/alt-hero/secondary.webp">
-      <div class="flex p-2 bg-gradient-to-br to-secondary/30">
-        <div class="flex flex-col justify-end items-center">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/prop-diamond.svg" format="webp" class="w-14" />
-        </div>
-        <div class="flex-auto flex flex-col justify-between items-center">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/flylive-diamond.webp" class="w-full mb-2 max-w-28" />
-          <UButton color="secondary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
-        </div>
-        <div class="flex flex-col justify-end">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/prop-diamond.svg" format="webp" class="transform -scale-x-100 w-14" />
-        </div>
-      </div>
-    </AltHero>
-
     <div class="h-64"/>
     <footer class="fixed inset-x-3 z-50 bottom-4">
       <BgGlass

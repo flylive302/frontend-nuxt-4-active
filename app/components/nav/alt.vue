@@ -45,8 +45,8 @@ const variants = computed(() => {
           icon="i-lucide-chevron-left"
           size="md"
           variant="subtle"
-          :color="props.color"
-          :to="props.backTo"
+          :color="color"
+          :to="backTo"
           class="w-full justify-center rounded-none"
       />
 
@@ -55,28 +55,29 @@ const variants = computed(() => {
             aria-label="current-page-link"
             size="md"
             :variant="variants.current"
-            :color="props.color"
+            :color="color"
             class="w-full justify-center rounded-none"
         >
-          {{ props.current }}
+          {{ current }}
         </UButton>
         <UButton
-            v-if="props.linksTo !== undefined"
+            v-if="linksTo !== undefined"
             aria-label="Notifications"
             size="md"
             :variant="variants.link"
-            :color="props.color"
+            :color="color"
+            :to="linksTo"
             class="w-full justify-center rounded-none"
         >
-          {{ props.links }}
+          {{ links }}
         </UButton>
       </div>
       <UButton
-          v-if="props.subMenuTo !== undefined"
+          v-if="subMenuTo !== undefined"
           aria-label="Notifications"
           icon="i-lucide-menu"
           size="md"
-          :color="props.color"
+          :color="color"
           variant="soft"
           class="w-full justify-center rounded-none"
       />

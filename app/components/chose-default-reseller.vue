@@ -7,7 +7,7 @@ const toast = useToast()
 defineOptions({ name: 'ChooseDefaultReseller' })
 
 /** -------- Props -------- */
-type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'danger'
+type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
 withDefaults(defineProps<{ color?: Colors }>(), { color: 'primary' })
 
 /** -------- Types -------- */
@@ -41,14 +41,14 @@ const debouncedSearchTerm = useDebounce(searchTerm, 250)
 const selectedReseller = ref<null | Pick<ResellerApiRow, 'name' | 'contact' | 'avatar' | 'signature'>>(null)
 
 /** -------- Static class maps (no JIT misses) -------- */
-const colorClasses: Record<Colors, { border: string; to: string }> = {
-  primary:   { border: 'border-primary',   to: 'to-primary/30' },
-  secondary: { border: 'border-secondary', to: 'to-secondary/30' },
-  tertiary:  { border: 'border-tertiary',  to: 'to-tertiary/30' },
-  success:   { border: 'border-success',   to: 'to-success/30' },
-  info:      { border: 'border-info',      to: 'to-info/30' },
-  warning:   { border: 'border-warning',   to: 'to-warning/30' },
-  danger:    { border: 'border-danger',    to: 'to-danger/30' }
+const colorClasses: Record<Colors, { border: string; to: string, shadow: string }> = {
+  primary:   { border: 'border-primary',   to: 'to-primary/30',   shadow: 'shadow-primary/60' },
+  secondary: { border: 'border-secondary', to: 'to-secondary/30', shadow: 'shadow-secondary/60' },
+  tertiary:  { border: 'border-tertiary',  to: 'to-tertiary/30',  shadow: 'shadow-tertiary/60' },
+  success:   { border: 'border-success',   to: 'to-success/30',   shadow: 'shadow-success/60' },
+  info:      { border: 'border-info',      to: 'to-info/30',      shadow: 'shadow-info/60' },
+  warning:   { border: 'border-warning',   to: 'to-warning/30',   shadow: 'shadow-warning/60' },
+  error:     { border: 'border-error',     to: 'to-error/30',     shadow: 'shadow-error/60' }
 }
 
 /** -------- Data Fetch -------- */
@@ -198,8 +198,8 @@ const paletteGroups = computed<CommandGroup[]>(() => [
 
     <div
         v-if="selectedReseller"
-        class="mt-2 flex gap-1 rounded-md border p-1 bg-gradient-to-br"
-        :class="[colorClasses[color].border, colorClasses[color].to]"
+        class="mt-2 flex gap-1 rounded-md border p-1 bg-gradient-to-br shadow-md"
+        :class="[colorClasses[color].border, colorClasses[color].to, colorClasses[color].shadow]"
     >
       <div class="max-w-16">
         <Avatar :animated="true" />
