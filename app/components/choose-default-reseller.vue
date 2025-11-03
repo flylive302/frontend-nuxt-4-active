@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { navigateTo } from 'nuxt/app'
-import { ref, computed } from 'vue'
+import { ref, computed, toRef } from 'vue'
 import { useDebounce } from '@vueuse/core'
 const toast = useToast()
 
@@ -8,7 +8,14 @@ defineOptions({ name: 'ChooseDefaultReseller' })
 
 /** -------- Props -------- */
 type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
-withDefaults(defineProps<{ color?: Colors }>(), { color: 'primary' })
+const props = withDefaults(defineProps<{
+  color?: Colors
+  endpoint?: string
+}>(), {
+  color: 'primary',
+  endpoint: 'https://dummyjson.com/c/764f-c448-4151-8ac2'
+})
+const color = toRef(props, 'color')
 
 /** -------- Types -------- */
 type ResellerApiRow = {
@@ -41,14 +48,14 @@ const debouncedSearchTerm = useDebounce(searchTerm, 250)
 const selectedReseller = ref<null | Pick<ResellerApiRow, 'name' | 'contact' | 'avatar' | 'signature'>>(null)
 
 /** -------- Static class maps (no JIT misses) -------- */
-const colorClasses: Record<Colors, { border: string; to: string, shadow: string }> = {
-  primary:   { border: 'border-primary',   to: 'to-primary/30',   shadow: 'shadow-primary/60' },
-  secondary: { border: 'border-secondary', to: 'to-secondary/30', shadow: 'shadow-secondary/60' },
-  tertiary:  { border: 'border-tertiary',  to: 'to-tertiary/30',  shadow: 'shadow-tertiary/60' },
-  success:   { border: 'border-success',   to: 'to-success/30',   shadow: 'shadow-success/60' },
-  info:      { border: 'border-info',      to: 'to-info/30',      shadow: 'shadow-info/60' },
-  warning:   { border: 'border-warning',   to: 'to-warning/30',   shadow: 'shadow-warning/60' },
-  error:     { border: 'border-error',     to: 'to-error/30',     shadow: 'shadow-error/60' }
+const colorClasses: Record<Colors, { border: string; to: string; emphasis: string }> = {
+  primary:   { border: 'border-primary',   to: 'to-primary/30',   emphasis: 'ring-1 ring-primary/40' },
+  secondary: { border: 'border-secondary', to: 'to-secondary/30', emphasis: 'ring-1 ring-secondary/40' },
+  tertiary:  { border: 'border-tertiary',  to: 'to-tertiary/30',  emphasis: 'ring-1 ring-tertiary/40' },
+  success:   { border: 'border-success',   to: 'to-success/30',   emphasis: 'ring-1 ring-success/40' },
+  info:      { border: 'border-info',      to: 'to-info/30',      emphasis: 'ring-1 ring-info/40' },
+  warning:   { border: 'border-warning',   to: 'to-warning/30',   emphasis: 'ring-1 ring-warning/40' },
+  error:     { border: 'border-error',     to: 'to-error/30',     emphasis: 'ring-1 ring-error/40' }
 }
 
 /** -------- Data Fetch -------- */
@@ -57,10 +64,10 @@ const {
   status: fetchStatus,
   error: fetchError
 } = await useFetch<ResellerApiRow[]>(
-    'https://dummyjson.com/c/764f-c448-4151-8ac2',
+    () => props.endpoint,
     {
       query: { signature: debouncedSearchTerm }, // server-side search by signature
-      watch: [debouncedSearchTerm],
+      watch: [debouncedSearchTerm, () => props.endpoint],
       lazy: true,
       default: () => []
     }
@@ -85,7 +92,7 @@ function selectReseller(item: UiCommandItem) {
 
 /** Map API rows → palette items */
 const commandItems = computed<UiCommandItem[]>(() => {
-  const rows = resellerRows.value ?? []
+  const rows = (resellerRows.value ?? []).filter(r => !!r.avatar?.trim())
   return rows.map((r) => {
     const it: UiCommandItem = {
       id: r.signature,              // stable key
@@ -196,13 +203,13 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       </UDrawer>
     </header>
 
-    <div
-        v-if="selectedReseller"
-        class="mt-2 flex gap-1 rounded-md border p-1 bg-gradient-to-br shadow-md"
-        :class="[colorClasses[color].border, colorClasses[color].to, colorClasses[color].shadow]"
-    >
+      <div
+          v-if="selectedReseller"
+          class="mt-2 flex gap-1 rounded-md border p-1 bg-gradient-to-br shadow-md"
+        :class="[colorClasses[color].border, colorClasses[color].to, colorClasses[color].emphasis]"
+      >
       <div class="max-w-16">
-        <Avatar :animated="true" />
+        <Avatar :animated="true" :img="selectedReseller.avatar" />
       </div>
 
       <div class="w-full leading-tight min-w-0">

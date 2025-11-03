@@ -1,5 +1,6 @@
 // ~/composables/useApi.ts
 import { ofetch, type FetchContext, type FetchOptions } from 'ofetch'
+import { useRuntimeConfig, useCookie } from '#imports'
 
 export type NormalizedError = {
     status?: number

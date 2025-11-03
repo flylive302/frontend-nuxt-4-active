@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   frameName: 'frames/5',
   img: '/avatars/placeholder',
-  top: 50,
+  top: 55,
   left: 50,
   frameGirth: 70,
   animated: false,

@@ -1,12 +1,12 @@
 <!-- ~/components/from-conversion-request.vue -->
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { onBeforeUnmount, reactive, ref, watch, toRef } from 'vue'
 import { z } from 'zod'
 import { useSubmitRequest } from '~/composables/useSubmitRequest'
 import { toFormData } from '~/utils/toFormData'
 import type { FormSubmitEvent } from '@nuxt/ui'
 
-type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'danger'
+type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
 
 const props = withDefaults(defineProps<{
   color?: Colors
@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{
   apiUrl: '/form',
   disabled: false
 })
+const color = toRef(props, 'color')
 
 const emit = defineEmits<{
   (e: 'submitted', payload: { data: SubmitData; response: unknown }): void
@@ -46,6 +47,7 @@ const state = reactive<Schema>({
   message: undefined,
   proofs: []
 })
+const initialState: Schema = { number: 500, message: undefined, proofs: [] }
 
 const formRef = ref<{ validate: () => unknown; clear: () => void } | null>(null)
 const showSuccess = ref(false)
@@ -62,6 +64,16 @@ watch(state, () => {
 /** -------- Submit integration -------- */
 const { submit, abort, isSubmitting, mapError } = useSubmitRequest()
 const toast = useToast()
+
+const cardVariants: Record<Colors, { border: string; shadow: string }> = {
+  primary: { border: 'border-primary', shadow: 'ring-1 ring-primary/40' },
+  secondary: { border: 'border-secondary', shadow: 'ring-1 ring-secondary/40' },
+  tertiary: { border: 'border-tertiary', shadow: 'ring-1 ring-tertiary/40' },
+  success: { border: 'border-success', shadow: 'ring-1 ring-success/40' },
+  info: { border: 'border-info', shadow: 'ring-1 ring-info/40' },
+  warning: { border: 'border-warning', shadow: 'ring-1 ring-warning/40' },
+  error: { border: 'border-error', shadow: 'ring-1 ring-error/40' }
+}
 
 async function onSubmit(e: FormSubmitEvent<Schema>) {
   if (props.disabled || isSubmitting.value) return
@@ -87,13 +99,11 @@ async function onSubmit(e: FormSubmitEvent<Schema>) {
     toast.add({ title: 'Success', description: 'Your request was submitted.', color: 'success' })
 
     // Reset form state
-    state.number = 500
-    state.message = undefined
-    state.proofs = []
+    Object.assign(state, initialState, { proofs: [] })
     formRef.value?.clear()
 
     showSuccess.value = true
-    emit('submitted', { data: { number: 500, message: undefined, proofs: [] }, response })
+    emit('submitted', { data: e.data, response })
   } catch (error: unknown) {
     const n = mapError(error)
     formError.value = n.message
@@ -103,7 +113,7 @@ async function onSubmit(e: FormSubmitEvent<Schema>) {
       for (const [k, v] of Object.entries(n.fieldErrors)) serverFieldErrors[k] = v
     }
 
-    toast.add({ title: 'Error', description: n.message, color: 'danger' })
+    toast.add({ title: 'Error', description: n.message, color: 'error' })
     emit('error', { message: n.message, details: n })
   }
 }
@@ -133,7 +143,7 @@ onBeforeUnmount(() => abort())
           :schema="schema"
           :state="state"
           :ui="{ wrapper: 'space-y-4' }"
-          :class="`border-${color} shadow-${color}/50`"
+          :class="[cardVariants[color].border, cardVariants[color].shadow]"
           class="space-y-4 rounded-lg shadow-lg border-2 p-3"
           @submit="onSubmit"
       >

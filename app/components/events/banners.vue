@@ -79,6 +79,13 @@ const props = withDefaults(defineProps<Props>(), {
 // Compute once per prop change; auto-unwrapped in template
 const config = computed(() => TYPE_CONFIG[props.type])
 
+const leftAvatarBindings = computed(() =>
+  props.lAvatar ? { img: props.lAvatar } : {}
+)
+const rightAvatarBindings = computed(() =>
+  props.rAvatar ? { img: props.rAvatar } : {}
+)
+
 // a11y: link heading to article
 const headingId = `duel-card-title-${props.type}`
 </script>
@@ -125,9 +132,10 @@ const headingId = `duel-card-title-${props.type}`
         <figure class="col-span-3 grid grid-cols-2">
           <Avatar
               :animated="true"
-              :frame_girth="props.lFrameGirth"
+              :frame-girth="props.lFrameGirth"
               :top="props.lTop"
-              :frame_name="props.lFrameName"
+              :frame-name="props.lFrameName"
+              v-bind="leftAvatarBindings"
               class="col-span-1"
           />
           <figcaption class="text-xs font-bold text-shadow-md w-full col-span-1" :class="config.textShadow">
@@ -151,9 +159,10 @@ const headingId = `duel-card-title-${props.type}`
           </figcaption>
           <Avatar
               :animated="true"
-              :frame_girth="props.rFrameGirth"
+              :frame-girth="props.rFrameGirth"
               :top="props.rTop"
-              :frame_name="props.rFrameName"
+              :frame-name="props.rFrameName"
+              v-bind="rightAvatarBindings"
               class="col-span-1"
           />
         </figure>

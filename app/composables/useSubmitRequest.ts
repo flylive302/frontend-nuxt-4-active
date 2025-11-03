@@ -1,13 +1,28 @@
 // ~/composables/useSubmitRequest.ts
+import { ref } from '#imports'
 import type { NormalizedError } from './useApi'
+import { useApi } from '#imports'
 
 type SubmitOptions = {
     endpoint: string
     method?: 'POST' | 'PUT' | 'PATCH'
     body: FormData | Record<string, unknown>
-    asFormData?: boolean // informational only; header selection happens below
+    asFormData?: boolean // forces multipart encoding even if body is a plain object
     retryPost?: boolean  // default false
     timeoutMs?: number   // default 10_000 (client default)
+}
+
+function toFormData(payload: FormData | Record<string, unknown>): FormData {
+    if (payload instanceof FormData) return payload
+    const fd = new FormData()
+    for (const [key, value] of Object.entries(payload)) {
+        if (Array.isArray(value)) {
+            value.forEach((entry) => fd.append(`${key}[]`, entry as any))
+        } else if (value != null) {
+            fd.append(key, value as any)
+        }
+    }
+    return fd
 }
 
 export function useSubmitRequest() {
@@ -24,16 +39,20 @@ export function useSubmitRequest() {
             controller = new AbortController()
 
             const headers = new Headers()
-            // Let the browser set multipart boundary for FormData (do NOT set Content-Type)
-            const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData
-            if (!isForm) headers.set('Content-Type', 'application/json')
+            const shouldUseFormData =
+                opts.asFormData ?? (typeof FormData !== 'undefined' && opts.body instanceof FormData)
+            const payload = shouldUseFormData
+                ? toFormData(opts.body)
+                : JSON.stringify(opts.body ?? {})
+            if (!shouldUseFormData) headers.set('Content-Type', 'application/json')
 
             const request = () =>
                 api<T>(opts.endpoint, {
                     method: opts.method ?? 'POST',
-                    body: isForm ? (opts.body as FormData) : JSON.stringify(opts.body ?? {}),
+                    body: shouldUseFormData ? (payload as FormData) : payload,
                     signal: controller!.signal,
-                    headers
+                    headers,
+                    timeout: opts.timeoutMs
                 })
 
             try {
@@ -45,11 +64,16 @@ export function useSubmitRequest() {
             }
         } finally {
             isSubmitting.value = false
+            controller = null
         }
     }
 
     function abort() {
-        controller?.abort()
+        if (controller) {
+            controller.abort()
+            controller = null
+            isSubmitting.value = false
+        }
     }
 
     function mapError(error: unknown): NormalizedError {

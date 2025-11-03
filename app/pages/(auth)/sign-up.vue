@@ -82,7 +82,7 @@ const genderOptions: SelectItem[] = [
   { label: 'Prefer not to say', value: 'not_specified', icon: 'i-lucide-help-circle' },
 ]
 const selectedIcon = computed(() =>
-    genderOptions.find(o => o.value === state.gender)?.icon ?? 'i-lucide-venus-and-mars'
+    genderOptions.find(o => o?.value === state.gender)?.icon ?? 'i-lucide-venus-and-mars'
 )
 
 // ---------- compose schemas ----------

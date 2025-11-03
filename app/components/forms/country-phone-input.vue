@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 import type { Country, PhoneModel } from '~/composables/usePhoneSchema'
-import { usePhoneSchema } from '~/composables/usePhoneSchema'
 
 type Emits = {
   (e: 'update:model', v: PhoneModel): void
@@ -22,8 +21,6 @@ const model = reactive<PhoneModel>({
   phone: '',
 })
 
-const phoneSchema = usePhoneSchema(selectedCountry)
-const isValid = computed(() => phoneSchema.value.safeParse(model).success)
 watch(model, () => emit('update:model', { ...model }), { deep: true })
 
 const phoneInputRef = ref<{ inputRef: HTMLInputElement | null } | null>(null)
@@ -35,10 +32,10 @@ async function onCountryChange(country: Country | undefined) {
   model.countryCode = country.code
   model.dialCode = country.dial_code
   model.phone = ''
-  if (!showPhone.value) {
-    showPhone.value = true
-    await nextTick()
-    setTimeout(() => phoneInputRef.value?.inputRef?.focus(), 50)
+  showPhone.value = true
+  await nextTick()
+  if (import.meta.client) {
+    requestAnimationFrame(() => phoneInputRef.value?.inputRef?.focus())
   }
 }
 
@@ -95,7 +92,7 @@ function handlePaste(event: ClipboardEvent) {
       >
         <div class="flex items-center gap-1">
           <p class="text-base flex items-center font-semibold border border-neutral-700 h-9 rounded-md px-1 bg-neutral-950">
-            <icon name="i-lucide-phone"/> {{ selectedCountry.dial_code }}
+            <UIcon name="i-lucide-phone" class="mr-1"/> {{ selectedCountry.dial_code }}
           </p>
           <UInput
               ref="phoneInputRef"

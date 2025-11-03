@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onBeforeUnmount, watch, toRef } from 'vue'
 import { useInfiniteScroll } from '@vueuse/core'
 
 defineOptions({ name: 'InfiniteScroll' })
@@ -34,6 +34,9 @@ const props = withDefaults(defineProps<{
   minItemSize: 96
 })
 
+const endpoint = toRef(props, 'endpoint')
+const extraQuery = toRef(props, 'extraQuery')
+
 const isList = computed(() => props.view === 'list')
 const cols = computed(() => (isList.value ? 1 : props.cols))
 const aspect = computed(() => (isList.value ? props.aspectList : props.aspectGrid))
@@ -56,8 +59,8 @@ async function fetchPage(): Promise<void> {
   aborter = new AbortController()
 
   try {
-    const res = await $fetch<ApiResponse<AnyItem>>(props.endpoint, {
-      query: { page: page.value, perPage: props.perPage, ...props.extraQuery },
+    const res = await $fetch<ApiResponse<AnyItem>>(endpoint.value, {
+      query: { page: page.value, perPage: props.perPage, ...extraQuery.value },
       signal: aborter.signal
     })
 
@@ -107,9 +110,9 @@ useInfiniteScroll(
 )
 
 watch(
-    [cols, () => props.endpoint, () => JSON.stringify(props.extraQuery)],
+    [cols, endpoint, extraQuery],
     () => { void reload() }, // fire-and-forget; guards already prevent overlap
-    { flush: 'post' }
+    { flush: 'post', deep: true }
 )
 
 onBeforeUnmount(() => aborter?.abort())

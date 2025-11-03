@@ -1,3 +1,16 @@
+const accentButtonColors = ['primary', 'secondary', 'tertiary'] as const
+const buttonVariants = ['solid', 'outline', 'soft', 'subtle', 'ghost', 'link'] as const
+
+const compoundButtonVariants = accentButtonColors.flatMap(color =>
+    buttonVariants.map(variant => ({
+        color,
+        variant,
+        class: color === 'primary' && variant === 'solid'
+            ? 'text-white border border-white/40 shadow-lg shadow-primary/50'
+            : 'text-white'
+    }))
+)
+
 export default defineAppConfig({
     ui: {
         colors: {
@@ -11,98 +24,7 @@ export default defineAppConfig({
             neutral: 'neutral'
         },
         button: {
-            compoundVariants: [
-                {
-                    color: 'primary',
-                    variant: 'solid',
-                    class: 'text-white border border-white/40 shadow-lg shadow-primary/50'
-                },
-                {
-                    color: 'primary',
-                    variant: 'outline',
-                    class: 'text-white'
-                },
-                {
-                    color: 'primary',
-                    variant: 'soft',
-                    class: 'text-white'
-                },
-                {
-                    color: 'primary',
-                    variant: 'subtle',
-                    class: 'text-white'
-                },
-                {
-                    color: 'primary',
-                    variant: 'ghost',
-                    class: 'text-white'
-                },
-                {
-                    color: 'primary',
-                    variant: 'link',
-                    class: 'text-white'
-                },
-                {
-                    color: 'secondary',
-                    variant: 'solid',
-                    class: 'text-white'
-                },
-                {
-                    color: 'secondary',
-                    variant: 'outline',
-                    class: 'text-white'
-                },
-                {
-                    color: 'secondary',
-                    variant: 'soft',
-                    class: 'text-white'
-                },
-                {
-                    color: 'secondary',
-                    variant: 'subtle',
-                    class: 'text-white'
-                },
-                {
-                    color: 'secondary',
-                    variant: 'ghost',
-                    class: 'text-white'
-                },
-                {
-                    color: 'secondary',
-                    variant: 'link',
-                    class: 'text-white'
-                },
-                {
-                    color: 'tertiary',
-                    variant: 'solid',
-                    class: 'text-white'
-                },
-                {
-                    color: 'tertiary',
-                    variant: 'outline',
-                    class: 'text-white'
-                },
-                {
-                    color: 'tertiary',
-                    variant: 'soft',
-                    class: 'text-white'
-                },
-                {
-                    color: 'tertiary',
-                    variant: 'subtle',
-                    class: 'text-white'
-                },
-                {
-                    color: 'tertiary',
-                    variant: 'ghost',
-                    class: 'text-white'
-                },
-                {
-                    color: 'tertiary',
-                    variant: 'link',
-                    class: 'text-white'
-                }
-            ]
+            compoundVariants: compoundButtonVariants
         }
     }
 })

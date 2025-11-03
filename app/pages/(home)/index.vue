@@ -1,12 +1,6 @@
 <script setup lang="ts">
-const items = [
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp'
-]
+const ROOM_CARD_IMAGE = 'siteAssets/room/room-card-top.webp'
+const roomCarouselItems = Array.from({ length: 6 }, () => ROOM_CARD_IMAGE)
 
 // ---- Types
 type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
@@ -29,95 +23,61 @@ interface Banner {
   text?: string
 }
 
+const createBanner = (
+  type: CardType,
+  config: Partial<Omit<Banner, 'type'>> = {}
+): Banner => ({
+  type,
+  lFrameName: '',
+  lAvatar: '',
+  lFrameGirth: 70,
+  lTop: 50,
+  rFrameName: '',
+  rAvatar: '',
+  rFrameGirth: 70,
+  rTop: 50,
+  ...config
+})
+
 const banners: Banner[] = [
-  {
-    type: 'cp',
+  createBanner('cp', {
     lUserName: 'Noah',
-    lFrameName: '',
-    lAvatar: '',
-    lFrameGirth: 70,
-    lTop: 50,
-
     rUserName: 'Luna',
-    rFrameName: '',
-    rAvatar: '',
-    rFrameGirth: 70,
-    rTop: 50,
-
     textClass: 'pl-5',
     text: 'Weekly Cp'
-  },
-  {
-    type: 'country',
+  }),
+  createBanner('country', {
     lUserName: 'Ali',
     lFrameName: 'frames/9',
-    lAvatar: '',
-    lFrameGirth: 70,
-    lTop: 50,
-
     rUserName: 'Nora',
     rFrameName: 'frames/9',
-    rAvatar: '',
-    rFrameGirth: 70,
-    rTop: 50,
-
     textClass: 'text-base',
     text: 'Country Event'
-  },
-  {
-    type: 'recharge_tycoon',
-
+  }),
+  createBanner('recharge_tycoon', {
     lUserName: 'Darwaish',
     lFrameName: 'frames/6',
-    lAvatar: '',
-    lFrameGirth: 70,
-    lTop: 50,
-
     rUserName: 'Hori',
     rFrameName: 'frames/6',
-    rAvatar: '',
-    rFrameGirth: 70,
-    rTop: 50,
-
     textClass: 'text-sm',
     text: 'Recharge tycoon'
-  },
-  {
-    type: 'supreme_recharge',
-
+  }),
+  createBanner('supreme_recharge', {
     lUserName: 'Aria',
     lFrameName: 'frames/12',
-    lAvatar: '',
-    lFrameGirth: 70,
-    lTop: 50,
-
     rUserName: 'Junie',
     rFrameName: 'frames/12',
-    rAvatar: '',
-    rFrameGirth: 70,
-    rTop: 50,
-
     textClass: 'text-base',
     text: 'Supreme'
-  },
-  {
-    type: 'pretty_id',
-
+  }),
+  createBanner('pretty_id', {
     lUserName: 'Mina',
     lFrameName: 'frames/16',
-    lAvatar: '',
-    lFrameGirth: 70,
-    lTop: 50,
-
     rUserName: 'Aniya',
     rFrameName: 'frames/16',
-    rAvatar: '',
-    rFrameGirth: 70,
-    rTop: 50,
-
     textClass: 'text-sm',
     text: 'Pretty ID 💖'
-  },
+  })
 ]
 </script>
 
@@ -130,14 +90,14 @@ const banners: Banner[] = [
     <div class="h-14"/>
 
     <UCarousel
-        class-names
         :autoplay="{ delay: 4000 }"
         :items="banners"
+        class-names
         :ui="{
-          container: 'pt-4',
-          item: 'basis-1/1 transition duration-500 ease-in-out [&:not(.is-snapped)]:scale-50'
+          container: 'pt-3 px-3',
+          item: 'basis-1/1 transition duration-800 ease-in-out scale-10 [&.is-snapped]:scale-100'
         }"
-        class="mx-3 mb-5"
+        class="mb-4"
     >
       <template #default="{ item }">
         <EventsBanners
@@ -158,11 +118,11 @@ const banners: Banner[] = [
 
     <UCarousel
         v-slot="{ item }"
-        class-names
-        :items="items"
+        :items="roomCarouselItems"
         :autoplay="{ delay: 3000 }"
+        class-names
         :ui="{
-          item: 'basis-2/3 transition duration-300 ease-in-out [&:not(.is-snapped)]:scale-90'
+          item: 'basis-2/3 transition duration-300 ease-in-out scale-90 [&.is-snapped]:scale-100'
         }"
         class="mb-6"
     >
