@@ -23,14 +23,16 @@ const items = [
     <NavAlt current="My Profile" sub-menu-to="/" />
 
     <AltHero class="z-20">
-      <div class="px-3 py-9 flex bg-gradient-to-br to-primary/30">
-        <Avatar :animated="true" class="w-24" />
-        <div class="px-3">
-          <h1 class="text-lg font-bold">User Name</h1>
-          <ProfileBadge />
-          <div class="flex gap-2">
-            <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-            <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="1"/>
+      <div class="flex flex-col justify-center min-h-[50vw] bg-gradient-to-br to-primary/30">
+        <div class="flex px-3">
+          <Avatar :animated="true" class="w-24" />
+          <div class="px-3">
+            <h1 class="text-lg font-bold">User Name</h1>
+            <ProfileBadge />
+            <div class="flex gap-2">
+              <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
+              <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="1"/>
+            </div>
           </div>
         </div>
       </div>
@@ -38,7 +40,7 @@ const items = [
 
     <UserStats class="mt-1"/>
 
-    <SectionTitle class="my-2 mx-3">Agency</SectionTitle>
+    <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
     <div class="mx-3 grid grid-cols-12 bg-gradient-to-br to-primary/30 rounded-md border border-primary">
       <div class="col-span-3">
         <Avatar :animated="true" />

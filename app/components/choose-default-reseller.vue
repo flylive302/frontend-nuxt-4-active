@@ -206,10 +206,11 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       <div
           v-if="selectedReseller"
           class="mt-2 flex gap-1 rounded-md border p-1 bg-gradient-to-br shadow-md"
-        :class="[colorClasses[color].border, colorClasses[color].to, colorClasses[color].emphasis]"
+          :class="[colorClasses[color].border, colorClasses[color].to, colorClasses[color].emphasis]"
       >
       <div class="max-w-16">
-        <Avatar :animated="true" :img="selectedReseller.avatar" />
+        <!-- :img="selectedReseller.avatar" -->
+        <Avatar :animated="true" />
       </div>
 
       <div class="w-full leading-tight min-w-0">
