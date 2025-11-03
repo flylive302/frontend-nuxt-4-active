@@ -2,6 +2,8 @@
 import {z} from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 
+definePageMeta({ layout: 'alt' })
+
 const schema = z.object({
   diamonds: z.coerce.number('Invalid diamonds').int('Must be a whole number').nonnegative('Must be non-negative'),
 })
@@ -20,8 +22,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <div>
-    <NavAlt color="secondary" current="Diamonds" back-to="/profile" links-to="/wallet/purchase-coins" links="Coins"/>
+  <main>
+
+    <NavAlt color="secondary" back-to="/profile" :linked="true" first-link="/wallet/purchase-coins" second-link="/wallet/exchange-diamonds">
+      <template #first-link-text>Coins</template>
+      <template #second-link-text>Diamonds</template>
+    </NavAlt>
     <AltHero class="z-10" image-src="/siteAssets/alt-hero/secondary.webp">
       <div class="flex p-2 bg-gradient-to-br to-secondary/30">
         <div class="flex flex-col justify-end items-center">
@@ -76,7 +82,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       <ChooseDefaultReseller color="secondary" />
       <FromConversionRequest color="secondary" class="mb-18 mt-4" />
     </section>
-  </div>
+  </main>
 </template>
 
 <style scoped>

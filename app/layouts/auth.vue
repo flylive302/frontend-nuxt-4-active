@@ -1,7 +1,3 @@
-<script setup lang="ts">
-
-</script>
-
 <template>
   <div>
     <UApp>
@@ -41,14 +37,8 @@
 
         <USeparator color="primary" class="my-4" label="OR" />
 
-        <main>
-          <slot />
-        </main>
+        <slot />
       </section>
     </UApp>
   </div>
 </template>
-
-<style scoped>
-
-</style>

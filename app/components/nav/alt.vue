@@ -1,85 +1,97 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
 import { computed } from 'vue'
+import { useRoute } from '#imports'
 
-type colors = "primary" | "secondary" | "tertiary" | "success" | "info" | "warning" | "danger";
+type NavColor = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
 
 const props = withDefaults(defineProps<{
-  color?: colors,
+  color?: NavColor,
   backTo?: string,
   subMenuTo?: string | undefined,
-  current?: string,
-  linksTo?: string | undefined,
-  links?: string | undefined,
+  firstLink?: string | undefined,
+  secondLink?: string | undefined,
+  linked?: boolean,
 }>(), {
   color: 'primary',
   backTo: '/',
   subMenuTo: undefined,
-  current: 'Page Name',
-  linksTo: undefined,
-  links: "Page Name 2",
+  firstLink: '/wallet/purchase-coins',
+  secondLink: '/wallet/exchange-diamonds',
+  linked: false,
 })
-const route = useRoute();
-const variants = computed(() => {
-  const isActive = props.linksTo && route.path === props.linksTo
-  return {
-    current: isActive ? 'link' : 'subtle',
-    link: isActive ? 'subtle' : 'link'
-  }
-});
+const route = useRoute()
+
+const gradientTargets: Record<NavColor, string> = {
+  primary: 'to-primary/80',
+  secondary: 'to-secondary/80',
+  tertiary: 'to-tertiary/80',
+  success: 'to-success/80',
+  info: 'to-info/80',
+  warning: 'to-warning/80',
+  error: 'to-error/80',
+}
+
+const toGradient = computed(() => gradientTargets[props.color])
 </script>
 <template>
   <header
-      aria-label="fly-live-alt-pages-header"
-      class="fixed w-full z-50 top-0"
+    aria-label="fly-live-alt-pages-header"
+    class="fixed w-full z-50 top-0"
   >
     <BgGlass
-        frost-blur-radius="blur(4px)"
-        :noise-frequency="0.009"
-        :noise-strength="10"
-        rounded="rounded-none"
-        class="grid grid-cols-8 border-b border-white/50"
+      frost-blur-radius="blur(4px)"
+      :noise-frequency="0.009"
+      :noise-strength="10"
+      rounded="rounded-none"
+      class="grid grid-cols-8 border-b border-white/50"
     >
       <UButton
-          aria-label="back-navigation-link"
-          icon="i-lucide-chevron-left"
-          size="md"
-          variant="subtle"
-          :color="color"
-          :to="backTo"
-          class="w-full justify-center rounded-none"
+        aria-label="back-navigation-link"
+        icon="i-lucide-chevron-left"
+        size="md"
+        variant="ghost"
+        :color="color"
+        :to="backTo"
+        class="w-full justify-center rounded-none"
       />
 
-      <div class="col-span-6 flex gap-2">
+      <p v-if="!linked" class="col-span-6 flex justify-center items-center text-base font-semibold">
+        <slot />
+      </p>
+
+      <div v-else class="col-span-6 flex gap-2">
         <UButton
-            aria-label="current-page-link"
-            size="md"
-            :variant="variants.current"
-            :color="color"
-            class="w-full justify-center rounded-none"
+          aria-label="fist-page-link"
+          size="md"
+          :color="color"
+          variant="link"
+          :to="firstLink"
+          class="w-full justify-center rounded-none bg-gradient-to-br"
+          :class="route.path === firstLink ? toGradient : ''"
         >
-          {{ current }}
+          <slot name="first-link-text" />
         </UButton>
         <UButton
-            v-if="linksTo !== undefined"
-            aria-label="Notifications"
-            size="md"
-            :variant="variants.link"
-            :color="color"
-            :to="linksTo"
-            class="w-full justify-center rounded-none"
+          aria-label="second page link"
+          size="md"
+          variant="link"
+          :color="color"
+          :to="secondLink"
+          class="w-full justify-center rounded-none bg-gradient-to-br"
+          :class="route.path === secondLink ? toGradient : ''"
         >
-          {{ links }}
+          <slot name="second-link-text" />
         </UButton>
       </div>
       <UButton
-          v-if="subMenuTo !== undefined"
-          aria-label="Notifications"
-          icon="i-lucide-menu"
-          size="md"
-          :color="color"
-          variant="soft"
-          class="w-full justify-center rounded-none"
+        v-if="subMenuTo !== undefined"
+        aria-label="Notifications"
+        icon="i-lucide-menu"
+        size="md"
+        :color="color"
+        :to="subMenuTo"
+        variant="ghost"
+        class="w-full justify-center rounded-none"
       />
     </BgGlass>
   </header>

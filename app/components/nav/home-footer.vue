@@ -12,6 +12,7 @@
     >
       <div class="grid grid-cols-4 items-center gap-8 px-2 touch-manipulation select-none">
         <UButton
+            to="/"
             aria-label="Home"
             icon="i-lucide-house"
             size="xl"

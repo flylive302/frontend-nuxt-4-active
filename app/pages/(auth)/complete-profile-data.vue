@@ -73,7 +73,7 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
 </script>
 
 <template>
-  <div>
+  <main>
     <UForm :schema="formSchema" :state="state" class="space-y-3" @submit="onSubmit">
       <UFormField label="Name" name="name" required>
         <UInput v-model="state.name" class="w-full" size="lg" icon="i-lucide-user-pen" placeholder="Enter your full name" />
@@ -115,5 +115,5 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
         Submit
       </UButton>
     </UForm>
-  </div>
+  </main>
 </template>

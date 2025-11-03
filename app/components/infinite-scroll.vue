@@ -1,21 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, watch, toRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import { useInfiniteScroll } from '@vueuse/core'
 
 defineOptions({ name: 'InfiniteScroll' })
-// Generic item shape; needs an id
-type Id = string | number
-type AnyItem = { id: Id } & Record<string, unknown>
 
-// API helpers
-type ApiMeta = { page: number; perPage: number; total: number }
-type Paginated<T> = { data: T[]; meta?: ApiMeta }
-type ApiResponse<T> = Paginated<T> | T[]
-const isPaginated = <T,>(r: ApiResponse<T>): r is Paginated<T> =>
-    !Array.isArray(r) && 'data' in r
+type Identifier = string | number
+
+export interface InfiniteScrollItem {
+  id: Identifier
+  [key: string]: unknown
+}
+
+interface PaginationMeta {
+  page: number
+  perPage: number
+  total?: number
+}
+
+type FetchPayload<Item extends InfiniteScrollItem> = { data: Item[]; meta?: PaginationMeta } | Item[]
+
+interface FetchContext {
+  endpoint: string
+  page: number
+  perPage: number
+  query: Record<string, unknown>
+  signal: AbortSignal
+}
+
+type Fetcher<Item extends InfiniteScrollItem> = (context: FetchContext) => Promise<FetchPayload<Item>>
 
 const props = withDefaults(defineProps<{
   endpoint?: string
+  fetcher?: Fetcher<InfiniteScrollItem>
   perPage?: number
   view?: 'grid' | 'list'
   cols?: 1 | 2 | 3 | 4
@@ -23,138 +39,265 @@ const props = withDefaults(defineProps<{
   aspectList?: string
   extraQuery?: Record<string, unknown>
   minItemSize?: number
+  loadDistance?: number
+  loadInterval?: number
+  initialPage?: number
 }>(), {
   endpoint: 'https://dummyjson.com/c/0188-d62d-4dd7-9ad2',
+  fetcher: undefined,
   perPage: 10,
   view: 'grid',
   cols: 2,
   aspectGrid: 'aspect-[16/9]',
   aspectList: 'aspect-[3/4]',
   extraQuery: () => ({}),
-  minItemSize: 96
+  minItemSize: 96,
+  loadDistance: 600,
+  loadInterval: 150,
+  initialPage: 1
 })
 
-const endpoint = toRef(props, 'endpoint')
-const extraQuery = toRef(props, 'extraQuery')
+const emit = defineEmits<{
+  (event: 'loaded', payload: { page: number; items: InfiniteScrollItem[] }): void
+  (event: 'error', error: unknown): void
+}>()
 
-const isList = computed(() => props.view === 'list')
-const cols = computed(() => (isList.value ? 1 : props.cols))
-const aspect = computed(() => (isList.value ? props.aspectList : props.aspectGrid))
-const gridClass = computed(() =>
-    ({ 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' } as const)[cols.value]
+const endpointRef = toRef(props, 'endpoint')
+const extraQueryRef = toRef(props, 'extraQuery')
+const perPageRef = toRef(props, 'perPage')
+
+const isListView = computed(() => props.view === 'list')
+const columnCount = computed(() => (isListView.value ? 1 : props.cols))
+const aspectRatio = computed(() => (isListView.value ? props.aspectList : props.aspectGrid))
+const gridColumnsClass = computed(() =>
+  ({ 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' } as const)[columnCount.value]
 )
 
-const items = ref<AnyItem[]>([])
-const page = ref(1)
-const loading = ref(false)
-const canLoadMore = ref(true)
+const items = ref<InfiniteScrollItem[]>([])
+const currentPage = ref(props.initialPage)
+const isLoading = ref(false)
+const hasMore = ref(true)
+const fetchError = ref<unknown | null>(null)
+const shouldReactToPropChanges = ref(false)
 
-let aborter: AbortController | null = null
+interface GridRow {
+  __rowKey: number
+  cells: InfiniteScrollItem[]
+}
 
-async function fetchPage(): Promise<void> {
-  if (loading.value || !canLoadMore.value) return
-  loading.value = true
+function buildRows(source: InfiniteScrollItem[], columns: number): GridRow[] {
+  if (columns <= 1) {
+    return source.map((item, rowIndex) => ({ __rowKey: rowIndex, cells: [item] }))
+  }
 
-  aborter?.abort()
-  aborter = new AbortController()
+  const chunkedRows: GridRow[] = []
+  source.forEach((item, index) => {
+    const rowIndex = Math.floor(index / columns)
+    if (chunkedRows[rowIndex]) {
+      chunkedRows[rowIndex]!.cells.push(item)
+    } else {
+      chunkedRows[rowIndex] = { __rowKey: rowIndex, cells: [item] }
+    }
+  })
+  return chunkedRows
+}
+
+const rows = computed(() => buildRows(items.value, columnCount.value))
+
+function resolveThumbnail(item: InfiniteScrollItem): string | undefined {
+  const candidate = item.thumbnail
+  return typeof candidate === 'string' ? candidate : undefined
+}
+
+let abortController: AbortController | null = null
+let infiniteScrollController: { reset: () => void } | null = null
+
+async function defaultFetcher(context: FetchContext): Promise<FetchPayload<InfiniteScrollItem>> {
+  return await $fetch<FetchPayload<InfiniteScrollItem>>(context.endpoint, {
+    query: { page: context.page, perPage: context.perPage, ...context.query },
+    signal: context.signal
+  })
+}
+
+function evaluateHasMore(
+  response: FetchPayload<InfiniteScrollItem>,
+  fetchedItems: InfiniteScrollItem[],
+  metaFallback: { page: number; perPage: number }
+): boolean {
+  if (!Array.isArray(response) && response.meta) {
+    const { page, perPage, total } = response.meta
+    if (typeof total === 'number') {
+      return page * perPage < total
+    }
+    return fetchedItems.length >= perPage
+  }
+  return fetchedItems.length >= metaFallback.perPage
+}
+
+async function loadNextPage(): Promise<void> {
+  if (isLoading.value || !hasMore.value) return
+
+  const hasFetchSource = Boolean(props.fetcher) || endpointRef.value.length > 0
+  if (!hasFetchSource) {
+    console.warn('InfiniteScroll: provide either an endpoint or a fetcher.')
+    hasMore.value = false
+    return
+  }
+
+  isLoading.value = true
+  fetchError.value = null
+
+  abortController?.abort()
+  abortController = new AbortController()
+
+  const fetcher = props.fetcher ?? defaultFetcher
 
   try {
-    const res = await $fetch<ApiResponse<AnyItem>>(endpoint.value, {
-      query: { page: page.value, perPage: props.perPage, ...extraQuery.value },
-      signal: aborter.signal
+    const response = await fetcher({
+      endpoint: endpointRef.value,
+      page: currentPage.value,
+      perPage: perPageRef.value,
+      query: extraQueryRef.value,
+      signal: abortController.signal
     })
 
-    const data = isPaginated(res) ? res.data : res
-    if (data.length) items.value.push(...data)
-    page.value++
-
-    if (isPaginated(res) && res.meta) {
-      const { page: p, perPage: pp, total } = res.meta
-      canLoadMore.value = p * pp < total
-    } else {
-      canLoadMore.value = data.length >= props.perPage
+    const newItems = Array.isArray(response) ? response : response.data
+    if (newItems.length > 0) {
+      items.value.push(...newItems)
+      emit('loaded', { page: currentPage.value, items: newItems })
     }
-  } catch (err) {
-    if (!(err instanceof DOMException && err.name === 'AbortError')) {
-      canLoadMore.value = false
+
+    const metaReference = { page: currentPage.value, perPage: perPageRef.value }
+    hasMore.value = evaluateHasMore(response, newItems, metaReference)
+    currentPage.value += 1
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      hasMore.value = false
+      fetchError.value = error
+      emit('error', error)
     }
   } finally {
-    loading.value = false
+    isLoading.value = false
   }
 }
 
-type Row = { __rowKey: number; cells: AnyItem[] }
-const rows = computed<Row[]>(() => {
-  const out: Row[] = []
-  const a = items.value
-  const c = cols.value
-  for (let i = 0; i < a.length; i += c) out.push({ __rowKey: out.length, cells: a.slice(i, i + c) })
-  return out
-})
-
 function reset(): void {
-  aborter?.abort()
+  abortController?.abort()
   items.value = []
-  page.value = 1
-  canLoadMore.value = true
+  currentPage.value = props.initialPage
+  hasMore.value = true
+  fetchError.value = null
 }
+
 async function reload(): Promise<void> {
   reset()
-  await fetchPage()
+  await loadNextPage()
+  infiniteScrollController?.reset()
 }
 
-useInfiniteScroll(
-    window,
-    () => { if (canLoadMore.value) return fetchPage() },
-    { distance: 800, throttle: 100 }
-)
+onBeforeUnmount(() => abortController?.abort())
 
-watch(
-    [cols, endpoint, extraQuery],
-    () => { void reload() }, // fire-and-forget; guards already prevent overlap
-    { flush: 'post', deep: true }
-)
+if (import.meta.client) {
+  watch([endpointRef, perPageRef, () => props.fetcher, () => props.initialPage], () => {
+    if (!shouldReactToPropChanges.value) return
+    void reload()
+  })
 
-onBeforeUnmount(() => aborter?.abort())
+  watch(
+    extraQueryRef,
+    () => {
+      if (!shouldReactToPropChanges.value) return
+      void reload()
+    },
+    { deep: true }
+  )
 
-defineExpose({ reload, reset })
+  infiniteScrollController = useInfiniteScroll(
+    () => window,
+    async () => {
+      if (!hasMore.value) return
+      await loadNextPage()
+    },
+    {
+      distance: props.loadDistance,
+      interval: props.loadInterval,
+      canLoadMore: () => hasMore.value
+    }
+  )
+}
+
+onMounted(() => {
+  if (!import.meta.client) return
+  shouldReactToPropChanges.value = true
+  void loadNextPage()
+})
+
+defineExpose({
+  reload,
+  reset,
+  loadNextPage,
+  state: {
+    items,
+    isLoading,
+    hasMore,
+    error: fetchError
+  }
+})
 </script>
 
 <template>
-  <DynamicScroller
-      :items="rows"
-      key-field="__rowKey"
-      :min-item-size="minItemSize"
-      page-mode
-      class="mt-2"
-  >
-    <template #default="{ item, active }">
-      <DynamicScrollerItem
-          :item="item"
-          :active="active"
-          :size-dependencies="[cols]"
-      >
-        <div
-            class="grid gap-3"
-            :class="gridClass"
-            style="contain: content; content-visibility: auto;"
-            role="list"
+  <div :aria-busy="isLoading">
+    <DynamicScroller
+        :items="rows"
+        key-field="__rowKey"
+        :min-item-size="minItemSize"
+        page-mode
+        class="mt-2"
+    >
+      <template #default="{ item: rowGroup, active }">
+        <DynamicScrollerItem
+            :item="rowGroup"
+            :active="active"
+            :size-dependencies="[columnCount]"
         >
-          <!-- Default cell render; override via #cell slot -->
-          <template v-for="(r, idx) in item.cells" :key="r.id">
-            <slot name="cell" :cell="r" :index="idx">
-              <NuxtLink to="/" class="pb-2" role="list-item">
-                <RoomCard :image-src="(r as any).thumbnail" :class="[aspect, 'w-full']">
-                  Live / <span class="tabular-nums">{{ r.id }}</span>
-                </RoomCard>
-              </NuxtLink>
-            </slot>
-          </template>
-        </div>
-      </DynamicScrollerItem>
-    </template>
-  </DynamicScroller>
+          <div
+              class="grid gap-3"
+              :class="gridColumnsClass"
+              role="list"
+          >
+            <!-- Default cell render; override via #cell slot -->
+            <template v-for="(cellItem, cellIndex) in rowGroup.cells" :key="cellItem.id">
+              <slot
+                  name="cell"
+                  :cell="cellItem"
+                  :index="cellIndex"
+                  :columns="columnCount"
+                  :is-list="isListView"
+                  :aspect-class="aspectRatio"
+              >
+                <NuxtLink to="/" class="pb-2" role="listitem">
+                  <RoomCard :image-src="resolveThumbnail(cellItem)" :class="[aspectRatio, 'w-full']">
+                    Live / <span class="tabular-nums">{{ cellItem.id }}</span>
+                  </RoomCard>
+                </NuxtLink>
+              </slot>
+            </template>
+          </div>
+        </DynamicScrollerItem>
+      </template>
+    </DynamicScroller>
 
-  <div v-if="loading" class="py-4 text-center text-md text-white font-bold">Loading…</div>
-  <div v-else-if="!canLoadMore" class="py-6 text-center text-md text-white font-bold">You’re all caught up.</div>
+    <div v-if="fetchError" class="py-4 text-center text-md text-rose-300 font-semibold">
+      <slot name="error" :error="fetchError">Something went wrong. Please try again.</slot>
+    </div>
+    <div v-else-if="isLoading" class="py-4 text-center text-md text-white font-bold">
+      <slot name="loading">Loading…</slot>
+    </div>
+    <div v-else-if="rows.length === 0" class="py-6 text-center text-md text-white/70 font-semibold">
+      <slot name="empty">No results yet.</slot>
+    </div>
+    <div v-else-if="!hasMore" class="py-6 text-center text-md text-white font-bold">
+      <slot name="complete">You’re all caught up.</slot>
+    </div>
+  </div>
 </template>

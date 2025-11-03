@@ -88,7 +88,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
 </script>
 
 <template>
-  <div>
+  <main>
     <UForm :schema="pageSchema" :state="{ ...state, ...phone }" class="space-y-3" @submit="onSubmit">
       <!-- integrated country + phone -->
       <FormsCountryPhoneInput
@@ -107,5 +107,5 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
         Submit
       </UButton>
     </UForm>
-  </div>
+  </main>
 </template>

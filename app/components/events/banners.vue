@@ -119,7 +119,7 @@ const headingId = `duel-card-title-${props.type}`
         />
         <h2
             :id="headingId"
-            class="absolute inset-0 -mt-3 text-center text-lg font-bold text-shadow-lg"
+            class="absolute inset-0 -mt-3 text-center text-lg font-bold text-shadow-md"
             :class="config.textShadow"
         >
           <slot />

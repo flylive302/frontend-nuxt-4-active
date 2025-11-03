@@ -12,11 +12,11 @@ withDefaults(defineProps<{
 
 <template>
   <NuxtLink :to="to" class="flex w-full py-1">
-    <UButton class="text-primary" :icon="icon" size="md" variant="subtle" />
+    <UButton class="text-primary" :icon="icon" size="xl" variant="subtle" />
 
     <p class="text-base font-semibold flex-auto flex items-center pl-3">{{ txt }}</p>
 
-    <UButton class="text-primary" icon="i-lucide-chevron-right" size="md" variant="soft" />
+    <UButton class="text-primary" icon="i-lucide-chevron-right" size="xl" variant="soft" />
   </NuxtLink>
 </template>
 

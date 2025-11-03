@@ -2,9 +2,9 @@
   <header class="fixed inset-x-0 top-0 z-50">
     <BgGlass
         class="shadow-lg border-b border-white/60"
-        frost-blur-radius="blur(2px)"
+        frost-blur-radius="blur(4px)"
         :noise-frequency="0.006"
-        :noise-strength="50"
+        :noise-strength="100"
         rounded="rounded-none"
     >
       <nav class="flex items-center justify-between px-2">
@@ -14,6 +14,7 @@
         <!-- Actions -->
         <div class="flex items-center gap-1.5">
           <UButton
+              to="/discover-all-events"
               aria-label="discover-events"
               icon="i-lucide-earth"
               size="xl"

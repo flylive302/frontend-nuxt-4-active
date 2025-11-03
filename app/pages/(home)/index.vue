@@ -1,4 +1,7 @@
 <script setup lang="ts">
+
+definePageMeta({ layout: 'home' })
+
 const ROOM_CARD_IMAGE = 'siteAssets/room/room-card-top.webp'
 const roomCarouselItems = Array.from({ length: 6 }, () => ROOM_CARD_IMAGE)
 
@@ -82,13 +85,7 @@ const banners: Banner[] = [
 </script>
 
 <template>
-  <div>
-    <BackgroundDecorationsVariant1 />
-
-    <NavHome />
-
-    <div class="h-14"/>
-
+  <main>
     <UCarousel
         :autoplay="{ delay: 4000 }"
         :items="banners"
@@ -134,12 +131,5 @@ const banners: Banner[] = [
     <div class="mx-3">
       <InfiniteScroll />
     </div>
-
-    <div class="h-14"/>
-    <NavHomeFooter />
-  </div>
+  </main>
 </template>
-
-<style scoped>
-
-</style>

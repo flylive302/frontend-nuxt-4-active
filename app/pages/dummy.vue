@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useVirtualList, useInfiniteScroll } from '@vueuse/core'
 
 type Room = { id: string; thumbnail: string; active_users: number }
+interface PaginatedRooms {
+  data: Room[]
+  meta?: {
+    page: number
+    perPage: number
+    total: number
+  }
+}
+type RoomsApiResponse = PaginatedRooms | Room[]
 
 // ─────────────────────────────────────────────────────────────
 // CONFIG
@@ -20,6 +29,7 @@ const rooms = ref<Room[]>([])
 const page = ref(1)
 const loading = ref(false)
 const canLoadMore = ref(true)
+let fetchAbortController: AbortController | null = null
 
 // ─────────────────────────────────────────────────────────────
 // FETCH
@@ -27,21 +37,33 @@ const canLoadMore = ref(true)
 async function fetchPage() {
   if (loading.value || !canLoadMore.value) return
   loading.value = true
+  fetchAbortController?.abort()
+  fetchAbortController = new AbortController()
   try {
-    const res = await $fetch('https://dummyjson.com/c/3229-4208-4c0e-8571', {
+    const response = await $fetch<RoomsApiResponse>('https://dummyjson.com/c/3229-4208-4c0e-8571', {
       query: { page: page.value, perPage },
-    }) as any
+      signal: fetchAbortController.signal,
+    })
 
-    const data: Room[] = Array.isArray(res) ? res : res.data ?? []
-    rooms.value.push(...data)
-    page.value++
+    const nextRooms: Room[] = Array.isArray(response) ? response : response.data ?? []
+    rooms.value.push(...nextRooms)
+    page.value += 1
 
-    if (!Array.isArray(res) && res?.meta) {
-      const { page: p, perPage: pp, total } = res.meta
-      canLoadMore.value = p * pp < total
-    } else canLoadMore.value = data.length >= perPage
+    if (!Array.isArray(response) && response.meta) {
+      const { page: currentPage, perPage: pageSize, total } = response.meta
+      canLoadMore.value = typeof total === 'number'
+        ? currentPage * pageSize < total
+        : nextRooms.length >= perPage
+    } else {
+      canLoadMore.value = nextRooms.length >= perPage
+    }
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      canLoadMore.value = false
+    }
   } finally {
     loading.value = false
+    fetchAbortController = null
   }
 }
 
@@ -49,12 +71,12 @@ async function fetchPage() {
 // VIRTUALIZATION
 // ─────────────────────────────────────────────────────────────
 const grouped = computed(() => {
-  const arr = rooms.value
-  if (columns.value === 1) return arr.map(i => [i])
-  const out: Room[][] = []
-  for (let i = 0; i < arr.length; i += columns.value)
-    out.push(arr.slice(i, i + columns.value))
-  return out
+  const roomCollection = rooms.value
+  if (columns.value === 1) return roomCollection.map(room => [room])
+  const groupedRooms: Room[][] = []
+  for (let index = 0; index < roomCollection.length; index += columns.value)
+    groupedRooms.push(roomCollection.slice(index, index + columns.value))
+  return groupedRooms
 })
 
 // Measure responsive height once
@@ -62,6 +84,7 @@ const cardHeight = ref(0)
 onMounted(() => {
   const el = document.querySelector('.room-probe') as HTMLElement | null
   cardHeight.value = el?.offsetHeight || 240
+  void fetchPage()
 })
 const rowHeight = computed(() => cardHeight.value + gap)
 
@@ -73,20 +96,22 @@ const { list, containerProps, wrapperProps } = useVirtualList(grouped, {
 // ─────────────────────────────────────────────────────────────
 // INFINITE SCROLL
 // ─────────────────────────────────────────────────────────────
-useInfiniteScroll(
-    window,
-    async () => { if (canLoadMore.value) await fetchPage() },
-    { distance: 800 },
-)
+if (import.meta.client) {
+  useInfiniteScroll(
+      () => window,
+      async () => { if (canLoadMore.value) await fetchPage() },
+      { distance: 800, interval: 150 },
+  )
+}
 
-// first page
-fetchPage()
+onBeforeUnmount(() => fetchAbortController?.abort())
+
 </script>
 
 <template>
   <div v-bind="containerProps">
     <!-- probe to measure responsive height -->
-    <div class="room-probe invisible absolute" :class="[aspect, view === 'list' ? 'w-[90vw]' : 'w-[45vw] sm:w-[22vw]']"></div>
+    <div class="room-probe invisible absolute" :class="[aspect, view === 'list' ? 'w-[90vw]' : 'w-[45vw] sm:w-[22vw]']" />
     <div v-bind="wrapperProps" class="mt-4">
       <div
           v-for="{ index, data: row } in list"
@@ -96,16 +121,16 @@ fetchPage()
           style="contain: content; content-visibility: auto; padding-bottom: 12px;"
       >
         <NuxtLink
-            v-for="r in row"
-            :key="r.id"
+            v-for="room in row"
+            :key="room.id"
             to="/"
             class="block"
         >
           <RoomCard
-              :imageSrc="r.thumbnail"
+              :image-src="room.thumbnail"
               :class="[aspect, 'w-full']"
           >
-            Live / <span class="tabular-nums">{{ r.active_users }}</span>
+            Live / <span class="tabular-nums">{{ room.active_users }}</span>
           </RoomCard>
         </NuxtLink>
       </div>

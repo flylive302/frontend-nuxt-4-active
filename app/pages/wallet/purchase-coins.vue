@@ -1,6 +1,13 @@
+<script setup lang="ts">
+definePageMeta({ layout: 'alt' })
+</script>
+
 <template>
-  <div>
-    <NavAlt color="tertiary" current="Coins" back-to="/profile" links-to="/wallet/exchange-diamonds" links="Diamonds"/>
+  <main>
+    <NavAlt color="tertiary" back-to="/profile" :linked="true" first-link="/wallet/purchase-coins" second-link="/wallet/exchange-diamonds">
+      <template #first-link-text>Coins</template>
+      <template #second-link-text>Diamonds</template>
+    </NavAlt>
     <AltHero image-src="/siteAssets/alt-hero/tertiary.webp">
       <div class="flex p-2 bg-gradient-to-br to-tertiary/30">
         <div class="flex flex-col justify-end">
@@ -31,5 +38,5 @@
       </div>
     </section>
     <div class="h-14" />
-  </div>
+  </main>
 </template>
