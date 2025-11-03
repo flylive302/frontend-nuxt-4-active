@@ -1,4 +1,6 @@
 // server/api/detect-country.ts
+import { getRequestIP } from 'h3'
+
 export default defineEventHandler(async (event) => {
     try {
         // Get the client's IP address from the request
