@@ -35,7 +35,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         </div>
         <div class="flex-auto flex flex-col justify-between items-center">
           <NuxtImg provider="imagekit" src="/siteAssets/props/flylive-diamond.webp" class="w-full mb-2 max-w-28" />
-          <UButton color="secondary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
+          <UButton to="/wallet/transaction-history" color="secondary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
         </div>
         <div class="flex flex-col justify-end">
           <NuxtImg provider="imagekit" src="/siteAssets/props/prop-diamond.svg" format="webp" class="transform -scale-x-100 w-14" />

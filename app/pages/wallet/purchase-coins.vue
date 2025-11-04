@@ -15,7 +15,7 @@ definePageMeta({ layout: 'alt' })
         </div>
         <div class="flex-auto flex flex-col justify-between items-center">
           <NuxtImg provider="imagekit" src="/siteAssets/props/flylive_coin.webp" class="w-full mb-2" />
-          <UButton color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
+          <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
         </div>
         <div class="flex flex-col justify-end">
           <NuxtImg provider="imagekit" src="/siteAssets/props/prop-recharge.webp" class="w-20" />

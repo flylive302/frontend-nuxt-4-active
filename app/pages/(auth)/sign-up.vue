@@ -104,7 +104,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
       </UFormField>
 
       <UButton type="submit" size="xl" class="w-full justify-center" icon="i-lucide-send" :loading="processing" :disabled="!isValid">
-        Submit
+        Sign Up
       </UButton>
     </UForm>
   </main>
