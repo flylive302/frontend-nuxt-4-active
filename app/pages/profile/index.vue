@@ -32,7 +32,7 @@ definePageMeta({ layout: 'alt' })
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-crown" txt="Levels" />
-      <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
+      <NavProfileItem to="/income" icon="i-lucide-dollar-sign" txt="My Income" />
     </div>
   </main>
 </template>
