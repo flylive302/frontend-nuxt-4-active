@@ -31,7 +31,7 @@ definePageMeta({ layout: 'alt' })
     <div class="p-3 mb-12">
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
-      <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
+      <NavProfileItem to="/levels/wealth" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/" icon="i-lucide-crown" txt="Levels" />
     </div>
   </main>
