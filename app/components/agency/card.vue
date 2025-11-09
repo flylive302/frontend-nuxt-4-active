@@ -15,7 +15,7 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <NuxtLink :to="`/agency/${id}-profile`" class="rounded-lg overflow-hidden border-2 border-primary">
+  <NuxtLink :to="`/agency/${id}-agency`" class="rounded-lg overflow-hidden border-2 border-primary">
     <NuxtImg :src="avatar" class="aspect-square shadow-lg shadow-primary-950" />
     <div class="p-2 bg-gradient-to-br to-primary/90">
       <h2 class="text-base font-bold truncate">{{ name }}</h2>

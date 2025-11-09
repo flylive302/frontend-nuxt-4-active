@@ -34,7 +34,8 @@ definePageMeta({ layout: 'alt' })
       <NavProfileItem to="/levels/wealth" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
       <NavProfileItem to="/income" icon="i-lucide-dollar-sign" txt="My Income" />
-      <NavProfileItem to="/agency/list" icon="i-lucide-briefcase-business" txt="Agency List" />
+      <NavProfileItem to="/agency/list" icon="i-lucide-briefcase" txt="Agency List" />
+      <NavProfileItem to="/agency/owner" icon="i-lucide-briefcase-business" txt="My Agency" />
     </div>
   </main>
 </template>
