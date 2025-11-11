@@ -34,7 +34,7 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <div class="grid grid-cols-13 bg-gradient-to-br to-primary/40 border-2 border-primary rounded-md">
+  <div class="grid grid-cols-13 bg-gradient-to-br to-primary/40 border-2 border-primary rounded-lg overflow-hidden">
     <div class="col-span-3 flex flex-col justify-center">
       <Avatar
           :animated="animated"
@@ -69,6 +69,10 @@ withDefaults(defineProps<{
         <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" :txt="wealthBadge"/>
         <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" :txt="charmBadge"/>
       </div>
+    </div>
+    <div class="col-span-13 flex inset-shadow-sm inset-shadow-primary-950">
+      <UButton class="w-full text-white justify-center rounded-none" variant="subtle" color="success">Accept</UButton>
+      <UButton class="w-full text-white justify-center rounded-none" variant="subtle" color="error">Reject</UButton>
     </div>
   </div>
 </template>

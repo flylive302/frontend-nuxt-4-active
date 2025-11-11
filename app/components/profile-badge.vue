@@ -40,7 +40,7 @@ const variantMap: Record<Color, string> = {
         loading="lazy"
     />
     <p
-        class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-sm pr-2 pl-5 -ml-4 truncate"
+        class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1 pl-4 -ml-4 truncate"
         :class="[variantMap[color]]"
         role="note"
         :aria-label="txt"

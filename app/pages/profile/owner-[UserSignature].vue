@@ -45,7 +45,7 @@ const items = [
     <EventsProfileCard />
 
     <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
-    <div class="mx-3 grid grid-cols-12 bg-gradient-to-br to-primary/30 rounded-md border border-primary">
+    <NuxtLink to="/agency/id" class="mx-3 grid grid-cols-12 bg-gradient-to-br to-primary/30 rounded-md border border-primary">
       <div class="col-span-3">
         <Avatar :animated="true" />
       </div>
@@ -67,7 +67,7 @@ const items = [
           <p class="text-xs font-bold leading-none truncate">42 <br> Members</p>
         </div>
       </div>
-    </div>
+    </NuxtLink>
 
     <div class="p-3 mb-12">
       <SectionTitle class="mt-4">History</SectionTitle>
@@ -133,7 +133,3 @@ const items = [
 
   </main>
 </template>
-
-<style scoped>
-
-</style>

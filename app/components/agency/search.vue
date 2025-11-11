@@ -98,7 +98,7 @@ const agencyItems = computed<AgencyListItem[]>(() => {
     countryCode: agency.countryCode,
     members: agency.members,
     avatar: { src: agency.avatar },
-    onSelect: () => navigateTo(`/agency/${agency.id}-profile`)
+    onSelect: () => navigateTo(`/agency/${agency.id}`)
   }))
 })
 
