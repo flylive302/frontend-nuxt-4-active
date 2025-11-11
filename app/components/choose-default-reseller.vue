@@ -17,6 +17,11 @@ const props = withDefaults(defineProps<{
 })
 const color = toRef(props, 'color')
 
+/** -------- Emits -------- */
+const emit = defineEmits<{
+  (e: 'update:selected', value: Pick<ResellerApiRow, 'name' | 'contact' | 'avatar' | 'signature'> | null): void
+}>()
+
 /** -------- Types -------- */
 type ResellerApiRow = {
   name: string
@@ -80,12 +85,14 @@ function contactReseller(item: UiCommandItem) {
 }
 
 function selectReseller(item: UiCommandItem) {
-  selectedReseller.value = {
+  const reseller = {
     signature: item.label,
     contact: item.suffix ?? '',
     avatar: item.avatar?.src ?? '',
     name: item.name
   }
+  selectedReseller.value = reseller
+  emit('update:selected', reseller)
   isModalOpen.value = false
   toast.add({ title: `${item.label} set as default` })
 }

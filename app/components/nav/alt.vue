@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from '#imports'
+import { useRoute } from 'vue-router'
 
 type NavColor = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
 

@@ -35,5 +35,20 @@ const {data} = await useFetch<AgencyApiResponse[]>('https://dummyjson.com/c/0f16
         </Suspense>
       </div>
     </div>
+
+    <footer
+        aria-label="Primary"
+        class="fixed inset-x-2 z-50 bottom-4"
+    >
+      <BgGlass
+          class="border border-white/40 px-3 py-2"
+          frost-blur-radius="blur(4px)"
+          :noise-frequency="0.009"
+          :noise-strength="200"
+          rounded="rounded-lg"
+      >
+        <UButton size="lg" class="block text-center" to="/agency/create">Create New Agency</UButton>
+      </BgGlass>
+    </footer>
   </main>
 </template>
