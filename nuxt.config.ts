@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
     ssr: false,
     compatibilityDate: '2025-07-15',
-    devtools: { enabled: true },
+    devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
     modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt'],
     app: {
