@@ -8,11 +8,13 @@ withDefaults(defineProps<{
   badgeSrc?: string
   txt?: string
   imgAlt?: string
+  showBadge?: boolean
 }>(), {
   color: "primary",
   badgeSrc: "/siteAssets/badges/badge-profile-1.webp",
   txt: "UserSignature",
-  imgAlt: "User badge"
+  imgAlt: "User badge",
+  showBadge: true,
 })
 
 // Tailwind-safe variants
@@ -28,6 +30,7 @@ const variantMap: Record<Color, string> = {
 <template>
   <div class="flex items-center w-fit">
     <NuxtImg
+        v-if="showBadge"
         provider="imagekit"
         :src="badgeSrc"
         :alt="imgAlt"
@@ -40,8 +43,11 @@ const variantMap: Record<Color, string> = {
         loading="lazy"
     />
     <p
-        class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1 pl-4 -ml-4 truncate"
-        :class="[variantMap[color]]"
+        class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1  truncate"
+        :class="[
+          variantMap?.[color],
+          showBadge ? 'pl-4 -ml-4' : 'pl-1 m-0'
+        ]"
         role="note"
         :aria-label="txt"
     >

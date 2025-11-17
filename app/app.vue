@@ -1,3 +1,6 @@
+<script setup lang="ts">
+</script>
+
 <template>
   <div>
     <NuxtRouteAnnouncer />
@@ -5,9 +8,6 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
-
-    <RoomMinimized />
+    <LazyRoomShell />
   </div>
 </template>
-<script setup lang="ts">
-</script>

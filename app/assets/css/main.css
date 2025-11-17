@@ -50,3 +50,35 @@
     opacity: 0;
     transform: translateX(-2.5rem);
 }
+
+
+
+.show-content {
+    animation: circleIn 0.5s ease-in-out 1 forwards;
+}
+
+@keyframes circleIn {
+    from
+    {
+        clip-path: circle(0% at 50% 50%);
+    }
+    to
+    {
+        clip-path: circle(100% at 50% 50%);
+    }
+}
+
+.hide-content {
+    animation: circleOut 0.5s ease-in-out 1 forwards;
+}
+
+@keyframes circleOut {
+    from
+    {
+        clip-path: circle(100% at 50% 50%);
+    }
+    to
+    {
+        clip-path: circle(0% at 50% 50%);
+    }
+}
