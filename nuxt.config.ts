@@ -7,7 +7,13 @@ export default defineNuxtConfig({
     modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt'],
     app: {
         head: {
-            htmlAttrs: { class: 'dark' }
+            htmlAttrs: { class: 'dark' },
+            meta: [
+                {
+                    name: 'viewport',
+                    content: 'initial-scale=1, viewport-fit=cover'
+                }
+            ]
         },
         pageTransition: { name: 'page', mode: 'out-in' }
     },

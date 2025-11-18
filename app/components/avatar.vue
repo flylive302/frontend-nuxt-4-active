@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   frameName?: string        // SVGA name, e.g. "frames/admin/cs_leader"
   img?: string          // avatar url
   top?: number          // % for absolute center point
@@ -9,12 +9,12 @@ const props = withDefaults(defineProps<{
   staticSrc?: string
 }>(), {
   frameName: 'frames/5',
-  img: '/avatars/placeholder',
+  img: '/siteAssets/seats/default-seat.webp',
   top: 55,
   left: 50,
   frameGirth: 70,
   animated: false,
-  staticSrc: 'siteAssets/frames/ladies-frame.webp'
+  staticSrc: 'siteAssets/frames/default-frame.webp'
 });
 </script>
 
@@ -25,13 +25,13 @@ const props = withDefaults(defineProps<{
       <NuxtImg
           provider="imagekit"
           class="absolute-middle aspect-square rounded-full object-cover"
-          :src="props.img"
+          :src="img"
           alt="avatar"
           preload
           :style="{
-            top: `${props.top}%`,
-            left: `${props.left}%`,
-            width: `${props.frameGirth}%`,
+            top: `${top}%`,
+            left: `${left}%`,
+            width: `${frameGirth}%`,
           }"
       />
       <!-- Frame layer (on top) -->
@@ -39,14 +39,14 @@ const props = withDefaults(defineProps<{
           v-if="animated"
           hydrate-on-visible
           class="relative min-w-full z-10"
-          :name="props.frameName"
+          :name="frameName"
           height="auto"
       />
 
       <NuxtImg
           v-else
           provider="imagekit"
-          :src="props.staticSrc"
+          :src="staticSrc"
           alt="avatar"
           class="relative min-w-full z-10"
           height="auto"
