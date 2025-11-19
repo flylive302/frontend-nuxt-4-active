@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { StepperItem } from "@nuxt/ui";
-import {ref} from "vue";
+import { ref } from "vue";
 
 const emit = defineEmits(['update:roomOpen'])
 
@@ -61,6 +61,7 @@ const adminAnnouncements = ref<StepperItem[]>([
     icon: 'i-lucide-asterisk'
   },
 ])
+
 </script>
 
 <template>
@@ -79,19 +80,7 @@ const adminAnnouncements = ref<StepperItem[]>([
           <div class="px-3">
             <SectionTitle class="mb-3">Room Details</SectionTitle>
             <div class="px-2 pt-3 bg-neutral-800 rounded-t-lg inset-shadow-sm inset-shadow-neutral-800 gap-4">
-              <div class="flex gap-1 w-full">
-                <Avatar :animated="true" class="w-20"/>
-                <div class="w-full">
-                  <div class="flex justify-between items-baseline">
-                    <h2 class="text-base font-bold">Room Name</h2>
-                    <UButton icon="i-lucide-trophy" class="px-2 py-1 font-bold" size="sm">1</UButton>
-                  </div>
-                  <div class="flex justify-between items-baseline">
-                    <h2 class="text-base font-bold">Recalled: 750</h2>
-                    <ProfileBadge :show-badge="false" />
-                  </div>
-                </div>
-              </div>
+              <RoomDetails />
 
               <SectionTitle class="mt-1">Levels</SectionTitle>
               <p class="text-base font-semibold">
@@ -175,7 +164,6 @@ const adminAnnouncements = ref<StepperItem[]>([
           </div>
         </template>
       </UDrawer>
-
     </div>
   </header>
 

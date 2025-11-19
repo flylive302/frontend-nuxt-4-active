@@ -29,7 +29,18 @@ export default defineAppConfig({
         drawer: {
             slots: {
                 content: 'bg-neutral-950'
-            }
+            },
+            compoundVariants: [
+                {
+                    direction: [
+                        'right',
+                        'left'
+                    ],
+                    class: {
+                        content: 'min-w-[96%]',
+                    }
+                }
+            ]
         }
     }
 })

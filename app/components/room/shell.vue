@@ -27,7 +27,7 @@ const closeRoom = () => emit('update:roomOpen', false)
   >
     <div class="fixed inset-0 z-0">
       <div class="fixed inset-0 z-0 bg-gray-950/20"/>
-      <NuxtImg provider="imagekit" src="/siteAssets/backgrounds/eagle2.jpg" class="size-full object-cover" />
+      <NuxtImg provider="imagekit" src="/siteAssets/backgrounds/eagle.jpg" class="size-full object-cover" />
     </div>
 
     <div class="relative z-10 h-full flex flex-col">
@@ -35,7 +35,7 @@ const closeRoom = () => emit('update:roomOpen', false)
 
       <RoomInfo />
 
-      <main class="grid grid-cols-5 gap-x-4">
+      <main class="grid grid-cols-5 gap-x-1 gap-y-1 px-1">
         <RoomSeat />
         <RoomSeat />
         <RoomSeat />
@@ -56,9 +56,9 @@ const closeRoom = () => emit('update:roomOpen', false)
       <div class="flex flex-grow gap-1 mt-1">
         <div class="bg-gradient-to-br to-primary-900 p-3 min-h-full w-full border border-primary rounded-lg"/>
         <div class="flex flex-col items-center gap-1 justify-end">
-          <NuxtImg src="./room/room-prop.png" alt="room prop" class="w-12" />
-          <NuxtImg src="./room/room-prop-2.png" alt="room prop" class="w-12" />
-          <NuxtImg src="./room/room-prop-2.png" alt="room prop" class="w-12" />
+          <NuxtImg src="/room/room-prop.png" alt="room prop" class="w-12" />
+          <NuxtImg src="/room/room-prop-2.png" alt="room prop" class="w-12" />
+          <NuxtImg src="/room/room-prop-2.png" alt="room prop" class="w-12" />
         </div>
       </div>
 
