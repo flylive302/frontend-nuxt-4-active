@@ -25,6 +25,11 @@ export default defineAppConfig({
         },
         button: {
             compoundVariants: compoundButtonVariants
+        },
+        drawer: {
+            slots: {
+                content: 'bg-neutral-950'
+            }
         }
     }
 })

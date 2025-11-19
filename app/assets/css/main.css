@@ -16,17 +16,18 @@
     --color-pink-950: #500121;
 
     /* Override default neutral color */
-    --color-neutral-50: #f6f6f6;
-    --color-neutral-100: #e7e7e7;
-    --color-neutral-200: #d1d1d1;
-    --color-neutral-300: #b0b0b0;
-    --color-neutral-400: #888888;
-    --color-neutral-500: #6d6d6d;
-    --color-neutral-600: #5d5d5d;
-    --color-neutral-700: #4f4f4f;
-    --color-neutral-800: #454545;
-    --color-neutral-900: #3d3d3d;
-    --color-neutral-950: #171717;
+    --color-neutral-50: #FAFAFA;
+    --color-neutral-100: #F5F5F5;
+    --color-neutral-200: #E5E5E5;
+    --color-neutral-300: #D4D4D4;
+    --color-neutral-400: #A1A1A1;
+    --color-neutral-500: #737373;
+    --color-neutral-600: #525252;
+    --color-neutral-700: #404040;
+    --color-neutral-800: #262626;
+    --color-neutral-900: #171717;
+    --color-neutral-950: #0A0A0A;
+
 }
 
 .dark {
@@ -50,8 +51,6 @@
     opacity: 0;
     transform: translateX(-2.5rem);
 }
-
-
 
 .show-content {
     animation: circleIn 0.5s ease-in-out 1 forwards;
