@@ -54,21 +54,21 @@ const closeRoom = () => emit('update:roomOpen', false)
       </main>
 
       <div class="flex flex-grow gap-1 mt-1">
-        <div class="bg-gradient-to-br to-primary-900 p-3 min-h-full w-full border border-primary rounded-lg"/>
+        <div class="min-h-full w-full flex flex-col">
+          <div class="bg-gradient-to-br to-primary-900 p-3 border border-primary rounded-lg flex-grow"/>
+          <div class="flex gap-2 p-1">
+            <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
+            <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
+            <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
+            <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
+          </div>
+        </div>
         <div class="flex flex-col items-center gap-1 justify-end">
           <NuxtImg src="/room/room-prop.png" alt="room prop" class="w-12" />
           <NuxtImg src="/room/room-prop-2.png" alt="room prop" class="w-12" />
           <NuxtImg src="/room/room-prop-2.png" alt="room prop" class="w-12" />
+          <RoomGiftingDrawer />
         </div>
-      </div>
-
-      <div class="flex gap-2 p-1">
-        <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
-        <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
-        <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
-        <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
-        <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
-        <UButton icon="i-lucide-heart" size="md" variant="subtle"/>
       </div>
     </div>
 

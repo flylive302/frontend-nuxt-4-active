@@ -81,3 +81,14 @@
         clip-path: circle(0% at 50% 50%);
     }
 }
+
+
+.scrollbar::-webkit-scrollbar
+{
+    @apply rounded-full overflow-hidden h-1;
+}
+
+.scrollbar::-webkit-scrollbar-thumb
+{
+    @apply bg-gradient-to-r to-primary/60 rounded-full shadow-lg shadow-primary
+}

@@ -4,7 +4,12 @@ import { ref } from "vue";
 
 const emit = defineEmits(['update:roomOpen'])
 
-const minimizeRoom = () => emit('update:roomOpen', false)
+const minimizeRoom = () => {
+  emit('update:roomOpen', false);
+
+  document.body.style.overflow = 'auto'
+  document.body.style.position = 'relative'
+}
 
 
 const items = ref([

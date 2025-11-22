@@ -4,12 +4,13 @@ import { ref, watch } from "vue";
 const roomOpen = ref(false);
 
 watch(() => roomOpen.value, (v) => {
-  document.body.style.overflow = v ? 'hidden' : ''
+  document.body.style.overflow = v ? 'hidden' : 'auto'
+  document.body.style.position = v ? 'fixed' : 'relative'
 })
 </script>
 
 <template>
-  <div>
+  <UApp>
     <NuxtRouteAnnouncer />
     <NuxtLoadingIndicator />
     <NuxtLayout>
@@ -23,5 +24,6 @@ watch(() => roomOpen.value, (v) => {
     />
 
     <RoomMinimized v-if="!roomOpen" @click="roomOpen = !roomOpen" />
-  </div>
+    <div id="teleport-here" class="bg-info fixed z-[9999999] h-80 w-40"/>
+  </UApp>
 </template>

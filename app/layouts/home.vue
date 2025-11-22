@@ -1,14 +1,14 @@
 <template>
   <div>
-    <UApp>
-      <BackgroundDecorationsVariant1 />
-      <NavHome />
+    <BackgroundDecorationsVariant1 />
+    <NavHome />
 
-      <div class="h-14"/>
+    <div class="h-14"/>
 
-      <slot />
+    <slot />
 
-      <NavHomeFooter />
-    </UApp>
+    <NavHomeFooter />
   </div>
 </template>
+<script setup lang="ts">
+</script>

@@ -3,6 +3,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, toRef } from "vue";
+import { useSvgaPlayer } from "~/composables/useSvgaPlayer";
+
 const props = withDefaults(defineProps<{
   name: string;
   width?: string;
