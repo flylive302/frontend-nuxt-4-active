@@ -1,85 +1,49 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { navigateTo, useLazyFetch } from 'nuxt/app'
-import { localFetch } from '~/utils/http'
-import type { Country, PhoneModel } from '~/composables/usePhoneSchema'
-import { usePhoneSchema, normalizePhone } from '~/composables/usePhoneSchema'
-import { useGeolocation } from '~/composables/useGeolocation'
+import { computed, reactive, ref } from 'vue'
+import { navigateTo } from 'nuxt/app'
+import type { PhoneModel } from '~/composables/usePhoneSchema'
 
 definePageMeta({ layout: 'auth' })
 
-// ---------- schema ----------
 const baseSchema = z.object({
   password: z.string().min(8, 'Must be at least 8 characters'),
+  countryCode: z.string().min(2),
+  dialCode: z.string().min(1),
+  phone: z.string().min(1),
 })
 
 type BaseSchema = z.output<typeof baseSchema>
 
-// ---------- reactive state ----------
 const state = reactive<Partial<BaseSchema>>({
   password: undefined,
+  countryCode: undefined,
+  dialCode: undefined,
+  phone: undefined,
 })
 
-// phone model (for merged schema)
-const phone = reactive<PhoneModel>({
-  countryCode: '',
-  dialCode: '',
-  phone: '',
-})
+const isValid = computed(() => baseSchema.safeParse(state).success)
 
-// ---------- load countries ----------
-const { data: countries, status } = await useLazyFetch<Country[]>(
-    '/countries.json',
-    { immediate: true, $fetch: localFetch }
-)
-
-// ---------- auto-detect country ----------
-const detectingLocation = ref(false)
-const { detectCountry } = useGeolocation()
-
-onMounted(async () => {
-  detectingLocation.value = true
-  try {
-    const code = await detectCountry()
-    if (code && countries.value) {
-      const match = countries.value.find(c => c.code.toUpperCase() === code.toUpperCase())
-      if (match) {
-        phone.countryCode = match.code
-        phone.dialCode = match.dial_code
-      }
-    }
-  } finally {
-    detectingLocation.value = false
-  }
-})
-
-// ---------- compose schemas ----------
-const phoneSchema = usePhoneSchema(computed(() =>
-    phone.countryCode ? { code: phone.countryCode, name: '' } : undefined
-))
-const pageSchema = computed(() => baseSchema.and(phoneSchema.value))
-
-type FullSchema = z.output<typeof pageSchema.value>
-
-// ---------- validity ----------
-const isValid = computed(() => pageSchema.value.safeParse({ ...state, ...phone }).success)
-
-// ---------- submit ----------
 const toast = useToast()
-
 const processing = ref(false)
-async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
+
+function onPhoneUpdate(phoneData: PhoneModel) {
+  state.countryCode = phoneData.countryCode
+  state.dialCode = phoneData.dialCode
+  state.phone = phoneData.phone
+}
+
+async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
   processing.value = true
   try {
-    const parsed = pageSchema.value.safeParse({ ...state, ...phone })
-    if (!parsed.success) {
-      return
-    }
-    const e164 = normalizePhone(phone.dialCode, phone.phone)
+    const parsed = baseSchema.safeParse(state)
+    if (!parsed.success) return
+
+    const e164 = `${state.dialCode}${state.phone}`
     toast.add({ title: 'Success', description: `Phone: ${e164}`, color: 'success' })
     console.log('Form payload →', parsed.data)
+
     setTimeout(() => navigateTo('/complete-profile-data'), 3000)
   } finally {
     processing.value = false
@@ -89,21 +53,28 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
 
 <template>
   <main>
-    <UForm :schema="pageSchema" :state="{ ...state, ...phone }" class="space-y-3" @submit="onSubmit">
-      <!-- integrated country + phone -->
-      <FormsCountryPhoneInput
-          v-if="countries"
-          :countries="countries"
-          :initial-country="countries.find(c => c.code === phone.countryCode)"
-          :detecting-location="detectingLocation || status === 'pending'"
-          @update:model="Object.assign(phone, $event)"
-      />
+    <UForm :schema="baseSchema" :state="state" class="space-y-3" @submit="onSubmit">
+      <FormsCountryPhoneInput @update:model="onPhoneUpdate" />
 
       <UFormField label="Password" name="password" required>
-        <UInput v-model="state.password" class="w-full" size="lg" icon="i-lucide-lock" type="password" placeholder="********" />
+        <UInput
+            v-model="state.password"
+            class="w-full"
+            size="lg"
+            icon="i-lucide-lock"
+            type="password"
+            placeholder="********"
+        />
       </UFormField>
 
-      <UButton type="submit" size="xl" class="w-full justify-center" icon="i-lucide-send" :loading="processing" :disabled="!isValid">
+      <UButton
+          type="submit"
+          size="xl"
+          class="w-full justify-center"
+          icon="i-lucide-send"
+          :loading="processing"
+          :disabled="!isValid"
+      >
         Sign Up
       </UButton>
     </UForm>

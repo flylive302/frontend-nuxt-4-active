@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 
 const props = withDefaults(defineProps<{
   // visual controls
@@ -21,7 +21,8 @@ const props = withDefaults(defineProps<{
 })
 
 // unique filter id per instance -> no cross-instance collisions
-const filterId = `glass-${Math.random().toString(36).slice(2)}`
+// useId() ensures consistent IDs between server and client (hydration-safe)
+const filterId = `glass-${useId()}`
 const filterRef = computed(() => `url(#${filterId})`)
 </script>
 

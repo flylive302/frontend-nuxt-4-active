@@ -130,7 +130,7 @@ const headingId = `duel-card-title-${props.type}`
       <main class="grid grid-cols-7 items-center">
         <!-- Left user -->
         <figure class="col-span-3 grid grid-cols-2">
-          <Avatar
+          <UserAvatar
               :animated="true"
               :frame-girth="props.lFrameGirth"
               :top="props.lTop"
@@ -157,7 +157,7 @@ const headingId = `duel-card-title-${props.type}`
           <figcaption class="text-right text-xs font-bold text-shadow-md col-span-1" :class="config.textShadow">
             {{ props.rUserName || 'User Name' }}
           </figcaption>
-          <Avatar
+          <UserAvatar
               :animated="true"
               :frame-girth="props.rFrameGirth"
               :top="props.rTop"

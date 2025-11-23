@@ -120,7 +120,7 @@ const data = ref<WealthLevelRow[]>([
     <AltHero class="z-10" image-src="/siteAssets/alt-hero/secondary.webp">
       <div class="p-2 w-full h-full bg-gradient-to-br to-secondary/30">
         <div class="grid grid-cols-9 gap-1">
-          <Avatar :animated="true" class="col-span-2" />
+          <UserAvatar :animated="true" class="col-span-2" />
           <div class="col-span-5 flex flex-col justify-center">
             <p class="text-base font-semibold">@UsersSignature</p>
             <p class="text-lg font-bold">User Name</p>

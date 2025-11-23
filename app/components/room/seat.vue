@@ -7,7 +7,7 @@ const open = ref(false)
 <template>
   <UDrawer v-model:open="open">
     <div class="flex flex-col items-center gap-0.5 h-21">
-      <Avatar src="/siteAssets/seats/default-seat.webp" />
+      <UserAvatar src="/siteAssets/seats/default-seat.webp" />
       <UButton
           icon="i-lucide-user"
           size="xs"

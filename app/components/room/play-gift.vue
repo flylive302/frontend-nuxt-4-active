@@ -140,10 +140,7 @@ onBeforeUnmount(() => {
               stroke-width="3"
               fill="none"
               stroke-linecap="round"
-              :style="{
-              strokeDasharray: 100,
-              strokeDashoffset: 100 - progressPercent,
-            }"
+              :style="{strokeDasharray: 100,strokeDashoffset: 100 - progressPercent}"
           />
         </svg>
 

@@ -77,7 +77,7 @@ const adminAnnouncements = ref<StepperItem[]>([
     <div class="rounded-md flex items-center border border-primary-800 bg-gradient-to-br to-primary/60 gap-1 backdrop-blur-xs">
       <UDrawer>
         <div class="w-10">
-          <Avatar :animated="true" />
+          <UserAvatar :animated="true" />
           <p class="text-xs text-center">LvL. 15</p>
         </div>
 

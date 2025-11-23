@@ -1,8 +1,8 @@
 <template>
-  <div>
+  <main>
     <BackgroundDecorationsVariant1 />
 
-    <section class="px-3 pb-64">
+    <nav class="px-3">
       <LogoLarge />
 
       <SectionTitle>Login With:</SectionTitle>
@@ -37,8 +37,10 @@
       <USeparator color="primary" class="my-4" label="OR" />
 
       <slot />
-    </section>
-  </div>
+
+      <aside class="h-64" />
+    </nav>
+  </main>
 </template>
 <script setup lang="ts">
 </script>

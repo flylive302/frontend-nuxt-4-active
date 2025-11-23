@@ -42,7 +42,6 @@ const ariaLabel = computed(() => props.alt || 'Room')
             :alt="props.alt"
             :quality="props.quality"
             class="h-full w-full object-cover"
-            placeholder="blur"
             preload
         />
         <figcaption class="sr-only">{{ props.alt }}</figcaption>

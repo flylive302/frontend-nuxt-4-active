@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {z} from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import { reactive } from "vue"
 
 definePageMeta({ layout: 'alt' })
 

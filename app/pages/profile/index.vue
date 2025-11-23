@@ -9,7 +9,7 @@ definePageMeta({ layout: 'alt' })
     <AltHero class="z-20">
       <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
         <NuxtLink to="/profile/owner-@NewUser" class="flex px-3">
-          <Avatar :animated="true" class="w-24" />
+          <UserAvatar :animated="true" class="w-24" />
           <div class="px-3">
             <h1 class="text-lg font-bold underline">User Name</h1>
             <ProfileBadge />

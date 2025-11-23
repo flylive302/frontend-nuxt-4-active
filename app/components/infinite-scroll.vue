@@ -79,6 +79,7 @@ const isLoading = ref(false)
 const hasMore = ref(true)
 const fetchError = ref<unknown | null>(null)
 const shouldReactToPropChanges = ref(false)
+const isMounted = ref(false)
 
 interface GridRow {
   __rowKey: number
@@ -228,6 +229,7 @@ if (import.meta.client) {
 
 onMounted(() => {
   if (!import.meta.client) return
+  isMounted.value = true
   shouldReactToPropChanges.value = true
   void loadNextPage()
 })
@@ -246,14 +248,20 @@ defineExpose({
 </script>
 
 <template>
-  <div :aria-busy="isLoading">
-    <DynamicScroller
-        :items="rows"
-        key-field="__rowKey"
-        :min-item-size="minItemSize"
-        page-mode
-        class="mt-2"
-    >
+  <ClientOnly :ssr="false">
+    <template #fallback>
+      <div class="py-6 text-center text-md text-white/70 font-semibold">
+        <slot name="loading">Loading…</slot>
+      </div>
+    </template>
+    <div :aria-busy="isLoading">
+      <DynamicScroller
+          :items="rows"
+          key-field="__rowKey"
+          :min-item-size="minItemSize"
+          page-mode
+          class="mt-2"
+      >
       <template #default="{ item: rowGroup, active }">
         <DynamicScrollerItem
             :item="rowGroup"
@@ -285,19 +293,20 @@ defineExpose({
           </div>
         </DynamicScrollerItem>
       </template>
-    </DynamicScroller>
+      </DynamicScroller>
 
-    <div v-if="fetchError" class="py-4 text-center text-md text-rose-300 font-semibold">
-      <slot name="error" :error="fetchError">Something went wrong. Please try again.</slot>
+      <div v-if="fetchError" class="py-4 text-center text-md text-rose-300 font-semibold">
+        <slot name="error" :error="fetchError">Something went wrong. Please try again.</slot>
+      </div>
+      <div v-else-if="isLoading" class="py-4 text-center text-md text-white font-bold">
+        <slot name="loading">Loading…</slot>
+      </div>
+      <div v-else-if="rows.length === 0" class="py-6 text-center text-md text-white/70 font-semibold">
+        <slot name="empty">No results yet.</slot>
+      </div>
+      <div v-else-if="!hasMore" class="py-6 text-center text-md text-white font-bold">
+        <slot name="complete">You're all caught up.</slot>
+      </div>
     </div>
-    <div v-else-if="isLoading" class="py-4 text-center text-md text-white font-bold">
-      <slot name="loading">Loading…</slot>
-    </div>
-    <div v-else-if="rows.length === 0" class="py-6 text-center text-md text-white/70 font-semibold">
-      <slot name="empty">No results yet.</slot>
-    </div>
-    <div v-else-if="!hasMore" class="py-6 text-center text-md text-white font-bold">
-      <slot name="complete">You’re all caught up.</slot>
-    </div>
-  </div>
+  </ClientOnly>
 </template>

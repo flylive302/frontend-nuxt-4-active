@@ -23,7 +23,7 @@ const items = [
             rounded="rounded-md"
             class="border border-white/30 h-full w-full p-1 flex flex-col justify-between items-center"
         >
-          <Avatar :animated="true" class="max-w-16"/>
+          <UserAvatar :animated="true" class="max-w-16"/>
           <UButton size="sm" icon="i-lucide-heart-handshake" class="w-full justify-center">Lover</UButton>
         </BgGlass>
       </aside>
@@ -31,7 +31,6 @@ const items = [
       <NuxtImg
           provider="imagekit"
           src="/siteAssets/room/room-card-top.webp"
-          placeholder="blur"
           preload
       />
     </div>

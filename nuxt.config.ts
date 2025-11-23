@@ -1,10 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-    ssr: false,
     compatibilityDate: '2025-07-15',
-    devtools: { enabled: false },
+    devtools: { enabled: true },
     css: ['~/assets/css/main.css'],
-    modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt'],
+    modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxt/hints'],
     app: {
         head: {
             htmlAttrs: { class: 'dark' },
@@ -29,7 +28,10 @@ export default defineNuxtConfig({
         }
     },
     vite: {
-        optimizeDeps: { include: ['svga/dist/index.esm.min.js'] },
+        optimizeDeps: {
+            include: ['svga/dist/index.esm.min.js'],
+            exclude: ['@nuxt/hints']
+        },
         build: {
             rollupOptions: {
                 output: { manualChunks: { svga: ['svga/dist/index.esm.min.js'] } }

@@ -42,7 +42,7 @@
             aria-label="Profile"
             class="justify-self-end"
         >
-          <LazyAvatar class="w-13" :animated="true" />
+          <UserAvatar class="w-13" :animated="true" />
         </NuxtLink>
       </div>
     </BgGlass>

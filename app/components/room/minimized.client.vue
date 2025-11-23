@@ -63,7 +63,6 @@ watch([winW, winH], () => {
           alt="Minimized Room Preview"
           :quality="10"
           class="h-full w-full object-cover rounded-full border pointer-events-none"
-          placeholder="blur"
       />
     </div>
 

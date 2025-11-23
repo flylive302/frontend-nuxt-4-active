@@ -217,7 +217,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       >
       <div class="max-w-16">
         <!-- :img="selectedReseller.avatar" -->
-        <Avatar :animated="true" />
+        <UserAvatar :animated="true" />
       </div>
 
       <div class="w-full leading-tight min-w-0">

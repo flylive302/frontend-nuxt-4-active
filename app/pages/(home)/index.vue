@@ -96,25 +96,25 @@ const banners: Banner[] = [
         }"
         class="mb-4"
     >
-      <template #default="{ item }">
+      <template #default="slotProps">
         <EventsBanners
+            v-if="slotProps?.item"
             v-bind="{
-              ...(item.lUserName ? { lUserName: item.lUserName } : {}),
-              ...(item.lFrameName ? { lFrameName: item.lFrameName } : {}),
-              ...(item.lFrameGirth ? { lFrameGirth: item.lFrameGirth } : {}),
-              ...(item.rUserName ? { rUserName: item.rUserName } : {}),
-              ...(item.rFrameName ? { rFrameName: item.rFrameName } : {}),
-              ...(item.rFrameGirth ? { rFrameGirth: item.rFrameGirth } : {})
+              ...(slotProps.item.lUserName ? { lUserName: slotProps.item.lUserName } : {}),
+              ...(slotProps.item.lFrameName ? { lFrameName: slotProps.item.lFrameName } : {}),
+              ...(slotProps.item.lFrameGirth ? { lFrameGirth: slotProps.item.lFrameGirth } : {}),
+              ...(slotProps.item.rUserName ? { rUserName: slotProps.item.rUserName } : {}),
+              ...(slotProps.item.rFrameName ? { rFrameName: slotProps.item.rFrameName } : {}),
+              ...(slotProps.item.rFrameGirth ? { rFrameGirth: slotProps.item.rFrameGirth } : {})
             }"
-            :type="item.type"
+            :type="slotProps.item.type"
         >
-          <span :class="item.textClass">{{ item.text }}</span>
+          <span :class="slotProps.item.textClass">{{ slotProps.item.text }}</span>
         </EventsBanners>
       </template>
     </UCarousel>
 
     <UCarousel
-        v-slot="{ item }"
         :items="roomCarouselItems"
         :autoplay="{ delay: 3000 }"
         class-names
@@ -123,9 +123,11 @@ const banners: Banner[] = [
         }"
         class="mb-6"
     >
-      <RoomCard :image-src="item">
-        Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
-      </RoomCard>
+      <template #default="slotProps">
+        <RoomCard v-if="slotProps?.item" :image-src="slotProps.item">
+          Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
+        </RoomCard>
+      </template>
     </UCarousel>
 
     <div class="mx-3">

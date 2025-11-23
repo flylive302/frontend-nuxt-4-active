@@ -108,7 +108,7 @@ const data = ref<WealthLevelRow[]>([
 
 <template>
   <div class="flex gap-1 w-full">
-    <Avatar :animated="true" class="w-20"/>
+    <UserAvatar :animated="true" class="w-20"/>
     <div class="w-full">
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">Room Name</h2>

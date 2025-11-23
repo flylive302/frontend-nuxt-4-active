@@ -11,7 +11,7 @@ withDefaults(defineProps<{
 <template>
   <div class="bg-secondary/30 border border-secondary rounded-md overflow-hidden">
     <p class="text-sm truncate text-center text-success font-bold leading-tight">Time Left: <br> {{ timeLeft }}</p>
-    <Avatar :animated="true" />
+    <UserAvatar :animated="true" />
 
     <UButton size="sm" icon="i-lucide-power" color="secondary" class="w-full justify-center">Activate</UButton>
   </div>

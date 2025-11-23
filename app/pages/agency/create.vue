@@ -170,9 +170,8 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
 
         <!-- Country and Phone (using country-phone-input component) -->
         <FormsCountryPhoneInput
-          v-if="countries"
-          :countries="countries"
-          :initial-country="countries.find((c: Country) => c.code === phone.countryCode)"
+          :countries="countries || []"
+          :initial-country="countries?.find((c: Country) => c.code === phone.countryCode)"
           :detecting-location="detectingLocation || status === 'pending'"
           @update:model="Object.assign(phone, $event)"
         />

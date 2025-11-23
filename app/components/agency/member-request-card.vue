@@ -36,7 +36,7 @@ withDefaults(defineProps<{
 <template>
   <div class="grid grid-cols-13 bg-gradient-to-br to-primary/40 border-2 border-primary rounded-lg overflow-hidden">
     <div class="col-span-3 flex flex-col justify-center">
-      <Avatar
+      <UserAvatar
           :animated="animated"
           :frame-name="frameName"
           :top="top"

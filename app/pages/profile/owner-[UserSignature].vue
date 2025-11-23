@@ -25,7 +25,7 @@ const items = [
     <AltHero class="z-20">
       <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
         <div class="flex px-3">
-          <Avatar :animated="true" class="w-24" />
+          <UserAvatar :animated="true" class="w-24" />
           <div class="px-3">
             <h1 class="text-lg font-bold">User Name</h1>
             <ProfileBadge />
@@ -47,7 +47,7 @@ const items = [
     <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
     <NuxtLink to="/agency/id" class="mx-3 grid grid-cols-12 bg-gradient-to-br to-primary/30 rounded-md border border-primary">
       <div class="col-span-3">
-        <Avatar :animated="true" />
+        <UserAvatar :animated="true" />
       </div>
 
       <div class="col-span-6 flex flex-col justify-around">

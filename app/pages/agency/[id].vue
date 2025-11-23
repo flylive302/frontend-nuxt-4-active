@@ -41,7 +41,7 @@ const items = ref([
     <AltHero class="z-20">
       <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
         <NuxtLink :to="`/agency/${route.params.id}`" class="grid grid-cols-5 gap-2">
-          <Avatar :animated="true" class="col-span-2" />
+          <UserAvatar :animated="true" class="col-span-2" />
           <div class="col-span-3 pr-3 my-auto">
             <h1 class="text-lg font-bold underline">Agency {{route.params.id}}</h1>
             <div class="flex justify-between w-full">

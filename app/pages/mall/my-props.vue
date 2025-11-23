@@ -30,7 +30,7 @@ const items = [
 
     <AltHero class="z-10" image-src="/siteAssets/alt-hero/secondary.webp">
       <div class="p-2 bg-gradient-to-br to-secondary/30">
-        <Avatar :animated="true" class="max-w-[40vw] mx-auto " />
+        <UserAvatar :animated="true" class="max-w-[40vw] mx-auto " />
       </div>
     </AltHero>
 
