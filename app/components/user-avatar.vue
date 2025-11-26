@@ -1,5 +1,5 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   frameName?: string    // SVGA name, e.g. "frames/admin/cs_leader"
   img?: string          // avatar url
   top?: number          // % for absolute center point
@@ -28,24 +28,23 @@ withDefaults(defineProps<{
         alt="avatar"
         preload
         :style="{
-          top: `${top}%`,
-          left: `${left}%`,
-          width: `${frameGirth}%`,
+          top: `${props.top}%`,
+          left: `${props.left}%`,
+          width: `${props.frameGirth}%`
         }"
     />
     <!-- Frame layer (on top) -->
-    <template v-if="animated">
-      <SvgaPlayer
-          class="relative min-w-full z-10"
-          :name="frameName"
-          height="auto"
-      />
-    </template>
+    <SvgaPlayer
+        v-if="props.animated"
+        class="relative min-w-full z-10"
+        :name="props.frameName"
+        height="auto"
+    />
 
     <NuxtImg
-        v-if="!animated"
+        v-else
         provider="imagekit"
-        :src="staticSrc"
+        :src="props.staticSrc"
         alt="avatar"
         class="relative min-w-full z-10"
         height="auto"

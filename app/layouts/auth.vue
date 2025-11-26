@@ -2,7 +2,7 @@
   <main>
     <BackgroundDecorationsVariant1 />
 
-    <nav class="px-3">
+    <div class="px-3 mb-28">
       <LogoLarge />
 
       <SectionTitle>Login With:</SectionTitle>
@@ -38,8 +38,7 @@
 
       <slot />
 
-      <aside class="h-64" />
-    </nav>
+    </div>
   </main>
 </template>
 <script setup lang="ts">

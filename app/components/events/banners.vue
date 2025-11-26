@@ -103,7 +103,6 @@ const headingId = `duel-card-title-${props.type}`
         alt=""
         aria-hidden="true"
         class="pointer-events-none select-none absolute inset-0 h-full w-full object-cover rounded-lg border border-white/50 shadow-lg"
-        preload
     />
 
     <div class="relative">
@@ -115,7 +114,6 @@ const headingId = `duel-card-title-${props.type}`
             alt=""
             aria-hidden="true"
             class="h-8 -mt-3"
-            preload
         />
         <h2
             :id="headingId"

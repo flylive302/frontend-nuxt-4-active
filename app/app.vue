@@ -4,10 +4,8 @@ import { ref, watch } from "vue";
 const roomOpen = ref(false);
 
 watch(() => roomOpen.value, (v) => {
-  if (import.meta.client) {
-    document.body.style.overflow = v ? 'hidden' : 'auto'
-    document.body.style.position = v ? 'fixed' : 'relative'
-  }
+  document.body.style.overflow = v ? 'hidden' : 'auto'
+  document.body.style.position = v ? 'fixed' : 'relative'
 })
 </script>
 

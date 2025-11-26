@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useDraggable, useWindowSize } from '@vueuse/core'
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
@@ -25,19 +25,18 @@ const { position } = useDraggable(dragEl, {
   }
 })
 
-onMounted(() => {
-  // Measure actual element size
-  if (dragEl.value) {
-    const rect = dragEl.value.getBoundingClientRect()
-    elW.value = rect.width
-    elH.value = rect.height
-  }
+// Measure actual element size
+if (dragEl.value) {
+  const rect = dragEl.value.getBoundingClientRect()
+  elW.value = rect.width
+  elH.value = rect.height
+}
 
-  position.value = {
-    x: winW.value - elW.value,
-    y: winH.value - elH.value - 80
-  }
-})
+position.value = {
+  x: winW.value - elW.value - 95,
+  y: winH.value - elH.value - 140
+}
+
 
 // Keep in bounds on window resize
 watch([winW, winH], () => {
@@ -54,7 +53,7 @@ watch([winW, winH], () => {
   <div
       ref="dragEl"
       :style="`left: ${position.x}px; top: ${position.y}px;`"
-      class="fixed flex justify-center items-center z-100 touch-none cursor-move"
+      class="fixed flex justify-center items-center z-50 touch-none cursor-move"
   >
     <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50">
       <NuxtImg

@@ -70,7 +70,7 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
       <UButton
           type="submit"
           size="xl"
-          class="w-full justify-center"
+          class="w-full justify-center disabled:bg-primary-400"
           icon="i-lucide-send"
           :loading="processing"
           :disabled="!isValid"

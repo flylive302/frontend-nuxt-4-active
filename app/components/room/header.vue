@@ -75,7 +75,10 @@ const adminAnnouncements = ref<StepperItem[]>([
 
     <!-- Left Section -->
     <div class="rounded-md flex items-center border border-primary-800 bg-gradient-to-br to-primary/60 gap-1 backdrop-blur-xs">
-      <UDrawer>
+      <UDrawer
+          title="Drawer with description"
+          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      >
         <div class="w-10">
           <UserAvatar :animated="true" />
           <p class="text-xs text-center">LvL. 15</p>
@@ -139,7 +142,10 @@ const adminAnnouncements = ref<StepperItem[]>([
           variant="subtle"
       />
 
-      <UDrawer>
+      <UDrawer
+          title="Drawer with description"
+          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      >
         <UButton
             icon="i-lucide-x"
             size="xl"

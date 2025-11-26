@@ -20,6 +20,6 @@
     { "path": "./.nuxt/tsconfig.shared.json" },
     { "path": "./.nuxt/tsconfig.node.json" }
   ],
-  "include": ["**/*", "types/**/*.d.ts"],
+  "include": ["**/*", "types/**/*.d.ts", ".nuxt/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

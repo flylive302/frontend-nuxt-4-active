@@ -111,7 +111,7 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
         <UInput v-model="state.email" class="w-full" size="lg" icon="i-lucide-at-sign" placeholder="email@example.com" />
       </UFormField>
 
-      <UButton type="submit" size="xl" class="w-full justify-center" icon="i-lucide-send" :loading="processing" :disabled="!isValid">
+      <UButton type="submit" size="xl" class="w-full justify-center disabled:bg-primary-400" icon="i-lucide-send" :loading="processing" :disabled="!isValid">
         Submit
       </UButton>
     </UForm>
