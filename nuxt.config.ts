@@ -5,6 +5,9 @@ export default defineNuxtConfig({
     devtools: { enabled: true },
     css: ['~/assets/css/main.css'],
     modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt'],
+    pinia: {
+        storesDirs: ['./stores/**'],
+    },
     app: {
         head: {
             htmlAttrs: { class: 'dark' },

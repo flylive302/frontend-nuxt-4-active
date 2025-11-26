@@ -2,15 +2,12 @@
 import type { StepperItem } from "@nuxt/ui";
 import { ref } from "vue";
 
-const emit = defineEmits(['update:roomOpen'])
-
+const roomStore = useRoomStore();
 const minimizeRoom = () => {
-  emit('update:roomOpen', false);
-
-  document.body.style.overflow = 'auto'
-  document.body.style.position = 'relative'
+  roomStore.minimizeRoom();
+  document.body.style.overflow = 'auto';
+  document.body.style.position = 'relative';
 }
-
 
 const items = ref([
   {
@@ -143,6 +140,7 @@ const adminAnnouncements = ref<StepperItem[]>([
       />
 
       <UDrawer
+          v-if="roomStore.roomMinimized"
           title="Drawer with description"
           description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
       >

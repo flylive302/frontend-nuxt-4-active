@@ -2,6 +2,9 @@
 import { useDraggable, useWindowSize } from '@vueuse/core'
 import { ref, watch } from 'vue'
 
+ 
+const roomStore = useRoomStore();
+
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
 const { width: winW, height: winH } = useWindowSize()
@@ -54,6 +57,7 @@ watch([winW, winH], () => {
       ref="dragEl"
       :style="`left: ${position.x}px; top: ${position.y}px;`"
       class="fixed flex justify-center items-center z-50 touch-none cursor-move"
+      @click="roomStore.maximizeRoom()"
   >
     <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50">
       <NuxtImg

@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import { useScreenSafeArea } from '@vueuse/core'
-
-withDefaults(defineProps<{
-  roomOpen?: boolean
-}>(),{
-  roomOpen: false
-});
+import { ref } from 'vue'
+import { useScreenSafeArea, useMutationObserver } from '@vueuse/core'
 
 const {
   top,
@@ -14,16 +9,37 @@ const {
   left,
 } = useScreenSafeArea()
 
-const emit = defineEmits(['update:roomOpen'])
+const shellRef = ref<HTMLElement | null>(null)
+useMutationObserver(shellRef, () => {
+  const el = shellRef.value
+  if (!el) {
+    return
+  }
 
-const closeRoom = () => emit('update:roomOpen', false)
+  const ariaHidden = el.getAttribute('aria-hidden')
+
+  if (ariaHidden === 'true') {
+    el.setAttribute('inert', '')
+    const activeElement = document.activeElement
+
+    if (activeElement instanceof HTMLElement && el.contains(activeElement)) {
+      activeElement.blur()
+    }
+  } else {
+    el.removeAttribute('inert')
+  }
+}, {
+  attributes: true,
+  attributeFilter: ['aria-hidden'],
+})
+
 </script>
 
 <template>
   <div
+      ref="shellRef"
       class="fixed bg-black z-50 p-1 overscroll-none"
       :style="`top: -${top}; bottom: ${bottom};left: ${left};right: ${right}`"
-      :class="roomOpen ? 'show-content' : 'hide-content'"
   >
     <div class="fixed inset-0 z-0">
       <div class="fixed inset-0 z-0 bg-gray-950/20"/>
@@ -31,7 +47,7 @@ const closeRoom = () => emit('update:roomOpen', false)
     </div>
 
     <div class="relative z-10 h-full flex flex-col">
-      <RoomHeader @update:room-open="closeRoom"/>
+      <RoomHeader />
 
       <RoomInfo />
 
