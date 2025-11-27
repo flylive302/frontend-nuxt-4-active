@@ -1,22 +1,46 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
+import { ref } from 'vue'
 
 const items: TabsItem[] = [
-  {
-    label: 'Daily',
-  },
-  {
-    label: 'Weekly',
-  },
-  {
-    label: 'Monthly',
-  }
+  { label: 'Daily' },
+  { label: 'Weekly' },
+  { label: 'Monthly' }
 ]
+
+interface RoomUser {
+  id: number
+  name: string
+  rank: number
+  wealthLevel: number
+  charmLevel: number
+  coins: string
+  avatar: string
+}
+
+const generateUsers = (count: number): RoomUser[] => {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    name: `User ${i + 1}`,
+    rank: i + 1,
+    wealthLevel: (i % 5) + 1,
+    charmLevel: (i % 5) + 1,
+    coins: `${(Math.random() * 10).toFixed(1)} M`,
+    avatar: '' // UserAvatar handles empty src
+  }))
+}
+
+const dailyUsers = ref(generateUsers(50))
+const activeUsers = ref(generateUsers(100))
+
+const isOpenLeft = ref(false)
+const isOpenRight = ref(false)
 </script>
 
 <template>
   <div class="flex justify-between items-center my-1">
-    <UDrawer direction="left">
+    <!-- Left Drawer: Room Activity -->
+    <UDrawer v-model:open="isOpenLeft" direction="left">
       <UButton
           variant="subtle"
           icon="i-lucide-coins"
@@ -27,8 +51,8 @@ const items: TabsItem[] = [
       </UButton>
 
       <template #content>
-        <div class="mt-2 pl-1 min-w-11/12">
-          <div class="flex items-baseline justify-between">
+        <div class="mt-2 pl-1 min-w-11/12 h-full flex flex-col">
+          <div class="flex items-baseline justify-between shrink-0">
             <SectionTitle>Room Activity</SectionTitle>
             <UButton
                 variant="soft"
@@ -40,164 +64,46 @@ const items: TabsItem[] = [
             </UButton>
           </div>
 
-          <UTabs :items="items" variant="link" :ui="{ trigger: 'grow' }" class="w-full h-full">
+          <UTabs :items="items" variant="link" :ui="{ trigger: 'grow' }" class="w-full h-full flex flex-col">
             <template #content="{ item }">
-              <div class="p-2 h-[84vh] bg-neutral-800 rounded-lg inset-shadow-sm inset-shadow-neutral-700 space-y-3 overflow-y-scroll">
+              <div class="p-2 h-[84vh] bg-neutral-800 rounded-lg inset-shadow-sm inset-shadow-neutral-700 overflow-hidden">
+                <DynamicScroller
+                  :items="dailyUsers"
+                  :min-item-size="70"
+                  class="h-full"
+                  key-field="id"
+                >
+                  <template #default="{ item, index, active }">
+                    <DynamicScrollerItem :item="item" :active="active" :data-index="index" class="pb-3">
+                      <div class="flex items-center justify-between w-full">
+                        <UBadge :color="item.rank <= 3 ? ['primary', 'secondary', 'tertiary'][item.rank - 1] : 'gray'" class="text-white font-bold" :label="item.rank"/>
+                        <div class="flex gap-1 bg-gradient-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden flex-grow ml-2">
+                          <UserAvatar animated class="w-14"/>
+                          <div class="flex flex-col justify-center min-h-full px-2">
+                            <h3 class="text-sm font-bold leading-tight">{{ item.name }} <icon name="i-lucide-mars" /></h3>
+                            <div class="flex items-center gap-1 mt-1">
+                              <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" :txt="item.wealthLevel"/>
+                              <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" :txt="item.charmLevel"/>
+                            </div>
+                          </div>
 
-                <div class="flex items-center justify-between w-full">
-                  <UBadge color="primary" class="text-white font-bold" label="1"/>
-                  <div class="flex gap-1 bg-gradient-to-br to-primary/40 border-2 border-primary rounded-lg shadow-md shadow-primary/50 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
+                          <div class="flex flex-col justify-center min-h-full ml-auto pr-2">
+                            <UButton size="xs" variant="soft" icon="i-lucide-coins">{{ item.coins }}</UButton>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" variant="soft" icon="i-lucide-coins">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge color="secondary" class="text-white font-bold" label="2"/>
-                  <div class="flex gap-1 bg-gradient-to-br to-secondary/40 border-2 border-secondary rounded-lg shadow-md shadow-secondary/50 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" color="secondary" variant="soft" icon="i-lucide-coins">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge color="tertiary" class="text-white font-bold" label="3"/>
-                  <div class="flex gap-1 bg-gradient-to-br to-tertiary/40 border-2 border-tertiary rounded-lg shadow-md shadow-tertiary/50 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" color="tertiary" variant="soft" icon="i-lucide-coins">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge class="text-white font-bold bg-neutral-700" label="4"/>
-                  <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" variant="soft" icon="i-lucide-coins" class="bg-default">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge class="text-white font-bold bg-neutral-700" label="4"/>
-                  <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" variant="soft" icon="i-lucide-coins" class="bg-default">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge class="text-white font-bold bg-neutral-700" label="4"/>
-                  <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" variant="soft" icon="i-lucide-coins" class="bg-default">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge class="text-white font-bold bg-neutral-700" label="4"/>
-                  <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" variant="soft" icon="i-lucide-coins" class="bg-default">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between w-full">
-                  <UBadge class="text-white font-bold bg-neutral-700" label="4"/>
-                  <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-                    <UserAvatar animated class="w-14"/>
-                    <div class="flex flex-col justify-center min-h-full">
-                      <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center min-h-full">
-                      <UButton size="xs" variant="soft" icon="i-lucide-coins" class="bg-default">5.2 M</UButton>
-                    </div>
-                  </div>
-                </div>
-
+                    </DynamicScrollerItem>
+                  </template>
+                </DynamicScroller>
               </div>
             </template>
           </UTabs>
-
         </div>
       </template>
     </UDrawer>
 
-
-    <UDrawer direction="right">
+    <!-- Right Drawer: Active Users -->
+    <UDrawer v-model:open="isOpenRight" direction="right">
       <UButton
           variant="subtle"
           icon="i-lucide-users-round"
@@ -208,137 +114,34 @@ const items: TabsItem[] = [
       </UButton>
 
       <template #content>
-        <div class="min-w-11/12 pr-2">
-          <SectionTitle class="my-3">User Active in Room</SectionTitle>
-          <div class="p-2 h-[90vh] bg-neutral-800 rounded-lg inset-shadow-sm inset-shadow-neutral-700 space-y-3 overflow-y-scroll">
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-              <UserAvatar animated class="w-13"/>
-              <div class="flex flex-col justify-center min-h-full">
-                <h3 class="text-sm font-bold leading-tight">User Name <icon name="i-lucide-mars" /></h3>
-                <div class="flex items-center gap-1">
-                  <ProfileBadge />
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
-                  <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="2"/>
-                </div>
-              </div>
-            </div>
-
+        <div class="min-w-11/12 pr-2 h-full flex flex-col">
+          <SectionTitle class="my-3 shrink-0">User Active in Room</SectionTitle>
+          <div class="p-2 h-[90vh] bg-neutral-800 rounded-lg inset-shadow-sm inset-shadow-neutral-700 overflow-hidden">
+            <DynamicScroller
+              :items="activeUsers"
+              :min-item-size="70"
+              class="h-full"
+              key-field="id"
+            >
+              <template #default="{ item, index, active }">
+                <DynamicScrollerItem :item="item" :active="active" :data-index="index" class="pb-3">
+                  <div class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
+                    <UserAvatar animated class="w-13"/>
+                    <div class="flex flex-col justify-center min-h-full px-2">
+                      <h3 class="text-sm font-bold leading-tight">{{ item.name }} <icon name="i-lucide-mars" /></h3>
+                      <div class="flex items-center gap-1">
+                        <ProfileBadge />
+                        <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" :txt="item.wealthLevel"/>
+                        <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" :txt="item.charmLevel"/>
+                      </div>
+                    </div>
+                  </div>
+                </DynamicScrollerItem>
+              </template>
+            </DynamicScroller>
           </div>
         </div>
       </template>
     </UDrawer>
   </div>
 </template>
-
-<style scoped>
-
-</style>

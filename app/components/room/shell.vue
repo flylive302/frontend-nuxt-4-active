@@ -52,21 +52,9 @@ useMutationObserver(shellRef, () => {
       <RoomInfo />
 
       <main class="grid grid-cols-5 gap-x-1 gap-y-1 px-1">
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
-        <RoomSeat />
+        <RoomSeat v-for="i in 15" :key="i" :seat-id="i" />
+
+        <RoomSeatDrawer />
       </main>
 
       <div class="flex flex-grow gap-1 mt-1">

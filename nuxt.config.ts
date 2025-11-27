@@ -38,7 +38,16 @@ export default defineNuxtConfig({
         },
         build: {
             rollupOptions: {
-                output: { manualChunks: { svga: ['svga/dist/index.esm.min.js'] } }
+                output: {
+                    manualChunks(id) {
+                        if (id.includes('node_modules')) {
+                            if (id.includes('svga')) return 'svga'
+                            if (id.includes('mapbox') || id.includes('googlemaps')) return 'maps'
+                            if (id.includes('vue') || id.includes('nuxt')) return 'framework'
+                            return 'vendor'
+                        }
+                    }
+                }
             }
         }
     },

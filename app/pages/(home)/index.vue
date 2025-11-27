@@ -1,9 +1,24 @@
 <script setup lang="ts">
+import { useIntersectionObserver } from '@vueuse/core'
 
 definePageMeta({ layout: 'home' })
 
 const ROOM_CARD_IMAGE = 'siteAssets/room/room-card-top.webp'
 const roomCarouselItems = Array.from({ length: 6 }, () => ROOM_CARD_IMAGE)
+
+// ---- Optimization: Pause Autoplay when off-screen
+const bannerRef = ref(null)
+const roomRef = ref(null)
+const bannerAutoplay = ref<{ delay: number } | null>({ delay: 4000 })
+const roomAutoplay = ref<{ delay: number } | null>({ delay: 3000 })
+
+useIntersectionObserver(bannerRef, ([{ isIntersecting }]) => {
+  bannerAutoplay.value = isIntersecting ? { delay: 4000 } : null
+})
+
+useIntersectionObserver(roomRef, ([{ isIntersecting }]) => {
+  roomAutoplay.value = isIntersecting ? { delay: 3000 } : null
+})
 
 // ---- Types
 type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
@@ -86,49 +101,53 @@ const banners: Banner[] = [
 
 <template>
   <main>
-    <UCarousel
-        :autoplay="{ delay: 4000 }"
-        :items="banners"
-        class-names
-        :ui="{
-          container: 'pt-3 px-3',
-          item: 'basis-1/1 transition duration-800 ease-in-out scale-10 [&.is-snapped]:scale-100'
-        }"
-        class="mb-4"
-    >
-      <template #default="slotProps">
-        <EventsBanners
-            v-if="slotProps?.item"
-            v-bind="{
-              ...(slotProps.item.lUserName ? { lUserName: slotProps.item.lUserName } : {}),
-              ...(slotProps.item.lFrameName ? { lFrameName: slotProps.item.lFrameName } : {}),
-              ...(slotProps.item.lFrameGirth ? { lFrameGirth: slotProps.item.lFrameGirth } : {}),
-              ...(slotProps.item.rUserName ? { rUserName: slotProps.item.rUserName } : {}),
-              ...(slotProps.item.rFrameName ? { rFrameName: slotProps.item.rFrameName } : {}),
-              ...(slotProps.item.rFrameGirth ? { rFrameGirth: slotProps.item.rFrameGirth } : {})
-            }"
-            :type="slotProps.item.type"
-        >
-          <span :class="slotProps.item.textClass">{{ slotProps.item.text }}</span>
-        </EventsBanners>
-      </template>
-    </UCarousel>
+    <div ref="bannerRef">
+      <UCarousel
+          :autoplay="bannerAutoplay"
+          :items="banners"
+          class-names
+          :ui="{
+            container: 'pt-3 px-3',
+            item: 'basis-1/1 transition duration-800 ease-in-out scale-10 [&.is-snapped]:scale-100'
+          }"
+          class="mb-4"
+      >
+        <template #default="slotProps">
+          <EventsBanners
+              v-if="slotProps?.item"
+              v-bind="{
+                ...(slotProps.item.lUserName ? { lUserName: slotProps.item.lUserName } : {}),
+                ...(slotProps.item.lFrameName ? { lFrameName: slotProps.item.lFrameName } : {}),
+                ...(slotProps.item.lFrameGirth ? { lFrameGirth: slotProps.item.lFrameGirth } : {}),
+                ...(slotProps.item.rUserName ? { rUserName: slotProps.item.rUserName } : {}),
+                ...(slotProps.item.rFrameName ? { rFrameName: slotProps.item.rFrameName } : {}),
+                ...(slotProps.item.rFrameGirth ? { rFrameGirth: slotProps.item.rFrameGirth } : {})
+              }"
+              :type="slotProps.item.type"
+          >
+            <span :class="slotProps.item.textClass">{{ slotProps.item.text }}</span>
+          </EventsBanners>
+        </template>
+      </UCarousel>
+    </div>
 
-    <UCarousel
-        :items="roomCarouselItems"
-        :autoplay="{ delay: 3000 }"
-        class-names
-        :ui="{
-          item: 'basis-2/3 transition duration-300 ease-in-out scale-90 [&.is-snapped]:scale-100'
-        }"
-        class="mb-6"
-    >
-      <template #default="slotProps">
-        <RoomCard v-if="slotProps?.item" :image-src="slotProps.item">
-          Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
-        </RoomCard>
-      </template>
-    </UCarousel>
+    <div ref="roomRef">
+      <UCarousel
+          :items="roomCarouselItems"
+          :autoplay="roomAutoplay"
+          class-names
+          :ui="{
+            item: 'basis-2/3 transition duration-300 ease-in-out scale-90 [&.is-snapped]:scale-100'
+          }"
+          class="mb-6"
+      >
+        <template #default="slotProps">
+          <RoomCard v-if="slotProps?.item" :image-src="slotProps.item">
+            Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
+          </RoomCard>
+        </template>
+      </UCarousel>
+    </div>
 
     <div class="mx-3">
       <InfiniteScroll />
