@@ -3,9 +3,12 @@ import { z } from 'zod'
 import type { FormSubmitEvent, SelectItem } from '@nuxt/ui'
 import { CalendarDate } from '@internationalized/date'
 import { computed, reactive, ref } from 'vue'
-import {navigateTo} from "nuxt/app";
+import { navigateTo } from 'nuxt/app'
 
-definePageMeta({ layout: 'auth' })
+definePageMeta({
+  layout: 'auth',
+  middleware: 'auth'
+})
 
 // ---------- schema ----------
 const formSchema = z.object({
@@ -54,6 +57,8 @@ const isValid = computed(() => formSchema.safeParse({ ...state }).success)
 // ---------- submit ----------
 const toast = useToast()
 const processing = ref(false)
+const { updateProfile } = useAuth()
+const { normalizeError } = useApi()
 
 async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
   processing.value = true
@@ -62,10 +67,18 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
     if (!parsed.success) {
       return
     }
-    toast.add({ title: 'Success', description: 'Profile data saved', color: 'success' })
-    console.log('Complete profile payload →', parsed.data)
 
-    setTimeout(() => navigateTo('/'), 3000)
+    await updateProfile({
+        name: parsed.data.name,
+        // gender: parsed.data.gender, // Assuming API supports this
+        email: parsed.data.email,
+        // dateOfBirth: parsed.data.dateOfBirth?.toString() // Assuming API supports this
+    })
+
+    navigateTo('/')
+  } catch (error: any) {
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
   } finally {
     processing.value = false
   }

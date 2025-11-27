@@ -4,7 +4,7 @@ export default defineNuxtConfig({
     ssr: false,
     devtools: { enabled: true },
     css: ['~/assets/css/main.css'],
-    modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt'],
+    modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     pinia: {
         storesDirs: ['./stores/**'],
     },
@@ -33,8 +33,7 @@ export default defineNuxtConfig({
     },
     vite: {
         optimizeDeps: {
-            include: ['svga/dist/index.esm.min.js'],
-            exclude: ['@nuxt/hints']
+            include: ['svga/dist/index.esm.min.js']
         },
         build: {
             rollupOptions: {
@@ -53,7 +52,7 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            apiBase: 'https://www.laravel-backend.com/api'
+            apiBase: 'http://localhost:8000/api'
         }
     }
 })

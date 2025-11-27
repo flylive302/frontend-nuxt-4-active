@@ -11,13 +11,7 @@ definePageMeta({
 })
 
 const baseSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  password: z.string()
-    .min(8, 'Must be at least 8 characters')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/\d/, 'Must contain at least one number')
-    .regex(/[\W_]/, 'Must contain at least one special character'),
+  password: z.string().min(8, 'Must be at least 8 characters'),
   countryCode: z.string().min(2),
   dialCode: z.string().min(1),
   phone: z.string().min(1),
@@ -26,7 +20,6 @@ const baseSchema = z.object({
 type BaseSchema = z.output<typeof baseSchema>
 
 const state = reactive<Partial<BaseSchema>>({
-  name: undefined,
   password: undefined,
   countryCode: undefined,
   dialCode: undefined,
@@ -39,7 +32,7 @@ const generalError = ref('')
 
 const toast = useToast()
 const processing = ref(false)
-const { register } = useAuth()
+const { login } = useAuth()
 const { normalizeError } = useApi()
 
 function onPhoneUpdate(phoneData: PhoneModel) {
@@ -51,19 +44,18 @@ function onPhoneUpdate(phoneData: PhoneModel) {
 async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
   processing.value = true
   generalError.value = ''
-  
+
   try {
     const parsed = baseSchema.safeParse(state)
     if (!parsed.success) return
 
-    await register({
-        name: parsed.data.name,
+    await login({
         phone: `${parsed.data.dialCode}${parsed.data.phone}`.replace(/[^+\d]/g, ''),
         phone_country: parsed.data.countryCode,
         password: parsed.data.password
     })
 
-    navigateTo('/complete-profile-data')
+    navigateTo('/')
   } catch (error: any) {
       const err = normalizeError(error)
       if (err.status === 422 && err.fieldErrors) {
@@ -87,23 +79,13 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
       v-if="generalError"
       color="error"
       variant="soft"
-      title="Registration Failed"
+      title="Login Failed"
       :description="generalError"
       class="mb-4"
       icon="i-lucide-alert-circle"
     />
 
     <UForm ref="form" :schema="baseSchema" :state="state" class="space-y-3" @submit="onSubmit">
-      <UFormField label="Full Name" name="name" required>
-        <UInput
-            v-model="state.name"
-            class="w-full"
-            size="lg"
-            icon="i-lucide-user"
-            placeholder="John Doe"
-        />
-      </UFormField>
-
       <FormsCountryPhoneInput @update:model="onPhoneUpdate" />
 
       <UFormField label="Password" name="password" required>
@@ -125,10 +107,10 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
           :loading="processing"
           :disabled="!isValid"
       >
-        Sign Up
+        Log In
       </UButton>
     </UForm>
 
-    <UButton to="/log-in" class="mt-3 underline font-bold px-0" variant="link" trailing-icon="i-lucide-arrow-right" size="xl">Have an Account Log In</UButton>
+    <UButton to="/sign-up" class="mt-3 underline font-bold px-0" variant="link" trailing-icon="i-lucide-arrow-right" size="xl">Create an Account</UButton>
   </main>
 </template>

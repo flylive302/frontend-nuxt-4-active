@@ -20,8 +20,17 @@ export function useApi() {
         timeout: 10_000,
         onRequest({ options }: FetchContext) {
             const headers = new Headers(options.headers || {})
+            const token = useCookie('sanctum_token')
+            const xsrfToken = useCookie('XSRF-TOKEN')
+
             if (token.value) headers.set('Authorization', `Bearer ${token.value}`)
+            if (xsrfToken.value) headers.set('X-XSRF-TOKEN', xsrfToken.value)
+
+            headers.set('Accept', 'application/json')
+            headers.set('Referer', 'http://localhost:3000')
+
             options.headers = headers
+            options.credentials = 'include'
         }
     })
 
