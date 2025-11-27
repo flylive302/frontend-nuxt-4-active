@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { watch } from "vue";
-
 const roomStore = useRoomStore();
 
-watch(() => roomStore.roomMinimized, (v) => {
-  document.body.style.overflow = v ? 'hidden' : 'auto'
-  document.body.style.position = v ? 'fixed' : 'relative'
-})
+// --- Control Body Scroll ---
+const toggleBodyScroll = (isMinimized: boolean) => {
+  document.body.style.overflow = isMinimized ? 'scroll' : 'scroll'
+  document.body.style.position = isMinimized ? 'fixed' : 'relative'
+}
 
+// Run on component mount and whenever state changes
+watch(() => roomStore.roomMinimized, toggleBodyScroll, { immediate: true })
 </script>
 
 <template>

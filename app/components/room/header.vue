@@ -3,11 +3,6 @@ import type { StepperItem } from "@nuxt/ui";
 import { ref } from "vue";
 
 const roomStore = useRoomStore();
-const minimizeRoom = () => {
-  roomStore.minimizeRoom();
-  document.body.style.overflow = 'auto';
-  document.body.style.position = 'relative';
-}
 
 const items = ref([
   {
@@ -64,6 +59,7 @@ const adminAnnouncements = ref<StepperItem[]>([
   },
 ])
 
+const open = ref(false)
 </script>
 
 <template>
@@ -140,7 +136,7 @@ const adminAnnouncements = ref<StepperItem[]>([
       />
 
       <UDrawer
-          v-if="roomStore.roomMinimized"
+          v-model:open="open"
           title="Drawer with description"
           description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
       >
@@ -149,6 +145,7 @@ const adminAnnouncements = ref<StepperItem[]>([
             size="xl"
             class="rounded-full border border-primary-600 cursor-pointer shadow-lg shadow-primary-950/50 backdrop-blur-xs"
             variant="subtle"
+            @click="open = true"
         />
 
         <template #content>
@@ -157,7 +154,7 @@ const adminAnnouncements = ref<StepperItem[]>([
               <UButton
                   icon="i-lucide-minimize" color="secondary" size="xl" variant="subtle"
                   class="w-full justify-center"
-                  @click="minimizeRoom()"
+                  @click="roomStore.minimizeRoom();open = false"
               >
                 Minimize
               </UButton>
