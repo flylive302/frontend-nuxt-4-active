@@ -1,5 +1,8 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'home' })
+definePageMeta({
+  layout: 'home',
+  middleware: 'auth'
+})
 
 </script>
 

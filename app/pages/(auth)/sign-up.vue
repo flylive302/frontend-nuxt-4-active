@@ -56,10 +56,12 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
     const parsed = baseSchema.safeParse(state)
     if (!parsed.success) return
 
+    console.log(parsed.data)
     await register({
         name: parsed.data.name,
         phone: `${parsed.data.dialCode}${parsed.data.phone}`.replace(/[^+\d]/g, ''),
-        phone_country: parsed.data.countryCode,
+        country: parsed.data.dialCode,
+        country_code: parsed.data.dialCode,
         password: parsed.data.password
     })
 

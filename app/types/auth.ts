@@ -1,34 +1,25 @@
 export interface User {
     id: number
-    name: string
-    signature: string | null
-    avatar: {
-        original: string
-        thumbnail: string
-        medium: string
-        large: string
-    } | null
-    email_verified_at: string | null
-    created_at: string
-    updated_at: string
-
-    // Private / Admin / Own Profile Only
+    name?: string
     email?: string
-    phone?: {
-        raw: string
-        formatted: string
-        country: string
-    }
-    phone_country?: string
-    last_login_at?: string
+    phone?: string
+    country?: string
+    country_code?: string
+    signature?: string | null
+    avatar?: string | null
+
+    is_blocked?: boolean | null
+    blocked_at?: string | null
+    blocked_reason?: string | null
+    locked_until?: string | null
+
     roles?: string[]
     permissions?: string[]
 
-    // Computed
-    profile_completion?: {
-        overall_percentage: number
-        is_complete: boolean
-    }
+    email_verified_at?: string | null
+    last_login_at?: string
+    created_at?: string
+    updated_at?: string
 }
 
 export interface AuthResponse {

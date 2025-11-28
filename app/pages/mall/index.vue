@@ -1,5 +1,8 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'alt' })
+definePageMeta({
+  layout: 'alt',
+  middleware: 'auth',
+})
 
 const items = [
   {

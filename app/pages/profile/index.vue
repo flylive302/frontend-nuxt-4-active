@@ -1,5 +1,9 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'alt' })
+definePageMeta({
+  layout: 'alt',
+  middleware: 'auth',
+})
+const authStore = useAuthStore();
 </script>
 
 <template>
@@ -36,6 +40,9 @@ definePageMeta({ layout: 'alt' })
       <NavProfileItem to="/income" icon="i-lucide-dollar-sign" txt="My Income" />
       <NavProfileItem to="/agency/list" icon="i-lucide-briefcase" txt="Agency List" />
       <NavProfileItem to="/agency/owner" icon="i-lucide-briefcase-business" txt="My Agency" />
+      <UButton class="w-full justify-center" icon="i-lucide-power-off" size="xl" @click="authStore.logout">
+        Logout
+      </UButton>
     </div>
   </main>
 </template>

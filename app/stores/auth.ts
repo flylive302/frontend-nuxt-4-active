@@ -1,48 +1,62 @@
-import { defineStore } from 'pinia'
-import type { User } from '~/types/auth'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import type { User } from '~/types/auth';
 
-export const useAuthStore = defineStore('auth', {
-    state: () => ({
-        user: null as User | null,
-        token: null as string | null,
-        status: 'idle' as 'idle' | 'loading' | 'authenticated' | 'unauthenticated',
-    }),
-    getters: {
-        isAuthenticated: (state) => !!state.token && !!state.user,
-    },
-    actions: {
-        setUser(user: User | null) {
-            this.user = user
-            this.status = user ? 'authenticated' : 'unauthenticated'
-        },
-        setToken(token: string | null) {
-            this.token = token
-            // Sync with cookie
-            const cookie = useCookie('sanctum_token')
-            cookie.value = token
-        },
-        async fetchUser() {
-            this.status = 'loading'
-            try {
-                const { api } = useApi()
-                const { data } = await api<{ data: User }>('/v1/auth/user')
-                this.setUser(data)
-            } catch (error) {
-                this.setUser(null)
-                this.setToken(null)
-            } finally {
-                if (this.status === 'loading') {
-                    this.status = this.user ? 'authenticated' : 'unauthenticated'
-                }
-            }
-        },
-        logout() {
-            this.setUser(null)
-            this.setToken(null)
-            this.status = 'unauthenticated'
-        },
-    },
-    persist: {
-        paths: ['user', 'token']
+export const useAuthStore = defineStore('auth', () => {
+    const user = ref<User | null>(null);
+    const token = ref<string | null>(null);
+    const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle');
+
+    const isAuthenticated = computed(() => !!token.value && !!user.value);
+
+    function setUser(newUser: User | null) {
+        user.value = newUser;
+        status.value = newUser ? 'authenticated' : 'unauthenticated';
     }
-})
+
+    function setToken(newToken: string | null) {
+        token.value = newToken;
+        // Sync with cookie
+        const cookie = useCookie('sanctum_token');
+        cookie.value = newToken;
+    }
+
+    async function fetchUser() {
+        status.value = 'loading';
+        try {
+            const { api } = useApi();
+            const { data } = await api<{ data: User }>('/v1/auth/user');
+            setUser(data);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+            setUser(null);
+            setToken(null);
+        } finally {
+            if (status.value === 'loading') {
+                status.value = user.value ? 'authenticated' : 'unauthenticated';
+            }
+        }
+    }
+
+    function logout() {
+        setUser(null);
+        setToken(null);
+        status.value = 'unauthenticated';
+        navigateTo('/log-in');
+    }
+
+    return {
+        user,
+        token,
+        status,
+        isAuthenticated,
+        setUser,
+        setToken,
+        fetchUser,
+        logout
+    };
+}, {
+    persist: {
+        pick: ['user', 'token']
+    }
+});

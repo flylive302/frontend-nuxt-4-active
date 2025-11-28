@@ -1,3 +1,6 @@
+<script setup lang="ts">
+</script>
+
 <template>
   <div>
     <BackgroundDecorationsVariant1 />
@@ -10,5 +13,3 @@
     <NavHomeFooter />
   </div>
 </template>
-<script setup lang="ts">
-</script>

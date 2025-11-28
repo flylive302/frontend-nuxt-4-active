@@ -2,7 +2,10 @@
 import TransactionItem from '~/components/transaction-item.vue';
 import type { BalanceChange, TransactionDay, WalletTransaction } from '~/types/wallet';
 
-definePageMeta({ layout: 'alt' });
+definePageMeta({
+  layout: 'alt',
+  middleware: 'auth'
+});
 
 interface TabItem {
   label: string;

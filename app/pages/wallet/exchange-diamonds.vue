@@ -3,7 +3,10 @@ import {z} from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { reactive } from "vue"
 
-definePageMeta({ layout: 'alt' })
+definePageMeta({
+  layout: 'alt',
+  middleware: 'auth'
+})
 
 const schema = z.object({
   diamonds: z.coerce.number('Invalid diamonds').int('Must be a whole number').nonnegative('Must be non-negative'),

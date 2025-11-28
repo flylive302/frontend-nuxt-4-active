@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
 
-definePageMeta({ layout: 'home' })
+definePageMeta({
+  layout: 'home',
+  middleware: 'auth'
+})
 
 const ROOM_CARD_IMAGE = 'siteAssets/room/room-card-top.webp'
 const roomCarouselItems = Array.from({ length: 6 }, () => ROOM_CARD_IMAGE)
