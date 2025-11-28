@@ -56,13 +56,13 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
     const parsed = baseSchema.safeParse(state)
     if (!parsed.success) return
 
-    console.log(parsed.data)
     await register({
         name: parsed.data.name,
         phone: `${parsed.data.dialCode}${parsed.data.phone}`.replace(/[^+\d]/g, ''),
-        country: parsed.data.dialCode,
+        phone_country: parsed.data.countryCode,
         country_code: parsed.data.dialCode,
-        password: parsed.data.password
+        password: parsed.data.password,
+        signature: null
     })
 
     navigateTo('/complete-profile-data')

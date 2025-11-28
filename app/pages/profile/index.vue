@@ -4,6 +4,8 @@ definePageMeta({
   middleware: 'auth',
 })
 const authStore = useAuthStore();
+
+console.log(authStore.user);
 </script>
 
 <template>
@@ -15,8 +17,8 @@ const authStore = useAuthStore();
         <NuxtLink to="/profile/owner-@NewUser" class="flex px-3">
           <UserAvatar :animated="true" class="w-24" />
           <div class="px-3">
-            <h1 class="text-lg font-bold underline">User Name</h1>
-            <ProfileBadge />
+            <h1 class="text-lg font-bold underline">{{ authStore.user.name }}</h1>
+            <ProfileBadge :txt="authStore.user.signature" />
             <div class="flex gap-2">
               <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1"/>
               <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="1"/>

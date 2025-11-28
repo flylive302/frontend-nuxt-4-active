@@ -15,6 +15,7 @@ const baseSchema = z.object({
   countryCode: z.string().min(2),
   dialCode: z.string().min(1),
   phone: z.string().min(1),
+  rememberMe: z.boolean().optional(),
 })
 
 type BaseSchema = z.output<typeof baseSchema>
@@ -24,6 +25,7 @@ const state = reactive<Partial<BaseSchema>>({
   countryCode: undefined,
   dialCode: undefined,
   phone: undefined,
+  rememberMe: false,
 })
 
 const isValid = computed(() => baseSchema.safeParse(state).success)
@@ -52,7 +54,8 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
     await login({
         phone: `${parsed.data.dialCode}${parsed.data.phone}`.replace(/[^+\d]/g, ''),
         phone_country: parsed.data.countryCode,
-        password: parsed.data.password
+        password: parsed.data.password,
+        remember_me: parsed.data.rememberMe
     })
 
     navigateTo('/')
@@ -98,6 +101,8 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
             placeholder="********"
         />
       </UFormField>
+
+      <UCheckbox v-model="state.rememberMe" label="Remember me" />
 
       <UButton
           type="submit"

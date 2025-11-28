@@ -3,7 +3,7 @@ export interface User {
     name?: string
     email?: string
     phone?: string
-    country?: string
+    phone_country?: string
     country_code?: string
     signature?: string | null
     avatar?: string | null
