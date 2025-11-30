@@ -62,7 +62,6 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
         phone_country: parsed.data.countryCode,
         country_code: parsed.data.dialCode,
         password: parsed.data.password,
-        signature: null
     })
 
     navigateTo('/complete-profile-data')

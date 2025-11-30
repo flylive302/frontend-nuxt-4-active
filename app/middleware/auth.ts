@@ -5,4 +5,7 @@ export default defineNuxtRouteMiddleware(() => {
         return navigateTo('/log-in')
     }
 
+    if (authStore.user?.profile_completion?.is_complete == false){
+        return navigateTo('/complete-profile-data')
+    }
 })

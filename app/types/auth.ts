@@ -1,4 +1,4 @@
-import type { CalendarDate, DateValue } from "@internationalized/date";
+import type {DateValue} from "@internationalized/date";
 
 export interface User {
     id: number
@@ -10,7 +10,7 @@ export interface User {
     signature?: string | null
     avatar?: string | null
     gender?: number | null
-    dateOfBirth?: DateValue | null
+    date_of_birth?: DateValue | null
 
     is_blocked?: boolean | null
     blocked_at?: string | null
@@ -24,6 +24,17 @@ export interface User {
     last_login_at?: string
     created_at?: string
     updated_at?: string
+
+    profile_completion?: UserProfileCompletion
+}
+
+export interface UserProfileCompletion {
+    is_complete?: boolean
+    optional_completed?: number | null
+    optional_total?: number | null
+    overall_percentage?: number | null
+    required_completed?: number | null
+    required_total?: number | null
 }
 
 export interface AuthResponse {

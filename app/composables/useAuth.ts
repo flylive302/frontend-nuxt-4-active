@@ -48,7 +48,7 @@ export function useAuth() {
 
             toast.add({ title: 'Account created!', color: 'success' })
             return true
-        } catch (error: any) {
+        } catch (error) {
             throw error
         }
     }

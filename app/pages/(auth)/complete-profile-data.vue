@@ -6,7 +6,6 @@ import { computed, reactive, ref } from 'vue'
 
 definePageMeta({
   layout: 'auth',
-  middleware: 'auth'
 })
 
 // ---------- schema ----------
@@ -33,10 +32,12 @@ type FormSchema = z.infer<typeof formSchema>
 const authStore = useAuthStore()
 
 // ---------- reactive state ----------
+const initialSignature = authStore.user?.signature ?? undefined
+
 const state = reactive<Partial<FormSchema>>({
   gender: undefined,
   email: undefined,
-  signature: authStore.user?.signature ?? undefined,
+  signature: initialSignature,
   dateOfBirth: undefined as DateValue | undefined,
 })
 
@@ -70,12 +71,22 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
       return
     }
 
-    await updateProfile({
-        gender: parsed.data.gender,
-        email: parsed.data.email,
-        signature: parsed.data.signature,
-        dateOfBirth: parsed.data.dateOfBirth
-    })
+    const payload: {
+      gender: number
+      email: string
+      date_of_birth: string
+      signature?: string
+    } = {
+      gender: parsed.data.gender,
+      email: parsed.data.email,
+      date_of_birth: parsed.data.dateOfBirth.toString(),
+    }
+
+    if (parsed.data.signature !== initialSignature) {
+      payload.signature = parsed.data.signature
+    }
+
+    await updateProfile(payload)
 
     navigateTo('/')
   } catch (error) {
