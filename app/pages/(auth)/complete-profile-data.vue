@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import type { FormSubmitEvent, SelectItem } from '@nuxt/ui'
-import { CalendarDate } from '@internationalized/date'
+import { CalendarDate, type DateValue } from '@internationalized/date'
 import { computed, reactive, ref } from 'vue'
-import { navigateTo } from 'nuxt/app'
 
 definePageMeta({
   layout: 'auth',
@@ -12,10 +11,10 @@ definePageMeta({
 
 // ---------- schema ----------
 const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  gender: z.string().min(1, 'Please select a gender'),
+  gender: z.number().min(1, 'Please select a gender'),
   email: z.email('Invalid email'),
-  dateOfBirth: z.custom<CalendarDate>(
+  signature: z.string().max(100, 'Signature must be less than 100 characters').optional(),
+  dateOfBirth: z.custom<DateValue>(
       (val) => val instanceof CalendarDate,
       { message: 'Please select a valid date of birth' }
   ).refine((date) => {
@@ -30,20 +29,23 @@ const formSchema = z.object({
 
 type FormSchema = z.infer<typeof formSchema>
 
+// ---------- store ----------
+const authStore = useAuthStore()
+
 // ---------- reactive state ----------
 const state = reactive<Partial<FormSchema>>({
-  name: undefined,
   gender: undefined,
   email: undefined,
-  dateOfBirth: undefined as CalendarDate | undefined,
+  signature: authStore.user?.signature ?? undefined,
+  dateOfBirth: undefined as DateValue | undefined,
 })
 
 // ---------- gender dropdown ----------
 const genderOptions: SelectItem[] = [
-  { label: 'Male', value: 'male', icon: 'i-lucide-mars' },
-  { label: 'Female', value: 'female', icon: 'i-lucide-venus' },
-  { label: 'Non-binary', value: 'non_binary', icon: 'i-lucide-non-binary' },
-  { label: 'Prefer not to say', value: 'not_specified', icon: 'i-lucide-help-circle' },
+  { label: 'Male', value: 1, icon: 'i-lucide-mars' },
+  { label: 'Female', value: 2, icon: 'i-lucide-venus' },
+  { label: 'Non-binary', value: 3, icon: 'i-lucide-non-binary' },
+  { label: 'Prefer not to say', value: 4, icon: 'i-lucide-help-circle' },
 ]
 const selectedIcon = computed(() =>
     genderOptions.find(o => o?.value === state.gender)?.icon ?? 'i-lucide-venus-and-mars'
@@ -69,14 +71,14 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
     }
 
     await updateProfile({
-        name: parsed.data.name,
-        // gender: parsed.data.gender, // Assuming API supports this
+        gender: parsed.data.gender,
         email: parsed.data.email,
-        // dateOfBirth: parsed.data.dateOfBirth?.toString() // Assuming API supports this
+        signature: parsed.data.signature,
+        dateOfBirth: parsed.data.dateOfBirth
     })
 
     navigateTo('/')
-  } catch (error: any) {
+  } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
   } finally {
@@ -88,10 +90,6 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
 <template>
   <main>
     <UForm :schema="formSchema" :state="state" class="space-y-3" @submit="onSubmit">
-      <UFormField label="Name" name="name" required>
-        <UInput v-model="state.name" class="w-full" size="lg" icon="i-lucide-user-pen" placeholder="Enter your full name" />
-      </UFormField>
-
       <UFormField label="Gender" name="gender" required>
         <USelect
             v-model="state.gender" class="w-full"
@@ -122,6 +120,10 @@ async function onSubmit(_e: FormSubmitEvent<FormSchema>) {
 
       <UFormField label="Email" name="email" required>
         <UInput v-model="state.email" class="w-full" size="lg" icon="i-lucide-at-sign" placeholder="email@example.com" />
+      </UFormField>
+
+      <UFormField label="Signature" name="signature">
+        <UInput v-model="state.signature" class="w-full" size="lg" icon="i-lucide-pen-tool" placeholder="Enter your signature" />
       </UFormField>
 
       <UButton type="submit" size="xl" class="w-full justify-center disabled:bg-primary-400" icon="i-lucide-send" :loading="processing" :disabled="!isValid">

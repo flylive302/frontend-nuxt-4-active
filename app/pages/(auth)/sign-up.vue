@@ -66,7 +66,7 @@ async function onSubmit(_e: FormSubmitEvent<BaseSchema>) {
     })
 
     navigateTo('/complete-profile-data')
-  } catch (error: any) {
+  } catch (error) {
       const err = normalizeError(error)
       if (err.status === 422 && err.fieldErrors) {
           const formErrors = Object.entries(err.fieldErrors).map(([path, messages]) => ({

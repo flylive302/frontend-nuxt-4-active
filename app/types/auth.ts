@@ -1,3 +1,5 @@
+import type { CalendarDate, DateValue } from "@internationalized/date";
+
 export interface User {
     id: number
     name?: string
@@ -7,6 +9,8 @@ export interface User {
     country_code?: string
     signature?: string | null
     avatar?: string | null
+    gender?: number | null
+    dateOfBirth?: DateValue | null
 
     is_blocked?: boolean | null
     blocked_at?: string | null
