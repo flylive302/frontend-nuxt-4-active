@@ -1,22 +1,13 @@
 <script setup lang="ts">
-// ========================================
-// Imports & Types
-// ========================================
 import { z } from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
-import { CalendarDate, type DateValue } from '@internationalized/date'
-import { computed, reactive, ref } from 'vue'
+import type { UpdateProfilePayload } from '~/composables/useAuth'
+import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
+import { computed, reactive, ref, watch } from 'vue'
 
-// ========================================
-// Page Configuration
-// ========================================
 definePageMeta({
   layout: 'auth',
 })
 
-// ========================================
-// Constants
-// ========================================
 const MINIMUM_AGE_REQUIREMENT = 18 as const
 const SIGNATURE_MAX_LENGTH = 100 as const
 const DEFAULT_CALENDAR_YEAR = 2000 as const
@@ -34,9 +25,6 @@ const ICON_NON_BINARY = 'i-lucide-non-binary' as const
 const ICON_HELP_CIRCLE = 'i-lucide-help-circle' as const
 const ICON_DEFAULT_GENDER = 'i-lucide-venus-and-mars' as const
 
-// ========================================
-// Validation Schema
-// ========================================
 const formSchema = z.object({
   gender: z.number().min(1, 'Please select a gender'),
   email: z.string().email('Invalid email'),
@@ -51,27 +39,28 @@ const formSchema = z.object({
     )
     .refine(
       (selectedDate) => {
-        const currentDate = new Date()
-        const birthDate = selectedDate.toDate('UTC')
-        const calculatedAge = currentDate.getFullYear() - birthDate.getFullYear()
-        const monthDifference = currentDate.getMonth() - birthDate.getMonth()
+        // Use @internationalized/date for consistent comparison
+        // This avoids timezone issues by comparing calendar dates directly
+        const now = today(getLocalTimeZone())
 
-        // Adjust age if birthday hasn't occurred yet this year
-        const hasNotHadBirthdayThisYear =
-          monthDifference < 0 ||
-          (monthDifference === 0 && currentDate.getDate() < birthDate.getDate())
+        // Calculate age based on year difference
+        let age = now.year - selectedDate.year
 
-        const adjustedAge = hasNotHadBirthdayThisYear ? calculatedAge - 1 : calculatedAge
+        // Adjust if birthday hasn't occurred yet this year
+        // Compare (month, day) tuples
+        if (
+          now.month < selectedDate.month ||
+          (now.month === selectedDate.month && now.day < selectedDate.day)
+        ) {
+          age--
+        }
 
-        return adjustedAge >= MINIMUM_AGE_REQUIREMENT
+        return age >= MINIMUM_AGE_REQUIREMENT
       },
       { message: `You must be at least ${MINIMUM_AGE_REQUIREMENT} years old` }
     ),
 })
 
-// ========================================
-// Types
-// ========================================
 type FormSchema = z.infer<typeof formSchema>
 
 interface GenderOption {
@@ -80,16 +69,8 @@ interface GenderOption {
   readonly icon: string
 }
 
-interface ProfileUpdatePayload {
-  gender: number
-  email: string
-  date_of_birth: string
-  signature?: string
-}
 
-// ========================================
-// Component State
-// ========================================
+
 const genderOptions: readonly GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
   { label: 'Female', value: GENDER_FEMALE, icon: ICON_VENUS },
@@ -112,20 +93,13 @@ const formState = reactive<Partial<FormSchema>>({
 
 const isProcessingSubmit = ref<boolean>(false)
 
-// ========================================
-// Composables / Injected Dependencies
-// ========================================
 const authStore = useAuthStore()
 const { updateProfile } = useAuth()
 const { normalizeError } = useApi()
 const toast = useToast()
 
-// ========================================
-// Computed Properties
-// ========================================
 /**
  * Retrieves the initial signature value from the authenticated user's profile.
- * @returns The user's existing signature or undefined if not set.
  */
 const initialUserSignature = computed<string | undefined>(() => {
   return authStore.user?.signature ?? undefined
@@ -133,7 +107,6 @@ const initialUserSignature = computed<string | undefined>(() => {
 
 /**
  * Determines the icon to display based on the selected gender option.
- * @returns The icon identifier string for the selected gender, or default icon if none selected.
  */
 const selectedGenderIcon = computed<string>(() => {
   const matchedOption = genderOptions.find(
@@ -143,29 +116,17 @@ const selectedGenderIcon = computed<string>(() => {
 })
 
 /**
- * Validates the entire form state against the schema.
- * @returns True if all form fields are valid, false otherwise.
- */
-const isFormValid = computed<boolean>(() => {
-  const validationResult = formSchema.safeParse({ ...formState })
-  return validationResult.success
-})
-
-// ========================================
-// Event Handlers
-// ========================================
-/**
  * Handles form submission by validating data, preparing the API payload,
  * and updating the user's profile information.
- * @param _submitEvent - The form submit event (unused but required by type signature).
  */
-async function handleFormSubmit(_submitEvent: FormSubmitEvent<FormSchema>): Promise<void> {
+async function handleFormSubmit(): Promise<void> {
   isProcessingSubmit.value = true
 
   try {
     const validationResult = formSchema.safeParse({ ...formState })
 
     if (!validationResult.success) {
+      // Form validation failed, UI will show errors automatically via UForm
       return
     }
 
@@ -186,17 +147,11 @@ async function handleFormSubmit(_submitEvent: FormSubmitEvent<FormSchema>): Prom
   }
 }
 
-// ========================================
-// Helpers / Utilities
-// ========================================
 /**
  * Builds the profile update payload from validated form data.
- * Only includes signature if it has been modified from the initial value.
- * @param validatedFormData - The validated form data.
- * @returns The formatted payload ready for API submission.
  */
-function buildProfileUpdatePayload(validatedFormData: FormSchema): ProfileUpdatePayload {
-  const payload: ProfileUpdatePayload = {
+function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfilePayload {
+  const payload: UpdateProfilePayload = {
     gender: validatedFormData.gender,
     email: validatedFormData.email,
     date_of_birth: validatedFormData.dateOfBirth.toString(),
@@ -210,23 +165,24 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): ProfileUpdate
   return payload
 }
 
-// ========================================
-// Lifecycle Hooks
-// ========================================
-/**
- * Initialize form state with existing user data on component mount.
- */
-onMounted(() => {
-  formState.signature = initialUserSignature.value
-})
-</script>
+// Initialize form state with existing user data
+// Watch for user data to be available (in case of race condition or late load)
+watch(
+  () => authStore.user,
+  (user) => {
+    if (user?.signature && formState.signature === undefined) {
+      formState.signature = user.signature
+    }
+  },
+  { immediate: true }
+)</script>
 
 <template>
   <main>
     <UForm :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
       <UFormField label="Gender" name="gender" required>
-        <USelect v-model="formState.gender" class="w-full" :items="genderOptions" :icon="selectedGenderIcon" size="lg"
-          placeholder="Select your gender" />
+        <USelect v-model.number="formState.gender" class="w-full" :items="genderOptions" :icon="selectedGenderIcon"
+          size="lg" placeholder="Select your gender" option-attribute="label" value-attribute="value" />
       </UFormField>
 
       <UFormField label="Date of Birth" name="dateOfBirth" required>
@@ -252,7 +208,7 @@ onMounted(() => {
       </UFormField>
 
       <UButton type="submit" size="xl" class="w-full justify-center disabled:bg-primary-400" icon="i-lucide-send"
-        :loading="isProcessingSubmit" :disabled="!isFormValid">
+        :loading="isProcessingSubmit">
         Submit
       </UButton>
     </UForm>

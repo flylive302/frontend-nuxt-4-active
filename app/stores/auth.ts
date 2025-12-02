@@ -13,7 +13,6 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = newUser;
         status.value = newUser ? 'authenticated' : 'unauthenticated';
     }
-
     function setToken(newToken: string | null) {
         token.value = newToken;
         // Sync with cookie

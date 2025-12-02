@@ -1,84 +1,130 @@
-// ~/composables/useApi.ts
+// ========================================
+// Imports & Types
+// ========================================
 import { ofetch, type FetchContext, type FetchOptions } from 'ofetch'
 import { useRuntimeConfig, useCookie } from '#imports'
 
-export type NormalizedError = {
-    status?: number
-    message: string
-    fieldErrors?: Record<string, string[]>
-    raw?: unknown
+// ========================================
+// Types
+// ========================================
+export interface NormalizedError {
+  status?: number
+  message: string
+  fieldErrors?: Record<string, string[]>
+  raw?: unknown
 }
 
 type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
+// ========================================
+// Composable
+// ========================================
+
+/**
+ * Composable for handling API requests with built-in authentication,
+ * error normalization, and retry logic.
+ * @returns An object containing the api wrapper, the raw client, and error normalization utility.
+ */
 export function useApi() {
-    const config = useRuntimeConfig()
-    const token = useCookie<string | null>('sanctum_token')
+  // ========================================
+  // Composables / Injected Dependencies
+  // ========================================
+  const config = useRuntimeConfig()
 
-    const client = ofetch.create({
-        baseURL: config.public.apiBase as string | undefined,
-        timeout: 10_000,
-        onRequest({ options }: FetchContext) {
-            const headers = new Headers(options.headers || {})
-            const token = useCookie('sanctum_token')
-            const xsrfToken = useCookie('XSRF-TOKEN')
+  // ========================================
+  // Business Logic / Core Logic
+  // ========================================
 
-            if (token.value) headers.set('Authorization', `Bearer ${token.value}`)
-            if (xsrfToken.value) headers.set('X-XSRF-TOKEN', xsrfToken.value)
+  const client = ofetch.create({
+    baseURL: config.public.apiBase as string | undefined,
+    timeout: 10_000,
+    onRequest({ options }: FetchContext) {
+      const headers = new Headers(options.headers || {})
+      const token = useCookie('sanctum_token')
+      const xsrfToken = useCookie('XSRF-TOKEN')
 
-            headers.set('Accept', 'application/json')
-            headers.set('Referer', 'http://localhost:3000')
+      if (token.value) {
+        headers.set('Authorization', `Bearer ${token.value}`)
+      }
+      if (xsrfToken.value) {
+        headers.set('X-XSRF-TOKEN', xsrfToken.value)
+      }
 
-            options.headers = headers
-            options.credentials = 'include'
-        }
-    })
+      headers.set('Accept', 'application/json')
 
-    function isIdempotent(method?: string) {
-        return method === 'GET' || method === 'HEAD'
+      options.headers = headers
+      options.credentials = 'include'
+    }
+  })
+
+  /**
+   * Checks if an HTTP method is safe to retry (GET or HEAD).
+   * @param method - The HTTP method to check.
+   * @returns True if the method is GET or HEAD, false otherwise.
+   */
+  function isIdempotent(method?: string): boolean {
+    return method === 'GET' || method === 'HEAD'
+  }
+
+  /**
+   * Performs an API request with automatic retries for idempotent methods on server errors.
+   * @param url - The endpoint URL.
+   * @param options - Fetch options.
+   * @returns The response data.
+   */
+  async function api<T>(url: string, options: FetchOptions<'json'> = {}): Promise<T> {
+    const method = (options.method?.toUpperCase() as HttpMethod) ?? 'GET'
+    const tryOnce = () => client<T>(url, options)
+
+    try {
+      return await tryOnce()
+    } catch (err: unknown) {
+      // Only retry for idempotent methods on network/5xx
+      if (!isIdempotent(method)) {
+        throw err
+      }
+
+      // We safely cast to any to inspect the error structure
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = (err as any)?.response?.status as number | undefined
+
+      if (!status || status >= 500) {
+        return await tryOnce()
+      }
+      throw err
+    }
+  }
+
+  /**
+   * Normalizes an unknown error into a standard format.
+   * Handles AbortError, Validation Errors (422), and generic API errors.
+   * @param error - The error object to normalize.
+   * @returns A NormalizedError object.
+   */
+  function normalizeError(error: unknown): NormalizedError {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const e = error as any
+    const status: number | undefined = e?.response?.status
+    const data = e?.response?._data ?? e?.data
+
+    if (e?.name === 'AbortError') {
+      return { status, message: 'Request was cancelled.', raw: error }
     }
 
-    async function api<T>(url: string, options: FetchOptions<'json'> = {}): Promise<T> {
-        const method = (options.method?.toUpperCase() as HttpMethod) ?? 'GET'
-        const tryOnce = () => client<T>(url, options)
-
-        try {
-            return await tryOnce()
-        } catch (err: unknown) {
-            // Only retry for idempotent methods on network/5xx
-            if (!isIdempotent(method)) throw err
-
-            const status = (err as any)?.response?.status as number | undefined
-            if (!status || status >= 500) {
-                return await tryOnce()
-            }
-            throw err
-        }
+    if (status === 422 && data) {
+      const fieldErrors: Record<string, string[]> | undefined = data.errors
+      const message: string = data.message || 'Validation failed'
+      return { status, message, fieldErrors, raw: error }
     }
 
-    function normalizeError(error: unknown): NormalizedError {
-        const e = error as any
-        const status: number | undefined = e?.response?.status
-        const data = e?.response?._data ?? e?.data
-
-        if (e?.name === 'AbortError') {
-            return { status, message: 'Request was cancelled.', raw: error }
-        }
-
-        if (status === 422 && data) {
-            const fieldErrors: Record<string, string[]> | undefined = data.errors
-            const message: string = data.message || 'Validation failed'
-            return { status, message, fieldErrors, raw: error }
-        }
-
-        if (status) {
-            const message: string =
-                data?.message || data?.error || e?.message || 'Request failed.'
-            return { status, message, raw: error }
-        }
-
-        return { message: 'Network error. Check your connection.', raw: error }
+    if (status) {
+      const message: string =
+        data?.message || data?.error || e?.message || 'Request failed.'
+      return { status, message, raw: error }
     }
 
-    return { api, client, normalizeError }
+    return { message: 'Network error. Check your connection.', raw: error }
+  }
+
+  return { api, client, normalizeError }
 }
