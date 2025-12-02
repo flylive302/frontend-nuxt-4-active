@@ -64,7 +64,14 @@ export function useAuth() {
         }
     }
 
-    async function updateProfile(payload: Partial<User>) {
+    interface UpdateProfilePayload {
+        gender: number
+        email: string
+        date_of_birth: string
+        signature?: string
+    }
+
+    async function updateProfile(payload: UpdateProfilePayload) {
         try {
             const { data } = await api<{ data: User }>('/v1/profile', {
                 method: 'PUT',
