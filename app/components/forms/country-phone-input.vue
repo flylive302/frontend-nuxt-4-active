@@ -4,10 +4,12 @@ import { useCountries } from '~/composables/useCountries'
 
 interface Props {
   disabled?: boolean
+  error?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  disabled: false
+  disabled: false,
+  error: undefined
 })
 
 // Named v-models for each field
@@ -169,7 +171,7 @@ onMounted(async () => {
     <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
       enter-to-class="opacity-100 translate-y-0">
       <UFormField v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
-        :help="`Enter your number for ${selectedCountry.name}`" required>
+        :help="`Enter your number for ${selectedCountry.name}`" :error="error" required>
         <div class="flex items-center gap-1">
           <div
             class="text-base flex items-center font-semibold border border-neutral-700 h-9 rounded-md px-2 bg-neutral-950 shrink-0">

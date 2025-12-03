@@ -51,8 +51,15 @@ const state = reactive({
 
 const formRef = ref<Form<RegistrationFormData> | null>(null)
 
-const { isSubmitting: isProcessing, generalError: generalErrorMessage, handleSubmit } = useAuthForm({
+const { isSubmitting: isProcessing, generalError: generalErrorMessage, handleSubmit } = useAuthForm<RegistrationFormData>({
   formRef,
+})
+
+const phoneError = computed(() => {
+  if (!formRef.value?.errors) return undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const error = formRef.value.errors.find((e: any) => e.path === 'phone' || e.id === 'phone')
+  return error?.message
 })
 
 const selectedCountry = computed(() => {
@@ -118,7 +125,7 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 
       <!-- Country phone input component - handles country code, dial code, and phone number -->
       <FormsCountryPhoneInput v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
-        v-model:phone="state.phone" />
+        v-model:phone="state.phone" :error="phoneError" />
 
       <!-- Password input field with strength requirements -->
       <UFormField label="Password" name="password" required>
@@ -137,6 +144,6 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
     <UButton :to="ROUTES.LOGIN" class="mt-3 underline font-bold px-0" variant="link"
       trailing-icon="i-lucide-arrow-right" size="xl">
       Have an Account? Log In
-    </UButton>  
+    </UButton>
   </main>
 </template>

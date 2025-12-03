@@ -5,7 +5,6 @@ export default defineNuxtRouteMiddleware(() => {
         return navigateTo('/log-in')
     }
 
-    if (authStore.user?.date_of_birth == null || authStore.user?.gender == null || authStore.user?.signature == null){
+    if (!authStore.user?.profile_completion?.is_complete) {
         return navigateTo('/complete-profile-data')
-    }
-})
+    }})

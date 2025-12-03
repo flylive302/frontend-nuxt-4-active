@@ -1,13 +1,17 @@
-
 import { ref, type Ref } from 'vue'
 
+
+export interface AuthFormRef {
+  setErrors(errors: { path: string; message: string }[], path?: string): void
+}
+
 export interface UseAuthFormOptions {
-  formRef: Ref<any>
+  formRef: Ref<AuthFormRef | undefined | null>
   onSuccess?: (data: any) => Promise<void> | void
   successMessage?: string
 }
 
-export function useAuthForm(options: UseAuthFormOptions) {
+export function useAuthForm<T = any>(options: UseAuthFormOptions) {
   const { normalizeError } = useApi()
   const toast = useToast()
   

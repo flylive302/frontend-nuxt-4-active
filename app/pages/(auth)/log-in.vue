@@ -39,9 +39,16 @@ const state = reactive({
 
 const form = ref<Form<LoginFormState> | null>(null)
 
-const { isSubmitting, handleSubmit } = useAuthForm({
+const { isSubmitting, handleSubmit } = useAuthForm<LoginFormState>({
   formRef: form,
   successMessage: 'Welcome back!',
+})
+
+const phoneError = computed(() => {
+  if (!form.value?.errors) return undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const error = form.value.errors.find((e: any) => e.path === 'phone' || e.id === 'phone')
+  return error?.message
 })
 
 const selectedCountry = computed(() => {
@@ -92,7 +99,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
     <UForm ref="form" :schema="loginSchema" :state="state" :validate-on="['blur']" :disabled="isSubmitting"
       class="space-y-3" @submit="onSubmit">
       <FormsCountryPhoneInput v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
-        v-model:phone="state.phone" :disabled="isSubmitting" />
+        v-model:phone="state.phone" :disabled="isSubmitting" :error="phoneError" />
 
       <UFormField label="Password" name="password" required>
         <UInput v-model="state.password" class="w-full" size="lg" :icon="ICONS.LOCK" type="password"

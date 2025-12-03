@@ -33,7 +33,7 @@ describe('detect-country handler', () => {
 
   it('fetches GeoJS for non-localhost addresses', async () => {
     const fetchMock = globalThis.$fetch as unknown as Mock<[string], Promise<{ country: string }>>
-    fetchMock.mockResolvedValueOnce({ country: 'US' })
+    fetchMock.mockResolvedValueOnce({ country: 'us' })
     getRequestIPMock.mockReturnValueOnce('203.0.113.5')
 
     await expect(handler({} as any)).resolves.toEqual({ country_code: 'US' })

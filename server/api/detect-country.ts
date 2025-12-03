@@ -13,10 +13,12 @@ export default defineEventHandler(async (event) => {
         }
 
         // Use a free geolocation service
-        const response = await $fetch<{ country: string }>(`https://get.geojs.io/v1/ip/country/${ip}.json`)
-
+        const response = await $fetch<{ country: string }>(`https://get.geojs.io/v1/ip/country/${ip}.json`, {
+            timeout: 3000, // 3 second timeout
+        })
+        
         return {
-            country_code: response.country
+            country_code: response.country?.toLowerCase() ?? null,
         }
     } catch (error) {
         console.error('Geolocation error:', error)

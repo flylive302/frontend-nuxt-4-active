@@ -2,7 +2,8 @@
 import { z } from 'zod'
 import type { UpdateProfilePayload } from '~/composables/useAuth'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
-import { computed, reactive, ref, watch } from 'vue'
+import { useAuthForm } from '~/composables/useAuthForm'
+import type { Form } from '@nuxt/ui'
 
 definePageMeta({
   layout: 'auth',
@@ -27,7 +28,7 @@ const ICON_DEFAULT_GENDER = 'i-lucide-venus-and-mars' as const
 
 const formSchema = z.object({
   gender: z.number().min(1, 'Please select a gender'),
-  email: z.string().email('Invalid email'),
+  email: z.email('Invalid email'),
   signature: z
     .string()
     .max(SIGNATURE_MAX_LENGTH, `Signature must be less than ${SIGNATURE_MAX_LENGTH} characters`)
@@ -69,8 +70,6 @@ interface GenderOption {
   readonly icon: string
 }
 
-
-
 const genderOptions: readonly GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
   { label: 'Female', value: GENDER_FEMALE, icon: ICON_VENUS },
@@ -91,12 +90,14 @@ const formState = reactive<Partial<FormSchema>>({
   dateOfBirth: undefined,
 })
 
-const isProcessingSubmit = ref<boolean>(false)
+const formRef = ref<Form<FormSchema> | null>(null)
 
 const authStore = useAuthStore()
 const { updateProfile } = useAuth()
-const { normalizeError } = useApi()
-const toast = useToast()
+
+const { isSubmitting: isProcessingSubmit, handleSubmit } = useAuthForm({
+  formRef,
+})
 
 /**
  * Retrieves the initial signature value from the authenticated user's profile.
@@ -120,31 +121,25 @@ const selectedGenderIcon = computed<string>(() => {
  * and updating the user's profile information.
  */
 async function handleFormSubmit(): Promise<void> {
-  isProcessingSubmit.value = true
+  await handleSubmit(async () => {
+    // Zod validation is handled by UForm before this is called if we use @submit
+    // But since we are inside handleSubmit, we can just proceed with the logic
+    // assuming validation passed if triggered via UForm @submit
 
-  try {
+    // However, if we need to manually validate because we are not using the event payload:
     const validationResult = formSchema.safeParse({ ...formState })
 
     if (!validationResult.success) {
-      // Form validation failed, UI will show errors automatically via UForm
-      return
+      // Should not happen if UForm handles validation, but good for safety
+      throw new Error('Validation failed')
     }
 
     const profilePayload = buildProfileUpdatePayload(validationResult.data)
 
     await updateProfile(profilePayload)
 
-    navigateTo('/')
-  } catch (error) {
-    const normalizedError = normalizeError(error)
-    toast.add({
-      title: 'Error',
-      description: normalizedError.message,
-      color: 'error',
-    })
-  } finally {
-    isProcessingSubmit.value = false
-  }
+    await navigateTo('/')
+  })
 }
 
 /**
@@ -175,19 +170,33 @@ watch(
     }
   },
   { immediate: true }
-)</script>
+)
+
+onMounted(() => {
+  if (!authStore.isAuthenticated) {
+    return navigateTo('/log-in')
+  }
+  if (authStore.user?.profile_completion?.is_complete === true) {
+    return navigateTo('/');
+  }
+})
+
+
+</script>
 
 <template>
   <main>
-    <UForm :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
+    <UForm ref="formRef" :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
       <UFormField label="Gender" name="gender" required>
-        <USelect v-model.number="formState.gender" class="w-full" :items="genderOptions" :icon="selectedGenderIcon"
+        <USelect
+v-model.number="formState.gender" :items="genderOptions" :icon="selectedGenderIcon" class="w-full"
           size="lg" placeholder="Select your gender" option-attribute="label" value-attribute="value" />
       </UFormField>
 
       <UFormField label="Date of Birth" name="dateOfBirth" required>
         <UPopover>
-          <UButton color="neutral" variant="outline" icon="i-lucide-calendar" size="lg"
+          <UButton
+color="neutral" variant="outline" icon="i-lucide-calendar" size="lg"
             class="justify-start text-dimmed" block>
             {{ formState.dateOfBirth ? formState.dateOfBirth.toString() : 'Select date of birth' }}
           </UButton>
@@ -198,17 +207,20 @@ watch(
       </UFormField>
 
       <UFormField label="Email" name="email" required>
-        <UInput v-model="formState.email" class="w-full" size="lg" icon="i-lucide-at-sign"
+        <UInput
+v-model="formState.email" class="w-full" size="lg" icon="i-lucide-at-sign"
           placeholder="email@example.com" />
       </UFormField>
 
       <UFormField label="Signature" name="signature">
-        <UInput v-model="formState.signature" class="w-full" size="lg" icon="i-lucide-pen-tool"
+        <UInput
+v-model="formState.signature" class="w-full" size="lg" icon="i-lucide-pen-tool"
           placeholder="Enter your signature" />
       </UFormField>
 
-      <UButton type="submit" size="xl" class="w-full justify-center disabled:bg-primary-400" icon="i-lucide-send"
-        :loading="isProcessingSubmit">
+      <UButton
+:loading="isProcessingSubmit" type="submit" size="xl" icon="i-lucide-send"
+        class="w-full justify-center disabled:bg-primary-400">
         Submit
       </UButton>
     </UForm>

@@ -4,8 +4,6 @@ definePageMeta({
   middleware: 'auth',
 })
 const authStore = useAuthStore();
-
-console.log(authStore.user);
 </script>
 
 <template>

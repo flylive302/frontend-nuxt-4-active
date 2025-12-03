@@ -17,9 +17,6 @@ export interface User {
     blocked_reason?: string | null
     locked_until?: string | null
 
-    roles?: string[]
-    permissions?: string[]
-
     email_verified_at?: string | null
     last_login_at?: string
     created_at?: string
