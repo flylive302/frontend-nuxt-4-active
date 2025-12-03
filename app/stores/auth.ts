@@ -6,15 +6,11 @@ export const useAuthStore = defineStore('auth', () => {
     const user = ref<User | null>(null);
     const token = ref<string | null>(null);
     const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle');
-    const permissions = ref<string[]>([]);    
     const isAuthenticated = computed(() => !!token.value && !!user.value);
 
     function setUser(newUser: User | null) {
         user.value = newUser;
         status.value = newUser ? 'authenticated' : 'unauthenticated';
-    }
-    function setPermissions(newPermissions: string[]) {
-        permissions.value = newPermissions;
     }
     function setToken(newToken: string | null) {
         token.value = newToken;
@@ -62,10 +58,8 @@ export const useAuthStore = defineStore('auth', () => {
         token,
         status,
         isAuthenticated,
-        permissions,
         setUser,
         testApi,
-        setPermissions,
         setToken,
         fetchUser,
         logout

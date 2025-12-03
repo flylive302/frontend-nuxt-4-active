@@ -16,7 +16,7 @@ const authStore = useAuthStore();
           <UserAvatar :animated="true" class="w-24" />
           <div class="px-3">
             <h1 class="text-lg font-bold underline">{{ authStore.user.name }}</h1>
-            <ProfileBadge :txt="authStore.user.signature" />
+            <ProfileBadge :txt="authStore?.user?.signature || undefined" />
             <div class="flex gap-2">
               <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1" />
               <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="1" />

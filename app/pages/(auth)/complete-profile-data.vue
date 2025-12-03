@@ -7,6 +7,7 @@ import type { Form } from '@nuxt/ui'
 
 definePageMeta({
   layout: 'auth',
+  middleware: ['profile-completion']
 })
 
 const MINIMUM_AGE_REQUIREMENT = 18 as const
@@ -65,17 +66,17 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>
 
 interface GenderOption {
-  readonly label: string
-  readonly value: number
-  readonly icon: string
+  label: string
+  value: number
+  icon: string
 }
 
-const genderOptions: readonly GenderOption[] = [
+const genderOptions: GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
   { label: 'Female', value: GENDER_FEMALE, icon: ICON_VENUS },
   { label: 'Non-binary', value: GENDER_NON_BINARY, icon: ICON_NON_BINARY },
   { label: 'Prefer not to say', value: GENDER_PREFER_NOT_TO_SAY, icon: ICON_HELP_CIRCLE },
-] as const
+]
 
 const calendarDefaultDate = new CalendarDate(
   DEFAULT_CALENDAR_YEAR,
@@ -85,8 +86,8 @@ const calendarDefaultDate = new CalendarDate(
 
 const formState = reactive<Partial<FormSchema>>({
   gender: undefined,
-  email: undefined,
-  signature: undefined,
+  email: '',
+  signature: '',
   dateOfBirth: undefined,
 })
 
@@ -95,7 +96,7 @@ const formRef = ref<Form<FormSchema> | null>(null)
 const authStore = useAuthStore()
 const { updateProfile } = useAuth()
 
-const { isSubmitting: isProcessingSubmit, handleSubmit } = useAuthForm({
+const { isSubmitting: isProcessingSubmit, generalError, handleSubmit } = useAuthForm<FormSchema>({
   formRef,
 })
 
@@ -165,62 +166,84 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
 watch(
   () => authStore.user,
   (user) => {
-    if (user?.signature && formState.signature === undefined) {
+    if (user?.signature && !formState.signature) {
       formState.signature = user.signature
     }
   },
   { immediate: true }
 )
 
-onMounted(() => {
-  if (!authStore.isAuthenticated) {
-    return navigateTo('/log-in')
-  }
-  if (authStore.user?.profile_completion?.is_complete === true) {
-    return navigateTo('/');
-  }
-})
-
-
 </script>
 
 <template>
   <main>
+    <UAlert 
+      v-if="generalError" 
+      :description="generalError" 
+      color="error" 
+      variant="soft"
+      title="Update Failed" 
+      class="mb-4" 
+      icon="i-lucide-alert-circle" 
+    />
+
     <UForm ref="formRef" :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
       <UFormField label="Gender" name="gender" required>
-        <USelect
-v-model.number="formState.gender" :items="genderOptions" :icon="selectedGenderIcon" class="w-full"
-          size="lg" placeholder="Select your gender" option-attribute="label" value-attribute="value" />
+        <USelect 
+          v-model.number="formState.gender" 
+          :items="genderOptions" 
+          :icon="selectedGenderIcon" 
+          class="w-full"
+          size="lg" placeholder="Select your gender" 
+          option-attribute="label" value-attribute="value"
+        />
       </UFormField>
 
       <UFormField label="Date of Birth" name="dateOfBirth" required>
         <UPopover>
-          <UButton
-color="neutral" variant="outline" icon="i-lucide-calendar" size="lg"
-            class="justify-start text-dimmed" block>
+          <UButton 
+            color="neutral" 
+            variant="outline" 
+            icon="i-lucide-calendar" 
+            size="lg"
+            class="justify-start text-dimmed" block
+          >
             {{ formState.dateOfBirth ? formState.dateOfBirth.toString() : 'Select date of birth' }}
           </UButton>
           <template #content>
-            <UCalendar v-model="formState.dateOfBirth" :default-placeholder="calendarDefaultDate" class="p-2" />
+            <UCalendar 
+            v-model="formState.dateOfBirth" :default-placeholder="calendarDefaultDate" class="p-2" />
           </template>
         </UPopover>
       </UFormField>
 
       <UFormField label="Email" name="email" required>
-        <UInput
-v-model="formState.email" class="w-full" size="lg" icon="i-lucide-at-sign"
-          placeholder="email@example.com" />
+        <UInput 
+          v-model="formState.email" 
+          class="w-full" 
+          size="lg" 
+          icon="i-lucide-at-sign"
+          placeholder="email@example.com" 
+        />
       </UFormField>
 
       <UFormField label="Signature" name="signature">
-        <UInput
-v-model="formState.signature" class="w-full" size="lg" icon="i-lucide-pen-tool"
-          placeholder="Enter your signature" />
+        <UInput 
+        v-model="formState.signature" 
+        class="w-full" 
+        size="lg" 
+        icon="i-lucide-pen-tool"
+        placeholder="Enter your signature" 
+        />
       </UFormField>
 
-      <UButton
-:loading="isProcessingSubmit" type="submit" size="xl" icon="i-lucide-send"
-        class="w-full justify-center disabled:bg-primary-400">
+      <UButton 
+        :loading="isProcessingSubmit" 
+        type="submit" 
+        size="xl" 
+        icon="i-lucide-send"
+        class="w-full justify-center disabled:bg-primary-400"
+      >
         Submit
       </UButton>
     </UForm>

@@ -29,26 +29,21 @@ const ICONS = {
 const { login } = useAuth()
 const { countries } = useCountries()
 
+const form = ref<Form<LoginFormState> | null>(null)
+
+const { isSubmitting, getFieldError, handleSubmit } = useAuthForm({
+  formRef: form,
+  successMessage: 'Welcome back!',
+})
+
+const phoneError = computed(() => getFieldError('phone'))
+
 const state = reactive({
   countryCode: '',
   dialCode: '',
   phone: '',
   password: '',
   rememberMe: false,
-})
-
-const form = ref<Form<LoginFormState> | null>(null)
-
-const { isSubmitting, handleSubmit } = useAuthForm<LoginFormState>({
-  formRef: form,
-  successMessage: 'Welcome back!',
-})
-
-const phoneError = computed(() => {
-  if (!form.value?.errors) return undefined
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const error = form.value.errors.find((e: any) => e.path === 'phone' || e.id === 'phone')
-  return error?.message
 })
 
 const selectedCountry = computed(() => {
@@ -96,34 +91,74 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
   <main aria-labelledby="login-heading">
     <h1 id="login-heading" class="sr-only">Log In to Your Account</h1>
 
-    <UForm ref="form" :schema="loginSchema" :state="state" :validate-on="['blur']" :disabled="isSubmitting"
-      class="space-y-3" @submit="onSubmit">
-      <FormsCountryPhoneInput v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
-        v-model:phone="state.phone" :disabled="isSubmitting" :error="phoneError" />
+    <UForm
+        ref="form"
+        :schema="loginSchema"
+        :state="state"
+        :validate-on="['blur']"
+        :disabled="isSubmitting"
+        class="space-y-3"
+        @submit="onSubmit"
+    >
+      <FormsCountryPhoneInput
+          v-model:country-code="state.countryCode"
+          v-model:dial-code="state.dialCode"
+          v-model:phone="state.phone"
+          :disabled="isSubmitting"
+          :error="phoneError"
+      />
 
       <UFormField label="Password" name="password" required>
-        <UInput v-model="state.password" class="w-full" size="lg" :icon="ICONS.LOCK" type="password"
-          autocomplete="current-password" placeholder="Enter your password" :maxlength="MAX_PASSWORD_LENGTH"
-          :disabled="isSubmitting" aria-label="Password" />
+        <UInput
+            v-model="state.password"
+            class="w-full"
+            size="lg"
+            :icon="ICONS.LOCK"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Enter your password"
+            :maxlength="MAX_PASSWORD_LENGTH"
+            :disabled="isSubmitting"
+            aria-label="Password"
+        />
       </UFormField>
 
       <div class="flex items-center justify-between">
-        <UCheckbox v-model="state.rememberMe" label="Remember me" :disabled="isSubmitting" />
+        <UCheckbox
+            v-model="state.rememberMe"
+            label="Remember me"
+            :disabled="isSubmitting"
+        />
 
-        <NuxtLink :to="ROUTES.FORGOT_PASSWORD" class="text-sm font-medium text-primary hover:underline"
-          :tabindex="isSubmitting ? -1 : 0">
+        <NuxtLink
+            :to="ROUTES.FORGOT_PASSWORD"
+            :tabindex="isSubmitting ? -1 : 0"
+            class="text-sm font-medium text-primary hover:underline"
+        >
           Forgot password?
         </NuxtLink>
       </div>
 
-      <UButton type="submit" size="xl" class="w-full justify-center" :icon="ICONS.SEND" :loading="isSubmitting"
-        :disabled="isSubmitting" aria-label="Log in">
+      <UButton
+          type="submit" size="xl"
+          class="w-full justify-center"
+          :icon="ICONS.SEND"
+          :loading="isSubmitting"
+          :disabled="isSubmitting"
+          aria-label="Log in"
+      >
         Log In
       </UButton>
     </UForm>
 
-    <UButton :to="ROUTES.SIGNUP" class="mt-3 underline font-bold px-0" variant="link" :trailing-icon="ICONS.ARROW_RIGHT"
-      size="xl" :disabled="isSubmitting">
+    <UButton
+        :to="ROUTES.SIGNUP"
+        class="mt-3 underline font-bold px-0"
+        variant="link"
+        :trailing-icon="ICONS.ARROW_RIGHT"
+        size="xl"
+        :disabled="isSubmitting"
+    >
       Create an Account
     </UButton>
   </main>

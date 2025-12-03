@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 import { z } from 'zod'
 import { computed, reactive, ref } from 'vue'
 import { navigateTo } from 'nuxt/app'
@@ -41,25 +42,20 @@ const ROUTES = {
 const { register } = useAuth()
 const { countries } = useCountries()
 
+const formRef = ref<Form<RegistrationFormData> | null>(null)
+
+const { isSubmitting: isProcessing, generalError: generalErrorMessage, getFieldError, handleSubmit } = useAuthForm<RegistrationFormData>({
+  formRef,
+})
+
+const phoneError = computed(() => getFieldError('phone'))
+
 const state = reactive({
   name: '',
   password: '',
   countryCode: '',
   dialCode: '',
   phone: '',
-})
-
-const formRef = ref<Form<RegistrationFormData> | null>(null)
-
-const { isSubmitting: isProcessing, generalError: generalErrorMessage, handleSubmit } = useAuthForm<RegistrationFormData>({
-  formRef,
-})
-
-const phoneError = computed(() => {
-  if (!formRef.value?.errors) return undefined
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const error = formRef.value.errors.find((e: any) => e.path === 'phone' || e.id === 'phone')
-  return error?.message
 })
 
 const selectedCountry = computed(() => {

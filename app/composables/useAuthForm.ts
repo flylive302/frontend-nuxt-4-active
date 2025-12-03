@@ -1,26 +1,57 @@
-import { ref, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
+import type { Form, FormError } from '@nuxt/ui'
+import { useApi } from './useApi'
 
-
-export interface AuthFormRef {
-  setErrors(errors: { path: string; message: string }[], path?: string): void
-}
-
-export interface UseAuthFormOptions {
-  formRef: Ref<AuthFormRef | undefined | null>
+export interface UseAuthFormOptions<T> {
+  formRef: Ref<any>
   onSuccess?: (data: any) => Promise<void> | void
   successMessage?: string
 }
 
-export function useAuthForm<T = any>(options: UseAuthFormOptions) {
+export function useAuthForm<T extends Record<string, any>>(options: UseAuthFormOptions<T>) {
   const { normalizeError } = useApi()
   const toast = useToast()
   
   const isSubmitting = ref(false)
   const generalError = ref('')
 
+  /**
+   * Generic helper to extract field-specific errors from the form.
+   * This centralizes error retrieval logic while maintaining composable genericity.
+   * 
+   * @param fieldName - The name/path/id of the field to get the error for
+   * @returns The error message for the field, or undefined if no error exists
+   */
+  function getFieldError(fieldName: string): string | undefined {
+    const errors = options.formRef.value?.errors
+    if (!errors) return undefined
+    
+    // errors is a Ref<FormError[]> in Nuxt UI Form
+    // We define a local interface to ensure we can access the properties we need
+    interface LocalFormError {
+      id: string
+      message: string
+      path?: string
+    }
+
+    const errorList = (Array.isArray(errors) ? errors : (errors as unknown as Ref<LocalFormError[]>).value) as LocalFormError[]
+    
+    const error = errorList?.find(
+      (e) => e.path === fieldName || e.id === fieldName
+    )
+    return error?.message
+  }
+
+  /**
+   * Handles form submission with standardized error handling and state management.
+   * @param action - The async action to perform (e.g., login, register).
+   */
   async function handleSubmit(action: () => Promise<any>) {
+    if (isSubmitting.value) return
+    
     isSubmitting.value = true
     generalError.value = ''
+    options.formRef.value?.clear()
 
     try {
       const result = await action()
@@ -41,9 +72,10 @@ export function useAuthForm<T = any>(options: UseAuthFormOptions) {
 
       // Handle validation errors (422)
       if (normalizedError.status === 422 && normalizedError.fieldErrors) {
-        const formErrors = Object.entries(normalizedError.fieldErrors).map(
+        const formErrors: FormError[] = Object.entries(normalizedError.fieldErrors).map(
           ([path, messages]) => ({
-            path, // UForm uses 'path' or 'name' depending on version, usually 'path' matches schema keys
+            path,
+            id: path,
             message: messages?.[0] ?? 'Invalid value',
           })
         )
@@ -69,6 +101,7 @@ export function useAuthForm<T = any>(options: UseAuthFormOptions) {
   return {
     isSubmitting,
     generalError,
+    getFieldError,
     handleSubmit
   }
 }

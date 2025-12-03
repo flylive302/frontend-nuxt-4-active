@@ -77,7 +77,6 @@ export function useAuth() {
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
-    authStore.setPermissions(data.permissions)
 
     toast.add({ title: 'Welcome back!', color: 'success' })
     return data
@@ -99,7 +98,6 @@ export function useAuth() {
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
-    authStore.setPermissions(data.permissions)
 
     toast.add({ title: 'Account created!', color: 'success' })
     return data

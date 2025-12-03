@@ -23,6 +23,9 @@ export interface User {
     updated_at?: string
 
     profile_completion?: UserProfileCompletion
+
+    permissions?: string[]
+    roles?: string[]
 }
 
 export interface UserProfileCompletion {
