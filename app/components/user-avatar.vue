@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
   staticSrc?: string
 }>(), {
   frameName: 'frames/5',
-  img: '/siteAssets/seats/default-seat.webp',
+  img: 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp',
   top: 55,
   left: 50,
   frameGirth: 70,
@@ -22,7 +22,6 @@ const props = withDefaults(defineProps<{
   <div class="relative aspect-square cursor-pointer">
     <!-- Avatar Image -->
     <NuxtImg
-        provider="imagekit"
         class="absolute-middle aspect-square rounded-full object-cover"
         :src="img"
         alt="avatar"

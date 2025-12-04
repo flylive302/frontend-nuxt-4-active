@@ -4,7 +4,7 @@ import { normalizePhone, usePhoneSchema } from '~/composables/usePhoneSchema'
 import { useCountries } from '~/composables/useCountries'
 import { useAuthForm } from '~/composables/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
-import type { LoginPayload } from '~/composables/useAuth'
+import type {LoginPayload} from "~/types/auth";
 
 definePageMeta({
   layout: 'auth',
@@ -76,7 +76,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
     const loginPayload: LoginPayload = {
       phone: normalizePhone(dialCode, phone),
       phone_country: countryCode,
-      country_code: dialCode,
+      phone_country_code: dialCode,
       password,
       remember_me: rememberMe
     }

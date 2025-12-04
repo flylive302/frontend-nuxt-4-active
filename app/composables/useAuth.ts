@@ -1,35 +1,7 @@
 // ========================================
 // Imports & Types
 // ========================================
-import type { AuthResponse, User } from '~/types/auth'
-
-// ========================================
-// Types
-// ========================================
-export interface LoginPayload {
-  phone: string
-  phone_country: string
-  country_code: string
-  password?: string
-  remember_me?: boolean
-}
-
-export interface RegisterPayload {
-  name: string
-  email?: string
-  phone: string
-  phone_country: string
-  country_code: string
-  password?: string
-  password_confirmation?: string
-}
-
-export interface UpdateProfilePayload {
-  gender: number
-  email: string
-  date_of_birth: string
-  signature?: string
-}
+import type { AuthResponse, User, LoginPayload, RegisterPayload, UpdateProfilePayload } from '~/types/auth'
 
 // ========================================
 // Composable
@@ -138,10 +110,31 @@ export function useAuth() {
     return data
   }
 
+  /**
+   * Uploads and updates the user's profile avatar.
+   * @param file - The image file to upload.
+   * @returns The updated user data (or specific avatar response if needed).
+   */
+  async function uploadAvatar(file: File): Promise<User> {
+      await fetchCsrfToken()
+
+      const formData = new FormData()
+      formData.append('avatar', file)
+
+      const { data } = await api<{ data: User }>('/profile/avatar', {
+          method: 'POST',
+          body: formData,
+      })
+
+      authStore.setUser(data)
+      toast.add({ title: 'Avatar updated successfully', color: 'success' })
+      return data
+  }
   return {
     login,
     register,
     logout,
     updateProfile,
+    uploadAvatar,
   }
 }

@@ -8,14 +8,13 @@ const authStore = useAuthStore();
 
 <template>
   <main>
-    <NavAlt sub-menu-to="/">My Profile</NavAlt>
+    <NavAlt sub-menu-to="/profile/edit">My Profile</NavAlt>
 
     <AltHero class="z-20">
       <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
-        <NuxtLink v-if="authStore.user" :to="`/profile/owner-${authStore.user.name}`" class="flex px-3">
-          <UserAvatar :animated="true" class="w-24" />
+        <NuxtLink v-if="authStore.user" :to="{ path: '/profile/owner-' + authStore.user.signature }" class="flex px-3">          <UserAvatar :animated="true" :img="authStore.user.avatar?.original" class="w-24" />
           <div class="px-3">
-            <h1 class="text-lg font-bold underline">{{ authStore.user.name }}</h1>
+            <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
             <ProfileBadge :txt="authStore?.user?.signature || undefined" />
             <div class="flex gap-2">
               <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1" />

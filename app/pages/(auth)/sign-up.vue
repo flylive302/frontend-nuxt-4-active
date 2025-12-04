@@ -96,7 +96,7 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
       name,
       phone: normalizePhone(dialCode, phone),
       phone_country: countryCode,
-      country_code: dialCode,
+      phone_country_code: dialCode,
       password,
     })
 

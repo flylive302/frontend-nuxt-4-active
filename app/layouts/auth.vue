@@ -11,27 +11,24 @@
         <UButton
             variant="subtle"
             size="xl"
-            :avatar="{
-              src: 'https://github.com/nuxt.png',
-              class: 'size-8'
-            }"
-        />
+            :square="true"
+        >
+          <UIcon name="i-logos-facebook" class="size-8"/>
+        </UButton>
         <UButton
             variant="subtle"
             size="xl"
-            :avatar="{
-              src: 'https://github.com/nuxt.png',
-              class: 'size-8'
-            }"
-        />
+            :square="true"
+        >
+          <UIcon name="i-logos-google-icon" class="size-8"/>
+        </UButton>
         <UButton
             variant="subtle"
             size="xl"
-            :avatar="{
-              src: 'https://github.com/nuxt.png',
-              class: 'size-8'
-            }"
-        />
+            :square="true"
+        >
+          <UIcon name="i-skill-icons-instagram" class="size-8"/>
+        </UButton>
       </div>
 
       <USeparator color="primary" class="my-4" label="OR" />

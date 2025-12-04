@@ -1,5 +1,5 @@
-import { ref, computed, type Ref } from 'vue'
-import type { Form, FormError } from '@nuxt/ui'
+import { ref, type Ref } from 'vue'
+import type { FormError } from '@nuxt/ui'
 import { useApi } from './useApi'
 
 export interface UseAuthFormOptions<T> {

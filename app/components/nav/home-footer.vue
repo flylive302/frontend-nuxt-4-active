@@ -1,3 +1,7 @@
+<script setup>
+const authStore = useAuthStore();
+</script>
+
 <template>
   <footer
       aria-label="Primary"
@@ -42,7 +46,7 @@
             aria-label="Profile"
             class="justify-self-end"
         >
-          <UserAvatar class="w-13" :animated="true" />
+          <UserAvatar class="w-13" :animated="true" :img="authStore.user?.avatar?.thumbnail" />
         </NuxtLink>
       </div>
     </BgGlass>

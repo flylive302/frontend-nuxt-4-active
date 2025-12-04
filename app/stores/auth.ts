@@ -18,16 +18,6 @@ export const useAuthStore = defineStore('auth', () => {
         const cookie = useCookie('sanctum_token');
         cookie.value = newToken;
     }
-
-    async function testApi(): Promise<void> {
-        const {api} = useApi();
-        try {
-            const results = await api('/auth/test');
-            console.log(results);
-        } catch (error) {
-            console.error('API test failed:', error);
-        }
-    }    
     
     async function fetchUser() {
         status.value = 'loading';
@@ -59,7 +49,6 @@ export const useAuthStore = defineStore('auth', () => {
         status,
         isAuthenticated,
         setUser,
-        testApi,
         setToken,
         fetchUser,
         logout

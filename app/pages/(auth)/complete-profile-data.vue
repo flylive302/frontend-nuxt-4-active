@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import type { UpdateProfilePayload } from '~/composables/useAuth'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm } from '~/composables/useAuthForm'
 import type { Form } from '@nuxt/ui'
+import FileUpload from "~/components/common/FileUpload.vue";
+import type {UpdateProfilePayload, GenderOption} from "~/types/auth";
 
 definePageMeta({
   layout: 'auth',
@@ -65,12 +66,6 @@ const formSchema = z.object({
 
 type FormSchema = z.infer<typeof formSchema>
 
-interface GenderOption {
-  label: string
-  value: number
-  icon: string
-}
-
 const genderOptions: GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
   { label: 'Female', value: GENDER_FEMALE, icon: ICON_VENUS },
@@ -94,11 +89,16 @@ const formState = reactive<Partial<FormSchema>>({
 const formRef = ref<Form<FormSchema> | null>(null)
 
 const authStore = useAuthStore()
-const { updateProfile } = useAuth()
+const { updateProfile, uploadAvatar } = useAuth()
 
-const { isSubmitting: isProcessingSubmit, generalError, handleSubmit } = useAuthForm<FormSchema>({
+const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm<FormSchema>({
   formRef,
 })
+
+const emailError = computed(() => getFieldError('email'))
+const genderError = computed(() => getFieldError('gender'))
+const dateOfBirthError = computed(() => getFieldError('dateOfBirth') || getFieldError('date_of_birth'))
+const signatureError = computed(() => getFieldError('signature'))
 
 /**
  * Retrieves the initial signature value from the authenticated user's profile.
@@ -117,28 +117,43 @@ const selectedGenderIcon = computed<string>(() => {
   return matchedOption?.icon ?? ICON_DEFAULT_GENDER
 })
 
+const isUploadingAvatar = ref(false)
+const toast = useToast()
+
+/**
+ * Normalizes the user's avatar to a string URL.
+ * Extracts the original URL from the Avatar object.
+ */
+const avatarUrl = computed<string | null>(() => {
+  const avatar = authStore.user?.avatar
+  if (!avatar) return null
+
+  return avatar.original ?? null
+})
+
+async function handleAvatarSelected(file: File) {
+  try {
+    isUploadingAvatar.value = true
+    await uploadAvatar(file)
+  } catch {
+    toast.add({
+      title: 'Upload Failed',
+      description: 'Failed to upload avatar. Please try again.',
+      color: 'error',
+    })
+  } finally {
+    isUploadingAvatar.value = false
+  }
+}
+
 /**
  * Handles form submission by validating data, preparing the API payload,
  * and updating the user's profile information.
  */
 async function handleFormSubmit(): Promise<void> {
   await handleSubmit(async () => {
-    // Zod validation is handled by UForm before this is called if we use @submit
-    // But since we are inside handleSubmit, we can just proceed with the logic
-    // assuming validation passed if triggered via UForm @submit
-
-    // However, if we need to manually validate because we are not using the event payload:
-    const validationResult = formSchema.safeParse({ ...formState })
-
-    if (!validationResult.success) {
-      // Should not happen if UForm handles validation, but good for safety
-      throw new Error('Validation failed')
-    }
-
-    const profilePayload = buildProfileUpdatePayload(validationResult.data)
-
+    const profilePayload = buildProfileUpdatePayload(formState as FormSchema)
     await updateProfile(profilePayload)
-
     await navigateTo('/')
   })
 }
@@ -187,8 +202,18 @@ watch(
       icon="i-lucide-alert-circle" 
     />
 
+    <div class="mb-2">
+      <FileUpload
+        :current-image="avatarUrl"
+        :loading="isUploadingAvatar"
+        crop
+        @file-selected="handleAvatarSelected"
+      />
+      <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
+    </div>
+
     <UForm ref="formRef" :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
-      <UFormField label="Gender" name="gender" required>
+      <UFormField label="Gender" name="gender" required :error="genderError">
         <USelect 
           v-model.number="formState.gender" 
           :items="genderOptions" 
@@ -199,7 +224,7 @@ watch(
         />
       </UFormField>
 
-      <UFormField label="Date of Birth" name="dateOfBirth" required>
+      <UFormField label="Date of Birth" name="dateOfBirth" required :error="dateOfBirthError">
         <UPopover>
           <UButton 
             color="neutral" 
@@ -211,13 +236,12 @@ watch(
             {{ formState.dateOfBirth ? formState.dateOfBirth.toString() : 'Select date of birth' }}
           </UButton>
           <template #content>
-            <UCalendar 
-            v-model="formState.dateOfBirth" :default-placeholder="calendarDefaultDate" class="p-2" />
+            <UCalendar v-model="formState.dateOfBirth" :default-placeholder="calendarDefaultDate" class="p-2" />
           </template>
         </UPopover>
       </UFormField>
 
-      <UFormField label="Email" name="email" required>
+      <UFormField label="Email" name="email" required :error="emailError">
         <UInput 
           v-model="formState.email" 
           class="w-full" 
@@ -227,7 +251,7 @@ watch(
         />
       </UFormField>
 
-      <UFormField label="Signature" name="signature">
+      <UFormField label="Signature" name="signature" :error="signatureError">
         <UInput 
         v-model="formState.signature" 
         class="w-full" 
