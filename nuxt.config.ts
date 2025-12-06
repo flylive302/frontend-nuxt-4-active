@@ -52,8 +52,8 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            apiBase: 'http://localhost:8000/api/v1',
-            apiRoot: 'http://localhost:8000'
+            apiBase: 'https://backend-laravel-12-master-txvbmd.laravel.cloud/api/v1',
+            apiRoot: 'https://backend-laravel-12-master-txvbmd.laravel.cloud'
         }
     }
 })
