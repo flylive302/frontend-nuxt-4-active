@@ -6,21 +6,44 @@ definePageMeta({
   middleware: 'auth'
 })
 
-const ROOM_CARD_IMAGE = 'siteAssets/room/room-card-top.webp'
-const roomCarouselItems = Array.from({ length: 6 }, () => ROOM_CARD_IMAGE)
+const bannerAutoplay = ref<{ delay: number } | null>({ delay: 4000 })
+const roomAutoplay = ref<{ delay: number } | null>({ delay: 3000 })
 
 // ---- Optimization: Pause Autoplay when off-screen
 const bannerRef = ref(null)
 const roomRef = ref(null)
-const bannerAutoplay = ref<{ delay: number } | null>({ delay: 4000 })
-const roomAutoplay = ref<{ delay: number } | null>({ delay: 3000 })
 
-useIntersectionObserver(bannerRef, ([{ isIntersecting }]) => {
-  bannerAutoplay.value = isIntersecting ? { delay: 4000 } : null
+// ---- Room Logic
+const roomStore = useRoomStore()
+const { fetchRooms } = useRoom()
+const authStore = useAuthStore()
+
+const { data: roomsResponse } = await useAsyncData('home-rooms', async () => {
+  const country = authStore.user?.phone_country?.toLowerCase() || 'pk'
+  return await fetchRooms({ page: 1, country })
 })
 
-useIntersectionObserver(roomRef, ([{ isIntersecting }]) => {
-  roomAutoplay.value = isIntersecting ? { delay: 3000 } : null
+const carouselRooms = computed(() => roomsResponse.value?.data?.slice(0, 5) || [])
+const initialListRooms = computed(() => roomsResponse.value?.data?.slice(5) || [])
+const roomsMeta = computed(() => roomsResponse.value?.meta)
+
+const fetchRoomsList = async ({ page }: { page: number }) => {
+  if (page === 1) {
+    return {
+      data: initialListRooms.value,
+      meta: roomsMeta.value
+    }
+  }
+  const country = authStore.user?.phone_country?.toLowerCase() || 'pk'
+  return await fetchRooms({ page, country })
+}
+
+useIntersectionObserver(bannerRef, ([entry]) => {
+  bannerAutoplay.value = entry?.isIntersecting ? { delay: 4000 } : null
+})
+
+useIntersectionObserver(roomRef, ([entry]) => {
+  roomAutoplay.value = entry?.isIntersecting ? { delay: 3000 } : null
 })
 
 // ---- Types
@@ -136,7 +159,8 @@ const banners: Banner[] = [
 
     <div ref="roomRef">
       <UCarousel
-          :items="roomCarouselItems"
+          v-if="carouselRooms.length > 0"
+          :items="carouselRooms"
           :autoplay="roomAutoplay"
           class-names
           :ui="{
@@ -144,16 +168,29 @@ const banners: Banner[] = [
           }"
           class="mb-6"
       >
-        <template #default="slotProps">
-          <RoomCard v-if="slotProps?.item" :image-src="slotProps.item">
-            Live <span aria-hidden="true">/</span> <span class="tabular-nums">24</span>
-          </RoomCard>
+        <template #default="{ item }">
+          <RoomCard
+            v-if="item"
+            :room="item"
+            class="aspect-[9/12] rounded-xl"
+          />
         </template>
       </UCarousel>
     </div>
 
     <div class="mx-3">
-      <InfiniteScroll />
+      <InfiniteScroll
+        :fetcher="fetchRoomsList"
+        :initial-page="1"
+        :per-page="15"
+      >
+        <template #cell="{ cell }">
+          <RoomCard
+            :room="cell"
+            class="w-full aspect-[9/12] rounded-md"
+          />
+        </template>
+      </InfiniteScroll>
     </div>
   </main>
 </template>

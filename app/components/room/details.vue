@@ -2,6 +2,7 @@
 import {h, ref, resolveComponent} from "vue";
 import type {ColumnDef} from "@tanstack/vue-table";
 
+const roomStore = useRoomStore();
 interface WealthLevelRow {
   level: string;
   badge: {
@@ -111,7 +112,7 @@ const data = ref<WealthLevelRow[]>([
     <UserAvatar :animated="true" class="w-20"/>
     <div class="w-full">
       <div class="flex justify-between items-baseline">
-        <h2 class="text-base font-bold">Room Name</h2>
+        <h2 class="text-base font-bold">{{roomStore.currentRoom?.name || 'Loading...'}}</h2>        
         <UDrawer>
           <UButton icon="i-lucide-trophy" class="px-2 py-1 font-bold" size="sm">1</UButton>
 
@@ -125,12 +126,15 @@ const data = ref<WealthLevelRow[]>([
       </div>
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">Followers: 750</h2>
-        <NuxtLink to="/profile/owner-RoomOwner"><ProfileBadge :show-badge="false" /></NuxtLink>
+        <NuxtLink 
+          v-if="roomStore.currentRoom?.user?.signature" 
+          :to="{ name: 'profile-ownerId', params: { ownerId: roomStore.currentRoom.user.signature } }" 
+          @click="roomStore.minimizeRoom()"
+        >
+          <ProfileBadge :show-badge="false" :txt="roomStore.currentRoom?.user?.signature" />
+        </NuxtLink>        
+        <ProfileBadge v-else :show-badge="false" />
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-
-</style>

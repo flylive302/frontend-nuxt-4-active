@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2025-12-05T21:18:59+05:00",
+  "project": {
+    "framework": "Nuxt 4",
+    "language": "TypeScript",
+    "style": {
+      "indentation": 2,
+      "semicolons": false,
+      "quotes": "single",
+      "trailingComma": "es5"
+    },
+    "structure": {
+      "components": "app/components",
+      "composables": "app/composables",
+      "pages": "app/pages",
+      "stores": "app/stores",
+      "types": "app/types",
+      "tests": "tests"
+    }
+  },
+  "patterns": {
+    "components": {
+      "style": "Script Setup (Vue 3 Composition API)",
+      "naming": "PascalCase for component files (e.g., UserAvatar.vue) or kebab-case (e.g., user-avatar.vue). Project uses kebab-case for filenames.",
+      "props": "monitor existing usage; use `withDefaults` and `defineProps`.",
+      "styles": "TailwindCSS via Nuxt UI and vanilla CSS in `<style scoped>`."
+    },
+    "composables": {
+      "naming": "camelCase (e.g., useAuth.ts)",
+      "structure": "Export named function. Return object with refs/methods. Explicit return types.",
+      "comments": "Section dividers using `// =======`."
+    },
+    "state": {
+      "manager": "Pinia",
+      "persisted": "pinia-plugin-persistedstate",
+      "location": "app/stores"
+    },
+    "api": {
+      "client": "ofetch (via `useApi` wrapper)",
+      "baseUrl": "config.public.apiBase",
+      "auth": "Bearer token from cookie 'sanctum_token'"
+    },
+    "tests": {
+      "runner": "Vitest",
+      "style": "describe/it pattern",
+      "location": "tests/"
+    }
+  },
+  "guardrails": {
+    "forbidden": [
+      "Any usage of `axios` (use `useApi`)",
+      "Implicit `any` types",
+      "Global state outside Pinia",
+      "Hardcoded API URLs (use `config`)"
+    ],
+    "mandatory": [
+      "Explicit types for all function arguments and return values",
+      "useApi for all network requests",
+      "Zod schemas for form validation",
+      "Follow exact comment style for `Business Logic` sections in composables"
+    ]
+  }
+}

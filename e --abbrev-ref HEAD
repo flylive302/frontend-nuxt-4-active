@@ -1,0 +1,66 @@
+[33mcommit 5f387d041f0aefd8bd8425e0bb7029f1bf8a609b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mwork[m[33m, [m[1;31morigin/stagging[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mstagging[m[33m, [m[1;32mmaster[m[33m)[m
+Author: flylive302 <sarasobania01@gmail.com>
+Date:   Fri Dec 5 04:44:50 2025 +0500
+
+    feat(pages): add profile edit page with avatar upload cropper and form validation
+    
+    Changes:
+    
+    • Added FileUpload component with image cropping support and file validation
+    • Added ImageUploadModal component with vue-advanced-cropper integration for image editing
+    • Added profile/edit.vue page with avatar upload, gender selection, date of birth, email, and signature fields
+    • Added uploadAvatar function to useAuth composable for avatar upload API integration
+    • Updated auth types with Avatar interface containing original, thumbnail, medium, and large URLs
+    • Moved LoginPayload, RegisterPayload, and UpdateProfilePayload interfaces from composables to types/auth.ts
+    • Added GenderOption interface to types/auth.ts for reusable gender selection
+    • Updated log-in.vue and sign-up.vue to use phone_country_code instead of country_code in payloads
+    • Updated complete-profile-data.vue with avatar upload functionality and improved error handling
+    • Updated user-avatar.vue to use ImageKit CDN URL for default avatar image
+    • Updated home-footer.vue to display authenticated user avatar from auth store
+    • Updated profile/index.vue navigation to link to edit page and display user avatar
+    • Updated auth layout with social login icon buttons replacing avatar placeholders
+    • Removed testApi function from auth store
+    • Removed dummy.vue page
+    • Added avatar-upload-backend-guide.md documentation for frontend team
+    • Updated dependencies: added vue-advanced-cropper@^2.8.9
+    
+    Quality Assurance:
+    
+    Tests: N/A (command execution failed)
+    Lint: N/A (command execution failed)
+    Build: N/A (command execution failed)
+    Typecheck: N/A (command execution failed)
+    Documentation: Updated (added avatar-upload-backend-guide.md)
+    
+    Impact:
+    
+    • Performance: Neutral – image cropping and upload functionality uses conditional rendering with minimal runtime overhead
+    • Breaking Changes: None – payload field rename from country_code to phone_country_code aligns with backend API expectations
+    • Dependencies: Added vue-advanced-cropper@^2.8.9 with transitive dependencies (classnames@^2.2.6, debounce@^1.2.0, easy-bem@^1.0.2)
+    
+    Context:
+    
+    • Branch: work
+    • Related: docs/avatar-upload-backend-guide.md
+    • Implements: Profile editing workflow with avatar upload and image cropping capabilities; Centralizes auth payload types in types/auth.ts for better type safety and reusability; Aligns frontend payload field names with backend API expectations
+
+A	app/components/common/FileUpload.vue
+A	app/components/common/ImageUploadModal.vue
+M	app/components/nav/home-footer.vue
+M	app/components/user-avatar.vue
+M	app/composables/useAuth.ts
+M	app/composables/useAuthForm.ts
+M	app/layouts/auth.vue
+M	app/pages/(auth)/complete-profile-data.vue
+M	app/pages/(auth)/forgot-password.vue
+M	app/pages/(auth)/log-in.vue
+M	app/pages/(auth)/sign-up.vue
+M	app/pages/(home)/income.vue
+D	app/pages/dummy.vue
+A	app/pages/profile/edit.vue
+M	app/pages/profile/index.vue
+M	app/stores/auth.ts
+M	app/types/auth.ts
+A	docs/avatar-upload-backend-guide.md
+M	package-lock.json
+M	package.json

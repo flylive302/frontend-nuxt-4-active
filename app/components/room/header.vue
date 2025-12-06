@@ -73,7 +73,7 @@ const open = ref(false)
           description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
       >
         <div class="w-10">
-          <UserAvatar :animated="true" />
+          <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo?.thumbnail" />
           <p class="text-xs text-center">LvL. 15</p>
         </div>
 
@@ -108,8 +108,8 @@ const open = ref(false)
       <div>
         <div class="flex items-center justify-between gap-2 pr-1">
           <div>
-            <p class="text-xs leading-tight">UserSignature</p>
-            <h1 class="text-sm font-bold leading-tight">Room Name</h1>
+            <p class="text-xs leading-tight">{{ roomStore.currentRoom?.user?.signature }}</p>
+            <h1 class="text-sm font-bold leading-tight">{{ roomStore.currentRoom?.name }}</h1>
           </div>
           <UButton icon="i-lucide-bookmark" variant="subtle" class="shadow-md shadow-primary-950/50" size="sm" />
         </div>
@@ -163,7 +163,16 @@ const open = ref(false)
                   icon="i-lucide-door-open"
                   class="w-full justify-center"
                   size="xl" variant="subtle"
-              >
+                  @click="async () => {
+                    try {
+                      await roomStore.leaveRoom();
+                      open = false;
+                    } catch (error) {
+                      // Show error notification to user
+                      console.error('Failed to leave room:', error);
+                    }
+                  }"
+                >
                 Leave
               </UButton>
             </div>

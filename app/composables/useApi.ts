@@ -26,16 +26,16 @@ type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
  * @returns An object containing the api wrapper, the raw client, and error normalization utility.
  */
 export function useApi() {
-  // ========================================
-  // Composables / Injected Dependencies
-  // ========================================
-  const config = useRuntimeConfig()
+    // ========================================
+    // Composables / Injected Dependencies
+    // ========================================
+    const config = useRuntimeConfig()
 
-  // ========================================
-  // Business Logic / Core Logic
-  // ========================================
+    // ========================================
+    // Business Logic / Core Logic
+    // ========================================
 
-  const client = ofetch.create({
+    const client = ofetch.create({
     baseURL: config.public.apiBase as string | undefined,
     timeout: 10_000,
     onRequest({ options }: FetchContext) {
@@ -55,24 +55,24 @@ export function useApi() {
       options.headers = headers
       options.credentials = 'include'
     }
-  })
+    })
 
-  /**
-   * Checks if an HTTP method is safe to retry (GET or HEAD).
-   * @param method - The HTTP method to check.
-   * @returns True if the method is GET or HEAD, false otherwise.
-   */
-  function isIdempotent(method?: string): boolean {
+    /**
+    * Checks if an HTTP method is safe to retry (GET or HEAD).
+    * @param method - The HTTP method to check.
+    * @returns True if the method is GET or HEAD, false otherwise.
+    */
+    function isIdempotent(method?: string): boolean {
     return method === 'GET' || method === 'HEAD'
-  }
+    }
 
-  /**
-   * Performs an API request with automatic retries for idempotent methods on server errors.
-   * @param url - The endpoint URL.
-   * @param options - Fetch options.
-   * @returns The response data.
-   */
-  async function api<T>(url: string, options: FetchOptions<'json'> = {}): Promise<T> {
+    /**
+    * Performs an API request with automatic retries for idempotent methods on server errors.
+    * @param url - The endpoint URL.
+    * @param options - Fetch options.
+    * @returns The response data.
+    */
+    async function api<T>(url: string, options: FetchOptions<'json'> = {}): Promise<T> {
     const method = (options.method?.toUpperCase() as HttpMethod) ?? 'GET'
     const tryOnce = () => client<T>(url, options)
 
@@ -93,15 +93,15 @@ export function useApi() {
       }
       throw err
     }
-  }
+    }
 
-  /**
-   * Normalizes an unknown error into a standard format.
-   * Handles AbortError, Validation Errors (422), and generic API errors.
-   * @param error - The error object to normalize.
-   * @returns A NormalizedError object.
-   */
-  function normalizeError(error: unknown): NormalizedError {
+    /**
+    * Normalizes an unknown error into a standard format.
+    * Handles AbortError, Validation Errors (422), and generic API errors.
+    * @param error - The error object to normalize.
+    * @returns A NormalizedError object.
+    */
+    function normalizeError(error: unknown): NormalizedError {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const e = error as any
     const status: number | undefined = e?.response?.status
@@ -124,7 +124,26 @@ export function useApi() {
     }
 
     return { message: 'Network error. Check your connection.', raw: error }
-  }
+    }
 
-  return { api, client, normalizeError }
+
+    // ========================================
+    // Business Logic / Core Logic
+    // ========================================
+
+    /**
+     * Fetches the CSRF token from the backend.
+     * Required before making state-modifying requests (POST, PUT, DELETE).
+     */
+    async function fetchCsrfToken(): Promise<void> {
+        // Remove /api from the end of apiBase to get the root URL
+        // We cast to string because we know apiBase is defined in nuxt.config
+        const backendUrl = config.public.apiRoot as string
+
+        await api(`${backendUrl}/sanctum/csrf-cookie`, {
+            method: 'GET',
+        })
+    }
+
+    return { api, client, normalizeError, fetchCsrfToken }
 }

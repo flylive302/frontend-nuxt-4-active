@@ -11,27 +11,8 @@ export function useAuth() {
   // Composables / Injected Dependencies
   // ========================================
   const authStore = useAuthStore()
-  const { api } = useApi()
+  const { api, fetchCsrfToken } = useApi()
   const toast = useToast()
-  const config = useRuntimeConfig()
-
-  // ========================================
-  // Business Logic / Core Logic
-  // ========================================
-
-  /**
-   * Fetches the CSRF token from the backend.
-   * Required before making state-modifying requests (POST, PUT, DELETE).
-   */
-  async function fetchCsrfToken(): Promise<void> {
-    // Remove /api from the end of apiBase to get the root URL
-    // We cast to string because we know apiBase is defined in nuxt.config
-    const backendUrl = (config.public.apiBase as string).replace(/\/api\/.*$/, '')
-
-    await api(`${backendUrl}/sanctum/csrf-cookie`, {
-      method: 'GET',
-    })
-  }
 
   /**
    * Authenticates a user with the provided credentials.
@@ -130,6 +111,7 @@ export function useAuth() {
       toast.add({ title: 'Avatar updated successfully', color: 'success' })
       return data
   }
+
   return {
     login,
     register,
