@@ -22,7 +22,7 @@ const props = withDefaults(
   <div class="flex flex-col items-center bg-primary/10 border border-primary rounded cursor-pointer">
     <div class="p-1 w-full">
       <NuxtImg
-          :src="`/parsedAnimations/gifts/${category}/castle/static/${name}.png`"
+          :src="`/parsedAnimations/gifts/${category}/castle/${name}.png`"
           alt="Castle"
           class="w-full shadow-md shadow-primary-950 rounded"
       />
@@ -33,7 +33,8 @@ const props = withDefaults(
     </p>
 
     <p class="text-sm font-bold truncate w-full text-center">
-      <Icon name="i-lucide-coins" class="bg-tertiary" /> 40
+      <Icon name="i-lucide-coins" class="bg-tertiary" />
+      {{ price }}
     </p>
   </div>
 </template>

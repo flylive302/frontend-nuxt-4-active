@@ -3,6 +3,7 @@ import type { StepperItem } from "@nuxt/ui";
 import { ref } from "vue";
 
 const roomStore = useRoomStore();
+const {leaveRoom} = useRoomAudio();
 
 const items = ref([
   {
@@ -165,6 +166,7 @@ const open = ref(false)
                   size="xl" variant="subtle"
                   @click="async () => {
                     try {
+                      leaveRoom();
                       await roomStore.leaveRoom();
                       open = false;
                     } catch (error) {

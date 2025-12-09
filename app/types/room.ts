@@ -13,8 +13,11 @@ export interface Room {
   logo: Logo;
   type: 'public' | 'private';
   country: string;
-  created_at: string;
+  is_live: boolean;
+  participant_count: number;
+  last_activity_at: string | null;
   user: User;
+  created_at: string;
 }
 
 export interface CreateRoomPayload {
@@ -32,13 +35,13 @@ export interface RoomResponse {
 }
 
 export interface RoomsResponse {
-    status: string;
-    message: string;
-    data: Room[];
-    meta: {
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-    }
+  status: string;
+  message: string;
+  data: Room[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  }
 }

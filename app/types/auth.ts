@@ -13,6 +13,11 @@ export interface User {
     gender?: number | null
     date_of_birth?: string | null
 
+    coins?: string
+    diamonds?: string
+    wealth_xp?: string
+    charm_xp?: string
+
     is_blocked?: boolean | null
     blocked_at?: string | null
     blocked_reason?: string | null
@@ -54,7 +59,6 @@ export interface AuthResponse {
     token: string
     token_type: string
     expires_at: string
-    permissions: string[]
 }
 
 export interface LoginPayload {

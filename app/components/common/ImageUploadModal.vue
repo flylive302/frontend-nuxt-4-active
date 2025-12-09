@@ -136,6 +136,7 @@ onBeforeUnmount(() => {
     :open="modelValue" 
     side="bottom"
     title="Edit Image"
+    description="Adjust your image by zooming, rotating, and cropping before saving"
     @update:open="emit('update:modelValue', $event)"
   >
     <template #content>
