@@ -54,7 +54,7 @@ export default defineNuxtConfig({
         public: {
             apiBase: 'https://backend-laravel-12-master-txvbmd.laravel.cloud/api/v1',
             apiRoot: 'https://backend-laravel-12-master-txvbmd.laravel.cloud',
-            audioServerUrl: 'http://64.227.147.89:3030'
+            audioServerUrl: 'wss://besttvcableinternet.us'
             // apiBase: 'http://localhost:8000/api/v1',
             // apiRoot: 'http://localhost:8000',
             // audioServerUrl: 'ws://localhost:3030'
