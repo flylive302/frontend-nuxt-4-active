@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
     compatibilityDate: '2025-02-03',
     ssr: false,
-    devtools: { enabled: true },
+    devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
     modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     pinia: {
@@ -52,12 +52,12 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            // apiBase: 'https://backend-laravel-12-master-txvbmd.laravel.cloud/api/v1',
-            // apiRoot: 'https://backend-laravel-12-master-txvbmd.laravel.cloud'
-            apiBase: 'http://localhost:8000/api/v1',
-            apiRoot: 'http://localhost:8000',
-            // Audio Server: Set via NUXT_PUBLIC_AUDIO_SERVER_URL environment variable
-            audioServerUrl: 'ws://localhost:3030'
+            apiBase: 'https://backend-laravel-12-master-txvbmd.laravel.cloud/api/v1',
+            apiRoot: 'https://backend-laravel-12-master-txvbmd.laravel.cloud',
+            audioServerUrl: 'http://64.227.147.89:3030'
+            // apiBase: 'http://localhost:8000/api/v1',
+            // apiRoot: 'http://localhost:8000',
+            // audioServerUrl: 'ws://localhost:3030'
         }
     }
 })
