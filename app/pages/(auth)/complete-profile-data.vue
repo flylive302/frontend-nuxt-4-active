@@ -255,7 +255,7 @@ watch(
           </UButton>
           <template #content>
             <UCalendar
-              v-model="(dateOfBirthModel as unknown as DateValue | null)"
+              v-model="dateOfBirthModel"
               :default-placeholder="calendarDefaultDate"
               class="p-2"
             />
