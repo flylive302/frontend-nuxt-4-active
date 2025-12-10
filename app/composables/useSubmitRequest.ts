@@ -1,9 +1,9 @@
 // ========================================
 // Imports & Types
 // ========================================
-import { ref } from '#imports'
+import { ref } from 'vue'
 import type { NormalizedError } from './useApi'
-import { useApi } from '#imports'
+import { useApi } from './useApi'
 
 // ========================================
 // Types

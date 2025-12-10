@@ -66,6 +66,8 @@ const formSchema = z.object({
 
 type FormSchema = z.infer<typeof formSchema>
 
+type FormState = Partial<Omit<FormSchema, 'dateOfBirth'>> & { dateOfBirth: DateValue | null }
+
 const genderOptions: GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
   { label: 'Female', value: GENDER_FEMALE, icon: ICON_VENUS },
@@ -79,11 +81,21 @@ const calendarDefaultDate = new CalendarDate(
   DEFAULT_CALENDAR_DAY
 )
 
-const formState = reactive<Partial<FormSchema>>({
+const formState = reactive<FormState>({
   gender: undefined,
   email: '',
   signature: '',
-  dateOfBirth: undefined,
+  dateOfBirth: null,
+})
+
+const dateOfBirthModel = ref<DateValue | null>(null)
+
+watchEffect(() => {
+  dateOfBirthModel.value = formState.dateOfBirth ?? null
+})
+
+watch(dateOfBirthModel, (value) => {
+  formState.dateOfBirth = value ?? null
 })
 
 const formRef = ref<Form<FormSchema> | null>(null)
@@ -212,7 +224,13 @@ watch(
       <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
     </div>
 
-    <UForm ref="formRef" :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
+    <UForm
+      ref="formRef"
+      :schema="formSchema"
+      :state="{ ...formState, dateOfBirth: formState.dateOfBirth ?? undefined } as Partial<FormSchema>"
+      class="space-y-3"
+      @submit="handleFormSubmit"
+    >
       <UFormField label="Gender" name="gender" required :error="genderError">
         <USelect 
           v-model.number="formState.gender" 
@@ -236,7 +254,11 @@ watch(
             {{ formState.dateOfBirth ? formState.dateOfBirth.toString() : 'Select date of birth' }}
           </UButton>
           <template #content>
-            <UCalendar v-model="formState.dateOfBirth" :default-placeholder="calendarDefaultDate" class="p-2" />
+            <UCalendar
+              v-model="(dateOfBirthModel as unknown as DateValue | null)"
+              :default-placeholder="calendarDefaultDate"
+              class="p-2"
+            />
           </template>
         </UPopover>
       </UFormField>

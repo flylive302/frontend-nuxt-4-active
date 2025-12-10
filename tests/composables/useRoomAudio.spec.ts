@@ -359,11 +359,11 @@ describe('useRoomAudio', () => {
         const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
         const roomAudio = useRoomAudio()
 
-        roomAudio.sendGift('gift-abc', 42, 5)
+        roomAudio.sendGift(123, 42, 5)
 
         expect(mockSocket.value.emit).toHaveBeenCalledWith('gift:send', {
           roomId: 'room-123',
-          giftId: 'gift-abc',
+          giftId: 123,
           recipientId: 42,
           quantity: 5,
         })

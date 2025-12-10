@@ -18,7 +18,7 @@ definePageMeta({
         </div>
         <div class="flex-auto flex flex-col justify-between items-center">
           <NuxtImg provider="imagekit" src="/siteAssets/props/flylive_coin.webp" class="w-full mb-2" />
-          <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
+          <UButton to="/wallet/transaction-history" :color="('tertiary' as any)" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
         </div>
         <div class="flex flex-col justify-end">
           <NuxtImg provider="imagekit" src="/siteAssets/props/prop-recharge.webp" class="w-20" />
@@ -32,7 +32,7 @@ definePageMeta({
       <ChooseDefaultReseller color="tertiary" />
 
       <FromConversionRequest class="mt-4" />
-      <USeparator color="tertiary" class="my-4" label="OR" />
+      <USeparator :color="('tertiary' as any)" class="my-4" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
       <div class="flex flex-col gap-3">
         <ListItemPurchaseCoins />

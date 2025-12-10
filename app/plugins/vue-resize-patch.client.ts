@@ -1,4 +1,4 @@
-import { defineNuxtPlugin } from '#app'
+import { defineNuxtPlugin } from 'nuxt/app'
 import { ResizeObserver } from 'vue-resize'
 import type {
   ResizeObserverHandler,

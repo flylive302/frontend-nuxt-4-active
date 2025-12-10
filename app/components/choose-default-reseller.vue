@@ -2,12 +2,12 @@
 import { navigateTo } from 'nuxt/app'
 import { ref, computed, toRef } from 'vue'
 import { useDebounce } from '@vueuse/core'
+import type { Colors } from '~/types/colors'
 const toast = useToast()
 
 defineOptions({ name: 'ChooseDefaultReseller' })
 
 /** -------- Props -------- */
-type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
 const props = withDefaults(defineProps<{
   color?: Colors
   endpoint?: string
@@ -130,7 +130,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
 
       <UButton
           label="Change"
-          :color="color"
+          :color="(color as any)"
           variant="subtle"
           trailing-icon="i-lucide-search"
           aria-haspopup="dialog"
@@ -153,7 +153,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
               class="h-90"
               selected-icon="i-lucide-circle-check"
               virtualize
-              @select="(it) => it?.onSelect?.()"
+              @select="(it: any) => it?.onSelect?.()"
           >
             <!-- Custom row with two action icons on the right -->
             <template #item="{ item }">
@@ -179,14 +179,14 @@ const paletteGroups = computed<CommandGroup[]>(() => [
                       variant="soft"
                       color="neutral"
                       :aria-label="`Contact ${item.label}`"
-                      @click.stop.prevent="contactReseller(item)"
+                      @click.stop.prevent="contactReseller(item as UiCommandItem)"
                   />
                   <UButton
                       icon="i-lucide-circle-check"
                       variant="soft"
                       color="neutral"
                       :aria-label="`Select ${item.label} as default`"
-                      @click.stop.prevent="selectReseller(item)"
+                      @click.stop.prevent="selectReseller(item as UiCommandItem)"
                   />
                 </div>
               </div>
@@ -201,7 +201,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
 
           <UAlert
               v-if="fetchError"
-              color="red"
+              color="error"
               variant="subtle"
               title="Couldn’t load resellers"
               description="Network error. Please try again."
@@ -230,7 +230,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
         <UButton
             icon="i-lucide-mail"
             variant="subtle"
-            :color="color"
+            :color="(color as any)"
             :aria-label="`Contact ${selectedReseller.signature}`"
             to="/profile"
         />

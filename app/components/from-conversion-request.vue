@@ -1,12 +1,11 @@
 <!-- ~/components/from-conversion-request.vue -->
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, ref, watch, toRef } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch, toRef } from 'vue'
 import { z } from 'zod'
 import { useSubmitRequest } from '~/composables/useSubmitRequest'
 import { toFormData } from '~/utils/toFormData'
 import type { FormSubmitEvent } from '@nuxt/ui'
-
-type Colors = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
+import type { Colors } from '~/types/colors'
 
 const props = withDefaults(defineProps<{
   color?: Colors
@@ -30,7 +29,8 @@ const imageFile = z.instanceof(File, { message: 'Only image files are allowed' }
     .refine(f => f.size <= 2 * 1024 * 1024, 'Each file must be ≤ 2MB')
 
 const schema = z.object({
-  number: z.coerce.number({ invalid_type_error: 'Invalid number' })
+  number: z.coerce.number()
+      .refine(val => !Number.isNaN(val), 'Invalid number') // custom message on failed coercion
       .int('Must be a whole number')
       .nonnegative('Must be non-negative')
       .gte(500, 'Minimum is 500')
@@ -64,6 +64,9 @@ watch(state, () => {
 /** -------- Submit integration -------- */
 const { submit, abort, isSubmitting, mapError } = useSubmitRequest()
 const toast = useToast()
+
+// Use semantic color directly - Nuxt UI components accept semantic colors configured in app.config.ts
+const uiColor = computed(() => color.value)
 
 const cardVariants: Record<Colors, { border: string; shadow: string }> = {
   primary: { border: 'border-primary', shadow: 'ring-1 ring-primary/40' },
@@ -163,7 +166,7 @@ onBeforeUnmount(() => abort())
               :min="0"
               :step="500"
               :disabled="disabled || isSubmitting"
-              :color="color"
+              :color="uiColor"
               placeholder="500"
               orientation="vertical"
               class="w-full"
@@ -178,7 +181,7 @@ onBeforeUnmount(() => abort())
           <UInput
               v-model="state.message"
               :disabled="disabled || isSubmitting"
-              :color="color"
+              :color="uiColor"
               type="text"
               class="w-full"
               placeholder="Write a short note…"
@@ -193,7 +196,7 @@ onBeforeUnmount(() => abort())
               v-model="state.proofs"
               multiple
               highlight
-              :color="color"
+              :color="uiColor"
               accept="image/*"
               :disabled="disabled || isSubmitting"
               class="w-full min-h-40"
@@ -203,7 +206,7 @@ onBeforeUnmount(() => abort())
                 v-for="f in state.proofs"
                 :key="f.name + f.size"
                 variant="soft"
-                color="gray"
+                color="neutral"
                 class="mr-2 mb-2"
             >
               {{ f.name }}
@@ -220,7 +223,7 @@ onBeforeUnmount(() => abort())
 
         <UButton
             type="submit"
-            :color="color"
+            :color="uiColor"
             :loading="isSubmitting"
             :disabled="disabled || isSubmitting"
             class="w-full justify-center"
@@ -250,7 +253,7 @@ onBeforeUnmount(() => abort())
         <p class="mt-1 text-sm text-gray-600">
           We’ll update you soon once it’s processed.
         </p>
-        <UButton class="mt-4" :color="color" @click="submitAnother">
+        <UButton class="mt-4" :color="uiColor" @click="submitAnother">
           Submit another request
         </UButton>
       </div>

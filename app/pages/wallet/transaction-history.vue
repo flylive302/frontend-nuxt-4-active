@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import TransactionItem from '~/components/transaction-item.vue';
-import type { BalanceChange, TransactionDay, WalletTransaction } from '~/types/wallet';
+import type { BalanceChange, TransactionDay, WalletTransaction } from '@/types/wallet';
 
 definePageMeta({
   layout: 'alt',

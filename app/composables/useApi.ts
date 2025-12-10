@@ -2,7 +2,7 @@
 // Imports & Types
 // ========================================
 import { ofetch, type FetchContext, type FetchOptions } from 'ofetch'
-import { useRuntimeConfig, useCookie } from '#imports'
+import { useRuntimeConfig, useCookie } from 'nuxt/app'
 
 // ========================================
 // Types

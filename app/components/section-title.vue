@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { Colors } from '~/types/colors'
+
+// SectionTitle only supports accent colors (primary, secondary, tertiary)
+type SectionTitleType = Extract<Colors, 'primary' | 'secondary' | 'tertiary'>
 
 const props = withDefaults(defineProps<{
-  type?: 'primary' | 'secondary' | 'tertiary'
+  type?: SectionTitleType
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'   // heading tag
   height?: number                                 // bar height (px)
   strokeWidth?: number                            // bar thickness (px)

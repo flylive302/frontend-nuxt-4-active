@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-
-type NavColor = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
+import type { Colors } from '~/types/colors'
 
 const props = withDefaults(defineProps<{
-  color?: NavColor,
+  color?: Colors,
   backTo?: string,
   subMenuTo?: string | undefined,
   firstLink?: string | undefined,
@@ -21,7 +20,7 @@ const props = withDefaults(defineProps<{
 })
 const route = useRoute()
 
-const gradientTargets: Record<NavColor, string> = {
+const gradientTargets: Record<Colors, string> = {
   primary: 'to-primary/80',
   secondary: 'to-secondary/80',
   tertiary: 'to-tertiary/80',
@@ -32,6 +31,8 @@ const gradientTargets: Record<NavColor, string> = {
 }
 
 const toGradient = computed(() => gradientTargets[props.color])
+// Use semantic color directly - Nuxt UI components accept semantic colors configured in app.config.ts
+const uiColor = computed(() => props.color)
 </script>
 <template>
   <header
@@ -50,7 +51,7 @@ const toGradient = computed(() => gradientTargets[props.color])
         icon="i-lucide-chevron-left"
         size="md"
         variant="ghost"
-        :color="color"
+        :color="uiColor"
         :to="backTo"
         class="w-full justify-center rounded-none"
       />
@@ -61,9 +62,9 @@ const toGradient = computed(() => gradientTargets[props.color])
 
       <div v-else class="col-span-6 flex gap-2">
         <UButton
-          aria-label="fist-page-link"
+          aria-label="first-page-link"          
           size="md"
-          :color="color"
+          :color="uiColor"
           variant="link"
           :to="firstLink"
           class="w-full justify-center rounded-none bg-gradient-to-br"
@@ -75,7 +76,7 @@ const toGradient = computed(() => gradientTargets[props.color])
           aria-label="second page link"
           size="md"
           variant="link"
-          :color="color"
+          :color="uiColor"
           :to="secondLink"
           class="w-full justify-center rounded-none bg-gradient-to-br"
           :class="route.path === secondLink ? toGradient : ''"
@@ -88,7 +89,7 @@ const toGradient = computed(() => gradientTargets[props.color])
         aria-label="Notifications"
         icon="i-lucide-menu"
         size="md"
-        :color="color"
+        :color="uiColor"
         :to="subMenuTo"
         variant="ghost"
         class="w-full justify-center rounded-none"

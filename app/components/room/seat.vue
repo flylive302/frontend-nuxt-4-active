@@ -47,27 +47,31 @@ const displayName = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer transition-transform hover:scale-105"
-    :class="{ 'animate-pulse': isActiveSpeaker }" @click="openDrawer">
+  <div
+    class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer" 
+    @click="openDrawer"
+  >
     <!-- Avatar with audio indicators -->
     <div class="relative">
       <!-- Occupied seat: show user avatar with animation -->
-      <UserAvatar v-if="!isEmpty" :img="avatarSrc" :animated="true" :class="{
-        'ring-2 ring-primary-500 rounded-full': isActiveSpeaker,
-        'ring-2 ring-green-500 ring-offset-1 ring-offset-black': isActiveSpeaker && !isMuted,
-      }" />
-
+      <UserAvatar
+          v-if="!isEmpty" :animated="true" :class="{
+            'ring-2 rounded-full animate-pulse': isActiveSpeaker,
+            'ring-primary': isActiveSpeaker && isMuted,
+            'ring-success ring-offset-1 ring-offset-black': isActiveSpeaker && !isMuted,
+          }" :img="avatarSrc"
+      />
       <!-- Empty seat: show default placeholder -->
       <UserAvatar v-else/>
 
       <!-- Mute indicator -->
-      <div v-if="!isEmpty && isMuted" class="absolute -bottom-0.5 -right-0.5 bg-red-500 rounded-full p-0.5">
-        <UIcon name="i-lucide-mic-off" class="size-2.5 text-white" />
+      <div v-if="!isEmpty && isMuted" class="absolute -bottom-0.5 -right-0.5 bg-error rounded-full p-0.5">
+        <UIcon name="i-lucide-mic-off" class="size-1.5 text-white" />
       </div>
 
       <!-- Speaking indicator -->
-      <div v-if="isActiveSpeaker && !isMuted" class="absolute -bottom-0.5 -right-0.5 bg-green-500 rounded-full p-0.5">
-        <UIcon name="i-lucide-volume-2" class="size-2.5 text-white" />
+      <div v-if="isActiveSpeaker && !isMuted" class="absolute -bottom-0.5 -right-0.5 bg-success rounded-full p-0.5">
+        <UIcon name="i-lucide-volume-2" class="size-1.5 text-white" />
       </div>
 
       <!-- Empty seat indicator (+ icon overlay) -->
@@ -77,16 +81,18 @@ const displayName = computed(() => {
     </div>
 
     <!-- User name -->
-    <UButton :icon="isEmpty ? 'i-lucide-user' : (isMuted ? 'i-lucide-mic-off' : 'i-lucide-mic')" size="xs"
+    <UButton
+        :icon="isEmpty ? 'i-lucide-user' : (isMuted ? 'i-lucide-mic-off' : 'i-lucide-mic')" size="xs"
       :variant="isEmpty ? 'soft' : 'subtle'" :color="isMuted ? 'error' : 'primary'"
       class="px-1 py-0 rounded-xs text-[8px] truncate w-full justify-center" :ui="{ leadingIcon: 'size-[9px]' }">
       {{ displayName }}
     </UButton>
 
     <!-- Speaker indicator / seat number -->
-    <UButton v-if="!isEmpty && seat?.user?.isSpeaker" icon="i-lucide-headphones" size="xs" variant="subtle"
+    <UButton
+        v-if="!isEmpty && seat?.user?.isSpeaker" icon="i-lucide-headphones" size="xs" variant="subtle"
       class="px-1 py-0 rounded-xs text-[8px]" :ui="{ leadingIcon: 'size-[10px]' }">
-      Speaking
+      Speaker
     </UButton>
   </div>
 </template>

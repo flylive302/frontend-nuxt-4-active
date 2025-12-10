@@ -6,8 +6,8 @@ definePageMeta({
   middleware: 'auth'
 })
 
-const bannerAutoplay = ref<{ delay: number } | null>({ delay: 4000 })
-const roomAutoplay = ref<{ delay: number } | null>({ delay: 3000 })
+const bannerAutoplay = ref<{ delay: number } | undefined>({ delay: 4000 })
+const roomAutoplay = ref<{ delay: number } | undefined>({ delay: 3000 })
 
 // ---- Optimization: Pause Autoplay when off-screen
 const bannerRef = ref(null)
@@ -39,11 +39,11 @@ const fetchRoomsList = async ({ page }: { page: number }) => {
 }
 
 useIntersectionObserver(bannerRef, ([entry]) => {
-  bannerAutoplay.value = entry?.isIntersecting ? { delay: 4000 } : null
+  bannerAutoplay.value = entry?.isIntersecting ? { delay: 4000 } : undefined
 })
 
 useIntersectionObserver(roomRef, ([entry]) => {
-  roomAutoplay.value = entry?.isIntersecting ? { delay: 3000 } : null
+  roomAutoplay.value = entry?.isIntersecting ? { delay: 3000 } : undefined
 })
 
 // ---- Types
@@ -180,7 +180,7 @@ const banners: Banner[] = [
 
     <div class="mx-3">
       <InfiniteScroll
-        :fetcher="fetchRoomsList"
+        :fetcher="(fetchRoomsList as any)"
         :initial-page="1"
         :per-page="15"
       >

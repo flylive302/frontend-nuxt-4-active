@@ -174,7 +174,7 @@ function handleSendGift() {
       <!-- Send Button -->
       <UFieldGroup size="xs">
         <USelect v-model="selectedQuantity" class="w-15" size="xs" :items="quantityOptions" />
-        <UButton :disabled="!selectedGiftId || selectedRecipients.length === 0" size="xs" trailing-icon="i-lucide-send"
+        <UButton :disabled="!selectedGiftId || (selectedRecipients?.length ?? 0) === 0" size="xs" trailing-icon="i-lucide-send"
           @click="handleSendGift">
           Send
         </UButton>

@@ -3,8 +3,12 @@ import { navigateTo } from 'nuxt/app'
 import { ref, computed } from 'vue'
 import { useDebounce } from '@vueuse/core'
 
-/** -------- Props -------- */
+/** -------- Types -------- */
+
+// Theme colors that have corresponding theme classes defined
 type ThemeColor = 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'
+
+/** -------- Props -------- */
 
 const props = withDefaults(defineProps<{
   color?: ThemeColor
@@ -14,7 +18,6 @@ const props = withDefaults(defineProps<{
   endpoint: 'https://dummyjson.com/c/0f16-bb65-41ea-a7af'
 })
 
-/** -------- Types -------- */
 type AgencyId = string
 
 type AgencyApiResponse = {
@@ -57,7 +60,21 @@ const themeClasses: Record<ThemeColor, { border: string; focus: string }> = {
   info:      { border: 'border-info',      focus: 'focus:ring-info' },
   warning:   { border: 'border-warning',   focus: 'focus:ring-warning' },
   error:     { border: 'border-error',     focus: 'focus:ring-error' }
-}
+} as const
+
+// Default theme classes fallback
+const defaultThemeClasses = themeClasses.primary
+
+// Safely get theme classes with runtime guard and fallback
+const currentThemeClasses = computed(() => {
+  const color = props.color
+  return color && color in themeClasses 
+    ? themeClasses[color] 
+    : defaultThemeClasses
+})
+
+// Use semantic color directly - Nuxt UI components accept semantic colors configured in app.config.ts
+const buttonColor = computed(() => props.color)
 
 /** -------- Data Fetching -------- */
 const {
@@ -121,7 +138,7 @@ const errorMessage = computed<string | null>(() => {
 
   if (statusCode === 404) return 'Agencies not found'
   if (statusCode === 401 || statusCode === 403) return 'Authentication required'
-  if (statusCode >= 500) return 'Server error. Please try again later'
+  if (statusCode !== undefined && statusCode >= 500) return 'Server error. Please try again later'
 
   return 'Unable to load agencies. Check your connection'
 })
@@ -135,7 +152,7 @@ const errorMessage = computed<string | null>(() => {
 
       <UButton
           label="Browse"
-          :color="props.color"
+          :color="buttonColor"
           icon="i-lucide-building-2"
           size="md"
           aria-haspopup="dialog"
@@ -159,16 +176,16 @@ const errorMessage = computed<string | null>(() => {
             placeholder="Search by name or country..."
             class="h-90"
             virtualize
-            @select="(item) => item?.onSelect?.()"
+            @select="(item: any) => item?.onSelect?.()"
         >
           <!-- Custom Agency Row -->
-          <template #item="{ item }: { item: AgencyListItem }">
+          <template #item="{ item }">            
             <div class="flex items-center justify-between gap-3 w-full">
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 <UAvatar
-                    :src="item.avatar.src"
+                    :src="item.avatar?.src"
                     :alt="item.name"
-                    :class="['border-2', themeClasses[props.color].border]"
+                    :class="['border-2', currentThemeClasses.border]"
                     size="lg"
                 />
 
@@ -210,7 +227,7 @@ const errorMessage = computed<string | null>(() => {
         <!-- Error Alert -->
         <UAlert
             v-if="errorMessage"
-            color="red"
+            color="error"
             variant="subtle"
             icon="i-lucide-alert-circle"
             :title="errorMessage"

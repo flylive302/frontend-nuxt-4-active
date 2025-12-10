@@ -4,7 +4,7 @@ export default defineNuxtPlugin(async () => {
     const cache = new Map<string, Promise<any>>();
     const fetchAnimation = (name: string) => {
         if (!cache.has(name)) {
-            cache.set(name, $fetch(`/parsedAnimations/${name}.json`));
+            cache.set(name, ($fetch as any)(`/parsedAnimations/${name}.json`));
         }
         return cache.get(name)!;
     };

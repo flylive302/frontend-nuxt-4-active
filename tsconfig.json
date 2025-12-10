@@ -1,4 +1,5 @@
 {
+  "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -19,18 +20,15 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": [
+      "node"
+    ],
+    "skipLibCheck": true
   },
   "vueCompilerOptions": {
     "globalTypesPath": ".nuxt/types/vue-shim.d.ts"
   },
-  "files": [],
-  "references": [
-    {"path": "./.nuxt/tsconfig.app.json"},
-    {"path": "./.nuxt/tsconfig.server.json"},
-    {"path": "./.nuxt/tsconfig.shared.json"},
-    {"path": "./.nuxt/tsconfig.node.json"}
-  ],
   "include": [
     "**/*",
     "types/**/*.d.ts",
@@ -38,6 +36,7 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/node_modules/@nuxt/image/**/*.vue"
   ]
 }

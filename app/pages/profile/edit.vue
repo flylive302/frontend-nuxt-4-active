@@ -252,7 +252,7 @@ watch(
         <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
       </div>
 
-      <UForm ref="formRef" :schema="formSchema" :state="formState" class="space-y-3" @submit="handleFormSubmit">
+      <UForm ref="formRef" :schema="formSchema" :state="(formState as any)" class="space-y-3" @submit="handleFormSubmit">
         <UFormField label="Gender" name="gender" required :error="genderError">
           <USelect
               v-model.number="formState.gender"
@@ -276,7 +276,7 @@ watch(
               {{ formState.dateOfBirth ? formState.dateOfBirth.toString() : 'Select date of birth' }}
             </UButton>
             <template #content>
-              <UCalendar v-model="formState.dateOfBirth" :default-placeholder="calendarDefaultDate" class="p-2" />
+              <UCalendar v-model="(formState.dateOfBirth as any)" :default-placeholder="calendarDefaultDate" class="p-2" />
             </template>
           </UPopover>
         </UFormField>

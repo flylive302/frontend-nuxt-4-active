@@ -105,7 +105,7 @@ describe('useMediasoup', () => {
         headerExtensions: [],
       }
 
-      await mediasoup.loadDevice(rtpCapabilities as Parameters<typeof mediasoup.loadDevice>[0])
+      await mediasoup.loadDevice(rtpCapabilities as unknown as Parameters<typeof mediasoup.loadDevice>[0])
 
       expect(mockDevice.load).toHaveBeenCalledWith({
         routerRtpCapabilities: rtpCapabilities,

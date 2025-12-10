@@ -1,10 +1,11 @@
 <script setup lang="ts">
-defineOptions({ name: "UserSignatureBadge" })
+import type { Colors } from '~/types/colors'
 
-type Color = | "primary" | "secondary" | "tertiary" | "success"
+// ProfileBadge only supports a subset of colors
+type BadgeColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary' | 'success'>
 
 withDefaults(defineProps<{
-  color?: Color
+  color?: BadgeColor
   badgeSrc?: string
   txt?: string
   imgAlt?: string
@@ -18,7 +19,7 @@ withDefaults(defineProps<{
 })
 
 // Tailwind-safe variants
-const variantMap: Record<Color, string> = {
+const variantMap: Record<BadgeColor, string> = {
   primary:   "bg-primary/30   border-primary/70",
   secondary: "bg-secondary/30 border-secondary/70",
   tertiary:  "bg-tertiary/30  border-tertiary/70",

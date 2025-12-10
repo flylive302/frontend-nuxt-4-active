@@ -14,7 +14,7 @@ const categories = getGiftsByCategory();
 
 // Selected recipients (user IDs)
 const selectedRecipients = ref<number[]>([]);
-const selectedGiftId = ref<number | null>(null);
+const selectedGiftId = ref<number | undefined>(undefined);
 
 // Get participants for recipient selection
 const participants = computed(() => roomStore.participantList);
@@ -95,10 +95,10 @@ function selectGift(giftId: number) {
           <template #content="{ item }">
             <RoomGiftCard
               v-for="i in item.gifts"
-              :key="i"
+              :key="i.id"
               :category="item.category"
               :name="i.name"
-              :price="i.price"
+              :price="i.price_coins"
               :class="selectedGiftId == i.id ? 'ring-2 ring-primary' : 'border'"
               @click="selectGift(i.id)"
             />

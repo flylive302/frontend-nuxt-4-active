@@ -284,7 +284,7 @@ defineExpose({
                   :aspect-class="aspectRatio"
               >
                 <NuxtLink to="/" class="pb-2" role="listitem">
-                  <RoomCard :image-src="resolveThumbnail(cellItem)" :class="[aspectRatio, 'w-full']">
+                  <RoomCard :room="(cellItem as any)" :class="[aspectRatio, 'w-full']">
                     Live / <span class="tabular-nums">{{ cellItem.id }}</span>
                   </RoomCard>
                 </NuxtLink>

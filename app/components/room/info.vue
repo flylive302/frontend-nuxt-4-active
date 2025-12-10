@@ -70,7 +70,7 @@ const isOpenRight = ref(false)
                   <template #default="{ item, index, active }">
                     <DynamicScrollerItem :item="item" :active="active" :data-index="index" class="pb-3">
                       <div class="flex items-center justify-between w-full">
-                        <UBadge :color="item.rank <= 3 ? ['primary', 'secondary', 'tertiary'][item.rank - 1] : 'gray'"
+                        <UBadge :color="(item.rank <= 3 ? ['primary', 'secondary', 'tertiary'][item.rank - 1] : 'neutral') as any"
                           class="text-white font-bold" :label="item.rank" />
                         <div
                           class="flex gap-1 bg-gradient-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden flex-grow ml-2">

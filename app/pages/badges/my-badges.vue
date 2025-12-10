@@ -22,7 +22,7 @@ const items = [
 
     <div class="px-3 mt-6 mb-32 overflow-hidden">
       <UTabs
-          color="ghost"
+          color="neutral"
           size="sm" class="mt-6"
           :ui="{
               trigger: '!text-white !font-bold data-[state=active]:border border-secondary data-[state=active]:bg-gradient-to-br to-secondary/50',

@@ -67,7 +67,7 @@ const data = ref([
       <UForm :schema="schema" :state="state" class="space-y-2 my-3" @submit="onSubmit">
 
         <UFormField label="Enter Number of Coins" name="coins" class="w-full" required>
-          <UInputNumber v-model="state.coins" placeholder="50" color="tertiary" class="w-full" />
+          <UInputNumber v-model="state.coins" placeholder="50" :color="('tertiary' as any)" class="w-full" />
         </UFormField>
 
         <p class="font-semibold text-base leading-none">Change in Balances after Exchange:</p>
@@ -87,17 +87,17 @@ const data = ref([
 
         </div>
 
-        <UButton size="lg" class="w-full justify-center mt-2" icon="i-lucide-send" color="tertiary" type="submit">
+        <UButton size="lg" class="w-full justify-center mt-2" icon="i-lucide-send" :color="('tertiary' as any)" type="submit">
           Convert
         </UButton>
       </UForm>
 
-      <USeparator color="white" class="my-4" />
+      <USeparator color="neutral" class="my-4" />
 
       <SectionTitle type="tertiary">Total Coins Earned</SectionTitle>
       <div class="flex justify-between mt-2 items-center">
-        <UButton variant="subtle" color="tertiary" size="sm" icon="i-lucide-calendar-clock">May 2024</UButton>
-        <UButton variant="subtle" color="tertiary" size="sm" square icon="i-lucide-info" />
+        <UButton variant="subtle" :color="('tertiary' as any)" size="sm" icon="i-lucide-calendar-clock">May 2024</UButton>
+        <UButton variant="subtle" :color="('tertiary' as any)" size="sm" square icon="i-lucide-info" />
       </div>
 
       <div class="grid grid-cols-6 mt-3 mb-5 gap-2">
@@ -109,7 +109,7 @@ const data = ref([
 
         <div class="col-span-1">
           <UButton
-              color="tertiary"
+              :color="('tertiary' as any)"
               size="xl"
               square
               icon="i-lucide-sparkles"

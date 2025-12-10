@@ -1,4 +1,4 @@
-import type {App} from "vue";
+import type { SvgaPlayer, SvgaPlugin } from '@/types/svga'
 
 export const useSvgaPlayer = (
     canvas: Ref<HTMLCanvasElement | null>,
@@ -10,17 +10,13 @@ export const useSvgaPlayer = (
 ) => {
     if (!import.meta.client) return { player: null };
 
-    const player = shallowRef<
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        Awaited<ReturnType<App['$svga']['createSvgaPlayer']>> | null
-    >(null);
+    const player = shallowRef<SvgaPlayer | null>(null);
     const nuxtApp = useNuxtApp();
 
     const load = async () => {
         if (!canvas.value) return;
         player.value?.destroy();
-        player.value = await nuxtApp.$svga.createSvgaPlayer({
+        player.value = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
             canvas: canvas.value,
             name: options.name.value,
             loop: options.loop?.value,

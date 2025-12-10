@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
     compatibilityDate: '2025-02-03',
     ssr: false,
@@ -38,7 +39,7 @@ export default defineNuxtConfig({
         build: {
             rollupOptions: {
                 output: {
-                    manualChunks(id) {
+                    manualChunks(id: string) {
                         if (id.includes('node_modules')) {
                             if (id.includes('svga')) return 'svga'
                             if (id.includes('mapbox') || id.includes('googlemaps')) return 'maps'
@@ -52,12 +53,9 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            apiBase: 'https://backend-laravel-12-master-txvbmd.laravel.cloud/api/v1',
-            apiRoot: 'https://backend-laravel-12-master-txvbmd.laravel.cloud',
-            audioServerUrl: 'wss://besttvcableinternet.us'
-            // apiBase: 'http://localhost:8000/api/v1',
-            // apiRoot: 'http://localhost:8000',
-            // audioServerUrl: 'ws://localhost:3030'
+            apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
+            apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
+            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'ws://localhost:3030'
         }
     }
 })

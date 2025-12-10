@@ -4,12 +4,14 @@
  * Integrates header, seats, chat panel, and gifting drawer
  */
 import { ref } from 'vue';
-import { useScreenSafeArea, useMutationObserver, useWindowFocus } from '@vueuse/core';
+import { useScreenSafeArea, useMutationObserver, useWindowFocus, useMediaQuery } from '@vueuse/core';
 const roomStore = useRoomStore()
 const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio()
 const toast = useToast()
 
 const {top, right, bottom, left,} = useScreenSafeArea();
+
+const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
 const shellRef = ref<HTMLElement | null>(null);
 
@@ -114,7 +116,18 @@ onUnmounted(() => {
     <!-- Background -->
     <div class="fixed inset-0 z-0">
       <div class="fixed inset-0 z-0 bg-gray-950/20" />
-      <NuxtImg provider="imagekit" src="/siteAssets/backgrounds/eagle.jpg" class="size-full object-cover" />
+      <NuxtImg 
+        v-if="!prefersReducedMotion"
+        provider="imagekit" 
+        src="/siteAssets/backgrounds/5.gif" 
+        class="size-full object-cover" 
+      />
+      <NuxtImg 
+        v-else
+        provider="imagekit" 
+        src="/siteAssets/backgrounds/5.jpg" 
+        class="size-full object-cover" 
+      />
     </div>
 
     <!-- Content -->
