@@ -31,3 +31,4 @@ jobs:
         uses: nuxt-hub/action@v2
         with:
           project-key: flylive-6hg1
+          output-directory: .output
