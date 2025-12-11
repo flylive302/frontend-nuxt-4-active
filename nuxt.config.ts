@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     ssr: false,
     devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
-    modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+    modules: ['@nuxthub/core', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     pinia: {
         storesDirs: ['./stores/**'],
     },
