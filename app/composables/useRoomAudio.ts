@@ -108,28 +108,26 @@ export function useRoomAudio(): UseRoomAudioReturn {
    */
   function emitAsync<TPayload, TResponse>(event: string, payload: TPayload): Promise<TResponse> {
     return new Promise((resolve, reject) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:109',message:'emitAsync called',data:{event,payload},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       if (!socket.value) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:112',message:'emitAsync socket not connected',data:{event},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         reject(new Error('Socket not connected'));
         return;
       }
+      
+      let isResolved = false; // Track if promise was already resolved/rejected
       const timeoutId = setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:120',message:'emitAsync timeout',data:{event,payload},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        reject(new Error(`Socket event ${event} timed out after 10 seconds`));
+        if (!isResolved) {
+          isResolved = true;
+          reject(new Error(`Socket event ${event} timed out after 10 seconds`));
+        }
       }, 10000);
+      
       socket.value.emit(event, payload, (response: TResponse) => {
         clearTimeout(timeoutId);
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:125',message:'emitAsync callback received',data:{event,response},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        resolve(response);
+        if (!isResolved) {
+          isResolved = true;
+          resolve(response);
+        }
+        // If already resolved/rejected, ignore the callback to prevent memory leaks
       });
     });
   }
@@ -538,31 +536,14 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * Owner: Lock a seat.
    */
   async function lockSeat(seatIndex: number): Promise<boolean> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:524',message:'lockSeat called',data:{seatIndex,roomId:roomStore.currentRoom?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    if (!roomStore.currentRoom) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:526',message:'lockSeat no current room',data:{seatIndex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      return false;
-    }
+    if (!roomStore.currentRoom) return false;
 
-    try {
-      const response = await emitAsync<{ roomId: string; seatIndex: number }, SeatResponse>('seat:lock', {
-        roomId: roomStore.currentRoom.id.toString(),
-        seatIndex,
-      });
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:533',message:'lockSeat response received',data:{seatIndex,success:response.success,error:response.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      return response.success ?? false;
-    } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:537',message:'lockSeat error',data:{seatIndex,error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      throw error;
-    }
+    const response = await emitAsync<{ roomId: string; seatIndex: number }, SeatResponse>('seat:lock', {
+      roomId: roomStore.currentRoom.id.toString(),
+      seatIndex,
+    });
+
+    return response.success ?? false;
   }
 
   /**
@@ -583,40 +564,23 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * Owner: Invite user to a seat.
    */
   async function inviteToSeat(userId: number, seatIndex: number): Promise<boolean> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:552',message:'inviteToSeat called',data:{userId,seatIndex,roomId:roomStore.currentRoom?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    if (!roomStore.currentRoom) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:554',message:'inviteToSeat no current room',data:{userId,seatIndex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
+    if (!roomStore.currentRoom) return false;
+
+    const response = await emitAsync<{ roomId: string; userId: number; seatIndex: number }, SeatResponse>(
+      'seat:invite',
+      {
+        roomId: roomStore.currentRoom.id.toString(),
+        userId,
+        seatIndex,
+      }
+    );
+
+    if (response.error) {
+      toast.add({ title: 'Cannot invite', description: response.error, color: 'error' });
       return false;
     }
 
-    try {
-      const response = await emitAsync<{ roomId: string; userId: number; seatIndex: number }, SeatResponse>(
-        'seat:invite',
-        {
-          roomId: roomStore.currentRoom.id.toString(),
-          userId,
-          seatIndex,
-        }
-      );
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:567',message:'inviteToSeat response received',data:{userId,seatIndex,success:response.success,error:response.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      if (response.error) {
-        toast.add({ title: 'Cannot invite', description: response.error, color: 'error' });
-        return false;
-      }
-
-      return response.success ?? false;
-    } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/8a897506-63a2-4b32-97bd-dcb4f465f57e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRoomAudio.ts:575',message:'inviteToSeat error',data:{userId,seatIndex,error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      throw error;
-    }
+    return response.success ?? false;
   }
 
   /**
