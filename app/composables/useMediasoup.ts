@@ -29,6 +29,7 @@ const producerTransport = ref<Transport | null>(null);
 const consumerTransport = ref<Transport | null>(null);
 const producer = ref<Producer | null>(null);
 const consumers = ref<Map<string, Consumer>>(new Map());
+const isLocalMuted = ref(false);
 
 // Track the current room for transport operations
 const currentRoomId = ref<string | null>(null);
@@ -275,8 +276,29 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     if (producer.value) {
       producer.value.close();
       producer.value = null;
+      isLocalMuted.value = false;
       console.log('[Mediasoup] Stopped producing audio');
     }
+  }
+
+  /**
+   * Toggle local microphone mute (pauses/resumes the track, not the producer).
+   * This mutes locally - other users won't hear audio until unmuted.
+   */
+  function toggleLocalMute(): boolean {
+    if (!producer.value) {
+      console.warn('[Mediasoup] Cannot toggle mute: no active producer');
+      return isLocalMuted.value;
+    }
+
+    const track = producer.value.track;
+    if (track) {
+      isLocalMuted.value = !isLocalMuted.value;
+      track.enabled = !isLocalMuted.value;
+      console.log('[Mediasoup] Local mute toggled:', isLocalMuted.value ? 'muted' : 'unmuted');
+    }
+
+    return isLocalMuted.value;
   }
 
   /**
@@ -329,7 +351,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     // Attach to audio element
     const audio = new Audio();
     audio.srcObject = new MediaStream([consumer.track]);
-    
+
     // Try to play, handling autoplay policy
     const playAudio = async () => {
       try {
@@ -339,7 +361,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
         if (err instanceof Error && err.name === 'NotAllowedError') {
           // Autoplay blocked - wait for user interaction
           console.warn('[Mediasoup] Autoplay blocked, waiting for user interaction');
-          
+
           // Add a one-time click listener to resume playback
           const resumePlayback = async () => {
             try {
@@ -351,7 +373,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
             document.removeEventListener('click', resumePlayback);
             document.removeEventListener('touchstart', resumePlayback);
           };
-          
+
           document.addEventListener('click', resumePlayback, { once: true });
           document.addEventListener('touchstart', resumePlayback, { once: true });
         } else {
@@ -359,7 +381,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
         }
       }
     };
-    
+
     playAudio();
 
     consumer.on('transportclose', () => {
@@ -427,10 +449,12 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     producer,
     consumers,
     isProducing,
+    isLocalMuted,
     loadDevice,
     createTransports,
     startAudio,
     stopAudio,
+    toggleLocalMute,
     consumeProducer,
     stopConsumer,
     cleanup,

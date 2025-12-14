@@ -33,6 +33,7 @@ export interface JoinRoomResponse {
   rtpCapabilities?: RtpCapabilities;
   participants?: { id: number; name: string; avatar?: string; isSpeaker: boolean }[];
   seats?: { seatIndex: number; userId: string; isMuted: boolean }[];
+  lockedSeats?: number[]; // Added: List of locked seat indices
   existingProducers?: { producerId: string; userId: number }[];
   error?: string;
 }
@@ -187,6 +188,18 @@ export interface SeatUserMutedEvent {
   isMuted: boolean;
 }
 
+export interface SeatLockedEvent {
+  seatIndex: number;
+  isLocked: boolean;
+}
+
+export interface SeatInviteReceivedEvent {
+  seatIndex: number;
+  invitedBy: { id: number; name: string };
+  expiresAt: number;
+  targetUserId: number;
+}
+
 // ============================================
 // CHAT EVENTS (Ephemeral - no persistence)
 // ============================================
@@ -269,6 +282,7 @@ export interface Seat {
   user: RoomParticipant | null;
   isMuted: boolean;
   isActive: boolean;
+  isLocked: boolean;
 }
 
 /**
@@ -292,4 +306,4 @@ export function userToParticipant(user: User, overrides?: Partial<RoomParticipan
 
 export const TOTAL_SEATS = 15;
 export const RATE_LIMIT_MESSAGES_PER_MINUTE = 60;
-export const RATE_LIMIT_GIFTS_PER_MINUTE = 30;
+export const RATE_LIMIT_GIFTS_PER_MINUTE = 120;

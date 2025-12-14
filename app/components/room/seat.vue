@@ -18,6 +18,15 @@ const seat = computed(() => roomStore.seats[seatIndex.value]);
 // Whether this seat has a user
 const isEmpty = computed(() => !seat.value?.user);
 
+// Whether this seat is locked
+const isLocked = computed(() => seat.value?.isLocked ?? false);
+
+// Check if this seat is the target of an invite
+const isInviteTarget = computed(() => {
+  // Assuming roomStore.inviteModeSeat is 0-indexed, matching seatIndex
+  return roomStore.inviteModeSeat === seatIndex.value;
+});
+
 // Whether this seat's user is the active speaker
 const isActiveSpeaker = computed(() => seat.value?.isActive ?? false);
 
@@ -40,59 +49,35 @@ const avatarSrc = computed(() => {
 // Display name
 const displayName = computed(() => {
   if (isEmpty.value) {
-    return `Seat ${props.seatId}`;
+    return isLocked.value ? 'Locked' : `Seat ${props.seatId}`;
   }
   return seat.value?.user?.name || 'Unknown';
 });
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer" 
-    @click="openDrawer"
-  >
+  <div class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer rounded-xl transition-all duration-300"
+    :class="{ 'ring-2 ring-cyan-500 bg-cyan-500/10 animate-pulse': isInviteTarget }" @click="openDrawer">
     <!-- Avatar with audio indicators -->
-    <div class="relative">
+    <div class="relative w-full">
       <!-- Occupied seat: show user avatar with animation -->
-      <UserAvatar
-          v-if="!isEmpty" :animated="true" :class="{
-            'ring-2 rounded-full animate-pulse': isActiveSpeaker,
-            'ring-primary': isActiveSpeaker && isMuted,
-            'ring-success ring-offset-1 ring-offset-black': isActiveSpeaker && !isMuted,
-          }" :img="avatarSrc"
-      />
+      <UserAvatar v-if="!isEmpty" :animated="true" :img="avatarSrc" class="relative z-20" />
+      <!-- Locked empty seat: show lock image -->
+      <UserAvatar v-else-if="isLocked" img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
+        class="relative z-20" />
       <!-- Empty seat: show default placeholder -->
-      <UserAvatar v-else/>
+      <UserAvatar v-else class="relative z-20" />
 
       <!-- Mute indicator -->
-      <div v-if="!isEmpty && isMuted" class="absolute -bottom-0.5 -right-0.5 bg-error rounded-full p-0.5">
-        <UIcon name="i-lucide-mic-off" class="size-1.5 text-white" />
-      </div>
+      <UIcon v-if="!isEmpty && isMuted" name="i-lucide-mic-off"
+        class="size-4 text-white absolute bottom-0 -right-1 z-20" />
 
       <!-- Speaking indicator -->
-      <div v-if="isActiveSpeaker && !isMuted" class="absolute -bottom-0.5 -right-0.5 bg-success rounded-full p-0.5">
-        <UIcon name="i-lucide-volume-2" class="size-1.5 text-white" />
-      </div>
+      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="mice_waves/8" />
 
-      <!-- Empty seat indicator (+ icon overlay) -->
-<!--      <div v-if="isEmpty" class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">-->
-<!--        <UIcon name="i-lucide-plus" class="size-4 text-white/60" />-->
-<!--      </div>-->
     </div>
 
     <!-- User name -->
-    <UButton
-        :icon="isEmpty ? 'i-lucide-user' : (isMuted ? 'i-lucide-mic-off' : 'i-lucide-mic')" size="xs"
-      :variant="isEmpty ? 'soft' : 'subtle'" :color="isMuted ? 'error' : 'primary'"
-      class="px-1 py-0 rounded-xs text-[8px] truncate w-full justify-center" :ui="{ leadingIcon: 'size-[9px]' }">
-      {{ displayName }}
-    </UButton>
-
-    <!-- Speaker indicator / seat number -->
-    <UButton
-        v-if="!isEmpty && seat?.user?.isSpeaker" icon="i-lucide-headphones" size="xs" variant="subtle"
-      class="px-1 py-0 rounded-xs text-[8px]" :ui="{ leadingIcon: 'size-[10px]' }">
-      Speaker
-    </UButton>
+    <p class="text-xs truncate font-semibold">{{ displayName }}</p>
   </div>
 </template>

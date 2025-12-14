@@ -50,6 +50,7 @@ export const useRoomStore = defineStore('roomStore', () => {
       user: null,
       isMuted: false,
       isActive: false,
+      isLocked: false,
     }))
   );
 
@@ -67,6 +68,16 @@ export const useRoomStore = defineStore('roomStore', () => {
   // Legacy Seat UI State
   // ========================================
   const activeSeat = ref<number | null>(null);
+  const inviteModeSeat = ref<number | null>(null); // Index of seat being invited to
+
+  function startInviteMode(seatIndex: number) {
+    inviteModeSeat.value = seatIndex;
+    activeSeat.value = null; // Clear active selection to close seat drawer
+  }
+
+  function cancelInviteMode() {
+    inviteModeSeat.value = null;
+  }
 
   // ========================================
   // Computed
@@ -74,8 +85,10 @@ export const useRoomStore = defineStore('roomStore', () => {
   const participantList = computed(() => Array.from(participants.value.values()));
   const speakersCount = computed(() => seats.value.filter((s) => s.user !== null).length);
   const isRoomOwner = computed(() => {
-    if (!currentRoom.value || !userRoom.value) return false;
-    return currentRoom.value.id === userRoom.value.id;
+    if (!currentRoom.value) return false;
+    const authStore = useAuthStore();
+    // Check if current user is the room owner (room.user is the owner)
+    return currentRoom.value.user?.id === authStore.user?.id;
   });
 
   // ========================================
@@ -151,6 +164,7 @@ export const useRoomStore = defineStore('roomStore', () => {
       user: null,
       isMuted: false,
       isActive: false,
+      isLocked: false,
     }));
   }
 
@@ -191,11 +205,13 @@ export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
   function updateSeat(seatIndex: number, user: RoomParticipant | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
+      const currentSeat = seats.value[seatIndex];
       seats.value[seatIndex] = {
         index: seatIndex,
         user,
         isMuted,
         isActive: audioState.value.activeSpeakerId === user?.id,
+        isLocked: currentSeat?.isLocked ?? false, // Preserve lock state
       };
 
       // Update participant's speaker status
@@ -219,6 +235,7 @@ export const useRoomStore = defineStore('roomStore', () => {
         user: null,
         isMuted: false,
         isActive: false,
+        isLocked: seat?.isLocked ?? false, // Preserve lock state
       };
 
       // Update participant's speaker status
@@ -229,6 +246,13 @@ export const useRoomStore = defineStore('roomStore', () => {
           participant.seatIndex = undefined;
         }
       }
+    }
+  }
+
+  function setSeatLocked(seatIndex: number, isLocked: boolean) {
+    const seat = seats.value[seatIndex];
+    if (seatIndex >= 0 && seatIndex < seats.value.length && seat) {
+      seat.isLocked = isLocked;
     }
   }
 
@@ -293,6 +317,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     // Seats
     seats,
     speakersCount,
+    inviteModeSeat,
 
     // Chat
     messages,
@@ -310,6 +335,8 @@ export const useRoomStore = defineStore('roomStore', () => {
     setCurrentRoom,
     setUserRoom,
     leaveRoom,
+    startInviteMode,
+    cancelInviteMode,
 
     // Audio actions
     setAudioConnected,
@@ -326,6 +353,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     // Seat actions
     updateSeat,
     clearSeat,
+    setSeatLocked,
 
     // Chat actions
     addMessage,

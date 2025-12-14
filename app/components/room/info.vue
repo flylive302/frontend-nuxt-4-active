@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
 import { ref } from 'vue'
+import { useRoomAudio } from '~/composables/useRoomAudio'
 
 const roomStore = useRoomStore()
+const { inviteToSeat } = useRoomAudio()
 
 const items: TabsItem[] = [
   { label: 'Daily' },
@@ -39,6 +41,54 @@ const dailyUsers = ref(generateUsers(50))
 const participants = computed(() => roomStore.participantList)
 const participantCount = computed(() => roomStore.participantList.length)
 
+// Owner check and active seat for invite functionality
+const isRoomOwner = computed(() => roomStore.isRoomOwner)
+const activeSeat = computed(() => roomStore.activeSeat) // 1-indexed, null if none
+const activeSeatIndex = computed(() => activeSeat.value ? activeSeat.value - 1 : null) // 0-indexed
+
+// Handle invite to seat
+// Handle invite to seat
+const isInviting = ref(false)
+const inviteModeSeat = computed(() => roomStore.inviteModeSeat)
+
+// Auto-open drawer when invite mode starts
+watch(inviteModeSeat, (newVal) => {
+  if (newVal !== null) {
+    isOpenRight.value = true
+  }
+})
+
+async function handleInvite(userId: number) {
+  // Use inviteModeSeat if available, otherwise fallback to activeSeat (legacy)
+  const targetSeat = inviteModeSeat.value !== null
+    ? inviteModeSeat.value
+    : activeSeatIndex.value
+
+  if (targetSeat === null) return
+
+  isInviting.value = true
+  try {
+    await inviteToSeat(userId, targetSeat)
+    // If successful, we can perhaps close the drawer or cancel mode?
+    // User flow: Select user -> sent -> done.
+    roomStore.cancelInviteMode()
+    isOpenRight.value = false // Optional: Close drawer after invite?
+  } finally {
+    isInviting.value = false
+  }
+}
+
+// Handle invite to seat
+// isInviting and inviteModeSeat are already declared above
+// Nothing needed here, just the watcher
+
+// Auto-open drawer when invite mode starts
+watch(inviteModeSeat, (newVal) => {
+  if (newVal !== null) {
+    isOpenRight.value = true
+  }
+})
+
 const isOpenLeft = ref(false)
 const isOpenRight = ref(false)
 </script>
@@ -70,7 +120,8 @@ const isOpenRight = ref(false)
                   <template #default="{ item, index, active }">
                     <DynamicScrollerItem :item="item" :active="active" :data-index="index" class="pb-3">
                       <div class="flex items-center justify-between w-full">
-                        <UBadge :color="(item.rank <= 3 ? ['primary', 'secondary', 'tertiary'][item.rank - 1] : 'neutral') as any"
+                        <UBadge
+                          :color="(item.rank <= 3 ? ['primary', 'secondary', 'tertiary'][item.rank - 1] : 'neutral') as any"
                           class="text-white font-bold" :label="item.rank" />
                         <div
                           class="flex gap-1 bg-gradient-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden flex-grow ml-2">
@@ -120,7 +171,7 @@ const isOpenRight = ref(false)
                   <div
                     class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
                     <UserAvatar :img="item.avatar" animated class="w-13" />
-                    <div class="flex flex-col justify-center min-h-full px-2">
+                    <div class="flex flex-col justify-center min-h-full px-2 flex-grow">
                       <h3 class="text-sm font-bold leading-tight">
                         {{ item.name }}
                         <UBadge v-if="item.isSpeaker" size="xs" color="primary" class="ml-1">Speaker</UBadge>
@@ -129,6 +180,13 @@ const isOpenRight = ref(false)
                         <span class="text-xs text-gray-400">ID: {{ item.id }}</span>
                       </div>
                     </div>
+                    <!-- Invite to Seat button - Owner only, for non-speakers -->
+                    <!-- Show ONLY if in invite mode -->
+                    <UButton v-if="inviteModeSeat !== null && !item.isSpeaker && isRoomOwner" size="xs" color="primary"
+                      variant="soft" icon="i-lucide-user-plus" :loading="isInviting" class="mr-2 self-center"
+                      @click.stop="handleInvite(item.id)">
+                      Invite to Seat {{ inviteModeSeat + 1 }}
+                    </UButton>
                   </div>
                 </DynamicScrollerItem>
               </template>

@@ -11,6 +11,8 @@ import type {
   SeatUpdatedEvent,
   SeatClearedEvent,
   SeatUserMutedEvent,
+  SeatLockedEvent,
+  SeatInviteReceivedEvent,
   SeatResponse,
 } from '~/types/audio';
 import { userToParticipant } from '~/types/audio';
@@ -41,6 +43,16 @@ export interface UseRoomAudioReturn {
   muteUser: (userId: number) => Promise<boolean>;
   /** Owner: Unmute user */
   unmuteUser: (userId: number) => Promise<boolean>;
+  /** Owner: Lock a seat */
+  lockSeat: (seatIndex: number) => Promise<boolean>;
+  /** Owner: Unlock a seat */
+  unlockSeat: (seatIndex: number) => Promise<boolean>;
+  /** Owner: Invite user to a seat */
+  inviteToSeat: (userId: number, seatIndex: number) => Promise<boolean>;
+  /** Accept pending invite */
+  acceptInvite: () => Promise<boolean>;
+  /** Decline pending invite */
+  declineInvite: () => Promise<boolean>;
   /** Send chat message */
   sendChatMessage: (content: string, type?: string) => void;
   /** Send gift */
@@ -51,6 +63,10 @@ export interface UseRoomAudioReturn {
   isConnected: ComputedRef<boolean>;
   /** Whether producing audio */
   isProducing: ComputedRef<boolean>;
+  /** Whether local microphone is muted */
+  isLocalMuted: Ref<boolean>;
+  /** Toggle local microphone mute */
+  toggleLocalMute: () => boolean;
 }
 
 // ============================================
@@ -79,6 +95,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     consumeProducer,
     cleanup: cleanupMediasoup,
     isProducing,
+    isLocalMuted,
+    toggleLocalMute,
   } = useMediasoup(socket);
 
   // ========================================
@@ -147,11 +165,59 @@ export function useRoomAudio(): UseRoomAudioReturn {
     });
 
     s.on('seat:cleared', (event: SeatClearedEvent) => {
+      // Check if current user was on this seat before clearing
+      const seat = roomStore.seats[event.seatIndex];
+      const wasCurrentUserSeated = seat?.user?.id === authStore.user?.id;
+
       roomStore.clearSeat(event.seatIndex);
+
+      // If current user was kicked, stop their audio
+      if (wasCurrentUserSeated) {
+        console.log('[RoomAudio] User was kicked from seat, stopping audio');
+        stopMediasoupAudio();
+        toast.add({
+          title: 'Removed from seat',
+          description: 'You have been removed from your seat',
+          color: 'warning',
+        });
+      }
     });
 
     s.on('seat:userMuted', (event: SeatUserMutedEvent) => {
       roomStore.setParticipantMuted(event.userId, event.isMuted);
+    });
+
+    s.on('seat:locked', (event: SeatLockedEvent) => {
+      roomStore.setSeatLocked(event.seatIndex, event.isLocked);
+    });
+
+    // Invite events
+    s.on('seat:invite:received', (event: SeatInviteReceivedEvent) => {
+      // Only show toast if this invite is for the current user
+      if (event.targetUserId === authStore.user?.id) {
+        toast.add({
+          id: `seat-invite-${event.seatIndex}`,
+          title: 'Seat Invitation',
+          description: `${event.invitedBy.name} invited you to Seat ${event.seatIndex + 1}`,
+          color: 'primary',
+          duration: 30000,
+          actions: [
+            {
+              label: 'Accept',
+              color: 'primary',
+              onClick: async () => {
+                await acceptInvite();
+                await startAudio();
+              },
+            },
+            {
+              label: 'Decline',
+              color: 'neutral',
+              onClick: () => void declineInvite(),
+            },
+          ],
+        });
+      }
     });
 
     // Chat events
@@ -220,8 +286,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Setup event listeners
     setupEventListeners();
 
-    // Join room via socket
-    const response = await emitAsync<{ roomId: string }, JoinRoomResponse>('room:join', { roomId });
+    // Join room via socket (send owner ID so server can cache it)
+    const ownerId = roomStore.currentRoom?.user?.id;
+    const response = await emitAsync<{ roomId: string; ownerId?: number }, JoinRoomResponse>(
+      'room:join',
+      { roomId, ownerId }
+    );
 
     if (response.error || !response.rtpCapabilities) {
       throw new Error(response.error || 'Failed to join room');
@@ -257,16 +327,18 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
 
     // 2. Initialize seats from server state
-    if (response.seats && response.seats.length > 0) {
-      console.log('[RoomAudio] Initializing', response.seats.length, 'seats');
-      for (const seat of response.seats) {
-        // Find the participant to get full user info
-        const userId = parseInt(seat.userId, 10);
-        const participant = roomStore.participants.get(userId);
-        if (participant) {
-          roomStore.updateSeat(seat.seatIndex, participant, seat.isMuted);
-        }
-      }
+    // Initialize empty/locked seats state
+    if (response.seats) {
+      response.seats.forEach((seat) => {
+        roomStore.updateSeat(seat.seatIndex, seat.user, seat.isMuted);
+      });
+    }
+
+    // Initialize locked seats (if provided by server)
+    if (response.lockedSeats) {
+      response.lockedSeats.forEach((seatIndex: number) => {
+        roomStore.setSeatLocked(seatIndex, true);
+      });
     }
 
     // 3. Consume existing producers (listen to active speakers)
@@ -336,6 +408,13 @@ export function useRoomAudio(): UseRoomAudioReturn {
       return false;
     }
 
+    // Update local seat state for the current user
+    // (Socket.IO's socket.to() excludes sender, so we update locally)
+    if (response.success && authStore.user) {
+      const currentUser = userToParticipant(authStore.user, { isSpeaker: true, seatIndex });
+      roomStore.updateSeat(seatIndex, currentUser, false);
+    }
+
     return response.success ?? false;
   }
 
@@ -345,6 +424,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
   async function leaveSeat(): Promise<boolean> {
     if (!roomStore.currentRoom) return false;
 
+    // Find current user's seat before leaving
+    const currentUserSeatIndex = authStore.user
+      ? roomStore.seats.findIndex((s) => s.user?.id === authStore.user!.id)
+      : -1;
+
     const response = await emitAsync<{ roomId: string }, SeatResponse>('seat:leave', {
       roomId: roomStore.currentRoom.id.toString(),
     });
@@ -352,6 +436,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
     if (response.error) {
       toast.add({ title: 'Cannot leave seat', description: response.error, color: 'error' });
       return false;
+    }
+
+    // Clear local seat state
+    // (Socket.IO's socket.to() excludes sender, so we update locally)
+    if (response.success && currentUserSeatIndex >= 0) {
+      roomStore.clearSeat(currentUserSeatIndex);
     }
 
     stopAudio();
@@ -429,6 +519,88 @@ export function useRoomAudio(): UseRoomAudioReturn {
   }
 
   /**
+   * Owner: Lock a seat.
+   */
+  async function lockSeat(seatIndex: number): Promise<boolean> {
+    if (!roomStore.currentRoom) return false;
+
+    const response = await emitAsync<{ roomId: string; seatIndex: number }, SeatResponse>('seat:lock', {
+      roomId: roomStore.currentRoom.id.toString(),
+      seatIndex,
+    });
+
+    return response.success ?? false;
+  }
+
+  /**
+   * Owner: Unlock a seat.
+   */
+  async function unlockSeat(seatIndex: number): Promise<boolean> {
+    if (!roomStore.currentRoom) return false;
+
+    const response = await emitAsync<{ roomId: string; seatIndex: number }, SeatResponse>('seat:unlock', {
+      roomId: roomStore.currentRoom.id.toString(),
+      seatIndex,
+    });
+
+    return response.success ?? false;
+  }
+
+  /**
+   * Owner: Invite user to a seat.
+   */
+  async function inviteToSeat(userId: number, seatIndex: number): Promise<boolean> {
+    if (!roomStore.currentRoom) return false;
+
+    const response = await emitAsync<{ roomId: string; userId: number; seatIndex: number }, SeatResponse>(
+      'seat:invite',
+      {
+        roomId: roomStore.currentRoom.id.toString(),
+        userId,
+        seatIndex,
+      }
+    );
+
+    if (response.error) {
+      toast.add({ title: 'Cannot invite', description: response.error, color: 'error' });
+      return false;
+    }
+
+    return response.success ?? false;
+  }
+
+  /**
+   * Accept pending invite.
+   */
+  async function acceptInvite(): Promise<boolean> {
+    if (!roomStore.currentRoom) return false;
+
+    const response = await emitAsync<{ roomId: string }, SeatResponse>('seat:invite:accept', {
+      roomId: roomStore.currentRoom.id.toString(),
+    });
+
+    if (response.error) {
+      toast.add({ title: 'Cannot accept invite', description: response.error, color: 'error' });
+      return false;
+    }
+
+    return response.success ?? false;
+  }
+
+  /**
+   * Decline pending invite.
+   */
+  async function declineInvite(): Promise<boolean> {
+    if (!roomStore.currentRoom) return false;
+
+    const response = await emitAsync<{ roomId: string }, SeatResponse>('seat:invite:decline', {
+      roomId: roomStore.currentRoom.id.toString(),
+    });
+
+    return response.success ?? false;
+  }
+
+  /**
    * Send a chat message.
    */
   function sendChatMessage(content: string, type: string = 'text'): void {
@@ -469,10 +641,17 @@ export function useRoomAudio(): UseRoomAudioReturn {
     removeUserFromSeat,
     muteUser,
     unmuteUser,
+    lockSeat,
+    unlockSeat,
+    inviteToSeat,
+    acceptInvite,
+    declineInvite,
     sendChatMessage,
     sendGift,
     connectionStatus,
     isConnected,
     isProducing,
+    isLocalMuted,
+    toggleLocalMute,
   };
 }

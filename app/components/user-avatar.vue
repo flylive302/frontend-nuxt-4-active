@@ -22,7 +22,7 @@ const props = withDefaults(defineProps<{
   <div class="relative aspect-square cursor-pointer">
     <!-- Avatar Image -->
     <NuxtImg
-        class="absolute-middle aspect-square rounded-full object-cover"
+        class="absolute-middle aspect-square rounded-full object-contain"
         :src="img"
         alt="avatar"
         preload
@@ -37,15 +37,6 @@ const props = withDefaults(defineProps<{
         v-if="props.animated"
         class="relative min-w-full z-10"
         :name="props.frameName"
-        height="auto"
-    />
-
-    <NuxtImg
-        v-else
-        provider="imagekit"
-        :src="props.staticSrc"
-        alt="avatar"
-        class="relative min-w-full z-10"
         height="auto"
     />
   </div>

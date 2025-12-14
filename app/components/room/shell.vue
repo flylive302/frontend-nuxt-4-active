@@ -6,7 +6,7 @@
 import { ref } from 'vue';
 import { useScreenSafeArea, useMutationObserver, useWindowFocus, useMediaQuery } from '@vueuse/core';
 const roomStore = useRoomStore()
-const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio()
+const { joinRoom, leaveRoom, connectionStatus, isLocalMuted, toggleLocalMute, isProducing } = useRoomAudio()
 const toast = useToast()
 
 const {top, right, bottom, left,} = useScreenSafeArea();
@@ -119,7 +119,7 @@ onUnmounted(() => {
       <NuxtImg 
         v-if="!prefersReducedMotion"
         provider="imagekit" 
-        src="/siteAssets/backgrounds/5.gif" 
+        src="/siteAssets/backgrounds/1.gif"
         class="size-full object-cover" 
       />
       <NuxtImg 
@@ -137,11 +137,10 @@ onUnmounted(() => {
       <RoomInfo />
 
       <!-- Seats Grid -->
-      <main class="grid grid-cols-5 gap-x-1 gap-y-1 px-1">
+      <main class="grid grid-cols-5 gap-x-4">
         <RoomSeat v-for="i in 15" :key="i" :seat-id="i" />
-        <RoomSeatDrawer />
       </main>
-
+      <RoomSeatDrawer title="Room Seat Drawer" description="Room Seat Description" />
       <!-- Bottom Section: Chat + Controls -->
       <div class="flex flex-grow gap-1 mt-1 min-h-0">
         <!-- Chat Panel -->
@@ -152,10 +151,18 @@ onUnmounted(() => {
 
           <!-- Quick Actions -->
           <footer class="flex gap-2 p-1">
-            <UButton icon="i-lucide-mic" size="md" variant="subtle" />
+            <!-- Mic Mute/Unmute - only show when producing audio -->
+            <UButton 
+              v-if="isProducing"
+              :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'" 
+              size="md" 
+              :variant="isLocalMuted ? 'solid' : 'subtle'"
+              :color="isLocalMuted ? 'error' : 'neutral'"
+              @click="toggleLocalMute"
+            />
+            <UButton v-else icon="i-lucide-mic" size="md" variant="ghost" disabled />
+            <!-- Volume Control (placeholder for future) -->
             <UButton icon="i-lucide-volume-2" size="md" variant="subtle" />
-            <UButton icon="i-lucide-users" size="md" variant="subtle" />
-            <UButton icon="i-lucide-settings" size="md" variant="subtle" />
           </footer>
         </div>
 
