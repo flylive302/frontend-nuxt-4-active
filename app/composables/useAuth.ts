@@ -58,7 +58,7 @@ export function useAuth() {
 
   /**
    * Logs out the current user.
-   * Calls the logout API, clears the store, and redirects to login.
+   * Calls the logout API, clears the store, and redirects to log in.
    * Ignores API errors during logout to ensure local cleanup always happens.
    */
   async function logout(): Promise<void> {

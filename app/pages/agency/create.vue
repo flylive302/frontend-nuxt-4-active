@@ -45,8 +45,10 @@ const phone = reactive<PhoneModel>({
   phone: '',
 })
 
+import type { ResellerApiRow } from '~/types/reseller'
+
 // selected reseller
-const selectedReseller = ref<{ signature: string; name: string; contact: string; avatar: string } | null>(null)
+const selectedReseller = ref<ResellerApiRow | null>(null)
 
 // ---------- load countries ----------
 const { data: countries, status } = await useLazyFetch<Country[]>(

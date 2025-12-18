@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { navigateTo } from 'nuxt/app'
-import { ref, computed, toRef } from 'vue'
+import { ref, computed, toRef, onMounted, watch } from 'vue'
 import { useDebounce } from '@vueuse/core'
 import type { Colors } from '~/types/colors'
+import type { ResellerApiRow, ApiResponse } from '~/types/reseller'
+import { useResellers } from '~/composables/useResellers'
+import type { NormalizedError } from '~/composables/useApi'
+
 const toast = useToast()
 
 defineOptions({ name: 'ChooseDefaultReseller' })
@@ -10,32 +14,25 @@ defineOptions({ name: 'ChooseDefaultReseller' })
 /** -------- Props -------- */
 const props = withDefaults(defineProps<{
   color?: Colors
-  endpoint?: string
 }>(), {
-  color: 'primary',
-  endpoint: 'https://dummyjson.com/c/764f-c448-4151-8ac2'
+  color: 'primary'
 })
 const color = toRef(props, 'color')
 
 /** -------- Emits -------- */
 const emit = defineEmits<{
-  (e: 'update:selected', value: Pick<ResellerApiRow, 'name' | 'contact' | 'avatar' | 'signature'> | null): void
+  (e: 'update:selected', value: ResellerApiRow | null): void
+  (e: 'update:selectedId', value: number | null): void
 }>()
 
 /** -------- Types -------- */
-type ResellerApiRow = {
-  name: string
-  signature: string
-  contact: string
-  avatar: string
-}
-
 type UiCommandItem = {
-  id: string            // stable id (signature)
-  label: string         // what palette searches/displays
+  id: number            // reseller id for API calls
+  label: string         // what palette searches/displays (signature)
   name: string          // person/org display name
-  suffix?: string
-  avatar?: { src: string }
+  suffix?: string       // contact info
+  avatar?: { src: string }  // Only include if avatar exists (not null)
+  resellerId: number    // for update request
   onSelect?: () => void // keyboard Enter / click
 }
 
@@ -45,12 +42,18 @@ type CommandGroup = {
   items: UiCommandItem[]
 }
 
+/** -------- Composables -------- */
+const { fetchResellers, getDefaultReseller, updateDefaultReseller, normalizeError } = useResellers()
+
 /** -------- State -------- */
 const isModalOpen = ref(false)
 const searchTerm = ref('')
 const debouncedSearchTerm = useDebounce(searchTerm, 250)
-
-const selectedReseller = ref<null | Pick<ResellerApiRow, 'name' | 'contact' | 'avatar' | 'signature'>>(null)
+const isUpdating = ref(false)
+const selectedReseller = ref<ResellerApiRow | null>(null)
+const resellers = ref<ResellerApiRow[]>([])
+const isFetching = ref(false)
+const fetchError = ref<NormalizedError | null>(null)
 
 /** -------- Static class maps (no JIT misses) -------- */
 const colorClasses: Record<Colors, { border: string; to: string; emphasis: string }> = {
@@ -63,19 +66,66 @@ const colorClasses: Record<Colors, { border: string; to: string; emphasis: strin
   error:     { border: 'border-error',     to: 'to-error/30',     emphasis: 'ring-1 ring-error/40' }
 }
 
-/** -------- Data Fetch -------- */
-const {
-  data: resellerRows,
-  status: fetchStatus,
-  error: fetchError
-} = await useFetch<ResellerApiRow[]>(
-    () => props.endpoint,
-    {
-      query: { signature: debouncedSearchTerm }, // server-side search by signature
-      watch: [debouncedSearchTerm, () => props.endpoint],
-      lazy: true,
-      default: () => []
+/** -------- Load Default Reseller on Mount -------- */
+onMounted(async () => {
+  try {
+    const response = await getDefaultReseller()
+    // Backend returns status: "success" not success: true
+    if (response.status === 'success' && response.data) {
+      selectedReseller.value = response.data
+      emit('update:selected', response.data)
+      emit('update:selectedId', response.data.id)
     }
+  } catch (err) {
+    // Silently fail - user may not have a default reseller yet
+    console.warn('Failed to load default reseller:', err)
+  }
+})
+
+/** -------- Data Fetch (Resellers List) -------- */
+async function loadResellers(signature?: string) {
+  isFetching.value = true
+  fetchError.value = null
+
+  try {
+    const response = await fetchResellers(signature)
+    // Backend returns status: "success" not success: true
+    if (response.status === 'success') {
+      resellers.value = response.data ?? []
+      // Debug: Log response to help diagnose issues
+      if (import.meta.dev) {
+        console.log('[ChooseDefaultReseller] Loaded resellers:', {
+          count: resellers.value.length,
+          signature: signature || '(all)',
+          resellers: resellers.value
+        })
+      }
+    } else {
+      resellers.value = []
+      if (import.meta.dev) {
+        console.warn('[ChooseDefaultReseller] Unexpected response status:', response.status)
+      }
+    }
+  } catch (err) {
+    const normalized = normalizeError(err)
+    fetchError.value = normalized
+    resellers.value = []
+    if (import.meta.dev) {
+      console.error('[ChooseDefaultReseller] Error loading resellers:', normalized)
+    }
+  } finally {
+    isFetching.value = false
+  }
+}
+
+watch(
+  debouncedSearchTerm,
+  (value) => {
+    // Trim to avoid sending meaningless whitespace-only signatures
+    const signature = value?.trim() || undefined
+    void loadResellers(signature)
+  },
+  { immediate: true }
 )
 
 /** -------- Actions -------- */
@@ -84,29 +134,43 @@ function contactReseller(item: UiCommandItem) {
   toast.add({ title: `Contacting ${item.label}` })
 }
 
-function selectReseller(item: UiCommandItem) {
-  const reseller = {
-    signature: item.label,
-    contact: item.suffix ?? '',
-    avatar: item.avatar?.src ?? '',
-    name: item.name
+async function selectReseller(item: UiCommandItem) {
+  if (isUpdating.value) return
+
+  isUpdating.value = true
+  try {
+    const response = await updateDefaultReseller(item.resellerId)
+
+    // Backend returns status: "success" not success: true
+    if (response.status === 'success' && response.data) {
+      selectedReseller.value = response.data
+      emit('update:selected', response.data)
+      emit('update:selectedId', response.data.id)
+      isModalOpen.value = false
+      toast.add({ title: `${item.name} set as default`, color: 'success' })
+    }
+  } catch (err) {
+    const normalized = normalizeError(err)
+    toast.add({
+      title: 'Failed to update reseller',
+      description: normalized.message,
+      color: 'error'
+    })
+  } finally {
+    isUpdating.value = false
   }
-  selectedReseller.value = reseller
-  emit('update:selected', reseller)
-  isModalOpen.value = false
-  toast.add({ title: `${item.label} set as default` })
 }
 
 /** Map API rows → palette items */
 const commandItems = computed<UiCommandItem[]>(() => {
-  const rows = (resellerRows.value ?? []).filter(r => !!r.avatar?.trim())
-  return rows.map((r) => {
+  return resellers.value.map((r) => {
     const it: UiCommandItem = {
-      id: r.signature,              // stable key
-      label: r.signature,           // palette search/display
+      id: r.id,
+      resellerId: r.id,
+      label: r.signature,
       name: r.name,
       suffix: r.contact,
-      avatar: { src: r.avatar }
+      avatar: r.avatar ? { src: r.avatar } : undefined
     }
     it.onSelect = () => selectReseller(it)
     return it
@@ -117,7 +181,7 @@ const commandItems = computed<UiCommandItem[]>(() => {
 const paletteGroups = computed<CommandGroup[]>(() => [
   {
     id: 'resellers',
-    label: searchTerm.value ? `Resellers matching “${searchTerm.value}”` : 'Resellers',
+    label: searchTerm.value ? `Resellers matching "${searchTerm.value}"` : 'Resellers',
     items: commandItems.value
   }
 ])
@@ -147,7 +211,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
         <template #content>
           <UCommandPalette
               v-model:search-term="searchTerm"
-              :loading="fetchStatus === 'pending'"
+              :loading="isFetching || isUpdating"
               :groups="paletteGroups"
               placeholder="Search Resellers..."
               class="h-90"
@@ -160,7 +224,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
               <div class="flex items-center justify-between gap-2 w-full">
                 <div class="flex items-center gap-2 min-w-0">
                   <UAvatar
-                      :src="item.avatar?.src"
+                      :src="item.avatar?.src || undefined"
                       :class="['border-2', colorClasses[color].border]"
                       size="lg"
                       :alt="item.name"
@@ -185,6 +249,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
                       icon="i-lucide-circle-check"
                       variant="soft"
                       color="neutral"
+                      :disabled="isUpdating"
                       :aria-label="`Select ${item.label} as default`"
                       @click.stop.prevent="selectReseller(item as UiCommandItem)"
                   />
@@ -203,7 +268,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
               v-if="fetchError"
               color="error"
               variant="subtle"
-              title="Couldn’t load resellers"
+              title="Couldn't load resellers"
               description="Network error. Please try again."
           />
         </template>
@@ -216,8 +281,12 @@ const paletteGroups = computed<CommandGroup[]>(() => [
           :class="[colorClasses[color].border, colorClasses[color].to, colorClasses[color].emphasis]"
       >
       <div class="max-w-16">
-        <!-- :img="selectedReseller.avatar" -->
-        <UserAvatar :animated="true" />
+        <UAvatar
+            :src="selectedReseller.avatar || undefined"
+            :alt="selectedReseller.name"
+            size="xl"
+            :class="['border-2', colorClasses[color].border]"
+        />
       </div>
 
       <div class="w-full leading-tight min-w-0">
