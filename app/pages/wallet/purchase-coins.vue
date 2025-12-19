@@ -1,8 +1,31 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import type { CoinRequest } from '~/types/coin-request'
+
 definePageMeta({
   layout: 'alt',
   middleware: 'auth'
 })
+
+// ========================================
+// State
+// ========================================
+const hasPendingRequest = ref(false)
+const isLoadingRequests = ref(true)
+const coinRequestsListRef = ref<{ addRequest: (r: CoinRequest) => void } | null>(null)
+
+// ========================================
+// Event Handlers
+// ========================================
+function handleHasPending(value: boolean): void {
+  hasPendingRequest.value = value
+  isLoadingRequests.value = false
+}
+
+function handleRequestCreated(request: CoinRequest): void {
+  coinRequestsListRef.value?.addRequest(request)
+  hasPendingRequest.value = true
+}
 </script>
 
 <template>
@@ -26,13 +49,41 @@ definePageMeta({
       </div>
     </AltHero>
     <div class="h-14" />
+
     <section class="px-3">
       <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
       <p class="text-sm !text-muted">Keep your default reseller or select a Different One</p>
       <ChooseDefaultReseller color="tertiary" />
 
-      <FromConversionRequest class="mt-4" />
-      <USeparator :color="('tertiary' as any)" class="my-4" label="OR" />
+      <!-- Form - Hidden when pending request exists -->
+      <Transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <FromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
+      </Transition>
+
+      <!-- Pending Notice -->
+      <UAlert
+        v-if="hasPendingRequest && !isLoadingRequests"
+        icon="i-lucide-clock"
+        color="warning"
+        variant="subtle"
+        title="Pending Request"
+        description="You already have a pending request. Wait for it to be processed before creating a new one."
+        class="mt-4"
+      />
+
+      <USeparator :color="('tertiary' as any)" class="my-6" />
+
+      <!-- Coin Requests List Component -->
+      <CoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
+
+      <USeparator :color="('tertiary' as any)" class="my-6" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
       <div class="flex flex-col gap-3">
         <ListItemPurchaseCoins />

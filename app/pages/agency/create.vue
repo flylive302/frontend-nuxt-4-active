@@ -45,10 +45,7 @@ const phone = reactive<PhoneModel>({
   phone: '',
 })
 
-import type { ResellerApiRow } from '~/types/reseller'
 
-// selected reseller
-const selectedReseller = ref<ResellerApiRow | null>(null)
 
 // ---------- load countries ----------
 const { data: countries, status } = await useLazyFetch<Country[]>(
@@ -88,7 +85,7 @@ type FullSchema = z.output<typeof pageSchema.value>
 const isValid = computed(() => {
   const baseValid = baseSchema.safeParse(state).success
   const phoneValid = phoneSchema.value.safeParse(phone).success
-  return baseValid && phoneValid && !!selectedReseller.value
+  return baseValid && phoneValid
 })
 
 // ---------- submit ----------
@@ -105,12 +102,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
       return
     }
 
-    if (!selectedReseller.value) {
-      toast.add({ title: 'Validation Error', description: 'Please select a default reseller', color: 'error' })
-      return
-    }
-
-    // Build FormData
+    // Build FormData (NOTE: Backend uses user's default_reseller field)
     const formData = new FormData()
     formData.append('agency_name', parsed.data.agencyName)
     formData.append('address', parsed.data.address)
@@ -121,9 +113,6 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
     formData.append('dial_code', parsed.data.dialCode)
     formData.append('phone', parsed.data.phone)
     formData.append('phone_e164', normalizePhone(parsed.data.dialCode, parsed.data.phone))
-    formData.append('reseller_signature', selectedReseller.value.signature)
-    formData.append('reseller_name', selectedReseller.value.name)
-    formData.append('reseller_contact', selectedReseller.value.contact)
 
     try {
       await submit({
@@ -135,7 +124,6 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
       })
 
       toast.add({ title: 'Success', description: 'Agency registration submitted for review', color: 'success' })
-      console.log('Form payload →', parsed.data)
       
       // Navigate after success
       setTimeout(() => navigateTo('/agency/owner'), 3000)
@@ -147,6 +135,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
     processing.value = false
   }
 }
+
 </script>
 
 <template>
@@ -238,11 +227,8 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
           />
         </UFormField>
 
-        <!-- Default Reseller -->
-        <ChooseDefaultReseller
-          color="primary"
-          @update:selected="selectedReseller = $event"
-        />
+        <!-- Default Reseller (informational - backend uses user's default_reseller) -->
+        <ChooseDefaultReseller color="primary" />
 
         <!-- Submit Button -->
         <UButton
