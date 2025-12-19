@@ -175,17 +175,18 @@ const paletteGroups = computed<CommandGroup[]>(() => [
             placeholder="Search Resellers..."
             class="h-90"
             selected-icon="i-lucide-circle-check"
-            virtualize
+            :virtualize="{ estimateSize: 54 }"
+            :ui="{item: 'bg-elevated/60 rounded-md'}"
             @select="(item: CommandItem) => selectReseller(item)"
           >
             <template #item="{ item }">
-              <div class="flex items-center justify-between gap-2 w-full">
-                <div class="flex items-center gap-2 min-w-0">
+              <div class="w-full flex items-center justify-between" @click.stop.prevent="selectReseller(item as CommandItem)">
+                <div class="flex items-center gap-2">
                   <UAvatar
-                    :src="item.avatar?.src"
-                    :class="['border-2', borderClass]"
-                    size="lg"
-                    :alt="item.name"
+                      :src="item.avatar?.src"
+                      :class="['border', borderClass]"
+                      size="lg"
+                      :alt="item.name"
                   />
                   <div class="text-left min-w-0">
                     <p class="text-base truncate">{{ item.label }}</p>
@@ -196,12 +197,11 @@ const paletteGroups = computed<CommandGroup[]>(() => [
                 </div>
 
                 <UButton
-                  icon="i-lucide-circle-check"
-                  variant="soft"
-                  color="neutral"
-                  :disabled="isUpdating"
-                  :aria-label="`Select ${item.label} as default`"
-                  @click.stop.prevent="selectReseller(item as CommandItem)"
+                    icon="i-lucide-circle-check"
+                    variant="subtle"
+                    color="neutral"
+                    :disabled="isUpdating"
+                    :aria-label="`Select ${item.label} as default`"
                 />
               </div>
             </template>
@@ -224,23 +224,21 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       </UDrawer>
     </header>
 
-    <div
-      v-if="selectedReseller"
-      class="mt-2 flex gap-1 rounded-md border p-1 bg-gradient-to-br shadow-md"
-      :class="[borderClass, gradientClass, emphasisClass]"
-    >
-      <div class="max-w-16">
+    <div v-if="selectedReseller" class="mt-2 flex gap-2 rounded-md border p-2 bg-linear-to-br from-elevated/80 shadow-md" :class="[borderClass, gradientClass, emphasisClass]">
+      <div class="max-w-16 flex flex-col justify-center">
         <UAvatar
-          :src="selectedReseller.avatar || undefined"
-          :alt="selectedReseller.name"
-          size="xl"
-          :class="['border-2', borderClass]"
+            :src="selectedReseller.avatar || undefined"
+            :alt="selectedReseller.name"
+            size="xl"
+            :class="['border-2', borderClass]"
         />
       </div>
 
       <div class="w-full leading-tight min-w-0">
-        <p class="font-bold truncate">{{ selectedReseller.name }}</p>
-        <p class="text-sm font-semibold text-muted truncate">{{ selectedReseller.signature }}</p>
+        <p class="font-bold truncate">
+          {{ selectedReseller.name }}
+          <span class="text-sm font-semibold text-muted truncate">{{ selectedReseller.signature }}</span>
+        </p>
         <p class="text-sm font-semibold text-muted truncate">{{ selectedReseller.contact }}</p>
       </div>
     </div>

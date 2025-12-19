@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { CoinRequest } from '~/types/coin-request'
+import {formatCurrency} from "~/utils/currency";
 
 definePageMeta({
   layout: 'alt',
@@ -26,6 +27,11 @@ function handleRequestCreated(request: CoinRequest): void {
   coinRequestsListRef.value?.addRequest(request)
   hasPendingRequest.value = true
 }
+
+const authStore = useAuthStore();
+onMounted(() => {
+  authStore.fetchUser();
+})
 </script>
 
 <template>
@@ -35,24 +41,42 @@ function handleRequestCreated(request: CoinRequest): void {
       <template #second-link-text>Diamonds</template>
     </NavAlt>
     <AltHero image-src="/siteAssets/alt-hero/tertiary.webp">
-      <div class="flex p-2 bg-gradient-to-br to-tertiary/30">
+      <div class="flex p-2 bg-linear-to-br to-tertiary/30">
         <div class="flex flex-col justify-end">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/prop-recharge.webp" class="transform -scale-x-100 w-20" />
+          <NuxtImg
+              provider="imagekit"
+              src="/siteAssets/props/prop-recharge.webp"
+              :modifiers="{ effectSharpen: 1 }"
+              class="transform -scale-x-100 w-20"
+          />
         </div>
         <div class="flex-auto flex flex-col justify-between items-center">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/flylive_coin.webp" class="w-full mb-2" />
-          <UButton to="/wallet/transaction-history" :color="('tertiary' as any)" icon="i-lucide-coins" trailing-icon="i-lucide-history">9999</UButton>
+          <NuxtImg
+              provider="imagekit"
+              src="/siteAssets/props/flylive_coin.webp"
+              density="3x"
+              class="mb-2 w-44"
+              :modifiers="{ effectSharpen: 1 }"
+          />
+          <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">
+            {{ formatCurrency(authStore.user?.coins) }}
+          </UButton>
         </div>
         <div class="flex flex-col justify-end">
-          <NuxtImg provider="imagekit" src="/siteAssets/props/prop-recharge.webp" class="w-20" />
+          <NuxtImg
+              provider="imagekit"
+              src="/siteAssets/props/prop-recharge.webp"
+              class="w-20"
+              :modifiers="{ effectSharpen: 1 }"
+          />
         </div>
       </div>
     </AltHero>
-    <div class="h-14" />
+    <div class="h-[12vw]" />
 
     <section class="px-3">
       <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
-      <p class="text-sm !text-muted">Keep your default reseller or select a Different One</p>
+      <p class="text-sm text-muted mb-4">Keep your default reseller or select a Different One</p>
       <ChooseDefaultReseller color="tertiary" />
 
       <!-- Form - Hidden when pending request exists -->

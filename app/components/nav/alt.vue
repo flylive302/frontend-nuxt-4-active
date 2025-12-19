@@ -67,7 +67,7 @@ const uiColor = computed(() => props.color)
           :color="uiColor"
           variant="link"
           :to="firstLink"
-          class="w-full justify-center rounded-none bg-gradient-to-br"
+          class="w-full justify-center rounded-none bg-linear-to-br"
           :class="route.path === firstLink ? toGradient : ''"
         >
           <slot name="first-link-text" />
@@ -78,7 +78,7 @@ const uiColor = computed(() => props.color)
           variant="link"
           :color="uiColor"
           :to="secondLink"
-          class="w-full justify-center rounded-none bg-gradient-to-br"
+          class="w-full justify-center rounded-none bg-linear-to-br"
           :class="route.path === secondLink ? toGradient : ''"
         >
           <slot name="second-link-text" />

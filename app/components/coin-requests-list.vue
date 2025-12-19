@@ -208,7 +208,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
           v-for="request in filteredRequests"
           :key="request.id"
           :class="[borderClass]"
-          class="rounded-xl border p-4 bg-gradient-to-br from-elevated/80 to-tertiary/5 shadow-sm hover:shadow-md transition-all duration-200"
+          class="rounded-xl border p-3 bg-linear-to-br to-tertiary/10 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <!-- Header -->
           <div class="flex items-start justify-between gap-3">
@@ -217,7 +217,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
                 :src="request.reseller.avatar || undefined"
                 :alt="request.reseller.name"
                 size="md"
-                :class="[borderClass, 'ring-2 flex-shrink-0']"
+                :class="[borderClass, 'ring-2 shrink-0']"
               />
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-semibold truncate">{{ request.reseller.name }}</p>
@@ -227,14 +227,14 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
                 </p>
               </div>
             </div>
-            <UBadge :color="(STATUS_COLORS[request.status.value] as any)" variant="subtle" size="sm" class="flex-shrink-0">
+            <UBadge :color="(STATUS_COLORS[request.status.value] as any)" variant="subtle" size="sm">
               <UIcon :name="getStatusIcon(request.status.value)" class="w-3 h-3 mr-1" />
               {{ request.status.label }}
             </UBadge>
           </div>
 
           <!-- Amount -->
-          <div :class="`mt-3 flex items-center justify-between bg-${color}/5 rounded-lg px-3 py-2`">
+          <div :class="`bg-${color}/10`" class="flex items-center justify-between rounded-lg px-3 py-2 mt-2">
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-coins" :class="`w-5 h-5 text-${color}`" />
               <span :class="`text-lg font-bold text-${color}`">{{ request.final_amount }}</span>
