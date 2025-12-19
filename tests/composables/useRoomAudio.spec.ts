@@ -165,7 +165,7 @@ describe('useRoomAudio', () => {
       mockAudioSocket.status.value = 'connected'
 
       const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
-      const roomAudio = useRoomAudio()
+      const _roomAudio = useRoomAudio()
 
       // Note: joinRoom will try to connect and wait for socket
       // Since we're mocking, this may not complete exactly as expected

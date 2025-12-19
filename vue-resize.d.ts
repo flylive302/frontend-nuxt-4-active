@@ -1,1 +1,2 @@
-/// <reference path="./types/vue-resize.d.ts" />
+import './types/vue-resize.d.ts'
+export {}

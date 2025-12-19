@@ -1,7 +1,6 @@
 <script setup lang="ts">
 //Play Gift Model : play-gift.vue -> Component
 import { ref, watch, onBeforeUnmount } from "vue"
-import { getGiftById } from '~/types/gift';
 import { useRoomAudio } from "~/composables/useRoomAudio";
 const { sendGift } = useRoomAudio();
 
@@ -24,11 +23,12 @@ const props = withDefaults(
     label: "Castle",
     price: 3000,
     autoCloseMs: 4000,
+    selectedGiftId: undefined,
+    selectedRecipients: () => []
   }
 )
 
 
-const giftQuantity = ref(1);
 
 // ────────────────────────────────────────────
 // Reactive State
@@ -158,7 +158,8 @@ function handleSendGift() {
       <div v-show="showComboButton" class="fixed bottom-4 right-4 z-[999999] size-20 flex items-center justify-center">
         <svg class="absolute inset-0 size-20 -rotate-90" viewBox="0 0 36 36">
           <circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,0.25)" stroke-width="3" fill="none" />
-          <circle cx="18" cy="18" r="16" stroke="var(--ui-primary)" stroke-width="3" fill="none" stroke-linecap="round"
+          <circle
+cx="18" cy="18" r="16" stroke="var(--ui-primary)" stroke-width="3" fill="none" stroke-linecap="round"
             :style="{ strokeDasharray: 100, strokeDashoffset: 100 - progressPercent }" />
         </svg>
 
@@ -169,12 +170,14 @@ function handleSendGift() {
     </Teleport>
 
     <!-- Modal -->
-    <UModal v-model:open="isGiftPlaying" fullscreen :dismissible="false" :overlay="false"
+    <UModal
+v-model:open="isGiftPlaying" fullscreen :dismissible="false" :overlay="false"
       :ui="{ content: 'bg-transparent !z-0 border-none rounded-none !pointer-events-none' }">
       <!-- Send Button -->
       <UFieldGroup size="xs">
         <USelect v-model="selectedQuantity" class="w-15" size="xs" :items="quantityOptions" />
-        <UButton :disabled="!selectedGiftId || (selectedRecipients?.length ?? 0) === 0" size="xs" trailing-icon="i-lucide-send"
+        <UButton
+:disabled="!selectedGiftId || (selectedRecipients?.length ?? 0) === 0" size="xs" trailing-icon="i-lucide-send"
           @click="handleSendGift">
           Send
         </UButton>

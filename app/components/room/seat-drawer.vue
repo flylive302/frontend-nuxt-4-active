@@ -4,10 +4,9 @@ import { useRoomAudio } from '~/composables/useRoomAudio'
 
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
-const { takeSeat, leaveSeat, startAudio, stopAudio, isProducing, muteUser, unmuteUser, lockSeat, unlockSeat, inviteToSeat } = useRoomAudio()
+const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat } = useRoomAudio()
 
 const isLoading = ref(false)
-const showInviteSelect = ref(false)
 
 // Separate drawer open state from activeSeat (keep seat selected when drawer closes)
 const isOpen = ref(false)
@@ -53,12 +52,6 @@ const isUserSeatedElsewhere = computed(() => {
   return idx !== -1 && idx !== seatIndex.value
 })
 
-// Get invitable users (non-speaker participants, excluding self)
-const invitableUsers = computed(() => {
-  return roomStore.participantList.filter(p =>
-    !p.isSpeaker && p.id !== authStore.user?.id
-  )
-})
 
 // Handle starting invite mode
 function handleStartInvite() {
@@ -159,14 +152,16 @@ async function handleToggleLock() {
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-2 pb-4">
         <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
-        <UButton v-if="(isSeatEmpty && !isSeatLocked) || isUserSeatedElsewhere"
+        <UButton
+v-if="(isSeatEmpty && !isSeatLocked) || isUserSeatedElsewhere"
           class="w-full justify-center rounded-none" size="xl" variant="subtle" color="primary" :loading="isLoading"
           icon="i-lucide-mic" @click="handleTakeSeat">
           {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }}
         </UButton>
 
         <!-- Leave Seat button - only show if current user occupies this seat -->
-        <UButton v-if="isCurrentUserSeat" class="w-full justify-center rounded-none" size="xl" variant="subtle"
+        <UButton
+v-if="isCurrentUserSeat" class="w-full justify-center rounded-none" size="xl" variant="subtle"
           color="error" :loading="isLoading" icon="i-lucide-mic-off" @click="handleLeaveSeat">
           Leave Seat {{ seatId }}
         </UButton>
@@ -177,7 +172,8 @@ async function handleToggleLock() {
 <!--        </UButton>-->
 
         <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
-        <UButton v-if="isRoomOwner && !isSeatEmpty && !isCurrentUserSeat" class="w-full justify-center rounded-none"
+        <UButton
+v-if="isRoomOwner && !isSeatEmpty && !isCurrentUserSeat" class="w-full justify-center rounded-none"
           size="xl" variant="subtle" :color="isSeatMuted ? 'success' : 'warning'" :loading="isLoading"
           :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'" @click="handleToggleMute">
           {{ isSeatMuted ? 'Unmute' : 'Mute' }} Seat
@@ -185,19 +181,22 @@ async function handleToggleLock() {
 
 
         <!-- Lock/Unlock Seat - Owner only -->
-        <UButton v-if="isRoomOwner" class="w-full justify-center rounded-none" size="xl" variant="subtle"
+        <UButton
+v-if="isRoomOwner" class="w-full justify-center rounded-none" size="xl" variant="subtle"
           :color="isSeatLocked ? 'success' : 'error'" :loading="isLoading"
           :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'" @click="handleToggleLock">
           {{ isSeatLocked ? 'Unlock' : 'Lock' }} Seat
         </UButton>
 
         <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
-        <UButton v-if="isRoomOwner && isSeatEmpty && !isSeatLocked" class="w-full justify-center rounded-none" size="xl"
+        <UButton
+v-if="isRoomOwner && isSeatEmpty && !isSeatLocked" class="w-full justify-center rounded-none" size="xl"
           variant="subtle" color="info" :loading="isLoading" icon="i-lucide-user-plus" @click="handleStartInvite">
           Invite User to Seat {{ seatId }}
         </UButton>
 
-        <UButton color="neutral" variant="subtle" icon="i-lucide-x"
+        <UButton
+color="neutral" variant="subtle" icon="i-lucide-x"
           class="justify-center mt-2 shadow-md shadow-neutral-800" @click="isOpen = false">
           Cancel
         </UButton>

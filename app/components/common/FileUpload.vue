@@ -183,6 +183,7 @@ function getExtensionFromMimeType(mimeType: string): string | null {
  */
 function sanitizeFilename(filename: string): string {
   // Remove invalid characters for filenames (Windows/Unix compatible)
+  // eslint-disable-next-line no-control-regex
   return filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim()
 }
 

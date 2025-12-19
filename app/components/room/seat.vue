@@ -56,20 +56,23 @@ const displayName = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer rounded-xl transition-all duration-300"
+  <div
+class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer rounded-xl transition-all duration-300"
     :class="{ 'ring-2 ring-cyan-500 bg-cyan-500/10 animate-pulse': isInviteTarget }" @click="openDrawer">
     <!-- Avatar with audio indicators -->
     <div class="relative w-full">
       <!-- Occupied seat: show user avatar with animation -->
       <UserAvatar v-if="!isEmpty" :animated="true" :img="avatarSrc" class="relative z-20" />
       <!-- Locked empty seat: show lock image -->
-      <UserAvatar v-else-if="isLocked" img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
+      <UserAvatar
+v-else-if="isLocked" img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
         class="relative z-20" />
       <!-- Empty seat: show default placeholder -->
       <UserAvatar v-else class="relative z-20" />
 
       <!-- Mute indicator -->
-      <UIcon v-if="!isEmpty && isMuted" name="i-lucide-mic-off"
+      <UIcon
+v-if="!isEmpty && isMuted" name="i-lucide-mic-off"
         class="size-4 text-white absolute bottom-0 -right-1 z-20" />
 
       <!-- Speaking indicator -->

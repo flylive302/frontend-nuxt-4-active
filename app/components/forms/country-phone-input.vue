@@ -7,7 +7,7 @@ interface Props {
   error?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   disabled: false,
   error: undefined
 })
@@ -147,12 +147,14 @@ onMounted(async () => {
 <template>
   <div class="space-y-2">
     <UFormField label="Country" name="countryCode" required>
-      <USelectMenu v-model="selectedCountry" :items="(countries as any)" :loading="loading || externalDetectingLocation"
+      <USelectMenu
+v-model="selectedCountry" :items="(countries as any)" :loading="loading || externalDetectingLocation"
         :disabled="disabled" label-key="name" placeholder="Select your country"
         :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...' }" size="lg" class="w-full"
         @update:model-value="(val: any) => onCountryChange(val)">
         <template #leading="{ modelValue }">
-          <UIcon v-if="modelValue && (modelValue as any).code" :name="getFlagIconName((modelValue as any).code)"
+          <UIcon
+v-if="modelValue && (modelValue as any).code" :name="getFlagIconName((modelValue as any).code)"
             class="size-5 rounded overflow-hidden h-4" />
           <UIcon v-else :name="DEFAULT_FLAG_ICON" />
         </template>
@@ -170,9 +172,11 @@ onMounted(async () => {
       </USelectMenu>
     </UFormField>
 
-    <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
+    <Transition
+enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
       enter-to-class="opacity-100 translate-y-0">
-      <UFormField v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
+      <UFormField
+v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
         :help="`Enter your number for ${selectedCountry.name}`" :error="error" required>
         <div class="flex items-center gap-1">
           <div
@@ -181,7 +185,8 @@ onMounted(async () => {
             <span>{{ selectedCountry.dial_code }}</span>
           </div>
 
-          <UInput ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric"
+          <UInput
+ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric"
             :placeholder="phonePlaceholder" size="lg" class="w-full" autocomplete="tel-national" :disabled="disabled"
             @paste="handlePaste" />
         </div>

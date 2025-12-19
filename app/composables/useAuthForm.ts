@@ -2,13 +2,14 @@ import { ref, type Ref } from 'vue'
 import type { FormError } from '@nuxt/ui'
 import { useApi } from './useApi'
 
-export interface UseAuthFormOptions<T> {
+export interface UseAuthFormOptions {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formRef: Ref<any>
-  onSuccess?: (data: any) => Promise<void> | void
+  onSuccess?: (data: unknown) => Promise<void> | void
   successMessage?: string
 }
 
-export function useAuthForm<T extends Record<string, any>>(options: UseAuthFormOptions<T>) {
+export function useAuthForm(options: UseAuthFormOptions) {
   const { normalizeError } = useApi()
   const toast = useToast()
   
@@ -46,7 +47,7 @@ export function useAuthForm<T extends Record<string, any>>(options: UseAuthFormO
    * Handles form submission with standardized error handling and state management.
    * @param action - The async action to perform (e.g., login, register).
    */
-  async function handleSubmit(action: () => Promise<any>) {
+  async function handleSubmit(action: () => Promise<unknown>) {
     if (isSubmitting.value) return
     
     isSubmitting.value = true

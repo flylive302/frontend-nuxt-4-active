@@ -109,7 +109,8 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 <template>
   <main>
     <!-- General error alert - displayed at top of form when registration fails -->
-    <UAlert v-if="generalErrorMessage" :description="generalErrorMessage" color="error" variant="soft"
+    <UAlert
+v-if="generalErrorMessage" :description="generalErrorMessage" color="error" variant="soft"
       title="Registration Failed" class="mb-4" icon="i-lucide-alert-circle" />
 
     <!-- Registration form with Zod validation -->
@@ -120,24 +121,28 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
       </UFormField>
 
       <!-- Country phone input component - handles country code, dial code, and phone number -->
-      <FormsCountryPhoneInput v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
+      <FormsCountryPhoneInput
+v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
         v-model:phone="state.phone" :error="phoneError" />
 
       <!-- Password input field with strength requirements -->
       <UFormField label="Password" name="password" required>
-        <UInput v-model="state.password" class="w-full" size="lg" icon="i-lucide-lock" type="password"
+        <UInput
+v-model="state.password" class="w-full" size="lg" icon="i-lucide-lock" type="password"
           placeholder="********" />
       </UFormField>
 
       <!-- Submit button - disabled until form is valid -->
-      <UButton :loading="isProcessing" type="submit" size="xl" icon="i-lucide-send"
+      <UButton
+:loading="isProcessing" type="submit" size="xl" icon="i-lucide-send"
         class="w-full justify-center disabled:bg-primary-400">
         Sign Up
       </UButton>
     </UForm>
 
     <!-- Link to login page for existing users -->
-    <UButton :to="ROUTES.LOGIN" class="mt-3 underline font-bold px-0" variant="link"
+    <UButton
+:to="ROUTES.LOGIN" class="mt-3 underline font-bold px-0" variant="link"
       trailing-icon="i-lucide-arrow-right" size="xl">
       Have an Account? Log In
     </UButton>

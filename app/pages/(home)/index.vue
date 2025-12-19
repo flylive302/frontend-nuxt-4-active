@@ -14,7 +14,6 @@ const bannerRef = ref(null)
 const roomRef = ref(null)
 
 // ---- Room Logic
-const roomStore = useRoomStore()
 const { fetchRooms } = useRoom()
 const authStore = useAuthStore()
 

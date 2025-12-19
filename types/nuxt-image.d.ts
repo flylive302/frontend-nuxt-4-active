@@ -3,7 +3,7 @@
 // when checking .vue files in node_modules/@nuxt/image
 
 // Reference Nuxt's app types
-/// <reference types="nuxt/app" />
+import type {} from 'nuxt/app'
 
 // Declare #imports module with the specific exports needed by @nuxt/image
 // This avoids circular dependencies by not re-exporting from .nuxt/imports.d.ts

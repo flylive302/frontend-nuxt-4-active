@@ -13,6 +13,4 @@ declare module '@nuxt/ui' {
 }
 
 // Augment component prop types to accept 'tertiary'
-type ExtendedColor = 'primary' | 'secondary' | 'tertiary' | 'info' | 'success' | 'warning' | 'error' | 'neutral'
-
 export {}

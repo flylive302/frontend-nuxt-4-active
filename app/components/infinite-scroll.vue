@@ -105,10 +105,6 @@ function buildRows(source: InfiniteScrollItem[], columns: number): GridRow[] {
 
 const rows = computed(() => buildRows(items.value, columnCount.value))
 
-function resolveThumbnail(item: InfiniteScrollItem): string | undefined {
-  const candidate = item.thumbnail
-  return typeof candidate === 'string' ? candidate : undefined
-}
 
 let abortController: AbortController | null = null
 let infiniteScrollController: { reset: () => void } | null = null

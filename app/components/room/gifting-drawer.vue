@@ -4,9 +4,7 @@
  * Allows users to select recipients and send gifts via socket
  */
 import { ref } from 'vue';
-import type { TabsItem } from '@nuxt/ui'
 import { getGiftsByCategory } from '~/types/gift';
-const authStore = useAuthStore();
 const roomStore = useRoomStore();
 
 // Gift categories

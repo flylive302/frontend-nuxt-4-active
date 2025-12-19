@@ -1,10 +1,10 @@
 export default defineNuxtPlugin(async () => {
     const { Player } = await import((`svga/dist/index.esm.min.js`));
 
-    const cache = new Map<string, Promise<any>>();
+    const cache = new Map<string, Promise<unknown>>();
     const fetchAnimation = (name: string) => {
         if (!cache.has(name)) {
-            cache.set(name, ($fetch as any)(`/parsedAnimations/${name}.json`));
+            cache.set(name, $fetch<unknown>(`/parsedAnimations/${name}.json`));
         }
         return cache.get(name)!;
     };

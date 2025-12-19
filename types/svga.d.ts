@@ -5,7 +5,7 @@ export interface SvgaPlayer {
     /**
      * Mount animation data to the player
      */
-    mount(data: any): Promise<void>
+    mount(data: unknown): Promise<void>
     
     /**
      * Start playing the animation

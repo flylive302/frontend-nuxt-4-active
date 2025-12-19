@@ -55,10 +55,11 @@ async function onSubmit() {
         type: 'public',
         logo: state.logo
       })
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error(e)
         // Show API error if available
-        const errorMsg = e.response?._data?.message || e.message || 'Failed to create room';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const errorMsg = (e as any).response?._data?.message || (e as any).message || 'Failed to create room';
         toast.add({ title: 'Error', description: errorMsg, color: 'error' });
     } finally {
         isSubmitting.value = false
