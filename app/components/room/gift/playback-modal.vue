@@ -6,6 +6,7 @@
  * Routes to correct player based on asset type.
  */
 
+const authStore = useAuthStore();
 const giftStore = useGiftStore();
 const { combo } = useGiftSending();
 
@@ -18,13 +19,18 @@ const staticDisplayRef = ref<{ restart: () => void } | null>(null);
 const currentPlayback = computed(() => giftStore.currentPlayback);
 const isOpen = computed(() => giftStore.isPlaying);
 
+// Check if the current user is the sender of the gift
+const isSender = computed(() => authStore.user?.id === currentPlayback.value?.senderId);
+
 // Combo button visibility (independent of animation state)
 const isComboButtonVisible = ref(false);
 
-// Show combo button when playback starts
+// Show combo button when playback starts (only for sender)
 watch(isOpen, (open) => {
-  if (open) {
+  if (open && isSender.value) {
     isComboButtonVisible.value = true;
+  } else {
+    isComboButtonVisible.value = false;
   }
 });
 
@@ -43,8 +49,10 @@ watch(
       } else if (assetType === 'static') {
         staticDisplayRef.value?.restart();
       }
-      // Reset combo button visibility on restart
-      isComboButtonVisible.value = true;
+      // Reset combo button visibility on restart (only for sender)
+      if (isSender.value) {
+        isComboButtonVisible.value = true;
+      }
     }
   }
 );

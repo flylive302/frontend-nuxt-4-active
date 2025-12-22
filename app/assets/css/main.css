@@ -112,6 +112,6 @@ body {
 }
 
 .unlock-body {
-    overflow: hidden !important;
-    position: fixed !important;
+    overflow: scroll !important;
+    position: relative !important;
 }

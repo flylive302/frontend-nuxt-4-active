@@ -16,11 +16,20 @@ import type {
   SeatResponse,
 } from '~/types/audio';
 import { userToParticipant } from '~/types/audio';
+import { GIFT_QUEUE_INTERVAL_MS } from '~/constants/gift';
 import type { AudioSocket } from './useAudioSocket';
 
 // ============================================
 // Types
 // ============================================
+
+/** Data required for an outgoing gift socket message */
+interface QueuedGift {
+  roomId: string;
+  giftId: number;
+  recipientId: number;
+  quantity: number;
+}
 
 export interface UseRoomAudioReturn {
   /** Join a room with audio capabilities */
@@ -67,6 +76,48 @@ export interface UseRoomAudioReturn {
   isLocalMuted: Ref<boolean>;
   /** Toggle local microphone mute */
   toggleLocalMute: () => boolean;
+}
+
+// ============================================
+// Shared State (Module-level)
+// ============================================
+
+/** Outgoing gift queue to handle rapid combo sends */
+const giftQueue: QueuedGift[] = [];
+/** Whether the gift queue is currently being processed */
+const isProcessingGiftQueue = ref(false);
+
+/**
+ * Process the outgoing gift queue sequentially with spacing.
+ * This ensures we don't hit server-side rate limits while maintaining
+ * smooth optimistic updates on the sender's side.
+ */
+function processGiftQueue(socket: Ref<AudioSocket | null>) {
+  if (isProcessingGiftQueue.value || giftQueue.length === 0) return;
+
+  isProcessingGiftQueue.value = true;
+
+  const processNext = () => {
+    // Stop if socket is gone or queue is empty
+    if (!socket.value || giftQueue.length === 0) {
+      isProcessingGiftQueue.value = false;
+      return;
+    }
+
+    const gift = giftQueue.shift();
+    if (gift) {
+      socket.value.emit('gift:send', gift);
+    }
+
+    // Schedule next if queue still has items
+    if (giftQueue.length > 0) {
+      setTimeout(processNext, GIFT_QUEUE_INTERVAL_MS);
+    } else {
+      isProcessingGiftQueue.value = false;
+    }
+  };
+
+  processNext();
 }
 
 // ============================================
@@ -660,16 +711,21 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
   /**
    * Send a gift to a user.
+   * Pushes to a local queue to be processed with spacing.
    */
   function sendGift(giftId: number, recipientId: number, quantity: number = 1): void {
     if (!socket.value || !roomStore.currentRoom) return;
 
-    socket.value.emit('gift:send', {
+    // Push to queue for background processing
+    giftQueue.push({
       roomId: roomStore.currentRoom.id.toString(),
       giftId,
       recipientId,
       quantity,
     });
+
+    // Trigger queue processor
+    processGiftQueue(socket);
   }
 
   // ========================================

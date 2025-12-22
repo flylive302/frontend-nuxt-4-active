@@ -14,7 +14,10 @@ export const STATIC_DISPLAY_DURATION_MS = 3000;
 export const COMBO_BUTTON_TIMEOUT_MS = 5000;
 
 /** Maximum number of gifts in the playback queue */
-export const MAX_PLAYBACK_QUEUE_SIZE = 10;
+export const MAX_PLAYBACK_QUEUE_SIZE = 10000;
+
+/** Minimum interval between outgoing gift socket messages (in milliseconds) */
+export const GIFT_QUEUE_INTERVAL_MS = 100;
 
 /** Default gift category to show when drawer opens */
 export const DEFAULT_GIFT_CATEGORY = 'normal' as const;

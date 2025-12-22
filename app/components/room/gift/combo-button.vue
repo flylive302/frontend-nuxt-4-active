@@ -126,9 +126,9 @@ defineExpose({ resetTimer });
         class="rounded-full size-16 font-bold text-sm relative"
         @click="handleClick"
       >
-        <div class="flex flex-col items-center">
-          <span class="text-lg">×{{ giftStore.comboCount }}</span>
-          <span class="text-xs opacity-75">Combo</span>
+        <div class="flex flex-col justify-center items-center w-full h-fit">
+          <span class="text-lg leading-none">X{{ giftStore.comboCount }}</span>
+          <span class="text-xs font-semibold leading-none">Combo</span>
         </div>
       </UButton>
     </div>
