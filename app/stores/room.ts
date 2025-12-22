@@ -4,7 +4,6 @@ import type { Room } from '~/types/room';
 import type {
   RoomParticipant,
   ChatMessageEvent,
-  GiftReceivedEvent,
   AudioState,
   Seat,
 } from '~/types/audio';
@@ -58,11 +57,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   // Chat Messages (Ephemeral)
   // ========================================
   const messages = ref<ChatMessageEvent[]>([]);
-
-  // ========================================
-  // Last Gift (for animations)
-  // ========================================
-  const lastGift = ref<GiftReceivedEvent | null>(null);
 
   // ========================================
   // Legacy Seat UI State
@@ -158,7 +152,6 @@ export const useRoomStore = defineStore('roomStore', () => {
     };
     participants.value.clear();
     messages.value = [];
-    lastGift.value = null;
     seats.value = Array.from({ length: 15 }, (_, i) => ({
       index: i,
       user: null,
@@ -273,20 +266,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   }
 
   // ========================================
-  // Gift Actions
-  // ========================================
-  function handleGiftReceived(gift: GiftReceivedEvent) {
-    lastGift.value = gift;
-
-    // Auto-clear after animation duration
-    setTimeout(() => {
-      if (lastGift.value === gift) {
-        lastGift.value = null;
-      }
-    }, 5000);
-  }
-
-  // ========================================
   // Legacy Seat UI Actions
   // ========================================
   function openSeat(seatId: number) {
@@ -322,9 +301,6 @@ export const useRoomStore = defineStore('roomStore', () => {
     // Chat
     messages,
 
-    // Gifts
-    lastGift,
-
     // Computed
     isRoomOwner,
 
@@ -358,9 +334,6 @@ export const useRoomStore = defineStore('roomStore', () => {
     // Chat actions
     addMessage,
     clearMessages,
-
-    // Gift actions
-    handleGiftReceived,
 
     // Legacy seat UI
     activeSeat,

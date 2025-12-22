@@ -102,7 +102,7 @@ const headingId = `duel-card-title-${props.type}`
         :src="config.banner"
         alt=""
         aria-hidden="true"
-        class="pointer-events-none select-none absolute inset-0 h-full w-full object-cover rounded-lg border border-white/50 shadow-lg"
+        class="select-none absolute inset-0 h-full w-full object-cover rounded-lg border border-white/50 shadow-lg"
     />
 
     <div class="relative">

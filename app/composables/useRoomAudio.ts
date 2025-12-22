@@ -83,6 +83,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   // ========================================
   const roomStore = useRoomStore();
   const authStore = useAuthStore();
+  const giftStore = useGiftStore();
   const toast = useToast();
 
   // Socket and mediasoup instances
@@ -241,10 +242,40 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Gift events
     s.on('gift:received', (event: GiftReceivedEvent) => {
-      roomStore.handleGiftReceived(event);
+      // Skip if current user is the sender (they already see optimistic playback)
+      if (event.senderId === authStore.user?.id) return;
+
+      // Get gift data to enqueue playback
+      const { getGiftById } = useGiftData();
+      const gift = getGiftById(event.giftId);
+      
+      if (gift) {
+        // Check if this is a combo (same gift+sender as current playback)
+        const current = giftStore.currentPlayback;
+        const isCombo = current &&
+          current.gift.id === gift.id &&
+          current.senderId === event.senderId;
+
+        if (isCombo) {
+          // Restart current playback instead of enqueuing
+          giftStore.restartCurrentPlayback();
+        } else {
+          giftStore.enqueuePlayback({
+            gift,
+            senderId: event.senderId,
+            senderName: event.senderName,
+            senderAvatar: event.senderAvatar,
+            recipientIds: [event.recipientId],
+            quantity: event.quantity,
+          });
+        }
+      }
     });
 
     s.on('gift:error', (event: GiftErrorEvent) => {
+      // Rollback coins on error using module-level function (avoids inject() issues)
+      refundPendingCoins();
+
       if (event.error === 'insufficient_balance') {
         toast.add({
           title: 'Insufficient balance',

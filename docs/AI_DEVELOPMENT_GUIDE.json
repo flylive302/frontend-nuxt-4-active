@@ -22,9 +22,9 @@
   "patterns": {
     "components": {
       "style": "Script Setup (Vue 3 Composition API)",
-      "naming": "PascalCase for component files (e.g., UserAvatar.vue) or kebab-case (e.g., user-avatar.vue). Project uses kebab-case for filenames.",
+      "naming": "PascalCase for component files kebab-case (e.g., user-avatar.vue). Project uses kebab-case for filenames.",
       "props": "monitor existing usage; use `withDefaults` and `defineProps`.",
-      "styles": "TailwindCSS via Nuxt UI and vanilla CSS in `<style scoped>`."
+      "styles": "TailwindCSS via Nuxt UI 4 and vanilla CSS in `<style scoped>`."
     },
     "composables": {
       "naming": "camelCase (e.g., useAuth.ts)",

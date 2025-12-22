@@ -44,7 +44,7 @@ const { countries } = useCountries()
 
 const formRef = ref<Form<RegistrationFormData> | null>(null)
 
-const { isSubmitting: isProcessing, generalError: generalErrorMessage, getFieldError, handleSubmit } = useAuthForm<RegistrationFormData>({
+const { isSubmitting: isProcessing, generalError: generalErrorMessage, getFieldError, handleSubmit } = useAuthForm({
   formRef,
 })
 

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { z } from 'zod'
+import type { FormError, Form } from '@nuxt/ui'
 import FileUpload from '~/components/common/FileUpload.vue'
-import {useRoom} from "~/composables/useRoom";
+import { useRoom } from "~/composables/useRoom";
 
 const authStore = useAuthStore()
+const { normalizeError } = useApi()
 
 // Schema
 const schema = z.object({
@@ -13,6 +15,8 @@ const schema = z.object({
 })
 
 type Schema = z.infer<typeof schema>
+
+const formRef = ref<Form<Schema> | null>(null)
 
 const state = reactive<Schema>({
   name: '',
@@ -47,6 +51,7 @@ async function onSubmit() {
         return;
     }
     isSubmitting.value = true
+    formRef.value?.clear()
 
     try {
       await useRoom().createRoom({
@@ -56,11 +61,24 @@ async function onSubmit() {
         logo: state.logo
       })
     } catch (e: unknown) {
-        console.error(e)
-        // Show API error if available
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const errorMsg = (e as any).response?._data?.message || (e as any).message || 'Failed to create room';
-        toast.add({ title: 'Error', description: errorMsg, color: 'error' });
+        const normalizedError = normalizeError(e)
+
+        // Handle validation errors (422) - display on form fields
+        if (normalizedError.status === 422 && normalizedError.fieldErrors) {
+            const formErrors: FormError[] = Object.entries(normalizedError.fieldErrors).map(
+                ([path, messages]) => ({
+                    path,
+                    id: path,
+                    message: messages?.[0] ?? 'Invalid value',
+                })
+            )
+            formRef.value?.setErrors(formErrors)
+        }
+
+        // Show toast for non-validation errors
+        if (normalizedError.status !== 422) {
+            toast.add({ title: 'Error', description: normalizedError.message, color: 'error' });
+        }
     } finally {
         isSubmitting.value = false
     }
@@ -68,13 +86,13 @@ async function onSubmit() {
 </script>
 
 <template>
-  <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+  <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
 
     <!-- Logo Upload -->
     <div class="flex flex-col items-center gap-2">
       <FileUpload
-          :error="fileInputError" :current-image="logoPreview" crop
-          shape="circle" size="sm" label="Room Logo"
+          :error="fileInputError" :current-image="logoPreview"
+          shape="rounded" size="xl" label="Room Logo" :aspectRatio="2"
           @file-selected="onFileSelected"
       />
       <span class="text-sm font-medium text-gray-500">Upload Room Logo</span>

@@ -113,7 +113,7 @@ const data = ref<WealthLevelRow[]>([
     <div class="w-full">
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">{{roomStore.currentRoom?.name || 'Loading...'}}</h2>        
-        <UDrawer>
+        <UDrawer title="Room Level & Rewards" description="View the current room level and associated rewards.">
           <UButton icon="i-lucide-trophy" class="px-2 py-1 font-bold" size="sm">1</UButton>
 
           <template #content>

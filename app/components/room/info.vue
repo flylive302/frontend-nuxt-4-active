@@ -96,7 +96,7 @@ const isOpenRight = ref(false)
 <template>
   <div class="flex justify-between items-center my-1">
     <!-- Left Drawer: Room Activity -->
-    <UDrawer v-model:open="isOpenLeft" direction="left">
+    <UDrawer v-model:open="isOpenLeft" direction="left" title="Room Activity" description="View daily, weekly, and monthly room activity rankings.">
       <UButton
 variant="subtle" icon="i-lucide-coins" size="xs"
         class="cursor-pointer shadow-md backdrop-blur-xs font-bold">
@@ -158,7 +158,7 @@ variant="soft" icon="i-lucide-coins" size="xs"
     </UDrawer>
 
     <!-- Right Drawer: Active Users -->
-    <UDrawer v-model:open="isOpenRight" direction="right">
+    <UDrawer v-model:open="isOpenRight" direction="right" title="Users in Room" description="View a list of all current participants in the room.">
       <UButton
 variant="subtle" icon="i-lucide-users-round" size="xs"
         class="cursor-pointer shadow-md backdrop-blur-xs font-bold">

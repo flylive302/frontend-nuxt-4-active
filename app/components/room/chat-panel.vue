@@ -69,28 +69,19 @@ function handleKeydown(event: KeyboardEvent) {
     </DynamicScroller>
 
     <!-- Empty State -->
-    <div
-      v-if="roomStore.messages.length === 0"
-      class="flex-1 flex items-center justify-center text-gray-500 text-sm"
-    >
-      <p>No messages yet. Be the first to say hello! 👋</p>
-    </div>
+    <p v-if="roomStore.messages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
+      No messages yet.
+      <br> Be the first to say hello! 👋
+    </p>
 
     <!-- Input -->
-    <div class="p-2 border-t border-white/10">
-      <div class="flex gap-2">
-        <input
-          ref="inputRef"
-          v-model="messageInput"
-          type="text"
-          maxlength="500"
-          placeholder="Type a message..."
-          class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-          @keydown="handleKeydown"
-        >
+    <div class="p-2 border-t border-accented">
+      <div class="flex items-center gap-2">
+        <UInput ref="inputRef" v-model="messageInput" class="w-full" size="lg" icon="i-lucide-user" placeholder="Type a message..." @keydown="handleKeydown" />
         <UButton
           icon="i-lucide-send"
           size="sm"
+          class="size-8"
           :disabled="!messageInput.trim()"
           @click="handleSend"
         />

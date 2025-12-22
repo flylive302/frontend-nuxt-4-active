@@ -31,7 +31,7 @@ const { countries } = useCountries()
 
 const form = ref<Form<LoginFormState> | null>(null)
 
-const { isSubmitting, getFieldError, handleSubmit } = useAuthForm({
+const { isSubmitting, generalError, getFieldError, handleSubmit } = useAuthForm({
   formRef: form,
   successMessage: 'Welcome back!',
 })
@@ -91,11 +91,22 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
   <main aria-labelledby="login-heading">
     <h1 id="login-heading" class="sr-only">Log In to Your Account</h1>
 
+    <!-- General error alert - displayed at top of form when login fails -->
+    <UAlert
+      v-if="generalError"
+      :description="generalError"
+      color="error"
+      variant="soft"
+      title="Login Failed"
+      class="mb-4"
+      icon="i-lucide-alert-circle"
+    />
+
     <UForm
         ref="form"
         :schema="loginSchema"
         :state="state"
-        :validate-on="['blur']"
+        :validate-on="['blur', 'change']"
         :disabled="isSubmitting"
         class="space-y-3"
         @submit="onSubmit"

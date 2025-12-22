@@ -237,7 +237,7 @@ function handleCropCancel() {
         @click="triggerFileInput"
         @keydown="handleKeyDown"
       >
-        <div 
+        <div
           class="relative overflow-hidden border-2 border-primary shadow-2xl shadow-primary/50"
           :class="[sizeClasses.container, shapeClass]"
         >

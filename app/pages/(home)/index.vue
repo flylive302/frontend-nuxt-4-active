@@ -171,7 +171,7 @@ const banners: Banner[] = [
           <RoomCard
             v-if="item"
             :room="item"
-            class="aspect-[9/12] rounded-xl"
+            class="aspect-9/12 rounded-xl"
           />
         </template>
       </UCarousel>
@@ -186,7 +186,7 @@ const banners: Banner[] = [
         <template #cell="{ cell }">
           <RoomCard
             :room="cell"
-            class="w-full aspect-[9/12] rounded-md"
+            class="w-full aspect-9/12 rounded-md"
           />
         </template>
       </InfiniteScroll>

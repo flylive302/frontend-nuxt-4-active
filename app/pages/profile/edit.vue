@@ -91,7 +91,7 @@ const formRef = ref<Form<FormSchema> | null>(null)
 const authStore = useAuthStore()
 const { updateProfile, uploadAvatar } = useAuth()
 
-const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm<FormSchema>({
+const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,
 })
 

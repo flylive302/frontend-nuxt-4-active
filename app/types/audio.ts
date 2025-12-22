@@ -32,7 +32,7 @@ export interface JoinRoomPayload {
 export interface JoinRoomResponse {
   rtpCapabilities?: RtpCapabilities;
   participants?: { id: number; name: string; avatar?: string; isSpeaker: boolean }[];
-  seats?: { seatIndex: number; userId: string; isMuted: boolean }[];
+  seats?: { seatIndex: number; user: RoomParticipant | null; isMuted: boolean }[];
   lockedSeats?: number[]; // Added: List of locked seat indices
   existingProducers?: { producerId: string; userId: number }[];
   error?: string;

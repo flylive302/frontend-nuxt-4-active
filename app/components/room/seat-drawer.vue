@@ -148,7 +148,7 @@ async function handleToggleLock() {
 </script>
 
 <template>
-  <UDrawer v-model:open="isOpen">
+  <UDrawer v-model:open="isOpen" title="Seat Options" description="Manage seat actions like joining, leaving, muting, or locking.">
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-2 pb-4">
         <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->

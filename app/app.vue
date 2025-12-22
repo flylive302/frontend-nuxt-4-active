@@ -6,12 +6,14 @@ const toggleBodyScroll = () => {
   const isShellVisible = roomStore.currentRoom && !roomStore.isMinimized;
 
   if (isShellVisible) {
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100vw';
+    document.body.removeAttribute('style');
+    document.body.classList.remove('unlock-body');
+    document.body.classList.add('lock-body');
   } else {
     setTimeout(() => {
       document.body.removeAttribute('style');
+      document.body.classList.remove('lock-body');
+      document.body.classList.add('unlock-body');
     },1000);
   }
 }
@@ -33,12 +35,12 @@ watch(
 
     <RoomShell 
       v-if="roomStore.currentRoom"
-      :class="!roomStore.isMinimized ? 'show-content' : 'hide-content'"
+      :class="!roomStore.isMinimized ? 'show-room-shell' : 'hide-room-shell'"
     />
 
     <RoomMinimized 
       v-if="roomStore.currentRoom"
-      :class="roomStore.isMinimized ? 'show-content' : 'hide-content'" 
+      :class="roomStore.isMinimized ? 'show-room-shell' : 'hide-room-shell'"
     />
   </UApp>
 </template>
