@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
 })
 
 const color = toRef(props, 'color')
-const { borderClass, emphasisClass } = useColorClasses(color)
+const { gradientClass } = useColorClasses(color)
 
 const emit = defineEmits<{
   (e: 'success', request: CoinRequest): void
@@ -163,8 +163,8 @@ onBeforeUnmount(() => {
         :schema="schema"
         :state="state"
         :ui="{ wrapper: 'space-y-4' }"
-        :class="[borderClass, emphasisClass]"
-        class="space-y-4 rounded-lg shadow-lg border-2 p-3"
+        :class="[gradientClass]"
+        class="space-y-4 rounded-lg shadow-lg p-3"
         @submit="onSubmit"
       >
         <UAlert

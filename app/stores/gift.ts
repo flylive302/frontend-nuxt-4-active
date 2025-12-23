@@ -107,6 +107,13 @@ export const useGiftStore = defineStore('giftStore', () => {
     selectedRecipients.value = [];
   }
 
+  function removeRecipient(userId: number) {
+    const index = selectedRecipients.value.indexOf(userId);
+    if (index !== -1) {
+      selectedRecipients.value.splice(index, 1);
+    }
+  }
+
   function setQuantity(qty: number) {
     selectedQuantity.value = qty;
   }
@@ -237,6 +244,7 @@ export const useGiftStore = defineStore('giftStore', () => {
     toggleRecipient,
     selectAllRecipients,
     clearRecipients,
+    removeRecipient,
     setQuantity,
 
     // Playback actions

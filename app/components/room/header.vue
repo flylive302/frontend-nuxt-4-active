@@ -68,10 +68,10 @@ const open = ref(false)
   <header class="flex justify-between items-center">
 
     <!-- Left Section -->
-    <div class="rounded-md flex items-center border border-primary-800 bg-gradient-to-br to-primary/60 gap-1 backdrop-blur-xs">
+    <div class="rounded-md flex items-center bg-primary/20 border border-primary-800 gap-1 backdrop-blur-xs">
       <UDrawer
-          title="Drawer with description"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+          title="Room Information Drawer"
+          description="Room Information and Level Status."
       >
         <div class="w-10">
           <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo?.thumbnail" />
@@ -138,8 +138,8 @@ const open = ref(false)
 
       <UDrawer
           v-model:open="open"
-          title="Drawer with description"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+          title="Close Or Minimize Room"
+          description="Close Or Minimize Room to go back to the room page"
       >
         <UButton
             icon="i-lucide-x"

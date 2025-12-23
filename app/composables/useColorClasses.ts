@@ -13,13 +13,13 @@ export const COLOR_CLASSES: Record<Colors, {
   gradient: string
   emphasis: string
 }> = {
-  primary:   { border: 'border-primary',   gradient: 'to-primary/10',   emphasis: 'ring-1 ring-primary/40' },
-  secondary: { border: 'border-secondary', gradient: 'to-secondary/10', emphasis: 'ring-1 ring-secondary/40' },
-  tertiary:  { border: 'border-tertiary',  gradient: 'to-tertiary/10',  emphasis: 'ring-1 ring-tertiary/40' },
-  success:   { border: 'border-success',   gradient: 'to-success/10',   emphasis: 'ring-1 ring-success/40' },
-  info:      { border: 'border-info',      gradient: 'to-info/10',      emphasis: 'ring-1 ring-info/40' },
-  warning:   { border: 'border-warning',   gradient: 'to-warning/10',   emphasis: 'ring-1 ring-warning/40' },
-  error:     { border: 'border-error',     gradient: 'to-error/10',     emphasis: 'ring-1 ring-error/40' }
+  primary:   { border: 'border-primary',   gradient: 'bg-primary/5',   emphasis: 'ring-1 ring-primary/40' },
+  secondary: { border: 'border-secondary', gradient: 'bg-secondary/5', emphasis: 'ring-1 ring-secondary/40' },
+  tertiary:  { border: 'border-tertiary',  gradient: 'bg-tertiary/5',  emphasis: 'ring-1 ring-tertiary/40' },
+  success:   { border: 'border-success',   gradient: 'bg-success/5',   emphasis: 'ring-1 ring-success/40' },
+  info:      { border: 'border-info',      gradient: 'bg-info/5',      emphasis: 'ring-1 ring-info/40' },
+  warning:   { border: 'border-warning',   gradient: 'bg-warning/5',   emphasis: 'ring-1 ring-warning/40' },
+  error:     { border: 'border-error',     gradient: 'bg-error/5',     emphasis: 'ring-1 ring-error/40' }
 }
 
 /**

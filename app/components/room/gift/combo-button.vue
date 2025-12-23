@@ -92,7 +92,7 @@ defineExpose({ resetTimer });
 
 <template>
   <Teleport to="body">
-    <div class="fixed bottom-4 right-4 z-[9999] size-20 flex items-center justify-center">
+    <div class="fixed bottom-4 right-4 z-9999 size-20 flex items-center justify-center">
       <!-- Progress ring -->
       <svg class="absolute inset-0 size-20 -rotate-90" viewBox="0 0 36 36">
         <!-- Background circle -->

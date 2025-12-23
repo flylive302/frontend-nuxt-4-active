@@ -75,10 +75,19 @@ onUnmounted(() => {
   }
 })
 
+// ========================================
+// Asset Preloading (Opportunistic)
+// ========================================
+const { startIdlePreload } = useAssetPreloader()
+onMounted(() => {
+  // Delay to allow initial render to complete
+  setTimeout(startIdlePreload, 2000)
+})
+
 </script>
 
 <template>
-  <div class="absolute inset-0 z-50 p-1 pb-5 bg-elevated">
+  <div class="absolute inset-0 z-50 p-1 pb-6 max-h-screen bg-elevated" aria-hidden="undefined" >
     <!-- Background Image -->
     <div class="absolute inset-0 z-0">
       <NuxtImg
@@ -106,9 +115,7 @@ onUnmounted(() => {
       <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
         <!-- Chat Panel -->
         <div class="size-full flex flex-col inset-shadow-2xs">
-          <aside class="bg-linear-to-br from-elevated/80 to-primary/20 rounded-lg grow overflow-hidden">
-            <RoomChatPanel />
-          </aside>
+          <RoomChatPanel />
         </div>
 
         <!-- Side Controls & Gifting -->
@@ -121,7 +128,7 @@ onUnmounted(() => {
               size="md"
               :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
               :variant="isLocalMuted ? 'solid' : 'subtle'"
-              :color="isLocalMuted ? 'error' : 'neutral'"
+              :color="isLocalMuted ? 'error' : 'primary'"
               @click="() => { toggleLocalMute() }"
           />
           <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />

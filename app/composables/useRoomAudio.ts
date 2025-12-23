@@ -200,6 +200,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     s.on('room:userLeft', (event: UserLeftEvent) => {
       roomStore.removeParticipant(event.userId);
+      giftStore.removeRecipient(event.userId);
       console.log('[RoomAudio] User left:', event.userId);
     });
 

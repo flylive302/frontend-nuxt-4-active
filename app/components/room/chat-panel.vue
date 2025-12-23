@@ -48,7 +48,7 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="bg-primary/20 rounded-lg grow overflow-hidden flex flex-col h-full">
     <!-- Messages Container -->
     <DynamicScroller
       ref="scrollerRef"
@@ -75,7 +75,7 @@ function handleKeydown(event: KeyboardEvent) {
     </p>
 
     <!-- Input -->
-    <div class="p-2 border-t border-accented">
+    <div class="p-2 border-t border-primary">
       <div class="flex items-center gap-2">
         <UInput ref="inputRef" v-model="messageInput" class="w-full" size="lg" icon="i-lucide-user" placeholder="Type a message..." @keydown="handleKeydown" />
         <UButton
@@ -87,5 +87,6 @@ function handleKeydown(event: KeyboardEvent) {
         />
       </div>
     </div>
+
   </div>
 </template>

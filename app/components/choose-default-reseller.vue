@@ -154,7 +154,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       <UButton
         label="Change"
         :color="(color as any)"
-        variant="subtle"
+        variant="soft"
         trailing-icon="i-lucide-search"
         aria-haspopup="dialog"
         aria-controls="choose-reseller"
@@ -224,7 +224,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       </UDrawer>
     </header>
 
-    <div v-if="selectedReseller" class="mt-2 flex gap-2 rounded-md border p-2 bg-linear-to-br from-elevated/80 shadow-md" :class="[borderClass, gradientClass, emphasisClass]">
+    <div v-if="selectedReseller" class="mt-2 flex gap-2 rounded-md p-2 shadow-md" :class="[gradientClass]">
       <div class="max-w-16 flex flex-col justify-center">
         <UAvatar
             :src="selectedReseller.avatar || undefined"

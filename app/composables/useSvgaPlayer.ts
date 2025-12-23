@@ -46,30 +46,37 @@ export function useSvgaPlayer(
     // Increment playback ID to invalidate any pending callbacks
     const currentPlaybackId = ++playbackId;
 
-    // Create new player instance
-    player.value = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
-      canvas: canvas.value,
-      name: options.name.value,
-      loop: options.loop?.value ?? 1,
-      autoplay: options.autoplay?.value ?? true,
-    });
+    try {
+      // Create new player instance
+      player.value = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
+        canvas: canvas.value,
+        name: options.name.value,
+        loop: options.loop?.value ?? 1,
+        autoplay: options.autoplay?.value ?? true,
+      });
 
-    // Register event callbacks
-    if (player.value) {
-      player.value.onStart = () => {
-        isPlaying.value = true;
-      };
+      // Register event callbacks
+      if (player.value) {
+        player.value.onStart = () => {
+          isPlaying.value = true;
+        };
 
-      player.value.onEnd = () => {
-        // Only fire if this playback is still current (prevents stale callbacks during combo)
-        if (currentPlaybackId !== playbackId) return;
-        isPlaying.value = false;
-        options.onComplete?.();
-      };
+        player.value.onEnd = () => {
+          // Only fire if this playback is still current (prevents stale callbacks during combo)
+          if (currentPlaybackId !== playbackId) return;
+          isPlaying.value = false;
+          options.onComplete?.();
+        };
 
-      player.value.onStop = () => {
-        isPlaying.value = false;
-      };
+        player.value.onStop = () => {
+          isPlaying.value = false;
+        };
+      }
+    } catch (error) {
+      console.error('[SvgaPlayer] Failed to load animation:', options.name.value, error);
+      isPlaying.value = false;
+      // Signal completion to prevent stuck modal
+      options.onComplete?.();
     }
   };
 

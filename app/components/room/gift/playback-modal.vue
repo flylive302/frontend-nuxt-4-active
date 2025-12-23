@@ -4,7 +4,9 @@
  *
  * Full-screen modal that plays gift animations.
  * Routes to correct player based on asset type.
+ * Includes safety timeout to prevent stuck modals.
  */
+import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift';
 
 const authStore = useAuthStore();
 const giftStore = useGiftStore();
@@ -25,11 +27,42 @@ const isSender = computed(() => authStore.user?.id === currentPlayback.value?.se
 // Combo button visibility (independent of animation state)
 const isComboButtonVisible = ref(false);
 
+// ========================================
+// Playback Timeout (Safety Net)
+// ========================================
+let playbackTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Clear the playback timeout
+ */
+function clearPlaybackTimeout() {
+  if (playbackTimeoutId) {
+    clearTimeout(playbackTimeoutId);
+    playbackTimeoutId = null;
+  }
+}
+
+/**
+ * Start the playback timeout - force completes if animation stalls
+ */
+function startPlaybackTimeout() {
+  clearPlaybackTimeout();
+  playbackTimeoutId = setTimeout(() => {
+    console.warn('[GiftPlayback] Timeout reached - force closing modal');
+    handleComplete();
+  }, GIFT_PLAYBACK_TIMEOUT_MS);
+}
+
 // Show combo button when playback starts (only for sender)
+// Also start the safety timeout
 watch(isOpen, (open) => {
-  if (open && isSender.value) {
-    isComboButtonVisible.value = true;
+  if (open) {
+    startPlaybackTimeout();
+    if (isSender.value) {
+      isComboButtonVisible.value = true;
+    }
   } else {
+    clearPlaybackTimeout();
     isComboButtonVisible.value = false;
   }
 });
@@ -53,6 +86,8 @@ watch(
       if (isSender.value) {
         isComboButtonVisible.value = true;
       }
+      // Reset timeout for combo
+      startPlaybackTimeout();
     }
   }
 );
@@ -61,8 +96,12 @@ watch(
  * Handle playback completion
  */
 function handleComplete() {
+  clearPlaybackTimeout();
   giftStore.onPlaybackComplete();
 }
+
+// Cleanup timeout on unmount
+onBeforeUnmount(clearPlaybackTimeout);
 
 /**
  * Handle combo button click
