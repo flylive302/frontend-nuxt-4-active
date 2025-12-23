@@ -44,13 +44,6 @@ export default defineNuxtConfig({
                         if (id.includes('node_modules')) {
                             if (id.includes('svga')) return 'svga'
                             if (id.includes('mapbox') || id.includes('googlemaps')) return 'maps'
-                            if (id.includes('@nuxt/ui')) return 'ui'
-                            if (id.includes('headlessui')) return 'headless'
-                            if (id.includes('radix-ui')) return 'radix'
-                            if (id.includes('zod')) return 'zod'
-                            if (id.includes('@internationalized/date')) return 'i18n-date'
-                            if (id.includes('@vueuse')) return 'vueuse'
-                            if (id.includes('vue') || id.includes('nuxt')) return 'framework'
                             return 'vendor'
                         }
                     }
