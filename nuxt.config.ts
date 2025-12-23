@@ -39,6 +39,12 @@ export default defineNuxtConfig({
         build: {
             chunkSizeWarningLimit: 2000,
             rollupOptions: {
+                onwarn(warning, warn) {
+                    if (warning.code === 'EVAL' && warning.id?.includes('svga')) {
+                        return
+                    }
+                    warn(warning)
+                },
                 output: {
                     manualChunks(id: string) {
                         if (id.includes('node_modules')) {
