@@ -8,6 +8,7 @@
 import { useIdle } from '@vueuse/core';
 import type { PreloadAsset, PreloadAssetType } from '~/config/preload-assets';
 import { ROOM_PRELOAD_ASSETS } from '~/config/preload-assets';
+import { useGiftAssetCache } from './useGiftAssetCache';
 
 // ========================================
 // Module-level State (Singleton)
@@ -33,36 +34,23 @@ const PRELOAD_DELAY_MS = 50;
 // ========================================
 
 /**
- * Preload a video asset
+ * Preload a video asset using unified cache (stores Blob URL)
  */
-function preloadVideo(url: string): Promise<void> {
-  return new Promise((resolve) => {
-    const video = document.createElement('video');
-    video.preload = 'auto';
-    video.src = url;
-
-    video.onloadeddata = () => {
-      console.log('[AssetPreloader] ✅ Video:', url);
-      resolve();
-    };
-
-    video.onerror = () => {
-      console.warn('[AssetPreloader] ❌ Video failed:', url);
-      resolve();
-    };
-  });
+async function preloadVideo(url: string): Promise<void> {
+  const { preloadVideo: cacheVideo } = useGiftAssetCache();
+  try {
+    await cacheVideo(url);
+  } catch {
+    // Errors already logged in cache
+  }
 }
 
 /**
- * Preload an SVGA animation (leverages existing cache)
+ * Preload an SVGA animation using unified cache
  */
 async function preloadSvga(name: string): Promise<void> {
-  try {
-    await $fetch(`/parsedAnimations/${name}.json`);
-    console.log('[AssetPreloader] ✅ SVGA:', name);
-  } catch {
-    console.warn('[AssetPreloader] ❌ SVGA failed:', name);
-  }
+  const { preloadSvga: cacheSvga } = useGiftAssetCache();
+  await cacheSvga(name);
 }
 
 /**

@@ -246,6 +246,11 @@ export interface GiftErrorEvent {
   error: 'insufficient_balance' | 'invalid_gift' | string;
 }
 
+export interface GiftPrepareEvent {
+  giftId: number;
+  recipientId: number;
+}
+
 // ============================================
 // ROOM STATE TYPES
 // ============================================

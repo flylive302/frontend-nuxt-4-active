@@ -7,6 +7,7 @@ import type {
   ChatMessageEvent,
   GiftReceivedEvent,
   GiftErrorEvent,
+  GiftPrepareEvent,
   ActiveSpeakerEvent,
   SeatUpdatedEvent,
   SeatClearedEvent,
@@ -66,6 +67,8 @@ export interface UseRoomAudioReturn {
   sendChatMessage: (content: string, type?: string) => void;
   /** Send gift */
   sendGift: (giftId: number, recipientId: number, quantity?: number) => void;
+  /** Send gift preload signal to recipients */
+  prepareGift: (giftId: number, recipientIds: number[]) => void;
   /** Connection status */
   connectionStatus: Ref<'disconnected' | 'connecting' | 'connected' | 'error'>;
   /** Whether connected to audio server */
@@ -340,6 +343,20 @@ export function useRoomAudio(): UseRoomAudioReturn {
           description: 'Failed to send gift. Please try again.',
           color: 'error',
         });
+      }
+    });
+
+    // Gift preload signal (receiver should preload asset)
+    s.on('gift:prepare', async (event: GiftPrepareEvent) => {
+      // Only preload if this user is the intended recipient
+      if (event.recipientId !== authStore.user?.id) return;
+      
+      const { getGiftById } = useGiftData();
+      const { preloadGift } = useGiftAssetCache();
+      
+      const gift = getGiftById(event.giftId);
+      if (gift) {
+        await preloadGift(gift);
       }
     });
   }
@@ -729,6 +746,23 @@ export function useRoomAudio(): UseRoomAudioReturn {
     processGiftQueue(socket);
   }
 
+  /**
+   * Send preload signal to recipients.
+   * Call when sender selects a gift and recipients.
+   */
+  function prepareGift(giftId: number, recipientIds: number[]): void {
+    if (!socket.value || !roomStore.currentRoom) return;
+
+    // Send prepare signal for each recipient
+    for (const recipientId of recipientIds) {
+      socket.value.emit('gift:prepare', {
+        roomId: roomStore.currentRoom.id.toString(),
+        giftId,
+        recipientId,
+      });
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -750,6 +784,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     declineInvite,
     sendChatMessage,
     sendGift,
+    prepareGift,
     connectionStatus,
     isConnected,
     isProducing,

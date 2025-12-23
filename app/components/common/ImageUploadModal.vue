@@ -167,7 +167,7 @@ onBeforeUnmount(() => {
             <Cropper
                 v-if="imageSrc"
                 ref="cropperRef"
-                class="h-full w-auto"
+                class="h-[65vh] w-auto"
                 :src="imageSrc"
                 :stencil-component="props.stencilComponent"
                 :stencil-props="{

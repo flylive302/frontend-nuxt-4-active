@@ -120,6 +120,33 @@ export const useGiftStore = defineStore('giftStore', () => {
   }
 
   // ========================================
+  // Preload Trigger (Auto-trigger on selection)
+  // ========================================
+
+  // Get composables at setup level (outside watcher callback to avoid inject() warnings)
+  const { preloadGift } = useGiftAssetCache();
+  const { prepareGift } = useRoomAudio();
+
+  /**
+   * Watch for gift + recipient selection and trigger preload
+   * - Preloads locally for sender
+   * - Sends gift:prepare signal to recipients
+   */
+  watch(
+    [selectedGift, selectedRecipients],
+    async ([gift, recipients]) => {
+      if (!gift || recipients.length === 0) return;
+
+      // 1. Preload locally for sender (instant playback)
+      await preloadGift(gift);
+
+      // 2. Send prepare signal to recipients
+      prepareGift(gift.id, recipients);
+    },
+    { deep: true }
+  );
+
+  // ========================================
   // Playback Actions
   // ========================================
 

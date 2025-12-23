@@ -3,8 +3,10 @@
  * Gift Video Player
  *
  * Plays video gift assets with proper ended event handling.
+ * Uses cached Blob URLs from preloader for instant playback.
  * NO loop attribute - video plays once and emits 'ended'.
  */
+import { useGiftAssetCache } from '~/composables/useGiftAssetCache';
 
 const props = withDefaults(
   defineProps<{
@@ -22,6 +24,12 @@ const emit = defineEmits<{
 }>();
 
 const videoRef = ref<HTMLVideoElement | null>(null);
+const { getCachedVideoUrl } = useGiftAssetCache();
+
+/**
+ * Get the video source - use cached Blob URL if available
+ */
+const videoSrc = computed(() => getCachedVideoUrl(props.src));
 
 /**
  * Auto-detect MIME type from URL extension
@@ -65,11 +73,13 @@ defineExpose({ restart });
     ref="videoRef"
     class="min-w-screen object-contain"
     :autoplay="autoplay"
+    preload="auto"
     playsinline
     @ended="emit('ended')"
     @error="handleError"
   >
-    <source :src="src" :type="videoType">
+    <source :src="videoSrc" :type="videoType">
   </video>
 </template>
+
 

@@ -97,6 +97,16 @@ export interface SvgaPlugin {
    * Create a new SVGA player instance
    */
   createSvgaPlayer(options: CreateSvgaPlayerOptions): Promise<SvgaPlayer>;
+
+  /**
+   * Fetch and cache SVGA animation data (for preloading)
+   */
+  fetchAnimation(name: string): Promise<unknown>;
+
+  /**
+   * Check if an animation is already cached
+   */
+  isCached(name: string): boolean;
 }
 
 declare module '#app' {
