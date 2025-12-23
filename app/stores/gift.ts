@@ -54,7 +54,7 @@ export const useGiftStore = defineStore('giftStore', () => {
    */
   const totalCost = computed(() => {
     if (!selectedGift.value) return 0;
-    return selectedGift.value.price_coins * selectedRecipients.value.length * selectedQuantity.value;
+    return selectedGift.value.price * selectedRecipients.value.length * selectedQuantity.value;
   });
 
   /**

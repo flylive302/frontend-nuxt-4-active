@@ -2,16 +2,16 @@
  * Gift Types
  *
  * Type definitions for gift-related features.
- * Backend API: GET /api/gifts
+ * Backend API: GET /api/v1/gifts
  */
 
 // ============================================
 // CORE TYPES
 // ============================================
 
-export type GiftCategory = 'normal' | 'lucky' | 'cp-gifts' | 'vip-gifts' | 'country' | 'celebrity' | 'bag';
-export type GiftRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-export type AssetType = 'video' | 'svga' | 'static';
+export type GiftAssetType = 'video' | 'svga' | 'image';
+export type GiftRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type GiftCategory = 'normal' | 'vip-gifts' | 'lucky' | 'cp-gift';
 
 /**
  * Gift item as returned from Laravel backend API
@@ -19,23 +19,16 @@ export type AssetType = 'video' | 'svga' | 'static';
 export interface Gift {
   id: number;
   name: string;
-  label: string;
-  asset_url: string;
-  description?: string;
-  image_url: string;
-  animation_url?: string;
-  price_coins: number;
-  price_diamonds?: number;
+  label: string | null;
+  description: string | null;
+  price: number;
+  thumbnail_url: string;
+  animation_url: string | null;
+  asset_type: GiftAssetType;
+  is_animated: boolean;
   category: GiftCategory;
   rarity: GiftRarity;
-  asset_type: AssetType;
-  charm_xp_increment: number;
-  wealth_xp_increment: number;
-  is_animated: boolean;
   sort_order: number;
-  is_available: boolean;
-  created_at?: string;
-  updated_at?: string;
 }
 
 /**
@@ -110,10 +103,8 @@ export interface GiftReceivedEvent {
 /** Category metadata for UI tabs */
 export const GIFT_CATEGORY_CONFIG: Record<GiftCategory, { label: string; icon: string }> = {
   normal: { label: 'Normal', icon: 'i-lucide-gift' },
-  lucky: { label: 'Lucky', icon: 'i-lucide-sparkles' },
-  'cp-gifts': { label: 'CP Gift', icon: 'i-lucide-heart' },
   'vip-gifts': { label: 'VIP', icon: 'i-lucide-crown' },
-  country: { label: 'Country', icon: 'i-lucide-flag' },
-  celebrity: { label: 'Celebrity', icon: 'i-lucide-star' },
-  bag: { label: 'Bag', icon: 'i-lucide-shopping-bag' },
+  lucky: { label: 'Lucky', icon: 'i-lucide-sparkles' },
+  'cp-gift': { label: 'CP Gift', icon: 'i-lucide-heart' },
 };
+

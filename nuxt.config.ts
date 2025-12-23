@@ -62,7 +62,7 @@ export default defineNuxtConfig({
             moduleContext: {
                 'node_modules/mime/dist/src/Mime.js': 'undefined'
             }
-        }
+        },
     },
     runtimeConfig: {
         public: {
@@ -70,5 +70,5 @@ export default defineNuxtConfig({
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
             audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'ws://localhost:3030'
         }
-    }
+    },
 })

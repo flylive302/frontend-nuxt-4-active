@@ -43,7 +43,7 @@ export function useGiftPlayback() {
       case 'svga':
         svgaPlayerRef.value?.restart();
         break;
-      case 'static':
+      case 'image':
         staticDisplayRef.value?.restart();
         break;
     }

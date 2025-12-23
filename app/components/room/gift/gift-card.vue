@@ -31,8 +31,8 @@ const { formatGiftPrice } = useGiftData();
   >
     <div class="p-1 w-full">
       <NuxtImg
-        :src="gift.image_url"
-        :alt="gift.label"
+        :src="gift.thumbnail_url"
+        :alt="gift.label ?? gift.name"
         class="w-full aspect-square object-contain rounded"
       />
     </div>

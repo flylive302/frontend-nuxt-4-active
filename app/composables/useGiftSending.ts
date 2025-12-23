@@ -74,7 +74,7 @@ export function useGiftSending() {
    * Calculate cost for a specific gift/recipients/quantity combination
    */
   function calculateCost(gift: Gift, recipientCount: number, quantity: number): number {
-    return gift.price_coins * recipientCount * quantity;
+    return gift.price * recipientCount * quantity;
   }
 
   /**

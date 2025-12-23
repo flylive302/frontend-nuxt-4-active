@@ -2,19 +2,46 @@
  * Gift Data Composable
  *
  * Handles gift data fetching, caching, and category grouping.
- * Currently uses mock data; will integrate with API later.
+ * Uses backend API: GET /api/v1/gifts/all
+ * Falls back to mock data if API is unavailable.
  */
 import { ref, computed } from 'vue';
 import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift';
 import { GIFT_CATEGORY_CONFIG } from '~/types/gift';
+import { useApi } from './useApi';
 import { MOCK_GIFTS } from '~/mock/gifts';
 
-// Shared state across all component instances
+// ============================================
+// API Response Types
+// ============================================
+
+interface AllGiftsApiResponse {
+  status: 'success' | 'error';
+  message: string;
+  data: {
+    gifts: Gift[];
+    total: number;
+  };
+  meta: {
+    timestamp: string;
+    correlation_id: string;
+  };
+}
+
+// ============================================
+// Shared State (across all component instances)
+// ============================================
+
 const gifts = ref<Gift[]>([]);
 const isLoading = ref(false);
 const isInitialized = ref(false);
 
 export function useGiftData() {
+  // ========================================
+  // Dependencies
+  // ========================================
+  const { api } = useApi();
+
   // ========================================
   // Computed: Category Groups
   // ========================================
@@ -29,7 +56,7 @@ export function useGiftData() {
       .map((category) => {
         const config = GIFT_CATEGORY_CONFIG[category];
         const categoryGifts = gifts.value
-          .filter((g) => g.category === category && g.is_available)
+          .filter((g) => g.category === category)
           .sort((a, b) => a.sort_order - b.sort_order);
 
         return {
@@ -54,7 +81,7 @@ export function useGiftData() {
   }
 
   /**
-   * Fetch gifts from API (currently uses mock data)
+   * Fetch gifts from API (falls back to mock data if unavailable)
    */
   async function fetchGifts(): Promise<void> {
     if (isLoading.value) return;
@@ -62,15 +89,14 @@ export function useGiftData() {
     isLoading.value = true;
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await useApi().get<Gift[]>('/gifts');
-      // gifts.value = response;
-
-      // Using mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate network delay
+      const response = await api<AllGiftsApiResponse>('/gifts/all');
+      gifts.value = response.data.gifts;
+    } catch (error) {
+      // Fallback to mock data when API is unavailable
+      console.warn('[useGiftData] API unavailable, using mock data:', error);
       gifts.value = MOCK_GIFTS;
-      isInitialized.value = true;
     } finally {
+      isInitialized.value = true;
       isLoading.value = false;
     }
   }
@@ -85,13 +111,10 @@ export function useGiftData() {
   }
 
   /**
-   * Format gift price for display
+   * Format gift price for display (coins only)
    */
   function formatGiftPrice(gift: Gift): string {
-    if (gift.price_diamonds) {
-      return `💎 ${gift.price_diamonds.toLocaleString()}`;
-    }
-    return `🪙 ${gift.price_coins.toLocaleString()}`;
+    return `🪙 ${gift.price.toLocaleString()}`;
   }
 
   // ========================================
@@ -108,3 +131,4 @@ export function useGiftData() {
     formatGiftPrice,
   };
 }
+

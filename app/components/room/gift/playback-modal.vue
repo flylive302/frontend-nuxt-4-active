@@ -79,7 +79,7 @@ watch(
         videoPlayerRef.value?.restart();
       } else if (assetType === 'svga') {
         svgaPlayerRef.value?.restart();
-      } else if (assetType === 'static') {
+      } else if (assetType === 'image') {
         staticDisplayRef.value?.restart();
       }
       // Reset combo button visibility on restart (only for sender)
@@ -116,7 +116,7 @@ async function handleCombo() {
       videoPlayerRef.value?.restart();
     } else if (assetType === 'svga') {
       svgaPlayerRef.value?.restart();
-    } else if (assetType === 'static') {
+    } else if (assetType === 'image') {
       staticDisplayRef.value?.restart();
     }
   }
@@ -150,7 +150,7 @@ function handleComboTimeout() {
           <RoomGiftVideoPlayer
             v-if="currentPlayback.gift.asset_type === 'video'"
             ref="videoPlayerRef"
-            :src="currentPlayback.gift.asset_url"
+            :src="currentPlayback.gift.animation_url ?? ''"
             @ended="handleComplete"
           />
 
@@ -158,7 +158,7 @@ function handleComboTimeout() {
           <RoomGiftSvgaPlayer
             v-else-if="currentPlayback.gift.asset_type === 'svga'"
             ref="svgaPlayerRef"
-            :name="currentPlayback.gift.asset_url"
+            :name="currentPlayback.gift.animation_url ?? ''"
             @complete="handleComplete"
           />
 
@@ -166,7 +166,7 @@ function handleComboTimeout() {
           <RoomGiftStaticDisplay
             v-else
             ref="staticDisplayRef"
-            :src="currentPlayback.gift.asset_url"
+            :src="currentPlayback.gift.thumbnail_url"
             @timeout="handleComplete"
           />
         </template>
