@@ -111,7 +111,7 @@ export interface SvgaPlugin {
 
 declare module '#app' {
   interface NuxtApp {
-    $svga: SvgaPlugin;
+    $svga?: SvgaPlugin;
   }
 }
 

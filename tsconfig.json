@@ -12,31 +12,18 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "verbatimModuleSyntax": true,
-    "baseUrl": ".",
-    "paths": {
-      "~/*": [
-        "app/*"
-      ],
-      "@/*": [
-        "./*"
-      ]
-    },
     "types": [
       "node"
     ],
     "skipLibCheck": true
-  },
-  "vueCompilerOptions": {
-    "globalTypesPath": ".nuxt/types/vue-shim.d.ts"
   },
   "include": [
     "**/*",
     "types/**/*.d.ts",
     ".nuxt/types/**/*.d.ts"
   ],
-  "exclude": [
+    "exclude": [
     "node_modules",
-    "dist",
-    "**/node_modules/@nuxt/image/**/*.vue"
+    "dist"
   ]
 }
