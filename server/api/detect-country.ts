@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
         })
         
         return {
-            country_code: response.country?.toLowerCase() ?? null,
+            country_code: response.country?.toUpperCase() ?? null,
         }
     } catch (error) {
         console.error('Geolocation error:', error)

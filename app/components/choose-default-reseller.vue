@@ -25,7 +25,7 @@ const color = toRef(props, 'color')
 // ========================================
 const toast = useToast()
 const { fetchResellers, getDefaultReseller, updateDefaultReseller, normalizeError } = useResellers()
-const { borderClass, gradientClass, emphasisClass } = useColorClasses(color)
+const { borderClass, gradientClass } = useColorClasses(color)
 
 // ========================================
 // State

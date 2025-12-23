@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { usePermission } from '../../app/composables/usePermission'
 import { useAuthStore } from '../../app/stores/auth'
 import type { User } from '~/types/auth'
+
+// Mock useAuthStore as a global (Nuxt auto-import)
+vi.stubGlobal('useAuthStore', useAuthStore)
 
 describe('usePermission', () => {
     beforeEach(() => {

@@ -21,9 +21,30 @@ vi.stubGlobal('onUnmounted', vi.fn())
 const mockToast = { add: vi.fn() }
 vi.stubGlobal('useToast', () => mockToast)
 
+// Mock Nuxt navigateTo
+vi.stubGlobal('navigateTo', vi.fn())
+
+// Mock refundPendingCoins (auto-imported)
+vi.stubGlobal('refundPendingCoins', vi.fn())
+
 // Mock useAuthStore (useRoomAudio calls this directly)
 const mockAuthStore = { token: 'test-token', user: { id: 1, name: 'Test User' } }
 vi.stubGlobal('useAuthStore', () => mockAuthStore)
+
+// Mock useGiftStore
+const mockGiftStore = {
+  currentPlayback: null,
+  enqueuePlayback: vi.fn(),
+  restartCurrentPlayback: vi.fn(),
+  removeRecipient: vi.fn(),
+}
+vi.stubGlobal('useGiftStore', () => mockGiftStore)
+
+// Mock useGiftData
+const mockGiftData = {
+  getGiftById: vi.fn().mockReturnValue({ id: 1, name: 'Test Gift' }),
+}
+vi.stubGlobal('useGiftData', () => mockGiftData)
 
 // ============================================
 // Mock Dependent Composables
@@ -94,13 +115,15 @@ vi.mock('~/types/audio', () => ({
 
 let mockRoomStore: {
   currentRoom: { id: string } | null
+  seats: Record<string, unknown>[]
   addParticipant: ReturnType<typeof vi.fn>
   removeParticipant: ReturnType<typeof vi.fn>
   addMessage: ReturnType<typeof vi.fn>
-  setSeat: ReturnType<typeof vi.fn>
+  updateSeat: ReturnType<typeof vi.fn>
   clearSeat: ReturnType<typeof vi.fn>
   setParticipantMuted: ReturnType<typeof vi.fn>
   setActiveSpeaker: ReturnType<typeof vi.fn>
+  setSeatLocked: ReturnType<typeof vi.fn>
   setAudioConnected: ReturnType<typeof vi.fn>
   setAudioProducing: ReturnType<typeof vi.fn>
   setAudioMuted: ReturnType<typeof vi.fn>
@@ -126,12 +149,14 @@ describe('useRoomAudio', () => {
 
     mockRoomStore = {
       currentRoom: null,
+      seats: [],
       addParticipant: vi.fn(),
       removeParticipant: vi.fn(),
       addMessage: vi.fn(),
-      setSeat: vi.fn(),
+      updateSeat: vi.fn(),
       clearSeat: vi.fn(),
       setParticipantMuted: vi.fn(),
+      setSeatLocked: vi.fn(),
       setActiveSpeaker: vi.fn(),
       setAudioConnected: vi.fn(),
       setAudioProducing: vi.fn(),

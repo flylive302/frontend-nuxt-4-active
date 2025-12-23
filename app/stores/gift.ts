@@ -7,6 +7,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Gift, GiftPlaybackItem } from '~/types/gift';
 import { MAX_PLAYBACK_QUEUE_SIZE } from '~/constants/gift';
+import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 
 export const useGiftStore = defineStore('giftStore', () => {
   // ========================================
@@ -20,7 +21,7 @@ export const useGiftStore = defineStore('giftStore', () => {
   // ========================================
   const selectedGift = ref<Gift | null>(null);
   const selectedRecipients = ref<number[]>([]);
-  const selectedQuantity = ref(1);
+  const selectedQuantity = ref<(typeof GIFT_QUANTITY_OPTIONS)[number]>(1);
 
   // ========================================
   // Playback State
@@ -115,7 +116,7 @@ export const useGiftStore = defineStore('giftStore', () => {
   }
 
   function setQuantity(qty: number) {
-    selectedQuantity.value = qty;
+    selectedQuantity.value = qty as (typeof GIFT_QUANTITY_OPTIONS)[number];
   }
 
   // ========================================

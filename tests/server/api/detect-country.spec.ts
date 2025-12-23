@@ -44,6 +44,8 @@ describe('detect-country handler', () => {
     getRequestIPMock.mockReturnValueOnce('203.0.113.5')
 
     await expect(handler({} as unknown as H3Event)).resolves.toEqual({ country_code: 'US' })
-    expect(fetchMock).toHaveBeenCalledWith('https://get.geojs.io/v1/ip/country/203.0.113.5.json')
+    expect(fetchMock).toHaveBeenCalledWith('https://get.geojs.io/v1/ip/country/203.0.113.5.json', {
+      timeout: 3000
+    })
   })
 })

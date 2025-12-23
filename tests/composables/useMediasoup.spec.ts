@@ -95,6 +95,17 @@ describe('useMediasoup', () => {
     vi.clearAllMocks()
   })
 
+  describe('device state', () => {
+    it('should have initial state as null', async () => {
+      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
+
+      expect(mediasoup.device.value).toBeNull()
+      expect(mediasoup.producer.value).toBeNull()
+      expect(mediasoup.isProducing.value).toBe(false)
+    })
+  })
+
   describe('loadDevice()', () => {
     it('should create device and load RTP capabilities', async () => {
       const { useMediasoup } = await import('../../app/composables/useMediasoup')
@@ -110,17 +121,6 @@ describe('useMediasoup', () => {
       expect(mockDevice.load).toHaveBeenCalledWith({
         routerRtpCapabilities: rtpCapabilities,
       })
-    })
-  })
-
-  describe('device state', () => {
-    it('should have initial state as null', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
-      const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
-
-      expect(mediasoup.device.value).toBeNull()
-      expect(mediasoup.producer.value).toBeNull()
-      expect(mediasoup.isProducing.value).toBe(false)
     })
   })
 

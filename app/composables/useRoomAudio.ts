@@ -16,7 +16,7 @@ import type {
   SeatResponse,
 } from '~/types/audio';
 import { userToParticipant } from '~/types/audio';
-import { GIFT_QUEUE_INTERVAL_MS } from '~/constants/gift';
+import { GIFT_QUEUE_INTERVAL_MS } from '../constants/gift';
 import type { AudioSocket } from './useAudioSocket';
 
 // ============================================

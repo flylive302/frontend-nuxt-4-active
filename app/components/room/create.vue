@@ -92,7 +92,7 @@ async function onSubmit() {
     <div class="flex flex-col items-center gap-2">
       <FileUpload
           :error="fileInputError" :current-image="logoPreview"
-          shape="rounded" size="xl" label="Room Logo" :aspectRatio="2"
+          shape="rounded" size="xl" label="Room Logo" :aspect-ratio="2"
           @file-selected="onFileSelected"
       />
       <span class="text-sm font-medium text-gray-500">Upload Room Logo</span>

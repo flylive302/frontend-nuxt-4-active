@@ -255,9 +255,10 @@ watch(
           </UButton>
           <template #content>
             <UCalendar
-              v-model="dateOfBirthModel"
+              :model-value="(dateOfBirthModel as any)"
               :default-placeholder="calendarDefaultDate"
               class="p-2"
+              @update:model-value="(val: any) => (dateOfBirthModel = val)"
             />
           </template>
         </UPopover>

@@ -87,7 +87,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="absolute inset-0 z-50 p-1 pb-6 max-h-screen bg-elevated" aria-hidden="undefined" >
+  <div class="absolute inset-0 z-50 p-1 pb-6 max-h-screen bg-elevated">
     <!-- Background Image -->
     <div class="absolute inset-0 z-0">
       <NuxtImg
