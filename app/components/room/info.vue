@@ -22,20 +22,8 @@ interface RoomUser {
   avatar: string
 }
 
-const generateUsers = (count: number): RoomUser[] => {
-  return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    name: `User ${i + 1}`,
-    rank: i + 1,
-    wealthLevel: (i % 5) + 1,
-    charmLevel: (i % 5) + 1,
-    coins: `${(Math.random() * 10).toFixed(1)} M`,
-    avatar: '' // UserAvatar handles empty src
-  }))
-}
-
-// Placeholder for room activity leaderboard (daily/weekly/monthly)
-const dailyUsers = ref(generateUsers(50))
+// TODO: Replace with real API data when room activity leaderboard is implemented
+const dailyUsers = ref<RoomUser[]>([])
 
 // Real participants from room store
 const participants = computed(() => roomStore.participantList)
@@ -46,8 +34,7 @@ const isRoomOwner = computed(() => roomStore.isRoomOwner)
 const activeSeat = computed(() => roomStore.activeSeat) // 1-indexed, null if none
 const activeSeatIndex = computed(() => activeSeat.value ? activeSeat.value - 1 : null) // 0-indexed
 
-// Handle invite to seat
-// Handle invite to seat
+// Invite to seat functionality
 const isInviting = ref(false)
 const inviteModeSeat = computed(() => roomStore.inviteModeSeat)
 
@@ -78,16 +65,14 @@ async function handleInvite(userId: number) {
   }
 }
 
-// Handle invite to seat
-// isInviting and inviteModeSeat are already declared above
-// Nothing needed here, just the watcher
-
-// Auto-open drawer when invite mode starts
-watch(inviteModeSeat, (newVal) => {
-  if (newVal !== null) {
-    isOpenRight.value = true
+/** Get color based on user rank for leaderboard badges */
+function getRankColor(rank: number): 'primary' | 'secondary' | 'tertiary' | 'neutral' {
+  const colors = ['primary', 'secondary', 'tertiary'] as const
+  if (rank >= 1 && rank <= 3) {
+    return colors[rank - 1]
   }
-})
+  return 'neutral'
+}
 
 const isOpenLeft = ref(false)
 const isOpenRight = ref(false)
@@ -123,7 +108,7 @@ variant="soft" icon="i-lucide-coins" size="xs"
                     <DynamicScrollerItem :item="user" :active="active" :data-index="index" class="pb-3">
                       <div class="flex items-center justify-between w-full">
                         <UBadge
-                          :color="(user.rank <= 3 ? ['primary', 'secondary', 'tertiary'][user.rank - 1] : 'neutral') as any"
+                          :color="getRankColor(user.rank)"
                           class="text-white font-bold" :label="user.rank" />
                         <div
                           class="flex gap-1 bg-gradient-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden flex-grow ml-2">

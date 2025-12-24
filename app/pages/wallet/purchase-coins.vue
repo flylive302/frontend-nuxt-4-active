@@ -102,12 +102,12 @@ onMounted(() => {
         class="mt-4"
       />
 
-      <USeparator :color="('tertiary' as any)" class="my-6" />
+      <USeparator color="tertiary" class="my-6" />
 
       <!-- Coin Requests List Component -->
       <CoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
 
-      <USeparator :color="('tertiary' as any)" class="my-6" label="OR" />
+      <USeparator color="tertiary" class="my-6" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
       <div class="flex flex-col gap-3">
         <ListItemPurchaseCoins />

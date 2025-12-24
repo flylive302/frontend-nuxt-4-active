@@ -134,13 +134,13 @@ export interface CoinRequestPaginatedResponse<T> {
 /**
  * Status colors for UI badges
  */
-export const STATUS_COLORS: Record<CoinRequestStatus, string> = {
+export const STATUS_COLORS = {
   pending: 'warning',
   approved: 'success',
   rejected: 'error',
   cancelled: 'neutral',
   expired: 'neutral'
-}
+} as const
 
 /**
  * Type colors for UI badges

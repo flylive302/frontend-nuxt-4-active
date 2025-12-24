@@ -160,7 +160,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h3 class="text-base font-semibold">Your Coin Requests</h3>
-      <UBadge v-if="requests.length > 0" :color="(color as any)" variant="soft" size="sm">
+      <UBadge v-if="requests.length > 0" :color="color" variant="soft" size="sm">
         {{ requests.length }} total
       </UBadge>
     </div>
@@ -170,7 +170,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
       :items="tabItems"
       :model-value="activeTab"
       variant="link"
-      :color="(color as any)"
+      :color="color"
       :ui="{ list: 'bg-elevated/20 rounded-md overflow-x-scroll overflow-y-hidden', trigger: 'min-w-fit' }"
       class="w-full"
       @update:model-value="handleTabChange"
@@ -178,7 +178,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
 
     <!-- Loading -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center py-8 gap-3">
-      <UProgress animation="carousel" :color="(color as any)" class="w-32" />
+      <UProgress animation="carousel" :color="color" class="w-32" />
       <p class="text-sm text-muted">Loading requests...</p>
     </div>
 
@@ -227,7 +227,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
                 </p>
               </div>
             </div>
-            <UBadge :color="(STATUS_COLORS[request.status.value] as any)" variant="subtle" size="sm">
+            <UBadge :color="STATUS_COLORS[request.status.value]" variant="subtle" size="sm">
               <UIcon :name="getStatusIcon(request.status.value)" class="w-3 h-3 mr-1" />
               {{ request.status.label }}
             </UBadge>
@@ -244,7 +244,7 @@ defineExpose({ addRequest, hasPendingRequest, isLoading })
               <span v-if="request.was_adjusted" class="text-xs text-muted line-through">{{ request.amount }}</span>
               <UBadge
                 v-if="request.status.value === 'approved' && request.type"
-                :color="(request.type.value === 'credit' ? 'info' : 'success') as any"
+                :color="request.type.value === 'credit' ? 'info' : 'success'"
                 variant="soft"
                 size="xs"
               >

@@ -179,7 +179,7 @@ const banners: Banner[] = [
 
     <div class="mx-3">
       <InfiniteScroll
-        :fetcher="(fetchRoomsList as any)"
+        :fetcher="(fetchRoomsList as (ctx: { page: number }) => Promise<{ data: { id: number | string }[] }>)"
         :initial-page="1"
         :per-page="15"
       >

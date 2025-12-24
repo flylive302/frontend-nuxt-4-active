@@ -153,7 +153,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
 
       <UButton
         label="Change"
-        :color="(color as any)"
+        :color="color"
         variant="soft"
         trailing-icon="i-lucide-search"
         aria-haspopup="dialog"

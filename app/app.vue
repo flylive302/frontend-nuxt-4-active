@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
+
+// Lazy-load room components - only loaded when user joins a room
+const RoomShell = defineAsyncComponent(() => import('~/components/room/shell.vue'))
+const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
+
 const roomStore = useRoomStore();
 
 const toggleBodyScroll = () => {

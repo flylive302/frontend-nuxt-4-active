@@ -148,28 +148,41 @@ onMounted(async () => {
   <div class="space-y-2">
     <UFormField label="Country" name="countryCode" required>
       <USelectMenu
-v-model="selectedCountry" :items="(countries as any)" :loading="loading || externalDetectingLocation"
-        :disabled="disabled" label-key="name" placeholder="Select your country"
-        :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...' }" size="lg" class="w-full"
-        @update:model-value="(val: any) => onCountryChange(val)">
-        <template #leading="{ modelValue }">
-          <UIcon
-v-if="modelValue && (modelValue as any).code" :name="getFlagIconName((modelValue as any).code)"
-            class="size-5 rounded overflow-hidden h-4" />
-          <UIcon v-else :name="DEFAULT_FLAG_ICON" />
-        </template>
+      v-model="selectedCountry"
+      :items="(countries as Country[])"
+      :loading="loading || externalDetectingLocation"
+      :disabled="disabled"
+      label-key="name"
+      placeholder="Select your country"
+      :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...' }"
+      size="lg"
+      class="w-full"
+      @update:model-value="onCountryChange"
+    >
+      <template #leading="{ modelValue }">
+        <UIcon
+          v-if="(modelValue as Country)?.code"
+          :name="getFlagIconName((modelValue as Country).code)"
+          class="size-5 rounded overflow-hidden h-4"
+        />
+        <UIcon v-else :name="DEFAULT_FLAG_ICON" />
+      </template>
 
-        <template #item-leading="{ item }">
-          <UIcon v-if="item" :name="getFlagIconName((item as any).code)" class="size-5 rounded overflow-hidden h-4" />
-        </template>
+      <template #item-leading="{ item }">
+        <UIcon
+          v-if="(item as Country)?.code"
+          :name="getFlagIconName((item as Country).code)"
+          class="size-5 rounded overflow-hidden h-4"
+        />
+      </template>
 
-        <template #item-label="{ item }">
-          <template v-if="item">
-            {{ (item as any).name }}
-            <span class="text-xs text-muted ms-1">{{ (item as any).dial_code }}</span>
-          </template>
+      <template #item-label="{ item }">
+        <template v-if="item">
+          {{ (item as Country).name }}
+          <span class="text-xs text-muted ms-1">{{ (item as Country).dial_code }}</span>
         </template>
-      </USelectMenu>
+      </template>
+    </USelectMenu>
     </UFormField>
 
     <Transition

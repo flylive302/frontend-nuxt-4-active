@@ -3,13 +3,11 @@
  *
  * Handles gift data fetching, caching, and category grouping.
  * Uses backend API: GET /api/v1/gifts/all
- * Falls back to mock data if API is unavailable.
  */
 import { ref, computed } from 'vue';
 import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift';
 import { GIFT_CATEGORY_CONFIG } from '~/types/gift';
-import { useApi } from './useApi';
-import { MOCK_GIFTS } from '~/mock/gifts';
+import { useApi, type NormalizedError } from './useApi';
 
 // ============================================
 // API Response Types
@@ -35,12 +33,19 @@ interface AllGiftsApiResponse {
 const gifts = ref<Gift[]>([]);
 const isLoading = ref(false);
 const isInitialized = ref(false);
+const error = ref<NormalizedError | null>(null);
 
 export function useGiftData() {
   // ========================================
   // Dependencies
   // ========================================
-  const { api } = useApi();
+  const { api, normalizeError } = useApi();
+
+  // ========================================
+  // Computed: Error State
+  // ========================================
+
+  const hasError = computed(() => error.value !== null);
 
   // ========================================
   // Computed: Category Groups
@@ -81,24 +86,34 @@ export function useGiftData() {
   }
 
   /**
-   * Fetch gifts from API (falls back to mock data if unavailable)
+   * Fetch gifts from API
+   * @throws Will set error state on failure - check hasError computed
    */
   async function fetchGifts(): Promise<void> {
     if (isLoading.value) return;
 
     isLoading.value = true;
+    error.value = null;
 
     try {
       const response = await api<AllGiftsApiResponse>('/gifts/all');
       gifts.value = response.data.gifts;
-    } catch (error) {
-      // Fallback to mock data when API is unavailable
-      console.warn('[useGiftData] API unavailable, using mock data:', error);
-      gifts.value = MOCK_GIFTS;
+    } catch (e) {
+      error.value = normalizeError(e);
+      console.error('[useGiftData] Failed to fetch gifts:', error.value.message);
+      // Don't set gifts to empty - keep any previously loaded data
     } finally {
       isInitialized.value = true;
       isLoading.value = false;
     }
+  }
+
+  /**
+   * Retry fetching gifts after an error
+   */
+  async function retry(): Promise<void> {
+    error.value = null;
+    await fetchGifts();
   }
 
   /**
@@ -125,10 +140,13 @@ export function useGiftData() {
     giftsByCategory,
     isLoading,
     isInitialized,
+    error,
+    hasError,
     getGiftById,
     fetchGifts,
     ensureLoaded,
     formatGiftPrice,
+    retry,
   };
 }
 
