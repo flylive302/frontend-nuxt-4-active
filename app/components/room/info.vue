@@ -38,10 +38,21 @@ const activeSeatIndex = computed(() => activeSeat.value ? activeSeat.value - 1 :
 const isInviting = ref(false)
 const inviteModeSeat = computed(() => roomStore.inviteModeSeat)
 
+// Drawer state - must be declared before watchers that reference them
+const isOpenLeft = ref(false)
+const isOpenRight = ref(false)
+
 // Auto-open drawer when invite mode starts
 watch(inviteModeSeat, (newVal) => {
   if (newVal !== null) {
     isOpenRight.value = true
+  }
+})
+
+// Cancel invite mode when drawer is closed
+watch(isOpenRight, (isOpen) => {
+  if (!isOpen && inviteModeSeat.value !== null) {
+    roomStore.cancelInviteMode()
   }
 })
 
@@ -69,13 +80,10 @@ async function handleInvite(userId: number) {
 function getRankColor(rank: number): 'primary' | 'secondary' | 'tertiary' | 'neutral' {
   const colors = ['primary', 'secondary', 'tertiary'] as const
   if (rank >= 1 && rank <= 3) {
-    return colors[rank - 1]
+    return colors[rank - 1]!
   }
   return 'neutral'
 }
-
-const isOpenLeft = ref(false)
-const isOpenRight = ref(false)
 </script>
 
 <template>
