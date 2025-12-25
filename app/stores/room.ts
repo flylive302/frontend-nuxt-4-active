@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
 import type { Room } from '~/types/room';
 import type {
   RoomParticipant,

@@ -4,10 +4,12 @@
  * Handles gift data fetching, caching, and category grouping.
  * Uses backend API: GET /api/v1/gifts/all
  */
-import { ref, computed } from 'vue';
 import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift';
 import { GIFT_CATEGORY_CONFIG } from '~/types/gift';
 import { useApi, type NormalizedError } from './useApi';
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[GiftData]');
 
 // ============================================
 // API Response Types
@@ -100,7 +102,7 @@ export function useGiftData() {
       gifts.value = response.data.gifts;
     } catch (e) {
       error.value = normalizeError(e);
-      console.error('[useGiftData] Failed to fetch gifts:', error.value.message);
+      log.error('Failed to fetch gifts:', error.value.message);
       // Don't set gifts to empty - keep any previously loaded data
     } finally {
       isInitialized.value = true;

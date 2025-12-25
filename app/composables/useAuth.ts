@@ -2,6 +2,9 @@
 // Imports & Types
 // ========================================
 import type { AuthResponse, User, LoginPayload, RegisterPayload, UpdateProfilePayload } from '~/types/auth'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[Auth]')
 
 // ========================================
 // Composable
@@ -66,7 +69,7 @@ export function useAuth() {
       await api('/auth/logout', { method: 'POST' })
     } catch (error) {
       // Ignore logout errors from API, we still want to clear local state
-      console.error('Logout API error (ignored):', error)
+      log.warn('Logout API error (ignored):', error)
     } finally {
       authStore.logout()
       await navigateTo('/log-in')

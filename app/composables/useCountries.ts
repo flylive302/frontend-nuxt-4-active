@@ -1,9 +1,11 @@
 // app/composables/useCountries.ts
 // "wts my cmd code" style: single responsibility, documented, cached, re-usable across pages/components.
 
-import { ref, readonly } from 'vue'
 import type { Country } from '~/composables/usePhoneSchema'
 import { useGeolocation } from '~/composables/useGeolocation'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[Countries]');
 
 /**
  * Global countries composable (singleton).
@@ -51,8 +53,7 @@ async function loadCountries(): Promise<void> {
     } catch (err) {
         // Keep component resilient: log and fallback to empty list
         // Calling code should react to empty array as "no countries".
-         
-        console.error('[useCountries] loadCountries error:', err)
+        log.error('loadCountries error:', err)
         _countries.value = []
     } finally {
         _loading.value = false
@@ -71,8 +72,7 @@ async function autoDetectCountry(): Promise<Country | undefined> {
         if (match) return match
     } catch (err) {
         // non-fatal; just return undefined
-         
-        console.error('[useCountries] autoDetectCountry failed:', err)
+        log.error('autoDetectCountry failed:', err)
     }
     return undefined
 }

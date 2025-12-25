@@ -4,7 +4,11 @@
  * Manages SVGA animation playback with lifecycle hooks and completion events.
  * Uses SVGAPlayer-Web-Lite: https://github.com/svga/SVGAPlayer-Web-Lite
  */
+import type { Ref } from 'vue';
 import type { SvgaPlayer, SvgaPlugin } from '@/types/svga';
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[SvgaPlayer]');
 
 export interface UseSvgaPlayerOptions {
   name: Ref<string>;
@@ -39,6 +43,13 @@ export function useSvgaPlayer(
    */
   const load = async () => {
     if (!canvas.value) return;
+    
+    // Defensive check - ensure name ref has a value
+    const animationName = options.name?.value;
+    if (!animationName) {
+      log.warn('No animation name provided, skipping load');
+      return;
+    }
 
     // Cleanup existing player
     player.value?.destroy();
@@ -50,7 +61,7 @@ export function useSvgaPlayer(
       // Create new player instance
       player.value = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
         canvas: canvas.value,
-        name: options.name.value,
+        name: animationName,
         loop: options.loop?.value ?? 1,
         autoplay: options.autoplay?.value ?? true,
       });
@@ -73,7 +84,7 @@ export function useSvgaPlayer(
         };
       }
     } catch (error) {
-      console.error('[SvgaPlayer] Failed to load animation:', options.name.value, error);
+      log.error('Failed to load animation:', options.name.value, error);
       isPlaying.value = false;
       // Signal completion to prevent stuck modal
       options.onComplete?.();

@@ -5,6 +5,9 @@ import { useAuthForm } from '~/composables/useAuthForm'
 import type { Form } from '@nuxt/ui'
 import FileUpload from "~/components/common/file-upload.vue";
 import type {UpdateProfilePayload, GenderOption} from "~/types/auth";
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[ProfileEdit]');
 
 definePageMeta({
   layout: 'alt',
@@ -218,7 +221,7 @@ watch(
           }
         } catch (error) {
           // Silently fail if date parsing fails
-          console.error('Failed to parse date_of_birth:', error)
+          log.warn('Failed to parse date_of_birth:', error)
         }
       }
     },

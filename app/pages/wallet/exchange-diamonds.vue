@@ -19,9 +19,9 @@ const state = reactive<Partial<Schema>>({
 })
 
 const toast = useToast()
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(_event: FormSubmitEvent<Schema>) {
   toast.add({ title: 'Success', description: 'The form has been submitted.', color: 'success' })
-  console.log(event.data)
+  // TODO: Implement actual diamond exchange API call with _event.data
 }
 </script>
 

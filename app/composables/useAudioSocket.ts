@@ -38,6 +38,16 @@ const status = ref<ConnectionStatus>('disconnected');
 const error = ref<string | null>(null);
 
 // ============================================
+// Cached Dependencies (Module-level)
+// ============================================
+// These are cached on first call to prevent inject() warnings when
+// composable is accessed from socket callbacks outside Vue's setup context.
+
+let _config: ReturnType<typeof useRuntimeConfig> | null = null;
+let _authStore: ReturnType<typeof useAuthStore> | null = null;
+let _toast: ReturnType<typeof useToast> | null = null;
+
+// ============================================
 // Composable
 // ============================================
 
@@ -52,9 +62,15 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // ========================================
   // Composables / Injected Dependencies
   // ========================================
-  const config = useRuntimeConfig();
-  const authStore = useAuthStore();
-  const toast = useToast();
+  // Initialize on first call only (during Vue setup context)
+  if (!_config) _config = useRuntimeConfig();
+  if (!_authStore) _authStore = useAuthStore();
+  if (!_toast) _toast = useToast();
+
+  // Use cached references
+  const config = _config;
+  const authStore = _authStore;
+  const toast = _toast;
 
   // ========================================
   // Computed Properties

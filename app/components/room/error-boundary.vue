@@ -1,8 +1,9 @@
 <!-- ~/components/room/error-boundary.vue -->
 <!-- Error boundary wrapper for room operations with retry functionality -->
 <script setup lang="ts">
-import { ref, onErrorCaptured } from 'vue'
+import { createLogger } from '~/utils/logger';
 
+const log = createLogger('[ErrorBoundary]');
 defineOptions({ name: 'RoomErrorBoundary' })
 
 // ========================================
@@ -42,9 +43,7 @@ onErrorCaptured((error: Error, instance, info) => {
   
   // Log for debugging in development
   if (import.meta.env?.DEV) {
-    console.error('[RoomErrorBoundary] Caught error:', error)
-    console.error('Component:', instance)
-    console.error('Error info:', info)
+    log.error('Caught error:', error, 'Component:', instance, 'Info:', info);
   }
   
   // Prevent error from propagating

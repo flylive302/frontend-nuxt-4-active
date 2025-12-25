@@ -29,7 +29,6 @@ const { restart, isPlaying } = useSvgaPlayer(canvas, {
   loop: toRef(props, 'loop'),
   autoplay: toRef(props, 'autoplay'),
   onComplete: () => {
-    console.log(toRef(props, 'loop'));
     emit('complete');
   },
 });

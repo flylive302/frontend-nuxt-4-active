@@ -2,7 +2,6 @@
 // Imports & Types
 // ========================================
 import { ofetch, type FetchContext, type FetchOptions } from 'ofetch'
-import { useRuntimeConfig, useCookie } from 'nuxt/app'
 
 // ========================================
 // Types
@@ -17,26 +16,22 @@ export interface NormalizedError {
 type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 // ========================================
-// Composable
+// Module-level Singleton
 // ========================================
+// CRITICAL: Client must be at module level to reuse connections across calls.
 
-/**
- * Composable for handling API requests with built-in authentication,
- * error normalization, and retry logic.
- * @returns An object containing the api wrapper, the raw client, and error normalization utility.
- */
-export function useApi() {
-    // ========================================
-    // Composables / Injected Dependencies
-    // ========================================
-    const config = useRuntimeConfig()
+let _client: ReturnType<typeof ofetch.create> | null = null
+let _baseURL: string | undefined = undefined
 
-    // ========================================
-    // Business Logic / Core Logic
-    // ========================================
-
-    const client = ofetch.create({
-    baseURL: config.public.apiBase as string | undefined,
+function getClient(baseURL: string | undefined) {
+  // Recreate client only if baseURL changed (shouldn't happen in practice)
+  if (_client && _baseURL === baseURL) {
+    return _client
+  }
+  
+  _baseURL = baseURL
+  _client = ofetch.create({
+    baseURL,
     timeout: 10_000,
     onRequest({ options }: FetchContext) {
       const headers = new Headers(options.headers || {})
@@ -55,7 +50,30 @@ export function useApi() {
       options.headers = headers
       options.credentials = 'include'
     }
-    })
+  })
+  
+  return _client
+}
+
+// ========================================
+// Composable
+// ========================================
+
+/**
+ * Composable for handling API requests with built-in authentication,
+ * error normalization, and retry logic.
+ * @returns An object containing the api wrapper, the raw client, and error normalization utility.
+ */
+export function useApi() {
+    // ========================================
+    // Composables / Injected Dependencies
+    // ========================================
+    const config = useRuntimeConfig()
+
+    // ========================================
+    // Get or create singleton client
+    // ========================================
+    const client = getClient(config.public.apiBase as string | undefined)
 
     /**
     * Checks if an HTTP method is safe to retry (GET or HEAD).

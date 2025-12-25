@@ -12,8 +12,6 @@
  * logger.error('[Module]', 'Error message');  // Always logs
  */
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
 /**
  * Check if we're in development mode.
  * Uses import.meta.env for Vite compatibility.
@@ -66,9 +64,4 @@ export const logger = {
   error: (...args: unknown[]) => console.error(...args),
 };
 
-/**
- * Type guard to check if a value is a valid log level.
- */
-export function isValidLogLevel(level: string): level is LogLevel {
-  return ['debug', 'info', 'warn', 'error'].includes(level);
-}
+

@@ -1,5 +1,8 @@
 <script setup>
 import {useRoom} from "~/composables/useRoom";
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[HomeFooter]');
 
 const authStore = useAuthStore();
 const roomStore = useRoomStore();
@@ -19,8 +22,7 @@ async function handleMyRoomClick() {
       createRoomOpen.value = true;
     }
   } catch (error) {
-    console.error('Failed to fetch user room:', error);
-    // Consider showing a toast/notification to the user
+    log.error('Failed to fetch user room:', error);
   }
 }
 </script>

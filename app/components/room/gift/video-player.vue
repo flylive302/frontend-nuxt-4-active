@@ -7,6 +7,9 @@
  * NO loop attribute - video plays once and emits 'ended'.
  */
 import { useGiftAssetCache } from '~/composables/useGiftAssetCache';
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[VideoPlayer]');
 
 const props = withDefaults(
   defineProps<{
@@ -58,7 +61,7 @@ function restart() {
  * Handle video error
  */
 function handleError(event: Event) {
-  console.error('[VideoPlayer] Error loading video:', props.src);
+  log.error('Error loading video:', props.src);
   emit('error', event);
   // Fallback: emit ended to prevent modal from hanging
   emit('ended');

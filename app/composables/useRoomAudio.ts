@@ -48,6 +48,17 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
 }
 
 // ============================================
+// Cached Dependencies (Module-level)
+// ============================================
+// These are cached on first call to prevent inject() warnings when
+// composable is accessed from socket callbacks outside Vue's setup context.
+
+let _roomStore: ReturnType<typeof useRoomStore> | null = null;
+let _authStore: ReturnType<typeof useAuthStore> | null = null;
+let _giftStore: ReturnType<typeof useGiftStore> | null = null;
+let _toast: ReturnType<typeof useToast> | null = null;
+
+// ============================================
 // Composable
 // ============================================
 
@@ -59,10 +70,17 @@ export function useRoomAudio(): UseRoomAudioReturn {
   // ========================================
   // Dependencies
   // ========================================
-  const roomStore = useRoomStore();
-  const authStore = useAuthStore();
-  const giftStore = useGiftStore();
-  const toast = useToast();
+  // Initialize on first call only (during Vue setup context)
+  if (!_roomStore) _roomStore = useRoomStore();
+  if (!_authStore) _authStore = useAuthStore();
+  if (!_giftStore) _giftStore = useGiftStore();
+  if (!_toast) _toast = useToast();
+
+  // Use cached references
+  const roomStore = _roomStore;
+  const authStore = _authStore;
+  const giftStore = _giftStore;
+  const toast = _toast;
   const log = createLogger('[RoomAudio]');
 
   // Socket and mediasoup instances

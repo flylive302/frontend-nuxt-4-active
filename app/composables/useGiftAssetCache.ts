@@ -20,18 +20,6 @@ const videoPending = new Map<string, Promise<string>>();
 const preloadedGiftIds = new Set<number>();
 
 // ========================================
-// URL Normalization
-// ========================================
-
-/**
- * Normalize video URL - currently just passes through as-is.
- * Can be extended if URL transformation is needed.
- */
-function normalizeVideoUrl(url: string): string {
-  return url;
-}
-
-// ========================================
 // Composable
 // ========================================
 
@@ -39,16 +27,9 @@ export function useGiftAssetCache() {
   const log = createLogger('[GiftAssetCache]');
   /**
    * Preload a video asset and store as Blob URL.
-   * Normalizes URLs to handle proxy paths from backend.
    */
-  async function preloadVideo(rawUrl: string): Promise<string> {
-    // Normalize URL to local path
-    const url = normalizeVideoUrl(rawUrl);
-    
-    // Already cached (check both raw and normalized)
-    if (videoCache.has(rawUrl)) {
-      return videoCache.get(rawUrl)!;
-    }
+  async function preloadVideo(url: string): Promise<string> {
+    // Already cached
     if (videoCache.has(url)) {
       return videoCache.get(url)!;
     }
@@ -67,11 +48,7 @@ export function useGiftAssetCache() {
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
         
-        // Cache with both raw and normalized URLs as keys
-        videoCache.set(rawUrl, blobUrl);
-        if (rawUrl !== url) {
-          videoCache.set(url, blobUrl);
-        }
+        videoCache.set(url, blobUrl);
         log.debug('✅ Video cached:', url);
         
         return blobUrl;
@@ -134,28 +111,21 @@ export function useGiftAssetCache() {
   }
 
   /**
-   * Get cached Blob URL for a video, or return normalized URL as fallback
+   * Get cached Blob URL for a video, or return original URL as fallback
    */
-  function getCachedVideoUrl(rawUrl: string): string {
-    // Check raw URL first
-    if (videoCache.has(rawUrl)) {
-      return videoCache.get(rawUrl)!;
-    }
-    // Check normalized URL
-    const url = normalizeVideoUrl(rawUrl);
+  function getCachedVideoUrl(url: string): string {
     if (videoCache.has(url)) {
       return videoCache.get(url)!;
     }
-    // Return normalized URL as fallback (local path)
+    // Return original URL as fallback
     return url;
   }
 
   /**
    * Check if a video is cached
    */
-  function isVideoCached(rawUrl: string): boolean {
-    const url = normalizeVideoUrl(rawUrl);
-    return videoCache.has(rawUrl) || videoCache.has(url);
+  function isVideoCached(url: string): boolean {
+    return videoCache.has(url);
   }
 
   /**

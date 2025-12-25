@@ -3,8 +3,11 @@
  * RoomShell - Main room container component
  * Integrates header, seats, chat panel, and gifting drawer
  */
-import { ref } from 'vue';
 import { useWindowFocus } from '@vueuse/core';
+import { createLogger } from '~/utils/logger';
+import { ASSET_PRELOAD_DELAY_MS } from '~/constants/room';
+
+const log = createLogger('[RoomShell]');
 const roomStore = useRoomStore()
 const { joinRoom, leaveRoom, connectionStatus, isLocalMuted, toggleLocalMute, isProducing } = useRoomAudio()
 const toast = useToast()
@@ -38,7 +41,7 @@ watch(
         try {
           await joinRoom(String(newRoom.id))
         } catch (error) {
-          console.error('[RoomShell] Failed to join audio:', error)
+          log.error('Failed to join audio:', error)
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           toast.add({
             title: 'Audio connection failed',
@@ -82,7 +85,7 @@ onUnmounted(() => {
 const { startIdlePreload } = useAssetPreloader()
 onMounted(() => {
   // Delay to allow initial render to complete
-  setTimeout(startIdlePreload, 2000)
+  setTimeout(startIdlePreload, ASSET_PRELOAD_DELAY_MS)
 })
 
 </script>

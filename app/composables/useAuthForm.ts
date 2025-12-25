@@ -1,10 +1,36 @@
-import { ref, type Ref } from 'vue'
-import type { FormError } from '@nuxt/ui'
+import type { Ref } from 'vue'
 import { useApi } from './useApi'
 
+/**
+ * Field error object shape used by Nuxt UI Form component at runtime.
+ * Note: This differs from @nuxt/ui's FormError<T> TypeScript type due to 
+ * a mismatch between the library's type definitions and runtime behavior.
+ */
+interface FormFieldError {
+  path: string
+  id?: string
+  message: string
+}
+
+/**
+ * Minimal interface for the form methods we actually use.
+ * Uses loose typing to accommodate Nuxt UI Form's complex internal types.
+ * 
+ * @internal This is intentionally loose to handle Nuxt UI's Form component
+ * which has complex generic types that don't align with our usage patterns.
+ */
+interface FormInstance {
+  errors: unknown
+  clear: () => void
+  setErrors: (errors: FormFieldError[]) => void
+}
+
 export interface UseAuthFormOptions {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  formRef: Ref<any>
+  /** 
+   * Reference to the Nuxt UI Form component instance.
+   * Uses loose typing due to Nuxt UI Form's complex generic types.
+   */
+  formRef: Ref<FormInstance | null>
   onSuccess?: (data: unknown) => Promise<void> | void
   successMessage?: string
 }
@@ -27,18 +53,15 @@ export function useAuthForm(options: UseAuthFormOptions) {
     const errors = options.formRef.value?.errors
     if (!errors) return undefined
     
-    // errors is a Ref<FormError[]> in Nuxt UI Form
-    // We define a local interface to ensure we can access the properties we need
-    interface LocalFormError {
-      id: string
-      message: string
-      path?: string
-    }
-
-    const errorList = (Array.isArray(errors) ? errors : (errors as unknown as Ref<LocalFormError[]>).value) as LocalFormError[]
+    // Handle both array and ref-wrapped array formats from Nuxt UI Form
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawErrors = errors as any
+    const errorList: FormFieldError[] = Array.isArray(rawErrors) 
+      ? rawErrors 
+      : (rawErrors?.value ?? [])
     
-    const error = errorList?.find(
-      (e) => e.path === fieldName || e.id === fieldName
+    const error = errorList.find(
+      (e: FormFieldError) => e.path === fieldName || e.id === fieldName
     )
     return error?.message
   }
@@ -73,7 +96,7 @@ export function useAuthForm(options: UseAuthFormOptions) {
 
       // Handle validation errors (422)
       if (normalizedError.status === 422 && normalizedError.fieldErrors) {
-        const formErrors: FormError[] = Object.entries(normalizedError.fieldErrors).map(
+        const formErrors: FormFieldError[] = Object.entries(normalizedError.fieldErrors).map(
           ([path, messages]) => ({
             path,
             id: path,

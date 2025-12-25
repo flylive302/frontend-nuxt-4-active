@@ -9,6 +9,12 @@ import { useIdle } from '@vueuse/core';
 import type { PreloadAsset, PreloadAssetType } from '~/config/preload-assets';
 import { ROOM_PRELOAD_ASSETS } from '~/config/preload-assets';
 import { useGiftAssetCache } from './useGiftAssetCache';
+import { createLogger } from '~/utils/logger';
+
+// ========================================
+// Logger
+// ========================================
+const log = createLogger('[AssetPreloader]');
 
 // ========================================
 // Module-level State (Singleton)
@@ -62,12 +68,12 @@ function preloadImage(url: string): Promise<void> {
     img.src = url;
 
     img.onload = () => {
-      console.log('[AssetPreloader] ✅ Image:', url);
+      log.debug('Image loaded:', url);
       resolve();
     };
 
     img.onerror = () => {
-      console.warn('[AssetPreloader] ❌ Image failed:', url);
+      log.warn('Image failed:', url);
       resolve();
     };
   });
@@ -83,12 +89,12 @@ function preloadAudio(url: string): Promise<void> {
     audio.src = url;
 
     audio.onloadeddata = () => {
-      console.log('[AssetPreloader] ✅ Audio:', url);
+      log.debug('Audio loaded:', url);
       resolve();
     };
 
     audio.onerror = () => {
-      console.warn('[AssetPreloader] ❌ Audio failed:', url);
+      log.warn('Audio failed:', url);
       resolve();
     };
   });
@@ -100,9 +106,9 @@ function preloadAudio(url: string): Promise<void> {
 async function preloadJson(url: string): Promise<void> {
   try {
     await $fetch(url);
-    console.log('[AssetPreloader] ✅ JSON:', url);
+    log.debug('JSON loaded:', url);
   } catch {
-    console.warn('[AssetPreloader] ❌ JSON failed:', url);
+    log.warn('JSON failed:', url);
   }
 }
 
@@ -152,7 +158,7 @@ export function useAssetPreloader() {
     // Sort by priority (lower = higher priority)
     const sorted = [...assets].sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
 
-    console.log(`[AssetPreloader] 🚀 Starting preload of ${sorted.length} assets`);
+    log.debug('Starting preload of', sorted.length, 'assets');
 
     for (const asset of sorted) {
       // Skip already loaded
@@ -164,7 +170,7 @@ export function useAssetPreloader() {
       await preloadAsset(asset);
     }
 
-    console.log('[AssetPreloader] ✅ Preloading complete');
+    log.debug('Preloading complete');
   }
 
   /**

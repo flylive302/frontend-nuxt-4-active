@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
+import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 
 definePageMeta({
   layout: 'home',
   middleware: 'auth'
 })
 
-const bannerAutoplay = ref<{ delay: number } | undefined>({ delay: 4000 })
-const roomAutoplay = ref<{ delay: number } | undefined>({ delay: 3000 })
+const bannerAutoplay = ref<{ delay: number } | undefined>({ delay: BANNER_AUTOPLAY_DELAY_MS })
+const roomAutoplay = ref<{ delay: number } | undefined>({ delay: ROOM_AUTOPLAY_DELAY_MS })
 
 // ---- Optimization: Pause Autoplay when off-screen
 const bannerRef = ref(null)
@@ -38,11 +39,11 @@ const fetchRoomsList = async ({ page }: { page: number }) => {
 }
 
 useIntersectionObserver(bannerRef, ([entry]) => {
-  bannerAutoplay.value = entry?.isIntersecting ? { delay: 4000 } : undefined
+  bannerAutoplay.value = entry?.isIntersecting ? { delay: BANNER_AUTOPLAY_DELAY_MS } : undefined
 })
 
 useIntersectionObserver(roomRef, ([entry]) => {
-  roomAutoplay.value = entry?.isIntersecting ? { delay: 3000 } : undefined
+  roomAutoplay.value = entry?.isIntersecting ? { delay: ROOM_AUTOPLAY_DELAY_MS } : undefined
 })
 
 // ---- Types
@@ -137,20 +138,13 @@ const banners: Banner[] = [
           }"
           class="mb-4"
       >
-        <template #default="slotProps">
+        <template #default="{ item }">
           <EventsBanners
-              v-if="slotProps?.item"
-              v-bind="{
-                ...(slotProps.item.lUserName ? { lUserName: slotProps.item.lUserName } : {}),
-                ...(slotProps.item.lFrameName ? { lFrameName: slotProps.item.lFrameName } : {}),
-                ...(slotProps.item.lFrameGirth ? { lFrameGirth: slotProps.item.lFrameGirth } : {}),
-                ...(slotProps.item.rUserName ? { rUserName: slotProps.item.rUserName } : {}),
-                ...(slotProps.item.rFrameName ? { rFrameName: slotProps.item.rFrameName } : {}),
-                ...(slotProps.item.rFrameGirth ? { rFrameGirth: slotProps.item.rFrameGirth } : {})
-              }"
-              :type="slotProps.item.type"
+              v-if="item"
+              v-bind="item"
+              :type="item.type"
           >
-            <span :class="slotProps.item.textClass">{{ slotProps.item.text }}</span>
+            <span :class="item.textClass">{{ item.text }}</span>
           </EventsBanners>
         </template>
       </UCarousel>

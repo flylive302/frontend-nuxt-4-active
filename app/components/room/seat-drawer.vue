@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoomAudio } from '~/composables/useRoomAudio'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[SeatDrawer]')
 
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
@@ -82,7 +85,7 @@ async function handleTakeSeat() {
       roomStore.closeSeat()
     }
   } catch (error) {
-    console.error('[SeatDrawer] Failed to take seat:', error)
+    log.error('Failed to take seat:', error)
   } finally {
     isLoading.value = false
   }
@@ -100,7 +103,7 @@ async function handleLeaveSeat() {
       roomStore.closeSeat()
     }
   } catch (error) {
-    console.error('[SeatDrawer] Failed to leave seat:', error)
+    log.error('Failed to leave seat:', error)
   } finally {
     isLoading.value = false
   }
@@ -121,7 +124,7 @@ async function handleToggleMute() {
       await muteUser(userId)
     }
   } catch (error) {
-    console.error('[SeatDrawer] Failed to toggle mute:', error)
+    log.error('Failed to toggle mute:', error)
   } finally {
     isLoading.value = false
   }
@@ -140,7 +143,7 @@ async function handleToggleLock() {
     }
     roomStore.closeSeat()
   } catch (error) {
-    console.error('[SeatDrawer] Failed to toggle lock:', error)
+    log.error('Failed to toggle lock:', error)
   } finally {
     isLoading.value = false
   }
@@ -169,10 +172,7 @@ v-if="isCurrentUserSeat" class="w-full justify-center rounded-none" size="xl" va
           Leave Seat {{ seatId }}
         </UButton>
 
-<!--        <UButton v-if="isCurrentUserSeat && isProducing" class="w-full justify-center rounded-none" size="xl"-->
-<!--          variant="subtle" color="warning" icon="i-lucide-volume-x" @click="stopAudio">-->
-<!--          Stop Speaking-->
-<!--        </UButton>-->
+
 
         <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
         <UButton

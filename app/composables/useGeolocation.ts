@@ -2,6 +2,10 @@
  * Composable for handling geolocation-related functionality.
  * Provides methods to detect the user's country.
  */
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[Geolocation]');
+
 export function useGeolocation() {
   // ========================================
   // Business Logic / Core Logic
@@ -17,7 +21,7 @@ export function useGeolocation() {
       const { country_code } = await $fetch<{ country_code: string | null }>('/api/detect-country')
       return country_code
     } catch (error) {
-      console.error('Failed to detect country:', error)
+      log.error('Failed to detect country:', error)
       return null
     }
   }

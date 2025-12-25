@@ -7,7 +7,9 @@
  * Includes safety timeout to prevent stuck modals.
  */
 import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift';
+import { createLogger } from '~/utils/logger';
 
+const log = createLogger('[GiftPlayback]');
 const authStore = useAuthStore();
 const giftStore = useGiftStore();
 const { combo } = useGiftSending();
@@ -48,7 +50,7 @@ function clearPlaybackTimeout() {
 function startPlaybackTimeout() {
   clearPlaybackTimeout();
   playbackTimeoutId = setTimeout(() => {
-    console.warn('[GiftPlayback] Timeout reached - force closing modal');
+    log.warn('Timeout reached - force closing modal');
     handleComplete();
   }, GIFT_PLAYBACK_TIMEOUT_MS);
 }

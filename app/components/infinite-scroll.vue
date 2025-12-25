@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import { useInfiniteScroll } from '@vueuse/core'
+import { createLogger } from '~/utils/logger';
 
 defineOptions({ name: 'InfiniteScroll' })
 
@@ -131,12 +131,14 @@ function evaluateHasMore(
   return fetchedItems.length >= metaFallback.perPage
 }
 
+const log = createLogger('[InfiniteScroll]');
+
 async function loadNextPage(): Promise<void> {
   if (isLoading.value || !hasMore.value) return
 
   const hasFetchSource = Boolean(props.fetcher) || endpointRef.value.length > 0
   if (!hasFetchSource) {
-    console.warn('InfiniteScroll: provide either an endpoint or a fetcher.')
+    log.warn('Provide either an endpoint or a fetcher.')
     hasMore.value = false
     return
   }

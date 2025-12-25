@@ -38,3 +38,7 @@ export const MAX_CHAT_MESSAGES = 500;
 
 /** Debounce delay for gift preload trigger in milliseconds */
 export const GIFT_PRELOAD_DEBOUNCE_MS = 300;
+
+/** Delay before starting idle asset preloading in milliseconds */
+export const ASSET_PRELOAD_DELAY_MS = 2_000;
+

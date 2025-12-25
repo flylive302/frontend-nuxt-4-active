@@ -1,64 +1,20 @@
 <script setup lang="ts">
 import type { StepperItem } from "@nuxt/ui";
-import { ref } from "vue";
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[RoomHeader]');
 
 const roomStore = useRoomStore();
 const {leaveRoom} = useRoomAudio();
 
-const items = ref([
-  {
-    title: 'Level 1',
-    description: 'Pro Badge',
-    icon: 'i-lucide-trophy'
-  },
-  {
-    title: 'Level 2',
-    description: 'Custom Room Card',
-    icon: 'i-lucide-trophy'
-  },
-  {
-    title: 'Level 3',
-    description: 'Agency Frame',
-    icon: 'i-lucide-trophy'
-  },
-  {
-    title: 'Level 4',
-    description: 'Custom Entry',
-    icon: 'i-lucide-trophy'
-  },
-  {
-    title: 'Maxed Out',
-    description: 'Top Agency'
-  }
-])
-
-const adminAnnouncements = ref<StepperItem[]>([
-  {
-    title: '24-04-2014',
-    description: 'Admin Announcements will be displayed here in a proper formate with date and time',
-    icon: 'i-lucide-asterisk'
-  },
-  {
-    title: '24-04-2014',
-    description: 'Admin Announcements will be displayed here in a proper formate with date and time',
-    icon: 'i-lucide-asterisk'
-  },
-  {
-    title: '24-04-2014',
-    description: 'Admin Announcements will be displayed here in a proper formate with date and time',
-    icon: 'i-lucide-asterisk'
-  },
-  {
-    title: '24-04-2014',
-    description: 'Admin Announcements will be displayed here in a proper formate with date and time',
-    icon: 'i-lucide-asterisk'
-  },
-  {
-    title: '24-04-2014',
-    description: 'Admin Announcements will be displayed here in a proper formate with date and time',
-    icon: 'i-lucide-asterisk'
-  },
-])
+// Room level progression (placeholder until API is implemented)
+const ROOM_LEVELS: StepperItem[] = [
+  { title: 'Level 1', description: 'Pro Badge', icon: 'i-lucide-trophy' },
+  { title: 'Level 2', description: 'Custom Room Card', icon: 'i-lucide-trophy' },
+  { title: 'Level 3', description: 'Agency Frame', icon: 'i-lucide-trophy' },
+  { title: 'Level 4', description: 'Custom Entry', icon: 'i-lucide-trophy' },
+  { title: 'Maxed Out', description: 'Top Agency' },
+];
 
 const open = ref(false)
 </script>
@@ -90,17 +46,10 @@ const open = ref(false)
               </p>
 
               <div class="w-full overflow-x-scroll pb-2">
-                <UStepper :ui="{indicator: 'text-white'}" :items="items" size="sm" class="w-[250%]" />
+                <UStepper :ui="{indicator: 'text-white'}" :items="ROOM_LEVELS" size="sm" class="w-[250%]" />
               </div>
 
-              <SectionTitle class="mt-1">Admin Announcements</SectionTitle>
-              <UStepper
-                  :ui="{indicator: 'text-white'}"
-                  :items="adminAnnouncements"
-                  size="sm"
-                  class="bg-default p-2 rounded-md mt-2 overflow-scroll shadow-lg shadow-neutral-950 max-h-[30vh]"
-                  orientation="vertical"
-              />
+              <!-- TODO: Admin Announcements - Enable when API is ready -->
             </div>
           </div>
         </template>
@@ -170,8 +119,7 @@ const open = ref(false)
                       await roomStore.leaveRoom();
                       open = false;
                     } catch (error) {
-                      // Show error notification to user
-                      console.error('Failed to leave room:', error);
+                      log.error('Failed to leave room:', error);
                     }
                   }"
                 >

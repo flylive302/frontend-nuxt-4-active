@@ -43,23 +43,3 @@ export function createEmitAsync(socket: Ref<AudioSocket | null>) {
   };
 }
 
-/**
- * Type-safe socket event emitter without acknowledgement.
- * Use for fire-and-forget events like chat messages.
- *
- * @param socket - Ref to the socket instance
- * @param event - Event name
- * @param payload - Event payload
- * @returns true if emitted, false if socket not connected
- */
-export function emitEvent<TPayload>(
-  socket: Ref<AudioSocket | null>,
-  event: string,
-  payload: TPayload
-): boolean {
-  if (!socket.value) {
-    return false;
-  }
-  socket.value.emit(event, payload);
-  return true;
-}
