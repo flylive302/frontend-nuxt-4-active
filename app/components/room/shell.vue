@@ -39,9 +39,10 @@ watch(
           await joinRoom(String(newRoom.id))
         } catch (error) {
           console.error('[RoomShell] Failed to join audio:', error)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           toast.add({
             title: 'Audio connection failed',
-            description: 'Chat and gifting will still work.',
+            description: errorMessage || 'Chat and gifting will still work.',
             color: 'warning',
           })
           // Don't close room - let user stay with chat-only mode

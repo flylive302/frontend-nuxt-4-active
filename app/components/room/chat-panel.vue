@@ -12,7 +12,7 @@ const { sendChatMessage } = useRoomAudio();
 
 // Input state
 const messageInput = ref('');
-const inputRef = ref<HTMLInputElement | null>(null);
+const inputRef = ref<{ $el: HTMLElement } | null>(null);
 
 // Auto-scroll to bottom when new messages arrive
 const scrollerRef = ref<InstanceType<typeof DynamicScroller> | null>(null);
@@ -35,7 +35,9 @@ function handleSend() {
 
   sendChatMessage(content);
   messageInput.value = '';
-  inputRef.value?.focus();
+  // UInput is a Vue component - access the input element via $el
+  const inputEl = inputRef.value?.$el?.querySelector('input') as HTMLInputElement | null;
+  inputEl?.focus();
 }
 
 // Handle enter key

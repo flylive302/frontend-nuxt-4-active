@@ -88,15 +88,28 @@ const formState = reactive<FormState>({
   dateOfBirth: null,
 })
 
-const dateOfBirthModel = ref<DateValue | null>(null)
+const dateOfBirthModel = ref<DateValue | undefined>(undefined)
 
 watchEffect(() => {
-  dateOfBirthModel.value = formState.dateOfBirth ?? null
+  dateOfBirthModel.value = formState.dateOfBirth ?? undefined
 })
 
 watch(dateOfBirthModel, (value) => {
   formState.dateOfBirth = value ?? null
 })
+
+/**
+ * Handler for UCalendar's model-value update.
+ * Accepts the union type from UCalendar and extracts DateValue.
+ */
+function handleDateOfBirthChange(value: unknown): void {
+  // UCalendar emits DateValue for single selection mode
+  if (value && typeof value === 'object' && 'year' in value && 'month' in value && 'day' in value) {
+    dateOfBirthModel.value = value as DateValue
+  } else {
+    dateOfBirthModel.value = undefined
+  }
+}
 
 const formRef = ref<Form<FormSchema> | null>(null)
 
@@ -255,9 +268,10 @@ watch(
           </UButton>
           <template #content>
             <UCalendar
-              v-model="dateOfBirthModel"
+              :model-value="(dateOfBirthModel as DateValue | undefined)"
               :default-placeholder="calendarDefaultDate"
               class="p-2"
+              @update:model-value="handleDateOfBirthChange"
             />
           </template>
         </UPopover>

@@ -84,6 +84,8 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
   /**
    * Load the mediasoup device with RTP capabilities from the server.
    * Must be called before creating transports.
+   * 
+   * @throws {Error} If the device/browser doesn't support WebRTC
    */
   async function loadDevice(rtpCapabilities: RtpCapabilities): Promise<void> {
     if (device.value?.loaded) {
@@ -91,9 +93,23 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    device.value = new Device();
-    await device.value.load({ routerRtpCapabilities: rtpCapabilities });
-    console.log('[Mediasoup] Device loaded');
+    // Check for basic WebRTC support
+    if (typeof RTCPeerConnection === 'undefined') {
+      throw new Error('WebRTC is not supported in this browser. Please use a modern browser like Chrome, Firefox, Safari, or Edge.');
+    }
+
+    try {
+      device.value = new Device();
+      await device.value.load({ routerRtpCapabilities: rtpCapabilities });
+      console.log('[Mediasoup] Device loaded');
+    } catch (error) {
+      // Handle UnsupportedError from mediasoup-client
+      if (error instanceof Error && error.name === 'UnsupportedError') {
+        console.error('[Mediasoup] Device not supported:', error.message);
+        throw new Error('Audio is not supported on this device/browser. Please try using Chrome, Firefox, or Safari on a desktop or mobile device.');
+      }
+      throw error;
+    }
   }
 
   /**
