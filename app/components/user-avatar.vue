@@ -7,6 +7,7 @@ const props = withDefaults(defineProps<{
   frameGirth?: number
   animated?: boolean
   staticSrc?: string
+  lazy?: boolean        // Enable lazy loading (default: true for performance)
 }>(), {
   frameName: 'frames/5',
   img: 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp',
@@ -14,7 +15,8 @@ const props = withDefaults(defineProps<{
   left: 50,
   frameGirth: 70,
   animated: false,
-  staticSrc: 'siteAssets/frames/default-frame.webp'
+  staticSrc: 'siteAssets/frames/default-frame.webp',
+  lazy: true,
 });
 </script>
 
@@ -25,7 +27,7 @@ const props = withDefaults(defineProps<{
         class="absolute-middle aspect-square rounded-full object-contain"
         :src="img"
         alt="avatar"
-        preload
+        :loading="lazy ? 'lazy' : 'eager'"
         :style="{
           top: `${props.top}%`,
           left: `${props.left}%`,
