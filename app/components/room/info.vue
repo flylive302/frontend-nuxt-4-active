@@ -75,15 +75,6 @@ async function handleInvite(userId: number) {
     isInviting.value = false
   }
 }
-
-/** Get color based on user rank for leaderboard badges */
-function getRankColor(rank: number): 'primary' | 'secondary' | 'tertiary' | 'neutral' {
-  const colors = ['primary', 'secondary', 'tertiary'] as const
-  if (rank >= 1 && rank <= 3) {
-    return colors[rank - 1]!
-  }
-  return 'neutral'
-}
 </script>
 
 <template>
@@ -114,32 +105,7 @@ variant="soft" icon="i-lucide-coins" size="xs"
                 <DynamicScroller :items="dailyUsers" :min-item-size="70" class="h-full" key-field="id">
                   <template #default="{ item: user, index, active }">
                     <DynamicScrollerItem :item="user" :active="active" :data-index="index" class="pb-3">
-                      <div class="flex items-center justify-between w-full">
-                        <UBadge
-                          :color="getRankColor(user.rank)"
-                          class="text-white font-bold" :label="user.rank" />
-                        <div
-                          class="flex gap-1 bg-gradient-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden flex-grow ml-2">
-                          <UserAvatar animated class="w-14" />
-                          <div class="flex flex-col justify-center min-h-full px-2">
-                            <h3 class="text-sm font-bold leading-tight">{{ user.name }}
-                              <icon name="i-lucide-mars" />
-                            </h3>
-                            <div class="flex items-center gap-1 mt-1">
-                              <ProfileBadge
-                                badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary"
-                                :txt="user.wealthLevel" />
-                              <ProfileBadge
-                                badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary"
-                                :txt="user.charmLevel" />
-                            </div>
-                          </div>
-
-                          <div class="flex flex-col justify-center min-h-full ml-auto pr-2">
-                            <UButton size="xs" variant="soft" icon="i-lucide-coins">{{ user.coins }}</UButton>
-                          </div>
-                        </div>
-                      </div>
+                      <RoomLeaderboardItem :user="user" />
                     </DynamicScrollerItem>
                   </template>
                 </DynamicScroller>
@@ -166,27 +132,13 @@ variant="subtle" icon="i-lucide-users-round" size="xs"
             <DynamicScroller :items="participants" :min-item-size="70" class="h-full" key-field="id">
               <template #default="{ item, index, active }">
                 <DynamicScrollerItem :item="item" :active="active" :data-index="index" class="pb-3">
-                  <div
-                    class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden">
-                    <UserAvatar :img="item.avatar" animated class="w-13" />
-                    <div class="flex flex-col justify-center min-h-full px-2 flex-grow">
-                      <h3 class="text-sm font-bold leading-tight">
-                        {{ item.name }}
-                        <UBadge v-if="item.isSpeaker" size="xs" color="primary" class="ml-1">Speaker</UBadge>
-                      </h3>
-                      <div class="flex items-center gap-1 mt-1">
-                        <span class="text-xs text-gray-400">ID: {{ item.id }}</span>
-                      </div>
-                    </div>
-                    <!-- Invite to Seat button - Owner only, for non-speakers -->
-                    <!-- Show ONLY if in invite mode -->
-                    <UButton
-v-if="inviteModeSeat !== null && !item.isSpeaker && isRoomOwner" size="xs" color="primary"
-                      variant="soft" icon="i-lucide-user-plus" :loading="isInviting" class="mr-2 self-center"
-                      @click.stop="handleInvite(item.id)">
-                      Invite to Seat {{ inviteModeSeat + 1 }}
-                    </UButton>
-                  </div>
+                  <RoomParticipantListItem
+                    :participant="item"
+                    :invite-mode-seat="inviteModeSeat"
+                    :is-room-owner="isRoomOwner"
+                    :is-inviting="isInviting"
+                    @invite="handleInvite"
+                  />
                 </DynamicScrollerItem>
               </template>
             </DynamicScroller>

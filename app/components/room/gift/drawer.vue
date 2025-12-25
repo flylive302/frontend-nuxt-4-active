@@ -98,7 +98,7 @@ async function handleSend() {
                   :items="quantityOptions"
                   size="sm"
                   class="w-20 rounded-full overflow-hidden"
-                  @update:model-value="(val: any) => giftStore.setQuantity(val)"
+                  @update:model-value="(val: number) => giftStore.setQuantity(val)"
               />
               <!-- Send Button -->
               <UButton

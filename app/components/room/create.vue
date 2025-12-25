@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import type { FormError, Form } from '@nuxt/ui'
-import FileUpload from '~/components/common/FileUpload.vue'
+import FileUpload from '~/components/common/file-upload.vue'
 import { useRoom } from "~/composables/useRoom";
 
 const authStore = useAuthStore()

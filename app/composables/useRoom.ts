@@ -31,9 +31,9 @@ export function useRoom() {
                 toast.add({ title: response.message, color: 'error' })
                 roomStore.updateStatus('error');
             }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            toast.add({ title: error?.data?.message || 'Failed to fetch room', color: 'error' })
+        } catch (error: unknown) {
+            const errorMessage = (error as { data?: { message?: string } })?.data?.message || 'Failed to fetch room'
+            toast.add({ title: errorMessage, color: 'error' })
             roomStore.updateStatus('error');
         }
     }
@@ -68,10 +68,10 @@ export function useRoom() {
                 toast.add({ title: response.message, color: "error" })
                 return 'failed';
             }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
+        } catch (error: unknown) {
+             const errorMessage = (error as { data?: { message?: string } })?.data?.message || 'Failed to create room'
              roomStore.setUserRoom(null);
-             toast.add({ title: error?.data?.message || 'Failed to create room', color: "error" })
+             toast.add({ title: errorMessage, color: "error" })
              return 'failed';
         }
     }

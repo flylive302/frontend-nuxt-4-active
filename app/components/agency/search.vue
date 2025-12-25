@@ -176,7 +176,7 @@ const errorMessage = computed<string | null>(() => {
             placeholder="Search by name or country..."
             class="h-90"
             virtualize
-            @select="(item: any) => item?.onSelect?.()"
+            @select="(item: AgencyListItem) => item?.onSelect?.()"
         >
           <!-- Custom Agency Row -->
           <template #item="{ item }">            

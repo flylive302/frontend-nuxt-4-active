@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm } from '~/composables/useAuthForm'
 import type { Form } from '@nuxt/ui'
-import FileUpload from "~/components/common/FileUpload.vue";
+import FileUpload from "~/components/common/file-upload.vue";
 import type {UpdateProfilePayload, GenderOption} from "~/types/auth";
 
 definePageMeta({
@@ -88,28 +88,24 @@ const formState = reactive<FormState>({
   dateOfBirth: null,
 })
 
-const dateOfBirthModel = ref<DateValue | undefined>(undefined)
+const dateOfBirthModel = ref<CalendarDate | undefined>(undefined)
+
+// Computed wrapper for UCalendar v-model compatibility
+// UCalendar expects DateValue from @nuxt/ui, but we use CalendarDate from @internationalized/date
+const calendarModel = computed({
+  get: () => dateOfBirthModel.value as DateValue | undefined,
+  set: (value: DateValue | undefined) => {
+    dateOfBirthModel.value = value as CalendarDate | undefined
+  }
+})
 
 watchEffect(() => {
-  dateOfBirthModel.value = formState.dateOfBirth ?? undefined
+  dateOfBirthModel.value = (formState.dateOfBirth as CalendarDate | null) ?? undefined
 })
 
 watch(dateOfBirthModel, (value) => {
   formState.dateOfBirth = value ?? null
 })
-
-/**
- * Handler for UCalendar's model-value update.
- * Accepts the union type from UCalendar and extracts DateValue.
- */
-function handleDateOfBirthChange(value: unknown): void {
-  // UCalendar emits DateValue for single selection mode
-  if (value && typeof value === 'object' && 'year' in value && 'month' in value && 'day' in value) {
-    dateOfBirthModel.value = value as DateValue
-  } else {
-    dateOfBirthModel.value = undefined
-  }
-}
 
 const formRef = ref<Form<FormSchema> | null>(null)
 
@@ -268,10 +264,9 @@ watch(
           </UButton>
           <template #content>
             <UCalendar
-              :model-value="(dateOfBirthModel as DateValue | undefined)"
+              v-model="calendarModel"
               :default-placeholder="calendarDefaultDate"
               class="p-2"
-              @update:model-value="handleDateOfBirthChange"
             />
           </template>
         </UPopover>
@@ -309,3 +304,4 @@ watch(
     </UForm>
   </main>
 </template>
+
