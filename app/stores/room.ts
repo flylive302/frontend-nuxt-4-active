@@ -7,6 +7,7 @@ import type {
   AudioState,
   Seat,
 } from '~/types/audio';
+import { SEAT_COUNT, MAX_CHAT_MESSAGES } from '~/constants/room';
 
 // ============================================
 // Types
@@ -44,7 +45,7 @@ export const useRoomStore = defineStore('roomStore', () => {
   // Seats (15 speaker seats)
   // ========================================
   const seats = ref<Seat[]>(
-    Array.from({ length: 15 }, (_, i) => ({
+    Array.from({ length: SEAT_COUNT }, (_, i) => ({
       index: i,
       user: null,
       isMuted: false,
@@ -152,7 +153,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     };
     participants.value.clear();
     messages.value = [];
-    seats.value = Array.from({ length: 15 }, (_, i) => ({
+    seats.value = Array.from({ length: SEAT_COUNT }, (_, i) => ({
       index: i,
       user: null,
       isMuted: false,
@@ -255,9 +256,9 @@ export const useRoomStore = defineStore('roomStore', () => {
   function addMessage(message: ChatMessageEvent) {
     messages.value.push(message);
 
-    // Keep last 500 messages to prevent memory issues
-    if (messages.value.length > 500) {
-      messages.value = messages.value.slice(-500);
+    // Keep last MAX_CHAT_MESSAGES messages to prevent memory issues
+    if (messages.value.length > MAX_CHAT_MESSAGES) {
+      messages.value = messages.value.slice(-MAX_CHAT_MESSAGES);
     }
   }
 

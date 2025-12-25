@@ -22,6 +22,7 @@ import type {
 } from '~/types/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { refundPendingCoins } from './useGiftSending';
+import { createLogger } from '~/utils/logger';
 
 // ============================================
 // Types
@@ -73,16 +74,18 @@ export function setupRoomEventHandlers({
   declineInvite,
   startAudio,
 }: UseRoomEventHandlersParams): void {
+  const log = createLogger('[RoomEvents]');
+
   // Room events
   socket.on('room:userJoined', (event: UserJoinedEvent) => {
     roomStore.addParticipant(event.user);
-    console.log('[RoomAudio] User joined:', event.user.name);
+    log.debug('User joined:', event.user.name);
   });
 
   socket.on('room:userLeft', (event: UserLeftEvent) => {
     roomStore.removeParticipant(event.userId);
     giftStore.removeRecipient(event.userId);
-    console.log('[RoomAudio] User left:', event.userId);
+    log.debug('User left:', event.userId);
   });
 
   socket.on('room:closed', (event: RoomClosedEvent) => {
@@ -97,7 +100,7 @@ export function setupRoomEventHandlers({
 
   // Audio events
   socket.on('audio:newProducer', async (event: NewProducerEvent) => {
-    console.log('[RoomAudio] New producer from user:', event.userId);
+    log.debug('New producer from user:', event.userId);
     if (roomStore.currentRoom) {
       await consumeProducer(event.producerId, roomStore.currentRoom.id.toString());
     }
@@ -121,7 +124,7 @@ export function setupRoomEventHandlers({
 
     // If current user was kicked, stop their audio
     if (wasCurrentUserSeated) {
-      console.log('[RoomAudio] User was kicked from seat, stopping audio');
+      log.debug('User was kicked from seat, stopping audio');
       stopAudio();
       toast.add({
         title: 'Removed from seat',

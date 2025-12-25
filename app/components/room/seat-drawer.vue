@@ -4,7 +4,7 @@ import { useRoomAudio } from '~/composables/useRoomAudio'
 
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
-const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat } = useRoomAudio()
+const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, isAudioReady } = useRoomAudio()
 
 const isLoading = ref(false)
 
@@ -154,9 +154,12 @@ async function handleToggleLock() {
         <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
         <UButton
 v-if="(isSeatEmpty && !isSeatLocked) || isUserSeatedElsewhere"
-          class="w-full justify-center rounded-none" size="xl" variant="subtle" color="primary" :loading="isLoading"
+          class="w-full justify-center rounded-none" size="xl" variant="subtle" color="primary" 
+          :loading="isLoading"
+          :disabled="!isAudioReady"
           icon="i-lucide-mic" @click="handleTakeSeat">
           {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }}
+          <template v-if="!isAudioReady">(Loading...)</template>
         </UButton>
 
         <!-- Leave Seat button - only show if current user occupies this seat -->

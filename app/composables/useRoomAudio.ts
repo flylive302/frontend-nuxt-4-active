@@ -14,6 +14,9 @@ import type { Ref, ComputedRef } from 'vue';
 import { setupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
+import { createEmitAsync } from '~/utils/socket';
+import { createLogger } from '~/utils/logger';
+import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 
 // ============================================
 // Types
@@ -40,6 +43,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   isLocalMuted: Ref<boolean>;
   /** Toggle local microphone mute */
   toggleLocalMute: () => boolean;
+  /** Whether audio system is ready (device loaded + room joined) */
+  isAudioReady: ComputedRef<boolean>;
 }
 
 // ============================================
@@ -58,6 +63,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
   const toast = useToast();
+  const log = createLogger('[RoomAudio]');
 
   // Socket and mediasoup instances
   const { socket, connect, disconnect, status: connectionStatus, isConnected } = useAudioSocket();
@@ -68,6 +74,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     stopAudio: stopMediasoupAudio,
     consumeProducer,
     cleanup: cleanupMediasoup,
+    isDeviceLoaded,
     isProducing,
     isLocalMuted,
     toggleLocalMute,
@@ -81,25 +88,19 @@ export function useRoomAudio(): UseRoomAudioReturn {
   }
 
   // ========================================
-  // Helper: Emit with Promise
+  // Computed: Audio Ready State
   // ========================================
-  function emitAsync<TPayload, TResponse>(event: string, payload: TPayload): Promise<TResponse> {
-    return new Promise((resolve, reject) => {
-      if (!socket.value) {
-        reject(new Error('Socket not connected'));
-        return;
-      }
+  /**
+   * Whether the audio system is fully ready.
+   * This is true when device is loaded and we're connected.
+   * Used to prevent race conditions when user clicks seats too fast.
+   */
+  const isAudioReady = computed(() => isDeviceLoaded.value && isConnected.value);
 
-      const timeout = setTimeout(() => {
-        reject(new Error(`Socket event '${event}' timed out`));
-      }, 10000);
-
-      socket.value.emit(event, payload, (response: TResponse) => {
-        clearTimeout(timeout);
-        resolve(response);
-      });
-    });
-  }
+  // ========================================
+  // Helper: Emit with Promise (shared utility)
+  // ========================================
+  const emitAsync = createEmitAsync(socket);
 
   // ========================================
   // Core Audio Functions
@@ -170,11 +171,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
         }
       });
 
-      // Timeout after 10 seconds
+      // Timeout after configured duration
       setTimeout(() => {
         unwatch();
         reject(new Error('Connection timeout'));
-      }, 10000);
+      }, CONNECTION_TIMEOUT_MS);
     });
 
     // Setup event listeners (delegated to useRoomEventHandlers)
@@ -223,7 +224,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Handle initial room state from server
     // 1. Add existing participants
     if (response.participants && response.participants.length > 0) {
-      console.log('[RoomAudio] Adding', response.participants.length, 'existing participants');
+      log.debug('Adding', response.participants.length, 'existing participants');
       for (const p of response.participants) {
         roomStore.addParticipant({
           id: p.id,
@@ -250,17 +251,17 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // 3. Consume existing producers (listen to active speakers)
     if (response.existingProducers && response.existingProducers.length > 0) {
-      console.log('[RoomAudio] Consuming', response.existingProducers.length, 'existing producers');
+      log.debug('Consuming', response.existingProducers.length, 'existing producers');
       for (const producer of response.existingProducers) {
         try {
           await consumeProducer(producer.producerId, roomId);
         } catch (err) {
-          console.warn('[RoomAudio] Failed to consume producer:', producer.producerId, err);
+          log.warn('Failed to consume producer:', producer.producerId, err);
         }
       }
     }
 
-    console.log('[RoomAudio] Joined room:', roomId);
+    log.debug('Joined room:', roomId);
   }
 
   /**
@@ -280,7 +281,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear room state
     roomStore.clearAudioState();
 
-    console.log('[RoomAudio] Left room');
+    log.debug('Left room');
   }
 
   // ========================================
@@ -325,5 +326,6 @@ export function useRoomAudio(): UseRoomAudioReturn {
     isProducing,
     isLocalMuted,
     toggleLocalMute,
+    isAudioReady,
   };
 }

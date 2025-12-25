@@ -4,6 +4,7 @@
  * Unified cache for gift animation assets (videos as Blob URLs, SVGA parsed data).
  * This ensures preloaded assets are available to players without re-fetching.
  */
+import { createLogger } from '~/utils/logger';
 
 // ========================================
 // Module-level Singleton Caches
@@ -35,6 +36,7 @@ function normalizeVideoUrl(url: string): string {
 // ========================================
 
 export function useGiftAssetCache() {
+  const log = createLogger('[GiftAssetCache]');
   /**
    * Preload a video asset and store as Blob URL.
    * Normalizes URLs to handle proxy paths from backend.
@@ -70,11 +72,11 @@ export function useGiftAssetCache() {
         if (rawUrl !== url) {
           videoCache.set(url, blobUrl);
         }
-        console.log('[GiftAssetCache] ✅ Video cached:', url);
+        log.debug('✅ Video cached:', url);
         
         return blobUrl;
       } catch (error) {
-        console.warn('[GiftAssetCache] ❌ Video failed:', url, error);
+        log.warn('❌ Video failed:', url, error);
         throw error;
       } finally {
         videoPending.delete(url);
@@ -97,17 +99,17 @@ export function useGiftAssetCache() {
     if (svgaPlugin?.fetchAnimation) {
       try {
         await svgaPlugin.fetchAnimation(name);
-        console.log('[GiftAssetCache] ✅ SVGA cached:', name);
+        log.debug('✅ SVGA cached:', name);
       } catch (error) {
-        console.warn('[GiftAssetCache] ❌ SVGA failed:', name, error);
+        log.warn('❌ SVGA failed:', name, error);
       }
     } else {
       // Fallback if plugin not available
       try {
         await $fetch(`/parsedAnimations/${name}.json`);
-        console.log('[GiftAssetCache] ✅ SVGA cached (fallback):', name);
+        log.debug('✅ SVGA cached (fallback):', name);
       } catch (error) {
-        console.warn('[GiftAssetCache] ❌ SVGA failed:', name, error);
+        log.warn('❌ SVGA failed:', name, error);
       }
     }
   }

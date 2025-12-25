@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
+import { BODY_UNLOCK_DELAY_MS } from '~/constants/room'
 
 // Lazy-load room components - only loaded when user joins a room
 const RoomShell = defineAsyncComponent(() => import('~/components/room/shell.vue'))
@@ -20,7 +21,7 @@ const toggleBodyScroll = () => {
       document.body.removeAttribute('style');
       document.body.classList.remove('lock-body');
       document.body.classList.add('unlock-body');
-    },1000);
+    }, BODY_UNLOCK_DELAY_MS);
   }
 }
 // Run on component mount and whenever state changes

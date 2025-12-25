@@ -10,6 +10,8 @@ import type {
   ConsumerResumeResponse,
 } from '~/types/audio';
 import type { AudioSocket } from './useAudioSocket';
+import { createEmitAsync } from '~/utils/socket';
+import { createLogger } from '~/utils/logger';
 
 // ============================================
 // Types from mediasoup-client
@@ -55,27 +57,14 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
   const isProducing = computed(() => producer.value !== null && !producer.value.closed);
 
   // ========================================
-  // Private Helpers
+  // Logger
   // ========================================
+  const log = createLogger('[Mediasoup]');
 
-  /**
-   * Emit socket event with promise-based response
-   */
-  function emitAsync<TPayload, TResponse>(
-    event: string,
-    payload: TPayload
-  ): Promise<TResponse> {
-    return new Promise((resolve, reject) => {
-      if (!socket.value) {
-        reject(new Error('Socket not connected'));
-        return;
-      }
-
-      socket.value.emit(event, payload, (response: TResponse) => {
-        resolve(response);
-      });
-    });
-  }
+  // ========================================
+  // Socket Helper (shared utility)
+  // ========================================
+  const emitAsync = createEmitAsync(socket);
 
   // ========================================
   // Public Methods
@@ -89,7 +78,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
    */
   async function loadDevice(rtpCapabilities: RtpCapabilities): Promise<void> {
     if (device.value?.loaded) {
-      console.log('[Mediasoup] Device already loaded');
+      log.debug('Device already loaded');
       return;
     }
 
@@ -101,11 +90,11 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     try {
       device.value = new Device();
       await device.value.load({ routerRtpCapabilities: rtpCapabilities });
-      console.log('[Mediasoup] Device loaded');
+      log.debug('Device loaded');
     } catch (error) {
       // Handle UnsupportedError from mediasoup-client
       if (error instanceof Error && error.name === 'UnsupportedError') {
-        console.error('[Mediasoup] Device not supported:', error.message);
+        log.error('Device not supported:', error.message);
         throw new Error('Audio is not supported on this device/browser. Please try using Chrome, Firefox, or Safari on a desktop or mobile device.');
       }
       throw error;
@@ -164,19 +153,31 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
       }
     );
 
-    console.log('[Mediasoup] Consumer transport created');
+    log.debug('Consumer transport created');
   }
 
   /**
    * Create producer transport (called when user wants to speak)
    */
   async function createProducerTransport(): Promise<void> {
+    // Enhanced debugging for seat-taking issue
+    log.debug('createProducerTransport called:', {
+      deviceLoaded: device.value?.loaded,
+      currentRoomId: currentRoomId.value,
+      hasSocket: !!socket.value,
+      socketConnected: socket.value?.connected,
+    });
+
     if (!device.value?.loaded || !currentRoomId.value) {
+      log.error('Cannot create producer transport:', {
+        deviceLoaded: device.value?.loaded ?? false,
+        currentRoomId: currentRoomId.value,
+      });
       throw new Error('Device not loaded or room not joined');
     }
 
     if (producerTransport.value) {
-      console.log('[Mediasoup] Producer transport already exists');
+      log.debug('Producer transport already exists');
       return;
     }
 
@@ -245,7 +246,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
       }
     );
 
-    console.log('[Mediasoup] Producer transport created');
+    log.debug('Producer transport created');
   }
 
   /**
@@ -273,16 +274,16 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     producer.value = await producerTransport.value!.produce({ track });
 
     producer.value.on('transportclose', () => {
-      console.log('[Mediasoup] Producer transport closed');
+      log.debug('Producer transport closed');
       producer.value = null;
     });
 
     producer.value.on('trackended', () => {
-      console.log('[Mediasoup] Producer track ended');
+      log.debug('Producer track ended');
       stopAudio();
     });
 
-    console.log('[Mediasoup] Started producing audio:', producer.value.id);
+    log.debug('Started producing audio:', producer.value.id);
   }
 
   /**
@@ -293,7 +294,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
       producer.value.close();
       producer.value = null;
       isLocalMuted.value = false;
-      console.log('[Mediasoup] Stopped producing audio');
+      log.debug('Stopped producing audio');
     }
   }
 
@@ -303,7 +304,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
    */
   function toggleLocalMute(): boolean {
     if (!producer.value) {
-      console.warn('[Mediasoup] Cannot toggle mute: no active producer');
+      log.warn('Cannot toggle mute: no active producer');
       return isLocalMuted.value;
     }
 
@@ -311,7 +312,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     if (track) {
       isLocalMuted.value = !isLocalMuted.value;
       track.enabled = !isLocalMuted.value;
-      console.log('[Mediasoup] Local mute toggled:', isLocalMuted.value ? 'muted' : 'unmuted');
+      log.debug('Local mute toggled:', isLocalMuted.value ? 'muted' : 'unmuted');
     }
 
     return isLocalMuted.value;
@@ -322,13 +323,13 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
    */
   async function consumeProducer(producerId: string, roomId: string): Promise<void> {
     if (!device.value?.loaded || !consumerTransport.value) {
-      console.error('[Mediasoup] Cannot consume: device or transport not ready');
+      log.error('Cannot consume: device or transport not ready');
       return;
     }
 
     // Check if already consuming
     if (consumers.value.has(producerId)) {
-      console.log('[Mediasoup] Already consuming producer:', producerId);
+      log.debug('Already consuming producer:', producerId);
       return;
     }
 
@@ -340,7 +341,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     });
 
     if (response.error || !response.id) {
-      console.error('[Mediasoup] Failed to consume:', response.error);
+      log.error('Failed to consume:', response.error);
       return;
     }
 
@@ -360,7 +361,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     });
 
     if (resumeResponse.error) {
-      console.error('[Mediasoup] Failed to resume consumer:', resumeResponse.error);
+      log.error('Failed to resume consumer:', resumeResponse.error);
       return;
     }
 
@@ -372,19 +373,19 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     const playAudio = async () => {
       try {
         await audio.play();
-        console.log('[Mediasoup] Audio playing for producer:', producerId);
+        log.debug('Audio playing for producer:', producerId);
       } catch (err) {
         if (err instanceof Error && err.name === 'NotAllowedError') {
           // Autoplay blocked - wait for user interaction
-          console.warn('[Mediasoup] Autoplay blocked, waiting for user interaction');
+          log.warn('Autoplay blocked, waiting for user interaction');
 
           // Add a one-time click listener to resume playback
           const resumePlayback = async () => {
             try {
               await audio.play();
-              console.log('[Mediasoup] Audio resumed after user interaction');
+              log.debug('Audio resumed after user interaction');
             } catch (e) {
-              console.error('[Mediasoup] Still failed to play after interaction:', e);
+              log.error('Still failed to play after interaction:', e);
             }
             document.removeEventListener('click', resumePlayback);
             document.removeEventListener('touchstart', resumePlayback);
@@ -393,7 +394,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
           document.addEventListener('click', resumePlayback, { once: true });
           document.addEventListener('touchstart', resumePlayback, { once: true });
         } else {
-          console.error('[Mediasoup] Failed to play audio:', err);
+          log.error('Failed to play audio:', err);
         }
       }
     };
@@ -401,11 +402,11 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     playAudio();
 
     consumer.on('transportclose', () => {
-      console.log('[Mediasoup] Consumer transport closed for:', producerId);
+      log.debug('Consumer transport closed for:', producerId);
       consumers.value.delete(producerId);
     });
 
-    console.log('[Mediasoup] Started consuming producer:', producerId);
+    log.debug('Started consuming producer:', producerId);
   }
 
   /**
@@ -416,7 +417,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     if (consumer) {
       consumer.close();
       consumers.value.delete(producerId);
-      console.log('[Mediasoup] Stopped consuming producer:', producerId);
+      log.debug('Stopped consuming producer:', producerId);
     }
   }
 
@@ -446,7 +447,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     device.value = null;
     currentRoomId.value = null;
 
-    console.log('[Mediasoup] Cleanup complete');
+    log.debug('Cleanup complete');
   }
 
 

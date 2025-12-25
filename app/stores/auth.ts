@@ -25,8 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
             const { api } = useApi();
             const { data } = await api<{ data: User }>('/auth/user');
             setUser(data);
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
+        } catch {
             setUser(null);
             setToken(null);
         } finally {

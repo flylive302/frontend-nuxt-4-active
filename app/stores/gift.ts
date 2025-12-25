@@ -128,23 +128,34 @@ export const useGiftStore = defineStore('giftStore', () => {
   const { prepareGift } = useRoomAudio();
 
   /**
-   * Watch for gift + recipient selection and trigger preload
-   * - Preloads locally for sender
-   * - Sends gift:prepare signal to recipients
+   * Debounced preload function to prevent excessive triggers
+   * when user is rapidly changing selection.
    */
-  watch(
-    [selectedGift, selectedRecipients],
-    async ([gift, recipients]) => {
-      if (!gift || recipients.length === 0) return;
-
+  const debouncedPreload = useDebounceFn(
+    async (gift: Gift, recipients: number[]) => {
       // 1. Preload locally for sender (instant playback)
       await preloadGift(gift);
 
       // 2. Send prepare signal to recipients
       prepareGift(gift.id, recipients);
     },
+    300
+  );
+
+  /**
+   * Watch for gift + recipient selection and trigger preload
+   * - Preloads locally for sender
+   * - Sends gift:prepare signal to recipients
+   */
+  watch(
+    [selectedGift, selectedRecipients],
+    ([gift, recipients]) => {
+      if (!gift || recipients.length === 0) return;
+      debouncedPreload(gift, recipients);
+    },
     { deep: true }
   );
+
 
   // ========================================
   // Playback Actions

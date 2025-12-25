@@ -1,6 +1,7 @@
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import type { SocketErrorEvent } from '~/types/audio';
+import { createLogger } from '~/utils/logger';
 
 // ============================================
 // Types
@@ -64,17 +65,20 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // Internal Handlers
   // ========================================
 
+  /** Logger for this module */
+  const log = createLogger('[AudioSocket]');
+
   /** Handle successful connection */
   function handleConnect() {
     status.value = 'connected';
     error.value = null;
-    console.log('[AudioSocket] Connected:', socket.value?.id);
+    log.debug('Connected:', socket.value?.id);
   }
 
   /** Handle disconnection */
   function handleDisconnect(reason: string) {
     status.value = 'disconnected';
-    console.log('[AudioSocket] Disconnected:', reason);
+    log.debug('Disconnected:', reason);
 
     // If server disconnected us, try to reconnect
     if (reason === 'io server disconnect') {
@@ -86,7 +90,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
   function handleConnectError(err: Error) {
     status.value = 'error';
     error.value = err.message;
-    console.error('[AudioSocket] Connection error:', err.message);
+    log.error('Connection error:', err.message);
 
     // Handle specific auth errors
     if (err.message === 'Invalid credentials' || err.message === 'Authentication failed') {
@@ -107,19 +111,19 @@ export function useAudioSocket(): UseAudioSocketReturn {
   /** Handle reconnection attempts */
   function handleReconnectAttempt(attemptNumber: number) {
     status.value = 'connecting';
-    console.log('[AudioSocket] Reconnecting... attempt:', attemptNumber);
+    log.debug('Reconnecting... attempt:', attemptNumber);
   }
 
   /** Handle successful reconnection */
   function handleReconnect(attemptNumber: number) {
     status.value = 'connected';
     error.value = null;
-    console.log('[AudioSocket] Reconnected after', attemptNumber, 'attempts');
+    log.debug('Reconnected after', attemptNumber, 'attempts');
   }
 
   /** Handle server-sent error events */
   function handleError(errorEvent: SocketErrorEvent) {
-    console.error('[AudioSocket] Server error:', errorEvent.message);
+    log.error('Server error:', errorEvent.message);
 
     // Show toast for specific errors
     if (errorEvent.message === 'Too many messages') {
@@ -149,7 +153,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (!authStore.token) {
       error.value = 'Authentication required';
       status.value = 'error';
-      console.error('[AudioSocket] Cannot connect: No auth token');
+      log.error('Cannot connect: No auth token');
       return;
     }
 
@@ -157,13 +161,13 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (!serverUrl) {
       error.value = 'Audio server URL not configured';
       status.value = 'error';
-      console.error('[AudioSocket] Cannot connect: NUXT_PUBLIC_AUDIO_SERVER_URL not set');
+      log.error('Cannot connect: NUXT_PUBLIC_AUDIO_SERVER_URL not set');
       return;
     }
 
     // Don't reconnect if already connected
     if (socket.value?.connected) {
-      console.log('[AudioSocket] Already connected');
+      log.debug('Already connected');
       return;
     }
 
@@ -209,7 +213,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
     status.value = 'disconnected';
     error.value = null;
-    console.log('[AudioSocket] Disconnected by client');
+    log.debug('Disconnected by client');
   }
 
 
