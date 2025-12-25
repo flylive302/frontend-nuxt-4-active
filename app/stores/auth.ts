@@ -7,10 +7,18 @@ export const useAuthStore = defineStore('auth', () => {
     const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle');
     const isAuthenticated = computed(() => !!token.value && !!user.value);
 
+    /**
+     * Update the authenticated user.
+     * @param newUser - User object or null to clear
+     */
     function setUser(newUser: User | null) {
         user.value = newUser;
         status.value = newUser ? 'authenticated' : 'unauthenticated';
     }
+    /**
+     * Set authentication token and sync with cookie.
+     * @param newToken - JWT token or null to clear
+     */
     function setToken(newToken: string | null) {
         token.value = newToken;
         // Sync with cookie
@@ -18,6 +26,10 @@ export const useAuthStore = defineStore('auth', () => {
         cookie.value = newToken;
     }
     
+    /**
+     * Fetch authenticated user from API.
+     * Updates store with user data or clears on failure.
+     */
     async function fetchUser() {
         status.value = 'loading';
         try {
@@ -34,6 +46,9 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    /**
+     * Log out the current user, clear state, and navigate to login.
+     */
     function logout() {
         setUser(null);
         setToken(null);

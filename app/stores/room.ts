@@ -122,6 +122,10 @@ export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
   // Audio State Actions
   // ========================================
+  /**
+   * Set audio connection status.
+   * @param connected - Whether audio is connected
+   */
   function setAudioConnected(connected: boolean) {
     audioState.value.isConnected = connected;
   }
@@ -164,6 +168,10 @@ export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
   // Participant Actions
   // ========================================
+  /**
+   * Add a participant to the room.
+   * @param user - Participant to add
+   */
   function addParticipant(user: RoomParticipant) {
     participants.value.set(user.id, user);
   }
@@ -196,6 +204,12 @@ export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
   // Seat Actions
   // ========================================
+  /**
+   * Update a seat with user and mute state.
+   * @param seatIndex - Zero-based seat index (0-14)
+   * @param user - Participant to assign, or null to clear
+   * @param isMuted - Whether user is server-muted
+   */
   function updateSeat(seatIndex: number, user: RoomParticipant | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
       const currentSeat = seats.value[seatIndex];
@@ -218,6 +232,10 @@ export const useRoomStore = defineStore('roomStore', () => {
     }
   }
 
+  /**
+   * Clear a seat (remove user).
+   * @param seatIndex - Zero-based seat index (0-14)
+   */
   function clearSeat(seatIndex: number) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
       const seat = seats.value[seatIndex];
@@ -242,6 +260,11 @@ export const useRoomStore = defineStore('roomStore', () => {
     }
   }
 
+  /**
+   * Lock or unlock a seat (owner only).
+   * @param seatIndex - Zero-based seat index (0-14)
+   * @param isLocked - Whether seat should be locked
+   */
   function setSeatLocked(seatIndex: number, isLocked: boolean) {
     const seat = seats.value[seatIndex];
     if (seatIndex >= 0 && seatIndex < seats.value.length && seat) {
@@ -252,6 +275,10 @@ export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
   // Chat Actions
   // ========================================
+  /**
+   * Add a chat message to the message list.
+   * @param message - Chat message event from server
+   */
   function addMessage(message: ChatMessageEvent) {
     messages.value.push(message);
 

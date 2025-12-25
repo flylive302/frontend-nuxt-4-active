@@ -14,6 +14,7 @@ import type { Ref, ComputedRef } from 'vue';
 import { setupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
+import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
@@ -160,6 +161,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
     getCurrentRoomId,
   });
 
+  // Chat messaging
+  const chatActions = useRoomChat({
+    socket,
+    getCurrentRoomId,
+  });
+
   // ========================================
   // Room Lifecycle
   // ========================================
@@ -302,22 +309,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     log.debug('Left room');
   }
 
-  // ========================================
-  // Chat
-  // ========================================
 
-  /**
-   * Send a chat message.
-   */
-  function sendChatMessage(content: string, type: string = 'text'): void {
-    if (!socket.value || !roomStore.currentRoom) return;
-
-    socket.value.emit('chat:message', {
-      roomId: roomStore.currentRoom.id.toString(),
-      content,
-      type,
-    });
-  }
 
   // ========================================
   // Return Combined API
@@ -335,8 +327,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Gift actions (from useRoomGifts)
     ...giftActions,
 
-    // Chat
-    sendChatMessage,
+    // Chat (from useRoomChat)
+    ...chatActions,
 
     // State
     connectionStatus,

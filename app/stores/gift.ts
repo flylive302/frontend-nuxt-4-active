@@ -88,6 +88,10 @@ export const useGiftStore = defineStore('giftStore', () => {
   // Selection Actions
   // ========================================
 
+  /**
+   * Select a gift for sending.
+   * @param gift - Gift object to select
+   */
   function selectGift(gift: Gift) {
     selectedGift.value = gift;
   }
@@ -98,6 +102,10 @@ export const useGiftStore = defineStore('giftStore', () => {
     selectedQuantity.value = 1;
   }
 
+  /**
+   * Toggle recipient selection.
+   * @param userId - User ID to toggle
+   */
   function toggleRecipient(userId: number) {
     const index = selectedRecipients.value.indexOf(userId);
     if (index === -1) {
@@ -122,6 +130,10 @@ export const useGiftStore = defineStore('giftStore', () => {
     }
   }
 
+  /**
+   * Set gift quantity.
+   * @param qty - Quantity to send (1, 10, 66, 188, 520, 1314)
+   */
   function setQuantity(qty: number) {
     selectedQuantity.value = qty as (typeof GIFT_QUANTITY_OPTIONS)[number];
   }
@@ -175,6 +187,10 @@ export const useGiftStore = defineStore('giftStore', () => {
 
   /**
    * Add a gift to the playback queue
+   */
+  /**
+   * Add a gift to the playback queue.
+   * @param item - Gift playback item (without id and timestamp)
    */
   function enqueuePlayback(item: Omit<GiftPlaybackItem, 'id' | 'timestamp'>) {
     if (playbackQueue.value.length >= MAX_PLAYBACK_QUEUE_SIZE) {
@@ -238,6 +254,9 @@ export const useGiftStore = defineStore('giftStore', () => {
 
   /**
    * Increment combo count (called on combo button click)
+   */
+  /**
+   * Increment combo count (called on combo button click).
    */
   function incrementCombo() {
     comboCount.value++;
