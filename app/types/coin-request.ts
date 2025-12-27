@@ -81,13 +81,26 @@ export interface CoinRequest {
 // ========================================
 
 /**
+ * Pre-uploaded proof image for coin request (ImageKit CDN upload)
+ */
+export interface UploadedProof {
+  url: string
+  file_id: string
+}
+
+/**
  * Payload for creating a new coin request
  * Note: reseller_id is optional - backend uses user's default reseller
  */
 export interface CreateCoinRequestPayload {
   amount: number
   message?: string
+  /**
+   * @deprecated Use uploadedProofs with pre-uploaded URLs instead
+   */
   proofs?: File[]
+  /** Pre-uploaded proof images (preferred - ImageKit CDN) */
+  uploadedProofs?: UploadedProof[]
   reseller_id?: number
 }
 

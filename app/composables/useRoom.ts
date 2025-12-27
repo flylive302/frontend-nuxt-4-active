@@ -39,23 +39,33 @@ export function useRoom() {
     }
     /**
      * Create a new room.
-     * @param payload - The room creation data.
+     * @param payload - The room creation data (use logo_url and logo_file_id for pre-uploaded logos).
      * @returns 'success' if created, 'failed' otherwise.
      */
     async function createRoom(payload: CreateRoomPayload): Promise<'success' | 'failed'> {
         await fetchCsrfToken();
 
-        const formData = new FormData();
-        formData.append('name', payload.name);
-        formData.append('country', payload.country);
-        formData.append('type', payload.type);
-        if (payload.password) formData.append('password', payload.password);
-        if (payload.logo) formData.append('logo', toRaw(payload.logo));
+        // Build JSON payload (no FormData - logos are pre-uploaded to ImageKit)
+        const body: Record<string, unknown> = {
+            name: payload.name,
+            country: payload.country,
+            type: payload.type,
+        };
+
+        if (payload.password) {
+            body.password = payload.password;
+        }
+
+        // Use pre-uploaded logo URL if available
+        if (payload.logo_url && payload.logo_file_id) {
+            body.logo_url = payload.logo_url;
+            body.logo_file_id = payload.logo_file_id;
+        }
 
         try {
             const response = await api<RoomResponse>('/rooms', {
                 method: 'POST',
-                body: formData
+                body,
             });
 
             if (response.status === "success") {

@@ -1,9 +1,34 @@
 <script setup lang="ts">
+// ========================================
+// Imports & Types
+// ========================================
+
+import { onMounted } from 'vue'
+
+// ========================================
+// Page Configuration
+// ========================================
+
 definePageMeta({
   layout: 'alt',
   middleware: 'auth',
 })
-const authStore = useAuthStore();
+
+// ========================================
+// Composables / Injected Dependencies
+// ========================================
+
+const authStore = useAuthStore()
+const agencyStore = useAgencyStore()
+
+// ========================================
+// Lifecycle
+// ========================================
+
+onMounted(() => {
+  // Fetch user's agency context for conditional navigation
+  agencyStore.fetchUserAgency()
+})
 </script>
 
 <template>
@@ -12,7 +37,11 @@ const authStore = useAuthStore();
 
     <AltHero class="z-20">
       <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
-        <NuxtLink v-if="authStore.user" :to="{ path: '/profile/owner-' + authStore.user.signature }" class="flex px-3">
+        <NuxtLink 
+          v-if="authStore.user" 
+          :to="{ path: '/profile/owner-' + authStore.user.signature }" 
+          class="flex px-3"
+        >
           <UserAvatar :animated="true" :img="authStore.user.avatar?.original" class="w-24" />
           <div class="px-3">
             <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
@@ -38,9 +67,57 @@ const authStore = useAuthStore();
       <NavProfileItem to="/levels/wealth" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
       <NavProfileItem to="/income" icon="i-lucide-dollar-sign" txt="My Income" />
-      <NavProfileItem to="/agency/list" icon="i-lucide-briefcase" txt="Agency List" />
-      <NavProfileItem to="/agency/owner" icon="i-lucide-briefcase-business" txt="My Agency" />
-      <UButton class="w-full justify-center" icon="i-lucide-power-off" size="xl" @click="authStore.logout">
+      
+      <!-- Agency Section -->
+      <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>
+      
+      <!-- Browse Agencies (always visible) -->
+      <NavProfileItem 
+        to="/agency/list" 
+        icon="i-lucide-building-2" 
+        txt="Browse Agencies" 
+      />
+      
+      <!-- My Agency (visible if member/owner) -->
+      <NavProfileItem 
+        v-if="agencyStore.isAgencyMember"
+        to="/agency/my-agency" 
+        icon="i-lucide-home" 
+        txt="My Agency" 
+      />
+      
+      <!-- Agency Invitations (visible if has invitations) -->
+      <NavProfileItem 
+        v-if="agencyStore.receivedInvitations.items.length > 0"
+        to="/agency/invitations" 
+        icon="i-lucide-mail" 
+        txt="Agency Invitations"
+        :badge="agencyStore.receivedInvitations.items.length"
+      />
+      
+      <!-- My Join Requests (visible if has pending requests) -->
+      <NavProfileItem 
+        v-if="agencyStore.myJoinRequests.items.length > 0"
+        to="/agency/my-requests" 
+        icon="i-lucide-user-plus" 
+        txt="My Join Requests"
+        :badge="agencyStore.myJoinRequests.items.filter(r => r.status === 'pending').length || undefined"
+      />
+      
+      <!-- Create Agency (visible if not in agency) -->
+      <NavProfileItem 
+        v-if="!agencyStore.isAgencyMember"
+        to="/agency/create" 
+        icon="i-lucide-plus-circle" 
+        txt="Create Agency" 
+      />
+      
+      <UButton 
+        class="w-full justify-center mt-4" 
+        icon="i-lucide-power-off" 
+        size="xl" 
+        @click="authStore.logout"
+      >
         Logout
       </UButton>
     </div>

@@ -25,7 +25,14 @@ export interface CreateRoomPayload {
   country: string;
   type: 'public' | 'private';
   password?: string;
+  /**
+   * @deprecated Use logo_url and logo_file_id instead (ImageKit CDN upload)
+   */
   logo?: File;
+  /** ImageKit CDN URL for the room logo */
+  logo_url?: string;
+  /** ImageKit file ID for cleanup */
+  logo_file_id?: string;
 }
 
 export interface RoomResponse {

@@ -1,20 +1,32 @@
 <script setup lang="ts">
+// ========================================
+// Imports & Types
+// ========================================
+
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { navigateTo, useLazyFetch } from 'nuxt/app'
-import { localFetch } from '~/utils/http'
-import type { Country, PhoneModel } from '~/composables/usePhoneSchema'
+import { computed, reactive, ref } from 'vue'
+import { navigateTo } from 'nuxt/app'
+import type { PhoneModel } from '~/composables/usePhoneSchema'
 import { usePhoneSchema, normalizePhone } from '~/composables/usePhoneSchema'
-import { useGeolocation } from '~/composables/useGeolocation'
-import { useSubmitRequest } from '~/composables/useSubmitRequest'
+import type { NationalIdImage } from '~/types/upload'
 
-definePageMeta({ layout: 'alt' })
+// ========================================
+// Page Configuration
+// ========================================
 
-// ---------- schema ----------
+definePageMeta({ 
+  layout: 'alt',
+  middleware: 'auth',
+})
+
+// ========================================
+// Schema
+// ========================================
+
 const imageFile = z.instanceof(File, { message: 'Only image files are allowed' })
   .refine(f => /^image\//.test(f.type), 'Only image files are allowed')
-  .refine(f => f.size <= 2 * 1024 * 1024, 'Each file must be ≤ 2MB')
+  .refine(f => f.size <= 5 * 1024 * 1024, 'Each file must be ≤ 5MB')
 
 const baseSchema = z.object({
   agencyName: z.string()
@@ -29,7 +41,10 @@ const baseSchema = z.object({
 
 type BaseSchema = z.output<typeof baseSchema>
 
-// ---------- reactive state ----------
+// ========================================
+// Component State
+// ========================================
+
 const state = reactive<Partial<BaseSchema>>({
   agencyName: undefined,
   address: undefined,
@@ -38,42 +53,36 @@ const state = reactive<Partial<BaseSchema>>({
   idCardBack: undefined,
 })
 
-// phone model (for merged schema)
 const phone = reactive<PhoneModel>({
   countryCode: '',
   dialCode: '',
   phone: '',
 })
 
+// ========================================
+// Composables / Injected Dependencies
+// ========================================
 
+const toast = useToast()
+const agencyStore = useAgencyStore()
+const { api } = useApi()
+const { uploadImage, createUploadState } = useImageUpload()
 
-// ---------- load countries ----------
-const { data: countries, status } = await useLazyFetch<Country[]>(
-  '/countries.json',
-  { immediate: true, $fetch: localFetch }
-)
+// ========================================
+// Upload States
+// ========================================
 
-// ---------- auto-detect country ----------
-const detectingLocation = ref(false)
-const { detectCountry } = useGeolocation()
+const logoUpload = createUploadState()
+const idFrontUpload = createUploadState()
+const idBackUpload = createUploadState()
 
-onMounted(async () => {
-  detectingLocation.value = true
-  try {
-    const code = await detectCountry()
-    if (code && countries.value) {
-      const match = countries.value.find(c => c.code.toUpperCase() === code.toUpperCase())
-      if (match) {
-        phone.countryCode = match.code
-        phone.dialCode = match.dial_code
-      }
-    }
-  } finally {
-    detectingLocation.value = false
-  }
-})
+const processing = ref(false)
+const currentStep = ref<'idle' | 'uploading' | 'submitting'>('idle')
 
-// ---------- compose schemas ----------
+// ========================================
+// Schema Composition
+// ========================================
+
 const phoneSchema = usePhoneSchema(computed(() =>
   phone.countryCode ? { code: phone.countryCode, name: '' } : undefined
 ))
@@ -81,20 +90,36 @@ const pageSchema = computed(() => baseSchema.and(phoneSchema.value))
 
 type FullSchema = z.output<typeof pageSchema.value>
 
-// ---------- validity ----------
+// ========================================
+// Computed
+// ========================================
+
 const isValid = computed(() => {
   const baseValid = baseSchema.safeParse(state).success
   const phoneValid = phoneSchema.value.safeParse(phone).success
   return baseValid && phoneValid
 })
 
-// ---------- submit ----------
-const toast = useToast()
-const processing = ref(false)
-const { submit, mapError } = useSubmitRequest()
+const isUploading = computed(() => 
+  logoUpload.state.value.status === 'uploading' ||
+  idFrontUpload.state.value.status === 'uploading' ||
+  idBackUpload.state.value.status === 'uploading'
+)
 
-async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
+const overallProgress = computed(() => {
+  const states = [logoUpload.state.value, idFrontUpload.state.value, idBackUpload.state.value]
+  const total = states.reduce((sum, s) => sum + s.progress, 0)
+  return Math.round(total / 3)
+})
+
+// ========================================
+// Event Handlers
+// ========================================
+
+async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
   processing.value = true
+  currentStep.value = 'idle'
+
   try {
     const parsed = pageSchema.value.safeParse({ ...state, ...phone })
     if (!parsed.success) {
@@ -102,40 +127,108 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
       return
     }
 
-    // Build FormData (NOTE: Backend uses user's default_reseller field)
-    const formData = new FormData()
-    formData.append('agency_name', parsed.data.agencyName)
-    formData.append('address', parsed.data.address)
-    formData.append('logo', parsed.data.logo)
-    formData.append('id_card_front', parsed.data.idCardFront)
-    formData.append('id_card_back', parsed.data.idCardBack)
-    formData.append('country_code', parsed.data.countryCode)
-    formData.append('dial_code', parsed.data.dialCode)
-    formData.append('phone', parsed.data.phone)
-    formData.append('phone_e164', normalizePhone(parsed.data.dialCode, parsed.data.phone))
+    // Step 1: Upload images to ImageKit
+    currentStep.value = 'uploading'
 
-    try {
-      await submit({
-        endpoint: '/api/agency/create',
-        method: 'POST',
-        body: formData,
-        asFormData: true,
-        retryPost: false
-      })
-
-      toast.add({ title: 'Success', description: 'Agency registration submitted for review', color: 'success' })
-      
-      // Navigate after success
-      setTimeout(() => navigateTo('/agency/owner'), 3000)
-    } catch (error: unknown) {
-      const n = mapError(error)
-      toast.add({ title: 'Error', description: n.message, color: 'error' })
+    // Upload logo
+    const logoResult = await logoUpload.upload(parsed.data.logo, 'agencies/logos')
+    if (!logoResult) {
+      toast.add({ title: 'Upload Failed', description: 'Failed to upload logo', color: 'error' })
+      return
     }
+
+    // Upload ID front
+    const idFrontResult = await idFrontUpload.upload(parsed.data.idCardFront, 'agencies/national-ids')
+    if (!idFrontResult) {
+      toast.add({ title: 'Upload Failed', description: 'Failed to upload ID card front', color: 'error' })
+      return
+    }
+
+    // Upload ID back
+    const idBackResult = await idBackUpload.upload(parsed.data.idCardBack, 'agencies/national-ids')
+    if (!idBackResult) {
+      toast.add({ title: 'Upload Failed', description: 'Failed to upload ID card back', color: 'error' })
+      return
+    }
+
+    // Step 2: Submit to API with URLs
+    currentStep.value = 'submitting'
+
+    const nationalIdImages: NationalIdImage[] = [
+      { url: idFrontResult.url, file_id: idFrontResult.fileId, side: 'front' },
+      { url: idBackResult.url, file_id: idBackResult.fileId, side: 'back' },
+    ]
+
+    const payload = {
+      name: parsed.data.agencyName,
+      address: parsed.data.address,
+      country: parsed.data.countryCode.toUpperCase(),
+      logo_url: logoResult.url,
+      logo_file_id: logoResult.fileId,
+      national_id_images: nationalIdImages,
+      // Phone info
+      phone_country_code: parsed.data.countryCode,
+      phone_dial_code: parsed.data.dialCode,
+      phone: parsed.data.phone,
+      phone_e164: normalizePhone(parsed.data.dialCode, parsed.data.phone),
+    }
+
+    await api('/agencies', {
+      method: 'POST',
+      body: payload,
+      timeout: 30_000, // 30 seconds for agency creation
+    })
+
+    // Refresh user agency state
+    await agencyStore.fetchUserAgency()
+
+    toast.add({ title: 'Success', description: 'Agency application submitted for review', color: 'success' })
+    
+    // Navigate to my-agency dashboard
+    setTimeout(() => navigateTo('/agency/my-agency'), 1500)
+
+  } catch (error: unknown) {
+    console.error('[AgencyCreate] Submit failed:', error)
+    
+    const { normalizeError } = useApi()
+    const normalizedError = normalizeError(error)
+    
+    const errorDescription = normalizedError.fieldErrors 
+      ? Object.values(normalizedError.fieldErrors).flat()[0] 
+      : normalizedError.message
+    
+    toast.add({ 
+      title: 'Error', 
+      description: errorDescription || 'Failed to create agency. Please try again.', 
+      color: 'error' 
+    })
   } finally {
     processing.value = false
+    currentStep.value = 'idle'
   }
 }
 
+// ========================================
+// Helpers
+// ========================================
+
+function getUploadStatusIcon(status: string): string {
+  switch (status) {
+    case 'uploading': return 'i-lucide-loader-2'
+    case 'success': return 'i-lucide-check-circle'
+    case 'error': return 'i-lucide-alert-circle'
+    default: return 'i-lucide-upload'
+  }
+}
+
+function getUploadStatusColor(status: string): string {
+  switch (status) {
+    case 'uploading': return 'text-primary'
+    case 'success': return 'text-success'
+    case 'error': return 'text-error'
+    default: return 'text-muted'
+  }
+}
 </script>
 
 <template>
@@ -143,6 +236,28 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
     <NavAlt back-to="/agency/list">Create New Agency</NavAlt>
 
     <div class="px-3 py-14 space-y-6">
+      <!-- Upload Progress Banner -->
+      <div
+        v-if="isUploading || currentStep === 'submitting'"
+        class="fixed inset-x-0 top-12 z-50 bg-primary/90 text-white px-4 py-3"
+      >
+        <div class="flex items-center gap-3 max-w-md mx-auto">
+          <icon name="i-lucide-loader-2" class="size-5 animate-spin" />
+          <div class="flex-1">
+            <p class="text-sm font-medium">
+              {{ currentStep === 'submitting' ? 'Creating agency...' : 'Uploading images...' }}
+            </p>
+            <div v-if="isUploading" class="mt-1 h-1.5 bg-white/30 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-white rounded-full transition-all duration-300"
+                :style="{ width: `${overallProgress}%` }"
+              />
+            </div>
+          </div>
+          <span v-if="isUploading" class="text-sm font-bold">{{ overallProgress }}%</span>
+        </div>
+      </div>
+
       <UForm :schema="pageSchema" :state="{ ...state, ...phone }" class="space-y-6" @submit="onSubmit">
         <!-- Agency Name -->
         <UFormField label="Agency Name" name="agencyName" required>
@@ -156,30 +271,41 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
             icon="i-lucide-building-2"
             placeholder="Choose a name less than 30 characters"
             :maxlength="30"
+            :disabled="processing"
           />
         </UFormField>
 
-        <!-- Country and Phone (using country-phone-input component) -->
+        <!-- Country and Phone -->
         <FormsCountryPhoneInput
-          :countries="countries || []"
-          :initial-country="countries?.find((c: Country) => c.code === phone.countryCode)"
-          :detecting-location="detectingLocation || status === 'pending'"
-          @update:model="Object.assign(phone, $event)"
+          v-model:country-code="phone.countryCode"
+          v-model:dial-code="phone.dialCode"
+          v-model:phone="phone.phone"
+          :disabled="processing"
         />
 
         <!-- Logo Upload -->
-        <UFormField
-            label="Add a Logo for your Agency"
-            name="logo"
-            required
-        >
+        <UFormField label="Add a Logo for your Agency" name="logo" required>
+          <template #hint>
+            <div class="flex items-center gap-1.5">
+              <icon 
+                :name="getUploadStatusIcon(logoUpload.state.value.status)" 
+                :class="[getUploadStatusColor(logoUpload.state.value.status), 'size-4', { 'animate-spin': logoUpload.state.value.status === 'uploading' }]"
+              />
+              <span v-if="logoUpload.state.value.status === 'uploading'" class="text-xs">
+                {{ logoUpload.state.value.progress }}%
+              </span>
+              <span v-else-if="logoUpload.state.value.status === 'success'" class="text-xs text-success">
+                Uploaded
+              </span>
+            </div>
+          </template>
           <UFileUpload
             v-model="state.logo"
             color="primary"
             accept="image/*"
             :disabled="processing"
-            label="Drop your Agencies Logo here"
-            description="SVG, PNG, JPG (max. 2MB)"
+            label="Drop your Agency Logo here"
+            description="JPG, PNG, WebP (max. 5MB)"
             class="w-full min-h-40"
             highlight
           />
@@ -196,18 +322,33 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
             size="lg"
             icon="i-lucide-map-pin"
             placeholder="Add your current address"
+            :disabled="processing"
           />
         </UFormField>
 
         <!-- ID Card Front -->
         <UFormField label="Upload the front Side of your ID Card" name="idCardFront" required>
+          <template #hint>
+            <div class="flex items-center gap-1.5">
+              <icon 
+                :name="getUploadStatusIcon(idFrontUpload.state.value.status)" 
+                :class="[getUploadStatusColor(idFrontUpload.state.value.status), 'size-4', { 'animate-spin': idFrontUpload.state.value.status === 'uploading' }]"
+              />
+              <span v-if="idFrontUpload.state.value.status === 'uploading'" class="text-xs">
+                {{ idFrontUpload.state.value.progress }}%
+              </span>
+              <span v-else-if="idFrontUpload.state.value.status === 'success'" class="text-xs text-success">
+                Uploaded
+              </span>
+            </div>
+          </template>
           <UFileUpload
             v-model="state.idCardFront"
             color="primary"
             accept="image/*"
             :disabled="processing"
             label="Make Sure It's clear and fully readable"
-            description="SVG, PNG, JPG or GIF (max. 2MB). Make sure it's clear and fully readable"
+            description="JPG, PNG, WebP (max. 5MB)"
             class="w-full min-h-40"
             highlight
           />
@@ -215,19 +356,33 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
 
         <!-- ID Card Back -->
         <UFormField label="Upload the Back Side of your ID Card" name="idCardBack" required>
+          <template #hint>
+            <div class="flex items-center gap-1.5">
+              <icon 
+                :name="getUploadStatusIcon(idBackUpload.state.value.status)" 
+                :class="[getUploadStatusColor(idBackUpload.state.value.status), 'size-4', { 'animate-spin': idBackUpload.state.value.status === 'uploading' }]"
+              />
+              <span v-if="idBackUpload.state.value.status === 'uploading'" class="text-xs">
+                {{ idBackUpload.state.value.progress }}%
+              </span>
+              <span v-else-if="idBackUpload.state.value.status === 'success'" class="text-xs text-success">
+                Uploaded
+              </span>
+            </div>
+          </template>
           <UFileUpload
             v-model="state.idCardBack"
             color="primary"
             accept="image/*"
             :disabled="processing"
             label="Make Sure It's clear and fully readable"
-            description="SVG, PNG, JPG or GIF (max. 2MB). Make sure it's clear and fully readable"
+            description="JPG, PNG, WebP (max. 5MB)"
             class="w-full min-h-40"
             highlight
           />
         </UFormField>
 
-        <!-- Default Reseller (informational - backend uses user's default_reseller) -->
+        <!-- Default Reseller -->
         <ChooseDefaultReseller color="primary" />
 
         <!-- Submit Button -->
@@ -237,10 +392,10 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>) {
           class="w-full justify-center"
           icon="i-lucide-send"
           :loading="processing"
-          :disabled="!isValid"
+          :disabled="!isValid || processing"
           color="primary"
         >
-          Submit For Review
+          {{ isUploading ? 'Uploading...' : currentStep === 'submitting' ? 'Creating...' : 'Submit For Review' }}
         </UButton>
       </UForm>
     </div>

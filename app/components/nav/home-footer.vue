@@ -6,6 +6,7 @@ const log = createLogger('[HomeFooter]');
 
 const authStore = useAuthStore();
 const roomStore = useRoomStore();
+const notificationStore = useNotificationStore();
 
 const createRoomOpen = ref(false);
 
@@ -72,13 +73,21 @@ async function handleMyRoomClick() {
 
         <UButton
             square
+            to="/notifications"
             aria-label="Notifications"
             icon="i-lucide-bell-plus"
             size="xl"
             color="primary"
             variant="soft"
-            class="justify-center size-10"
-        />
+            class="justify-center size-10 relative"
+        >
+          <span
+            v-if="notificationStore.unreadBadge"
+            class="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center"
+          >
+            {{ notificationStore.unreadBadge }}
+          </span>
+        </UButton>
         <!-- Profile -->
         <NuxtLink
             to="/profile"

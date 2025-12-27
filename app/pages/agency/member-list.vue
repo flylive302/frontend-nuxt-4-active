@@ -1,47 +1,261 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'alt' })
+// ========================================
+// Imports & Types
+// ========================================
+
+import { onMounted } from 'vue'
+import type { AgencyMember, AgencyMemberRole } from '~/types/agency'
+import { AGENCY_ROLE_CONFIG } from '~/types/agency'
+
+// ========================================
+// Page Configuration
+// ========================================
+
+definePageMeta({ 
+  layout: 'alt',
+  middleware: 'auth',
+})
+
+// ========================================
+// Composables / Injected Dependencies
+// ========================================
+
+const agencyStore = useAgencyStore()
+
+// ========================================
+// Component State
+// ========================================
+
+const kickingId = ref<number | null>(null)
+const showKickModal = ref(false)
+const selectedMember = ref<AgencyMember | null>(null)
+const kickReason = ref('')
+
+// ========================================
+// Computed
+// ========================================
+
+const members = computed(() => agencyStore.currentAgency.members)
+const loading = computed(() => agencyStore.currentAgency.membersLoading)
+const hasMore = computed(() => agencyStore.currentAgency.membersHasMore)
+
+const canKick = (member: AgencyMember): boolean => {
+  // Owner can kick anyone except self
+  if (agencyStore.isAgencyOwner) {
+    return member.role !== 'owner'
+  }
+  // Admin can kick members only
+  if (agencyStore.isAgencyAdmin) {
+    return member.role === 'member'
+  }
+  return false
+}
+
+// ========================================
+// Event Handlers
+// ========================================
+
+function handleShowKickModal(member: AgencyMember): void {
+  selectedMember.value = member
+  kickReason.value = ''
+  showKickModal.value = true
+}
+
+async function handleKick(): Promise<void> {
+  if (!selectedMember.value) return
+  
+  kickingId.value = selectedMember.value.id
+  await agencyStore.kickMember(selectedMember.value.id, { reason: kickReason.value || undefined })
+  kickingId.value = null
+  showKickModal.value = false
+  selectedMember.value = null
+}
+
+function handleLoadMore(): void {
+  if (agencyStore.userAgency.agency?.id) {
+    agencyStore.fetchAgencyMembers(agencyStore.userAgency.agency.id)
+  }
+}
+
+// ========================================
+// Lifecycle
+// ========================================
+
+onMounted(async () => {
+  if (agencyStore.userAgency.agency?.id) {
+    await agencyStore.fetchAgencyMembers(agencyStore.userAgency.agency.id, true)
+  }
+})
+
+// ========================================
+// Helpers
+// ========================================
+
+function getRoleConfig(role: AgencyMemberRole) {
+  return AGENCY_ROLE_CONFIG[role]
+}
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 </script>
 
 <template>
-  <div>
-    <NavAlt back-to="/agency/owner">Agency Members List</NavAlt>
-    <div class="flex flex-col gap-3 px-3 my-14">
-      <AgencyMemberCard
-          name="Alia Butt"
-          charm-badge="2"
-          wealth-badge="1"
-          frame-name="/frames/17"
-          :frame-girth="50"
-          img="/avatars/placeholder"
-          gender="male"
-      />
-      <AgencyMemberCard
-          name="Rana Haseeb"
-          charm-badge="12"
-          wealth-badge="11"
-          frame-name="/frames/admin/admin"
-          :frame-girth="48"
-          img="/avatars/placeholder"
-          gender="female"
-      />
-      <AgencyMemberCard
-          name="Butt Saab"
-          charm-badge="12"
-          wealth-badge="11"
-          frame-name="/frames/admin/bd"
-          :frame-girth="48"
-          img="/avatars/placeholder"
-          gender="others"
-      />
-      <AgencyMemberCard
-          name="Darwaish Saab"
-          charm-badge="12"
-          wealth-badge="11"
-          frame-name="/frames/admin/cs_leader"
-          :frame-girth="45"
-          img="/avatars/placeholder"
-          gender="male"
-      />
+  <main>
+    <NavAlt back-to="/agency/my-agency">Agency Members</NavAlt>
+
+    <div class="px-3 pt-14 pb-24">
+      <!-- Loading State -->
+      <div v-if="loading && members.length === 0" class="space-y-3">
+        <div v-for="i in 5" :key="i" class="animate-pulse">
+          <div class="flex gap-3 p-3 bg-elevated rounded-lg">
+            <div class="size-12 bg-muted rounded-full" />
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-muted rounded w-3/4" />
+              <div class="h-3 bg-muted rounded w-1/2" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-else-if="!loading && members.length === 0"
+        class="flex flex-col items-center justify-center py-16 text-center"
+      >
+        <div class="size-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+          <icon name="i-lucide-users" class="size-10 text-primary" />
+        </div>
+        <h3 class="text-lg font-semibold mb-1">No Members Yet</h3>
+        <p class="text-sm text-muted max-w-xs">
+          Invite users to join your agency.
+        </p>
+        <UButton
+          v-if="agencyStore.isAgencyAdmin"
+          variant="soft"
+          color="primary"
+          class="mt-4"
+          to="/agency/member-invites"
+          icon="i-lucide-user-plus"
+        >
+          Send Invitations
+        </UButton>
+      </div>
+
+      <!-- Members List -->
+      <div v-else class="space-y-3">
+        <div
+          v-for="member in members"
+          :key="member.id"
+          class="p-3 bg-elevated rounded-lg"
+        >
+          <div class="flex items-center gap-3">
+            <!-- Avatar -->
+            <UserAvatar
+              :img="member.user.avatar || undefined"
+              class="w-12 shrink-0"
+            />
+            
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="font-semibold truncate">{{ member.user.name }}</p>
+                
+                <!-- Role Badge -->
+                <span
+                  class="px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
+                  :class="[
+                    getRoleConfig(member.role).color === 'primary' ? 'bg-primary/20 text-primary' : '',
+                    getRoleConfig(member.role).color === 'info' ? 'bg-info/20 text-info' : '',
+                    getRoleConfig(member.role).color === 'neutral' ? 'bg-muted/20 text-muted' : '',
+                  ]"
+                >
+                  <icon :name="getRoleConfig(member.role).icon" class="size-3 inline" />
+                  {{ getRoleConfig(member.role).label }}
+                </span>
+              </div>
+              
+              <p v-if="member.user.signature" class="text-sm text-muted">
+                @{{ member.user.signature }}
+              </p>
+              
+              <p class="text-xs text-muted mt-1">
+                Joined {{ formatDate(member.joined_at) }}
+              </p>
+            </div>
+            
+            <!-- Actions -->
+            <div v-if="canKick(member)" class="shrink-0">
+              <UButton
+                variant="ghost"
+                color="error"
+                size="sm"
+                icon="i-lucide-user-x"
+                @click="handleShowKickModal(member)"
+              />
+            </div>
+          </div>
+          
+          <!-- Invited By (Admin View) -->
+          <p
+            v-if="member.invited_by && agencyStore.isAgencyAdmin"
+            class="text-xs text-muted mt-2 pl-15"
+          >
+            Invited by {{ member.invited_by.name }}
+          </p>
+        </div>
+
+        <!-- Load More -->
+        <div v-if="hasMore" class="flex justify-center pt-4">
+          <UButton
+            variant="soft"
+            color="primary"
+            :loading="loading"
+            @click="handleLoadMore"
+          >
+            Load More
+          </UButton>
+        </div>
+      </div>
     </div>
-  </div>
+
+    <!-- Kick Member Modal -->
+    <UModal v-model:open="showKickModal">
+      <template #content>
+        <div class="p-4 space-y-4">
+          <h3 class="text-lg font-semibold">Remove Member?</h3>
+          <p class="text-sm text-muted">
+            Are you sure you want to remove <strong>{{ selectedMember?.user.name }}</strong> from the agency?
+          </p>
+          
+          <UTextarea
+            v-model="kickReason"
+            placeholder="Reason for removal (optional)"
+            :rows="2"
+          />
+          
+          <div class="flex gap-2 justify-end">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              @click="showKickModal = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="error"
+              :loading="kickingId === selectedMember?.id"
+              @click="handleKick"
+            >
+              Remove Member
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+  </main>
 </template>

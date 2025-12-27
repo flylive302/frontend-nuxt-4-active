@@ -96,23 +96,33 @@ export function useAuth() {
 
   /**
    * Uploads and updates the user's profile avatar.
+   * Uses ImageKit CDN for direct client-side upload with progress tracking.
+   *
    * @param file - The image file to upload.
-   * @returns The updated user data (or specific avatar response if needed).
+   * @param onProgress - Optional callback for upload progress (0-100).
+   * @returns The updated user data.
    */
-  async function uploadAvatar(file: File): Promise<User> {
-      await fetchCsrfToken()
+  async function uploadAvatar(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<User> {
+    // Step 1: Upload to ImageKit CDN
+    const { uploadImage } = useImageUpload()
+    const result = await uploadImage(file, 'avatars', { onProgress })
 
-      const formData = new FormData()
-      formData.append('avatar', file)
+    // Step 2: Submit URL to API (PUT method per migration guide)
+    await fetchCsrfToken()
+    const { data } = await api<{ data: User }>('/profile/avatar', {
+      method: 'PUT',
+      body: {
+        url: result.url,
+        file_id: result.fileId,
+      },
+    })
 
-      const { data } = await api<{ data: User }>('/profile/avatar', {
-          method: 'POST',
-          body: formData,
-      })
-
-      authStore.setUser(data)
-      toast.add({ title: 'Avatar updated successfully', color: 'success' })
-      return data
+    authStore.setUser(data)
+    toast.add({ title: 'Avatar updated successfully', color: 'success' })
+    return data
   }
 
   return {
