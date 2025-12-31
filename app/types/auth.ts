@@ -5,7 +5,7 @@ export interface User {
     id: number
     name?: string
     email?: string
-    phone?: string
+    phone?: string | { raw: string, formatted: string, country: string }
     phone_country?: string
     phone_country_code?: string
     signature?: string | null

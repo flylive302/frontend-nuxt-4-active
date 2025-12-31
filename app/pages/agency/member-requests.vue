@@ -7,6 +7,12 @@ import { onMounted } from 'vue'
 import type { AgencyJoinRequest } from '~/types/agency'
 
 // ========================================
+// Imports from Utils
+// ========================================
+
+import { formatAgencyDate } from '~/utils/agency-format'
+
+// ========================================
 // Page Configuration
 // ========================================
 
@@ -73,19 +79,6 @@ async function handleBlockUser(): Promise<void> {
 onMounted(() => {
   agencyStore.fetchJoinRequests(true)
 })
-
-// ========================================
-// Helpers
-// ========================================
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
 </script>
 
 <template>
@@ -158,7 +151,7 @@ function formatDate(dateString: string): string {
 
           <!-- Request Date -->
           <p class="text-xs text-muted mb-3">
-            Requested {{ formatDate(request.created_at) }}
+            Requested {{ formatAgencyDate(request.created_at, { includeTime: true }) }}
           </p>
 
           <!-- Actions -->

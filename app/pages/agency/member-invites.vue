@@ -3,7 +3,15 @@
 // Imports & Types
 // ========================================
 
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
+import UserInviteDialog from '~/components/agency/UserInviteDialog.vue'
+import type { User } from '~/types/auth'
+
+// ========================================
+// Imports from Utils
+// ========================================
+
+import { formatAgencyDate, formatExpiryTime, getInvitationStatusColor } from '~/utils/agency-format'
 
 // ========================================
 // Page Configuration
@@ -25,11 +33,7 @@ const agencyStore = useAgencyStore()
 // ========================================
 
 const cancellingId = ref<number | null>(null)
-const showInviteModal = ref(false)
-const searchQuery = ref('')
-const searchResults = ref<Array<{ id: number; name: string; signature?: string; avatar?: string }>>([])
-const searching = ref(false)
-const sending = ref(false)
+const showInviteDialog = ref(false)
 
 // ========================================
 // Computed
@@ -56,35 +60,9 @@ async function handleCancel(invitationId: number): Promise<void> {
   cancellingId.value = null
 }
 
-async function handleSendInvite(userId: number): Promise<void> {
-  sending.value = true
-  const result = await agencyStore.sendInvitation({ user_id: userId })
-  sending.value = false
-  
-  if (result) {
-    showInviteModal.value = false
-    searchQuery.value = ''
-    searchResults.value = []
-  }
-}
-
-// Note: User search would require a backend endpoint
-// For now, this is a placeholder for the UI
-async function handleSearch(): Promise<void> {
-  if (searchQuery.value.length < 2) {
-    searchResults.value = []
-    return
-  }
-  
-  searching.value = true
-  // TODO: Implement user search API call
-  // const { api } = useApi()
-  // const response = await api('/users/search', { params: { query: searchQuery.value } })
-  // searchResults.value = response.data
-  
-  // Placeholder: Show empty for now
-  searchResults.value = []
-  searching.value = false
+async function handleInviteUser(user: User): Promise<void> {
+  // We utilize the store action which handles the API call and toast
+  await agencyStore.sendInvitation({ user_id: user.id })
 }
 
 // ========================================
@@ -94,63 +72,24 @@ async function handleSearch(): Promise<void> {
 onMounted(() => {
   agencyStore.fetchSentInvitations(true)
 })
-
-// ========================================
-// Helpers
-// ========================================
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function formatExpiryTime(expiresAt: string): string {
-  const now = new Date()
-  const expiry = new Date(expiresAt)
-  const diffMs = expiry.getTime() - now.getTime()
-  
-  if (diffMs <= 0) return 'Expired'
-  
-  const diffDays = Math.floor(diffMs / 86400000)
-  const diffHours = Math.floor((diffMs % 86400000) / 3600000)
-  
-  if (diffDays > 0) return `${diffDays}d left`
-  if (diffHours > 0) return `${diffHours}h left`
-  return 'Expiring soon'
-}
-
-function getStatusColor(status: string, isExpired: boolean): 'error' | 'info' | 'primary' | 'secondary' | 'success' | 'warning' | 'tertiary' | 'neutral' {
-  if (isExpired) return 'neutral'
-  switch (status) {
-    case 'pending': return 'warning'
-    case 'accepted': return 'success'
-    case 'declined': return 'error'
-    case 'cancelled': return 'neutral'
-    default: return 'neutral'
-  }
-}
 </script>
 
 <template>
   <main>
-    <NavAlt back-to="/agency/my-agency">
-      Sent Invitations
-      <template #action>
-        <UButton
-          v-if="agencyStore.isAgencyAdmin"
-          variant="soft"
-          size="sm"
-          icon="i-lucide-user-plus"
-          @click="showInviteModal = true"
-        >
-          Invite
-        </UButton>
-      </template>
-    </NavAlt>
+    <NavAlt back-to="/agency/my-agency">Sent Invitations</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
+      <!-- Invite Button - Always visible for admins when there are invitations -->
+      <UButton
+        v-if="agencyStore.isAgencyAdmin && (invitations.length > 0 || !loading)"
+        color="primary"
+        class="w-full justify-center mb-4"
+        icon="i-lucide-user-plus"
+        @click="showInviteDialog = true"
+      >
+        Invite User to Agency
+      </UButton>
+
       <!-- Loading State -->
       <div v-if="loading && invitations.length === 0" class="space-y-3">
         <div v-for="i in 3" :key="i" class="animate-pulse">
@@ -180,11 +119,10 @@ function getStatusColor(status: string, isExpired: boolean): 'error' | 'info' | 
         </p>
         <UButton
           v-if="agencyStore.isAgencyAdmin"
-          variant="soft"
           color="primary"
           class="mt-4"
           icon="i-lucide-user-plus"
-          @click="showInviteModal = true"
+          @click="showInviteDialog = true"
         >
           Send Invitation
         </UButton>
@@ -249,12 +187,12 @@ function getStatusColor(status: string, isExpired: boolean): 'error' | 'info' | 
                   <p class="font-medium truncate text-sm">{{ invitation.user?.name }}</p>
                 </div>
                 <UBadge 
-                  :color="getStatusColor(invitation.status, invitation.is_expired)" 
+                  :color="getInvitationStatusColor(invitation.status, invitation.is_expired)" 
                   size="xs"
                 >
                   {{ invitation.is_expired ? 'Expired' : invitation.status_label }}
                 </UBadge>
-                <span class="text-xs text-muted">{{ formatDate(invitation.created_at) }}</span>
+                <span class="text-xs text-muted">{{ formatAgencyDate(invitation.created_at) }}</span>
               </div>
             </div>
           </div>
@@ -272,67 +210,10 @@ function getStatusColor(status: string, isExpired: boolean): 'error' | 'info' | 
       />
     </div>
 
-    <!-- Invite User Modal -->
-    <UModal v-model:open="showInviteModal">
-      <template #content>
-        <div class="p-4 space-y-4">
-          <h3 class="text-lg font-semibold">Invite User</h3>
-          <p class="text-sm text-muted">
-            Search for a user to invite to your agency.
-          </p>
-          
-          <UInput
-            v-model="searchQuery"
-            placeholder="Search by name or @signature..."
-            icon="i-lucide-search"
-            :loading="searching"
-            @input="handleSearch"
-          />
-          
-          <!-- Search Results -->
-          <div v-if="searchResults.length > 0" class="space-y-2 max-h-60 overflow-y-auto">
-            <div
-              v-for="user in searchResults"
-              :key="user.id"
-              class="flex items-center gap-3 p-2 bg-elevated rounded cursor-pointer hover:bg-muted/20"
-              @click="handleSendInvite(user.id)"
-            >
-              <UserAvatar :img="user.avatar" class="w-8" />
-              <div class="flex-1">
-                <p class="font-medium text-sm">{{ user.name }}</p>
-                <p v-if="user.signature" class="text-xs text-muted">@{{ user.signature }}</p>
-              </div>
-              <UButton
-                variant="soft"
-                size="xs"
-                :loading="sending"
-              >
-                Invite
-              </UButton>
-            </div>
-          </div>
-          
-          <!-- No Results -->
-          <div v-else-if="searchQuery.length >= 2 && !searching" class="text-center py-4 text-muted">
-            <p class="text-sm">No users found</p>
-          </div>
-          
-          <!-- Search Hint -->
-          <div v-else-if="searchQuery.length < 2" class="text-center py-4 text-muted">
-            <p class="text-sm">Enter at least 2 characters to search</p>
-          </div>
-          
-          <div class="flex justify-end">
-            <UButton
-              variant="ghost"
-              color="neutral"
-              @click="showInviteModal = false"
-            >
-              Close
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <!-- New Invite User Dialog -->
+    <UserInviteDialog
+      v-model:open="showInviteDialog"
+      @select="handleInviteUser"
+    />
   </main>
 </template>

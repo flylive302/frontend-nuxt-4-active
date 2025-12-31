@@ -5,8 +5,7 @@
 
 import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import type { AgencyMemberRole } from '~/types/agency'
-import { AGENCY_STATUS_CONFIG, AGENCY_ROLE_CONFIG } from '~/types/agency'
+import { AGENCY_STATUS_CONFIG } from '~/types/agency'
 
 // ========================================
 // Page Configuration
@@ -104,13 +103,7 @@ onMounted(async () => {
   }
 })
 
-// ========================================
-// Helpers
-// ========================================
 
-function getRoleConfig(role: AgencyMemberRole) {
-  return AGENCY_ROLE_CONFIG[role]
-}
 </script>
 
 <template>
@@ -155,19 +148,7 @@ function getRoleConfig(role: AgencyMemberRole) {
               <h1 class="text-lg font-bold">{{ agency.name }}</h1>
               
               <!-- Status Badge -->
-              <div
-                v-if="statusConfig"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
-                :class="[
-                  statusConfig.color === 'success' ? 'bg-success/20 text-success' : '',
-                  statusConfig.color === 'warning' ? 'bg-warning/20 text-warning' : '',
-                  statusConfig.color === 'error' ? 'bg-error/20 text-error' : '',
-                  statusConfig.color === 'neutral' ? 'bg-muted/20 text-muted' : '',
-                ]"
-              >
-                <icon :name="statusConfig.icon" class="size-3" />
-                {{ statusConfig.label }}
-              </div>
+              <AgencyStatusBadge v-if="agency.status" :status="agency.status" />
               
               <!-- Country -->
               <div class="flex items-center gap-2">
@@ -196,6 +177,19 @@ function getRoleConfig(role: AgencyMemberRole) {
             <p class="text-xs text-muted">Owner</p>
             <p class="font-semibold">{{ agency.owner.name }}</p>
             <p v-if="agency.owner.signature" class="text-sm text-muted">@{{ agency.owner.signature }}</p>
+          </div>
+        </div>
+
+        <!-- Coin Reseller Info -->
+        <div v-if="agency.coin_reseller" class="flex items-center gap-3 p-3 bg-elevated rounded-lg mb-4">
+          <UserAvatar
+            :img="agency.coin_reseller.avatar || undefined"
+            class="w-12"
+          />
+          <div>
+            <p class="text-xs text-muted">Coin Reseller</p>
+            <p class="font-semibold">{{ agency.coin_reseller.name }}</p>
+            <p v-if="agency.coin_reseller.signature" class="text-sm text-muted">@{{ agency.coin_reseller.signature }}</p>
           </div>
         </div>
 
@@ -276,16 +270,7 @@ function getRoleConfig(role: AgencyMemberRole) {
               <div class="flex items-center gap-2">
                 <p class="font-semibold truncate">{{ member.user.name }}</p>
                 <!-- Role Badge -->
-                <span
-                  class="px-1.5 py-0.5 rounded text-xs font-semibold"
-                  :class="[
-                    getRoleConfig(member.role).color === 'primary' ? 'bg-primary/20 text-primary' : '',
-                    getRoleConfig(member.role).color === 'info' ? 'bg-info/20 text-info' : '',
-                    getRoleConfig(member.role).color === 'neutral' ? 'bg-muted/20 text-muted' : '',
-                  ]"
-                >
-                  {{ getRoleConfig(member.role).label }}
-                </span>
+                <AgencyRoleBadge :role="member.role" />
               </div>
               <p v-if="member.user.signature" class="text-sm text-muted">@{{ member.user.signature }}</p>
             </div>

@@ -6,10 +6,16 @@
 import { onMounted } from 'vue'
 
 // ========================================
+// Imports from Utils
+// ========================================
+
+import { formatExpiryTime } from '~/utils/agency-format'
+
+// ========================================
 // Page Configuration
 // ========================================
 
-definePageMeta({ layout: 'alt' })
+definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ========================================
 // Composables / Injected Dependencies
@@ -50,25 +56,6 @@ async function handleBlockAgency(agencyId: number): Promise<void> {
 onMounted(() => {
   agencyStore.fetchReceivedInvitations(true)
 })
-
-// ========================================
-// Helpers
-// ========================================
-
-function formatExpiryTime(expiresAt: string): string {
-  const now = new Date()
-  const expiry = new Date(expiresAt)
-  const diffMs = expiry.getTime() - now.getTime()
-  
-  if (diffMs <= 0) return 'Expired'
-  
-  const diffDays = Math.floor(diffMs / 86400000)
-  const diffHours = Math.floor((diffMs % 86400000) / 3600000)
-  
-  if (diffDays > 0) return `${diffDays}d ${diffHours}h left`
-  if (diffHours > 0) return `${diffHours}h left`
-  return 'Expiring soon'
-}
 </script>
 
 <template>

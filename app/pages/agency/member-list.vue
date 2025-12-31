@@ -4,8 +4,8 @@
 // ========================================
 
 import { onMounted } from 'vue'
-import type { AgencyMember, AgencyMemberRole } from '~/types/agency'
-import { AGENCY_ROLE_CONFIG } from '~/types/agency'
+import type { AgencyMember } from '~/types/agency'
+import { formatAgencyDate } from '~/utils/agency-format'
 
 // ========================================
 // Page Configuration
@@ -86,22 +86,6 @@ onMounted(async () => {
     await agencyStore.fetchAgencyMembers(agencyStore.userAgency.agency.id, true)
   }
 })
-
-// ========================================
-// Helpers
-// ========================================
-
-function getRoleConfig(role: AgencyMemberRole) {
-  return AGENCY_ROLE_CONFIG[role]
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 </script>
 
 <template>
@@ -166,17 +150,7 @@ function formatDate(dateString: string): string {
                 <p class="font-semibold truncate">{{ member.user.name }}</p>
                 
                 <!-- Role Badge -->
-                <span
-                  class="px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
-                  :class="[
-                    getRoleConfig(member.role).color === 'primary' ? 'bg-primary/20 text-primary' : '',
-                    getRoleConfig(member.role).color === 'info' ? 'bg-info/20 text-info' : '',
-                    getRoleConfig(member.role).color === 'neutral' ? 'bg-muted/20 text-muted' : '',
-                  ]"
-                >
-                  <icon :name="getRoleConfig(member.role).icon" class="size-3 inline" />
-                  {{ getRoleConfig(member.role).label }}
-                </span>
+                <AgencyRoleBadge :role="member.role" />
               </div>
               
               <p v-if="member.user.signature" class="text-sm text-muted">
@@ -184,7 +158,7 @@ function formatDate(dateString: string): string {
               </p>
               
               <p class="text-xs text-muted mt-1">
-                Joined {{ formatDate(member.joined_at) }}
+                Joined {{ formatAgencyDate(member.joined_at, { includeYear: true }) }}
               </p>
             </div>
             

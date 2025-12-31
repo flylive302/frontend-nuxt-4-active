@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
   staticSrc?: string
   lazy?: boolean        // Enable lazy loading (default: true for performance)
 }>(), {
-  frameName: 'frames/5',
+  frameName: 'frames/ranks/top_3',
   img: 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp',
   top: 55,
   left: 50,

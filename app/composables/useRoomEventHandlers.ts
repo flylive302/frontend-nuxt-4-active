@@ -219,7 +219,7 @@ export function setupRoomEventHandlers({
     } else {
       toast.add({
         title: 'Gift failed',
-        description: 'Failed to send gift. Please try again.',
+        description: event.message || 'Failed to send gift. Please try again.',
         color: 'error',
       });
     }

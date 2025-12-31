@@ -97,6 +97,66 @@ export interface GiftReceivedEvent {
 }
 
 // ============================================
+// GIFT TRANSACTION RESPONSE TYPES
+// ============================================
+
+/**
+ * Distribution breakdown for gift coins
+ */
+export interface GiftDistribution {
+  room_owner: string;
+  receiver: string;
+  agency_income: boolean;
+}
+
+/**
+ * XP earned from gift transaction
+ */
+export interface GiftXpEarned {
+  sender_wealth_xp?: string;
+  receiver_charm_xp?: string;
+}
+
+/**
+ * Gift transaction details returned by API
+ */
+export interface GiftTransaction {
+  id: string;
+  batch_id: string;
+  sender_id: number;
+  receiver_id: number;
+  gift_id: number;
+  quantity: number;
+  total_coins: string;
+  distributions: GiftDistribution;
+  xp_earned: GiftXpEarned;
+  new_balance: string;
+  gift: Gift;
+  created_at: string;
+}
+
+/**
+ * Response from POST /api/v1/gifts/send
+ */
+export interface GiftSendResponse {
+  success: true;
+  data: {
+    transaction: GiftTransaction;
+  };
+  message: string;
+}
+
+/**
+ * Request body for POST /api/v1/gifts/send
+ */
+export interface GiftSendRequest {
+  gift_id: number;
+  receiver_id: number;
+  room_id: number;
+  quantity?: number; // 1-1000, default 1
+}
+
+// ============================================
 // CATEGORY CONFIGURATION
 // ============================================
 

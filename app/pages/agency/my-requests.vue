@@ -6,6 +6,12 @@
 import { onMounted } from 'vue'
 
 // ========================================
+// Imports from Utils
+// ========================================
+
+import { formatAgencyDate, getJoinRequestStatusColor } from '~/utils/agency-format'
+
+// ========================================
 // Page Configuration
 // ========================================
 
@@ -52,27 +58,6 @@ const pendingRequests = computed(() =>
 const processedRequests = computed(() =>
   agencyStore.myJoinRequests.items.filter(r => r.status !== 'pending')
 )
-
-// ========================================
-// Helpers
-// ========================================
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
-function getStatusColor(status: string): 'error' | 'info' | 'primary' | 'secondary' | 'success' | 'warning' | 'tertiary' | 'neutral' {
-  switch (status) {
-    case 'approved': return 'success'
-    case 'rejected': return 'error'
-    case 'cancelled': return 'neutral'
-    default: return 'warning'
-  }
-}
 </script>
 
 <template>
@@ -157,7 +142,7 @@ function getStatusColor(status: string): 'error' | 'info' | 'primary' | 'seconda
 
               <!-- Submitted Date -->
               <p class="text-xs text-muted mb-3">
-                Submitted {{ formatDate(request.created_at) }}
+                Submitted {{ formatAgencyDate(request.created_at, { includeYear: true }) }}
               </p>
 
               <!-- Cancel Action -->
@@ -196,10 +181,10 @@ function getStatusColor(status: string): 'error' | 'info' | 'primary' | 'seconda
                 <div class="flex-1 min-w-0">
                   <h3 class="font-semibold truncate text-sm">{{ request.agency?.name }}</h3>
                   <div class="flex items-center gap-2">
-                    <UBadge :color="getStatusColor(request.status)" size="xs">
+                    <UBadge :color="getJoinRequestStatusColor(request.status)" size="xs">
                       {{ request.status_label }}
                     </UBadge>
-                    <span class="text-xs text-muted">{{ formatDate(request.created_at) }}</span>
+                    <span class="text-xs text-muted">{{ formatAgencyDate(request.created_at, { includeYear: true }) }}</span>
                   </div>
                 </div>
               </div>

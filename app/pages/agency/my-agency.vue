@@ -4,7 +4,6 @@
 // ========================================
 
 import { onMounted, computed } from 'vue'
-import { AGENCY_STATUS_CONFIG, AGENCY_ROLE_CONFIG } from '~/types/agency'
 
 // ========================================
 // Page Configuration
@@ -20,6 +19,7 @@ definePageMeta({
 // ========================================
 
 const agencyStore = useAgencyStore()
+const incomeStore = useIncomeStore()
 const router = useRouter()
 
 // ========================================
@@ -42,15 +42,6 @@ const isOwner = computed(() => agencyStore.isAgencyOwner)
 const isAdmin = computed(() => agencyStore.isAgencyAdmin)
 const loading = computed(() => agencyStore.userAgency.loading)
 
-const statusConfig = computed(() => 
-  agency.value ? AGENCY_STATUS_CONFIG[agency.value.status] : null
-)
-
-const roleConfig = computed(() => {
-  if (isOwner.value) return AGENCY_ROLE_CONFIG.owner
-  if (membership.value) return AGENCY_ROLE_CONFIG[membership.value.role]
-  return null
-})
 
 const isApproved = computed(() => agency.value?.status === 'approved')
 
@@ -59,6 +50,17 @@ const canDissolve = computed(() => isOwner.value && isApproved.value)
 const dissolveConfirmValid = computed(() => 
   dissolveConfirmName.value === agency.value?.name
 )
+
+// Transform agency's coin_reseller to the format expected by ChooseDefaultReseller
+const agencyCoinReseller = computed(() => {
+  if (!agency.value?.coin_reseller) return null
+  return {
+    id: agency.value.coin_reseller.id,
+    name: agency.value.coin_reseller.name,
+    avatar: agency.value.coin_reseller.avatar ?? null,
+    signature: agency.value.coin_reseller.signature ?? null,
+  }
+})
 
 // ========================================
 // Event Handlers
@@ -94,6 +96,16 @@ async function handleDissolve(): Promise<void> {
 
 onMounted(async () => {
   await agencyStore.fetchUserAgency()
+  
+  if (agencyStore.isAgencyAdmin) {
+    agencyStore.fetchJoinRequests()
+    agencyStore.fetchSentInvitations()
+  }
+  
+  // Fetch income data for approved agency members
+  if (agencyStore.userAgency.agency?.status === 'approved') {
+    incomeStore.fetchAll()
+  }
   
   // Redirect if user has no agency
   if (!agencyStore.userAgency.agency) {
@@ -155,32 +167,11 @@ onMounted(async () => {
               <h1 class="text-lg font-bold">{{ agency.name }}</h1>
               
               <!-- Role Badge -->
-              <div
-                v-if="roleConfig"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
-                :class="[
-                  roleConfig.color === 'primary' ? 'bg-primary/20 text-primary' : '',
-                  roleConfig.color === 'info' ? 'bg-info/20 text-info' : '',
-                  roleConfig.color === 'neutral' ? 'bg-muted/20 text-muted' : '',
-                ]"
-              >
-                <icon :name="roleConfig.icon" class="size-3" />
-                {{ roleConfig.label }}
-              </div>
+              <AgencyRoleBadge v-if="isOwner" role="owner" />
+              <AgencyRoleBadge v-else-if="membership" :role="membership.role" />
               
               <!-- Status Badge -->
-              <div
-                v-if="statusConfig"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ml-1"
-                :class="[
-                  statusConfig.color === 'success' ? 'bg-success/20 text-success' : '',
-                  statusConfig.color === 'warning' ? 'bg-warning/20 text-warning' : '',
-                  statusConfig.color === 'error' ? 'bg-error/20 text-error' : '',
-                  statusConfig.color === 'neutral' ? 'bg-muted/20 text-muted' : '',
-                ]"
-              >
-                {{ statusConfig.label }}
-              </div>
+              <AgencyStatusBadge v-if="agency.status" :status="agency.status" class="ml-1" />
               
               <!-- Country -->
               <div class="flex items-center gap-2">
@@ -208,6 +199,15 @@ onMounted(async () => {
         :description="agency.rejection_note"
         class="mx-3 mt-4"
       />
+
+      <!-- Income Dashboard (for approved members) -->
+      <template v-if="isApproved">
+        <div class="px-3 mt-4">
+          <SectionTitle class="mb-2">Income Dashboard</SectionTitle>
+          <IncomeTargetProgress />
+          <RecentEarnings />
+        </div>
+      </template>
 
       <!-- Navigation Menu -->
       <div class="px-3 mt-4 pb-24">
@@ -238,23 +238,11 @@ onMounted(async () => {
           <SectionTitle class="mb-2 mt-6">Agency Settings</SectionTitle>
           
           <!-- Coin Reseller -->
-          <div class="p-3 bg-elevated rounded-lg mb-2">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-semibold">Coin Reseller</p>
-                <p class="text-sm text-muted">
-                  {{ agency.coin_reseller?.name || 'Not set' }}
-                </p>
-              </div>
-              <UButton
-                variant="soft"
-                size="sm"
-                icon="i-lucide-edit"
-              >
-                Change
-              </UButton>
-            </div>
-          </div>
+          <ChooseDefaultReseller
+            agency-mode
+            :initial-reseller="agencyCoinReseller"
+            color="primary"
+          />
 
           <!-- Dissolve Agency -->
           <UButton

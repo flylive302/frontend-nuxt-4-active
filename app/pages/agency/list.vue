@@ -167,8 +167,8 @@ const hasActiveFilters = computed(() => {
       <div v-else class="grid grid-cols-2 gap-3">
         <AgencyCard
           v-for="agency in agencyStore.agencies.items"
-          :key="agency.id"
           :id="String(agency.id)"
+          :key="agency.id"
           :name="agency.name"
           :members="agency.member_count || 0"
           :country-code="agency.country.toLowerCase()"

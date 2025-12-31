@@ -59,6 +59,9 @@ const phone = reactive<PhoneModel>({
   phone: '',
 })
 
+// Track selected coin reseller ID from ChooseDefaultReseller
+const coinResellerId = ref<number | null>(null)
+
 // ========================================
 // Composables / Injected Dependencies
 // ========================================
@@ -171,6 +174,8 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
       phone_dial_code: parsed.data.dialCode,
       phone: parsed.data.phone,
       phone_e164: normalizePhone(parsed.data.dialCode, parsed.data.phone),
+      // Coin reseller (from user's default reseller selection)
+      ...(coinResellerId.value && { coin_reseller_id: coinResellerId.value }),
     }
 
     await api('/agencies', {
@@ -383,7 +388,7 @@ function getUploadStatusColor(status: string): string {
         </UFormField>
 
         <!-- Default Reseller -->
-        <ChooseDefaultReseller color="primary" />
+        <ChooseDefaultReseller v-model="coinResellerId" color="primary" />
 
         <!-- Submit Button -->
         <UButton

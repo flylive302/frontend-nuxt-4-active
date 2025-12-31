@@ -14,16 +14,34 @@ defineOptions({ name: 'ChooseDefaultReseller' })
 // ========================================
 const props = withDefaults(defineProps<{
   color?: Colors
+  modelValue?: number | null
+  readonly?: boolean
+  /** When true, changes the agency coin reseller instead of user default */
+  agencyMode?: boolean
+  /** Initial reseller to display (for agency mode when showing agency's coin reseller) */
+  initialReseller?: { id: number; name: string; avatar?: string | null; signature?: string | null; contact?: string } | null
 }>(), {
-  color: 'primary'
+  color: 'primary',
+  modelValue: undefined,
+  readonly: false,
+  agencyMode: false,
+  initialReseller: null
 })
 
 const color = toRef(props, 'color')
 
 // ========================================
+// Emits
+// ========================================
+const emit = defineEmits<{
+  'update:modelValue': [id: number | null]
+}>()
+
+// ========================================
 // Composables
 // ========================================
 const toast = useToast()
+const agencyStore = useAgencyStore()
 const { fetchResellers, getDefaultReseller, updateDefaultReseller, normalizeError } = useResellers()
 const { borderClass, gradientClass } = useColorClasses(color)
 
@@ -60,10 +78,25 @@ type CommandGroup = {
 // Lifecycle
 // ========================================
 onMounted(async () => {
+  // In agency mode with initialReseller, use that instead of fetching
+  if (props.agencyMode && props.initialReseller) {
+    selectedReseller.value = {
+      id: props.initialReseller.id,
+      name: props.initialReseller.name,
+      avatar: props.initialReseller.avatar ?? null,
+      signature: props.initialReseller.signature ?? '',
+      contact: props.initialReseller.contact ?? '',
+    }
+    emit('update:modelValue', props.initialReseller.id)
+    return
+  }
+
+  // Fetch user's default reseller
   try {
     const response = await getDefaultReseller()
     if (response.status === 'success' && response.data) {
       selectedReseller.value = response.data
+      emit('update:modelValue', response.data.id)
     }
   } catch {
     // Silently fail - user may not have a default reseller yet
@@ -105,12 +138,30 @@ async function selectReseller(item: CommandItem): Promise<void> {
 
   isUpdating.value = true
   try {
-    const response = await updateDefaultReseller(item.id)
+    // Agency mode: use agency store to update agency's coin reseller
+    if (props.agencyMode) {
+      const success = await agencyStore.changeCoinReseller({ coin_reseller_id: item.id })
+      if (success) {
+        selectedReseller.value = {
+          id: item.id,
+          name: item.name,
+          signature: item.label,
+          contact: item.suffix ?? '',
+          avatar: item.avatar?.src ?? null,
+        }
+        emit('update:modelValue', item.id)
+        isModalOpen.value = false
+      }
+    } else {
+      // User mode: update user's default reseller
+      const response = await updateDefaultReseller(item.id)
 
-    if (response.status === 'success' && response.data) {
-      selectedReseller.value = response.data
-      isModalOpen.value = false
-      toast.add({ title: `${item.name} set as default`, color: 'success' })
+      if (response.status === 'success' && response.data) {
+        selectedReseller.value = response.data
+        emit('update:modelValue', response.data.id)
+        isModalOpen.value = false
+        toast.add({ title: `${item.name} set as default`, color: 'success' })
+      }
     }
   } catch (err) {
     const normalized = normalizeError(err)

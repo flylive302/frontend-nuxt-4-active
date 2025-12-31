@@ -28,6 +28,8 @@ const agencyStore = useAgencyStore()
 onMounted(() => {
   // Fetch user's agency context for conditional navigation
   agencyStore.fetchUserAgency()
+  agencyStore.fetchReceivedInvitations()
+  agencyStore.fetchMyJoinRequests()
 })
 </script>
 
@@ -86,18 +88,18 @@ onMounted(() => {
         txt="My Agency" 
       />
       
-      <!-- Agency Invitations (visible if has invitations) -->
+      <!-- Agency Invitations (visible if not agency member) -->
       <NavProfileItem 
-        v-if="agencyStore.receivedInvitations.items.length > 0"
+        v-if="!agencyStore.isAgencyMember"
         to="/agency/invitations" 
         icon="i-lucide-mail" 
         txt="Agency Invitations"
-        :badge="agencyStore.receivedInvitations.items.length"
+        :badge="agencyStore.receivedInvitations.items.length || undefined"
       />
       
-      <!-- My Join Requests (visible if has pending requests) -->
+      <!-- My Join Requests (visible if not agency member) -->
       <NavProfileItem 
-        v-if="agencyStore.myJoinRequests.items.length > 0"
+        v-if="!agencyStore.isAgencyMember"
         to="/agency/my-requests" 
         icon="i-lucide-user-plus" 
         txt="My Join Requests"

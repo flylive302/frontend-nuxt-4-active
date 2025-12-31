@@ -44,7 +44,7 @@ interface UserAgencyState {
 // ========================================
 
 export const useAgencyStore = defineStore('agency', () => {
-  const { api } = useApi()
+  const { api, normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -164,7 +164,8 @@ export const useAgencyStore = defineStore('agency', () => {
         userAgency.value.isOwner = false
       }
     } catch (error) {
-      userAgency.value.error = 'Failed to load agency information'
+      const err = normalizeError(error)
+      userAgency.value.error = err.message
       console.error('[AgencyStore] fetchUserAgency failed:', error)
     } finally {
       userAgency.value.loading = false
@@ -194,7 +195,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Left Agency', description: 'You have left the agency.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to leave agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] leaveAgency failed:', error)
       return false
     }
@@ -220,7 +222,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Agency Dissolved', description: 'Your agency has been dissolved.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to dissolve agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] dissolveAgency failed:', error)
       return false
     }
@@ -248,7 +251,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Updated', description: 'Coin reseller updated successfully.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to update coin reseller.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] changeCoinReseller failed:', error)
       return false
     }
@@ -307,7 +311,8 @@ export const useAgencyStore = defineStore('agency', () => {
       agencies.value.cursor = response.meta.next_cursor
       agencies.value.hasMore = response.meta.next_cursor !== null
     } catch (error) {
-      agencies.value.error = 'Failed to load agencies'
+      const err = normalizeError(error)
+      agencies.value.error = err.message
       console.error('[AgencyStore] fetchAgencies failed:', error)
     } finally {
       agencies.value.loading = false
@@ -328,7 +333,8 @@ export const useAgencyStore = defineStore('agency', () => {
       const response = await api<{ data: Agency }>(`/agencies/${id}`)
       currentAgency.value.agency = response.data
     } catch (error) {
-      currentAgency.value.error = 'Failed to load agency'
+      const err = normalizeError(error)
+      currentAgency.value.error = err.message
       console.error('[AgencyStore] fetchAgencyById failed:', error)
     } finally {
       currentAgency.value.loading = false
@@ -411,7 +417,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Success', description: 'Agency application submitted for review.', color: 'success' })
       return response.data
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to create agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] createAgency failed:', error)
       return null
     }
@@ -437,7 +444,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Request Sent', description: 'Your join request has been submitted.', color: 'success' })
       return response.data
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to send join request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] requestToJoin failed:', error)
       return null
     }
@@ -458,7 +466,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Cancelled', description: 'Join request cancelled.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to cancel request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] cancelJoinRequest failed:', error)
       return false
     }
@@ -494,7 +503,8 @@ export const useAgencyStore = defineStore('agency', () => {
       myJoinRequests.value.cursor = response.meta.next_cursor
       myJoinRequests.value.hasMore = response.meta.next_cursor !== null
     } catch (error) {
-      myJoinRequests.value.error = 'Failed to load join requests'
+      const err = normalizeError(error)
+      myJoinRequests.value.error = err.message
       console.error('[AgencyStore] fetchMyJoinRequests failed:', error)
     } finally {
       myJoinRequests.value.loading = false
@@ -531,7 +541,8 @@ export const useAgencyStore = defineStore('agency', () => {
       joinRequests.value.cursor = response.meta.next_cursor
       joinRequests.value.hasMore = response.meta.next_cursor !== null
     } catch (error) {
-      joinRequests.value.error = 'Failed to load join requests'
+      const err = normalizeError(error)
+      joinRequests.value.error = err.message
       console.error('[AgencyStore] fetchJoinRequests failed:', error)
     } finally {
       joinRequests.value.loading = false
@@ -551,7 +562,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Approved', description: 'Join request approved.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to approve request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] approveJoinRequest failed:', error)
       return false
     }
@@ -570,7 +582,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Rejected', description: 'Join request rejected.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to reject request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] rejectJoinRequest failed:', error)
       return false
     }
@@ -606,7 +619,8 @@ export const useAgencyStore = defineStore('agency', () => {
       receivedInvitations.value.items = response.data
       receivedInvitations.value.hasMore = false // Uses offset pagination
     } catch (error) {
-      receivedInvitations.value.error = 'Failed to load invitations'
+      const err = normalizeError(error)
+      receivedInvitations.value.error = err.message
       console.error('[AgencyStore] fetchReceivedInvitations failed:', error)
     } finally {
       receivedInvitations.value.loading = false
@@ -639,7 +653,8 @@ export const useAgencyStore = defineStore('agency', () => {
       sentInvitations.value.items = response.data
       sentInvitations.value.hasMore = false
     } catch (error) {
-      sentInvitations.value.error = 'Failed to load sent invitations'
+      const err = normalizeError(error)
+      sentInvitations.value.error = err.message
       console.error('[AgencyStore] fetchSentInvitations failed:', error)
     } finally {
       sentInvitations.value.loading = false
@@ -661,7 +676,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Invitation Sent', description: 'Invitation sent successfully.', color: 'success' })
       return response.data
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to send invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] sendInvitation failed:', error)
       return null
     }
@@ -681,7 +697,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Cancelled', description: 'Invitation cancelled.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to cancel invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] cancelInvitation failed:', error)
       return false
     }
@@ -708,7 +725,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Joined', description: 'You have joined the agency!', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to accept invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] acceptInvitation failed:', error)
       return false
     }
@@ -728,7 +746,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Declined', description: 'Invitation declined.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to decline invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] declineInvitation failed:', error)
       return false
     }
@@ -755,7 +774,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Removed', description: 'Member removed from agency.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to remove member.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] kickMember failed:', error)
       return false
     }
@@ -770,7 +790,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Blocked', description: 'User blocked from agency.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to block user.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] blockUser failed:', error)
       return false
     }
@@ -785,7 +806,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Unblocked', description: 'User unblocked.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to unblock user.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] unblockUser failed:', error)
       return false
     }
@@ -800,7 +822,8 @@ export const useAgencyStore = defineStore('agency', () => {
       toast.add({ title: 'Blocked', description: 'Agency blocked.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to block agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[AgencyStore] blockAgency failed:', error)
       return false
     }

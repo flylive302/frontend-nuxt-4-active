@@ -244,6 +244,7 @@ export interface GiftReceivedEvent {
 export interface GiftErrorEvent {
   transactionId: string;
   error: 'insufficient_balance' | 'invalid_gift' | string;
+  message?: string;
 }
 
 export interface GiftPrepareEvent {
