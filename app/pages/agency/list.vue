@@ -4,7 +4,7 @@
 // ========================================
 
 import { onMounted, watch } from 'vue'
-import type { Agency } from '~/types/agency'
+// Note: Agency type only needed for component prop inference, not direct use
 
 // ========================================
 // Page Configuration

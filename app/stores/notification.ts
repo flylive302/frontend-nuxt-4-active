@@ -3,10 +3,9 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import type {
   Notification,
-  NotificationState,
   NotificationListResponse,
   UnreadCountResponse,
 } from '~/types/notification'

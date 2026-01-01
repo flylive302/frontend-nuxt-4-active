@@ -709,7 +709,7 @@ export const useAgencyStore = defineStore('agency', () => {
    */
   async function acceptInvitation(invitationId: number): Promise<boolean> {
     try {
-      const response = await api<{ data: AgencyMember }>(
+      const _response = await api<{ data: AgencyMember }>(
         `/invitations/${invitationId}/accept`,
         { method: 'POST' }
       )

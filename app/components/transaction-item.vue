@@ -3,7 +3,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Transaction, BalanceChange } from '~/types/wallet'
-import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPE_COLORS } from '~/types/wallet'
+import { TRANSACTION_TYPE_LABELS } from '~/types/wallet'
 
 // ========================================
 // Props

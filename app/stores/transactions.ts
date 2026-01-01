@@ -5,7 +5,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
-  Transaction,
   TransactionsByDate,
   TransactionSummary,
   TransactionTypeFilter,

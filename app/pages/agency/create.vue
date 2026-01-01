@@ -69,7 +69,7 @@ const coinResellerId = ref<number | null>(null)
 const toast = useToast()
 const agencyStore = useAgencyStore()
 const { api } = useApi()
-const { uploadImage, createUploadState } = useImageUpload()
+const { uploadImage: _uploadImage, createUploadState } = useImageUpload()
 
 // ========================================
 // Upload States

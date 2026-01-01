@@ -47,7 +47,6 @@ const FILTER_TABS: FilterTab[] = [
 // ========================================
 
 const activeTab = ref(0)
-const scrollContainer = ref<HTMLElement | null>(null)
 
 // ========================================
 // Computed

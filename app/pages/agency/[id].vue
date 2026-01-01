@@ -19,7 +19,7 @@ definePageMeta({ layout: 'alt' })
 
 const route = useRoute()
 const agencyStore = useAgencyStore()
-const authStore = useAuthStore()
+const _authStore = useAuthStore() // Keep for future features
 
 // ========================================
 // Component State
@@ -40,7 +40,7 @@ const members = computed(() => agencyStore.currentAgency.members)
 const loading = computed(() => agencyStore.currentAgency.loading)
 const error = computed(() => agencyStore.currentAgency.error)
 
-const statusConfig = computed(() => 
+const _statusConfig = computed(() => 
   agency.value ? AGENCY_STATUS_CONFIG[agency.value.status] : null
 )
 
@@ -60,7 +60,7 @@ const hasPendingRequest = computed(() =>
   agencyStore.myJoinRequests.items.some(r => r.agency?.id === agencyId.value && r.status === 'pending')
 )
 
-const pendingRequest = computed(() =>
+const _pendingRequest = computed(() =>
   agencyStore.myJoinRequests.items.find(r => r.agency?.id === agencyId.value && r.status === 'pending')
 )
 

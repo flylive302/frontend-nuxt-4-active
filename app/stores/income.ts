@@ -69,8 +69,23 @@ export const useIncomeStore = defineStore('income', () => {
 
   /**
    * Coins needed to complete active target.
+   * Falls back to calculating from earned/required if API doesn't provide it.
    */
-  const coinsToComplete = computed(() => activeTarget.value?.coins_to_complete ?? '0')
+  const coinsToComplete = computed(() => {
+    if (!activeTarget.value) return '0'
+    
+    // If API provides valid coins_to_complete, use it
+    const apiValue = activeTarget.value.coins_to_complete
+    if (apiValue && parseFloat(apiValue) > 0) {
+      return apiValue
+    }
+    
+    // Calculate from earned/required as fallback
+    const required = parseFloat(activeTarget.value.required_coins ?? '0')
+    const earned = parseFloat(activeTarget.value.earned_coins ?? '0')
+    const remaining = Math.max(0, required - earned)
+    return remaining.toFixed(4)
+  })
 
   /**
    * Recent earnings from summary.

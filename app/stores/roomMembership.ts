@@ -372,7 +372,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * Handle room level up event (real-time).
    */
   function onRoomLevelUp(newProgress: RoomLevelProgress): void {
-    const oldLevel = levelProgress.value?.current_level ?? 0
+    const _oldLevel = levelProgress.value?.current_level ?? 0
     levelProgress.value = newProgress
     
     toast.add({

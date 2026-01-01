@@ -68,7 +68,6 @@ onMounted(() => {
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-crown" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
-      <NavProfileItem to="/income" icon="i-lucide-dollar-sign" txt="My Income" />
       
       <!-- Agency Section -->
       <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>
@@ -86,6 +85,14 @@ onMounted(() => {
         to="/agency/my-agency" 
         icon="i-lucide-home" 
         txt="My Agency" 
+      />
+      
+      <!-- My Income (visible if agency member) -->
+      <NavProfileItem 
+        v-if="agencyStore.isAgencyMember"
+        to="/agency/my-income" 
+        icon="i-lucide-dollar-sign" 
+        txt="My Income" 
       />
       
       <!-- Agency Invitations (visible if not agency member) -->

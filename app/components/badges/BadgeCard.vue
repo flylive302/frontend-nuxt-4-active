@@ -32,7 +32,7 @@ const emit = defineEmits<{
 
 const isEarned = computed(() => props.userBadge !== null)
 const isDisplayed = computed(() => props.userBadge?.is_displayed ?? false)
-const categoryColor = computed(() => BADGE_CATEGORY_COLORS[props.badge.category])
+const _categoryColor = computed(() => BADGE_CATEGORY_COLORS[props.badge.category])
 const rarityColor = computed(() => 
   props.badge.rarity ? BADGE_RARITY_COLORS[props.badge.rarity] : 'text-gray-400'
 )

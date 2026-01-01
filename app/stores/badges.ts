@@ -11,7 +11,6 @@ import type {
   BadgeCategory,
   BadgeCategoryInfo,
   GetBadgesParams,
-  BadgePagination,
 } from '~/types/badge'
 
 // ========================================
@@ -119,28 +118,20 @@ export const useBadgesStore = defineStore('badges', () => {
     catalog.value.error = null
 
     try {
-      const queryParams: Record<string, unknown> = {
-        per_page: params.per_page ?? 50,
-      }
+      const queryParams: Record<string, unknown> = {}
 
       if (params.category) {
         queryParams.category = params.category
       }
-      if (catalog.value.cursor) {
-        queryParams.cursor = catalog.value.cursor
-      }
 
+      // Backend returns simple array format: { data: Badge[] }
+      // No pagination - badge collections are small (10-50 items)
       const response = await api<{
-        success: true
-        data: {
-          badges: Badge[]
-          pagination: BadgePagination
-        }
+        data: Badge[]
       }>('/badges', { params: queryParams })
 
-      catalog.value.items.push(...response.data.badges)
-      catalog.value.hasMore = response.data.pagination.has_more
-      catalog.value.cursor = response.data.pagination.next_cursor ?? null
+      catalog.value.items = response.data
+      catalog.value.hasMore = false
     } catch (err) {
       const normalized = normalizeError(err)
       catalog.value.error = normalized.message
@@ -169,7 +160,7 @@ export const useBadgesStore = defineStore('badges', () => {
   /**
    * Fetch user's earned badges.
    */
-  async function fetchUserBadges(params: GetBadgesParams = {}, reset = false): Promise<void> {
+  async function fetchUserBadges(_params: GetBadgesParams = {}, reset = false): Promise<void> {
     if (reset) {
       userBadges.value.items = []
       userBadges.value.cursor = null
@@ -182,25 +173,14 @@ export const useBadgesStore = defineStore('badges', () => {
     userBadges.value.error = null
 
     try {
-      const queryParams: Record<string, unknown> = {
-        per_page: params.per_page ?? 50,
-      }
-
-      if (userBadges.value.cursor) {
-        queryParams.cursor = userBadges.value.cursor
-      }
-
+      // Backend returns simple array format: { data: UserBadge[] }
+      // No pagination - user badge collections are small
       const response = await api<{
-        success: true
-        data: {
-          badges: UserBadge[]
-          pagination: BadgePagination
-        }
-      }>('/user/badges', { params: queryParams })
+        data: UserBadge[]
+      }>('/user/badges')
 
-      userBadges.value.items.push(...response.data.badges)
-      userBadges.value.hasMore = response.data.pagination.has_more
-      userBadges.value.cursor = response.data.pagination.next_cursor ?? null
+      userBadges.value.items = response.data
+      userBadges.value.hasMore = false
     } catch (err) {
       const normalized = normalizeError(err)
       userBadges.value.error = normalized.message

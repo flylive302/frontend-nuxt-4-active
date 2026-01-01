@@ -204,8 +204,8 @@ onMounted(async () => {
       <template v-if="isApproved">
         <div class="px-3 mt-4">
           <SectionTitle class="mb-2">Income Dashboard</SectionTitle>
-          <IncomeTargetProgress />
-          <RecentEarnings />
+          <AgencyIncomeTargetProgress />
+          <AgencyRecentEarnings />
         </div>
       </template>
 
@@ -230,6 +230,11 @@ onMounted(async () => {
             to="/agency/member-invites" 
             icon="i-lucide-mail" 
             txt="Sent Invitations" 
+          />
+          <NavProfileItem 
+            to="/agency/member-income" 
+            icon="i-lucide-dollar-sign" 
+            txt="Member Income" 
           />
         </template>
 
