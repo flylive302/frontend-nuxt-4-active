@@ -11,7 +11,7 @@ import { AGENCY_STATUS_CONFIG } from '~/types/agency'
 // Page Configuration
 // ========================================
 
-definePageMeta({ layout: 'alt' })
+definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ========================================
 // Composables / Injected Dependencies

@@ -11,7 +11,7 @@ import type { LevelStatus, LevelConfigItem } from '~/types/levels'
 // Page Configuration
 // ========================================
 
-definePageMeta({ layout: 'alt' })
+definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ========================================
 // Composables / Injected Dependencies
@@ -86,9 +86,22 @@ const currentXP = computed(() =>
   levelStatus.value?.current_xp?.toLocaleString() ?? '0'
 )
 
-const xpRemaining = computed(() => 
-  levelStatus.value?.xp_remaining?.toLocaleString() ?? '0'
-)
+const xpRemaining = computed(() => {
+  const status = levelStatus.value
+  if (!status) return '0'
+
+  // If the API says 0 or we want to be sure, check the config for the next level
+  const nextLv = currentLevel.value + 1
+  const config = levelConfig.value.find(l => l.level === nextLv)
+  
+  if (config) {
+    const remaining = config.required_xp - (status.current_xp ?? 0)
+    return Math.max(0, remaining).toLocaleString()
+  }
+
+  // Fallback to API value if config not found
+  return status.xp_remaining?.toLocaleString() ?? '0'
+})
 
 const currentLevel = computed(() => 
   levelStatus.value?.current_level ?? 0
@@ -107,7 +120,7 @@ const tableData = computed<WealthLevelRow[]>(() =>
     level: item.name,
     requiredXP: item.required_xp.toLocaleString() + ' XP',
     badge: {
-      badgeSrc: item.badge.image_url || '/siteAssets/badges/badge-wealth-level-1.webp',
+      badgeSrc: item.badge?.image_url || '/badges/wealth/level_1.webp',
       color: 'tertiary',
       txt: String(item.level),
       class: item.level === currentLevel.value ? 'ring-2 ring-tertiary' : '',
@@ -160,7 +173,7 @@ onMounted(() => {
       <div class="p-2 w-full h-full bg-gradient-to-br to-tertiary/30">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
-          <UserAvatar :animated="true" class="col-span-2" />
+          <UserAvatar :animated="true" :img="authStore.user?.avatar?.original" class="col-span-2" />
           <div class="col-span-5 flex flex-col justify-center">
             <p v-if="loading" class="text-base font-semibold animate-pulse">Loading...</p>
             <template v-else-if="user">
@@ -200,7 +213,7 @@ onMounted(() => {
       </div>
     </AltHero>
 
-    <div class="px-3 my-14">
+    <div class="px-3 mt-2">
       <!-- Error State -->
       <UAlert
         v-if="error"
@@ -214,21 +227,8 @@ onMounted(() => {
       <!-- Level Description -->
       <div class="flex gap-2 items-center">
         <NuxtImg
-          v-if="currentBadge"
           provider="imagekit"
-          :src="currentBadge.image_url"
-          class="w-8 relative z-10 shrink-0"
-          width="18"
-          height="18"
-          format="webp"
-          densities="x1 x2"
-          sizes="64px"
-          loading="lazy"
-        />
-        <NuxtImg
-          v-else
-          provider="imagekit"
-          src="/siteAssets/badges/badge-wealth-level-1.webp"
+          :src="currentBadge?.image_url == null ? '/badges/wealth/level_1.webp' : currentBadge?.image_url"
           class="w-8 relative z-10 shrink-0"
           width="18"
           height="18"

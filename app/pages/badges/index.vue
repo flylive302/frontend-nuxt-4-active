@@ -95,7 +95,7 @@ onMounted(async () => {
       <template #second-link-text>My Badges</template>
     </NavAlt>
 
-    <div class="px-3 mt-6 mb-32 overflow-hidden">
+    <div class="px-3 mt-14 mb-32 overflow-hidden">
       <!-- Category Tabs -->
       <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
         <UButton

@@ -10,7 +10,7 @@ import { onMounted, watch } from 'vue'
 // Page Configuration
 // ========================================
 
-definePageMeta({ layout: 'alt' })
+definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ========================================
 // Composables / Injected Dependencies

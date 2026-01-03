@@ -15,7 +15,7 @@ import { formatAgencyDate, getJoinRequestStatusColor } from '~/utils/agency-form
 // Page Configuration
 // ========================================
 
-definePageMeta({ layout: 'alt' })
+definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ========================================
 // Composables / Injected Dependencies

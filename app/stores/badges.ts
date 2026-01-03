@@ -336,4 +336,8 @@ export const useBadgesStore = defineStore('badges', () => {
     setCategory,
     reset,
   }
+}, {
+  persist: {
+    pick: ['userBadges'],
+  }
 })

@@ -7,12 +7,12 @@ type BadgeColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary' | 'succes
 withDefaults(defineProps<{
   color?: BadgeColor
   badgeSrc?: string
-  txt?: string
+  txt?: string | number
   imgAlt?: string
   showBadge?: boolean
 }>(), {
   color: "primary",
-  badgeSrc: "/siteAssets/badges/badge-profile-1.webp",
+  badgeSrc: "/badges/profile-1.webp",
   txt: "UserSignature",
   imgAlt: "User badge",
   showBadge: true,
@@ -49,8 +49,6 @@ const variantMap: Record<BadgeColor, string> = {
           variantMap?.[color],
           showBadge ? 'pl-4 -ml-4' : 'pl-1 m-0'
         ]"
-        role="note"
-        :aria-label="txt"
     >
       {{ txt }}
     </p>

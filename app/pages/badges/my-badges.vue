@@ -76,7 +76,7 @@ onMounted(async () => {
       <template #second-link-text>My Badges</template>
     </NavAlt>
 
-    <div class="px-3 mt-6 mb-32 overflow-hidden">
+    <div class="px-3 mt-16 mb-32 overflow-hidden">
       <!-- Stats Summary -->
       <div v-if="stats" class="grid grid-cols-2 gap-2 mb-4">
         <div class="bg-elevated rounded-lg p-3 text-center">

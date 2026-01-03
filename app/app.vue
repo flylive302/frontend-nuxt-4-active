@@ -43,11 +43,13 @@ watch(
     <RoomShell 
       v-if="roomStore.currentRoom"
       :class="!roomStore.isMinimized ? 'show-room-shell' : 'hide-room-shell'"
+      :inert="roomStore.isMinimized"
     />
 
     <RoomMinimized 
       v-if="roomStore.currentRoom"
       :class="roomStore.isMinimized ? 'show-room-shell' : 'hide-room-shell'"
+      :inert="!roomStore.isMinimized"
     />
   </UApp>
 </template>

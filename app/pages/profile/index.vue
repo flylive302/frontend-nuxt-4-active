@@ -19,7 +19,13 @@ definePageMeta({
 // ========================================
 
 const authStore = useAuthStore()
+const levelsStore = useLevelsStore()
 const agencyStore = useAgencyStore()
+
+const CURRENT_WEALTH_BADGE = levelsStore.wealthBadge == null ? '/badges/wealth/level_0.webp' : levelsStore.wealthBadge.image_url;
+const CURRENT_CHARM_BADGE = levelsStore.charmBadge == null ? '/badges/charm/level_0.webp' : levelsStore.charmBadge.image_url;
+const CURRENT_WEALTH_LEVEL = levelsStore.wealthLevel?.current_level || '0';
+const CURRENT_CHARM_LEVEL = levelsStore.charmLevel?.current_level || '0';
 
 // ========================================
 // Lifecycle
@@ -49,8 +55,8 @@ onMounted(() => {
             <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
             <ProfileBadge :txt="authStore?.user?.signature || undefined" />
             <div class="flex gap-2">
-              <ProfileBadge badge-src="/siteAssets/badges/badge-wealth-level-3.webp" color="tertiary" txt="1" />
-              <ProfileBadge badge-src="/siteAssets/badges/badge-charm-level-3.webp" color="secondary" txt="1" />
+              <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
+              <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
             </div>
           </div>
         </NuxtLink>
