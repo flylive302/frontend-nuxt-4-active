@@ -143,7 +143,7 @@ onMounted(async () => {
     </div>
 
     <!-- Content for Owners/Admins -->
-    <div v-else class="px-3 py-14 space-y-6">
+    <div v-else class="px-3 py-14 space-y-4">
       <!-- Agency Header -->
       <div class="text-center">
         <h1 class="text-xl font-bold">{{ agencyName || 'Agency' }}</h1>
@@ -152,7 +152,7 @@ onMounted(async () => {
 
       <!-- Summary Stats -->
       <div class="grid grid-cols-2 gap-3">
-        <div class="bg-elevated rounded-lg p-3 text-center">
+        <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <div class="flex items-center justify-center gap-2 mb-1">
             <NuxtImg 
               provider="imagekit" 
@@ -164,10 +164,10 @@ onMounted(async () => {
               {{ totalDiamonds.toLocaleString() }}
             </p>
           </div>
-          <p class="text-xs text-muted">Total Diamonds Earned</p>
+          <p class="text-xs text-white">Total Diamonds Earned</p>
         </div>
 
-        <div class="bg-elevated rounded-lg p-3 text-center">
+        <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <div class="flex items-center justify-center gap-2 mb-1">
             <NuxtImg 
               provider="imagekit" 
@@ -179,7 +179,7 @@ onMounted(async () => {
               {{ Math.floor(totalCoinsContributed).toLocaleString() }}
             </p>
           </div>
-          <p class="text-xs text-muted">Total Coins Contributed</p>
+          <p class="text-xs text-white">Total Coins Contributed</p>
         </div>
       </div>
 
@@ -210,53 +210,59 @@ onMounted(async () => {
         <div 
           v-for="member in members" 
           :key="member.user_id" 
-          class="bg-elevated rounded-lg p-3"
+          class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-2 relative overflow-hidden"
         >
-          <div class="flex items-start gap-3">
+        <!-- Diamonds Earned -->
+          <div class="flex items-center gap-1 justify-center absolute top-0 right-0 bg-secondary/20 px-2 rounded">
+            <UIcon name="i-lucide-gem" class="size-4 text-secondary-400" />
+            <p class="font-semibold">{{ member.total_diamonds_earned }}</p>
+          </div>
+
+          <div class="flex gap-2">
             <!-- Avatar -->
-            <UserAvatar 
-              :img="member.avatar_url || undefined" 
-              class="w-12 shrink-0" 
+            <UserAvatar
+                :img="member.avatar_url || undefined"
+                class="w-12 shrink-0"
+                animated
             />
 
             <!-- Info -->
-            <div class="flex-1 min-w-0">
+            <div>
               <p class="font-semibold truncate">{{ member.name }}</p>
               <p class="text-xs text-muted">Joined {{ formatDate(member.joined_at) }}</p>
-              
-              <!-- Target Progress -->
-              <div v-if="member.current_target" class="mt-2">
-                <div class="flex justify-between text-xs mb-1">
-                  <span class="text-muted">Target: {{ member.current_target.tier }}</span>
-                  <span class="font-semibold">
-                    {{ member.current_target.progress_percentage.toFixed(0) }}%
-                  </span>
-                </div>
-                <UProgress 
-                  :model-value="member.current_target.progress_percentage" 
-                  color="primary" 
-                  size="xs" 
-                />
-                <p class="text-xs text-muted mt-1">
-                  {{ member.current_target.earned_coins.toLocaleString() }} / 
-                  {{ member.current_target.required_coins.toLocaleString() }} coins
-                  • {{ member.current_target.days_remaining }} days left
-                </p>
-              </div>
-              <p v-else class="text-xs text-muted mt-2">No active target</p>
             </div>
 
             <!-- Stats -->
-            <div class="text-right shrink-0">
-              <div class="flex items-center gap-1 justify-end">
-                <icon name="i-lucide-gem" class="size-4 text-secondary-400" />
-                <p class="font-semibold">{{ member.total_diamonds_earned }}</p>
-              </div>
-              <p class="text-xs text-muted">
-                {{ member.completed_targets_count }} targets done
-              </p>
-            </div>
+            <p class="text-sm text-info font-semibold">
+              {{ member.completed_targets_count }} targets achieved
+            </p>
+
           </div>
+
+          <!-- Target Progress -->
+          <div v-if="member.current_target" class="mt-1">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-white">Target: {{ member.current_target.tier }}</span>
+              <span class="font-semibold">
+                    {{ member.current_target.progress_percentage.toFixed(0) }}%
+                  </span>
+            </div>
+            <UProgress
+                :model-value="member.current_target.progress_percentage"
+                color="primary"
+                size="sm"
+            />
+            <p class="text-xs text-white mt-1">
+              {{ member.current_target.earned_coins.toLocaleString() }} /
+              {{ member.current_target.required_coins.toLocaleString() }} coins
+            </p>
+
+            <p class="text-sm text-info bg-info/10 px-2 py-1 absolute bottom-0 right-0">
+              {{ member.current_target.days_remaining }} days left
+            </p>
+          </div>
+          <p v-else class="text-xs text-white mt-2">No active target</p>
+
         </div>
 
         <!-- Load More -->

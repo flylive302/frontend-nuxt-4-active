@@ -63,7 +63,7 @@ const columns: ColumnDef<CharmLevelRow>[] = [
       if (!badge) return null
 
       return h(profileBadge, {
-        class: badge.class,
+        class: badge.class + 'mx-auto',
         badgeSrc: badge.badgeSrc,
         color: badge.color,
         txt: badge.txt,
@@ -123,7 +123,7 @@ const tableData = computed<CharmLevelRow[]>(() =>
       badgeSrc: item.badge?.image_url || '/badges/charm/level_1.webp',
       color: 'secondary',
       txt: String(item.level),
-      class: item.level === currentLevel.value ? 'ring-2 ring-secondary' : '',
+      class: item.level === currentLevel.value ? 'border border-secondary bg-secondary/10 rounded-md px-2 py-1 inset-shadow-sm ' : '',
     },
   }))
 )
@@ -170,7 +170,7 @@ onMounted(() => {
     </NavAlt>
 
     <AltHero class="z-10" image-src="/siteAssets/alt-hero/secondary.webp">
-      <div class="p-2 w-full h-full bg-gradient-to-br to-secondary/30">
+      <div class="p-2 w-full h-full bg-gradient-to-br to-secondary-900 backdrop-blur-sm">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
           <UserAvatar :animated="true" :img="authStore.user?.avatar?.original" class="col-span-2" />

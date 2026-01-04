@@ -61,78 +61,71 @@ function getSourceIcon(source: RecentEarning['source']): string {
 function getSourceColor(source: RecentEarning['source']): string {
   switch (source) {
     case 'gift':
-      return 'text-pink-500'
+      return 'text-success'
     case 'room_commission':
-      return 'text-blue-500'
+      return 'text-info'
     default:
-      return 'text-yellow-500'
+      return 'text-tertiary'
   }
 }
 </script>
 
 <template>
-  <UCollapsible :default-open="true">
-    <div class="flex items-center justify-between px-1 mb-2">
-      <SectionTitle>Recent Earnings</SectionTitle>
-      <icon name="i-lucide-chevron-down" class="size-5 text-muted" />
+  <div>
+    <!-- Loading State -->
+    <div v-if="isLoading" class="space-y-2">
+      <div v-for="i in 3" :key="i" class="animate-pulse bg-muted rounded-lg h-12" />
     </div>
 
-    <template #content>
-      <!-- Loading State -->
-      <div v-if="isLoading" class="space-y-2">
-        <div v-for="i in 3" :key="i" class="animate-pulse bg-muted rounded-lg h-12" />
-      </div>
+    <!-- Empty State -->
+    <div v-else-if="!hasEarnings" class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-4 text-center">
+      <icon name="i-lucide-wallet" class="size-10 mx-auto text-muted mb-2" />
+      <p class="text-sm text-muted">No recent earnings</p>
+    </div>
 
-      <!-- Empty State -->
-      <div v-else-if="!hasEarnings" class="bg-elevated rounded-lg p-4 text-center">
-        <icon name="i-lucide-wallet" class="size-10 mx-auto text-muted mb-2" />
-        <p class="text-sm text-muted">No recent earnings</p>
-      </div>
-
-      <!-- Earnings List -->
-      <template v-else>
-        <!-- Summary Row -->
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <div class="bg-elevated rounded-lg p-3 text-center">
-            <p class="text-xs text-muted">Today</p>
-            <p class="text-lg font-bold text-green-500">+{{ formatAmount(todayTotal) }}</p>
-          </div>
-          <div class="bg-elevated rounded-lg p-3 text-center">
-            <p class="text-xs text-muted">This Week</p>
-            <p class="text-lg font-bold text-primary">+{{ formatAmount(weekTotal) }}</p>
-          </div>
+    <!-- Earnings List -->
+    <template v-else>
+      <!-- Summary Row -->
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
+          <p class="text-xs text-muted">Today</p>
+          <p class="text-lg font-bold text-tertiary">+{{ formatAmount(todayTotal) }}</p>
         </div>
+        <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
+          <p class="text-xs text-muted">This Week</p>
+          <p class="text-lg font-bold text-success">+{{ formatAmount(weekTotal) }}</p>
+        </div>
+      </div>
 
-        <!-- Earnings Items -->
-        <div class="space-y-2">
-          <div
+      <!-- Earnings Items -->
+      <div class="space-y-2">
+        <div
             v-for="earning in earnings"
             :key="earning.date"
-            class="flex items-center gap-3 bg-elevated rounded-lg p-3"
-          >
-            <!-- Source Icon -->
-            <div 
+            class="flex items-center gap-3 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3"
+        >
+          <!-- Source Icon -->
+          <div
               class="size-10 rounded-full bg-muted/30 flex items-center justify-center"
               :class="getSourceColor(earning.source)"
-            >
-              <icon :name="getSourceIcon(earning.source)" class="size-5" />
-            </div>
+          >
+            <icon :name="getSourceIcon(earning.source)" class="size-5" />
+          </div>
 
-            <!-- Details -->
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold truncate">{{ earning.date_formatted }}</p>
-              <p class="text-xs text-muted">
-                {{ earning.count }} transaction{{ earning.count !== 1 ? 's' : '' }}
-              </p>
-            </div>
+          <!-- Details -->
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold truncate">{{ earning.date_formatted }}</p>
+            <p class="text-xs text-muted">
+              {{ earning.count }} transaction{{ earning.count !== 1 ? 's' : '' }}
+            </p>
+          </div>
 
-            <!-- Amount -->
-            <div class="text-right">
-              <p class="text-sm font-bold text-green-500">+{{ formatAmount(earning.amount) }}</p>
-            </div>
+          <!-- Amount -->
+          <div class="text-right">
+            <p class="text-sm font-bold text-tertiary">+{{ formatAmount(earning.amount) }}</p>
           </div>
         </div>
-      </template>
+      </div>
     </template>
-  </UCollapsible>
+  </div>
 </template>

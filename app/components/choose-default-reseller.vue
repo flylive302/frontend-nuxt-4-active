@@ -77,31 +77,68 @@ type CommandGroup = {
 // ========================================
 // Lifecycle
 // ========================================
-onMounted(async () => {
-  // In agency mode with initialReseller, use that instead of fetching
+// ========================================
+// Lifecycle
+// ========================================
+
+async function initReseller() {
+  // In agency mode with initialReseller, use that
   if (props.agencyMode && props.initialReseller) {
-    selectedReseller.value = {
-      id: props.initialReseller.id,
-      name: props.initialReseller.name,
-      avatar: props.initialReseller.avatar ?? null,
-      signature: props.initialReseller.signature ?? '',
-      contact: props.initialReseller.contact ?? '',
+    const reseller = props.initialReseller
+
+    // If we have a signature but no contact info, try to fetch full details
+    if (!reseller.contact && reseller.signature) {
+      try {
+        const response = await fetchResellers(reseller.signature)
+        if (response.status === 'success' && response.data?.length > 0) {
+          // Find exact match by signature or ID
+          const match = response.data.find(r => r.id === reseller.id || r.signature === reseller.signature)
+          if (match) {
+             selectedReseller.value = match
+             emit('update:modelValue', match.id)
+             return
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch full reseller details', e)
+      }
     }
-    emit('update:modelValue', props.initialReseller.id)
+
+    // Fallback to initial data if fetch failed or wasn't needed
+    selectedReseller.value = {
+      id: reseller.id,
+      name: reseller.name,
+      avatar: reseller.avatar ?? null,
+      signature: reseller.signature ?? '',
+      contact: reseller.contact ?? '', // Might be empty if fetch failed
+    }
+    emit('update:modelValue', reseller.id)
     return
   }
 
-  // Fetch user's default reseller
-  try {
-    const response = await getDefaultReseller()
-    if (response.status === 'success' && response.data) {
-      selectedReseller.value = response.data
-      emit('update:modelValue', response.data.id)
+  // Fetch user's default reseller (non-agency mode or no initial ref)
+  if (!props.agencyMode) {
+    try {
+      const response = await getDefaultReseller()
+      if (response.status === 'success' && response.data) {
+        selectedReseller.value = response.data
+        emit('update:modelValue', response.data.id)
+      }
+    } catch {
+      // Silently fail - user may not have a default reseller yet
     }
-  } catch {
-    // Silently fail - user may not have a default reseller yet
   }
+}
+
+onMounted(() => {
+  initReseller()
 })
+
+watch(() => props.initialReseller, () => {
+  if (props.agencyMode) {
+    initReseller()
+  }
+}, { deep: true })
 
 // ========================================
 // Data Fetching
@@ -276,21 +313,30 @@ const paletteGroups = computed<CommandGroup[]>(() => [
     </header>
 
     <div v-if="selectedReseller" class="mt-2 flex gap-2 rounded-md p-2 shadow-md" :class="[gradientClass]">
-      <div class="max-w-16 flex flex-col justify-center">
-        <UAvatar
-            :src="selectedReseller.avatar || undefined"
-            :alt="selectedReseller.name"
-            size="xl"
-            :class="['border-2', borderClass]"
+      <div class="max-w-20 flex flex-col justify-center">
+        <UserAvatar
+            :img="selectedReseller.avatar || undefined"
+            animated
+            lazy
+            :frame-girth="54"
+            :top="48"
+            frame-name="frames/admin/coin_reseller"
         />
       </div>
 
-      <div class="w-full leading-tight min-w-0">
+      <div class="w-full leading-tight min-w-0 flex flex-col justify-center">
         <p class="font-bold truncate">
           {{ selectedReseller.name }}
           <span class="text-sm font-semibold text-muted truncate">{{ selectedReseller.signature }}</span>
         </p>
-        <p class="text-sm font-semibold text-muted truncate">{{ selectedReseller.contact }}</p>
+        <UButton
+            :to="`https://wa.me/${selectedReseller.contact}`" target="_blank"
+            variant="subtle" color="info" size="xl"
+            class="justify-center items-center inset-shadow-sm mt-1"
+        >
+          <UIcon name="i-logos-whatsapp" />
+          {{ selectedReseller.contact }}
+        </UButton>
       </div>
     </div>
 

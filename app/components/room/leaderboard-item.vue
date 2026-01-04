@@ -39,7 +39,7 @@ function getRankColor(rank: number): 'primary' | 'secondary' | 'tertiary' | 'neu
   <div class="flex items-center justify-between w-full">
     <UBadge :color="getRankColor(user.rank)" class="text-white font-bold" :label="user.rank" />
     <div
-      class="flex gap-1 bg-gradient-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden flex-grow ml-2"
+      class="flex gap-1 bg-linear-to-br from-gray-800 to-black border-2 border-gray-700 rounded-lg shadow-md overflow-hidden grow ml-2"
     >
       <UserAvatar animated class="w-14" />
       <div class="flex flex-col justify-center min-h-full px-2">

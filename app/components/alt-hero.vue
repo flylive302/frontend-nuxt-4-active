@@ -1,8 +1,10 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
   imageSrc?: string
+  blur?: number
 }>(), {
   imageSrc: '/siteAssets/alt-hero/primary.webp',
+  blur: 2
 })
 
 </script>
@@ -23,7 +25,7 @@ withDefaults(defineProps<{
       <BgGlass
           :noise-frequency="0.0001"
           :noise-strength="10"
-          frost-blur-radius="blur(2px)"
+          :frost-blur-radius="`blur(${blur}px)`"
           class="w-full border border-white/40"
       >
         <slot />

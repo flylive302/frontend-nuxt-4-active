@@ -17,6 +17,18 @@ const ROOM_LEVELS: StepperItem[] = [
 ];
 
 const open = ref(false)
+
+/**
+ * Handle opening the leave drawer
+ * Blurs the trigger button first to avoid "Blocked aria-hidden" warning
+ * caused by the drawer trying to hide the focused element's container
+ */
+const openLeaveDrawer = (event: Event) => {
+  const target = event.currentTarget as HTMLElement | null
+  target?.blur()
+  open.value = true
+}
+
 </script>
 
 <template>
@@ -95,7 +107,7 @@ const open = ref(false)
             size="xl"
             class="rounded-full border border-primary-600 cursor-pointer shadow-lg shadow-primary-950/50 backdrop-blur-xs"
             variant="subtle"
-            @click="open = true"
+            @click="openLeaveDrawer"
         />
 
         <template #content>

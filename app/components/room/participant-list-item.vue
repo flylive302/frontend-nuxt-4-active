@@ -22,10 +22,10 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="flex gap-1 bg-gradient-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden"
+    class="flex gap-1 bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden"
   >
     <UserAvatar :img="participant.avatar" animated class="w-13" />
-    <div class="flex flex-col justify-center min-h-full px-2 flex-grow">
+    <div class="flex flex-col justify-center min-h-full px-2 grow">
       <h3 class="text-sm font-bold leading-tight">
         {{ participant.name }}
         <UBadge v-if="participant.isSpeaker" size="xs" color="primary" class="ml-1">Speaker</UBadge>

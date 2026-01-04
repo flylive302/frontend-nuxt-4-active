@@ -19,7 +19,6 @@ definePageMeta({
 // ========================================
 
 const agencyStore = useAgencyStore()
-const incomeStore = useIncomeStore()
 const router = useRouter()
 
 // ========================================
@@ -41,11 +40,10 @@ const membership = computed(() => agencyStore.userAgency.membership)
 const isOwner = computed(() => agencyStore.isAgencyOwner)
 const isAdmin = computed(() => agencyStore.isAgencyAdmin)
 const loading = computed(() => agencyStore.userAgency.loading)
-
-
 const isApproved = computed(() => agency.value?.status === 'approved')
 
-const canDissolve = computed(() => isOwner.value && isApproved.value)
+
+const canDissolve = computed(() => isOwner.value && agency.value?.status === 'approved')
 
 const dissolveConfirmValid = computed(() => 
   dissolveConfirmName.value === agency.value?.name
@@ -59,6 +57,9 @@ const agencyCoinReseller = computed(() => {
     name: agency.value.coin_reseller.name,
     avatar: agency.value.coin_reseller.avatar ?? null,
     signature: agency.value.coin_reseller.signature ?? null,
+    contact: typeof agency.value.coin_reseller.phone === 'object' && agency.value.coin_reseller.phone !== null
+        ? agency.value.coin_reseller.phone.formatted
+        : (agency.value.coin_reseller.phone ?? ''),
   }
 })
 
@@ -97,14 +98,9 @@ async function handleDissolve(): Promise<void> {
 onMounted(async () => {
   await agencyStore.fetchUserAgency()
   
-  if (agencyStore.isAgencyAdmin) {
+  if (agencyStore.isAgencyAdmin && agencyStore.userAgency.agency?.status === 'approved') {
     agencyStore.fetchJoinRequests()
     agencyStore.fetchSentInvitations()
-  }
-  
-  // Fetch income data for approved agency members
-  if (agencyStore.userAgency.agency?.status === 'approved') {
-    incomeStore.fetchAll()
   }
   
   // Redirect if user has no agency
@@ -119,14 +115,11 @@ onMounted(async () => {
     <NavAlt back-to="/profile">My Agency</NavAlt>
 
     <!-- Loading State -->
-    <div v-if="loading" class="pt-14 px-3">
-      <div class="animate-pulse space-y-4">
-        <div class="h-48 bg-muted rounded-lg" />
-        <div class="space-y-2">
-          <div class="h-12 bg-muted rounded" />
-          <div class="h-12 bg-muted rounded" />
-          <div class="h-12 bg-muted rounded" />
-        </div>
+    <div v-if="loading" class="pt-14 px-3 space-y-2">
+      <USkeleton class="h-16 rounded-lg" />
+      <div class="flex gap-2">
+        <USkeleton class="h-12 rounded w-3/4 mx-auto" />
+        <USkeleton class="h-12 rounded w-1/2 mx-auto" />
       </div>
     </div>
 
@@ -150,146 +143,138 @@ onMounted(async () => {
 
     <!-- Agency Dashboard -->
     <template v-else>
-      <AltHero class="z-20">
-        <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
+      <div class="px-3 mt-14">
+        <div class="py-3 bg-linear-to-bl to-neutral-950 border border-neutral-700 relative overflow-hidden rounded-lg">
           <NuxtLink :to="`/agency/${agency.id}`" class="grid grid-cols-5 gap-2 px-3">
-            <!-- Agency Logo -->
-            <div class="col-span-2">
-              <NuxtImg
+            <NuxtImg
                 :src="agency.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${agency.name}`"
                 :alt="agency.name"
-                class="w-full aspect-square rounded-lg border-2 border-primary object-cover"
-              />
-            </div>
-            
+                class="w-full aspect-square object-cover col-span-2"
+            />
+
             <!-- Agency Info -->
             <div class="col-span-3 pr-3 my-auto space-y-1">
-              <h1 class="text-lg font-bold">{{ agency.name }}</h1>
-              
+              <h1 class="text-xl font-bold drop-shadow-md">{{ agency.name }}</h1>
+              <!-- Status Badge -->
+              <AgencyStatusBadge v-if="agency.status" :status="agency.status" class="absolute top-0 right-0" />
+
+              <div class="flex items-center gap-2">
+                <!-- Country -->
+                <div class="flex items-center gap-2">
+                  <icon :name="`i-flag-${agency.country.toLowerCase()}-4x3`" class="size-6 rounded" />
+                  <span class="text-sm text-muted">{{ agency.country }}</span>
+                </div>
+
+                <!-- Member Count -->
+                <div class="flex items-center gap-2">
+                  <icon name="i-lucide-users" class="size-5" />
+                  <span class="font-semibold">{{ agency.member_count || 0 }} members</span>
+                </div>
+              </div>
+
               <!-- Role Badge -->
               <AgencyRoleBadge v-if="isOwner" role="owner" />
-              <AgencyRoleBadge v-else-if="membership" :role="membership.role" />
-              
-              <!-- Status Badge -->
-              <AgencyStatusBadge v-if="agency.status" :status="agency.status" class="ml-1" />
-              
-              <!-- Country -->
-              <div class="flex items-center gap-2">
-                <icon :name="`i-flag-${agency.country.toLowerCase()}-4x3`" class="size-6 rounded" />
-                <span class="text-sm text-muted">{{ agency.country }}</span>
+
+              <div v-else-if="membership" class="flex items-center gap-2">
+                <AgencyRoleBadge :role="membership.role" />
+                <p class="text-xs">Since:</p>
+                <p class="text-xs">
+                  {{ new Date(membership.joined_at).toLocaleDateString() }}
+                </p>
               </div>
-              
-              <!-- Member Count -->
-              <div class="flex items-center gap-2">
-                <icon name="i-lucide-users" class="size-5" />
-                <span class="font-semibold">{{ agency.member_count || 0 }} members</span>
-              </div>
+
             </div>
           </NuxtLink>
         </div>
-      </AltHero>
 
-      <!-- Rejection Notice -->
-      <UAlert
-        v-if="agency.status === 'rejected' && agency.rejection_note"
-        color="error"
-        variant="subtle"
-        icon="i-lucide-x-circle"
-        title="Application Rejected"
-        :description="agency.rejection_note"
-        class="mx-3 mt-4"
-      />
+        <!-- Rejection Notice -->
+        <UAlert
+            v-if="agency.status === 'rejected' && agency.rejection_note"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-x-circle"
+            title="Application Rejected"
+            :description="agency.rejection_note"
+            class="mx-3 mt-4"
+        />
 
-      <!-- Income Dashboard (for approved members) -->
-      <template v-if="isApproved">
-        <div class="px-3 mt-4">
-          <SectionTitle class="mb-2">Income Dashboard</SectionTitle>
-          <AgencyIncomeTargetProgress />
-          <AgencyRecentEarnings />
+        <!-- Navigation Menu -->
+        <div class="mt-4 pb-24">
+
+          <!-- Owner/Admin Management Links -->
+          <template v-if="isAdmin && isApproved">
+            <SectionTitle class="mb-2">Agency Management</SectionTitle>
+
+            <NavProfileItem
+                to="/agency/member-list"
+                icon="i-lucide-users"
+                txt="Members"
+            />
+            <NavProfileItem
+                to="/agency/member-requests"
+                icon="i-lucide-user-plus"
+                txt="Join Requests"
+                :badge="agencyStore.joinRequests.items.length || undefined"
+            />
+            <NavProfileItem
+                to="/agency/member-invites"
+                icon="i-lucide-mail"
+                txt="Sent Invitations"
+            />
+            <NavProfileItem
+                to="/agency/member-income"
+                icon="i-lucide-dollar-sign"
+                txt="Member Income"
+            />
+          </template>
+
+          <!-- Owner-Only Settings -->
+          <template v-if="isOwner">
+            <!-- Coin Reseller -->
+            <ChooseDefaultReseller
+                agency-mode
+                :initial-reseller="agencyCoinReseller"
+                color="primary"
+                class="mt-14"
+            />
+
+            <!-- Dissolve Agency -->
+            <UButton
+                v-if="canDissolve"
+                variant="soft"
+                color="error"
+                class="w-full justify-center mt-4"
+                icon="i-lucide-trash-2"
+                @click="showDissolveModal = true"
+            >
+              Dissolve Agency
+            </UButton>
+          </template>
+
+          <!-- Member Actions -->
+          <template v-if="!isOwner && membership">
+            <UButton
+                variant="soft"
+                color="error"
+                class="w-full justify-center mt-4"
+                icon="i-lucide-log-out"
+                @click="showLeaveModal = true"
+            >
+              Leave Agency
+            </UButton>
+          </template>
         </div>
-      </template>
-
-      <!-- Navigation Menu -->
-      <div class="px-3 mt-4 pb-24">
-        <!-- Owner/Admin Management Links -->
-        <template v-if="isAdmin && isApproved">
-          <SectionTitle class="mb-2">Agency Management</SectionTitle>
-          
-          <NavProfileItem 
-            to="/agency/member-list" 
-            icon="i-lucide-users" 
-            txt="Members" 
-          />
-          <NavProfileItem 
-            to="/agency/member-requests" 
-            icon="i-lucide-user-plus" 
-            txt="Join Requests"
-            :badge="agencyStore.joinRequests.items.length || undefined"
-          />
-          <NavProfileItem 
-            to="/agency/member-invites" 
-            icon="i-lucide-mail" 
-            txt="Sent Invitations" 
-          />
-          <NavProfileItem 
-            to="/agency/member-income" 
-            icon="i-lucide-dollar-sign" 
-            txt="Member Income" 
-          />
-        </template>
-
-        <!-- Owner-Only Settings -->
-        <template v-if="isOwner">
-          <SectionTitle class="mb-2 mt-6">Agency Settings</SectionTitle>
-          
-          <!-- Coin Reseller -->
-          <ChooseDefaultReseller
-            agency-mode
-            :initial-reseller="agencyCoinReseller"
-            color="primary"
-          />
-
-          <!-- Dissolve Agency -->
-          <UButton
-            v-if="canDissolve"
-            variant="outline"
-            color="error"
-            class="w-full justify-center mt-4"
-            icon="i-lucide-trash-2"
-            @click="showDissolveModal = true"
-          >
-            Dissolve Agency
-          </UButton>
-        </template>
-
-        <!-- Member Actions -->
-        <template v-if="!isOwner && membership">
-          <SectionTitle class="mb-2 mt-6">Membership</SectionTitle>
-          
-          <div class="p-3 bg-elevated rounded-lg mb-2">
-            <p class="text-sm text-muted">Member since</p>
-            <p class="font-semibold">
-              {{ new Date(membership.joined_at).toLocaleDateString() }}
-            </p>
-          </div>
-
-          <UButton
-            variant="outline"
-            color="error"
-            class="w-full justify-center mt-4"
-            icon="i-lucide-log-out"
-            @click="showLeaveModal = true"
-          >
-            Leave Agency
-          </UButton>
-        </template>
       </div>
     </template>
 
     <!-- Leave Agency Modal -->
-    <UModal v-model:open="showLeaveModal">
+    <UModal 
+      v-model:open="showLeaveModal"
+      title="Leave Agency?"
+      description="Confirm that you want to leave this agency."
+    >
       <template #content>
-        <div class="p-4 space-y-4">
+        <div class="p-4">
           <h3 class="text-lg font-semibold">Leave Agency?</h3>
           <p class="text-sm text-muted">
             Are you sure you want to leave <strong>{{ agency?.name }}</strong>?
@@ -300,11 +285,12 @@ onMounted(async () => {
             v-model="leaveReason"
             placeholder="Reason for leaving (optional)"
             :rows="2"
+            class="w-full my-2"
           />
           
           <div class="flex gap-2 justify-end">
             <UButton
-              variant="ghost"
+              variant="soft"
               color="neutral"
               @click="showLeaveModal = false"
             >
@@ -313,6 +299,7 @@ onMounted(async () => {
             <UButton
               color="error"
               :loading="processing"
+              class="text-error-200"
               @click="handleLeave"
             >
               Leave Agency
@@ -323,10 +310,14 @@ onMounted(async () => {
     </UModal>
 
     <!-- Dissolve Agency Modal -->
-    <UModal v-model:open="showDissolveModal">
+    <UModal 
+      v-model:open="showDissolveModal"
+      title="Dissolve Agency?"
+      description="This will permanently dissolve your agency and remove all members."
+    >
       <template #content>
         <div class="p-4 space-y-4">
-          <h3 class="text-lg font-semibold text-error">Dissolve Agency?</h3>
+          <h3 class="text-lg font-semibold">Dissolve Agency?</h3>
           
           <UAlert
             color="error"
@@ -343,11 +334,12 @@ onMounted(async () => {
           <UInput
             v-model="dissolveConfirmName"
             :placeholder="agency?.name"
+            class="w-full"
           />
           
           <div class="flex gap-2 justify-end">
             <UButton
-              variant="ghost"
+              variant="soft"
               color="neutral"
               @click="showDissolveModal = false"
             >

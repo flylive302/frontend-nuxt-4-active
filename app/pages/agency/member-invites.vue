@@ -139,12 +139,13 @@ onMounted(() => {
             <div
               v-for="invitation in pendingInvitations"
               :key="invitation.id"
-              class="p-3 bg-elevated rounded-lg border border-warning/30"
+              class="p-2 bg-linear-to-bl to-neutral-950 border border-warning/50 rounded-lg"
             >
               <div class="flex items-center gap-3">
                 <UserAvatar
                   :img="invitation.user?.avatar || undefined"
                   class="w-10 shrink-0"
+                  animated
                 />
                 <div class="flex-1 min-w-0">
                   <p class="font-semibold truncate">{{ invitation.user?.name }}</p>
@@ -155,13 +156,15 @@ onMounted(() => {
                   </div>
                 </div>
                 <UButton
-                  variant="ghost"
+                  variant="soft"
                   color="error"
                   size="sm"
                   icon="i-lucide-x"
                   :loading="cancellingId === invitation.id"
                   @click="handleCancel(invitation.id)"
-                />
+                >
+                  Cancel
+                </UButton>
               </div>
             </div>
           </div>
@@ -176,19 +179,21 @@ onMounted(() => {
             <div
               v-for="invitation in historyInvitations"
               :key="invitation.id"
-              class="p-3 bg-elevated rounded-lg opacity-60"
+              class="p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg"
             >
               <div class="flex items-center gap-3">
                 <UserAvatar
                   :img="invitation.user?.avatar || undefined"
                   class="w-8 shrink-0"
+                  animated
                 />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate text-sm">{{ invitation.user?.name }}</p>
                 </div>
                 <UBadge 
-                  :color="getInvitationStatusColor(invitation.status, invitation.is_expired)" 
-                  size="xs"
+                  :color="getInvitationStatusColor(invitation.status, invitation.is_expired)"
+                  variant="subtle"
+                  size="md"
                 >
                   {{ invitation.is_expired ? 'Expired' : invitation.status_label }}
                 </UBadge>

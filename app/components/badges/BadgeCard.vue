@@ -63,8 +63,8 @@ function handleToggle(): void {
 
 <template>
   <div 
-    class="relative bg-elevated rounded-lg p-3 text-center"
-    :class="{ 'opacity-50': !isEarned }"
+    class="relative bg-secondary/5 rounded-lg p-3 text-center inset-shadow-sm inset-shadow-secondary-900"
+    :class="{ 'opacity-80': !isEarned }"
   >
     <!-- Display indicator -->
     <div 
@@ -77,7 +77,7 @@ function handleToggle(): void {
     <!-- Lock icon for unearned -->
     <div 
       v-if="!isEarned"
-      class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"
+      class="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg"
     >
       <icon name="i-lucide-lock" class="size-8 text-muted" />
     </div>
@@ -107,10 +107,10 @@ function handleToggle(): void {
     <UButton
       v-if="showToggle && isEarned"
       size="xs"
-      :color="isDisplayed ? 'neutral' : 'primary'"
+      :color="isDisplayed ? 'error' : 'primary'"
       :variant="isDisplayed ? 'soft' : 'solid'"
       :loading="isToggling"
-      class="mt-2 w-full"
+      class="mt-2 w-full justify-center"
       @click="handleToggle"
     >
       {{ isDisplayed ? 'Hide' : 'Display' }}

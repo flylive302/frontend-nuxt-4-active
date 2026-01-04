@@ -23,7 +23,7 @@ const config = computed(() => AGENCY_STATUS_CONFIG[props.status])
 
 <template>
   <span
-    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold"
     :class="[
       config.color === 'success' ? 'bg-success/20 text-success' : '',
       config.color === 'warning' ? 'bg-warning/20 text-warning' : '',
@@ -31,7 +31,7 @@ const config = computed(() => AGENCY_STATUS_CONFIG[props.status])
       config.color === 'neutral' ? 'bg-muted/20 text-muted' : '',
     ]"
   >
-    <icon :name="config.icon" class="size-3" />
+    <icon :name="config.icon" class="size-4" />
     {{ config.label }}
   </span>
 </template>

@@ -27,7 +27,7 @@ const config = computed(() => AGENCY_ROLE_CONFIG[props.role])
     :class="[
       config.color === 'primary' ? 'bg-primary/20 text-primary' : '',
       config.color === 'info' ? 'bg-info/20 text-info' : '',
-      config.color === 'neutral' ? 'bg-muted/20 text-muted' : '',
+      config.color === 'neutral' ? 'bg-muted/80 text-muted' : '',
     ]"
   >
     <icon :name="config.icon" class="size-3" />

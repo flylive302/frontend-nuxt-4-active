@@ -76,7 +76,7 @@ onMounted(async () => {
       <template #second-link-text>My Badges</template>
     </NavAlt>
 
-    <div class="px-3 mt-16 mb-32 overflow-hidden">
+    <div class="px-3 mt-14 mb-32 overflow-hidden">
       <!-- Stats Summary -->
       <div v-if="stats" class="grid grid-cols-2 gap-2 mb-4">
         <div class="bg-elevated rounded-lg p-3 text-center">
@@ -100,10 +100,10 @@ onMounted(async () => {
           @click="handleTabChange(index)"
         >
           {{ tab.label }}
-          <UBadge v-if="index === 0" size="xs" variant="soft" class="ml-1">
+          <UBadge v-if="index === 0" size="sm" variant="subtle" color="tertiary" class="ml-1 shadow-md shadow-secondary-900">
             {{ displayedBadges.length }}
           </UBadge>
-          <UBadge v-else size="xs" variant="soft" class="ml-1">
+          <UBadge v-else size="sm" variant="subtle" color="tertiary" class="ml-1 shadow-md shadow-secondary-900">
             {{ hiddenBadges.length }}
           </UBadge>
         </UButton>

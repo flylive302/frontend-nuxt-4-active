@@ -254,13 +254,13 @@ onMounted(async () => {
           <!-- Preview -->
           <div v-if="previewResult" class="space-y-2">
             <p class="font-semibold text-sm">Change in Balances after Exchange:</p>
-            <div class="flex items-center gap-2 bg-gradient-to-br to-primary/30 px-3 py-2 border border-primary rounded-md">
+            <div class="flex items-center gap-2 bg-linear-to-br to-primary/30 px-3 py-2 border border-primary rounded-md">
               <div class="flex items-center gap-2 w-full">
                 <NuxtImg 
                   provider="imagekit" 
                   src="/siteAssets/props/flylive_coin.webp" 
                   class="w-8"
-                  alt="Coins" 
+                  alt="Coins"
                 />
                 <div class="text-sm font-semibold leading-tight">
                   <p class="text-muted">Coins:</p>
@@ -290,7 +290,7 @@ onMounted(async () => {
             </div>
           </div>
           
-          <UButton 
+          <UButton
             type="submit"
             size="lg" 
             class="w-full justify-center" 

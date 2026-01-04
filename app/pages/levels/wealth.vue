@@ -63,7 +63,7 @@ const columns: ColumnDef<WealthLevelRow>[] = [
       if (!badge) return null
 
       return h(profileBadge, {
-        class: badge.class,
+        class: badge.class + 'mx-auto',
         badgeSrc: badge.badgeSrc,
         color: badge.color,
         txt: badge.txt,
@@ -123,7 +123,7 @@ const tableData = computed<WealthLevelRow[]>(() =>
       badgeSrc: item.badge?.image_url || '/badges/wealth/level_1.webp',
       color: 'tertiary',
       txt: String(item.level),
-      class: item.level === currentLevel.value ? 'ring-2 ring-tertiary' : '',
+      class: item.level === currentLevel.value ? 'border border-tertiary bg-tertiary/10 rounded-md px-2 py-1 inset-shadow-sm ' : '',
     },
   }))
 )
@@ -170,7 +170,7 @@ onMounted(() => {
     </NavAlt>
 
     <AltHero class="z-10" image-src="/siteAssets/alt-hero/tertiary.webp">
-      <div class="p-2 w-full h-full bg-gradient-to-br to-tertiary/30">
+      <div class="p-2 w-full h-full bg-gradient-to-br to-tertiary/50 backdrop-blur-sm">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
           <UserAvatar :animated="true" :img="authStore.user?.avatar?.original" class="col-span-2" />

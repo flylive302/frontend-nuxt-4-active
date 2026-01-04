@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
   staticSrc?: string
   lazy?: boolean        // Enable lazy loading (default: true for performance)
 }>(), {
-  frameName: 'frames/ranks/top_3',
+  frameName: 'frames/5',
   img: 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp',
   top: 55,
   left: 50,
@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<{
     <!-- Avatar Image -->
     <NuxtImg
         class="absolute-middle aspect-square rounded-full object-contain"
-        :src="img"
+        :src="props.img"
         alt="avatar"
         :loading="lazy ? 'lazy' : 'eager'"
         :style="{

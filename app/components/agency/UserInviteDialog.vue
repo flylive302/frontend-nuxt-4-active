@@ -12,7 +12,7 @@ import type { User } from '~/types/auth'
 // Props & Emits
 // ========================================
 const props = withDefaults(defineProps<{
-  open: boolean
+  open?: boolean
 }>(), {
   open: false
 })

@@ -50,6 +50,8 @@ export interface UserReference {
   name: string
   avatar?: string | null
   signature?: string | null
+  // Phone can be a string or a structured object depending on API key used for expansion
+  phone?: string | { raw: string; formatted: string; country: string } | null
 }
 
 // ========================================

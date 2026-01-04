@@ -66,24 +66,24 @@ function formatCurrency(value: number): string {
  */
 const progressColor = computed(() => {
   if (progress.value >= 100) return 'success'
-  if (progress.value >= 75) return 'primary'
+  if (progress.value >= 75) return 'tertiary'
   if (progress.value >= 50) return 'info'
   return 'neutral'
 })
 </script>
 
 <template>
-  <div class="bg-elevated rounded-lg p-4 mb-4">
+  <div class="p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 relative overflow-hidden rounded-lg">
     <!-- Loading State -->
-    <div v-if="isLoading" class="animate-pulse space-y-3">
-      <div class="h-5 bg-muted rounded w-1/3" />
-      <div class="h-4 bg-muted rounded w-full" />
-      <div class="h-3 bg-muted rounded w-2/3" />
+    <div v-if="isLoading" class="pt-14 px-3 space-y-2">
+      <USkeleton class="h-48 rounded-lg" />
+      <USkeleton class="h-6 rounded w-3/4 mx-auto" />
+      <USkeleton class="h-4 rounded w-1/2 mx-auto" />
     </div>
 
     <!-- No Active Target -->
     <div v-else-if="!hasTarget" class="text-center py-4">
-      <icon name="i-lucide-target" class="size-10 mx-auto text-muted mb-2" />
+      <Icon name="i-lucide-target" class="size-10 mx-auto text-muted mb-2" />
       <p class="text-sm text-muted">No active income target</p>
       <p class="text-xs text-muted mt-1">Income targets are assigned by your agency.</p>
     </div>
@@ -93,46 +93,47 @@ const progressColor = computed(() => {
       <!-- Header -->
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center gap-2">
-          <icon name="i-lucide-target" class="size-5 text-primary" />
-          <span class="font-bold">{{ target?.name }}</span>
-          <UBadge size="xs" color="primary" variant="soft">{{ target?.tier }}</UBadge>
+          <Icon name="i-lucide-target" class="size-5 text-tertiary" />
+          <UBadge variant="soft" :color="target?.status_color" class="font-bold">{{ target?.status_label }}</UBadge>
+          <UBadge color="tertiary" variant="soft">{{ target?.tier }}</UBadge>
         </div>
-        <div class="flex items-center gap-1 text-sm">
-          <icon name="i-lucide-clock" class="size-4 text-muted" />
-          <span :class="daysRemaining <= 3 ? 'text-error font-bold' : 'text-muted'">
-            {{ daysRemaining }} days left
-          </span>
-        </div>
-      </div>
-
-      <!-- Progress Bar -->
-      <div class="mb-3">
-        <UProgress 
-          :value="progress" 
-          :color="progressColor"
-          size="lg"
-          class="mb-1"
-        />
-        <div class="flex justify-between text-xs text-muted">
-          <span>{{ earnedDisplay }} earned</span>
-          <span>{{ requiredDisplay }} required</span>
-        </div>
+        <UBadge variant="soft" :color="daysRemaining <= 3 ? 'error' : 'info'" class="flex items-center gap-1 text-sm">
+          <Icon name="i-lucide-clock" class="size-4 text-info" />
+          {{ daysRemaining }} days left
+        </UBadge>
       </div>
 
       <!-- Stats Row -->
       <div class="grid grid-cols-2 gap-3 text-center">
-        <div class="bg-muted/20 rounded-lg p-2">
-          <p class="text-xs text-muted">To Complete</p>
-          <p class="text-lg font-bold text-primary">{{ coinsToCompleteDisplay }}</p>
+        <div class="bg-tertiary/10 rounded-md p-2 inset-shadow-sm">
+          <p class="text-xs text-muted">Remaining to Get</p>
+          <p class="text-lg font-bold text-tertiary">{{ coinsToCompleteDisplay }}</p>
         </div>
-        <div class="bg-muted/20 rounded-lg p-2">
+        <div class="bg-secondary/10 rounded-md p-2 inset-shadow-sm">
           <p class="text-xs text-muted">Reward</p>
-          <p class="text-lg font-bold text-yellow-500">
-            <icon name="i-lucide-gem" class="size-4 inline-block mr-1" />
+          <p class="text-lg font-bold text-secondary">
+            <Icon name="i-lucide-gem" class="size-4 inline-block mr-1" />
             {{ rewardDisplay }}
           </p>
         </div>
       </div>
+
+      <!-- Progress Bar -->
+      <div class="rounded-md bg-muted/40 p-2 mt-3 inset-shadow-sm">
+        <UProgress 
+          v-model="progress"
+          :color="progressColor"
+          status
+          size="lg"
+          class="mb-1"
+          :ui="{ status: 'text-white -mb-1' }"
+        />
+        <div class="flex justify-between text-sm text-white font-semibold">
+          <span><UIcon name="i-lucide-coins" /> {{ earnedDisplay }} earned</span>
+          <span><UIcon name="i-lucide-coins" /> {{ requiredDisplay }} required</span>
+        </div>
+      </div>
+
     </template>
   </div>
 </template>
