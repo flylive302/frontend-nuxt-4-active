@@ -12,7 +12,6 @@ definePageMeta({
 })
 
 const MINIMUM_AGE_REQUIREMENT = 18 as const
-const SIGNATURE_MAX_LENGTH = 100 as const
 const DEFAULT_CALENDAR_YEAR = 2000 as const
 const DEFAULT_CALENDAR_MONTH = 1 as const
 const DEFAULT_CALENDAR_DAY = 1 as const
@@ -31,10 +30,6 @@ const ICON_DEFAULT_GENDER = 'i-lucide-venus-and-mars' as const
 const formSchema = z.object({
   gender: z.number().min(1, 'Please select a gender'),
   email: z.email('Invalid email'),
-  signature: z
-    .string()
-    .max(SIGNATURE_MAX_LENGTH, `Signature must be less than ${SIGNATURE_MAX_LENGTH} characters`)
-    .optional(),
   dateOfBirth: z
     .custom<DateValue>(
       (value) => value instanceof CalendarDate,
@@ -84,7 +79,6 @@ const calendarDefaultDate = new CalendarDate(
 const formState = reactive<FormState>({
   gender: undefined,
   email: '',
-  signature: '',
   dateOfBirth: null,
 })
 
@@ -119,14 +113,6 @@ const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldEr
 const emailError = computed(() => getFieldError('email'))
 const genderError = computed(() => getFieldError('gender'))
 const dateOfBirthError = computed(() => getFieldError('dateOfBirth') || getFieldError('date_of_birth'))
-const signatureError = computed(() => getFieldError('signature'))
-
-/**
- * Retrieves the initial signature value from the authenticated user's profile.
- */
-const initialUserSignature = computed<string | undefined>(() => {
-  return authStore.user?.signature ?? undefined
-})
 
 /**
  * Determines the icon to display based on the selected gender option.
@@ -183,31 +169,12 @@ async function handleFormSubmit(): Promise<void> {
  * Builds the profile update payload from validated form data.
  */
 function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfilePayload {
-  const payload: UpdateProfilePayload = {
+  return {
     gender: validatedFormData.gender,
     email: validatedFormData.email,
     date_of_birth: validatedFormData.dateOfBirth.toString(),
   }
-
-  // Only include signature in payload if it has been changed
-  if (validatedFormData.signature !== initialUserSignature.value) {
-    payload.signature = validatedFormData.signature
-  }
-
-  return payload
 }
-
-// Initialize form state with existing user data
-// Watch for user data to be available (in case of race condition or late load)
-watch(
-  () => authStore.user,
-  (user) => {
-    if (user?.signature && !formState.signature) {
-      formState.signature = user.signature
-    }
-  },
-  { immediate: true }
-)
 
 </script>
 
@@ -223,14 +190,23 @@ watch(
       icon="i-lucide-alert-circle" 
     />
 
-    <div class="mb-2">
+    <SectionTitle class="my-3">Complete your Profile</SectionTitle>
+
+
+    <div class="my-3 flex gap-2">
       <FileUpload
         :current-image="avatarUrl"
         :loading="isUploadingAvatar"
         crop
         @file-selected="handleAvatarSelected"
       />
-      <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
+      <div>
+        <h1 class="text-md font-semibold text-white">
+          Hy! {{authStore.user?.name}}. here is your Signature
+          <UBadge color="success" variant="soft" icon="i-lucide-pen-tool" class="text-success-200 text-md font-semibold">{{authStore.user?.signature}}</UBadge>
+        </h1>
+        <p class="text-sm text-warning-400"> <UIcon name="i-lucide-arrow-left" class="animate-pulse"/> You may Please Upload your profile picture from the input on left.</p>
+      </div>
     </div>
 
     <UForm
@@ -279,16 +255,6 @@ watch(
           size="lg" 
           icon="i-lucide-at-sign"
           placeholder="email@example.com" 
-        />
-      </UFormField>
-
-      <UFormField label="Signature" name="signature" :error="signatureError">
-        <UInput 
-        v-model="formState.signature" 
-        class="w-full" 
-        size="lg" 
-        icon="i-lucide-pen-tool"
-        placeholder="Enter your signature" 
         />
       </UFormField>
 

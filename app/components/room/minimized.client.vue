@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { useDraggable, useWindowSize } from '@vueuse/core'
 import { ref, watch } from 'vue'
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[RoomMinimizedClient]');
 
  
 const roomStore = useRoomStore();
+const {leaveRoom} = useRoomAudio();
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
@@ -57,9 +61,8 @@ watch([winW, winH], () => {
       ref="dragEl"
       :style="`left: ${position.x}px; top: ${position.y}px;`"
       class="fixed flex justify-center items-center z-50 touch-none cursor-move"
-      @click="roomStore.maximizeRoom()"
   >
-    <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50">
+    <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50" @click="roomStore.maximizeRoom()">
       <NuxtImg
           provider="imagekit"
           src="/siteAssets/room/room-card-top.webp"
@@ -69,6 +72,16 @@ watch([winW, winH], () => {
       />
     </div>
 
-    <UButton class="-ml-2" size="sm" icon="i-lucide-x" />
+    <UButton
+        class="-ml-2" size="sm" icon="i-lucide-x"
+        @click="async () => {
+          try {
+            leaveRoom();
+            roomStore.leaveRoom();
+          } catch (error) {
+            log.error('Failed to leave room:', error);
+          }
+        }"
+    />
   </div>
 </template>

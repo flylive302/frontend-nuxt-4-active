@@ -36,10 +36,14 @@ interface FilterTab {
 // ========================================
 
 const FILTER_TABS: FilterTab[] = [
-  { label: 'All Transactions', value: 'all' },
+  { label: 'All', value: 'all' },
   { label: 'Coins', value: 'coins' },
   { label: 'Diamonds', value: 'diamonds' },
-  { label: 'Gifts', value: 'gifts' },
+  { label: 'Gifts Sent', value: 'gift_send' },
+  { label: 'Gifts Received', value: 'gift_receive' },
+  { label: 'Room Commission', value: 'room_commission' },
+  { label: 'Agency Income', value: 'agency_income' },
+  { label: 'Transfer', value: 'transfer' },
 ]
 
 // ========================================
@@ -109,23 +113,17 @@ onMounted(async () => {
 <template>
   <main>
     <NavAlt back-to="/wallet/purchase-coins">Transaction History</NavAlt>
-    <div class="h-10" />
+    <div class="h-9" />
 
     <!-- Filter Tabs -->
-    <div class="px-3 mb-4">
-      <div class="flex gap-2 overflow-x-auto pb-2">
-        <UButton
-          v-for="(tab, index) in FILTER_TABS"
-          :key="tab.value"
-          :variant="activeTab === index ? 'solid' : 'soft'"
-          :color="activeTab === index ? 'primary' : 'neutral'"
-          size="sm"
-          class="shrink-0"
-          @click="handleTabChange(index)"
-        >
-          {{ tab.label }}
-        </UButton>
-      </div>
+    <div class="flex overflow-x-auto border-b-2 mb-1 border-black shadow-xl shadow-primary-950/50">
+      <UButton
+        v-for="(tab, index) in FILTER_TABS" :key="tab.value" :variant="activeTab === index ? 'subtle' : 'soft'"
+        :color="activeTab === index ? 'primary' : 'neutral'" size="lg" class="rounded-none min-w-fit"
+        @click="handleTabChange(index)"
+      >
+        {{ tab.label }}
+      </UButton>
     </div>
 
     <!-- Error State -->
@@ -163,7 +161,7 @@ onMounted(async () => {
         :key="day.date"
         :default-open="true"
       >
-        <div class="mb-2 mt-4 flex items-center justify-between px-3">
+        <div class="mb-2 flex items-center justify-between px-3">
           <SectionTitle>{{ day.date_formatted }}</SectionTitle>
           <icon name="i-lucide-chevron-down" />
         </div>

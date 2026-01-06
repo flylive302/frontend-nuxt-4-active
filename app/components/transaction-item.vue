@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import type { Transaction, BalanceChange } from '~/types/wallet'
 import { TRANSACTION_TYPE_LABELS } from '~/types/wallet'
+import { formatCurrency } from '~/utils/currency'
 
 // ========================================
 // Props
@@ -26,7 +27,7 @@ interface TimelineDetail {
 
 interface TimelineEntry {
   title: string
-  summary?: string
+  summary?: string | ComputedRef<string>
   details?: TimelineDetail[]
   icon: string
 }
@@ -67,7 +68,7 @@ const initiatorDisplay = computed(() => {
  */
 const concernedDisplay = computed(() => {
   const party = props.transaction.concerned_party
-  return party?.signature ?? party?.name ?? '-'
+  return party?.signature ?? party?.name ?? initiatorDisplay
 })
 
 /**
@@ -84,8 +85,8 @@ const primaryChange = computed(() => {
  */
 const changeColor = computed(() => {
   const change = primaryChange.value?.change
-  if (!change) return ''
-  return change.startsWith('-') ? 'text-red-500' : 'text-green-500'
+  if (!change) return undefined
+  return change.startsWith('-') ? 'error' : 'success'
 })
 
 /**
@@ -114,9 +115,9 @@ function buildBalanceEntry(label: string, balance?: BalanceChange | null): Timel
   return {
     title: `${label} Balance Change`,
     details: [
-      { label: 'Before', value: balance.before },
-      { label: 'After', value: balance.after },
-      { label: 'Change', value: balance.change },
+      { label: 'Before', value: formatCurrency(balance.before) },
+      { label: 'After', value: formatCurrency(balance.after) },
+      { label: 'Change', value: formatCurrency(balance.change) },
     ],
     icon: 'i-lucide-check-check',
   }
@@ -146,7 +147,35 @@ const timelineItems = computed<TimelineEntry[]>(() => {
 
   // Add all balance changes
   const changes = props.transaction.balance_changes
-  items.push(buildBalanceEntry('Coins', changes.coins))
+  
+  // Specific handling for diamond exchange
+  if (props.transaction.type === 'diamond_exchange' && props.transaction.metadata) {
+    // Add Coins Received
+    if (props.transaction.metadata.coins_received) {
+      items.push({
+        title: 'Coins Received',
+        details: [
+          { label: 'Amount', value: `+${formatCurrency(String(props.transaction.metadata.coins_received))}` },
+        ],
+        icon: 'i-lucide-plus',
+      })
+    }
+    // Add Exchange Rate
+    if (props.transaction.metadata.exchange_rate) {
+      items.push({
+        title: 'Exchange Rate',
+        details: [
+          { label: 'Rate', value: `1 Diamond = ${props.transaction.metadata.exchange_rate} Coins` },
+        ],
+        icon: 'i-lucide-arrow-right-left',
+      })
+    }
+  }
+  else {
+    // Standard handling for other types
+    items.push(buildBalanceEntry('Coins', changes.coins))
+  }
+
   items.push(buildBalanceEntry('Diamonds', changes.diamonds))
   items.push(buildBalanceEntry('Wealth XP', changes.wealth_xp))
   items.push(buildBalanceEntry('Charm XP', changes.charm_xp))
@@ -167,16 +196,20 @@ const activeTimelineIndex = computed<number | undefined>(() => {
 </script>
 
 <template>
-  <UCollapsible>
-    <div class="grid grid-cols-14 gap-1 bg-primary/20 p-1">
-      <NuxtImg
-        class="col-span-2 w-full rounded"
-        provider="imagekit"
-        :src="thumbnailUrl"
-        :alt="displayTitle"
-      />
-      <div class="col-span-8">
-        <p class="text-sm font-bold leading-tight">{{ displayTitle }}</p>
+  <UCollapsible :ui="{content: 'bg-linear-to-br from-neutral-300/10 to-neutral-950 shadow-xl shadow-neutral-950'}">
+    <div
+        class="grid grid-cols-14 gap-2 p-2 bg-linear-to-br from-neutral-950 shadow-xl shadow-neutral-950 mb-1"
+        :class="changeColor == 'error' ? 'to-error-950' : 'to-success-950'"
+    >
+      <div class="rounded-full bg-elevated border inset-shadow-sm col-span-2 overflow-hidden aspect-square">
+        <NuxtImg
+            class="h-full mx-auto rounded"
+            :src="thumbnailUrl"
+            :alt="displayTitle"
+        />
+      </div>
+      <div class="col-span-9">
+        <p class="text-sm font-bold leading-tight">{{ displayTitle }} <span class="text-primary text-xs font-semibold">ID: {{ transaction.id }}</span></p>
         <div class="flex gap-1 text-muted">
           <p class="w-full truncate text-xs font-bold leading-tight">
             Initiator:
@@ -190,18 +223,16 @@ const activeTimelineIndex = computed<number | undefined>(() => {
           </p>
         </div>
       </div>
-      <div class="col-span-4 flex flex-col justify-between">
+      <div class="col-span-3 flex flex-col items-end justify-between">
         <p class="text-xs leading-tight">{{ formattedTime }}</p>
         <UButton
-          block
-          class="px-1 shadow-lg"
-          icon="i-lucide-coins"
+          class="shadow-lg text-white ml-2"
           size="xs"
           trailing-icon="i-lucide-arrow-down"
           variant="subtle"
-          :class="changeColor"
+          :color="changeColor"
         >
-          {{ primaryChange?.change ?? '--' }}
+          {{ formatCurrency(primaryChange?.change) ?? '--' }}
         </UButton>
       </div>
     </div>

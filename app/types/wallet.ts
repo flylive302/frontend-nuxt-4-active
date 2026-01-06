@@ -58,11 +58,12 @@ export type TransactionType =
   | 'target_refund'
   | 'system_reward'
   | 'system_generation'
+  | 'diamond_exchange'
 
 /**
  * Filter options for transaction history.
  */
-export type TransactionTypeFilter = 'all' | 'coins' | 'diamonds' | 'gifts'
+export type TransactionTypeFilter = 'all' | 'coins' | 'diamonds' | 'gifts' | 'gift_send' | 'gift_receive' | 'room_commission' | 'agency_income' | 'transfer'
 
 /**
  * Additional metadata attached to transactions.
@@ -177,6 +178,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   target_refund: 'Target Refund',
   system_reward: 'System Reward',
   system_generation: 'Coin Generation',
+  diamond_exchange: 'Diamond Exchange',
 }
 
 /**
@@ -193,6 +195,7 @@ export const TRANSACTION_TYPE_COLORS: Record<TransactionType, string> = {
   target_refund: 'text-orange-500',
   system_reward: 'text-yellow-500',
   system_generation: 'text-green-500',
+  diamond_exchange: 'text-secondary-100',
 }
 
 // ========================================

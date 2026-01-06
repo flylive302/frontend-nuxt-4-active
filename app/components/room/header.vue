@@ -128,7 +128,7 @@ const openLeaveDrawer = (event: Event) => {
                   @click="async () => {
                     try {
                       leaveRoom();
-                      await roomStore.leaveRoom();
+                      roomStore.leaveRoom();
                       open = false;
                     } catch (error) {
                       log.error('Failed to leave room:', error);

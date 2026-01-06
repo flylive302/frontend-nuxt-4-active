@@ -65,8 +65,7 @@ const commandItems = computed<CommandItem[]>(() =>
   users.value.map((u) => ({
     id: u.id,
     label: u.name || `User ${u.id}`,
-    name: u.signature ? `@${u.signature}` : `ID: ${u.id}`,
-    suffix: u.signature ? `ID: ${u.id}` : undefined,
+    name: `ID: ${u.signature}`,
     avatar: u.avatar?.medium ? { src: u.avatar.medium } : undefined,
     user: u
   }))
@@ -145,17 +144,15 @@ function handleConfirm() {
               <UAvatar
                 :src="item.avatar?.src"
                 :alt="item.label"
-                size="md"
+                size="lg"
                 :class="['border', borderClass]"
               />
-              <div class="text-left min-w-0 flex-1">
-                <p class="text-sm font-semibold truncate">{{ item.label }}</p>
-                <div class="flex items-center gap-2 text-xs text-muted">
-                  <span v-if="item.name" class="font-medium text-primary/80">{{ item.name }}</span>
-                  <span v-if="item.suffix">{{ item.suffix }}</span>
-                </div>
+              <div class="flex items-center gap-2 w-full text-lg">
+                <p class=" font-semibold truncate">{{ item.label }}</p>
+                <span v-if="item.name" class="font-medium text-primary/80">{{ item.name }}</span>
+                <span v-if="item.suffix">{{ item.suffix }}</span>
               </div>
-              <UIcon name="i-lucide-chevron-right" class="text-muted/50" />
+              <UIcon name="i-lucide-chevron-right" class="size-8 text-muted/50" />
             </div>
           </template>
 
@@ -172,51 +169,28 @@ function handleConfirm() {
       <!-- Preview Mode (Selected) -->
       <template v-else>
         <div class="p-4 space-y-6">
-          <div 
-            class="rounded-xl p-4 shadow-sm border border-white/5 bg-elevated/50 relative overflow-hidden"
-            :class="[gradientClass]"
-          >
+          <div class="rounded-xl p-4 shadow-sm border border-white/10 bg-elevated/50 relative overflow-hidden" :class="[gradientClass]">
             <!-- Background decoration -->
             <div class="absolute -right-6 -top-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none" />
             
             <div class="flex flex-col items-center text-center relative z-10">
-              <UAvatar
-                :src="selectedUser.avatar?.large || selectedUser.avatar?.medium"
-                :alt="selectedUser.name"
-                size="3xl"
-                :class="['border-4 mb-3', borderClass]"
-              />
+              <LazyUserAvatar :img="selectedUser.avatar?.large || selectedUser.avatar?.medium" animated class="size-24"/>
               
               <h3 class="text-xl font-bold">{{ selectedUser.name }}</h3>
               
-              <div class="flex items-center gap-2 mt-1 mb-4">
-                <UBadge variant="soft" color="primary" size="sm">
-                  ID: {{ selectedUser.id }}
-                </UBadge>
-                <UBadge v-if="selectedUser.signature" variant="subtle" color="neutral" size="sm">
-                  @{{ selectedUser.signature }}
-                </UBadge>
+              <div class="flex items-center gap-2 mt-1">
+                <UBadge v-if="selectedUser.signature" variant="subtle" color="primary" size="lg">ID: {{ selectedUser.signature }}</UBadge>
+                <UIcon :name="`i-flag-${selectedUser.phone_country?.toLowerCase()}-4x3`" class="rounded overflow-hidden h-6 size-8 shadow-lg"/>
               </div>
 
-              <!-- Stats / Info can go here if available in User model -->
-              <div class="grid grid-cols-2 gap-4 w-full mt-2 pt-4 border-t border-white/10">
-                <div class="flex flex-col">
-                  <span class="text-xs text-muted uppercase tracking-wider">Country</span>
-                  <span class="font-semibold">{{ selectedUser.phone_country || '—' }}</span>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-xs text-muted uppercase tracking-wider">Joined</span>
-                  <span class="font-semibold">{{ selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString() : '—' }}</span>
-                </div>
-              </div>
             </div>
           </div>
 
           <div class="flex items-center gap-3 pt-4">
             <UButton
               color="neutral"
-              variant="ghost"
-              class="flex-1"
+              variant="soft"
+              class="flex-1 justify-center"
               @click="selectedUser = null"
             >
               Back to Search
@@ -224,8 +198,7 @@ function handleConfirm() {
             <UButton
               color="primary"
               variant="solid"
-              size="lg"
-              class="flex-1"
+              class="flex-1 justify-center"
               icon="i-lucide-mail"
               @click="handleConfirm"
             >

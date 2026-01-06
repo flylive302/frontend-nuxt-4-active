@@ -121,51 +121,73 @@ onMounted(() => {
         <div
           v-for="request in requests"
           :key="request.id"
-          class="p-4 bg-elevated rounded-lg border border-primary/20"
+          class="bg-linear-to-bl to-neutral-950 rounded-lg border border-primary/30 relative overflow-hidden"
         >
           <!-- User Info -->
-          <div class="flex gap-3 mb-3">
+          <NuxtLink
+            :to="`/profile/owner-${request.user?.signature}`"
+            class="flex gap-2 p-2 border-b border-black shadow-lg shadow-primary-950/50"
+          >
             <UserAvatar
-              :img="request.user?.avatar || undefined"
-              class="w-12 shrink-0"
+              :img="request.user?.avatar || undefined" animated
+              class="size-12"
             />
-            <div class="flex-1 min-w-0">
+
+            <div class="flex-1">
               <p class="font-semibold truncate">{{ request.user?.name }}</p>
-              <p v-if="request.user?.signature" class="text-sm text-muted">
-                @{{ request.user.signature }}
-              </p>
+              <div class="flex items-center gap-1">
+                <ProfileBadge :txt="request.user?.signature?.toString()" />
+                <!-- Request Date -->
+                <p class="text-xs text-muted">
+                  Requested {{ formatAgencyDate(request.created_at, { includeTime: true }) }}
+                </p>
+              </div>
             </div>
-            <UButton
-              variant="ghost"
-              color="neutral"
-              size="sm"
-              icon="i-lucide-eye"
-              :to="`/profile/owner-${request.user?.signature}`"
-            />
-          </div>
+
+            <div class="flex gap-1 absolute top-0 right-0">
+              <UButton
+                  variant="soft"
+                  color="neutral"
+                  size="sm"
+                  icon="i-lucide-eye"
+                  class="rounded-none"
+                  :to="`/profile/owner-${request.user?.signature}`"
+              />
+
+              <!-- Block Option -->
+              <UButton
+                  v-if="request.can_be_processed"
+                  variant="soft"
+                  color="warning"
+                  size="xs"
+                  icon="i-lucide-ban"
+                  class="rounded-none"
+                  @click="handleShowBlockModal(request)"
+              >
+                Block
+              </UButton>
+            </div>
+
+          </NuxtLink>
 
           <!-- Request Message -->
           <div v-if="request.message" class="p-2 bg-muted/20 rounded mb-3">
             <p class="text-sm italic">"{{ request.message }}"</p>
           </div>
 
-          <!-- Request Date -->
-          <p class="text-xs text-muted mb-3">
-            Requested {{ formatAgencyDate(request.created_at, { includeTime: true }) }}
-          </p>
-
           <!-- Actions -->
-          <div v-if="request.can_be_processed" class="flex gap-2">
+          <div v-if="request.can_be_processed" class="flex">
             <UButton
               color="success"
-              class="flex-1 justify-center"
+              variant="soft"
+              class="flex-1 justify-center rounded-none"
               :loading="processingId === request.id"
               @click="handleApprove(request)"
             >
               Approve
             </UButton>
             <UButton
-              variant="outline"
+              variant="soft"
               color="error"
               class="flex-1 justify-center"
               :loading="processingId === request.id"
@@ -175,18 +197,6 @@ onMounted(() => {
             </UButton>
           </div>
 
-          <!-- Block Option -->
-          <UButton
-            v-if="request.can_be_processed"
-            variant="ghost"
-            color="neutral"
-            size="xs"
-            class="w-full mt-2"
-            icon="i-lucide-ban"
-            @click="handleShowBlockModal(request)"
-          >
-            Reject & Block User
-          </UButton>
         </div>
       </div>
 

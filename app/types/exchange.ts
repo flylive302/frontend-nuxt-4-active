@@ -4,43 +4,41 @@
 
 /**
  * Exchange rate information response.
+ * GET /api/v1/user/exchange
  */
 export interface ExchangeInfo {
+  /** Exchange rate: 1 diamond = X coins */
   coins_per_diamond: number
-  min_exchange_amount: number
-  max_per_transaction: number
-  daily_limit: number
+  /** Whether exchange feature is enabled */
   is_enabled: boolean
-  user_coins_balance: number
+  /** User's current coin balance */
+  user_coins_balance: string
+  /** User's current diamond balance */
   user_diamonds_balance: number
-  today_exchanged: number
-  daily_remaining: number
-}
-
-/**
- * Exchange preview response.
- */
-export interface ExchangePreview {
-  coins_to_deduct: number
-  diamonds_to_receive: number
-  leftover_coins: number
-  exchange_rate: number
-}
-
-/**
- * Exchange result response.
- */
-export interface ExchangeResult {
-  coins_deducted: string
-  diamonds_received: number
-  new_coin_balance: string
-  new_diamond_balance: number
-  exchange_rate: number
 }
 
 /**
  * Exchange request payload.
+ * POST /api/v1/user/exchange
  */
 export interface ExchangeRequest {
-  coin_amount: number
+  /** Number of diamonds to exchange (positive integer ≥1) */
+  diamond_amount: number
+}
+
+/**
+ * Exchange result response.
+ * POST /api/v1/user/exchange success response
+ */
+export interface ExchangeResult {
+  /** Number of diamonds deducted from user */
+  diamonds_deducted: number
+  /** Number of coins received by user */
+  coins_received: number
+  /** User's new coin balance after exchange */
+  new_coin_balance: string
+  /** User's new diamond balance after exchange */
+  new_diamond_balance: number
+  /** Exchange rate used for this transaction */
+  exchange_rate: number
 }

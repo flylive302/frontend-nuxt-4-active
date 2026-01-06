@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
 import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
+import { useCountries } from '~/composables/useCountries'
 
 definePageMeta({
   layout: 'home',
@@ -18,10 +19,19 @@ const roomRef = ref(null)
 const { fetchRooms } = useRoom()
 const authStore = useAuthStore()
 
-const { data: roomsResponse } = await useAsyncData('home-rooms', async () => {
-  const country = authStore.user?.phone_country?.toLowerCase() || 'pk'
-  return await fetchRooms({ page: 1, country })
-})
+// Initial selection defaults to user's country (if supported) or 'pk'
+const userCountry = authStore.user?.phone_country?.toLowerCase()
+const selectedCountry = ref<string>(userCountry || 'pk')
+
+const { data: roomsResponse } = await useAsyncData(
+  'home-rooms',
+  async () => {
+    return await fetchRooms({ page: 1, country: selectedCountry.value })
+  },
+  {
+    watch: [selectedCountry]
+  }
+)
 
 const carouselRooms = computed(() => roomsResponse.value?.data?.slice(0, 5) || [])
 const initialListRooms = computed(() => roomsResponse.value?.data?.slice(5) || [])
@@ -34,8 +44,12 @@ const fetchRoomsList = async ({ page }: { page: number }) => {
       meta: roomsMeta.value
     }
   }
-  const country = authStore.user?.phone_country?.toLowerCase() || 'pk'
-  return await fetchRooms({ page, country })
+  return await fetchRooms({ page, country: selectedCountry.value })
+}
+
+// Wrapper to satisfy InfiniteScroll prop type requirements and avoid template casting
+const infiniteScrollFetcher = async (ctx: { page: number }) => {
+  return fetchRoomsList(ctx) as Promise<{ data: any[] }>
 }
 
 useIntersectionObserver(bannerRef, ([entry]) => {
@@ -127,6 +141,7 @@ const banners: Banner[] = [
 
 <template>
   <main>
+
     <div ref="bannerRef">
       <UCarousel
           :autoplay="bannerAutoplay"
@@ -136,7 +151,7 @@ const banners: Banner[] = [
             container: 'pt-3 px-3',
             item: 'basis-1/1 transition duration-800 ease-in-out scale-10 [&.is-snapped]:scale-100'
           }"
-          class="mb-4"
+          class="mb-1"
       >
         <template #default="{ item }">
           <EventsBanners
@@ -149,6 +164,11 @@ const banners: Banner[] = [
         </template>
       </UCarousel>
     </div>
+
+
+    <!-- Country Filter Tab -->
+    <HomeCountryFilter v-model="selectedCountry" />
+
 
     <div ref="roomRef">
       <UCarousel
@@ -173,7 +193,8 @@ const banners: Banner[] = [
 
     <div class="mx-3">
       <InfiniteScroll
-        :fetcher="(fetchRoomsList as (ctx: { page: number }) => Promise<{ data: { id: number | string }[] }>)"
+        :key="selectedCountry"
+        :fetcher="infiniteScrollFetcher"
         :initial-page="1"
         :per-page="15"
       >

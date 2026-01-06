@@ -1,222 +1,228 @@
 <script setup lang="ts">
 // ========================================
-// Imports & Types
+// Imports
 // ========================================
 
 import { z } from 'zod'
+import { useRoom } from '~/composables/useRoom'
 import type { FormError, Form } from '@nuxt/ui'
 import FileUpload from '~/components/common/file-upload.vue'
-import { useRoom } from '~/composables/useRoom'
 
 // ========================================
-// Component State
+// Emits
 // ========================================
 
-const authStore = useAuthStore()
-const { normalizeError } = useApi()
+const emit = defineEmits<{
+  (e: 'success'): void
+}>()
+
+// ========================================
+// Dependencies
+// ========================================
+
+const { createRoom } = useRoom()
 const { createUploadState } = useImageUpload()
+const { normalizeError } = useApi()
 const toast = useToast()
+const authStore = useAuthStore()
 
 // ========================================
-// Schema
+// Constants & Schema
 // ========================================
 
-const schema = z.object({
+const ROOM_SCHEMA = z.object({
   name: z.string().min(3, 'Room name must be at least 3 characters'),
   country: z.string().length(2, 'Country code must be 2 characters'),
-  logo: z.instanceof(File, { message: 'Logo is required' }).optional()
+  logo: z.instanceof(File, { message: 'Logo is required' }),
 })
 
-type Schema = z.infer<typeof schema>
+type RoomSchema = z.infer<typeof ROOM_SCHEMA>
 
-const formRef = ref<Form<Schema> | null>(null)
+// ========================================
+// State
+// ========================================
 
-const state = reactive<Schema>({
+// Form State
+const formRef = ref<Form<RoomSchema> | null>(null)
+const state = reactive<Partial<RoomSchema>>({
   name: '',
-  country: '',
-  logo: undefined
+  country: authStore.user?.phone_country || undefined, // Fallback to undefined if null/empty
+  logo: undefined,
 })
 
-state.country = authStore.user?.phone_country ?? ''
-
-const fileInputError = ref('')
+// UI State
+const isProcessing = ref(false)
 const logoPreview = ref<string | null>(null)
-const isSubmitting = ref(false)
-const currentStep = ref<'idle' | 'uploading' | 'submitting'>('idle')
 
-// ========================================
 // Upload State
-// ========================================
-
 const logoUpload = createUploadState()
-
 const isUploading = computed(() => logoUpload.state.value.status === 'uploading')
 
 // ========================================
 // Event Handlers
 // ========================================
 
-function onFileSelected(file: File) {
-  state.logo = file
-  fileInputError.value = ''
+/**
+ * Handle validation errors from the form.
+ */
+function onError(event: any) {
+  const errors = event.errors?.map((e: FormError) => e.message).join(', ')
+  if (errors) {
+    toast.add({
+      title: 'Validation Error',
+      description: errors,
+      color: 'error'
+    })
+  }
+}
 
+/**
+ * Handle file selection from the uploader.
+ */
+function handleFileSelected(file: File) {
+  state.logo = file
+  
+  // Create object URL for preview
   if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
   logoPreview.value = URL.createObjectURL(file)
 }
+
+/**
+ * Handle form submission.
+ */
+async function onSubmit() {
+  formRef.value?.clear()
+  isProcessing.value = true
+
+  try {
+    // 1. Validate Prerequisites
+    if (!state.logo) throw new Error('Logo is required')
+    if (!state.country) throw new Error('Country is required')
+
+    // 2. Upload Logo
+    let logoUrl: string | undefined
+    let logoFileId: string | undefined
+
+    const result = await logoUpload.upload(state.logo, 'rooms')
+
+    if (!result || !result.url) {
+      throw new Error('Failed to upload logo')
+    }
+
+    logoUrl = result.url
+    logoFileId = result.fileId
+
+    // 3. Create Room
+    await createRoom({
+      name: state.name!,
+      country: state.country!,
+      type: 'public',
+      logo_url: logoUrl,
+      logo_file_id: logoFileId,
+    })
+
+    // 4. Success
+    emit('success')
+    
+  } catch (error: unknown) {
+    const err = normalizeError(error)
+    
+    if (err.status === 422 && err.fieldErrors) {
+      // Map API validation errors to form fields
+      const errors: FormError[] = Object.entries(err.fieldErrors).map(([path, messages]) => ({
+        path,
+        message: messages[0] || 'Invalid value'
+      }))
+      formRef.value?.setErrors(errors)
+    } else {
+      toast.add({
+        title: 'Room Creation Failed',
+        description: err.message || 'An unexpected error occurred',
+        color: 'error'
+      })
+    }
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+// ========================================
+// Lifecycle
+// ========================================
 
 onBeforeUnmount(() => {
   if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
 })
 
-async function onSubmit() {
-  if (!state.country) {
-    toast.add({ title: 'Profile Error', description: 'Country code is missing in your profile.', color: 'error' })
-    return
-  }
-
-  isSubmitting.value = true
-  formRef.value?.clear()
-  currentStep.value = 'idle'
-
-  try {
-    let logoUrl: string | undefined
-    let logoFileId: string | undefined
-
-    // Step 1: Upload logo to ImageKit if provided
-    if (state.logo) {
-      currentStep.value = 'uploading'
-      const result = await logoUpload.upload(state.logo, 'rooms')
-
-      if (!result) {
-        toast.add({ title: 'Upload Failed', description: 'Failed to upload room logo', color: 'error' })
-        return
-      }
-
-      logoUrl = result.url
-      logoFileId = result.fileId
-    }
-
-    // Step 2: Create room with pre-uploaded logo URL
-    currentStep.value = 'submitting'
-    await useRoom().createRoom({
-      name: state.name,
-      country: state.country,
-      type: 'public',
-      logo_url: logoUrl,
-      logo_file_id: logoFileId,
-    })
-  } catch (e: unknown) {
-    const normalizedError = normalizeError(e)
-
-    // Handle validation errors (422) - display on form fields
-    if (normalizedError.status === 422 && normalizedError.fieldErrors) {
-      const formErrors: FormError[] = Object.entries(normalizedError.fieldErrors).map(
-        ([path, messages]) => ({
-          path,
-          id: path,
-          message: messages?.[0] ?? 'Invalid value',
-        })
-      )
-      formRef.value?.setErrors(formErrors)
-    }
-
-    // Show toast for non-validation errors
-    if (normalizedError.status !== 422) {
-      toast.add({ title: 'Error', description: normalizedError.message, color: 'error' })
-    }
-  } finally {
-    isSubmitting.value = false
-    currentStep.value = 'idle'
-  }
-}
-
-// ========================================
-// Helpers
-// ========================================
-
-function getUploadStatusIcon(status: string): string {
-  switch (status) {
-    case 'uploading': return 'i-lucide-loader-2'
-    case 'success': return 'i-lucide-check-circle'
-    case 'error': return 'i-lucide-alert-circle'
-    default: return 'i-lucide-upload'
-  }
-}
-
-function getUploadStatusColor(status: string): string {
-  switch (status) {
-    case 'uploading': return 'text-primary'
-    case 'success': return 'text-success'
-    case 'error': return 'text-error'
-    default: return 'text-muted'
-  }
-}
 </script>
 
 <template>
-  <UForm ref="formRef" :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-    <!-- Upload Progress Banner -->
-    <div
-      v-if="isUploading || currentStep === 'submitting'"
-      class="bg-primary/90 text-white px-4 py-3 rounded-lg"
-    >
-      <div class="flex items-center gap-3">
-        <icon name="i-lucide-loader-2" class="size-5 animate-spin" />
-        <div class="flex-1">
-          <p class="text-sm font-medium">
-            {{ currentStep === 'submitting' ? 'Creating room...' : 'Uploading logo...' }}
-          </p>
-          <div v-if="isUploading" class="mt-1 h-1.5 bg-white/30 rounded-full overflow-hidden">
-            <div
-              class="h-full bg-white rounded-full transition-all duration-300"
-              :style="{ width: `${logoUpload.state.value.progress}%` }"
-            />
-          </div>
-        </div>
-        <span v-if="isUploading" class="text-sm font-bold">{{ logoUpload.state.value.progress }}%</span>
-      </div>
-    </div>
-
-    <!-- Logo Upload -->
-    <div class="flex flex-col items-center gap-2">
-      <FileUpload
-        :error="fileInputError"
-        :current-image="logoPreview"
-        shape="rounded"
-        size="xl"
-        label="Room Logo"
-        :aspect-ratio="2"
-        :disabled="isSubmitting"
-        @file-selected="onFileSelected"
-      />
-      <div class="flex items-center gap-1.5">
-        <span class="text-sm font-medium text-gray-500">Upload Room Logo</span>
-        <icon
-          v-if="logoUpload.state.value.status !== 'idle'"
-          :name="getUploadStatusIcon(logoUpload.state.value.status)"
-          :class="[getUploadStatusColor(logoUpload.state.value.status), 'size-4', { 'animate-spin': isUploading }]"
+  <UForm
+    ref="formRef"
+    :schema="ROOM_SCHEMA"
+    :state="state"
+    class="space-y-6"
+    @submit="onSubmit"
+    @error="onError"
+  >
+    <!-- Logo Upload Section -->
+    <div class="flex flex-col items-center gap-4">
+      <UFormField name="logo">
+        <FileUpload
+          :current-image="logoPreview"
+          :loading="isUploading"
+          crop
+          shape="rounded"
+          label="Room Logo"
+          @file-selected="handleFileSelected"
         />
-        <span v-if="logoUpload.state.value.status === 'success'" class="text-xs text-success">
-          Uploaded
-        </span>
+      </UFormField>
+      
+      <div v-if="isUploading" class="w-full max-w-xs space-y-2">
+         <p class="text-xs text-center text-muted">Uploading logo...</p>
+         <UProgress :value="logoUpload.state.value.progress" size="xs" color="primary" />
       </div>
+
+       <p class="text-sm text-muted text-center max-w-xs">
+        Upload a strict 1:1 circular logo for your room. This will be visible to all users.
+      </p>
     </div>
 
-    <!-- Name -->
-    <UFormField label="Room Name" name="name">
+    <!-- Room Details -->
+    <UFormField label="Room Name" name="name" required>
       <UInput
         v-model="state.name"
-        placeholder="My Awesome Room"
+        placeholder="e.g. Chill Vibes Lounge"
+        icon="i-lucide-monitor-play"
         size="xl"
         class="w-full"
-        :disabled="isSubmitting"
       />
     </UFormField>
+    
+    <!-- Country Selection (Only if missing) -->
+    <UFormField v-if="!authStore.user?.phone_country" label="Country" name="country" required>
+        <USelect
+            v-model="state.country"
+            :items="['us', 'uk', 'ca', 'de', 'fr', 'in', 'cn', 'jp', 'br', 'sa', 'ae', 'kw', 'qa', 'bh', 'om', 'lb', 'pk']" 
+            placeholder="Select Country"
+            size="xl"
+            class="w-full"
+        />
+    </UFormField>
 
-    <div class="pt-4 mb-12">
-      <UButton type="submit" block size="xl" :loading="isSubmitting" :disabled="isSubmitting">
-        {{ isUploading ? 'Uploading...' : currentStep === 'submitting' ? 'Creating...' : 'Create Room' }}
+    <!-- Submit Button -->
+    <div class="pb-7">
+      <UButton
+        type="submit"
+        size="xl"
+        block
+        :loading="isProcessing"
+        :disabled="isProcessing"
+        icon="i-lucide-plus"
+      >
+        {{ isProcessing ? 'Creating Room...' : 'Create Room' }}
       </UButton>
     </div>
+
   </UForm>
 </template>

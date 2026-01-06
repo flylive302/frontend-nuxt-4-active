@@ -5,6 +5,7 @@ import { useCountries } from '~/composables/useCountries'
 import { useAuthForm } from '~/composables/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
 import type {LoginPayload} from "~/types/auth";
+import SocialAuth from "~/components/social-auth.vue";
 
 definePageMeta({
   layout: 'auth',
@@ -89,6 +90,11 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
 
 <template>
   <main aria-labelledby="login-heading">
+
+    <SocialAuth />
+
+    <USeparator color="primary" class="my-4" label="OR" />
+
     <h1 id="login-heading" class="sr-only">Log In to Your Account</h1>
 
     <!-- General error alert - displayed at top of form when login fails -->

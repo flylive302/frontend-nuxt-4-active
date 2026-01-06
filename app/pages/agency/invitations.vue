@@ -107,81 +107,89 @@ onMounted(() => {
         <div
           v-for="invitation in agencyStore.receivedInvitations.items"
           :key="invitation.id"
-          class="p-4 bg-elevated rounded-lg border"
-          :class="invitation.can_respond ? 'border-primary/30' : 'border-muted/30 opacity-60'"
+          class="bg-linear-to-bl to-neutral-950 rounded-lg border relative overflow-hidden"
+          :class="invitation.can_respond ? 'border-primary/30' : 'border-muted/30 opacity-70'"
         >
           <!-- Agency Info -->
           <NuxtLink
             :to="`/agency/${invitation.agency?.id}`"
-            class="flex gap-3 mb-3"
+            class="flex gap-2 p-2 border-b border-black shadow-lg shadow-primary-950/50"
           >
             <NuxtImg
               :src="invitation.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${invitation.agency?.name}`"
               :alt="invitation.agency?.name"
-              class="size-12 rounded-lg object-cover border border-muted"
+              class="size-12"
             />
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold truncate">{{ invitation.agency?.name }}</h3>
-              <div class="flex items-center gap-2 text-sm text-muted">
-                <icon :name="`i-flag-${invitation.agency?.country.toLowerCase()}-4x3`" class="size-4 rounded" />
-                <span>{{ invitation.agency?.country }}</span>
+
+            <div class="flex gap-1 min-w-0">
+              <div class="">
+                <h3 class="font-semibold truncate">{{ invitation.agency?.name }}</h3>
+                <div class="flex items-center gap-2 text-sm">
+                  <icon :name="`i-flag-${invitation.agency?.country.toLowerCase()}-4x3`" class="size-6 h-5 rounded shadow-md" />
+                  <span>{{ invitation.agency?.country }}</span>
+                  <!-- Expiry -->
+                  <UBadge
+                      class="flex items-center gap-1 text-xs"
+                      :color="invitation.is_expired ? 'error' : 'warning'"
+                      variant="soft"
+                      size="sm"
+                      icon="i-lucide-clock"
+                  >
+                    {{ invitation.is_expired ? 'Expired' : formatExpiryTime(invitation.expires_at) }}
+                  </UBadge>
+                </div>
+              </div>
+
+              <div class="flex flex-col items-end gap-2">
+                <p class="text-muted text-xs">Invited by <span class="font-medium text-primary">{{ invitation.invited_by.name }}</span></p>
+                <!-- Block Agency Option -->
+                <UButton
+                    v-if="invitation.can_respond"
+                    variant="soft"
+                    color="warning"
+                    size="xs"
+                    icon="i-lucide-ban"
+                    @click="handleBlockAgency(invitation.agency?.id || 0)"
+                >
+                  Block Agency
+                </UButton>
               </div>
             </div>
           </NuxtLink>
 
-          <!-- Invited By -->
-          <p class="text-sm text-muted mb-2">
-            Invited by <span class="font-medium">{{ invitation.invited_by.name }}</span>
-          </p>
+          <div class="inset-shadow-sm">
+            <!-- Actions -->
+            <div v-if="invitation.can_respond" class="flex">
+              <UButton
+                  color="success"
+                  variant="soft"
+                  icon="i-lucide-ticket-check"
+                  class="flex-1 justify-center rounded-none"
+                  :loading="processingId === invitation.id"
+                  @click="handleAccept(invitation.id)"
+              >
+                Accept
+              </UButton>
+              <UButton
+                  variant="soft"
+                  color="error"
+                  class="flex-1 justify-center rounded-none"
+                  icon="i-lucide-x"
+                  :loading="processingId === invitation.id"
+                  @click="handleDecline(invitation.id)"
+              >
+                Decline
+              </UButton>
+            </div>
 
-          <!-- Expiry -->
-          <div
-            class="flex items-center gap-1 text-sm mb-3"
-            :class="invitation.is_expired ? 'text-error' : 'text-warning'"
-          >
-            <icon name="i-lucide-clock" class="size-4" />
-            <span>{{ invitation.is_expired ? 'Expired' : formatExpiryTime(invitation.expires_at) }}</span>
+            <!-- Expired/Processed State -->
+            <div v-else class="flex items-center justify-center py-2 text-muted">
+              <span class="text-sm">{{ invitation.status_label }}</span>
+            </div>
+
           </div>
-
-          <!-- Actions -->
-          <div v-if="invitation.can_respond" class="flex gap-2">
-            <UButton
-              color="success"
-              class="flex-1 justify-center"
-              :loading="processingId === invitation.id"
-              @click="handleAccept(invitation.id)"
-            >
-              Accept
-            </UButton>
-            <UButton
-              variant="outline"
-              color="error"
-              class="flex-1 justify-center"
-              :loading="processingId === invitation.id"
-              @click="handleDecline(invitation.id)"
-            >
-              Decline
-            </UButton>
-          </div>
-
-          <!-- Expired/Processed State -->
-          <div v-else class="flex items-center justify-center py-2 text-muted">
-            <span class="text-sm">{{ invitation.status_label }}</span>
-          </div>
-
-          <!-- Block Agency Option -->
-          <UButton
-            v-if="invitation.can_respond"
-            variant="ghost"
-            color="neutral"
-            size="xs"
-            class="w-full mt-2"
-            icon="i-lucide-ban"
-            @click="handleBlockAgency(invitation.agency?.id || 0)"
-          >
-            Block this agency
-          </UButton>
         </div>
+
       </div>
 
       <!-- Error State -->

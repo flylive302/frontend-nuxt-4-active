@@ -79,16 +79,6 @@ onMounted(() => {
     <NavAlt back-to="/agency/my-agency">Sent Invitations</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
-      <!-- Invite Button - Always visible for admins when there are invitations -->
-      <UButton
-        v-if="agencyStore.isAgencyAdmin && (invitations.length > 0 || !loading)"
-        color="primary"
-        class="w-full justify-center mb-4"
-        icon="i-lucide-user-plus"
-        @click="showInviteDialog = true"
-      >
-        Invite User to Agency
-      </UButton>
 
       <!-- Loading State -->
       <div v-if="loading && invitations.length === 0" class="space-y-3">
@@ -214,6 +204,31 @@ onMounted(() => {
         class="mt-4"
       />
     </div>
+
+    <footer
+        v-if="!loading && invitations.length > 0"
+        aria-label="Primary"
+        class="fixed inset-x-2 z-50 bottom-8"
+    >
+      <BgGlass
+          class="border border-white/40 p-3"
+          frost-blur-radius="blur(8px)"
+          :noise-frequency="0.009"
+          :noise-strength="200"
+          rounded="rounded-lg"
+      >
+        <!-- Invite Button - Always visible for admins when there are invitations -->
+        <UButton
+            v-if="agencyStore.isAgencyAdmin && (invitations.length > 0 || !loading)"
+            color="primary"
+            class="w-full justify-center"
+            icon="i-lucide-user-plus"
+            @click="showInviteDialog = true"
+        >
+          Invite A User to Agency
+        </UButton>
+      </BgGlass>
+    </footer>
 
     <!-- New Invite User Dialog -->
     <UserInviteDialog

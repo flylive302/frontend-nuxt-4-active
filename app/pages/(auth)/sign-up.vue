@@ -7,6 +7,7 @@ import { normalizePhone, usePhoneSchema } from '~/composables/usePhoneSchema'
 import { useCountries } from '~/composables/useCountries'
 import { useAuthForm } from '~/composables/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
+import SocialAuth from "~/components/social-auth.vue";
 
 definePageMeta({
   layout: 'auth',
@@ -108,10 +109,15 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 
 <template>
   <main>
+
+    <SocialAuth />
+
+    <USeparator color="primary" class="my-4" label="OR" />
     <!-- General error alert - displayed at top of form when registration fails -->
     <UAlert
-v-if="generalErrorMessage" :description="generalErrorMessage" color="error" variant="soft"
-      title="Registration Failed" class="mb-4" icon="i-lucide-alert-circle" />
+      v-if="generalErrorMessage" :description="generalErrorMessage" color="error" variant="soft"
+      title="Registration Failed" class="mb-4" icon="i-lucide-alert-circle"
+    />
 
     <!-- Registration form with Zod validation -->
     <UForm ref="formRef" :schema="registrationSchema" :state="state" class="space-y-3" @submit="handleFormSubmit">
@@ -122,28 +128,31 @@ v-if="generalErrorMessage" :description="generalErrorMessage" color="error" vari
 
       <!-- Country phone input component - handles country code, dial code, and phone number -->
       <FormsCountryPhoneInput
-v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
-        v-model:phone="state.phone" :error="phoneError" />
+        v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
+        v-model:phone="state.phone" :error="phoneError"
+      />
 
       <!-- Password input field with strength requirements -->
       <UFormField label="Password" name="password" required>
         <UInput
-v-model="state.password" class="w-full" size="lg" icon="i-lucide-lock" type="password"
-          placeholder="********" />
+          v-model="state.password" class="w-full" size="lg" icon="i-lucide-lock" type="password" placeholder="********"
+        />
       </UFormField>
 
       <!-- Submit button - disabled until form is valid -->
       <UButton
-:loading="isProcessing" type="submit" size="xl" icon="i-lucide-send"
-        class="w-full justify-center disabled:bg-primary-400">
+        :loading="isProcessing" type="submit" size="xl" icon="i-lucide-send"
+        class="w-full justify-center disabled:bg-primary-400"
+      >
         Sign Up
       </UButton>
     </UForm>
 
     <!-- Link to login page for existing users -->
     <UButton
-:to="ROUTES.LOGIN" class="mt-3 underline font-bold px-0" variant="link"
-      trailing-icon="i-lucide-arrow-right" size="xl">
+      :to="ROUTES.LOGIN" class="mt-3 underline font-bold px-0" variant="link"
+      trailing-icon="i-lucide-arrow-right" size="xl"
+    >
       Have an Account? Log In
     </UButton>
   </main>

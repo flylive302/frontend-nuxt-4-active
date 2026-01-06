@@ -40,9 +40,10 @@ export function useRoom() {
     /**
      * Create a new room.
      * @param payload - The room creation data (use logo_url and logo_file_id for pre-uploaded logos).
-     * @returns 'success' if created, 'failed' otherwise.
+     * @returns The created room data.
+     * @throws ApiError if creation fails.
      */
-    async function createRoom(payload: CreateRoomPayload): Promise<'success' | 'failed'> {
+    async function createRoom(payload: CreateRoomPayload): Promise<RoomResponse> {
         await fetchCsrfToken();
 
         // Build JSON payload (no FormData - logos are pre-uploaded to ImageKit)
@@ -62,27 +63,31 @@ export function useRoom() {
             body.logo_file_id = payload.logo_file_id;
         }
 
-        try {
-            const response = await api<RoomResponse>('/rooms', {
-                method: 'POST',
-                body,
-            });
+        // We want to propagate errors to the component for proper form handling
+        const response = await api<RoomResponse>('/rooms', {
+            method: 'POST',
+            body,
+        });
 
-            if (response.status === "success") {
-                roomStore.setUserRoom(response.data);
-                roomStore.setCurrentRoom(response.data);
-                toast.add({ title: response.message, color: 'success' })
-                return 'success';
-            } else {
-                roomStore.setUserRoom(null);
-                toast.add({ title: response.message, color: "error" })
-                return 'failed';
-            }
-        } catch (error: unknown) {
-             const errorMessage = (error as { data?: { message?: string } })?.data?.message || 'Failed to create room'
-             roomStore.setUserRoom(null);
-             toast.add({ title: errorMessage, color: "error" })
-             return 'failed';
+        if (response.status === "success") {
+            roomStore.setUserRoom(response.data);
+            roomStore.setCurrentRoom(response.data);
+            toast.add({ title: response.message, color: 'success' })
+            return response;
+        } else {
+            // Even if api() doesn't throw (depending on implementation),
+            // if success is false, we should probably treat it as an error or let component handle it.
+            // However, usually api() throws on non-2xx. If it returns structured error with success=false, process here.
+            
+            // For safety in this refactor, if we get here it means HTTP 200 OK but application logic failure?
+            // Usually FlyLive API throws on errors. Assuming api composable handles throws.
+            
+            // If we do get a success: false payload without throw:
+            throw createError({
+                statusCode: 400,
+                statusMessage: response.message,
+                data: response
+            })
         }
     }
 

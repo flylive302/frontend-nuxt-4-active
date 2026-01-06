@@ -100,8 +100,8 @@ async function handleMyRoomClick() {
     </BgGlass>
     <UDrawer v-model:open="createRoomOpen" title="Create your Room" description="Start your journey by creating your own room.">
       <template #content>
-        <div class="safe-area-bottom p-4">
-          <RoomCreate />
+        <div class="safe-area-bottom p-4 pb-8">
+          <RoomCreate @success="createRoomOpen = false" />
         </div>
       </template>
     </UDrawer>

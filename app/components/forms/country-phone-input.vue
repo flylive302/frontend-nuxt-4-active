@@ -186,10 +186,11 @@ onMounted(async () => {
     </UFormField>
 
     <Transition
-enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
-      enter-to-class="opacity-100 translate-y-0">
+      enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
+      enter-to-class="opacity-100 translate-y-0"
+    >
       <UFormField
-v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
+        v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
         :help="`Enter your number for ${selectedCountry.name}`" :error="error" required>
         <div class="flex items-center gap-1">
           <div
@@ -199,7 +200,7 @@ v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
           </div>
 
           <UInput
-ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric"
+            ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric"
             :placeholder="phonePlaceholder" size="lg" class="w-full" autocomplete="tel-national" :disabled="disabled"
             @paste="handlePaste" />
         </div>

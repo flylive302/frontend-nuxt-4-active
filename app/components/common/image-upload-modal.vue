@@ -135,7 +135,7 @@ onBeforeUnmount(() => {
   <USlideover 
     :open="modelValue" 
     side="bottom"
-    title="Edit Image"
+    title="Crop Image"
     description="Adjust your image by zooming, rotating, and cropping before saving"
     @update:open="emit('update:modelValue', $event)"
   >
@@ -144,13 +144,14 @@ onBeforeUnmount(() => {
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold">
-              Edit Photo
+              Crop Photo
             </h3>
             <p class="text-xs text-muted">
               Scroll to zoom, drag to move
             </p>
             <UButton
-              variant="ghost" 
+              variant="soft"
+              color="error"
               icon="i-lucide-x" 
               class="-my-1" 
               type="button" 
@@ -162,25 +163,23 @@ onBeforeUnmount(() => {
         </template>
 
         <!-- Cropper Area -->
-        <div class="relative flex-1 w-full overflow-hidden rounded-lg bg-elevated flex items-center justify-center min-h-[200px] shadow-lg shadow-neutral-800">
-          <ClientOnly>
-            <Cropper
-                v-if="imageSrc"
-                ref="cropperRef"
-                class="h-[65vh] w-auto"
-                :src="imageSrc"
-                :stencil-component="props.stencilComponent"
-                :stencil-props="{
-                  aspectRatio: props.aspectRatio,
-                  previewClass: 'cropper-preview'
-                }"
-            />
-            <div v-else class="flex flex-col items-center gap-2 text-gray-400">
-              <UIcon name="i-lucide-image" class="h-8 w-8" />
-              <span>Loading image...</span>
-            </div>
-          </ClientOnly>
-        </div>
+        <ClientOnly>
+          <Cropper
+              v-if="imageSrc"
+              ref="cropperRef"
+              class="h-[60vh] border w-auto rounded-lg overflow-hidden inset-shadow-sm"
+              :src="imageSrc"
+              :stencil-component="props.stencilComponent"
+              :stencil-props="{
+                aspectRatio: props.aspectRatio,
+                previewClass: 'border'
+              }"
+          />
+          <div v-else class="flex flex-col items-center gap-2 text-gray-400">
+            <UIcon name="i-lucide-image" class="h-8 w-8" />
+            <span>Loading image...</span>
+          </div>
+        </ClientOnly>
 
         <!-- Controls -->
         <div class="flex items-center justify-center gap-4 mt-4">
@@ -249,7 +248,7 @@ onBeforeUnmount(() => {
           <div class="flex justify-between">
             <UButton
                 color="neutral"
-                variant="subtle"
+                variant="soft"
                 type="button"
                 :disabled="isProcessing"
                 @click.prevent="closeModal"

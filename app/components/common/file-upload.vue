@@ -3,6 +3,7 @@
 // Imports & Types
 // ========================================
 import type { Component } from 'vue'
+import { CircleStencil, RectangleStencil } from 'vue-advanced-cropper'
 
 // ========================================
 // Constants
@@ -76,7 +77,7 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   size: 'md',
   shape: 'circle',
-  aspectRatio: 1,
+  aspectRatio: 0.8,
   outputFormat: 'image/jpeg',
   outputQuality: 0.9,
 })
@@ -89,10 +90,15 @@ const isCropModalOpen = ref(false)
 const localError = ref<string | null>(null)
 
 // ========================================
-// Computed Styles
+// Computed Styles & Logic
 // ========================================
 const sizeClasses = computed(() => SIZE_MAP[props.size])
 const shapeClass = computed(() => SHAPE_MAP[props.shape])
+
+const realStencilComponent = computed(() => {
+  if (props.stencilComponent) return props.stencilComponent
+  return props.shape === 'circle' ? CircleStencil : RectangleStencil
+})
 
 // ========================================
 // Event Handlers
@@ -229,31 +235,24 @@ function handleCropCancel() {
     <div class="flex flex-col items-center gap-2">
       <!-- Preview / Trigger -->
       <div 
-        role="button"
-        tabindex="0"
-        :aria-label="label"
-        class="relative group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-        :class="shapeClass"
-        @click="triggerFileInput"
-        @keydown="handleKeyDown"
+        role="button" tabindex="0"
+        class="relative group cursor-pointer"
+        :class="shapeClass" :aria-label="label"
+        @click="triggerFileInput" @keydown="handleKeyDown"
       >
-        <div
-          class="relative overflow-hidden border-2 border-primary shadow-2xl shadow-primary/50"
-          :class="[sizeClasses.container, shapeClass]"
-        >
+        <div class="relative overflow-hidden ring-2 ring-primary inset-shadow-sm" :class="[sizeClasses.container, shapeClass]">
           <NuxtImg
-            v-if="currentImage"
-            :src="currentImage"
-            class="h-full w-full object-cover"
-            :alt="label"
+              v-if="currentImage"
+              :src="currentImage"
+              class="h-full w-full object-cover"
+              :alt="label"
           />
-          <div 
-            v-else 
-            class="flex h-full w-full items-center justify-center bg-elevated text-gray-400"
+          <div
+              v-else
+              class="flex h-full w-full items-center justify-center bg-elevated text-gray-400"
           >
             <UIcon :name="icon" :class="sizeClasses.icon" />
           </div>
-          
           <!-- Hover Overlay -->
           <div class="absolute inset-0 flex items-center justify-center bg-elevated opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
             <UIcon name="i-lucide-camera" class="text-white" :class="sizeClasses.hoverIcon" />
@@ -291,7 +290,7 @@ function handleCropCancel() {
       v-if="crop && isCropModalOpen"
       v-model="isCropModalOpen"
       :image-file="selectedFile"
-      :stencil-component="stencilComponent"
+      :stencil-component="realStencilComponent"
       :aspect-ratio="aspectRatio"
       :output-format="outputFormat"
       :output-quality="outputQuality"
