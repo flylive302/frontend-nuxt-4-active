@@ -101,7 +101,7 @@
 }
 
 body {
-    width: 100vw !important;
+    width: 100% !important;
     min-height: 100vh !important;
     pointer-events: auto !important;
 }
