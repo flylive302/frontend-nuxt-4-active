@@ -20,24 +20,11 @@ import type {
 // Types
 // ========================================
 
-interface MemberListState {
-  items: RoomMember[]
-  loading: boolean
-  error: string | null
-  hasMore: boolean
-  cursor: string | null
-}
-
-interface RequestListState {
-  items: RoomJoinRequest[]
-  loading: boolean
-  error: string | null
-  hasMore: boolean
-  cursor: string | null
-}
-
-interface InvitationListState {
-  items: RoomInvitation[]
+/**
+ * Generic paginated state for cursor-based pagination.
+ */
+interface PaginatedState<T> {
+  items: T[]
   loading: boolean
   error: string | null
   hasMore: boolean
@@ -59,8 +46,9 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   const currentRoomId = ref<number | null>(null)
   const levelProgress = ref<RoomLevelProgress | null>(null)
   const levelLoading = ref(false)
+  const levelError = ref<string | null>(null)
 
-  const members = ref<MemberListState>({
+  const members = ref<PaginatedState<RoomMember>>({
     items: [],
     loading: false,
     error: null,
@@ -68,7 +56,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     cursor: null,
   })
 
-  const joinRequests = ref<RequestListState>({
+  const joinRequests = ref<PaginatedState<RoomJoinRequest>>({
     items: [],
     loading: false,
     error: null,
@@ -76,7 +64,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     cursor: null,
   })
 
-  const myJoinRequests = ref<RequestListState>({
+  const myJoinRequests = ref<PaginatedState<RoomJoinRequest>>({
     items: [],
     loading: false,
     error: null,
@@ -84,7 +72,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     cursor: null,
   })
 
-  const receivedInvitations = ref<InvitationListState>({
+  const receivedInvitations = ref<PaginatedState<RoomInvitation>>({
     items: [],
     loading: false,
     error: null,
@@ -92,7 +80,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     cursor: null,
   })
 
-  const sentInvitations = ref<InvitationListState>({
+  const sentInvitations = ref<PaginatedState<RoomInvitation>>({
     items: [],
     loading: false,
     error: null,
@@ -102,6 +90,17 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
 
   // ========================================
   // Computed
+  // ========================================
+
+  /**
+   * Pending join request count.
+   */
+  const pendingRequestCount = computed(() => 
+    joinRequests.value.items.filter(r => r.status === 'pending').length
+  )
+
+  // ========================================
+  // Helper Methods
   // ========================================
 
   /**
@@ -124,13 +123,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   function membersByRole(role: RoomMemberRole): RoomMember[] {
     return members.value.items.filter(m => m.role === role)
   }
-
-  /**
-   * Pending join request count.
-   */
-  const pendingRequestCount = computed(() => 
-    joinRequests.value.items.filter(r => r.status === 'pending').length
-  )
 
   // ========================================
   // Actions
@@ -195,6 +187,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    */
   async function fetchLevelProgress(roomId: number): Promise<void> {
     levelLoading.value = true
+    levelError.value = null
 
     try {
       const response = await api<{
@@ -204,6 +197,8 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
 
       levelProgress.value = response.data
     } catch (err) {
+      const normalized = normalizeError(err)
+      levelError.value = normalized.message
       console.error('[RoomMembershipStore] fetchLevelProgress failed:', err)
     } finally {
       levelLoading.value = false
@@ -263,13 +258,16 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     joinRequests.value.error = null
 
     try {
+      const queryParams: Record<string, unknown> = { per_page: 50 }
+      if (joinRequests.value.cursor) queryParams.cursor = joinRequests.value.cursor
+
       const response = await api<{
         success: true
         data: {
           requests: RoomJoinRequest[]
           pagination: RoomMemberPagination
         }
-      }>(`/rooms/${roomId}/join-requests`)
+      }>(`/rooms/${roomId}/join-requests`, { params: queryParams })
 
       joinRequests.value.items.push(...response.data.requests)
       joinRequests.value.hasMore = response.data.pagination.has_more
@@ -306,12 +304,90 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     try {
       await api(`/rooms/${roomId}/join-requests/${requestId}/reject`, { method: 'POST' })
       joinRequests.value.items = joinRequests.value.items.filter(r => r.id !== requestId)
-      toast.add({ title: 'Rejected', description: 'Join request rejected.', color: 'success' })
+      toast.add({ title: 'Rejected', description: 'Join request rejected.', color: 'warning' })
       return true
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
       return false
+    }
+  }
+
+  /**
+   * Fetch received invitations (for current user).
+   */
+  async function fetchReceivedInvitations(reset = false): Promise<void> {
+    if (reset) {
+      receivedInvitations.value.items = []
+      receivedInvitations.value.cursor = null
+      receivedInvitations.value.hasMore = true
+    }
+
+    if (!receivedInvitations.value.hasMore || receivedInvitations.value.loading) return
+
+    receivedInvitations.value.loading = true
+    receivedInvitations.value.error = null
+
+    try {
+      const queryParams: Record<string, unknown> = { per_page: 50 }
+      if (receivedInvitations.value.cursor) queryParams.cursor = receivedInvitations.value.cursor
+
+      const response = await api<{
+        success: true
+        data: {
+          invitations: RoomInvitation[]
+          pagination: RoomMemberPagination
+        }
+      }>('/room-invitations/received', { params: queryParams })
+
+      receivedInvitations.value.items.push(...response.data.invitations)
+      receivedInvitations.value.hasMore = response.data.pagination.has_more
+      receivedInvitations.value.cursor = response.data.pagination.next_cursor ?? null
+    } catch (err) {
+      const normalized = normalizeError(err)
+      receivedInvitations.value.error = normalized.message
+      console.error('[RoomMembershipStore] fetchReceivedInvitations failed:', err)
+    } finally {
+      receivedInvitations.value.loading = false
+    }
+  }
+
+  /**
+   * Fetch sent invitations (for room owner/admin).
+   */
+  async function fetchSentInvitations(roomId: number, reset = false): Promise<void> {
+    if (reset) {
+      sentInvitations.value.items = []
+      sentInvitations.value.cursor = null
+      sentInvitations.value.hasMore = true
+    }
+
+    if (!sentInvitations.value.hasMore || sentInvitations.value.loading) return
+
+    sentInvitations.value.loading = true
+    sentInvitations.value.error = null
+
+    try {
+      const queryParams: Record<string, unknown> = { per_page: 50 }
+      if (sentInvitations.value.cursor) queryParams.cursor = sentInvitations.value.cursor
+
+      const response = await api<{
+        success: true
+        data: {
+          invitations: RoomInvitation[]
+          pagination: RoomMemberPagination
+        }
+      }>(`/rooms/${roomId}/invitations`, { params: queryParams })
+
+      sentInvitations.value.items.push(...response.data.invitations)
+      sentInvitations.value.hasMore = response.data.pagination.has_more
+      sentInvitations.value.cursor = response.data.pagination.next_cursor ?? null
+    } catch (err) {
+      const normalized = normalizeError(err)
+      sentInvitations.value.error = normalized.message
+      console.error('[RoomMembershipStore] fetchSentInvitations failed:', err)
+    } finally {
+      sentInvitations.value.loading = false
     }
   }
 
@@ -359,7 +435,23 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     try {
       await api(`/room-invitations/${invitationId}/decline`, { method: 'POST' })
       receivedInvitations.value.items = receivedInvitations.value.items.filter(i => i.id !== invitationId)
-      toast.add({ title: 'Declined', description: 'Invitation declined.', color: 'success' })
+      toast.add({ title: 'Declined', description: 'Invitation declined.', color: 'neutral' })
+      return true
+    } catch (err) {
+      const normalized = normalizeError(err)
+      toast.add({ title: 'Error', description: normalized.message, color: 'error' })
+      return false
+    }
+  }
+
+  /**
+   * Cancel sent invitation.
+   */
+  async function cancelInvitation(roomId: number, invitationId: number): Promise<boolean> {
+    try {
+      await api(`/rooms/${roomId}/invitations/${invitationId}`, { method: 'DELETE' })
+      sentInvitations.value.items = sentInvitations.value.items.filter(i => i.id !== invitationId)
+      toast.add({ title: 'Cancelled', description: 'Invitation cancelled.', color: 'success' })
       return true
     } catch (err) {
       const normalized = normalizeError(err)
@@ -372,7 +464,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * Handle room level up event (real-time).
    */
   function onRoomLevelUp(newProgress: RoomLevelProgress): void {
-    const _oldLevel = levelProgress.value?.current_level ?? 0
     levelProgress.value = newProgress
     
     toast.add({
@@ -401,6 +492,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     currentRoomId.value = null
     levelProgress.value = null
     levelLoading.value = false
+    levelError.value = null
     resetLists()
   }
 
@@ -413,6 +505,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     currentRoomId,
     levelProgress,
     levelLoading,
+    levelError,
     members,
     joinRequests,
     myJoinRequests,
@@ -422,7 +515,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     // Computed
     pendingRequestCount,
 
-    // Methods
+    // Helper Methods
     isMemberOf,
     getMember,
     membersByRole,
@@ -436,7 +529,10 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     fetchJoinRequests,
     approveJoinRequest,
     rejectJoinRequest,
+    fetchReceivedInvitations,
+    fetchSentInvitations,
     sendInvitation,
+    cancelInvitation,
     acceptInvitation,
     declineInvitation,
     onRoomLevelUp,
