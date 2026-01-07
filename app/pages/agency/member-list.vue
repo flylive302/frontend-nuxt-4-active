@@ -21,6 +21,8 @@ definePageMeta({
 // ========================================
 
 const agencyStore = useAgencyStore()
+const { fetchAgencyMembers } = useAgencyBrowsing()
+const { kickMember } = useAgencyAdmin()
 
 // ========================================
 // Component State
@@ -65,7 +67,7 @@ async function handleKick(): Promise<void> {
   if (!selectedMember.value) return
   
   kickingId.value = selectedMember.value.id
-  await agencyStore.kickMember(selectedMember.value.id, { reason: kickReason.value || undefined })
+  await kickMember(selectedMember.value.id, { reason: kickReason.value || undefined })
   kickingId.value = null
   showKickModal.value = false
   selectedMember.value = null
@@ -73,7 +75,7 @@ async function handleKick(): Promise<void> {
 
 function handleLoadMore(): void {
   if (agencyStore.userAgency.agency?.id) {
-    agencyStore.fetchAgencyMembers(agencyStore.userAgency.agency.id)
+    fetchAgencyMembers(agencyStore.userAgency.agency.id)
   }
 }
 
@@ -83,7 +85,7 @@ function handleLoadMore(): void {
 
 onMounted(async () => {
   if (agencyStore.userAgency.agency?.id) {
-    await agencyStore.fetchAgencyMembers(agencyStore.userAgency.agency.id, true)
+    await fetchAgencyMembers(agencyStore.userAgency.agency.id, true)
   }
 })
 </script>

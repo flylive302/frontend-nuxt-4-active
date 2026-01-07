@@ -22,6 +22,7 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 // ========================================
 
 const agencyStore = useAgencyStore()
+const { cancelJoinRequest, fetchMyJoinRequests } = useAgencyJoinRequests()
 
 // ========================================
 // Component State
@@ -35,7 +36,7 @@ const cancellingId = ref<number | null>(null)
 
 async function handleCancel(agencyId: number): Promise<void> {
   cancellingId.value = agencyId
-  await agencyStore.cancelJoinRequest(agencyId)
+  await cancelJoinRequest(agencyId)
   cancellingId.value = null
 }
 
@@ -44,7 +45,7 @@ async function handleCancel(agencyId: number): Promise<void> {
 // ========================================
 
 onMounted(() => {
-  agencyStore.fetchMyJoinRequests(true)
+  fetchMyJoinRequests(true)
 })
 
 // ========================================

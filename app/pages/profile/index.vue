@@ -21,6 +21,9 @@ definePageMeta({
 const authStore = useAuthStore()
 const levelsStore = useLevelsStore()
 const agencyStore = useAgencyStore()
+const { fetchUserAgency } = useAgencyMembership()
+const { fetchReceivedInvitations } = useAgencyInvitations()
+const { fetchMyJoinRequests } = useAgencyJoinRequests()
 
 const CURRENT_WEALTH_BADGE = levelsStore.wealthBadge == null ? '/badges/wealth/level_0.webp' : levelsStore.wealthBadge.image_url;
 const CURRENT_CHARM_BADGE = levelsStore.charmBadge == null ? '/badges/charm/level_0.webp' : levelsStore.charmBadge.image_url;
@@ -33,9 +36,9 @@ const CURRENT_CHARM_LEVEL = levelsStore.charmLevel?.current_level || '0';
 
 onMounted(() => {
   // Fetch user's agency context for conditional navigation
-  agencyStore.fetchUserAgency()
-  agencyStore.fetchReceivedInvitations()
-  agencyStore.fetchMyJoinRequests()
+  fetchUserAgency()
+  fetchReceivedInvitations()
+  fetchMyJoinRequests()
 })
 </script>
 

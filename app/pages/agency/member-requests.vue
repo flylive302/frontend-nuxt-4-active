@@ -26,6 +26,8 @@ definePageMeta({
 // ========================================
 
 const agencyStore = useAgencyStore()
+const { approveJoinRequest, rejectJoinRequest, fetchJoinRequests } = useAgencyJoinRequests()
+const { blockUser } = useAgencyAdmin()
 
 // ========================================
 // Component State
@@ -48,13 +50,13 @@ const loading = computed(() => agencyStore.joinRequests.loading)
 
 async function handleApprove(request: AgencyJoinRequest): Promise<void> {
   processingId.value = request.id
-  await agencyStore.approveJoinRequest(request.id)
+  await approveJoinRequest(request.id)
   processingId.value = null
 }
 
 async function handleReject(request: AgencyJoinRequest): Promise<void> {
   processingId.value = request.id
-  await agencyStore.rejectJoinRequest(request.id)
+  await rejectJoinRequest(request.id)
   processingId.value = null
 }
 
@@ -66,8 +68,8 @@ function handleShowBlockModal(request: AgencyJoinRequest): void {
 async function handleBlockUser(): Promise<void> {
   if (!selectedRequest.value?.user?.id) return
   
-  await agencyStore.blockUser(selectedRequest.value.user.id)
-  await agencyStore.rejectJoinRequest(selectedRequest.value.id)
+  await blockUser(selectedRequest.value.user.id)
+  await rejectJoinRequest(selectedRequest.value.id)
   showBlockModal.value = false
   selectedRequest.value = null
 }
@@ -77,7 +79,7 @@ async function handleBlockUser(): Promise<void> {
 // ========================================
 
 onMounted(() => {
-  agencyStore.fetchJoinRequests(true)
+  fetchJoinRequests(true)
 })
 </script>
 

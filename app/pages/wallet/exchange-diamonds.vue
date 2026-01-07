@@ -26,6 +26,7 @@ const authStore = useAuthStore()
 const agencyStore = useAgencyStore()
 const { api, normalizeError } = useApi()
 const toast = useToast()
+const { fetchUserAgency } = useAgencyMembership()
 
 // ========================================
 // Access Control
@@ -34,7 +35,7 @@ const toast = useToast()
 onMounted(async () => {
   // Ensure agency context is loaded
   if (!agencyStore.isAgencyMember) {
-    await agencyStore.fetchUserAgency()
+    await fetchUserAgency()
   }
   
   // Redirect non-agency members

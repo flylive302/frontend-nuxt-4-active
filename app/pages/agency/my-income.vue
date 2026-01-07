@@ -20,6 +20,7 @@ definePageMeta({
 
 const incomeStore = useIncomeStore()
 const agencyStore = useAgencyStore()
+const { fetchUserAgency } = useAgencyMembership()
 
 // ========================================
 // Computed
@@ -44,7 +45,7 @@ const isLoading = computed(() =>
 onMounted(async () => {
   // Check if user is agency member
   if (!agencyStore.isAgencyMember) {
-    await agencyStore.fetchUserAgency()
+    await fetchUserAgency()
   }
   
   // Fetch income data

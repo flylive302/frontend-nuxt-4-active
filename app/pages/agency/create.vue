@@ -67,9 +67,9 @@ const coinResellerId = ref<number | null>(null)
 // ========================================
 
 const toast = useToast()
-const agencyStore = useAgencyStore()
 const { api } = useApi()
 const { uploadImage: _uploadImage, createUploadState } = useImageUpload()
+const { fetchUserAgency } = useAgencyMembership()
 
 // ========================================
 // Upload States
@@ -185,7 +185,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     })
 
     // Refresh user agency state
-    await agencyStore.fetchUserAgency()
+    await fetchUserAgency()
 
     toast.add({ title: 'Success', description: 'Agency application submitted for review', color: 'success' })
     

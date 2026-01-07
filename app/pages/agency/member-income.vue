@@ -21,6 +21,7 @@ definePageMeta({
 
 const agencyStore = useAgencyStore()
 const { api, normalizeError } = useApi()
+const { fetchUserAgency } = useAgencyMembership()
 
 // ========================================
 // State
@@ -117,7 +118,7 @@ function formatDate(dateString: string): string {
 onMounted(async () => {
   // Ensure agency data is loaded
   if (!agencyStore.userAgency.agency) {
-    await agencyStore.fetchUserAgency()
+    await fetchUserAgency()
   }
 
   if (isOwnerOrAdmin.value) {

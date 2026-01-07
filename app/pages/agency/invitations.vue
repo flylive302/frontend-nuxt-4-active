@@ -22,6 +22,8 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 // ========================================
 
 const agencyStore = useAgencyStore()
+const { acceptInvitation, declineInvitation, fetchReceivedInvitations } = useAgencyInvitations()
+const { blockAgency } = useAgencyAdmin()
 
 // ========================================
 // Component State
@@ -35,18 +37,18 @@ const processingId = ref<number | null>(null)
 
 async function handleAccept(invitationId: number): Promise<void> {
   processingId.value = invitationId
-  await agencyStore.acceptInvitation(invitationId)
+  await acceptInvitation(invitationId)
   processingId.value = null
 }
 
 async function handleDecline(invitationId: number): Promise<void> {
   processingId.value = invitationId
-  await agencyStore.declineInvitation(invitationId)
+  await declineInvitation(invitationId)
   processingId.value = null
 }
 
 async function handleBlockAgency(agencyId: number): Promise<void> {
-  await agencyStore.blockAgency(agencyId)
+  await blockAgency(agencyId)
 }
 
 // ========================================
@@ -54,7 +56,7 @@ async function handleBlockAgency(agencyId: number): Promise<void> {
 // ========================================
 
 onMounted(() => {
-  agencyStore.fetchReceivedInvitations(true)
+  fetchReceivedInvitations(true)
 })
 </script>
 

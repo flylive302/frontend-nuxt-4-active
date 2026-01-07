@@ -4,6 +4,7 @@
 // ========================================
 
 import { onMounted, watch } from 'vue'
+import { useAgencyBrowsing } from '~/composables/agency/useAgencyBrowsing'
 // Note: Agency type only needed for component prop inference, not direct use
 
 // ========================================

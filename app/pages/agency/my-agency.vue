@@ -21,6 +21,8 @@ definePageMeta({
 const agencyStore = useAgencyStore()
 const router = useRouter()
 const { leaveAgency, dissolveAgency, fetchUserAgency } = useAgencyMembership()
+const { fetchJoinRequests } = useAgencyJoinRequests()
+const { fetchSentInvitations } = useAgencyInvitations()
 
 // ========================================
 // Component State
@@ -100,8 +102,8 @@ onMounted(async () => {
   await fetchUserAgency()
   
   if (agencyStore.isAgencyAdmin && agencyStore.userAgency.agency?.status === 'approved') {
-    agencyStore.fetchJoinRequests()
-    agencyStore.fetchSentInvitations()
+    fetchJoinRequests()
+    fetchSentInvitations()
   }
   
   // Redirect if user has no agency

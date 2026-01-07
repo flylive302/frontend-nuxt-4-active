@@ -27,6 +27,7 @@ definePageMeta({
 // ========================================
 
 const agencyStore = useAgencyStore()
+const { sendInvitation, cancelInvitation, fetchSentInvitations } = useAgencyInvitations()
 
 // ========================================
 // Component State
@@ -56,13 +57,13 @@ const historyInvitations = computed(() =>
 
 async function handleCancel(invitationId: number): Promise<void> {
   cancellingId.value = invitationId
-  await agencyStore.cancelInvitation(invitationId)
+  await cancelInvitation(invitationId)
   cancellingId.value = null
 }
 
 async function handleInviteUser(user: User): Promise<void> {
-  // We utilize the store action which handles the API call and toast
-  await agencyStore.sendInvitation({ user_id: user.id })
+  // We utilize the composable action which handles the API call and toast
+  await sendInvitation({ user_id: user.id })
 }
 
 // ========================================
@@ -70,7 +71,7 @@ async function handleInviteUser(user: User): Promise<void> {
 // ========================================
 
 onMounted(() => {
-  agencyStore.fetchSentInvitations(true)
+  fetchSentInvitations(true)
 })
 </script>
 
