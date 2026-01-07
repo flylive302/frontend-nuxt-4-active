@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
 import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
-import { useCountries } from '~/composables/useCountries'
 
 definePageMeta({
   layout: 'home',
@@ -49,7 +48,7 @@ const fetchRoomsList = async ({ page }: { page: number }) => {
 
 // Wrapper to satisfy InfiniteScroll prop type requirements and avoid template casting
 const infiniteScrollFetcher = async (ctx: { page: number }) => {
-  return fetchRoomsList(ctx) as Promise<{ data: any[] }>
+  return fetchRoomsList(ctx) as Promise<{ data: { id: string | number }[] }>
 }
 
 useIntersectionObserver(bannerRef, ([entry]) => {

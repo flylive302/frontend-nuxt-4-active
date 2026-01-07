@@ -4,7 +4,6 @@
 // ========================================
 
 import { onMounted, computed } from 'vue'
-import { parseCurrency, formatCurrency } from '~/utils/currency'
 
 // ========================================
 // Page Configuration
@@ -20,7 +19,6 @@ definePageMeta({
 // ========================================
 
 const incomeStore = useIncomeStore()
-const authStore = useAuthStore()
 const agencyStore = useAgencyStore()
 
 // ========================================
@@ -31,14 +29,6 @@ const agencyStore = useAgencyStore()
  * Check if user is an agency member.
  */
 const isAgencyMember = computed(() => agencyStore.isAgencyMember)
-
-/**
- * User's current coin balance.
- */
-const userCoins = computed((): number => {
-  const coins = authStore.user?.coins
-  return typeof coins === 'string' ? parseCurrency(coins) : (coins ?? 0)
-})
 
 /**
  * Loading state combining income and target loading.

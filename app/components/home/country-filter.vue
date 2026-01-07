@@ -73,7 +73,7 @@ const countryCodes = computed(() => countryOptions.value.map(c => c.code))
         class="w-auto pb-1 pt-1.5"
         :ui-menu="{ width: 'w-60' }"
     >
-      <template #default="{ open }">
+      <template #default>
         <div class="flex gap-1">
           <UIcon :name="getFlagIcon(selectedCountry)" class="size-5" />
           <p class="text-primary-100 text-base font-bold">{{ selectedCountry.toUpperCase() }}</p>

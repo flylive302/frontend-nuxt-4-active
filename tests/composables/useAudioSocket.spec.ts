@@ -66,10 +66,22 @@ vi.stubGlobal('useAuthStore', () => mockAuthStore)
 
 describe('useAudioSocket', () => {
   beforeEach(() => {
+    // CRITICAL: Reset module cache to clear singleton state in the composable
+    vi.resetModules()
+    
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockSocket.connected = false
     mockAuthStore = { token: null }
+    
+    // Re-stub all globals after module reset
+    vi.stubGlobal('useRuntimeConfig', () => mockRuntimeConfig)
+    vi.stubGlobal('useToast', () => mockToast)
+    vi.stubGlobal('onUnmounted', vi.fn())
+    vi.stubGlobal('ref', ref)
+    vi.stubGlobal('computed', computed)
+    vi.stubGlobal('shallowRef', shallowRef)
+    vi.stubGlobal('useAuthStore', () => mockAuthStore)
   })
 
   afterEach(() => {

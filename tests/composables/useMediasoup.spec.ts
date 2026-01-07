@@ -52,6 +52,18 @@ vi.stubGlobal('Audio', vi.fn().mockImplementation(() => ({
   play: vi.fn().mockResolvedValue(undefined),
 })))
 
+// Mock RTCPeerConnection (not available in Node)
+vi.stubGlobal('RTCPeerConnection', vi.fn().mockImplementation(() => ({
+  createOffer: vi.fn(),
+  createAnswer: vi.fn(),
+  setLocalDescription: vi.fn(),
+  setRemoteDescription: vi.fn(),
+  addTrack: vi.fn(),
+  getReceivers: vi.fn(() => []),
+  getSenders: vi.fn(() => []),
+  close: vi.fn(),
+})))
+
 // ============================================
 // Tests
 // ============================================

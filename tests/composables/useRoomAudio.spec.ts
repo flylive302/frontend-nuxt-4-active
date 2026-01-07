@@ -359,8 +359,28 @@ describe('useRoomAudio', () => {
       })
 
       it('should not emit if no current room', async () => {
+        // CRITICAL: Set room to null BEFORE importing the composable
+        // The composable captures mockRoomStore at import time
         mockRoomStore.currentRoom = null
         mockAudioSocket.status.value = 'connected'
+        
+        // Reset module cache to get fresh import with null room
+        vi.resetModules()
+        
+        // Re-stub globals after module reset
+        vi.stubGlobal('useRoomStore', () => mockRoomStore)
+        vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+        vi.stubGlobal('useMediasoup', () => mockMediasoup)
+        vi.stubGlobal('useAuthStore', () => mockAuthStore)
+        vi.stubGlobal('useGiftStore', () => mockGiftStore)
+        vi.stubGlobal('useGiftData', () => mockGiftData)
+        vi.stubGlobal('useToast', () => mockToast)
+        vi.stubGlobal('navigateTo', vi.fn())
+        vi.stubGlobal('refundPendingCoins', vi.fn())
+        vi.stubGlobal('ref', ref)
+        vi.stubGlobal('computed', computed)
+        vi.stubGlobal('shallowRef', shallowRef)
+        vi.stubGlobal('onUnmounted', vi.fn())
 
         const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
         const roomAudio = useRoomAudio()
@@ -380,6 +400,22 @@ describe('useRoomAudio', () => {
       it('should emit gift:send event', async () => {
         mockRoomStore.currentRoom = { id: 'room-123' }
         mockAudioSocket.status.value = 'connected'
+        
+        // Reset modules and re-stub globals (required after previous test's resetModules)
+        vi.resetModules()
+        vi.stubGlobal('useRoomStore', () => mockRoomStore)
+        vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+        vi.stubGlobal('useMediasoup', () => mockMediasoup)
+        vi.stubGlobal('useAuthStore', () => mockAuthStore)
+        vi.stubGlobal('useGiftStore', () => mockGiftStore)
+        vi.stubGlobal('useGiftData', () => mockGiftData)
+        vi.stubGlobal('useToast', () => mockToast)
+        vi.stubGlobal('navigateTo', vi.fn())
+        vi.stubGlobal('refundPendingCoins', vi.fn())
+        vi.stubGlobal('ref', ref)
+        vi.stubGlobal('computed', computed)
+        vi.stubGlobal('shallowRef', shallowRef)
+        vi.stubGlobal('onUnmounted', vi.fn())
 
         const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
         const roomAudio = useRoomAudio()

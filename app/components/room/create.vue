@@ -65,7 +65,7 @@ const isUploading = computed(() => logoUpload.state.value.status === 'uploading'
 /**
  * Handle validation errors from the form.
  */
-function onError(event: any) {
+function onError(event: { errors?: FormError[] }) {
   const errors = event.errors?.map((e: FormError) => e.message).join(', ')
   if (errors) {
     toast.add({
@@ -100,17 +100,14 @@ async function onSubmit() {
     if (!state.country) throw new Error('Country is required')
 
     // 2. Upload Logo
-    let logoUrl: string | undefined
-    let logoFileId: string | undefined
-
     const result = await logoUpload.upload(state.logo, 'rooms')
 
     if (!result || !result.url) {
       throw new Error('Failed to upload logo')
     }
 
-    logoUrl = result.url
-    logoFileId = result.fileId
+    const logoUrl = result.url
+    const logoFileId = result.fileId
 
     // 3. Create Room
     await createRoom({
