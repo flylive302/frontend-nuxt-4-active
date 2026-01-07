@@ -21,6 +21,9 @@ definePageMeta({
 
 const route = useRoute()
 const agencyStore = useAgencyStore()
+const { fetchAgencyById, fetchAgencyMembers } = useAgencyBrowsing()
+const { requestToJoin, cancelJoinRequest, fetchMyJoinRequests } = useAgencyJoinRequests()
+const { fetchUserAgency } = useAgencyMembership()
 
 // ========================================
 // Component State
@@ -64,7 +67,7 @@ const hasPendingRequest = computed(() =>
 
 async function handleJoinRequest(): Promise<void> {
   joiningAgency.value = true
-  const result = await agencyStore.requestToJoin(agencyId.value, { message: joinMessage.value || undefined })
+  const result = await requestToJoin(agencyId.value, { message: joinMessage.value || undefined })
   joiningAgency.value = false
   
   if (result) {
@@ -75,12 +78,12 @@ async function handleJoinRequest(): Promise<void> {
 
 async function handleCancelRequest(): Promise<void> {
   cancellingRequest.value = true
-  await agencyStore.cancelJoinRequest(agencyId.value)
+  await cancelJoinRequest(agencyId.value)
   cancellingRequest.value = false
 }
 
 function handleLoadMoreMembers(): void {
-  agencyStore.fetchAgencyMembers(agencyId.value)
+  fetchAgencyMembers(agencyId.value)
 }
 
 // ========================================
@@ -89,15 +92,15 @@ function handleLoadMoreMembers(): void {
 
 onMounted(async () => {
   // Hydrate user's agency context first (needed for membership checks)
-  await agencyStore.fetchUserAgency()
+  await fetchUserAgency()
   
   // Fetch the viewed agency details
-  await agencyStore.fetchAgencyById(agencyId.value)
-  await agencyStore.fetchAgencyMembers(agencyId.value, true)
+  await fetchAgencyById(agencyId.value)
+  await fetchAgencyMembers(agencyId.value, true)
   
   // Fetch user's join requests only if not already a member
   if (!agencyStore.isAgencyMember) {
-    await agencyStore.fetchMyJoinRequests(true)
+    await fetchMyJoinRequests(true)
   }
 
 })

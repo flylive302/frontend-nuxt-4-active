@@ -2,7 +2,7 @@
 // Agency Invitations Composable
 // ========================================
 
-import type { AgencyInvitation, SendInvitationRequest } from '~/types/agency'
+import type { AgencyInvitation, SendInvitationRequest, UserAgencyResponse } from '~/types/agency'
 
 // ========================================
 // Composable
@@ -14,7 +14,7 @@ import type { AgencyInvitation, SendInvitationRequest } from '~/types/agency'
  */
 export function useAgencyInvitations() {
   const store = useAgencyStore()
-  const { api } = useApi()
+  const { api, normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -71,13 +71,23 @@ export function useAgencyInvitations() {
         i => i.id !== invitationId
       )
 
-      // Refresh user agency
-      await store.fetchUserAgency()
+      // Refresh user agency state (inlined to avoid circular dependency)
+      try {
+        const response = await api<{ data: UserAgencyResponse | null }>('/user/agency')
+        if (response.data) {
+          store.userAgency.agency = response.data.agency
+          store.userAgency.membership = response.data.membership
+          store.userAgency.isOwner = response.data.is_owner
+        }
+      } catch {
+        // Silent fail - user agency refresh is secondary
+      }
 
       toast.add({ title: 'Joined', description: 'You have joined the agency!', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to accept invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyInvitations] acceptInvitation failed:', error)
       return false
     }
@@ -98,7 +108,8 @@ export function useAgencyInvitations() {
       toast.add({ title: 'Declined', description: 'Invitation declined.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to decline invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyInvitations] declineInvitation failed:', error)
       return false
     }
@@ -158,7 +169,8 @@ export function useAgencyInvitations() {
       toast.add({ title: 'Invitation Sent', description: 'Invitation sent successfully.', color: 'success' })
       return response.data
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to send invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyInvitations] sendInvitation failed:', error)
       return null
     }
@@ -179,7 +191,8 @@ export function useAgencyInvitations() {
       toast.add({ title: 'Cancelled', description: 'Invitation cancelled.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to cancel invitation.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyInvitations] cancelInvitation failed:', error)
       return false
     }

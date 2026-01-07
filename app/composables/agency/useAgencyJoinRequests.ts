@@ -14,7 +14,7 @@ import type { AgencyJoinRequest, JoinAgencyRequest } from '~/types/agency'
  */
 export function useAgencyJoinRequests() {
   const store = useAgencyStore()
-  const { api } = useApi()
+  const { api, normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -39,7 +39,8 @@ export function useAgencyJoinRequests() {
       toast.add({ title: 'Request Sent', description: 'Your join request has been submitted.', color: 'success' })
       return response.data
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to send join request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyJoinRequests] requestToJoin failed:', error)
       return null
     }
@@ -61,7 +62,8 @@ export function useAgencyJoinRequests() {
       toast.add({ title: 'Cancelled', description: 'Join request cancelled.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to cancel request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyJoinRequests] cancelJoinRequest failed:', error)
       return false
     }
@@ -161,7 +163,8 @@ export function useAgencyJoinRequests() {
       toast.add({ title: 'Approved', description: 'Join request approved.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to approve request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyJoinRequests] approveJoinRequest failed:', error)
       return false
     }
@@ -181,7 +184,8 @@ export function useAgencyJoinRequests() {
       toast.add({ title: 'Rejected', description: 'Join request rejected.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to reject request.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyJoinRequests] rejectJoinRequest failed:', error)
       return false
     }

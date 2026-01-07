@@ -20,6 +20,7 @@ definePageMeta({
 
 const agencyStore = useAgencyStore()
 const router = useRouter()
+const { leaveAgency, dissolveAgency, fetchUserAgency } = useAgencyMembership()
 
 // ========================================
 // Component State
@@ -69,7 +70,7 @@ const agencyCoinReseller = computed(() => {
 
 async function handleLeave(): Promise<void> {
   processing.value = true
-  const success = await agencyStore.leaveAgency({ reason: leaveReason.value || undefined })
+  const success = await leaveAgency({ reason: leaveReason.value || undefined })
   processing.value = false
   
   if (success) {
@@ -82,7 +83,7 @@ async function handleDissolve(): Promise<void> {
   if (!dissolveConfirmValid.value) return
   
   processing.value = true
-  const success = await agencyStore.dissolveAgency()
+  const success = await dissolveAgency()
   processing.value = false
   
   if (success) {
@@ -96,7 +97,7 @@ async function handleDissolve(): Promise<void> {
 // ========================================
 
 onMounted(async () => {
-  await agencyStore.fetchUserAgency()
+  await fetchUserAgency()
   
   if (agencyStore.isAgencyAdmin && agencyStore.userAgency.agency?.status === 'approved') {
     agencyStore.fetchJoinRequests()

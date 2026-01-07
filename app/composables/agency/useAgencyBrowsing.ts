@@ -14,7 +14,7 @@ import type { Agency, AgencyMember, AgencyListFilters, CreateAgencyRequest } fro
  */
 export function useAgencyBrowsing() {
   const store = useAgencyStore()
-  const { api } = useApi()
+  const { api, normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -180,7 +180,8 @@ export function useAgencyBrowsing() {
       toast.add({ title: 'Success', description: 'Agency application submitted for review.', color: 'success' })
       return response.data
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to create agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyBrowsing] createAgency failed:', error)
       return null
     }

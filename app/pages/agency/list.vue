@@ -18,6 +18,7 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 const agencyStore = useAgencyStore()
 const authStore = useAuthStore()
+const { fetchAgencies } = useAgencyBrowsing()
 
 // ========================================
 // Component State
@@ -34,11 +35,11 @@ const searchDebounced = refDebounced(searchQuery, 300)
 async function handleSearch(): Promise<void> {
   agencyStore.agencies.filters.search = searchDebounced.value
   agencyStore.agencies.filters.country = selectedCountry.value
-  await agencyStore.fetchAgencies(agencyStore.agencies.filters, true)
+  await fetchAgencies(agencyStore.agencies.filters, true)
 }
 
 async function handleLoadMore(): Promise<void> {
-  await agencyStore.fetchAgencies()
+  await fetchAgencies()
 }
 
 function handleResetFilters(): void {
@@ -53,7 +54,7 @@ function handleResetFilters(): void {
 
 onMounted(() => {
   if (agencyStore.agencies.items.length === 0) {
-    agencyStore.fetchAgencies({}, true)
+    fetchAgencies({}, true)
   }
 })
 

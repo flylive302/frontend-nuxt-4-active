@@ -19,7 +19,7 @@ import type {
  */
 export function useAgencyMembership() {
   const store = useAgencyStore()
-  const { api } = useApi()
+  const { api, normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -82,7 +82,8 @@ export function useAgencyMembership() {
       toast.add({ title: 'Left Agency', description: 'You have left the agency.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to leave agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyMembership] leaveAgency failed:', error)
       return false
     }
@@ -112,7 +113,8 @@ export function useAgencyMembership() {
       toast.add({ title: 'Agency Dissolved', description: 'Your agency has been dissolved.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to dissolve agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyMembership] dissolveAgency failed:', error)
       return false
     }
@@ -141,7 +143,8 @@ export function useAgencyMembership() {
       toast.add({ title: 'Updated', description: 'Coin reseller updated successfully.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to update coin reseller.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyMembership] changeCoinReseller failed:', error)
       return false
     }

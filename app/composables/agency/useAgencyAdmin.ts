@@ -14,7 +14,7 @@ import type { KickMemberRequest } from '~/types/agency'
  */
 export function useAgencyAdmin() {
   const store = useAgencyStore()
-  const { api } = useApi()
+  const { api, normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -40,7 +40,8 @@ export function useAgencyAdmin() {
       toast.add({ title: 'Removed', description: 'Member removed from agency.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to remove member.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyAdmin] kickMember failed:', error)
       return false
     }
@@ -57,7 +58,8 @@ export function useAgencyAdmin() {
       toast.add({ title: 'Blocked', description: 'User blocked from agency.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to block user.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyAdmin] blockUser failed:', error)
       return false
     }
@@ -73,7 +75,8 @@ export function useAgencyAdmin() {
       toast.add({ title: 'Unblocked', description: 'User unblocked.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to unblock user.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyAdmin] unblockUser failed:', error)
       return false
     }
@@ -93,7 +96,8 @@ export function useAgencyAdmin() {
       toast.add({ title: 'Blocked', description: 'Agency blocked.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to block agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyAdmin] blockAgency failed:', error)
       return false
     }
@@ -109,7 +113,8 @@ export function useAgencyAdmin() {
       toast.add({ title: 'Unblocked', description: 'Agency unblocked.', color: 'success' })
       return true
     } catch (error) {
-      toast.add({ title: 'Error', description: 'Failed to unblock agency.', color: 'error' })
+      const err = normalizeError(error)
+      toast.add({ title: 'Error', description: err.message, color: 'error' })
       console.error('[useAgencyAdmin] unblockAgency failed:', error)
       return false
     }

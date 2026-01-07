@@ -167,14 +167,14 @@ export const useGiftStore = defineStore('giftStore', () => {
    * Watch for gift + recipient selection and trigger preload
    * - Preloads locally for sender
    * - Sends gift:prepare signal to recipients
+   * - Optimized: Only tracks gift changes and recipient count (not deep array)
    */
   watch(
-    [selectedGift, selectedRecipients],
-    ([gift, recipients]) => {
-      if (!gift || recipients.length === 0) return;
-      debouncedPreload(gift, recipients);
-    },
-    { deep: true }
+    [selectedGift, () => selectedRecipients.value.length],
+    ([gift, _count]) => {
+      if (!gift || selectedRecipients.value.length === 0) return;
+      debouncedPreload(gift, selectedRecipients.value);
+    }
   );
 
 
