@@ -9,6 +9,13 @@ export default defineNuxtConfig({
     pinia: {
         storesDirs: ['./stores/**'],
     },
+    imports: {
+        dirs: [
+            'composables',
+            'composables/agency',
+            'composables/room',
+        ],
+    },
     app: {
         head: {
             htmlAttrs: { class: 'dark' },

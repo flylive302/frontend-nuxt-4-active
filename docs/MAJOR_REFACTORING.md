@@ -10,7 +10,7 @@
 | **P1** | Gift watcher optimization | 5 min | ✅ |
 | **P2** | Agency store decomposition | 2-3 hrs | ✅ (219 lines) |
 | **P3-PRE** | RoomMembership fixes | 30 min | ✅ |
-| **P3** | RoomMembership decomposition | 1-2 hrs | 🔮 Future |
+| **P3** | RoomMembership decomposition | 1-2 hrs | ✅ (158 lines) |
 | **P4** | Notification WebSocket | TBD | 🔮 Future |
 
 ✅ = Complete | ⏳ = Pending | 🔮 = Future/Deferred
