@@ -14,26 +14,8 @@ definePageMeta({
   middleware: 'guest'
 })
 
-const VALIDATION_MESSAGES = {
-  NAME_MIN_LENGTH: 'Name must be at least 2 characters',
-  PASSWORD_MIN_LENGTH: 'Must be at least 8 characters',
-  PASSWORD_LOWERCASE: 'Must contain at least one lowercase letter',
-  PASSWORD_UPPERCASE: 'Must contain at least one uppercase letter',
-  PASSWORD_NUMBER: 'Must contain at least one number',
-  PASSWORD_SPECIAL: 'Must contain at least one special character',
-} as const
-
-const FIELD_CONSTRAINTS = {
-  NAME_MIN_LENGTH: 2,
-  PASSWORD_MIN_LENGTH: 8,
-} as const
-
-const PASSWORD_REGEX = {
-  LOWERCASE: /[a-z]/,
-  UPPERCASE: /[A-Z]/,
-  NUMBER: /\d/,
-  SPECIAL: /[\W_]/,
-} as const
+// Keeping minimal Zod validation for form submission safety
+const MIN_PASSWORD_LENGTH = 8
 
 const ROUTES = {
   COMPLETE_PROFILE: '/complete-profile-data',
@@ -68,16 +50,8 @@ const phoneSchema = usePhoneSchema(selectedCountry)
 
 const registrationSchema = computed(() => {
   const baseSchema = z.object({
-    name: z.string().min(
-      FIELD_CONSTRAINTS.NAME_MIN_LENGTH,
-      VALIDATION_MESSAGES.NAME_MIN_LENGTH
-    ),
-    password: z.string()
-      .min(FIELD_CONSTRAINTS.PASSWORD_MIN_LENGTH, VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH)
-      .regex(PASSWORD_REGEX.LOWERCASE, VALIDATION_MESSAGES.PASSWORD_LOWERCASE)
-      .regex(PASSWORD_REGEX.UPPERCASE, VALIDATION_MESSAGES.PASSWORD_UPPERCASE)
-      .regex(PASSWORD_REGEX.NUMBER, VALIDATION_MESSAGES.PASSWORD_NUMBER)
-      .regex(PASSWORD_REGEX.SPECIAL, VALIDATION_MESSAGES.PASSWORD_SPECIAL),
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    password: z.string().min(MIN_PASSWORD_LENGTH, 'Must be at least 8 characters'),
   })
 
   return z.intersection(baseSchema, phoneSchema.value)
@@ -134,8 +108,9 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 
       <!-- Password input field with strength requirements -->
       <UFormField label="Password" name="password" required>
-        <UInput
-          v-model="state.password" class="w-full" size="lg" icon="i-lucide-lock" type="password" placeholder="********"
+        <FormsPasswordInput
+          v-model="state.password"
+          placeholder="********"
         />
       </UFormField>
 

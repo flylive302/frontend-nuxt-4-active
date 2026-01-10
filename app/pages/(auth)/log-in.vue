@@ -12,8 +12,7 @@ definePageMeta({
   middleware: 'guest'
 })
 
-const MIN_PASSWORD_LENGTH = 8 as const
-const MAX_PASSWORD_LENGTH = 128 as const
+// Min/Max password length handled by backend and component visual feedback
 
 const ROUTES = {
   HOME: '/',
@@ -56,9 +55,7 @@ const phoneSchema = usePhoneSchema(selectedCountry)
 
 const loginSchema = computed(() => {
   const baseSchema = z.object({
-    password: z.string()
-      .min(MIN_PASSWORD_LENGTH, 'Must be at least 8 characters')
-      .max(MAX_PASSWORD_LENGTH, 'Password may not exceed 128 characters'),
+    password: z.string(),
     rememberMe: z.boolean().default(false),
   })
 
@@ -126,15 +123,10 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
       />
 
       <UFormField label="Password" name="password" required>
-        <UInput
+        <FormsPasswordInput
             v-model="state.password"
-            class="w-full"
-            size="lg"
-            :icon="ICONS.LOCK"
-            type="password"
             autocomplete="current-password"
             placeholder="Enter your password"
-            :maxlength="MAX_PASSWORD_LENGTH"
             :disabled="isSubmitting"
             aria-label="Password"
         />
