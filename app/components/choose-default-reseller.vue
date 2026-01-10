@@ -42,6 +42,7 @@ const emit = defineEmits<{
 // ========================================
 const toast = useToast()
 const agencyStore = useAgencyStore()
+const { changeCoinReseller: changeCoinResellerApi } = useAgencyMembership()
 const { fetchResellers, getDefaultReseller, updateDefaultReseller, normalizeError } = useResellers()
 const { borderClass, gradientClass } = useColorClasses(color)
 
@@ -177,7 +178,7 @@ async function selectReseller(item: CommandItem): Promise<void> {
   try {
     // Agency mode: use agency store to update agency's coin reseller
     if (props.agencyMode) {
-      const success = await agencyStore.changeCoinReseller({ coin_reseller_id: item.id })
+      const success = await changeCoinResellerApi({ coin_reseller_id: item.id })
       if (success) {
         selectedReseller.value = {
           id: item.id,

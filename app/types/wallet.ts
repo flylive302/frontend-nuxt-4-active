@@ -1,43 +1,56 @@
 // ========================================
-// Wallet & Transaction Types
+// Wallet & Transaction Types (API v2)
 // ========================================
 
 // ========================================
-// Balance Types
+// Balance & XP Types
 // ========================================
 
 /**
- * Represents a change in balance (before/after/total).
- * Used for displaying balance changes in transaction history.
+ * Represents a balance snapshot with before/after values.
  */
-export interface BalanceChange {
-  before: string
-  after: string
-  change: string // API returns 'change', not 'total'
+export interface BalanceSnapshot {
+  before: number
+  after: number
 }
 
 /**
- * Collection of all possible balance changes in a transaction.
+ * Current user's balance changes in a transaction.
  */
-export interface BalanceChanges {
-  coins?: BalanceChange | null
-  diamonds?: BalanceChange | null
-  wealth_xp?: BalanceChange | null
-  charm_xp?: BalanceChange | null
+export interface MyBalance {
+  coins: BalanceSnapshot | null
+  diamonds: BalanceSnapshot | null
+}
+
+/**
+ * Current user's XP changes in a transaction.
+ */
+export interface MyXP {
+  wealth: BalanceSnapshot | null
+  charm: BalanceSnapshot | null
+}
+
+/**
+ * Transaction amount from current user's perspective.
+ */
+export interface TransactionAmount {
+  value: number // Negative = spent, Positive = gained
+  currency: 'coins' | 'diamonds'
+  formatted: string // Pre-formatted with sign
 }
 
 // ========================================
-// User Types (for transaction participants)
+// User Types
 // ========================================
 
 /**
- * Minimal user info for transaction participants.
+ * Other party in the transaction (identity only, no balance/XP).
  */
-export interface TransactionUser {
+export interface OtherParty {
   id: number
   name: string
-  signature?: string
-  avatar_url?: string | null
+  signature: string
+  avatar_url: string | null
 }
 
 // ========================================
@@ -45,25 +58,41 @@ export interface TransactionUser {
 // ========================================
 
 /**
+ * Current user's role in the transaction.
+ */
+export type TransactionRole = 'initiator' | 'beneficiary'
+
+/**
+ * Transaction status.
+ */
+export type TransactionStatus = 'pending' | 'completed' | 'failed'
+
+/**
  * All possible transaction types from the API.
  */
 export type TransactionType =
-  | 'coin_purchase'
-  | 'gift_send'
-  | 'gift_receive'
+  | 'gift'
   | 'room_commission'
-  | 'agency_income'
-  | 'transfer'
-  | 'reward_claim'
-  | 'target_refund'
+  | 'coin_transfer'
+  | 'diamond_exchange'
   | 'system_reward'
   | 'system_generation'
-  | 'diamond_exchange'
+  | 'agency_income'
+  | 'reward_claim'
+  | 'target_refund'
+  | 'owner_bonus'
 
 /**
  * Filter options for transaction history.
  */
-export type TransactionTypeFilter = 'all' | 'coins' | 'diamonds' | 'gifts' | 'gift_send' | 'gift_receive' | 'room_commission' | 'agency_income' | 'transfer'
+export type TransactionTypeFilter =
+  | 'all'
+  | 'coins'
+  | 'diamonds'
+  | 'gift'
+  | 'room_commission'
+  | 'agency_income'
+  | 'coin_transfer'
 
 /**
  * Additional metadata attached to transactions.
@@ -74,11 +103,14 @@ export interface TransactionMetadata {
   quantity?: number
   room_id?: number
   room_name?: string
+  diamonds_deducted?: number
+  coins_received?: number
+  exchange_rate?: number
   [key: string]: unknown
 }
 
 /**
- * Single transaction record from API.
+ * Single transaction record from API (v2 - perspective-aware).
  */
 export interface Transaction {
   id: string
@@ -87,9 +119,12 @@ export interface Transaction {
   title: string
   description: string
   thumbnail_url?: string
-  initiator?: TransactionUser
-  concerned_party?: TransactionUser | null
-  balance_changes: BalanceChanges
+  status: TransactionStatus
+  my_role: TransactionRole
+  amount: TransactionAmount
+  my_balance: MyBalance | null
+  my_xp: MyXP | null
+  other_party: OtherParty | null
   metadata: TransactionMetadata
 }
 
@@ -98,7 +133,7 @@ export interface Transaction {
  */
 export interface TransactionsByDate {
   date: string // YYYY-MM-DD
-  date_formatted: string // e.g., "29 December, 2025"
+  date_formatted: string // e.g., "10 January, 2026"
   transactions: Transaction[]
 }
 
@@ -122,10 +157,10 @@ export interface TransactionSummary {
 export interface GetTransactionsParams {
   type?: TransactionTypeFilter
   page?: number
-  per_page?: number // max 50
+  per_page?: number
   cursor?: string
-  date_from?: string // YYYY-MM-DD
-  date_to?: string // YYYY-MM-DD
+  date_from?: string
+  date_to?: string
   sort?: 'newest' | 'oldest'
 }
 
@@ -168,60 +203,49 @@ export interface TransactionSummaryResponse {
  * Human-readable labels for transaction types.
  */
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-  coin_purchase: 'Coins Purchased',
-  gift_send: 'Gift Sent',
-  gift_receive: 'Gift Received',
+  gift: 'Gift',
   room_commission: 'Room Commission',
-  agency_income: 'Agency Income',
-  transfer: 'Transfer',
-  reward_claim: 'Reward Claimed',
-  target_refund: 'Target Refund',
+  coin_transfer: 'Coin Transfer',
+  diamond_exchange: 'Diamond Exchange',
   system_reward: 'System Reward',
   system_generation: 'Coin Generation',
-  diamond_exchange: 'Diamond Exchange',
+  agency_income: 'Agency Income',
+  reward_claim: 'Reward Claimed',
+  target_refund: 'Target Refund',
+  owner_bonus: 'Owner Bonus',
 }
 
 /**
  * Colors for transaction types (Tailwind classes).
  */
 export const TRANSACTION_TYPE_COLORS: Record<TransactionType, string> = {
-  coin_purchase: 'text-green-500',
-  gift_send: 'text-red-500',
-  gift_receive: 'text-green-500',
+  gift: 'text-pink-500',
   room_commission: 'text-blue-500',
-  agency_income: 'text-purple-500',
-  transfer: 'text-gray-500',
-  reward_claim: 'text-yellow-500',
-  target_refund: 'text-orange-500',
+  coin_transfer: 'text-green-500',
+  diamond_exchange: 'text-secondary-100',
   system_reward: 'text-yellow-500',
   system_generation: 'text-green-500',
-  diamond_exchange: 'text-secondary-100',
+  agency_income: 'text-purple-500',
+  reward_claim: 'text-yellow-500',
+  target_refund: 'text-orange-500',
+  owner_bonus: 'text-amber-500',
 }
 
 // ========================================
-// Legacy Types (for backward compatibility)
+// Helper Functions
 // ========================================
 
 /**
- * @deprecated Use Transaction instead. Kept for backward compatibility.
+ * Check if transaction is positive (user gained) or negative (user spent).
  */
-export interface WalletTransaction {
-  time: string
-  title: string
-  thumbnail: string
-  itemsInvolved?: string
-  initiator: string
-  concerned: string
-  coins: BalanceChange
-  diamonds?: BalanceChange | null
-  wealthXp?: BalanceChange | null
-  charmXp?: BalanceChange | null
+export function isPositiveTransaction(transaction: Transaction): boolean {
+  return transaction.amount.value >= 0
 }
 
 /**
- * @deprecated Use TransactionsByDate instead. Kept for backward compatibility.
+ * Get the display name for the other party, or fallback.
  */
-export interface TransactionDay {
-  date: string
-  transactions: WalletTransaction[]
+export function getOtherPartyDisplay(transaction: Transaction): string {
+  if (!transaction.other_party) return 'System'
+  return transaction.other_party.signature || transaction.other_party.name
 }

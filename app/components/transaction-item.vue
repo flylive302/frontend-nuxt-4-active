@@ -1,9 +1,9 @@
 <!-- ~/components/transaction-item.vue -->
-<!-- Displays a single transaction with expandable details -->
+<!-- Displays a single transaction with minimal view + expandable details -->
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Transaction, BalanceChange } from '~/types/wallet'
-import { TRANSACTION_TYPE_LABELS } from '~/types/wallet'
+import { computed, ref } from 'vue'
+import type { Transaction, BalanceSnapshot } from '~/types/wallet'
+import { TRANSACTION_TYPE_LABELS, isPositiveTransaction, getOtherPartyDisplay } from '~/types/wallet'
 import { formatCurrency } from '~/utils/currency'
 
 // ========================================
@@ -17,23 +17,13 @@ const props = defineProps<{
 }>()
 
 // ========================================
-// Types
+// State
 // ========================================
 
-interface TimelineDetail {
-  label: string
-  value: string
-}
-
-interface TimelineEntry {
-  title: string
-  summary?: string | ComputedRef<string>
-  details?: TimelineDetail[]
-  icon: string
-}
+const isExpanded = ref(false)
 
 // ========================================
-// Computed
+// Computed - Display Values
 // ========================================
 
 /**
@@ -52,42 +42,27 @@ const formattedTime = computed(() => {
  * Get display title for transaction.
  */
 const displayTitle = computed(() => 
-  TRANSACTION_TYPE_LABELS[props.transaction.type] ?? props.transaction.title
+  props.transaction.title || TRANSACTION_TYPE_LABELS[props.transaction.type] || 'Transaction'
 )
 
 /**
- * Get initiator display string.
+ * Get the other party display name.
  */
-const initiatorDisplay = computed(() => {
-  const initiator = props.transaction.initiator
-  return initiator?.signature ?? initiator?.name ?? 'System'
-})
+const otherPartyName = computed(() => getOtherPartyDisplay(props.transaction))
 
 /**
- * Get concerned party display string.
+ * Get change color based on amount value.
  */
-const concernedDisplay = computed(() => {
-  const party = props.transaction.concerned_party
-  return party?.signature ?? party?.name ?? initiatorDisplay
-})
+const changeColor = computed(() => 
+  isPositiveTransaction(props.transaction) ? 'success' : 'error'
+)
 
 /**
- * Get primary balance change for display.
+ * Get background gradient based on transaction direction.
  */
-const primaryChange = computed(() => {
-  const changes = props.transaction.balance_changes
-  // Priority: coins > diamonds > wealth_xp > charm_xp
-  return changes.coins ?? changes.diamonds ?? changes.wealth_xp ?? changes.charm_xp ?? null
-})
-
-/**
- * Get change color based on value.
- */
-const changeColor = computed(() => {
-  const change = primaryChange.value?.change
-  if (!change) return undefined
-  return change.startsWith('-') ? 'error' : 'success'
-})
+const backgroundClass = computed(() => 
+  isPositiveTransaction(props.transaction) ? 'to-success-950' : 'to-error-950'
+)
 
 /**
  * Get thumbnail URL with fallback.
@@ -96,170 +71,215 @@ const thumbnailUrl = computed(() =>
   props.transaction.thumbnail_url ?? '/siteAssets/badges/badge-charm-level-1.webp'
 )
 
-// ========================================
-// Helpers
-// ========================================
+/**
+ * Get direction label based on role.
+ */
+const directionLabel = computed(() => 
+  props.transaction.my_role === 'initiator' ? 'To' : 'From'
+)
 
 /**
- * Build timeline entry for balance change.
+ * Check if we have any expandable details.
  */
-function buildBalanceEntry(label: string, balance?: BalanceChange | null): TimelineEntry {
-  if (!balance) {
-    return {
-      title: `${label} Balance Change`,
-      summary: '[No Effect]',
-      icon: 'i-lucide-minus',
-    }
-  }
+const hasDetails = computed(() => 
+  props.transaction.my_balance !== null || props.transaction.my_xp !== null
+)
 
-  return {
-    title: `${label} Balance Change`,
-    details: [
-      { label: 'Before', value: formatCurrency(balance.before) },
-      { label: 'After', value: formatCurrency(balance.after) },
-      { label: 'Change', value: formatCurrency(balance.change) },
-    ],
-    icon: 'i-lucide-check-check',
-  }
+// ========================================
+// Computed - Expandable Details
+// ========================================
+
+interface DetailItem {
+  label: string
+  before: string
+  after: string
+  change: string
 }
 
 /**
- * Build timeline items for transaction details.
+ * Build detail items for balance/XP changes.
  */
-const timelineItems = computed<TimelineEntry[]>(() => {
-  const items: TimelineEntry[] = [
-    {
-      title: 'Transaction Type',
-      summary: displayTitle.value,
-      icon: 'i-lucide-tag',
-    },
-    {
-      title: 'Initiated By',
-      summary: initiatorDisplay.value,
-      icon: 'i-lucide-user',
-    },
-    {
-      title: 'Concerned Party',
-      summary: concernedDisplay.value,
-      icon: 'i-lucide-users',
-    },
-  ]
+const detailItems = computed<DetailItem[]>(() => {
+  const items: DetailItem[] = []
+  const balance = props.transaction.my_balance
+  const xp = props.transaction.my_xp
 
-  // Add all balance changes
-  const changes = props.transaction.balance_changes
-  
-  // Specific handling for diamond exchange
-  if (props.transaction.type === 'diamond_exchange' && props.transaction.metadata) {
-    // Add Coins Received
-    if (props.transaction.metadata.coins_received) {
-      items.push({
-        title: 'Coins Received',
-        details: [
-          { label: 'Amount', value: `+${formatCurrency(String(props.transaction.metadata.coins_received))}` },
-        ],
-        icon: 'i-lucide-plus',
-      })
-    }
-    // Add Exchange Rate
-    if (props.transaction.metadata.exchange_rate) {
-      items.push({
-        title: 'Exchange Rate',
-        details: [
-          { label: 'Rate', value: `1 Diamond = ${props.transaction.metadata.exchange_rate} Coins` },
-        ],
-        icon: 'i-lucide-arrow-right-left',
-      })
-    }
-  }
-  else {
-    // Standard handling for other types
-    items.push(buildBalanceEntry('Coins', changes.coins))
+  // Coins
+  if (balance?.coins) {
+    items.push(formatDetailItem('Coins', balance.coins))
   }
 
-  items.push(buildBalanceEntry('Diamonds', changes.diamonds))
-  items.push(buildBalanceEntry('Wealth XP', changes.wealth_xp))
-  items.push(buildBalanceEntry('Charm XP', changes.charm_xp))
+  // Diamonds
+  if (balance?.diamonds) {
+    items.push(formatDetailItem('Diamonds', balance.diamonds))
+  }
 
-  // Add completion indicator
-  items.push({
-    title: 'Transaction Completed Successfully',
-    icon: 'i-lucide-thumbs-up',
-  })
+  // Wealth XP
+  if (xp?.wealth) {
+    items.push(formatDetailItem('Wealth XP', xp.wealth))
+  }
+
+  // Charm XP
+  if (xp?.charm) {
+    items.push(formatDetailItem('Charm XP', xp.charm))
+  }
 
   return items
 })
 
-const activeTimelineIndex = computed<number | undefined>(() => {
-  const { length } = timelineItems.value
-  return length ? length - 1 : undefined
-})
+/**
+ * Format a balance snapshot into a detail item.
+ */
+function formatDetailItem(label: string, snapshot: BalanceSnapshot): DetailItem {
+  const change = snapshot.after - snapshot.before
+  const changeStr = change >= 0 ? `+${formatCurrency(String(change))}` : formatCurrency(String(change))
+  
+  return {
+    label,
+    before: formatCurrency(String(snapshot.before)),
+    after: formatCurrency(String(snapshot.after)),
+    change: changeStr,
+  }
+}
+
+/**
+ * Toggle expanded state.
+ */
+function toggleExpand() {
+  if (hasDetails.value) {
+    isExpanded.value = !isExpanded.value
+  }
+}
 </script>
 
 <template>
-  <UCollapsible :ui="{content: 'bg-linear-to-br from-neutral-300/10 to-neutral-950 shadow-xl shadow-neutral-950'}">
+  <div
+    class="overflow-hidden cursor-pointer transition-all duration-200"
+    @click="toggleExpand"
+  >
+    <!-- Main Row (Always Visible) -->
     <div
-        class="grid grid-cols-14 gap-2 p-2 bg-linear-to-br from-neutral-950 shadow-xl shadow-neutral-950 mb-1"
-        :class="changeColor == 'error' ? 'to-error-950' : 'to-success-950'"
+      class="grid grid-cols-14 gap-2 p-2 bg-linear-to-br from-neutral-950 shadow-xl shadow-neutral"
+      :class="backgroundClass"
     >
+      <!-- Thumbnail -->
       <div class="rounded-full bg-elevated border inset-shadow-sm col-span-2 overflow-hidden aspect-square">
         <NuxtImg
-            class="h-full mx-auto rounded"
-            :src="thumbnailUrl"
-            :alt="displayTitle"
+          class="h-full mx-auto rounded"
+          :src="thumbnailUrl"
+          :alt="displayTitle"
         />
       </div>
-      <div class="col-span-9">
-        <p class="text-sm font-bold leading-tight">{{ displayTitle }} <span class="text-primary text-xs font-semibold">ID: {{ transaction.id }}</span></p>
-        <div class="flex gap-1 text-muted">
-          <p class="w-full truncate text-xs font-bold leading-tight">
-            Initiator:
-            <br>
-            {{ initiatorDisplay }}
-          </p>
-          <p class="w-full truncate text-xs font-bold leading-tight">
-            Concerned:
-            <br>
-            {{ concernedDisplay }}
-          </p>
+
+      <!-- Main Info -->
+      <div class="col-span-9 flex flex-col justify-center">
+        <p v-if="transaction.description" class="text-sm font-bold leading-tight truncate">
+          {{ transaction.description }}
+        </p>
+        <p v-else class="text-sm font-bold leading-tight truncate">
+          {{ displayTitle }}
+        </p>
+        <p class="text-xs text-muted leading-tight truncate">
+          {{ directionLabel }}: {{ otherPartyName }}
+        </p>
+         <!-- Transaction ID -->
+        <div class="flex text-xs gap-2">
+          <span class="text-muted">Transaction ID:</span>
+          <span class="font-mono">{{ transaction.id }}</span>
         </div>
       </div>
+
+      <!-- Amount & Time -->
       <div class="col-span-3 flex flex-col items-end justify-between">
-        <p class="text-xs leading-tight">{{ formattedTime }}</p>
+        <p class="text-xs text-muted leading-tight">{{ formattedTime }}</p>
         <UButton
-          class="shadow-lg text-white ml-2"
+          class="shadow-lg text-white"
           size="xs"
-          trailing-icon="i-lucide-arrow-down"
+          :trailing-icon="hasDetails ? (isExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down') : undefined"
           variant="subtle"
           :color="changeColor"
         >
-          {{ formatCurrency(primaryChange?.change) ?? '--' }}
+          {{ transaction.amount.formatted }}
         </UButton>
       </div>
     </div>
-    <template #content>
-      <UTimeline
-        :default-value="activeTimelineIndex"
-        :items="timelineItems"
-        :ui="{ indicator: '!text-white p-0 text-xl' }"
-        class="p-3"
+
+    <!-- Expandable Details -->
+    <Transition
+      name="expand"
+      @enter="(el: Element) => { const html = el as HTMLElement; html.style.height = '0'; html.offsetHeight; html.style.height = html.scrollHeight + 'px' }"
+      @after-enter="(el: Element) => { (el as HTMLElement).style.height = 'auto' }"
+      @leave="(el: Element) => { const html = el as HTMLElement; html.style.height = html.scrollHeight + 'px'; html.offsetHeight; html.style.height = '0' }"
+    >
+      <div
+        v-if="isExpanded && hasDetails"
+        class="overflow-hidden bg-linear-to-tr from-neutral-950"
+        :class="backgroundClass"
       >
-        <template #title="{ item }">
-          <div class="space-y-1">
-            <p class="flex justify-between">
-              <span class="text-muted">{{ item.title }}</span>
-              <span v-if="item.summary">{{ item.summary }}</span>
-            </p>
-            <p
-              v-for="detail in item.details"
-              :key="detail.label"
-              class="flex justify-between"
-            >
-              <span class="text-muted">{{ detail.label }}</span>
-              <span>{{ detail.value }}</span>
-            </p>
+        <!-- Divider -->
+        <USeparator/>
+
+        <div class="px-3 py-2 space-y-2">
+          <!-- Transaction ID -->
+          <div class="flex justify-between text-xs">
+            <span class="text-muted">Transaction ID</span>
+            <span class="font-mono">{{ transaction.id }}</span>
           </div>
-        </template>
-      </UTimeline>
-    </template>
-  </UCollapsible>
+
+          <!-- Status -->
+          <div class="flex justify-between text-xs">
+            <span class="text-muted">Status</span>
+            <UBadge 
+              :color="transaction.status === 'completed' ? 'success' : 'warning'" 
+              variant="subtle"
+              size="xs"
+            >
+              {{ transaction.status }}
+            </UBadge>
+          </div>
+
+          <!-- Divider -->
+          <USeparator />
+
+          <!-- Balance/XP Details -->
+          <div
+            v-for="item in detailItems"
+            :key="item.label"
+            class="space-y-1"
+          >
+            <p class="text-xs font-semibold text-muted">{{ item.label }}</p>
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              <div class="text-center">
+                <p class="text-muted">Before</p>
+                <p class="font-semibold">{{ item.before }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-muted">After</p>
+                <p class="font-semibold">{{ item.after }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-muted">Change</p>
+                <p class="font-semibold" :class="item.change.startsWith('+') ? 'text-success-400' : 'text-error-400'">
+                  {{ item.change }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </div>
 </template>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: height 0.2s ease-out;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  height: 0;
+}
+</style>

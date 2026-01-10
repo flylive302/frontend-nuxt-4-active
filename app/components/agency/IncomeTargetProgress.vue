@@ -2,6 +2,7 @@
 <!-- Displays active income target with progress bar -->
 <script setup lang="ts">
 import { computed } from 'vue'
+import { INCOME_STATUS_COLORS, INCOME_STATUS_LABELS } from '~/types/income'
 
 // ========================================
 // Props
@@ -94,7 +95,7 @@ const progressColor = computed(() => {
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center gap-2">
           <Icon name="i-lucide-target" class="size-5 text-tertiary" />
-          <UBadge variant="soft" :color="target?.status_color" class="font-bold">{{ target?.status_label }}</UBadge>
+          <UBadge variant="soft" :color="target ? INCOME_STATUS_COLORS[target.status] : 'neutral'" class="font-bold">{{ target ? INCOME_STATUS_LABELS[target.status] : '' }}</UBadge>
           <UBadge color="tertiary" variant="soft">{{ target?.tier }}</UBadge>
         </div>
         <UBadge variant="soft" :color="daysRemaining <= 3 ? 'error' : 'info'" class="flex items-center gap-1 text-sm">

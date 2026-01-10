@@ -37,13 +37,11 @@ interface FilterTab {
 
 const FILTER_TABS: FilterTab[] = [
   { label: 'All', value: 'all' },
-  { label: 'Coins', value: 'coins' },
-  { label: 'Diamonds', value: 'diamonds' },
-  { label: 'Gifts Sent', value: 'gift_send' },
-  { label: 'Gifts Received', value: 'gift_receive' },
+  { label: 'Coin Transfer', value: 'coin_transfer' },
+  { label: 'Gifts', value: 'gift' },
   { label: 'Room Commission', value: 'room_commission' },
   { label: 'Agency Income', value: 'agency_income' },
-  { label: 'Transfer', value: 'transfer' },
+  { label: 'Diamonds', value: 'diamonds' },
 ]
 
 // ========================================

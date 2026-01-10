@@ -131,11 +131,11 @@ export interface IncomeHistoryResponse {
 /**
  * Colors for income target status.
  */
-export const INCOME_STATUS_COLORS: Record<IncomeTargetStatus, string> = {
-  active: 'text-blue-500',
-  completed: 'text-green-500',
-  missed: 'text-red-500',
-  not_started: 'text-gray-500',
+export const INCOME_STATUS_COLORS: Record<IncomeTargetStatus, 'info' | 'success' | 'error' | 'neutral'> = {
+  active: 'info',
+  completed: 'success',
+  missed: 'error',
+  not_started: 'neutral',
 }
 
 /**
