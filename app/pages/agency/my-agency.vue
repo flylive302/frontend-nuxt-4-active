@@ -132,7 +132,7 @@ onMounted(async () => {
       class="pt-14 px-3 flex flex-col items-center justify-center py-16 text-center"
     >
       <div class="size-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-        <icon name="i-lucide-building-2" class="size-10 text-primary" />
+        <UIcon name="i-lucide-building-2" class="size-10 text-primary" />
       </div>
       <h3 class="text-lg font-semibold mb-1">No Agency</h3>
       <p class="text-sm text-muted max-w-xs mb-4">
@@ -164,13 +164,13 @@ onMounted(async () => {
               <div class="flex items-center gap-2">
                 <!-- Country -->
                 <div class="flex items-center gap-2">
-                  <icon :name="`i-flag-${agency.country.toLowerCase()}-4x3`" class="size-6 rounded" />
+                  <UIcon :name="`i-flag-${agency.country.toLowerCase()}-4x3`" class="size-6 rounded" />
                   <span class="text-sm text-muted">{{ agency.country }}</span>
                 </div>
 
                 <!-- Member Count -->
                 <div class="flex items-center gap-2">
-                  <icon name="i-lucide-users" class="size-5" />
+                  <UIcon name="i-lucide-users" class="size-5" />
                   <span class="font-semibold">{{ agency.member_count || 0 }} members</span>
                 </div>
               </div>

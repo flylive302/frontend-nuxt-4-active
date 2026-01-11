@@ -1,0 +1,149 @@
+/**
+ * User Profile Types
+ *
+ * Type definitions for the User Profile API.
+ * Backend API: GET /api/v1/users/profile/{signature}
+ */
+
+// ============================================
+// CORE TYPES
+// ============================================
+
+/**
+ * Avatar URLs with ImageKit transformations.
+ */
+export interface ProfileAvatar {
+  original: string
+  thumbnail: string
+  medium: string
+  large: string
+}
+
+/**
+ * Agency information (if user is a member).
+ */
+export interface ProfileAgency {
+  id: number
+  name: string
+  logo: string
+  country: string
+  total_member_count: number
+}
+
+/**
+ * Gift rarity levels.
+ */
+export type GiftRarity = 'common' | 'rare' | 'epic' | 'legendary'
+
+/**
+ * Gift received aggregate for profile display.
+ */
+export interface ProfileGiftReceived {
+  label: string
+  thumbnail_url: string
+  rarity: GiftRarity
+  total_quantity_received: number
+}
+
+/**
+ * Gender values used in the API.
+ * 1=Male, 2=Female, 3=Non-binary, 4=Not specified
+ */
+export type ProfileGender = 1 | 2 | 3 | 4
+
+/**
+ * Gender display labels.
+ */
+export const GENDER_LABELS: Record<ProfileGender, string> = {
+  1: 'Male',
+  2: 'Female',
+  3: 'Non-binary',
+  4: 'Not specified',
+} as const
+
+// ============================================
+// API RESPONSE TYPES
+// ============================================
+
+/**
+ * Main user profile data returned from API.
+ */
+export interface UserProfile {
+  name: string | null
+  signature: string
+  avatar: ProfileAvatar | null
+  frame: string
+  gender: ProfileGender | null
+  wealth_xp: string
+  charm_xp: string
+  total_gift_coins_sent: string
+  total_gift_coins_received: string
+  profile_visits: number
+  agency: ProfileAgency | null
+  room_id: number | null
+  gifts_received: ProfileGiftReceived[]
+}
+
+/**
+ * API response wrapper for user profile.
+ */
+export interface UserProfileResponse {
+  status: 'success'
+  message: string
+  data: UserProfile
+  meta: {
+    timestamp: string
+    correlation_id: string
+  }
+}
+
+/**
+ * API response for paginated gifts.
+ */
+export interface UserProfileGiftsResponse {
+  status: 'success'
+  data: ProfileGiftReceived[]
+  meta: {
+    next_cursor: string | null
+    has_more: boolean
+  }
+}
+
+// ============================================
+// UI HELPER TYPES
+// ============================================
+
+/**
+ * Rarity configuration for styling.
+ */
+export interface RarityConfig {
+  label: string
+  color: 'neutral' | 'info' | 'secondary' | 'warning'
+  borderClass: string
+}
+
+/**
+ * Rarity visual configuration for UI.
+ */
+export const GIFT_RARITY_CONFIG: Record<GiftRarity, RarityConfig> = {
+  common: {
+    label: 'Common',
+    color: 'neutral',
+    borderClass: 'border-neutral-500',
+  },
+  rare: {
+    label: 'Rare',
+    color: 'info',
+    borderClass: 'border-info',
+  },
+  epic: {
+    label: 'Epic',
+    color: 'secondary',
+    borderClass: 'border-secondary',
+  },
+  legendary: {
+    label: 'Legendary',
+    color: 'warning',
+    borderClass: 'border-warning',
+  },
+} as const

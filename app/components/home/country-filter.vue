@@ -69,9 +69,9 @@ const countryCodes = computed(() => countryOptions.value.map(c => c.code))
         v-model="selectedCountryModel"
         :items="countryOptions"
         label-key="label"
+        virtualize
         :search-input="{ placeholder: 'Search country...', icon: 'i-lucide-search' }"
-        class="w-auto pb-1 pt-1.5"
-        :ui-menu="{ width: 'w-60' }"
+        :ui="{ content: 'w-fit' }"
     >
       <template #default>
         <div class="flex gap-1">
@@ -81,7 +81,7 @@ const countryCodes = computed(() => countryOptions.value.map(c => c.code))
       </template>
 
       <template #item-leading="{ item }">
-        <UIcon :name="item.icon" class="w-5 h-5 flex-shrink-0" />
+        <UIcon :name="item.icon" class="w-5 h-5 shrink-0" />
       </template>
 
       <template #item-label="{ item }">

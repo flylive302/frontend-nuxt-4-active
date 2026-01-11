@@ -134,9 +134,10 @@ onMounted(async () => {
 
       <!-- Members List -->
       <div v-else class="space-y-3">
-        <div
+        <NuxtLink
           v-for="member in members"
           :key="member.id"
+          :to="`/profile/` + member.user.signature"
           class="p-3 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg relative"
         >
           <!-- Role Badge -->
@@ -178,7 +179,7 @@ onMounted(async () => {
               Kick
             </UButton>
           </div>
-        </div>
+        </NuxtLink>
 
         <!-- Load More -->
         <div v-if="hasMore" class="flex justify-center pt-4">
