@@ -50,7 +50,7 @@ onMounted(() => {
       <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
         <NuxtLink 
           v-if="authStore.user" 
-          :to="{ path: '/profile/owner-' + authStore.user.signature }" 
+          :to="{ path: '/profile/' + authStore.user.signature }" 
           class="flex px-3"
         >
           <UserAvatar :animated="true" :img="authStore.user.avatar?.original" class="w-24" />

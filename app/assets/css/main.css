@@ -106,12 +106,10 @@ body {
     pointer-events: auto !important;
 }
 .lock-body {
-    overflow: hidden !important;
     position: fixed !important;
     inset: 0 !important;
 }
 
 .unlock-body {
-    overflow: scroll !important;
     position: relative !important;
 }

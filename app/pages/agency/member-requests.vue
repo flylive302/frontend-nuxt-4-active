@@ -127,7 +127,7 @@ onMounted(() => {
         >
           <!-- User Info -->
           <NuxtLink
-            :to="`/profile/owner-${request.user?.signature}`"
+            :to="`/profile/${request.user?.signature}`"
             class="flex gap-2 p-2 border-b border-black shadow-lg shadow-primary-950/50"
           >
             <UserAvatar
@@ -153,7 +153,7 @@ onMounted(() => {
                   size="sm"
                   icon="i-lucide-eye"
                   class="rounded-none"
-                  :to="`/profile/owner-${request.user?.signature}`"
+                  :to="`/profile/${request.user?.signature}`"
               />
 
               <!-- Block Option -->

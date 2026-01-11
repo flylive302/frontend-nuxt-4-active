@@ -128,7 +128,7 @@ const data = ref<WealthLevelRow[]>([
         <h2 class="text-base font-bold">Followers: 750</h2>
         <NuxtLink 
           v-if="roomStore.currentRoom?.user?.signature"
-          :to="`/profile/owner-`+ roomStore.currentRoom.user.signature"
+          :to="`/profile/`+ roomStore.currentRoom.user.signature"
           @click="roomStore.minimizeRoom()"
         >
           <ProfileBadge :show-badge="false" :txt="roomStore.currentRoom?.user?.signature" />

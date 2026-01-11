@@ -207,19 +207,19 @@ onMounted(async () => {
         <div class="flex gap-2 w-full my-3">
 
           <!-- Owner Info -->
-          <div v-if="agency.owner" class="flex items-center p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg w-full relative overflow-hidden">
+          <NuxtLink v-if="agency.owner" :to="`/profile/` + agency.owner.signature" class="flex items-center p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg w-full relative overflow-hidden">
             <!-- Role Badge -->
             <AgencyRoleBadge class="absolute top-0 right-0 z-0 p-1 " :role="`owner`" />
 
             <UserAvatar :img="agency.owner.avatar || undefined" class="w-14" animated />
             <div class="relative mt-3">
               <p class="font-semibold">{{ agency.owner.name }}</p>
-              <p v-if="agency.owner.signature" class="text-sm text-muted">@{{ agency.owner.signature }}</p>
+              <p class="text-sm text-muted">ID: {{ agency.owner.signature }}</p>
             </div>
-          </div>
+          </NuxtLink>
 
           <!-- Coin Reseller Info -->
-          <div v-if="agency.coin_reseller" class="flex items-center p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg w-full relative overflow-hidden">
+          <NuxtLink :to="`/profile/` + agency.coin_reseller.signature" v-if="agency.coin_reseller" class="flex items-center p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg w-full relative overflow-hidden">
             <div class="absolute top-0 right-0 z-0 px-1.5 py-0.5 rounded text-xs font-semibold inline-flex items-center gap-1 shrink-0 bg-tertiary/30 text-tertiary">
               <Icon name="i-lucide-coins" />
               <p>Coin Reseller</p>
@@ -228,19 +228,20 @@ onMounted(async () => {
             <UserAvatar :img="agency.coin_reseller.avatar || undefined" class="w-14" animated />
             <div class="relative mt-3">
               <p class="font-semibold">{{ agency.coin_reseller.name }}</p>
-              <p v-if="agency.coin_reseller.signature" class="text-sm text-muted">@{{ agency.coin_reseller.signature }}
+              <p v-if="agency.coin_reseller.signature" class="text-sm text-muted">ID: {{ agency.coin_reseller.signature }}
               </p>
             </div>
-          </div>
+          </NuxtLink>
         </div>
 
         <!-- Members Section -->
         <SectionTitle class="mb-3">Agency Members</SectionTitle>
 
         <div class="flex flex-col gap-3">
-          <div
+          <NuxtLink
               v-for="member in members"
               :key="member.id"
+              :to="`/profile/` + member.user.signature"
               class="flex gap-1 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden relative p-1"
           >
             <UserAvatar
@@ -257,7 +258,7 @@ onMounted(async () => {
               </div>
               <p v-if="member.user.signature" class="text-sm text-muted">@{{ member.user.signature }}</p>
             </div>
-          </div>
+          </NuxtLink>
         </div>
 
         <!-- Load More Members -->
