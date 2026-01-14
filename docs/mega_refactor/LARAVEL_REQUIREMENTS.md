@@ -6,9 +6,20 @@
 
 ---
 
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2024-01-14 | **REMOVED** `feature_flags` from bootstrap response (no gradual rollout needed) |
+| 2024-01-14 | **ADDED** Web Push library recommendation: `laravel-notification-channels/webpush` |
+
+---
+
 ## Overview
 
 The frontend is consolidating multiple API calls into a single bootstrap endpoint. This requires a new endpoint and schema changes.
+
+**Important**: We are migrating directly to new implementation (no feature flags, no gradual rollout).
 
 ---
 
@@ -40,8 +51,7 @@ Required (Sanctum Bearer Token)
         "wealth_levels": [...],   // LevelConfigItem[]
         "charm_levels": [...],    // LevelConfigItem[]
         "room_levels": [...],     // LevelConfigItem[] (NEW)
-        "level_badges": [...],    // Badge[] for levels only
-        "feature_flags": {...}    // Record<string, boolean>
+        "level_badges": [...]     // Badge[] for levels only
     },
     
     "gifts": {
@@ -312,7 +322,116 @@ Frontend handles transforms via Nuxt Image + ImageKit.
 
 ---
 
-## 9. MSAB Event Triggers
+## 9. Web Push Notifications Setup
+
+> **UPDATED**: Added library recommendation
+
+### Recommended Package
+
+**[laravel-notification-channels/webpush](https://github.com/laravel-notification-channels/webpush)**
+
+This is the official Laravel notification channel for Web Push, built on `minishlink/web-push`.
+
+### Installation
+
+```bash
+composer require laravel-notification-channels/webpush
+php artisan vendor:publish --provider="NotificationChannels\WebPush\WebPushServiceProvider"
+php artisan webpush:vapid
+php artisan migrate
+```
+
+### VAPID Keys
+
+The `webpush:vapid` command generates keys and adds them to `.env`:
+
+```env
+VAPID_PUBLIC_KEY="BEl62iU..."
+VAPID_PRIVATE_KEY="8rZvwGU..."
+VAPID_SUBJECT="mailto:admin@flylive.com"
+```
+
+### Config
+
+```php
+// config/webpush.php
+return [
+    'vapid' => [
+        'subject' => env('VAPID_SUBJECT'),
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+];
+```
+
+### Bootstrap Response
+
+Only return the public key:
+
+```php
+'push_config' => [
+    'vapid_public_key' => config('webpush.vapid.public_key'),
+]
+```
+
+### User Model
+
+```php
+use NotificationChannels\WebPush\HasPushSubscriptions;
+
+class User extends Authenticatable
+{
+    use HasPushSubscriptions;
+}
+```
+
+### Subscription Endpoint
+
+```php
+// routes/api.php
+Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
+Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+
+// Controller
+public function store(Request $request)
+{
+    $request->user()->updatePushSubscription(
+        $request->input('endpoint'),
+        $request->input('keys.p256dh'),
+        $request->input('keys.auth')
+    );
+    
+    return response()->json(['success' => true]);
+}
+```
+
+### Sending Notifications
+
+```php
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
+
+class GiftReceivedNotification extends Notification
+{
+    public function via($notifiable)
+    {
+        return [WebPushChannel::class];
+    }
+    
+    public function toWebPush($notifiable, $notification)
+    {
+        return (new WebPushMessage)
+            ->title('Gift Received!')
+            ->body('You received a gift from someone')
+            ->icon('/icon-192x192.png')
+            ->data(['url' => '/gifts']);
+    }
+}
+```
+
+---
+
+## 10. MSAB Event Triggers
 
 Laravel needs to emit events to MSAB when:
 
@@ -333,13 +452,14 @@ See [MSAB_REQUIREMENTS.md](./MSAB_REQUIREMENTS.md) for event payloads.
 
 ---
 
-## 10. Summary of Changes
+## 11. Summary of Changes
 
 ### Database
 
 | Table | Change |
 |-------|--------|
 | rooms | Add `room_xp`, `sort_order` columns |
+| push_subscriptions | Created by webpush package migration |
 
 ### New Resources
 
@@ -348,6 +468,7 @@ See [MSAB_REQUIREMENTS.md](./MSAB_REQUIREMENTS.md) for event payloads.
 | `BootstrapUserResource` | 18-field user for bootstrap |
 | `MinimalUserResource` | 7-field user for references |
 | `BootstrapController` | Handle `/api/v1/bootstrap` |
+| `PushSubscriptionController` | Handle push subscription CRUD |
 
 ### Modified Resources
 
@@ -362,6 +483,14 @@ See [MSAB_REQUIREMENTS.md](./MSAB_REQUIREMENTS.md) for event payloads.
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/v1/bootstrap` | GET | Consolidated bootstrap data |
+| `/api/push-subscriptions` | POST | Store push subscription |
+| `/api/push-subscriptions` | DELETE | Remove push subscription |
+
+### New Packages
+
+| Package | Purpose |
+|---------|---------|
+| `laravel-notification-channels/webpush` | Web Push notifications |
 
 ---
 
