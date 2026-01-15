@@ -56,18 +56,18 @@ const text = computed(() => {
     <UInput
       v-bind="$attrs"
       v-model="password"
-      @focus="isFocused = true"
-      @blur="isFocused = false"
       :placeholder="placeholder || 'Password'"
       :color="color"
       :type="show ? 'text' : 'password'"
+      :disabled="disabled"
       :aria-invalid="score < 5"
       aria-describedby="password-strength"
       :ui="{ trailing: 'pe-1' }"
       class="w-full"
       size="lg"
       icon="i-lucide-lock"
-      :disabled="disabled"
+      @focus="isFocused = true"
+      @blur="isFocused = false"
     >
       <template #trailing>
         <UButton

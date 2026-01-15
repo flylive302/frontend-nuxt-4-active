@@ -41,7 +41,6 @@ const emit = defineEmits<{
 // Composables
 // ========================================
 const toast = useToast()
-const agencyStore = useAgencyStore()
 const { changeCoinReseller: changeCoinResellerApi } = useAgencyMembership()
 const { fetchResellers, getDefaultReseller, updateDefaultReseller, normalizeError } = useResellers()
 const { borderClass, gradientClass } = useColorClasses(color)

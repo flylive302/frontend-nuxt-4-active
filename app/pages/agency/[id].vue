@@ -219,7 +219,7 @@ onMounted(async () => {
           </NuxtLink>
 
           <!-- Coin Reseller Info -->
-          <NuxtLink :to="`/profile/` + agency.coin_reseller.signature" v-if="agency.coin_reseller" class="flex items-center p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg w-full relative overflow-hidden">
+          <NuxtLink v-if="agency.coin_reseller" :to="`/profile/` + agency.coin_reseller.signature" class="flex items-center p-2 bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg w-full relative overflow-hidden">
             <div class="absolute top-0 right-0 z-0 px-1.5 py-0.5 rounded text-xs font-semibold inline-flex items-center gap-1 shrink-0 bg-tertiary/30 text-tertiary">
               <Icon name="i-lucide-coins" />
               <p>Coin Reseller</p>
