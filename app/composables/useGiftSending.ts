@@ -134,7 +134,7 @@ export function useGiftSending() {
         gift: selectedGift,
         senderId: authStore.user!.id,
         senderName: authStore.user!.name ?? 'Unknown',
-        senderAvatar: authStore.user!.avatar?.thumbnail,
+        senderAvatar: authStore.user!.avatar ?? undefined,
         recipientIds: [...selectedRecipients],
         quantity: selectedQuantity,
       });

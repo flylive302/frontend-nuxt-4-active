@@ -66,7 +66,7 @@ const commandItems = computed<CommandItem[]>(() =>
     id: u.id,
     label: u.name || `User ${u.id}`,
     name: `ID: ${u.signature}`,
-    avatar: u.avatar?.medium ? { src: u.avatar.medium } : undefined,
+    avatar: u.avatar ? { src: u.avatar } : undefined,  // Avatar is now string
     user: u
   }))
 )
@@ -174,7 +174,7 @@ function handleConfirm() {
             <div class="absolute -right-6 -top-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none" />
             
             <div class="flex flex-col items-center text-center relative z-10">
-              <LazyUserAvatar :img="selectedUser.avatar?.large || selectedUser.avatar?.medium" animated class="size-24"/>
+              <LazyUserAvatar :img="selectedUser.avatar ?? undefined" animated class="size-24"/>
               
               <h3 class="text-xl font-bold">{{ selectedUser.name }}</h3>
               

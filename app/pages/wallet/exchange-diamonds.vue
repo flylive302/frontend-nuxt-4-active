@@ -49,11 +49,8 @@ onMounted(async () => {
     return
   }
   
-  // Fetch exchange info and user data
-  await Promise.all([
-    fetchExchangeInfo(),
-    authStore.fetchUser(),
-  ])
+  // Fetch exchange info (balance updates via socket 'balance.updated')
+  await fetchExchangeInfo()
 })
 
 // ========================================

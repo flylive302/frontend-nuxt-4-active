@@ -110,14 +110,10 @@ const isUploadingAvatar = ref(false)
 const toast = useToast()
 
 /**
- * Normalizes the user's avatar to a string URL.
- * Extracts the original URL from the Avatar object.
+ * User's avatar URL (BootstrapUser.avatar is now a string directly).
  */
 const avatarUrl = computed<string | null>(() => {
-  const avatar = authStore.user?.avatar
-  if (!avatar) return null
-
-  return avatar.original ?? null
+  return authStore.user?.avatar ?? null
 })
 
 async function handleAvatarSelected(file: File) {
@@ -166,8 +162,13 @@ watch(
       if (!user) return
 
       // Initialize gender if empty
-      if (user.gender !== null && user.gender !== undefined && formState.gender === undefined) {
-        formState.gender = user.gender
+      // BootstrapUser.gender is 'male' | 'female' | null, form uses numeric IDs
+      if (user.gender !== null && formState.gender === undefined) {
+        const GENDER_STRING_TO_NUMBER: Record<string, number> = {
+          'male': GENDER_MALE,
+          'female': GENDER_FEMALE,
+        }
+        formState.gender = GENDER_STRING_TO_NUMBER[user.gender] ?? undefined
       }
 
       // Initialize email if empty

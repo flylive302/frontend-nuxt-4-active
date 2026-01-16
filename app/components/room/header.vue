@@ -42,7 +42,7 @@ const openLeaveDrawer = (event: Event) => {
           description="Room Information and Level Status."
       >
         <div class="w-10">
-          <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo?.thumbnail" />
+          <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo" />
           <p class="text-xs text-center">LvL. 15</p>
         </div>
 

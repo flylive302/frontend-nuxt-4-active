@@ -28,10 +28,8 @@ function handleRequestCreated(request: CoinRequest): void {
   hasPendingRequest.value = true
 }
 
-const authStore = useAuthStore();
-onMounted(() => {
-  authStore.fetchUser();
-})
+// Balance updates handled via socket 'balance.updated' event
+const authStore = useAuthStore()
 </script>
 
 <template>

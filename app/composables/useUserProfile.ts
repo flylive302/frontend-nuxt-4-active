@@ -8,12 +8,8 @@ import type {
   UserProfileResponse,
 } from '~/types/user-profile'
 import { formatCurrency } from '~/utils/currency'
-import {
-  getLevelFromXp,
-  type LevelInfo,
-  DEFAULT_WEALTH_BADGE,
-  DEFAULT_CHARM_BADGE,
-} from '~/utils/level-badge'
+import type { LevelInfo } from '~/stores/bootstrap'
+import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/stores/bootstrap'
 
 // ========================================
 // Types
@@ -25,8 +21,6 @@ interface UseUserProfileOptions {
 }
 
 interface FormattedStats {
-  giftIn: string
-  giftOut: string
   visits: string
   wealthXp: string
   charmXp: string
@@ -55,6 +49,7 @@ export function useUserProfile(
   options: UseUserProfileOptions = {}
 ) {
   const { api, normalizeError } = useApi()
+  const bootstrapStore = useBootstrapStore()
 
   // ========================================
   // Configuration
@@ -110,10 +105,9 @@ export function useUserProfile(
 
   /**
    * Formatted stats for display using currency utilities.
+   * Note: total_gift_coins_sent/received removed - use wealth_xp/charm_xp
    */
   const formattedStats = computed<FormattedStats>(() => ({
-    giftIn: formatCurrency(profile.value?.total_gift_coins_received),
-    giftOut: formatCurrency(profile.value?.total_gift_coins_sent),
     visits: String(profile.value?.profile_visits ?? 0),
     wealthXp: formatCurrency(profile.value?.wealth_xp),
     charmXp: formatCurrency(profile.value?.charm_xp),
@@ -148,21 +142,17 @@ export function useUserProfile(
   // ========================================
 
   /**
-   * Fetch level info from XP values (async, runs after profile loads).
+   * Compute level info from XP values (sync, uses bootstrap store config).
    */
-  async function fetchLevelInfo(): Promise<void> {
+  function computeLevelInfo(): void {
     if (!profile.value) return
 
     levelInfoLoading.value = true
     try {
-      const [wealthInfo, charmInfo] = await Promise.all([
-        getLevelFromXp(profile.value.wealth_xp, 'wealth'),
-        getLevelFromXp(profile.value.charm_xp, 'charm'),
-      ])
-      wealthLevelInfo.value = wealthInfo
-      charmLevelInfo.value = charmInfo
+      wealthLevelInfo.value = bootstrapStore.getLevelFromXp(profile.value.wealth_xp, 'wealth')
+      charmLevelInfo.value = bootstrapStore.getLevelFromXp(profile.value.charm_xp, 'charm')
     } catch (err) {
-      console.error('[useUserProfile] fetchLevelInfo failed:', err)
+      console.error('[useUserProfile] computeLevelInfo failed:', err)
       // Non-blocking: keep default values
     } finally {
       levelInfoLoading.value = false
@@ -202,8 +192,8 @@ export function useUserProfile(
       // If we received a full page, there might be more
       giftsHasMore.value = response.data.gifts_received.length >= perPage
 
-      // Fetch level info in background (non-blocking)
-      fetchLevelInfo()
+      // Compute level info (sync, uses bootstrap store)
+      computeLevelInfo()
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message

@@ -3,7 +3,7 @@
 // ========================================
 
 import { ref } from 'vue'
-import type { User } from '~/types/auth'
+import type { MinimalUser } from '~/types/bootstrap'
 
 // ========================================
 // Types
@@ -28,6 +28,13 @@ interface ApiUser {
   avatar: string
 }
 
+/** Search result extends MinimalUser with contact fields */
+export interface SearchUser extends Pick<MinimalUser, 'id' | 'name' | 'signature' | 'avatar'> {
+  email: string
+  phone: string
+  phone_country: string
+}
+
 export interface UserSearchResult {
   data: ApiUser[]
   meta: {
@@ -49,7 +56,7 @@ export function useUserSearch() {
   // State
   // ========================================
 
-  const users = ref<User[]>([])
+  const users = ref<SearchUser[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasMore = ref(false)
@@ -97,19 +104,14 @@ export function useUserSearch() {
         params,
       })
 
-      const mappedUsers: User[] = response.data.map(u => ({
+      const mappedUsers: SearchUser[] = response.data.map(u => ({
         id: u.id,
         name: u.name,
         email: u.email,
         signature: u.signature,
         phone: u.phone.formatted,
         phone_country: u.phone.country,
-        avatar: {
-          medium: u.avatar,
-          large: u.avatar,
-          original: u.avatar,
-          thumbnail: u.avatar
-        }
+        avatar: u.avatar,
       }))
 
       if (reset) {

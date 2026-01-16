@@ -3,9 +3,10 @@
 // Imports & Types
 // ========================================
 
-import { h, onMounted, ref, computed, resolveComponent } from 'vue'
+import { h, ref, computed, resolveComponent } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
-import type { LevelStatus, LevelConfigItem } from '~/types/levels'
+import type { LevelConfig, LevelStatus } from '~/types/bootstrap'
+import { getAge } from '~/utils/date'
 
 // ========================================
 // Page Configuration
@@ -18,15 +19,14 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 // ========================================
 
 const authStore = useAuthStore()
-const { api } = useApi()
+const bootstrapStore = useBootstrapStore()
+const levelsStore = useLevelsStore()
 
 // ========================================
 // State
 // ========================================
 
-const levelStatus = ref<LevelStatus | null>(null)
-const levelConfig = ref<LevelConfigItem[]>([])
-const loading = ref(true)
+const loading = ref(!bootstrapStore.isReady)
 const error = ref<string | null>(null)
 
 // ========================================
@@ -111,54 +111,40 @@ const nextLevel = computed(() =>
   levelStatus.value?.next_level?.level ?? currentLevel.value + 1
 )
 
+// Charm level config from bootstrap store
+const levelConfig = computed<LevelConfig[]>(() => 
+  bootstrapStore.config?.charm_levels ?? []
+)
+
+// Current level status from levels store
+const levelStatus = computed<LevelStatus | null>(() => 
+  levelsStore.charmLevel
+)
+
 const currentBadge = computed(() => 
   levelStatus.value?.badge
 )
 
 const tableData = computed<CharmLevelRow[]>(() => 
-  levelConfig.value.map((item) => ({
-    level: item.name,
-    requiredXP: item.required_xp.toLocaleString() + ' XP',
-    badge: {
-      badgeSrc: item.badge?.image_url || '/badges/charm/level_1.webp',
-      color: 'secondary',
-      txt: String(item.level),
-      class: item.level === currentLevel.value ? 'border border-secondary bg-secondary/10 rounded-md px-2 py-1 inset-shadow-sm ' : '',
-    },
-  }))
+  levelConfig.value.map((item) => {
+    // Look up badge by badge_id using bootstrapStore.badgeMap
+    const badge = item.badge_id ? bootstrapStore.badgeMap.get(item.badge_id) : null
+    return {
+      level: item.name,
+      requiredXP: item.required_xp.toLocaleString() + ' XP',
+      badge: {
+        badgeSrc: badge?.image_url || '/badges/charm/level_1.webp',
+        color: 'secondary',
+        txt: String(item.level),
+        class: item.level === currentLevel.value ? 'border border-secondary bg-secondary/10 rounded-md px-2 py-1 inset-shadow-sm ' : '',
+      },
+    }
+  })
 )
 
-// ========================================
-// Actions
-// ========================================
-
-async function fetchLevelData(): Promise<void> {
-  loading.value = true
-  error.value = null
-
-  try {
-    // Fetch user's level status and level config in parallel
-    const [statusResponse, configResponse] = await Promise.all([
-      api<{ status: string; data: { wealth: LevelStatus; charm: LevelStatus } }>('/profile/levels'),
-      api<{ status: string; data: { charm_levels: LevelConfigItem[] } }>('/levels/config'),
-    ])
-
-    levelStatus.value = statusResponse.data.charm
-    levelConfig.value = configResponse.data.charm_levels
-  } catch (err) {
-    error.value = 'Failed to load level data'
-    console.error('[CharmLevel] fetchLevelData failed:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
-// ========================================
-// Lifecycle
-// ========================================
-
-onMounted(() => {
-  fetchLevelData()
+// Data comes from bootstrap store - no need to fetch
+watchEffect(() => {
+  loading.value = !bootstrapStore.isReady
 })
 </script>
 
@@ -173,11 +159,16 @@ onMounted(() => {
       <div class="p-2 w-full h-full bg-gradient-to-br to-secondary-900 backdrop-blur-sm">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
-          <UserAvatar :animated="true" :img="authStore.user?.avatar?.original" class="col-span-2" />
+          <UserAvatar :animated="true" :img="authStore.user?.avatar ?? undefined" class="col-span-2" />
           <div class="col-span-5 flex flex-col justify-center">
             <p v-if="loading" class="text-base font-semibold animate-pulse">Loading...</p>
             <template v-else-if="user">
-              <p class="text-base font-semibold">@{{ user.signature }}</p>
+              <div class="flex items-center gap-2">
+                <ProfileBadge :txt="user.signature"></ProfileBadge>
+                <UBadge color="secondary" icon="i-lucide-mars-stroke" size="sm" class="w-fit text-white p-1">
+                  {{ getAge(user.date_of_birth) }}
+                </UBadge>
+              </div>
               <p class="text-lg font-bold">{{ user.name }}</p>
             </template>
           </div>

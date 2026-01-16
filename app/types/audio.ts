@@ -298,8 +298,8 @@ export function userToParticipant(user: User, overrides?: Partial<RoomParticipan
   return {
     id: user.id,
     name: user.name ?? 'Anonymous',
-    email: user.email,
-    avatar: user.avatar?.medium,
+    email: user.email ?? undefined,
+    avatar: user.avatar ?? undefined,
     isSpeaker: false,
     isMuted: false,
     ...overrides,

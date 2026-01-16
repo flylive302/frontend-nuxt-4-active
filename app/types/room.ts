@@ -1,22 +1,36 @@
 import type { User } from './auth';
+import type { MinimalUser } from './bootstrap';
 
-export interface Logo {
-    large: string
-    medium: string
-    original: string
-    thumbnail: string
-}
 
+/**
+ * Room type.
+ * @deprecated Use BootstrapRoom from './bootstrap' for new code.
+ */
 export interface Room {
-  id: number;
-  name: string;
-  logo: Logo;
+  id: number
+  name: string
+  description: string | null
+  logo: string | null
+  topic: string | null
+  is_live: boolean
+  participant_count: number
   type: 'public' | 'private';
   country: string;
-  is_live: boolean;
-  participant_count: number;
   last_activity_at: string | null;
-  user: User;
+  /**
+   * @deprecated Use `owner` instead for bootstrap responses.
+   */
+  user?: User;
+  /** Room owner (MinimalUser in bootstrap responses) */
+  owner?: MinimalUser;
+  /** Room XP for level calculation */
+  room_xp?: string;
+  /** Current room level */
+  current_level?: number;
+  /** Display sort order */
+  sort_order?: number;
+  /** Maximum seats */
+  max_seats?: number;
   created_at: string;
 }
 

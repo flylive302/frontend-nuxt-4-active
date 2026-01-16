@@ -9,15 +9,7 @@
 // CORE TYPES
 // ============================================
 
-/**
- * Avatar URLs with ImageKit transformations.
- */
-export interface ProfileAvatar {
-  original: string
-  thumbnail: string
-  medium: string
-  large: string
-}
+// Note: Avatar is now a single URL string (use Nuxt Image for transforms)
 
 /**
  * Agency information (if user is a member).
@@ -67,17 +59,16 @@ export const GENDER_LABELS: Record<ProfileGender, string> = {
 
 /**
  * Main user profile data returned from API.
+ * Updated 2026-01-16: avatar is now string, removed gift coin totals
  */
 export interface UserProfile {
   name: string | null
   signature: string
-  avatar: ProfileAvatar | null
+  avatar: string | null  // Single URL - use Nuxt Image for transforms
   frame: string
   gender: ProfileGender | null
-  wealth_xp: string
-  charm_xp: string
-  total_gift_coins_sent: string
-  total_gift_coins_received: string
+  wealth_xp: string   // Use instead of total_gift_coins_sent
+  charm_xp: string    // Use instead of total_gift_coins_received
   profile_visits: number
   agency: ProfileAgency | null
   room_id: number | null

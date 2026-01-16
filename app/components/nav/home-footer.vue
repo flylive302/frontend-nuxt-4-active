@@ -94,7 +94,7 @@ async function handleMyRoomClick() {
             aria-label="Profile"
             class="justify-self-end"
         >
-          <UserAvatar class="w-13" :animated="true" :img="authStore.user?.avatar?.thumbnail" />
+          <UserAvatar class="w-13" :animated="true" :img="authStore.user?.avatar || undefined" />
         </NuxtLink>
       </div>
     </BgGlass>

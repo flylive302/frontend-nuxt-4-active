@@ -1,18 +1,21 @@
 // ========================================
 // User Level Types
 // ========================================
+// Re-export from bootstrap for consistency
 
-/**
- * Badge information for a level.
- */
-export interface LevelBadge {
-  id: number
-  name: string
-  image_url: string
-}
+export type {
+  LevelStatus,
+  LevelConfig,
+  LevelBadge,
+} from './bootstrap'
+
+// ========================================
+// Legacy Types (for components still using old names)
+// ========================================
 
 /**
  * Next level info.
+ * @deprecated Use LevelStatus.next_level directly
  */
 export interface NextLevelInfo {
   level: number
@@ -21,47 +24,25 @@ export interface NextLevelInfo {
 }
 
 /**
- * Level status for a user (wealth or charm).
- */
-export interface LevelStatus {
-  current_level: number
-  level_name: string
-  current_xp: number
-  xp_for_next_level: number
-  xp_remaining: number
-  progress_percentage: number
-  badge: LevelBadge | null
-  next_level: NextLevelInfo | null
-}
-
-/**
- * User levels response from /profile/levels.
+ * User levels response.
+ * @deprecated Use bootstrap user_data.levels
  */
 export interface UserLevelsResponse {
-  wealth: LevelStatus
-  charm: LevelStatus
+  wealth: import('./bootstrap').LevelStatus
+  charm: import('./bootstrap').LevelStatus
 }
 
 /**
  * Level configuration item.
+ * @deprecated Use bootstrap config.*_levels
  */
-export interface LevelConfigItem {
-  level: number
-  name: string
-  required_xp: number
-  badge: {
-    id: number
-    name: string
-    description?: string
-    image_url: string
-    category: 'wealth' | 'charm'
-  }
-}
+export type LevelConfigItem = import('./bootstrap').LevelConfig
 
 /**
- * Level configuration response from /levels/config.
+ * Level configuration response.
+ * @deprecated Endpoint removed - use bootstrap config
  */
 export interface LevelConfigResponse {
-  wealth_levels: LevelConfigItem[]
-  charm_levels: LevelConfigItem[]
+  wealth_levels: import('./bootstrap').LevelConfig[]
+  charm_levels: import('./bootstrap').LevelConfig[]
 }

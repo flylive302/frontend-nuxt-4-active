@@ -119,6 +119,21 @@ export const useRoomStore = defineStore('roomStore', () => {
     clearAudioState();
   }
 
+  /**
+   * Update room level from realtime event.
+   * @param level - New level
+   * @param xp - Current XP
+   */
+  function updateRoomLevel(level: number, xp: string) {
+    if (currentRoom.value) {
+      currentRoom.value = {
+        ...currentRoom.value,
+        current_level: level,
+        room_xp: xp,
+      };
+    }
+  }
+
   // ========================================
   // Audio State Actions
   // ========================================
@@ -338,6 +353,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     setCurrentRoom,
     setUserRoom,
     leaveRoom,
+    updateRoomLevel,
     startInviteMode,
     cancelInviteMode,
 
@@ -369,6 +385,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   };
 }, {
   persist: {
-    pick: ['userRoom', 'currentRoom'],
+    pick: ['userRoom'],
   },
 });

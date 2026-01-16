@@ -2,9 +2,14 @@
  * Gift Asset Cache Composable
  *
  * Unified cache for gift animation assets (videos as Blob URLs, SVGA parsed data).
- * This ensures preloaded assets are available to players without re-fetching.
+ * Uses a 3-tier cache strategy:
+ * - L1: Memory (fastest, lost on reload)
+ * - L2: Cache Storage (persistent, survives reloads)
+ * - L3: Network (fallback, downloads fresh)
  */
-import { createLogger } from '~/utils/logger';
+import * as cacheStorage from '~/services/cacheStorage'
+import * as assetIndex from '~/services/assetIndex'
+import { createLogger } from '~/utils/logger'
 
 // ========================================
 // Module-level Singleton Caches
@@ -27,9 +32,10 @@ export function useGiftAssetCache() {
   const log = createLogger('[GiftAssetCache]');
   /**
    * Preload a video asset and store as Blob URL.
+   * Uses L1 memory -> L2 Cache Storage -> L3 Network strategy.
    */
   async function preloadVideo(url: string): Promise<string> {
-    // Already cached
+    // L1: Memory cache (hot)
     if (videoCache.has(url)) {
       return videoCache.get(url)!;
     }
@@ -42,14 +48,28 @@ export function useGiftAssetCache() {
     // Start loading
     const loadPromise = (async () => {
       try {
+        // L2: Cache Storage (persistent)
+        const cachedUrl = await cacheStorage.getAsset(url)
+        if (cachedUrl) {
+          videoCache.set(url, cachedUrl)
+          await assetIndex.updateLastAccessed(url)
+          log.debug('✅ Video from cache storage:', url)
+          return cachedUrl
+        }
+
+        // L3: Network fallback
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
         
+        // Store in L2 (Cache Storage) for persistence
+        await cacheStorage.putAsset(url, blob)
+        
+        // Store in L1 (Memory) for speed
+        const blobUrl = URL.createObjectURL(blob);
         videoCache.set(url, blobUrl);
-        log.debug('✅ Video cached:', url);
+        log.debug('✅ Video cached (network):', url);
         
         return blobUrl;
       } catch (error) {
@@ -111,14 +131,31 @@ export function useGiftAssetCache() {
   }
 
   /**
-   * Get cached Blob URL for a video, or return original URL as fallback
+   * Get cached Blob URL for a video.
+   * Checks L1 memory first, then L2 Cache Storage, returns original URL as fallback.
    */
-  function getCachedVideoUrl(url: string): string {
+  async function getCachedVideoUrl(url: string): Promise<string> {
+    // L1: Memory
     if (videoCache.has(url)) {
       return videoCache.get(url)!;
     }
-    // Return original URL as fallback
+    
+    // L2: Cache Storage
+    const cachedUrl = await cacheStorage.getAsset(url)
+    if (cachedUrl) {
+      videoCache.set(url, cachedUrl) // Promote to L1
+      return cachedUrl
+    }
+    
+    // Fallback: return original URL (will fetch from network)
     return url;
+  }
+
+  /**
+   * Synchronous version - only checks L1 memory cache.
+   */
+  function getCachedVideoUrlSync(url: string): string {
+    return videoCache.get(url) ?? url
   }
 
   /**
@@ -151,6 +188,7 @@ export function useGiftAssetCache() {
     preloadSvga,
     preloadGift,
     getCachedVideoUrl,
+    getCachedVideoUrlSync,
     isVideoCached,
     isGiftPreloaded,
     getCacheStats,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
   frameName?: string    // SVGA name, e.g. "frames/admin/cs_leader"
-  img?: string          // avatar url
+  img?: string         // avatar url
   top?: number          // % for absolute center point
   left?: number         // % for absolute center point
   frameGirth?: number

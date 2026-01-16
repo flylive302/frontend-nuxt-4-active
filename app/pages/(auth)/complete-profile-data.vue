@@ -128,14 +128,10 @@ const isUploadingAvatar = ref(false)
 const toast = useToast()
 
 /**
- * Normalizes the user's avatar to a string URL.
- * Extracts the original URL from the Avatar object.
+ * User's avatar URL (BootstrapUser.avatar is now a string directly).
  */
 const avatarUrl = computed<string | null>(() => {
-  const avatar = authStore.user?.avatar
-  if (!avatar) return null
-
-  return avatar.original ?? null
+  return authStore.user?.avatar ?? null
 })
 
 async function handleAvatarSelected(file: File) {

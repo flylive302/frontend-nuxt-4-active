@@ -34,17 +34,20 @@ export const useLevelsStore = defineStore('levels', () => {
   // Computed
   // ========================================
 
+  // Badge type from LevelStatus (simpler than LevelBadge from config)
+  type StatusBadge = { id: number; name: string; image_url: string }
+
   /**
    * Current wealth badge (or null if level 0).
    */
-  const wealthBadge = computed<LevelBadge | null>(() => 
+  const wealthBadge = computed<StatusBadge | null>(() => 
     wealthLevel.value?.badge ?? null
   )
 
   /**
    * Current charm badge (or null if level 0).
    */
-  const charmBadge = computed<LevelBadge | null>(() => 
+  const charmBadge = computed<StatusBadge | null>(() => 
     charmLevel.value?.badge ?? null
   )
 
@@ -62,47 +65,14 @@ export const useLevelsStore = defineStore('levels', () => {
    */
   const isLoading = computed(() => loading.value)
 
-  // ========================================
-  // Actions
-  // ========================================
-
   /**
-   * Fetch user's wealth and charm level status.
-   * Updates store with level data including current badges.
+   * Set levels from bootstrap data (no API call).
+   * Used by bootstrap plugin to seed store.
    */
-  async function fetchLevels(): Promise<void> {
-    if (loading.value) return
-
-    loading.value = true
-    error.value = null
-
-    try {
-      const response = await api<{
-        status: string
-        data: {
-          wealth: LevelStatus
-          charm: LevelStatus
-        }
-      }>('/profile/levels')
-
-      wealthLevel.value = response.data.wealth
-      charmLevel.value = response.data.charm
-      lastFetchedAt.value = Date.now()
-    } catch (err) {
-      const normalized = normalizeError(err)
-      error.value = normalized.message
-      console.error('[LevelsStore] fetchLevels failed:', err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Force refresh levels data (ignores stale check).
-   */
-  async function refreshLevels(): Promise<void> {
-    lastFetchedAt.value = null
-    await fetchLevels()
+  function setLevels(wealth: LevelStatus, charm: LevelStatus): void {
+    wealthLevel.value = wealth
+    charmLevel.value = charm
+    lastFetchedAt.value = Date.now()
   }
 
   /**
@@ -135,8 +105,7 @@ export const useLevelsStore = defineStore('levels', () => {
     isLoading,
 
     // Actions
-    fetchLevels,
-    refreshLevels,
+    setLevels,
     reset,
   }
 }, {

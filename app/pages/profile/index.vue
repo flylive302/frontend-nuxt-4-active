@@ -53,7 +53,7 @@ onMounted(() => {
           :to="{ path: '/profile/' + authStore.user.signature }" 
           class="flex px-3"
         >
-          <UserAvatar :animated="true" :img="authStore.user.avatar?.original" class="w-24" />
+          <UserAvatar :animated="true" :img="authStore.user.avatar ?? undefined" class="w-24" />
           <div class="px-3">
             <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
             <ProfileBadge :txt="authStore?.user?.signature || undefined" />

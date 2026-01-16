@@ -1,73 +1,97 @@
-import { defineStore } from 'pinia';
-import type { User } from '~/types/auth';
+// ========================================
+// Auth Store
+// ========================================
+
+import { defineStore } from 'pinia'
+import type { BootstrapUser } from '~/types/bootstrap'
+
+/**
+ * @deprecated Use BootstrapUser directly
+ */
+export type User = BootstrapUser
 
 export const useAuthStore = defineStore('auth', () => {
-    const user = ref<User | null>(null);
-    const token = ref<string | null>(null);
-    const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle');
-    const isAuthenticated = computed(() => !!token.value && !!user.value);
+  // ========================================
+  // State
+  // ========================================
 
-    /**
-     * Update the authenticated user.
-     * @param newUser - User object or null to clear
-     */
-    function setUser(newUser: User | null) {
-        user.value = newUser;
-        status.value = newUser ? 'authenticated' : 'unauthenticated';
-    }
-    /**
-     * Set authentication token and sync with cookie.
-     * @param newToken - JWT token or null to clear
-     */
-    function setToken(newToken: string | null) {
-        token.value = newToken;
-        // Sync with cookie
-        const cookie = useCookie('sanctum_token');
-        cookie.value = newToken;
-    }
-    
-    /**
-     * Fetch authenticated user from API.
-     * Updates store with user data or clears on failure.
-     */
-    async function fetchUser() {
-        status.value = 'loading';
-        try {
-            const { api } = useApi();
-            const { data } = await api<{ data: User }>('/auth/user');
-            setUser(data);
-        } catch {
-            setUser(null);
-            setToken(null);
-        } finally {
-            if (status.value === 'loading') {
-                status.value = user.value ? 'authenticated' : 'unauthenticated';
-            }
-        }
-    }
+  const user = ref<BootstrapUser | null>(null)
+  const token = ref<string | null>(null)
+  const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle')
 
-    /**
-     * Log out the current user, clear state, and navigate to login.
-     */
-    function logout() {
-        setUser(null);
-        setToken(null);
-        status.value = 'unauthenticated';
-        navigateTo('/log-in');
-    }
+  // ========================================
+  // Getters
+  // ========================================
 
-    return {
-        user,
-        token,
-        status,
-        isAuthenticated,
-        setUser,
-        setToken,
-        fetchUser,
-        logout
-    };
+  const isAuthenticated = computed(() => !!token.value && !!user.value)
+
+  // ========================================
+  // Actions
+  // ========================================
+
+  /**
+   * Update the authenticated user.
+   */
+  function setUser(newUser: BootstrapUser | null) {
+    user.value = newUser
+    status.value = newUser ? 'authenticated' : 'unauthenticated'
+  }
+
+  /**
+   * Set authentication token and sync with cookie.
+   */
+  function setToken(newToken: string | null) {
+    token.value = newToken
+    const cookie = useCookie('sanctum_token')
+    cookie.value = newToken
+  }
+
+  /**
+   * Log out the current user.
+   */
+  function logout() {
+    setUser(null)
+    setToken(null)
+    status.value = 'unauthenticated'
+    navigateTo('/log-in')
+  }
+
+  /**
+   * Update user balance from realtime event.
+   */
+  function updateBalance(balance: {
+    coins: string
+    diamonds: string
+    wealth_xp: string
+    charm_xp: string
+  }) {
+    if (user.value) {
+      user.value = {
+        ...user.value,
+        coins: balance.coins,
+        diamonds: balance.diamonds,
+        wealth_xp: balance.wealth_xp,
+        charm_xp: balance.charm_xp,
+      }
+    }
+  }
+
+  // ========================================
+  // Return
+  // ========================================
+
+  return {
+    user,
+    token,
+    status,
+    isAuthenticated,
+    setUser,
+    setToken,
+    logout,
+    updateBalance,
+  }
 }, {
-    persist: {
-        pick: ['user', 'token'],
-    }
-});
+  persist: {
+    pick: ['token'],
+  },
+})

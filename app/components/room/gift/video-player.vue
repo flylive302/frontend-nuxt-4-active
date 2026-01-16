@@ -27,12 +27,15 @@ const emit = defineEmits<{
 }>();
 
 const videoRef = ref<HTMLVideoElement | null>(null);
-const { getCachedVideoUrl } = useGiftAssetCache();
+const { getCachedVideoUrlSync, preloadVideo } = useGiftAssetCache();
+
+// Reactive video source - starts with sync cache lookup, updates after preload
+const resolvedSrc = ref<string | null>(null);
 
 /**
- * Get the video source - use cached Blob URL if available
+ * Get the video source - use cached Blob URL if available, else original URL
  */
-const videoSrc = computed(() => getCachedVideoUrl(props.src));
+const videoSrc = computed(() => resolvedSrc.value ?? props.src);
 
 /**
  * Auto-detect MIME type from URL extension
@@ -45,6 +48,28 @@ const videoType = computed(() => {
   if (url.includes('.ogg')) return 'video/ogg';
   // Default fallback
   return 'video/mp4';
+});
+
+// On mount, try to get from cache or preload
+onMounted(async () => {
+  // First try sync L1 cache
+  const syncUrl = getCachedVideoUrlSync(props.src);
+  if (syncUrl !== props.src) {
+    resolvedSrc.value = syncUrl;
+    log.debug('Video from L1 cache:', props.src);
+    return;
+  }
+  
+  // If not in L1, preload async (L2 cache / network)
+  try {
+    const url = await preloadVideo(props.src);
+    resolvedSrc.value = url;
+    log.debug('Video preloaded:', props.src);
+  } catch {
+    // Use original URL as fallback
+    resolvedSrc.value = props.src;
+    log.warn('Video preload failed, using original URL:', props.src);
+  }
 });
 
 /**

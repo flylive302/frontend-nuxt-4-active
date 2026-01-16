@@ -136,7 +136,7 @@ useInfiniteScroll(
           <div class="flex px-3">
             <UserAvatar
               :animated="true"
-              :img="profile?.avatar?.medium ?? profile?.avatar?.original"
+              :img="profile?.avatar || undefined"
               :frame-name="profile?.frame"
               class="w-24"
             />
@@ -164,8 +164,8 @@ useInfiniteScroll(
       <!-- User Stats -->
       <UserStats
         class="mt-1"
-        :gift-in="formattedStats.giftIn"
-        :gift-out="formattedStats.giftOut"
+        :wealth-xp="formattedStats.charmXp"
+        :gift-out="formattedStats.wealthXp"
         :visits="formattedStats.visits"
       />
 

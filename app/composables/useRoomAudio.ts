@@ -291,6 +291,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
   /**
    * Leave the current room and clean up all resources.
+   * NOTE: Socket stays connected for app-wide events.
    */
   function leaveRoom(): void {
     if (socket.value && roomStore.currentRoom) {
@@ -300,13 +301,13 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Cleanup mediasoup
     cleanupMediasoup();
 
-    // Disconnect socket
-    disconnect();
+    // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
+    // Socket is managed by socket.client.ts plugin, disconnects only on logout
 
     // Clear room state
     roomStore.clearAudioState();
 
-    log.debug('Left room');
+    log.debug('Left room (socket stays connected)');
   }
 
 

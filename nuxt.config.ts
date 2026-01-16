@@ -5,7 +5,76 @@ export default defineNuxtConfig({
     ssr: false,
     devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
-    modules: ['@nuxthub/core', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+    modules: ['@vite-pwa/nuxt', '@nuxthub/core', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+    pwa: {
+        registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon-192x192.png', 'icon-512x512.png'],
+        manifest: {
+            name: 'FlyLive',
+            short_name: 'FlyLive',
+            description: 'Live audio streaming and social platform',
+            theme_color: '#ff2465',
+            background_color: '#0A0A0A',
+            display: 'standalone',
+            orientation: 'portrait',
+            icons: [
+                { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+                { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+                { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+            ],
+            screenshots: [
+                { src: '/screenshots/desktop.png', sizes: '1024x1024', type: 'image/png', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },
+                { src: '/screenshots/mobile.png', sizes: '1024x1024', type: 'image/png', form_factor: 'narrow', label: 'FlyLive Mobile - Discover Rooms' }
+            ]
+        },
+        devOptions: {
+            enabled: true,
+            type: 'module'
+        },
+        workbox: {
+            navigateFallback: '/offline',
+            navigateFallbackDenylist: [/^\/api/],
+            runtimeCaching: [
+                // Gift videos - Cache First (30 days)
+                {
+                    urlPattern: /\/room\/gifts\/.*\.(webm|mp4)$/i,
+                    handler: 'CacheFirst',
+                    options: {
+                        cacheName: 'gift-videos',
+                        expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }
+                    }
+                },
+                // SVGA JSON - Cache First (30 days)
+                {
+                    urlPattern: /\/parsedAnimations\/.*\.json$/i,
+                    handler: 'CacheFirst',
+                    options: {
+                        cacheName: 'svga-cache',
+                        expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }
+                    }
+                },
+                // CDN Images - Stale While Revalidate (7 days)
+                {
+                    urlPattern: /^https:\/\/ik\.imagekit\.io/,
+                    handler: 'StaleWhileRevalidate',
+                    options: {
+                        cacheName: 'cdn-images',
+                        expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 }
+                    }
+                },
+                // API - Network First (1 hour cache fallback)
+                {
+                    urlPattern: /\/api\//,
+                    handler: 'NetworkFirst',
+                    options: {
+                        cacheName: 'api-cache',
+                        expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 }
+                    }
+                }
+            ]
+        }
+    },
     pinia: {
         storesDirs: ['./stores/**'],
     },
@@ -19,11 +88,21 @@ export default defineNuxtConfig({
     app: {
         head: {
             htmlAttrs: { class: 'dark' },
+            title: 'FlyLive',
             meta: [
                 {
                     name: 'viewport',
-                    content: 'initial-scale=1, viewport-fit=cover'
-                }
+                    content: 'initial-scale=1, viewport-fit=cover, width=device-width'
+                },
+                { name: 'theme-color', content: '#ff2465' },
+                { name: 'mobile-web-app-capable', content: 'yes' },
+                { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+                { name: 'apple-mobile-web-app-title', content: 'FlyLive' }
+            ],
+            link: [
+                { rel: 'manifest', href: '/manifest.webmanifest' },
+                { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+                { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
             ]
         },
         pageTransition: { name: 'page', mode: 'out-in' }
@@ -70,6 +149,21 @@ export default defineNuxtConfig({
                 'node_modules/mime/dist/src/Mime.js': 'undefined'
             }
         },
+        // Cloudflare Pages compatibility
+        preset: 'cloudflare-pages',
+        cloudflare: {
+            pages: {
+                routes: {
+                    exclude: ['/api/*']
+                }
+            }
+        }
+    },
+    hub: {
+        // Enable Node.js compatibility for Cloudflare Workers
+        bindings: {
+            compatibilityFlags: ['nodejs_compat']
+        }
     },
     runtimeConfig: {
         public: {
