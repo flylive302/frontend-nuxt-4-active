@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { Room } from '~/types/room';
+import type { BootstrapRoom as Room } from '~/types/bootstrap';
 import type {
   RoomParticipant,
   ChatMessageEvent,
@@ -81,8 +81,8 @@ export const useRoomStore = defineStore('roomStore', () => {
   const isRoomOwner = computed(() => {
     if (!currentRoom.value) return false;
     const authStore = useAuthStore();
-    // Check if current user is the room owner (room.user is the owner)
-    return currentRoom.value.user?.id === authStore.user?.id;
+    // Check if current user is the room owner (room.owner is the owner)
+    return currentRoom.value.owner?.id === authStore.user?.id;
   });
 
   // ========================================

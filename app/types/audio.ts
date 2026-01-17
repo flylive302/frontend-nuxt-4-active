@@ -1,5 +1,6 @@
 import type { types as mediasoupTypes } from 'mediasoup-client';
 import type { User } from './auth';
+import type { MinimalUser } from './bootstrap';
 
 // Re-export mediasoup types for convenience
 export type RtpCapabilities = mediasoupTypes.RtpCapabilities;
@@ -31,7 +32,7 @@ export interface JoinRoomPayload {
 
 export interface JoinRoomResponse {
   rtpCapabilities?: RtpCapabilities;
-  participants?: { id: number; name: string; avatar?: string; isSpeaker: boolean }[];
+  participants?: RoomParticipant[];
   seats?: { seatIndex: number; user: RoomParticipant | null; isMuted: boolean }[];
   lockedSeats?: number[]; // Added: List of locked seat indices
   existingProducers?: { producerId: string; userId: number }[];
@@ -257,14 +258,10 @@ export interface GiftPrepareEvent {
 // ============================================
 
 /**
- * Participant in a room (extends User with room-specific fields)
+ * Participant in a room (extends MinimalUser with room-specific fields)
  */
-export interface RoomParticipant {
-  id: number;
-  name: string;
-  email?: string;
-  avatar?: string;
-  role?: string;
+export interface RoomParticipant extends MinimalUser {
+  // Room-specific fields
   isSpeaker: boolean;
   seatIndex?: number;
   isMuted?: boolean;
@@ -298,8 +295,12 @@ export function userToParticipant(user: User, overrides?: Partial<RoomParticipan
   return {
     id: user.id,
     name: user.name ?? 'Anonymous',
-    email: user.email ?? undefined,
-    avatar: user.avatar ?? undefined,
+    signature: user.signature ?? '',
+    avatar: user.avatar ?? null,
+    gender: user.gender ?? null,
+    date_of_birth: user.date_of_birth ?? null,
+    wealth_xp: String(user.wealth_xp ?? '0'),
+    charm_xp: String(user.charm_xp ?? '0'),
     isSpeaker: false,
     isMuted: false,
     ...overrides,

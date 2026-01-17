@@ -77,7 +77,73 @@ export const useLevelsStore = defineStore('levels', () => {
   }
 
   /**
-   * Update only wealth level from realtime event.
+   * Update wealth XP and recalculate progress.
+   * Called from balance.updated event.
+   */
+  function updateWealthXp(currentXp: number): void {
+    if (!wealthLevel.value) return
+    
+    const bootstrapStore = useBootstrapStore()
+    const config = bootstrapStore.config?.wealth_levels ?? []
+    
+    // Find current level and next level thresholds
+    const currentLevel = wealthLevel.value.current_level
+    const currentLevelConfig = config.find(l => l.level === currentLevel)
+    const nextLevelConfig = config.find(l => l.level === currentLevel + 1)
+    
+    const currentThreshold = currentLevelConfig?.required_xp ?? 0
+    const nextThreshold = nextLevelConfig?.required_xp ?? currentThreshold
+    
+    // Calculate progress within current level
+    const xpInLevel = currentXp - currentThreshold
+    const xpNeeded = nextThreshold - currentThreshold
+    const progress = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100
+    const remaining = Math.max(0, nextThreshold - currentXp)
+    
+    wealthLevel.value = {
+      ...wealthLevel.value,
+      current_xp: currentXp,
+      progress_percentage: progress,
+      xp_remaining: remaining,
+      xp_for_next_level: nextThreshold,
+    }
+  }
+
+  /**
+   * Update charm XP and recalculate progress.
+   * Called from balance.updated event.
+   */
+  function updateCharmXp(currentXp: number): void {
+    if (!charmLevel.value) return
+    
+    const bootstrapStore = useBootstrapStore()
+    const config = bootstrapStore.config?.charm_levels ?? []
+    
+    // Find current level and next level thresholds
+    const currentLevel = charmLevel.value.current_level
+    const currentLevelConfig = config.find(l => l.level === currentLevel)
+    const nextLevelConfig = config.find(l => l.level === currentLevel + 1)
+    
+    const currentThreshold = currentLevelConfig?.required_xp ?? 0
+    const nextThreshold = nextLevelConfig?.required_xp ?? currentThreshold
+    
+    // Calculate progress within current level
+    const xpInLevel = currentXp - currentThreshold
+    const xpNeeded = nextThreshold - currentThreshold
+    const progress = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100
+    const remaining = Math.max(0, nextThreshold - currentXp)
+    
+    charmLevel.value = {
+      ...charmLevel.value,
+      current_xp: currentXp,
+      progress_percentage: progress,
+      xp_remaining: remaining,
+      xp_for_next_level: nextThreshold,
+    }
+  }
+
+  /**
+   * Update only wealth level from realtime event (level.up).
    * @param newLevel - New level number
    * @param currentXp - Current XP as string
    */
@@ -88,11 +154,13 @@ export const useLevelsStore = defineStore('levels', () => {
         current_level: newLevel,
         current_xp: parseFloat(currentXp),
       }
+      // Recalculate progress
+      updateWealthXp(parseFloat(currentXp))
     }
   }
 
   /**
-   * Update only charm level from realtime event.
+   * Update only charm level from realtime event (level.up).
    * @param newLevel - New level number
    * @param currentXp - Current XP as string
    */
@@ -103,6 +171,8 @@ export const useLevelsStore = defineStore('levels', () => {
         current_level: newLevel,
         current_xp: parseFloat(currentXp),
       }
+      // Recalculate progress
+      updateCharmXp(parseFloat(currentXp))
     }
   }
 
@@ -139,6 +209,8 @@ export const useLevelsStore = defineStore('levels', () => {
     setLevels,
     updateWealthLevel,
     updateCharmLevel,
+    updateWealthXp,
+    updateCharmXp,
     reset,
   }
 }, {

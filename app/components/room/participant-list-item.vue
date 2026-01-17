@@ -21,19 +21,20 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-    class="flex gap-1 bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden"
+  <NuxtLink :to="`/profile/${participant.signature}`"
+    class="flex gap-1 bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden relative"
   >
     <UserAvatar :img="participant.avatar" animated class="w-13" />
-    <div class="flex flex-col justify-center min-h-full px-2 grow">
+    <div class="flex justify-center items-center gap-1">
       <h3 class="text-sm font-bold leading-tight">
         {{ participant.name }}
-        <UBadge v-if="participant.isSpeaker" size="xs" color="primary" class="ml-1">Speaker</UBadge>
       </h3>
-      <div class="flex items-center gap-1 mt-1">
-        <span class="text-xs text-gray-400">ID: {{ participant.id }}</span>
-      </div>
-    </div>
+      <UBadge color="secondary" icon="i-lucide-mars-stroke" size="xs" class="w-fit text-white py-0 rounded-md">
+        {{ getAge(participant.date_of_birth) }}
+      </UBadge>
+      <ProfileBadge :txt="participant.signature" :show-badge="false" />
+    </div>  
+    <UBadge v-if="participant.isSpeaker" size="sm" color="primary" variant="soft" class="absolute top-0 right-0">Speaker</UBadge>
     <!-- Invite to Seat button - Owner only, for non-speakers -->
     <!-- Show ONLY if in invite mode -->
     <UButton
@@ -48,5 +49,5 @@ const emit = defineEmits<{
     >
       Invite to Seat {{ inviteModeSeat + 1 }}
     </UButton>
-  </div>
+  </NuxtLink>
 </template>

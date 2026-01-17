@@ -49,7 +49,7 @@ const formattedXp = computed(() => {
   <UModal
     v-model:open="levelUpModalOpen"
     :ui="{
-      content: 'bg-transparent shadow-none',
+      content: 'bg-transparent shadow-none ring-0',
       overlay: 'bg-black/70 backdrop-blur-sm',
     }"
     @close="closeLevelUpModal"
@@ -66,7 +66,7 @@ const formattedXp = computed(() => {
       >
         <div
           v-if="levelUpModalData"
-          class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-neutral-800 to-neutral-900 p-6 text-center shadow-2xl"
+          class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-neutral-800 to-neutral-950 p-6 text-center shadow-2xl min-w-60"
           role="dialog"
           aria-labelledby="levelup-modal-title"
           aria-describedby="levelup-modal-description"
@@ -74,7 +74,7 @@ const formattedXp = computed(() => {
           <!-- Animated Background Glow -->
           <div class="pointer-events-none absolute inset-0 overflow-hidden">
             <div
-              class="absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 animate-pulse rounded-full opacity-40 blur-xl"
+              class="absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 animate-pulse rounded-full blur-xl"
               :class="typeStyle.bgColor"
             />
           </div>
@@ -90,11 +90,12 @@ const formattedXp = computed(() => {
               </span>
             </div>
 
-            <!-- Previous Level -->
-            <div class="absolute -right-2 top-0 rounded-full bg-neutral-700/80 px-2 py-1 text-xs text-neutral-300">
-              was {{ levelUpModalData.previousLevel }}
-            </div>
+            
           </div>
+          <!-- Previous Level -->
+          <UBadge color="info" variant="soft" class="absolute left-2 top-2">
+            was {{ levelUpModalData.previousLevel }}
+          </UBadge>
 
           <!-- Title -->
           <h2
@@ -131,14 +132,14 @@ const formattedXp = computed(() => {
           </div>
 
           <!-- Close Button -->
-          <button
-            type="button"
-            class="absolute right-3 top-3 rounded-full p-1 text-neutral-500 transition-colors hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          <UButton
+            variant="soft"
+            color="error"
+            class="absolute right-0 top-0"
             aria-label="Close"
+            icon="i-heroicons-x-mark"
             @click="closeLevelUpModal"
-          >
-            <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
-          </button>
+          />
         </div>
       </Transition>
     </template>

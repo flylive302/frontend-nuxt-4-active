@@ -54,22 +54,24 @@ const formattedQuantity = computed(() => {
 
 <template>
   <div
-    class="bg-primary/30 p-2 border rounded-md flex flex-col justify-between items-center relative"
+    class="bg-linear-to-b from-primary-950/30 to-neutral-950 p-2 rounded-md flex flex-col justify-between items-center relative"
     :class="rarityBorderClass"
   >
     <!-- Quantity Badge -->
-    <span
+    <UBadge
       v-if="showQuantity"
-      class="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.5rem] text-center z-10"
+      color="primary"
+      variant="soft"
+      class="absolute -top-2 -right-2 z-10"
     >
       {{ formattedQuantity }}
-    </span>
+    </UBadge>
 
     <!-- Item Image -->
     <NuxtImg
       :src="badgeSrc"
       :alt="itemName"
-      class="w-full aspect-square object-contain"
+      class="w-full aspect-square object-contain rounded-xl overflow-hidden"
       loading="lazy"
     />
 

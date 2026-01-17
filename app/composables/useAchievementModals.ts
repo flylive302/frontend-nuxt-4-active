@@ -2,7 +2,7 @@
 // Achievement Modals Composable
 // ========================================
 
-import type { BadgeEarnedPayload, UserLevelUpPayload } from '~/types/socket-events'
+import type { BadgeEarnedPayload, UserLevelUpPayload, IncomeTargetCompletedPayload } from '~/types/socket-events'
 
 // ========================================
 // Types
@@ -23,6 +23,14 @@ export interface LevelUpModalData {
   currentXp: string
 }
 
+export interface IncomeTargetModalData {
+  targetName: string
+  tier: string
+  memberReward: number
+  ownerReward: number
+  isOwnerView: boolean
+}
+
 // ========================================
 // State (module-level singleton)
 // ========================================
@@ -32,6 +40,9 @@ const badgeModalData = ref<BadgeModalData | null>(null)
 
 const levelUpModalOpen = ref(false)
 const levelUpModalData = ref<LevelUpModalData | null>(null)
+
+const incomeTargetModalOpen = ref(false)
+const incomeTargetModalData = ref<IncomeTargetModalData | null>(null)
 
 // ========================================
 // Composable
@@ -104,6 +115,38 @@ export function useAchievementModals() {
   }
 
   // ========================================
+  // Income Target Completion Modal
+  // ========================================
+
+  /**
+   * Show income target completion modal with celebration.
+   * Used for agency income tier completions.
+   */
+  function showIncomeTargetCompleted(payload: IncomeTargetCompletedPayload, isOwnerView = false): void {
+    incomeTargetModalData.value = {
+      targetName: payload.name,
+      tier: payload.tier,
+      memberReward: payload.member_reward,
+      ownerReward: payload.owner_reward,
+      isOwnerView,
+    }
+    incomeTargetModalOpen.value = true
+
+    // Auto-dismiss after 4 seconds
+    setTimeout(() => {
+      closeIncomeTargetModal()
+    }, 4000)
+  }
+
+  function closeIncomeTargetModal(): void {
+    incomeTargetModalOpen.value = false
+    // Clear data after animation completes
+    setTimeout(() => {
+      incomeTargetModalData.value = null
+    }, 300)
+  }
+
+  // ========================================
   // Return
   // ========================================
 
@@ -119,5 +162,11 @@ export function useAchievementModals() {
     levelUpModalData: readonly(levelUpModalData),
     showLevelUp,
     closeLevelUpModal,
+
+    // Income target modal state
+    incomeTargetModalOpen: readonly(incomeTargetModalOpen),
+    incomeTargetModalData: readonly(incomeTargetModalData),
+    showIncomeTargetCompleted,
+    closeIncomeTargetModal,
   }
 }

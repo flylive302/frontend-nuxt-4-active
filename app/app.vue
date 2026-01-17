@@ -108,5 +108,6 @@ function handleCellularConsent(granted: boolean): void {
     <!-- Achievement Modals (triggered by socket events) -->
     <EventsBadgeEarnedModal />
     <EventsLevelUpModal />
+    <EventsIncomeTargetModal />
   </UApp>
 </template>

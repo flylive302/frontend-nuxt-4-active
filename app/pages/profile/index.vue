@@ -66,7 +66,11 @@ onMounted(() => {
       </div>
     </AltHero>
 
-    <UserStats class="mt-1" />
+    <UserStats 
+      class="mt-1" 
+      :wealth-xp="authStore.user?.wealth_xp ?? '0'"
+      :charm-xp="authStore.user?.charm_xp ?? '0'"
+    />
 
     <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
 

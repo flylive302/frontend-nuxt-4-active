@@ -1,38 +1,5 @@
 import type { User } from './auth';
-import type { MinimalUser } from './bootstrap';
-
-
-/**
- * Room type.
- * @deprecated Use BootstrapRoom from './bootstrap' for new code.
- */
-export interface Room {
-  id: number
-  name: string
-  description: string | null
-  logo: string | null
-  topic: string | null
-  is_live: boolean
-  participant_count: number
-  type: 'public' | 'private';
-  country: string;
-  last_activity_at: string | null;
-  /**
-   * @deprecated Use `owner` instead for bootstrap responses.
-   */
-  user?: User;
-  /** Room owner (MinimalUser in bootstrap responses) */
-  owner?: MinimalUser;
-  /** Room XP for level calculation */
-  room_xp?: string;
-  /** Current room level */
-  current_level?: number;
-  /** Display sort order */
-  sort_order?: number;
-  /** Maximum seats */
-  max_seats?: number;
-  created_at: string;
-}
+import type { BootstrapRoom } from './bootstrap';
 
 export interface CreateRoomPayload {
   name: string;
@@ -52,13 +19,13 @@ export interface CreateRoomPayload {
 export interface RoomResponse {
     status: string;
     message: string;
-    data: Room;
+    data: BootstrapRoom;
 }
 
 export interface RoomsResponse {
   status: string;
   message: string;
-  data: Room[];
+  data: BootstrapRoom[];
   meta: {
     current_page: number;
     last_page: number;
@@ -105,7 +72,7 @@ export type RoomJoinRequestStatus = 'pending' | 'approved' | 'rejected'
 export interface RoomJoinRequest {
   id: number
   room_id: number
-  room?: Room
+  room?: BootstrapRoom
   user_id: number
   user: User
   status: RoomJoinRequestStatus
@@ -126,7 +93,7 @@ export type RoomInvitationStatus = 'pending' | 'accepted' | 'declined' | 'expire
 export interface RoomInvitation {
   id: number
   room_id: number
-  room?: Room
+  room?: BootstrapRoom
   inviter_id: number
   inviter: User
   invitee_id: number

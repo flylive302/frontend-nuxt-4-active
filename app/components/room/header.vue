@@ -43,7 +43,7 @@ const openLeaveDrawer = (event: Event) => {
       >
         <div class="w-10">
           <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo" />
-          <p class="text-xs text-center">LvL. 15</p>
+          <p class="text-xs text-center">LvL. {{ roomStore.currentRoom?.current_level }}</p>
         </div>
 
         <template #content>
@@ -54,7 +54,7 @@ const openLeaveDrawer = (event: Event) => {
 
               <SectionTitle class="mt-1">Levels</SectionTitle>
               <p class="text-base font-semibold">
-                Current Room Level is 1 need 51654 XP (Experience Points ) to reach Level 2
+                Current Room Level is {{ roomStore.currentRoom?.current_level }} and available XP is {{ roomStore.currentRoom?.room_xp }} need [] XP (Experience Points ) to reach Level {{ roomStore.currentRoom?.current_level !== undefined ? roomStore.currentRoom?.current_level + 1 : 1 }}
               </p>
 
               <div class="w-full overflow-x-scroll pb-2">
@@ -70,9 +70,9 @@ const openLeaveDrawer = (event: Event) => {
       <div>
         <div class="flex items-center justify-between gap-2 pr-1">
           <div>
-            <p class="text-xs leading-tight">{{ roomStore.currentRoom?.user?.signature }}</p>
             <h1 class="text-sm font-bold leading-tight">{{ roomStore.currentRoom?.name }}</h1>
-          </div>
+            <ProfileBadge :txt="roomStore.currentRoom?.owner?.signature" :show-badge="false" />
+          </div>  
           <UButton icon="i-lucide-bookmark" variant="subtle" class="shadow-md shadow-primary-950/50" size="sm" />
         </div>
 
@@ -80,8 +80,7 @@ const openLeaveDrawer = (event: Event) => {
           <NuxtImg
               v-for="i in 4"
               :key="i"
-              provider="imagekit"
-              src="/siteAssets/badges/badge-wealth-level-3.webp"
+              src="https://ik.imagekit.io/flylive/badges/profile-1.webp?updatedAt=1767448803742"
               class="size-4"
           />
         </div>

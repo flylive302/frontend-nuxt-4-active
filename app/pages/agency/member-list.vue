@@ -133,7 +133,7 @@ onMounted(async () => {
       </div>
 
       <!-- Members List -->
-      <div v-else class="space-y-3">
+      <div v-else class="flex flex-col gap-3">
         <NuxtLink
           v-for="member in members"
           :key="member.id"
@@ -168,17 +168,17 @@ onMounted(async () => {
           </div>
 
           <!-- Actions -->
-          <div v-if="canKick(member)" class="absolute bottom-0 right-0">
-            <UButton
+          <UButton
+              v-if="canKick(member)"
                 variant="soft"
                 color="error"
-                size="md"
+                size="sm"
                 icon="i-lucide-user-x"
-                @click="handleShowKickModal(member)"
+                class="absolute bottom-0 right-0"
+                @click.prevent.stop="handleShowKickModal(member)"
             >
-              Kick
-            </UButton>
-          </div>
+            Kick
+          </UButton>
         </NuxtLink>
 
         <!-- Load More -->

@@ -164,8 +164,8 @@ useInfiniteScroll(
       <!-- User Stats -->
       <UserStats
         class="mt-1"
-        :wealth-xp="formattedStats.charmXp"
-        :gift-out="formattedStats.wealthXp"
+        :wealth-xp="formattedStats.wealthXp"
+        :charm-xp="formattedStats.charmXp"
         :visits="formattedStats.visits"
       />
 

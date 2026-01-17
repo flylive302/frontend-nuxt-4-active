@@ -109,7 +109,7 @@ const data = ref<WealthLevelRow[]>([
 
 <template>
   <div class="flex gap-1 w-full">
-    <UserAvatar :animated="true" class="w-20"/>
+    <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo" class="w-20"/>
     <div class="w-full">
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">{{roomStore.currentRoom?.name || 'Loading...'}}</h2>        
@@ -127,11 +127,11 @@ const data = ref<WealthLevelRow[]>([
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">Followers: 750</h2>
         <NuxtLink 
-          v-if="roomStore.currentRoom?.user?.signature"
-          :to="`/profile/`+ roomStore.currentRoom.user.signature"
+          v-if="roomStore.currentRoom?.owner?.signature"
+          :to="`/profile/`+ roomStore.currentRoom.owner.signature"
           @click="roomStore.minimizeRoom()"
         >
-          <ProfileBadge :show-badge="false" :txt="roomStore.currentRoom?.user?.signature" />
+          <ProfileBadge :show-badge="false" :txt="roomStore.currentRoom?.owner?.signature" />
         </NuxtLink>        
         <ProfileBadge v-else :show-badge="false" />
       </div>

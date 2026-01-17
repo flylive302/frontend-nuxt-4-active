@@ -49,12 +49,19 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
 
   socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
     log.debug('balance.updated', payload)
+    
+    // Update auth store (coins, diamonds, XP values on user object)
     authStore.updateBalance({
       coins: payload.coins,
       diamonds: payload.diamonds,
       wealth_xp: payload.wealth_xp,
       charm_xp: payload.charm_xp,
     })
+    
+    // Update levelsStore XP and recalculate progress bars
+    const levelsStore = useLevelsStore()
+    levelsStore.updateWealthXp(parseFloat(payload.wealth_xp))
+    levelsStore.updateCharmXp(parseFloat(payload.charm_xp))
   })
 
   socket.on('reward.earned', (payload: RewardEarnedPayload) => {
@@ -122,20 +129,16 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
 
   socket.on('income_target.completed', (payload: IncomeTargetCompletedPayload) => {
     log.debug('income_target.completed', payload)
-    useToast().add({
-      title: 'Target Complete!',
-      description: `You completed ${payload.name}! +${payload.member_reward} 💎`,
-      color: 'success',
-    })
+    // Show celebratory modal with animation (same style as level up)
+    const { showIncomeTargetCompleted } = useAchievementModals()
+    showIncomeTargetCompleted(payload, false)
   })
 
   socket.on('income_target.member_completed', (payload: IncomeTargetCompletedPayload) => {
     log.debug('income_target.member_completed', payload)
-    useToast().add({
-      title: 'Team Member Target Complete',
-      description: `A member completed ${payload.name}! +${payload.owner_reward} 💎 for you`,
-      color: 'info',
-    })
+    // Show celebratory modal for owner
+    const { showIncomeTargetCompleted } = useAchievementModals()
+    showIncomeTargetCompleted(payload, true)
   })
 
   // ========================================
