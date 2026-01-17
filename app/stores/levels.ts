@@ -4,14 +4,15 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LevelStatus, LevelBadge } from '~/types/levels'
+import type { LevelStatus } from '~/types/levels'
 
 // ========================================
 // Store Definition
 // ========================================
 
 export const useLevelsStore = defineStore('levels', () => {
-  const { api, normalizeError } = useApi()
+  // Note: api/normalizeError kept for future use (fetchLevels restoration if needed)
+  const { api: _api, normalizeError: _normalizeError } = useApi()
 
   // ========================================
   // State

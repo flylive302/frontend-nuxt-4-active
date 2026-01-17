@@ -85,7 +85,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const log = createLogger('[RoomAudio]');
 
   // Socket and mediasoup instances
-  const { socket, connect, disconnect, status: connectionStatus, isConnected } = useAudioSocket();
+  const { socket, connect, disconnect: _disconnect, status: connectionStatus, isConnected } = useAudioSocket();
   const {
     loadDevice,
     createTransports,

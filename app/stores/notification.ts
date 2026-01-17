@@ -9,7 +9,9 @@ import type {
   NotificationListResponse,
   UnreadCountResponse,
 } from '~/types/notification'
-import { NOTIFICATION_POLLING_CONFIG } from '~/types/notification'
+
+// Note: Polling has been removed in favor of realtime socket events.
+// See useRealtimeEvents.ts for notification.new and notification.read handlers.
 
 // ========================================
 // Store Definition
@@ -30,11 +32,6 @@ export const useNotificationStore = defineStore('notification', () => {
   const cursor = ref<string | null>(null)
   const lastFetched = ref<number | null>(null)
   const error = ref<string | null>(null)
-
-  // Polling intervals
-  let fetchIntervalId: ReturnType<typeof setInterval> | null = null
-  let countIntervalId: ReturnType<typeof setInterval> | null = null
-  let isPollingActive = false
 
   // ========================================
   // Computed
@@ -123,7 +120,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
     try {
       const params: Record<string, unknown> = {
-        per_page: NOTIFICATION_POLLING_CONFIG.PAGE_SIZE,
+        per_page: 20, // Default page size
       }
       
       if (cursor.value) {
@@ -155,43 +152,6 @@ export const useNotificationStore = defineStore('notification', () => {
       unreadCount.value = response.data.count
     } catch (err) {
       console.error('[NotificationStore] fetchUnreadCount failed:', err)
-    }
-  }
-
-  /**
-   * Check for new notifications since last fetch.
-   * Used for polling to detect new items.
-   */
-  async function checkForNewNotifications(): Promise<void> {
-    try {
-      const params = {
-        per_page: 10,
-      }
-
-      const response = await api<NotificationListResponse>('/notifications', { params })
-      
-      // Check if there are new notifications
-      const existingIds = new Set(items.value.map(n => n.id))
-      const newNotifications = response.data.filter(n => !existingIds.has(n.id))
-
-      if (newNotifications.length > 0) {
-        // Prepend new notifications
-        items.value.unshift(...newNotifications)
-        unreadCount.value = response.meta.unread_count
-
-        // Show toast for first new notification
-        const first = newNotifications[0]
-        if (first) {
-          toast.add({
-            title: first.title,
-            description: first.body,
-            icon: 'i-lucide-bell',
-            color: 'info',
-          })
-        }
-      }
-    } catch (err) {
-      console.error('[NotificationStore] checkForNewNotifications failed:', err)
     }
   }
 
@@ -241,51 +201,18 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   // ========================================
-  // Polling Management
+  // Lifecycle
   // ========================================
 
   /**
-   * Start polling for new notifications.
+   * Initialize notifications on auth.
    * Call this when user authenticates.
+   * Polling has been removed - realtime updates come via socket events.
    */
-  function startPolling(): void {
-    if (isPollingActive) return
-    
-    isPollingActive = true
-    
-    // Initial fetch
-    fetchNotifications(true)
-    fetchUnreadCount()
-
-    // Set up polling intervals
-    fetchIntervalId = setInterval(() => {
-      checkForNewNotifications()
-    }, NOTIFICATION_POLLING_CONFIG.FETCH_INTERVAL)
-
-    countIntervalId = setInterval(() => {
-      fetchUnreadCount()
-    }, NOTIFICATION_POLLING_CONFIG.COUNT_INTERVAL)
-
-    console.log('[NotificationStore] Polling started')
-  }
-
-  /**
-   * Stop polling.
-   * Call this when user logs out.
-   */
-  function stopPolling(): void {
-    if (fetchIntervalId) {
-      clearInterval(fetchIntervalId)
-      fetchIntervalId = null
-    }
-    
-    if (countIntervalId) {
-      clearInterval(countIntervalId)
-      countIntervalId = null
-    }
-    
-    isPollingActive = false
-    console.log('[NotificationStore] Polling stopped')
+  async function initialize(): Promise<void> {
+    await fetchNotifications(true)
+    await fetchUnreadCount()
+    console.log('[NotificationStore] Initialized (socket-based, no polling)')
   }
 
   /**
@@ -328,7 +255,6 @@ export const useNotificationStore = defineStore('notification', () => {
   // ========================================
 
   function $reset(): void {
-    stopPolling()
     items.value = []
     unreadCount.value = 0
     loading.value = false
@@ -360,15 +286,13 @@ export const useNotificationStore = defineStore('notification', () => {
     // Actions
     fetchNotifications,
     fetchUnreadCount,
-    checkForNewNotifications,
     markAsRead,
     markAllAsRead,
 
-    // Polling
-    startPolling,
-    stopPolling,
+    // Lifecycle (replaces polling)
+    initialize,
 
-    // Future WebSocket handlers
+    // Socket Event Handlers
     handleRealtimeNotification,
     handleRealtimeRead,
 

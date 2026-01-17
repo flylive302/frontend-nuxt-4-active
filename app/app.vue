@@ -60,6 +60,9 @@ function handleCellularConsent(granted: boolean): void {
 
 <template>
   <UApp>
+    <!-- Full Screen Loader (during bootstrap) -->
+    <PreloaderFullScreenLoader />
+
     <NuxtRouteAnnouncer />
     <NuxtLoadingIndicator />
     <NuxtLayout>
@@ -101,5 +104,9 @@ function handleCellularConsent(granted: boolean): void {
 
     <!-- Update Available Toast (auto-shows when new SW version is ready) -->
     <UpdateAvailableToast />
+
+    <!-- Achievement Modals (triggered by socket events) -->
+    <EventsBadgeEarnedModal />
+    <EventsLevelUpModal />
   </UApp>
 </template>

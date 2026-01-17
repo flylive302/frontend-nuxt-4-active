@@ -72,22 +72,13 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
 
   socket.on('badge.earned', (payload: BadgeEarnedPayload) => {
     log.debug('badge.earned', payload)
-    useToast().add({
-      title: 'Badge Earned!',
-      description: `You earned the ${payload.badge_name} badge!`,
-      color: 'success',
-    })
-    // TODO: Trigger badge modal for rich feedback
+    // Show celebratory modal with animation
+    const { showBadgeEarned } = useAchievementModals()
+    showBadgeEarned(payload)
   })
 
   socket.on('level.up', (payload: UserLevelUpPayload) => {
     log.debug('level.up', payload)
-    const levelType = payload.type === 'wealth' ? 'Wealth' : 'Charm'
-    useToast().add({
-      title: `${levelType} Level Up!`,
-      description: `Congratulations! You reached ${levelType} Level ${payload.new_level}!`,
-      color: 'success',
-    })
     // Update levels store with new level
     const levelsStore = useLevelsStore()
     if (payload.type === 'wealth') {
@@ -95,7 +86,9 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
     } else {
       levelsStore.updateCharmLevel(payload.new_level, payload.current_xp)
     }
-    // TODO: Trigger level-up modal for rich feedback
+    // Show celebratory modal with animation
+    const { showLevelUp } = useAchievementModals()
+    showLevelUp(payload)
   })
 
   // ========================================

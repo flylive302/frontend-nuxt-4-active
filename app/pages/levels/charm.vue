@@ -164,7 +164,7 @@ watchEffect(() => {
             <p v-if="loading" class="text-base font-semibold animate-pulse">Loading...</p>
             <template v-else-if="user">
               <div class="flex items-center gap-2">
-                <ProfileBadge :txt="user.signature"></ProfileBadge>
+                <ProfileBadge :txt="user.signature"/>
                 <UBadge color="secondary" icon="i-lucide-mars-stroke" size="sm" class="w-fit text-white p-1">
                   {{ getAge(user.date_of_birth) }}
                 </UBadge>
