@@ -16,28 +16,45 @@ const log = createLogger('[Bootstrap]')
  * 4. Seed income store with active target
  * 5. Seed bootstrap store with config/gifts
  *
- * This replaces the old auth.ts plugin's fetchUser() call.
+ * Token is read from Pinia persisted state (localStorage) first,
+ * then falls back to cookie for backwards compatibility.
+ * This ensures token survives PWA refresh where cookies may be lost.
  */
 export default defineNuxtPlugin(async () => {
   const authStore = useAuthStore()
   const bootstrapStore = useBootstrapStore()
   const levelsStore = useLevelsStore()
-  const token = useCookie('sanctum_token')
 
-  // Skip if no token
-  if (!token.value) {
-    log.debug('No auth token, skipping bootstrap')
+  // Read token from Pinia persisted state first (survives PWA refresh)
+  // Fall back to cookie for backwards compatibility
+  const storedToken = authStore.token
+  const cookieToken = useCookie('sanctum_token')
+  const token = storedToken || cookieToken.value
+
+  // Skip if no token from either source
+  if (!token) {
+    log.debug('No auth token found, skipping bootstrap')
     return
   }
 
-  // Set token first
-  authStore.setToken(token.value)
+  // Sync token to store if it came from cookie (migration path)
+  if (!storedToken && cookieToken.value) {
+    log.debug('Migrating token from cookie to store')
+    authStore.setToken(cookieToken.value)
+  }
 
   // Check if we need to fetch (token exists but no user, or data is stale)
   const needsFetch = !authStore.user || bootstrapStore.needsRefresh
 
   if (!needsFetch && bootstrapStore.isReady) {
     log.debug('Bootstrap data fresh, skipping fetch')
+    
+    // Even with cached data, check if assets need downloading
+    // This handles the case where PWA was installed but assets weren't downloaded
+    if (bootstrapStore.giftCatalog.length > 0 && bootstrapStore.assetPhase === 'idle') {
+      log.debug('Starting asset download from cached data')
+      bootstrapStore.startAssetDownload()
+    }
     return
   }
 
@@ -58,12 +75,6 @@ export default defineNuxtPlugin(async () => {
     levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
 
     log.debug('Bootstrap complete, stores seeded')
-
-    // Request persistent storage (for Safari/iOS)
-    if (navigator.storage?.persist) {
-      const isPersisted = await navigator.storage.persist()
-      log.debug('Persistent storage:', isPersisted ? 'granted' : 'denied')
-    }
 
     // Start asset download in background
     if (data.gifts.catalog.length > 0) {

@@ -18,6 +18,14 @@ export default defineNuxtConfig({
             background_color: '#0A0A0A',
             display: 'standalone',
             orientation: 'portrait',
+            // PWA identity and scope
+            id: '/',
+            start_url: '/',
+            scope: '/',
+            // Preferred link handling (keeps external links in app)
+            handle_links: 'preferred',
+            // Display override for better fallback control
+            display_override: ['standalone', 'minimal-ui'],
             icons: [
                 { src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
                 { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -33,8 +41,11 @@ export default defineNuxtConfig({
             type: 'module'
         },
         workbox: {
-            navigateFallback: '/offline',
+            // Note: navigateFallback removed - not compatible with SPA.
+            // For SPAs, the cached index.html serves all routes, then Vue Router handles /offline
             navigateFallbackDenylist: [/^\/api/],
+            // Explicit glob patterns to avoid dev mode warnings
+            globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,webp}'],
             runtimeCaching: [
                 // Gift videos - Cache First (30 days)
                 {

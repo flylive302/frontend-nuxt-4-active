@@ -2,6 +2,7 @@ import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import type { SocketErrorEvent } from '~/types/audio';
 import { createLogger } from '~/utils/logger';
+import { registerRealtimeEventHandlers, resetRealtimeHandlers } from './useRealtimeEvents';
 
 // ============================================
 // Types
@@ -89,6 +90,11 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'connected';
     error.value = null;
     log.debug('Connected:', socket.value?.id);
+
+    // Register app-wide realtime event handlers (balance updates, badges, etc.)
+    if (socket.value) {
+      registerRealtimeEventHandlers(socket.value);
+    }
   }
 
   /** Handle disconnection */
@@ -229,6 +235,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
     status.value = 'disconnected';
     error.value = null;
+    // Reset handlers so they can be re-registered on next connect
+    resetRealtimeHandlers();
     log.debug('Disconnected by client');
   }
 

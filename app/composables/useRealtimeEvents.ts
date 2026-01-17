@@ -8,11 +8,15 @@ import type {
   BadgeEarnedPayload,
   RewardEarnedPayload,
   RoomLevelUpPayload,
+  RoomParticipantCountPayload,
   IncomeTargetCompletedPayload,
   AgencyInvitationPayload,
   AgencyJoinRequestPayload,
   AgencyStatusPayload,
+  AgencyMemberJoinedPayload,
+  AgencyMemberLeftPayload,
   ConfigInvalidatePayload,
+  UserLevelUpPayload,
 } from '~/types/socket-events'
 import type { AssetInvalidatePayload } from '~/types/asset'
 import * as cacheStorage from '~/services/cacheStorage'
@@ -73,7 +77,25 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
       description: `You earned the ${payload.badge_name} badge!`,
       color: 'success',
     })
-    // Could trigger badge modal here
+    // TODO: Trigger badge modal for rich feedback
+  })
+
+  socket.on('level.up', (payload: UserLevelUpPayload) => {
+    log.debug('level.up', payload)
+    const levelType = payload.type === 'wealth' ? 'Wealth' : 'Charm'
+    useToast().add({
+      title: `${levelType} Level Up!`,
+      description: `Congratulations! You reached ${levelType} Level ${payload.new_level}!`,
+      color: 'success',
+    })
+    // Update levels store with new level
+    const levelsStore = useLevelsStore()
+    if (payload.type === 'wealth') {
+      levelsStore.updateWealthLevel(payload.new_level, payload.current_xp)
+    } else {
+      levelsStore.updateCharmLevel(payload.new_level, payload.current_xp)
+    }
+    // TODO: Trigger level-up modal for rich feedback
   })
 
   // ========================================
@@ -91,6 +113,14 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
       description: `${payload.room_name} is now Level ${payload.new_level}!`,
       color: 'success',
     })
+  })
+
+  socket.on('room.participant_count', (payload: RoomParticipantCountPayload) => {
+    log.debug('room.participant_count', payload)
+    // Update room store participant count if in a room
+    if (roomStore.currentRoom) {
+      roomStore.updateParticipantCount(payload.count)
+    }
   })
 
   // ========================================
@@ -171,6 +201,26 @@ export function registerRealtimeEventHandlers(socket: Socket): void {
       description: `${payload.agency_name} has been dissolved`,
       color: 'info',
     })
+  })
+
+  socket.on('agency.member_joined', (payload: AgencyMemberJoinedPayload) => {
+    log.debug('agency.member_joined', payload)
+    useToast().add({
+      title: 'New Member Joined',
+      description: 'A new member has joined your agency!',
+      color: 'success',
+    })
+    // TODO: Optionally refresh agency member list
+  })
+
+  socket.on('agency.member_left', (payload: AgencyMemberLeftPayload) => {
+    log.debug('agency.member_left', payload)
+    useToast().add({
+      title: 'Member Left',
+      description: `A member has left your agency (${payload.reason})`,
+      color: 'info',
+    })
+    // TODO: Optionally refresh agency member list
   })
 
   // ========================================

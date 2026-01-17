@@ -134,6 +134,19 @@ export const useRoomStore = defineStore('roomStore', () => {
     }
   }
 
+  /**
+   * Update participant count from realtime event.
+   * @param count - New participant count
+   */
+  function updateParticipantCount(count: number) {
+    if (currentRoom.value) {
+      currentRoom.value = {
+        ...currentRoom.value,
+        participant_count: count,
+      };
+    }
+  }
+
   // ========================================
   // Audio State Actions
   // ========================================
@@ -354,6 +367,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     setUserRoom,
     leaveRoom,
     updateRoomLevel,
+    updateParticipantCount,
     startInviteMode,
     cancelInviteMode,
 

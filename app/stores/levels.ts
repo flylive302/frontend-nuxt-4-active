@@ -76,6 +76,36 @@ export const useLevelsStore = defineStore('levels', () => {
   }
 
   /**
+   * Update only wealth level from realtime event.
+   * @param newLevel - New level number
+   * @param currentXp - Current XP as string
+   */
+  function updateWealthLevel(newLevel: number, currentXp: string): void {
+    if (wealthLevel.value) {
+      wealthLevel.value = {
+        ...wealthLevel.value,
+        current_level: newLevel,
+        current_xp: parseFloat(currentXp),
+      }
+    }
+  }
+
+  /**
+   * Update only charm level from realtime event.
+   * @param newLevel - New level number
+   * @param currentXp - Current XP as string
+   */
+  function updateCharmLevel(newLevel: number, currentXp: string): void {
+    if (charmLevel.value) {
+      charmLevel.value = {
+        ...charmLevel.value,
+        current_level: newLevel,
+        current_xp: parseFloat(currentXp),
+      }
+    }
+  }
+
+  /**
    * Reset store state (e.g., on logout).
    */
   function reset(): void {
@@ -106,6 +136,8 @@ export const useLevelsStore = defineStore('levels', () => {
 
     // Actions
     setLevels,
+    updateWealthLevel,
+    updateCharmLevel,
     reset,
   }
 }, {

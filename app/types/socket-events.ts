@@ -1,7 +1,7 @@
 // ========================================
 // Socket Event Payload Types
 // ========================================
-// 13 real-time events from MSAB
+// Real-time events from MSAB - 17 total
 
 // ========================================
 // Economy Events
@@ -46,6 +46,16 @@ export interface BadgeEarnedPayload {
   context: string // e.g., 'level_up', 'gift_received'
 }
 
+/**
+ * level.up - Fired when user levels up (wealth or charm).
+ */
+export interface UserLevelUpPayload {
+  type: 'wealth' | 'charm'
+  previous_level: number
+  new_level: number
+  current_xp: string
+}
+
 // ========================================
 // Room Events
 // ========================================
@@ -59,6 +69,13 @@ export interface RoomLevelUpPayload {
   previous_level: number
   new_level: number
   current_xp: string
+}
+
+/**
+ * room.participant_count - Fired when room participant count changes.
+ */
+export interface RoomParticipantCountPayload {
+  count: number
 }
 
 // ========================================
@@ -119,6 +136,23 @@ export interface AgencyStatusPayload {
   reason?: string
 }
 
+/**
+ * agency.member_joined - Fired to agency owner when a member joins.
+ */
+export interface AgencyMemberJoinedPayload {
+  agency_id: number
+  member_id: number
+}
+
+/**
+ * agency.member_left - Fired to agency owner when a member leaves.
+ */
+export interface AgencyMemberLeftPayload {
+  agency_id: number
+  member_id: number
+  reason: string
+}
+
 // ========================================
 // System Events
 // ========================================
@@ -145,9 +179,11 @@ export interface ServerToClientEvents {
 
   // Achievement
   'badge.earned': (payload: BadgeEarnedPayload) => void
+  'level.up': (payload: UserLevelUpPayload) => void
 
   // Room
   'room.level_up': (payload: RoomLevelUpPayload) => void
+  'room.participant_count': (payload: RoomParticipantCountPayload) => void
 
   // Income
   'income_target.completed': (payload: IncomeTargetCompletedPayload) => void
@@ -160,6 +196,8 @@ export interface ServerToClientEvents {
   'agency.join_request_rejected': (payload: AgencyStatusPayload) => void
   'agency.member_kicked': (payload: AgencyStatusPayload) => void
   'agency.dissolved': (payload: AgencyStatusPayload) => void
+  'agency.member_joined': (payload: AgencyMemberJoinedPayload) => void
+  'agency.member_left': (payload: AgencyMemberLeftPayload) => void
 
   // System
   'config:invalidate': (payload: ConfigInvalidatePayload) => void
