@@ -1,21 +1,18 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
   frameName?: string    // SVGA name, e.g. "frames/admin/cs_leader"
-  img?: string         // avatar url
+  img: string | undefined | null // avatar url
   top?: number          // % for absolute center point
   left?: number         // % for absolute center point
   frameGirth?: number
   animated?: boolean
-  staticSrc?: string
   lazy?: boolean        // Enable lazy loading (default: true for performance)
 }>(), {
   frameName: 'frames/5',
-  img: 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp',
   top: 55,
   left: 50,
   frameGirth: 70,
   animated: false,
-  staticSrc: 'siteAssets/frames/default-frame.webp',
   lazy: true,
 });
 </script>
@@ -25,7 +22,7 @@ const props = withDefaults(defineProps<{
     <!-- Avatar Image -->
     <NuxtImg
         class="absolute-middle aspect-square rounded-full object-contain"
-        :src="props.img"
+        :src="props.img ?? 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp'"
         alt="avatar"
         :loading="lazy ? 'lazy' : 'eager'"
         :style="{
