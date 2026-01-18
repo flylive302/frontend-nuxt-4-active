@@ -206,3 +206,53 @@ export interface RoomLevelProgressResponse {
   data: RoomLevelProgress
 }
 
+// ========================================
+// Room Blocking Types
+// ========================================
+
+/**
+ * Room block record.
+ */
+export interface RoomBlock {
+  id: number
+  user: {
+    id: number
+    name: string
+    avatar: string | null
+    signature: string | null
+  }
+  reason: string | null
+  banned_until: string | null // ISO 8601 or null for permanent
+  is_permanent: boolean
+  blocked_at: string
+}
+
+/**
+ * Request to block a user from room.
+ */
+export interface BlockUserRequest {
+  user_id: number
+  reason?: string
+  duration?: '2h' | '24h' | '7d' | 'permanent'
+}
+
+/**
+ * Request to update member role.
+ */
+export interface UpdateMemberRoleRequest {
+  role: 'admin' | 'member'
+}
+
+// ========================================
+// User Membership State (for smart button)
+// ========================================
+
+/**
+ * Current user's membership state for a room.
+ */
+export type RoomMembershipState = 
+  | 'none'           // Not a member, no requests
+  | 'pending_request' // Has submitted join request
+  | 'has_invitation' // Has received invitation
+  | 'member'         // Is a member
+  | 'blocked'        // Is blocked from room

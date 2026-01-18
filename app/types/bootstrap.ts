@@ -18,6 +18,9 @@ export interface MinimalUser {
   signature: string
   avatar: string | null
   gender: string | null
+  email: string | null
+  phone: string | null
+  country: string | null
   date_of_birth: string | null
   wealth_xp: string
   charm_xp: string

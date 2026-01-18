@@ -17,6 +17,7 @@ const { leaveRoom } = useRoomAudio();
 // ========================================
 
 const open = ref(false);
+const settingsOpen = ref(false);
 
 // ========================================
 // Computed - Room Data
@@ -105,6 +106,61 @@ const levelStatus = computed(() => {
 });
 
 // ========================================
+// Membership State (for non-members)
+// ========================================
+
+const authStore = useAuthStore();
+const { myJoinRequests } = useRoomJoinRequests();
+const { receivedInvitations, fetchReceivedInvitations } = useRoomInvitations();
+
+// Fetch invitations on mount to check if user has pending invitations
+onMounted(() => {
+  fetchReceivedInvitations(true);
+});
+
+/** Current user's membership state for this room */
+const membershipState = computed(() => {
+  if (!thisRoom.value) return 'none';
+  
+  const roomId = thisRoom.value.id;
+  
+  // Owner is always a member
+  if (roomStore.isRoomOwner) return 'member';
+  
+  // Check if we have a pending join request for this room
+  // Note: items may have room_id or room.id depending on API response
+  const pendingRequest = myJoinRequests.value.items.find(
+    (r) => r && (r.room_id === roomId || r.room?.id === roomId) && r.status === 'pending'
+  );
+  if (pendingRequest) return 'pending_request';
+  
+  // Check if we have a pending invitation for this room
+  // RoomInvitationResource returns room.id, not room_id
+  const pendingInvite = receivedInvitations.value.items.find(
+    (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
+  );
+  if (pendingInvite) return 'has_invitation';
+  
+  // For now, treat everyone as non-member (can request to join)
+  return 'none';
+});
+
+/** Get invitation ID if user has a pending invitation */
+const pendingInvitationId = computed(() => {
+  if (!thisRoom.value) return undefined;
+  const roomId = thisRoom.value.id;
+  const pendingInvite = receivedInvitations.value.items.find(
+    (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
+  );
+  return pendingInvite?.id;
+});
+
+/** Should show membership action (non-owner, non-members) */
+const showMembershipAction = computed(() => {
+  return membershipState.value !== 'member' && !roomStore.isRoomOwner;
+});
+
+// ========================================
 // Handlers
 // ========================================
 
@@ -163,6 +219,8 @@ const openLeaveDrawer = (event: Event) => {
                 Experience Points more to reach Level {{ nextLevel }}
               </p>
               <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
+            
+              <!-- Room Actions -->
             </div>
           </div>
         </template>
@@ -185,6 +243,15 @@ const openLeaveDrawer = (event: Event) => {
 
     <!-- Right Section -->
     <div class="flex items-center ml-auto gap-2">
+      <!-- Settings Button (visible to all users - role-based actions inside drawer) -->
+      <UButton
+          icon="i-lucide-settings"
+          size="xl"
+          class="rounded-full cursor-pointer shadow-lg shadow-primary-950/50 border border-primary-600 backdrop-blur-xs"
+          variant="soft"
+          @click="settingsOpen = true"
+      />
+
       <UButton
           icon="i-lucide-share-2"
           size="xl"
@@ -238,5 +305,8 @@ const openLeaveDrawer = (event: Event) => {
       </UDrawer>
     </div>
   </header>
+
+  <!-- Settings Drawer (Owner/Admin only) -->
+  <RoomSettingsDrawer v-model:open="settingsOpen" />
 
 </template>

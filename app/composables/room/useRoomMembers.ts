@@ -2,7 +2,7 @@
 // Room Members Composable
 // ========================================
 
-import type { RoomMember, RoomMemberRole, GetRoomMembersParams, RoomMemberPagination } from '~/types/room'
+import type { RoomMember, RoomMemberRole, GetRoomMembersParams } from '~/types/room'
 
 /**
  * Composable for managing room members.
@@ -11,6 +11,7 @@ import type { RoomMember, RoomMemberRole, GetRoomMembersParams, RoomMemberPagina
 export function useRoomMembers() {
   const store = useRoomMembershipStore()
   const { api, normalizeError } = useApi()
+  const toast = useToast()
 
   // ========================================
   // State (from store)
@@ -73,23 +74,56 @@ export function useRoomMembers() {
       if (params.role) queryParams.role = params.role
       if (store.members.cursor) queryParams.cursor = store.members.cursor
 
+      // Laravel Resource::collection returns { data: RoomMember[] }
       const response = await api<{
-        success: true
-        data: {
-          members: RoomMember[]
-          pagination: RoomMemberPagination
-        }
+        data: RoomMember[]
       }>(`/rooms/${roomId}/members`, { params: queryParams })
 
-      store.members.items.push(...response.data.members)
-      store.members.hasMore = response.data.pagination.has_more
-      store.members.cursor = response.data.pagination.next_cursor ?? null
+      const members = Array.isArray(response.data) ? response.data : []
+      store.members.items = reset ? members : [...store.members.items, ...members]
+      store.members.hasMore = false // No cursor pagination on this endpoint
     } catch (err) {
       const normalized = normalizeError(err)
       store.members.error = normalized.message
       console.error('[useRoomMembers] fetchMembers failed:', err)
     } finally {
       store.members.loading = false
+    }
+  }
+
+  /**
+   * Fetch current user's room membership.
+   * Returns the membership object if user is a member, null otherwise.
+   */
+  async function fetchMyMembership(): Promise<RoomMember | null> {
+    try {
+      const response = await api<{ success: boolean; data: RoomMember | null }>('/user/room')
+      store.myMembership = response.data
+      return response.data
+    } catch (err) {
+      // 404 or error means user is not a member
+      store.myMembership = null
+      return null
+    }
+  }
+
+  /**
+   * Leave current room membership.
+   */
+  async function leaveRoomMembership(): Promise<boolean> {
+    try {
+      await api('/user/room/leave', { method: 'POST' })
+      store.myMembership = null
+      toast.add({
+        title: 'Left Room',
+        description: 'You have left the room membership.',
+        color: 'success',
+      })
+      return true
+    } catch (err) {
+      const normalized = normalizeError(err)
+      toast.add({ title: 'Error', description: normalized.message, color: 'error' })
+      return false
     }
   }
 
@@ -103,6 +137,7 @@ export function useRoomMembers() {
     loading,
     error,
     hasMore,
+    myMembership: computed(() => store.myMembership),
 
     // Methods
     isMemberOf,
@@ -111,5 +146,7 @@ export function useRoomMembers() {
 
     // Actions
     fetchMembers,
+    fetchMyMembership,
+    leaveRoomMembership,
   }
 }

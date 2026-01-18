@@ -5,7 +5,7 @@
 
 import { onMounted, ref, computed } from 'vue'
 import UserInviteDialog from '~/components/agency/UserInviteDialog.vue'
-import type { User } from '~/types/auth'
+import type { MinimalUser } from '~/types/bootstrap'
 
 // ========================================
 // Imports from Utils
@@ -61,7 +61,7 @@ async function handleCancel(invitationId: number): Promise<void> {
   cancellingId.value = null
 }
 
-async function handleInviteUser(user: User): Promise<void> {
+async function handleInviteUser(user: MinimalUser): Promise<void> {
   // We utilize the composable action which handles the API call and toast
   await sendInvitation({ user_id: user.id })
 }

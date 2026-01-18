@@ -221,7 +221,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
 
     // Join room via socket (send owner ID so server can cache it)
-    const ownerId = roomStore.currentRoom?.user?.id;
+    const ownerId = roomStore.currentRoom?.owner?.id;
     const response = await emitAsync<{ roomId: string; ownerId?: number }, JoinRoomResponse>(
       'room:join',
       { roomId, ownerId }
@@ -254,7 +254,15 @@ export function useRoomAudio(): UseRoomAudioReturn {
         roomStore.addParticipant({
           id: p.id,
           name: p.name,
+          signature: p.signature,
+          email: p.email,
+          phone: p.phone,
           avatar: p.avatar,
+          gender: p.gender,
+          country: p.country,
+          date_of_birth: p.date_of_birth,
+          wealth_xp: p.wealth_xp,
+          charm_xp: p.charm_xp,
           isSpeaker: p.isSpeaker,
         });
       }

@@ -2,7 +2,7 @@
 // Room Join Requests Composable
 // ========================================
 
-import type { RoomJoinRequest, JoinRoomRequest, RoomMemberPagination } from '~/types/room'
+import type { RoomJoinRequest, JoinRoomRequest } from '~/types/room'
 
 /**
  * Composable for managing room join requests.
@@ -30,7 +30,7 @@ export function useRoomJoinRequests() {
    */
   async function requestToJoin(roomId: number, request?: JoinRoomRequest): Promise<RoomJoinRequest | null> {
     try {
-      const response = await api<{ data: RoomJoinRequest }>(`/rooms/${roomId}/join`, {
+      const response = await api<{ data: RoomJoinRequest }>(`/rooms/${roomId}/join-request`, {
         method: 'POST',
         body: request,
       })
@@ -51,7 +51,7 @@ export function useRoomJoinRequests() {
    */
   async function cancelJoinRequest(roomId: number): Promise<boolean> {
     try {
-      await api(`/rooms/${roomId}/join`, { method: 'DELETE' })
+      await api(`/rooms/${roomId}/join-request`, { method: 'DELETE' })
       store.myJoinRequests.items = store.myJoinRequests.items.filter(r => r.room_id !== roomId)
       toast.add({ title: 'Cancelled', description: 'Join request cancelled.', color: 'success' })
       return true
@@ -68,6 +68,7 @@ export function useRoomJoinRequests() {
 
   /**
    * Fetch incoming join requests (room owner/admin).
+   * Uses /user/room/join-requests - gets pending requests for user's room.
    */
   async function fetchJoinRequests(roomId: number, reset = false): Promise<void> {
     if (reset) {
@@ -82,20 +83,14 @@ export function useRoomJoinRequests() {
     store.joinRequests.error = null
 
     try {
-      const queryParams: Record<string, unknown> = { per_page: 50 }
-      if (store.joinRequests.cursor) queryParams.cursor = store.joinRequests.cursor
-
+      // Note: roomId is not used in path - backend gets it from user's membership
       const response = await api<{
         success: true
-        data: {
-          requests: RoomJoinRequest[]
-          pagination: RoomMemberPagination
-        }
-      }>(`/rooms/${roomId}/join-requests`, { params: queryParams })
+        data: RoomJoinRequest[]
+      }>('/user/room/join-requests')
 
-      store.joinRequests.items.push(...response.data.requests)
-      store.joinRequests.hasMore = response.data.pagination.has_more
-      store.joinRequests.cursor = response.data.pagination.next_cursor ?? null
+      store.joinRequests.items = response.data
+      store.joinRequests.hasMore = false // No pagination for this endpoint
     } catch (err) {
       const normalized = normalizeError(err)
       store.joinRequests.error = normalized.message
@@ -108,9 +103,9 @@ export function useRoomJoinRequests() {
   /**
    * Approve join request.
    */
-  async function approveJoinRequest(roomId: number, requestId: number): Promise<boolean> {
+  async function approveJoinRequest(requestId: number): Promise<boolean> {
     try {
-      await api(`/rooms/${roomId}/join-requests/${requestId}/approve`, { method: 'POST' })
+      await api(`/user/room/join-requests/${requestId}/approve`, { method: 'POST' })
       store.joinRequests.items = store.joinRequests.items.filter(r => r.id !== requestId)
       toast.add({ title: 'Approved', description: 'Join request approved.', color: 'success' })
       return true
@@ -124,9 +119,9 @@ export function useRoomJoinRequests() {
   /**
    * Reject join request.
    */
-  async function rejectJoinRequest(roomId: number, requestId: number): Promise<boolean> {
+  async function rejectJoinRequest(requestId: number): Promise<boolean> {
     try {
-      await api(`/rooms/${roomId}/join-requests/${requestId}/reject`, { method: 'POST' })
+      await api(`/user/room/join-requests/${requestId}/reject`, { method: 'POST' })
       store.joinRequests.items = store.joinRequests.items.filter(r => r.id !== requestId)
       toast.add({ title: 'Rejected', description: 'Join request rejected.', color: 'warning' })
       return true

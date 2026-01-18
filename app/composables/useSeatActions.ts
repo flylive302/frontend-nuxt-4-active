@@ -6,6 +6,7 @@
  */
 import type { SeatResponse } from '~/types/audio';
 import { userToParticipant } from '~/types/audio';
+import type { MinimalUser } from '~/types/bootstrap';
 
 // ============================================
 // Types
@@ -87,7 +88,10 @@ export function useSeatActions({
     // Update local seat state for the current user
     // (Socket.IO's socket.to() excludes sender, so we update locally)
     if (response.success && authStore.user) {
-      const currentUser = userToParticipant(authStore.user, { isSpeaker: true, seatIndex });
+      const currentUser = userToParticipant({
+        ...authStore.user,
+        country: authStore.user.phone_country
+      } as MinimalUser, { isSpeaker: true, seatIndex });
       roomStore.updateSeat(seatIndex, currentUser, false);
     }
 

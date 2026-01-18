@@ -15,28 +15,8 @@ export interface SearchUsersParams {
   cursor?: string | null
 }
 
-interface ApiUser {
-  id: number
-  name: string
-  phone: {
-    raw: string
-    formatted: string
-    country: string
-  }
-  email: string
-  signature: string
-  avatar: string
-}
-
-/** Search result extends MinimalUser with contact fields */
-export interface SearchUser extends Pick<MinimalUser, 'id' | 'name' | 'signature' | 'avatar'> {
-  email: string
-  phone: string
-  phone_country: string
-}
-
 export interface UserSearchResult {
-  data: ApiUser[]
+  data: MinimalUser[]
   meta: {
     path: string
     per_page: number
@@ -56,7 +36,7 @@ export function useUserSearch() {
   // State
   // ========================================
 
-  const users = ref<SearchUser[]>([])
+  const users = ref<MinimalUser[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasMore = ref(false)
@@ -104,13 +84,17 @@ export function useUserSearch() {
         params,
       })
 
-      const mappedUsers: SearchUser[] = response.data.map(u => ({
+      const mappedUsers: MinimalUser[] = response.data.map(u => ({
         id: u.id,
         name: u.name,
         email: u.email,
         signature: u.signature,
-        phone: u.phone.formatted,
-        phone_country: u.phone.country,
+        gender: u.gender,
+        date_of_birth: u.date_of_birth,
+        wealth_xp: u.wealth_xp,
+        charm_xp: u.charm_xp,
+        phone: u.phone,
+        country: u.country,
         avatar: u.avatar,
       }))
 

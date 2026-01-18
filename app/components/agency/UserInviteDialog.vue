@@ -6,7 +6,7 @@ import { ref, computed, watch } from 'vue'
 import { useDebounce } from '@vueuse/core'
 import { useUserSearch } from '~/composables/useUserSearch'
 import { useColorClasses } from '~/composables/useColorClasses'
-import type { User } from '~/types/auth'
+import type { MinimalUser } from '~/types/bootstrap'
 
 // ========================================
 // Props & Emits
@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  'select': [user: User]
+  'select': [user: MinimalUser]
 }>()
 
 // ========================================
@@ -38,7 +38,7 @@ const isOpen = computed({
 
 const searchTerm = ref('')
 const debouncedSearchTerm = useDebounce(searchTerm, 300)
-const selectedUser = ref<User | null>(null)
+const selectedUser = ref<MinimalUser | null>(null)
 
 // ========================================
 // Types for Command Palette
@@ -49,7 +49,7 @@ type CommandItem = {
   name: string
   suffix?: string
   avatar?: { src: string }
-  user: User // Keep ref to original object
+  user: MinimalUser // Keep ref to original search result
 }
 
 type CommandGroup = {
@@ -179,8 +179,11 @@ function handleConfirm() {
               <h3 class="text-xl font-bold">{{ selectedUser.name }}</h3>
               
               <div class="flex items-center gap-2 mt-1">
-                <UBadge v-if="selectedUser.signature" variant="subtle" color="primary" size="lg">ID: {{ selectedUser.signature }}</UBadge>
-                <UIcon :name="`i-flag-${selectedUser.phone_country?.toLowerCase()}-4x3`" class="rounded overflow-hidden h-6 size-8 shadow-lg"/>
+                <ProfileBadge v-if="selectedUser.signature" :show-badge="false" :txt="selectedUser.signature"/>
+                <UBadge color="secondary" :icon="getGenderInfo(selectedUser.gender).icon" size="sm" class="w-fit text-white p-1">
+                  {{ getAge(selectedUser.date_of_birth) }}
+                </UBadge>
+                <UIcon :name="`i-flag-${selectedUser.country?.toLowerCase()}-4x3`" class="rounded overflow-hidden h-6 size-8 shadow-lg"/>
               </div>
 
             </div>

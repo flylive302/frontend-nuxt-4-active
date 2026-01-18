@@ -43,17 +43,11 @@ export function useRoomInvitations() {
       const queryParams: Record<string, unknown> = { per_page: 50 }
       if (store.receivedInvitations.cursor) queryParams.cursor = store.receivedInvitations.cursor
 
-      const response = await api<{
-        success: true
-        data: {
-          invitations: RoomInvitation[]
-          pagination: RoomMemberPagination
-        }
-      }>('/room-invitations/received', { params: queryParams })
+      // Laravel Resource Collection returns { data: RoomInvitation[] }
+      const response = await api<{ data: RoomInvitation[] }>('/user/room/invitations', { params: queryParams })
 
-      store.receivedInvitations.items.push(...response.data.invitations)
-      store.receivedInvitations.hasMore = response.data.pagination.has_more
-      store.receivedInvitations.cursor = response.data.pagination.next_cursor ?? null
+      store.receivedInvitations.items = response.data
+      store.receivedInvitations.hasMore = false // Simple collection, no pagination
     } catch (err) {
       const normalized = normalizeError(err)
       store.receivedInvitations.error = normalized.message
@@ -152,7 +146,7 @@ export function useRoomInvitations() {
    */
   async function acceptInvitation(invitationId: number): Promise<boolean> {
     try {
-      await api(`/room-invitations/${invitationId}/accept`, { method: 'POST' })
+      await api(`/user/room/invitations/${invitationId}/accept`, { method: 'POST' })
       store.receivedInvitations.items = store.receivedInvitations.items.filter(i => i.id !== invitationId)
       toast.add({ title: 'Joined', description: 'You have joined the room!', color: 'success' })
       return true
@@ -168,7 +162,7 @@ export function useRoomInvitations() {
    */
   async function declineInvitation(invitationId: number): Promise<boolean> {
     try {
-      await api(`/room-invitations/${invitationId}/decline`, { method: 'POST' })
+      await api(`/user/room/invitations/${invitationId}/decline`, { method: 'POST' })
       store.receivedInvitations.items = store.receivedInvitations.items.filter(i => i.id !== invitationId)
       toast.add({ title: 'Declined', description: 'Invitation declined.', color: 'neutral' })
       return true

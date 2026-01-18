@@ -154,6 +154,31 @@ async function handleToggleLock() {
   <UDrawer v-model:open="isOpen" title="Seat Options" description="Manage seat actions like joining, leaving, muting, or locking.">
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-2 pb-4">
+
+        <div v-if="currentSeat?.user" class="rounded-xl p-4 shadow-sm border border-white/10 bg-elevated/50 relative overflow-hidden">
+          <!-- Background decoration -->
+          <div class="absolute -right-6 -top-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none animate-pulse" />
+          <div class="absolute -left-6 -bottom-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none animate-pulse" />
+
+          <div class="flex flex-col items-center text-center relative z-10">
+            <LazyUserAvatar :img="currentSeat.user.avatar ?? undefined" animated class="size-24" />
+
+            <h3 class="text-xl font-bold">{{ currentSeat.user.name }}</h3>
+
+            <div class="flex items-center gap-2 mt-1">
+              <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+              <UBadge color="secondary" :icon="getGenderInfo(currentSeat.user.gender).icon" size="sm"
+                class="w-fit text-white p-1">
+                {{ getAge(currentSeat.user.date_of_birth) }}
+              </UBadge>
+              <UIcon :name="`i-flag-${currentSeat.user.country?.toLowerCase()}-4x3`"
+                class="rounded overflow-hidden h-6 size-8 shadow-lg" />
+            </div>
+
+          </div>
+        </div>
+
+
         <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
         <UButton
 v-if="(isSeatEmpty && !isSeatLocked) || isUserSeatedElsewhere"

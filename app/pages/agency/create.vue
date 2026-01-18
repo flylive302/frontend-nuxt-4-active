@@ -288,6 +288,15 @@ function getUploadStatusColor(status: string): string {
           :disabled="processing"
         />
 
+        <!-- Address -->
+        <UFormField label="Address" name="address" required>
+          <template #hint>
+            <p class="text-xs text-muted">Cannot be modified once created</p>
+          </template>
+          <UInput v-model="state.address" class="w-full" size="lg" icon="i-lucide-map-pin"
+            placeholder="Add your current address" :disabled="processing" />
+        </UFormField>
+
         <!-- Logo Upload -->
         <UFormField label="Add a Logo for your Agency" name="logo" required>
           <template #hint>
@@ -313,21 +322,6 @@ function getUploadStatusColor(status: string): string {
             description="JPG, PNG, WebP (max. 5MB)"
             class="w-full min-h-40"
             highlight
-          />
-        </UFormField>
-
-        <!-- Address -->
-        <UFormField label="Address" name="address" required>
-          <template #hint>
-            <p class="text-xs text-muted">Cannot be modified once created</p>
-          </template>
-          <UInput
-            v-model="state.address"
-            class="w-full"
-            size="lg"
-            icon="i-lucide-map-pin"
-            placeholder="Add your current address"
-            :disabled="processing"
           />
         </UFormField>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
   frameName?: string    // SVGA name, e.g. "frames/admin/cs_leader"
-  img: string | undefined | null // avatar url
+  img?: string | undefined | null // avatar url
   top?: number          // % for absolute center point
   left?: number         // % for absolute center point
   frameGirth?: number
@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<{
   lazy?: boolean        // Enable lazy loading (default: true for performance)
 }>(), {
   frameName: 'frames/5',
+  img: undefined,
   top: 55,
   left: 50,
   frameGirth: 70,

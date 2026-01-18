@@ -84,6 +84,11 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     cursor: null,
   })
 
+  /**
+   * Current user's room membership (null if not a member).
+   */
+  const myMembership = ref<RoomMember | null>(null)
+
   // ========================================
   // Computed
   // ========================================
@@ -146,6 +151,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     myJoinRequests,
     receivedInvitations,
     sentInvitations,
+    myMembership,
 
     // Computed
     pendingRequestCount,

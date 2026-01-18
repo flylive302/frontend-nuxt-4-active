@@ -291,13 +291,16 @@ export interface Seat {
 /**
  * Convert User to RoomParticipant
  */
-export function userToParticipant(user: User, overrides?: Partial<RoomParticipant>): RoomParticipant {
+export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomParticipant>): RoomParticipant {
   return {
     id: user.id,
     name: user.name ?? 'Anonymous',
     signature: user.signature ?? '',
     avatar: user.avatar ?? null,
     gender: user.gender ?? null,
+    phone: user.phone ?? null,
+    email: user.email ?? null,
+    country: user.country ?? null,
     date_of_birth: user.date_of_birth ?? null,
     wealth_xp: String(user.wealth_xp ?? '0'),
     charm_xp: String(user.charm_xp ?? '0'),
