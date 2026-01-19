@@ -1,14 +1,16 @@
 <!-- ~/components/room/participant-list-item.vue -->
-<!-- Single participant item in room user list with invite functionality -->
 <script setup lang="ts">
 import type { RoomParticipant } from '~/types/audio'
 
 defineOptions({ name: 'ParticipantListItem' })
+const { myMembership } = useRoomMembers();
+const roomStore = useRoomStore();
+const log = createLogger('[ParticipantListItem]');
 
 // ========================================
 // Props & Emits
 // ========================================
-defineProps<{
+const props = defineProps<{
   participant: RoomParticipant
   inviteModeSeat: number | null
   isRoomOwner: boolean
@@ -18,13 +20,33 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'invite', userId: number): void
 }>()
+
+/** Current user can manage members (owner or admin) */
+const canManageMembers = computed(() => {
+  // Owner can always manage
+  if (props.isRoomOwner) return true
+  // Admin members can also manage
+  if (myMembership.value?.role === 'admin') return true
+  return false
+})
 </script>
 
 <template>
-  <NuxtLink :to="`/profile/${participant.signature}`"
+  <div
     class="flex gap-1 bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 rounded-lg shadow-md shadow-neutral-900 overflow-hidden relative"
   >
-    <UserAvatar :img="participant.avatar" animated class="w-13" />
+    <div 
+      @click="async () => {
+        try {
+          roomStore.minimizeRoom();
+          navigateTo(`/profile/${participant.signature}`);
+        } catch (error) {
+          log.error('Failed to navigate to profile:', error);
+        }
+      }"
+    >
+      <UserAvatar :img="participant.avatar" animated class="w-13" />
+    </div>
     <div class="flex justify-center items-center gap-1">
       <h3 class="text-sm font-bold leading-tight">
         {{ participant.name }}
@@ -38,16 +60,15 @@ const emit = defineEmits<{
     <!-- Invite to Seat button - Owner only, for non-speakers -->
     <!-- Show ONLY if in invite mode -->
     <UButton
-      v-if="inviteModeSeat !== null && !participant.isSpeaker && isRoomOwner"
+      v-if="inviteModeSeat !== null && !participant.isSpeaker && canManageMembers"
       size="xs"
       color="primary"
-      variant="soft"
-      icon="i-lucide-user-plus"
+      variant="subtle"
       :loading="isInviting"
       class="mr-2 self-center"
       @click.stop="emit('invite', participant.id)"
     >
-      Invite to Seat {{ inviteModeSeat + 1 }}
+      Invite to {{ inviteModeSeat + 1 }}
     </UButton>
-  </NuxtLink>
+  </div>
 </template>

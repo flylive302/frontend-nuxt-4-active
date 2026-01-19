@@ -8,6 +8,7 @@ const log = createLogger('[SeatDrawer]')
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
 const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, isAudioReady } = useRoomAudio()
+const { myMembership } = useRoomMembers()
 
 const isLoading = ref(false)
 
@@ -148,6 +149,15 @@ async function handleToggleLock() {
     isLoading.value = false
   }
 }
+
+/** Current user can manage members (owner or admin) */
+const canManageMembers = computed(() => {
+  // Owner can always manage
+  if (isRoomOwner.value) return true
+  // Admin members can also manage
+  if (myMembership.value?.role === 'admin') return true
+  return false
+})
 </script>
 
 <template>
@@ -161,7 +171,19 @@ async function handleToggleLock() {
           <div class="absolute -left-6 -bottom-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none animate-pulse" />
 
           <div class="flex flex-col items-center text-center relative z-10">
-            <LazyUserAvatar :img="currentSeat.user.avatar ?? undefined" animated class="size-24" />
+            <LazyUserAvatar
+              :img="currentSeat.user.avatar ?? undefined" 
+              animated class="size-24" 
+              @click="async () => {
+                try {
+                  isOpen = false;
+                  roomStore.minimizeRoom();
+                  navigateTo(`/profile/${currentSeat?.user?.signature}`);
+                } catch (error) {
+                  log.error('Failed to navigate to profile:', error);
+                }
+              }"
+            />
 
             <h3 class="text-xl font-bold">{{ currentSeat.user.name }}</h3>
 
@@ -181,51 +203,73 @@ async function handleToggleLock() {
 
         <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
         <UButton
-v-if="(isSeatEmpty && !isSeatLocked) || isUserSeatedElsewhere"
-          class="w-full justify-center rounded-none" size="xl" variant="subtle" color="primary" 
+          v-if="(isSeatEmpty && !isSeatLocked)"
+          class="rounded-lg justify-center" 
+          size="xl" variant="soft" color="success" 
           :loading="isLoading"
           :disabled="!isAudioReady"
-          icon="i-lucide-mic" @click="handleTakeSeat">
+          icon="i-lucide-mic" 
+          @click="handleTakeSeat"
+        >
           {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }}
           <template v-if="!isAudioReady">(Loading...)</template>
         </UButton>
 
         <!-- Leave Seat button - only show if current user occupies this seat -->
         <UButton
-v-if="isCurrentUserSeat" class="w-full justify-center rounded-none" size="xl" variant="subtle"
-          color="error" :loading="isLoading" icon="i-lucide-mic-off" @click="handleLeaveSeat">
+          v-if="isCurrentUserSeat" 
+          class="rounded-lg justify-center" 
+          size="xl" variant="soft" color="error" 
+          :loading="isLoading" icon="i-lucide-mic-off" 
+          @click="handleLeaveSeat"
+        >
           Leave Seat {{ seatId }}
         </UButton>
 
+        <div v-if="canManageMembers" class="space-y-2">
+          <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
+          <UButton
+            v-if="!isSeatEmpty && !isCurrentUserSeat" 
+            class="w-full justify-center rounded-lg"
+            size="xl" variant="soft" 
+            :color="isSeatMuted ? 'success' : 'warning'" 
+            :loading="isLoading"
+            :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'" 
+            @click="handleToggleMute"
+          >
+            {{ isSeatMuted ? 'Unmute' : 'Mute' }} Seat
+          </UButton>
 
 
-        <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
+          <!-- Lock/Unlock Seat - Owner only -->
+          <UButton
+            class="w-full justify-center rounded-lg" 
+            size="xl" variant="soft"
+            :color="isSeatLocked ? 'success' : 'error'" 
+            :loading="isLoading"
+            :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'" 
+            @click="handleToggleLock"
+          >
+            {{ isSeatLocked ? 'Unlock' : 'Lock' }} Seat
+          </UButton>
+
+          <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
+          <UButton 
+            v-if="isSeatEmpty" 
+            class="w-full justify-center rounded-lg" size="xl"
+            variant="soft" color="info" :loading="isLoading" 
+            icon="i-lucide-user-plus" 
+            @click="handleStartInvite"
+          >
+            Invite User to Seat {{ seatId }}
+          </UButton>
+        </div>
+
         <UButton
-v-if="isRoomOwner && !isSeatEmpty && !isCurrentUserSeat" class="w-full justify-center rounded-none"
-          size="xl" variant="subtle" :color="isSeatMuted ? 'success' : 'warning'" :loading="isLoading"
-          :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'" @click="handleToggleMute">
-          {{ isSeatMuted ? 'Unmute' : 'Mute' }} Seat
-        </UButton>
-
-
-        <!-- Lock/Unlock Seat - Owner only -->
-        <UButton
-v-if="isRoomOwner" class="w-full justify-center rounded-none" size="xl" variant="subtle"
-          :color="isSeatLocked ? 'success' : 'error'" :loading="isLoading"
-          :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'" @click="handleToggleLock">
-          {{ isSeatLocked ? 'Unlock' : 'Lock' }} Seat
-        </UButton>
-
-        <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
-        <UButton
-v-if="isRoomOwner && isSeatEmpty && !isSeatLocked" class="w-full justify-center rounded-none" size="xl"
-          variant="subtle" color="info" :loading="isLoading" icon="i-lucide-user-plus" @click="handleStartInvite">
-          Invite User to Seat {{ seatId }}
-        </UButton>
-
-        <UButton
-color="neutral" variant="subtle" icon="i-lucide-x"
-          class="justify-center mt-2 shadow-md shadow-neutral-800" @click="isOpen = false">
+          color="neutral" variant="soft" icon="i-lucide-x"
+          class="justify-center mt-2 shadow-md shadow-neutral-800" 
+          @click="isOpen = false"
+        >
           Cancel
         </UButton>
       </div>

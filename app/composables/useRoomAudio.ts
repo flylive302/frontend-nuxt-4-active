@@ -11,7 +11,7 @@
 import type { JoinRoomResponse } from '~/types/audio';
 import { userToParticipant } from '~/types/audio';
 import type { Ref, ComputedRef } from 'vue';
-import { setupRoomEventHandlers } from './useRoomEventHandlers';
+import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
@@ -204,7 +204,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     });
 
     // Setup event listeners (delegated to useRoomEventHandlers)
+    // Clean up any existing listeners first to prevent duplicates on rejoin
     if (socket.value) {
+      cleanupRoomEventHandlers(socket.value);
       setupRoomEventHandlers({
         socket: socket.value,
         roomStore,

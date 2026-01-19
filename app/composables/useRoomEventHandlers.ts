@@ -54,6 +54,45 @@ export interface UseRoomEventHandlersParams {
 }
 
 // ============================================
+// Constants: Event Names
+// ============================================
+
+/** All room event names that we register listeners for */
+const ROOM_EVENT_NAMES = [
+  'room:userJoined',
+  'room:userLeft',
+  'room:closed',
+  'audio:newProducer',
+  'speaker:active',
+  'seat:updated',
+  'seat:cleared',
+  'seat:userMuted',
+  'seat:locked',
+  'seat:invite:received',
+  'chat:message',
+  'gift:received',
+  'gift:error',
+  'gift:prepare',
+] as const;
+
+// ============================================
+// Cleanup Function
+// ============================================
+
+/**
+ * Remove all room event listeners from socket.
+ * Call this before re-registering listeners to prevent duplicates.
+ */
+export function cleanupRoomEventHandlers(socket: AudioSocket): void {
+  const log = createLogger('[RoomEvents]');
+  log.debug('Cleaning up room event handlers');
+  
+  for (const eventName of ROOM_EVENT_NAMES) {
+    socket.off(eventName);
+  }
+}
+
+// ============================================
 // Setup Function
 // ============================================
 

@@ -23,7 +23,6 @@ const showInviteModal = ref(false)
 // ========================================
 
 const roomStore = useRoomStore()
-const authStore = useAuthStore()
 const { requestToJoin, cancelJoinRequest, myJoinRequests } = useRoomJoinRequests()
 const { acceptInvitation, declineInvitation, receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
 const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers()
