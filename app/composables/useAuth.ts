@@ -34,6 +34,10 @@ export function useAuth() {
     authStore.setToken(data.token)
     authStore.setUser(data.user)
 
+    // Note: fetchBootstrap is NOT called here because the cookie isn't
+    // immediately available to the API client in the same request cycle.
+    // The bootstrap.client.ts plugin will fetch data after navigation.
+
     toast.add({ title: 'Welcome back!', color: 'success' })
     return data
   }
@@ -54,6 +58,10 @@ export function useAuth() {
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
+
+    // Note: fetchBootstrap is NOT called here because the cookie isn't
+    // immediately available to the API client in the same request cycle.
+    // The bootstrap.client.ts plugin will fetch data after navigation.
 
     toast.add({ title: 'Account created!', color: 'success' })
     return data

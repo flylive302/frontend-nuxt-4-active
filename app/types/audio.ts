@@ -289,9 +289,29 @@ export interface Seat {
 }
 
 /**
- * Convert User to RoomParticipant
+ * Input type for userToParticipant - accepts both MinimalUser and BootstrapUser.
+ * Only requires id and name, rest are optional with fallbacks.
  */
-export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomParticipant>): RoomParticipant {
+type UserLike = {
+  id: number
+  name: string
+  signature?: string
+  avatar?: string | null
+  gender?: string | null
+  phone?: string | null
+  email?: string | null
+  country?: string | null
+  phone_country?: string | null  // BootstrapUser uses this instead of country
+  date_of_birth?: string | null
+  wealth_xp?: string
+  charm_xp?: string
+}
+
+/**
+ * Convert User/BootstrapUser to RoomParticipant.
+ * Accepts any object with at minimum id and name fields.
+ */
+export function userToParticipant(user: UserLike, overrides?: Partial<RoomParticipant>): RoomParticipant {
   return {
     id: user.id,
     name: user.name ?? 'Anonymous',
@@ -300,7 +320,7 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     gender: user.gender ?? null,
     phone: user.phone ?? null,
     email: user.email ?? null,
-    country: user.country ?? null,
+    country: user.country ?? user.phone_country ?? null,  // Fallback to phone_country for BootstrapUser
     date_of_birth: user.date_of_birth ?? null,
     wealth_xp: String(user.wealth_xp ?? '0'),
     charm_xp: String(user.charm_xp ?? '0'),

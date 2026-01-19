@@ -1,6 +1,12 @@
 import type { User } from './auth';
 import type { BootstrapRoom } from './bootstrap';
 
+/**
+ * Room type alias for BootstrapRoom.
+ * Use BootstrapRoom directly for new code.
+ */
+export type Room = BootstrapRoom;
+
 export interface CreateRoomPayload {
   name: string;
   country: string;

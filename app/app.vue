@@ -56,6 +56,46 @@ function handleCellularConsent(granted: boolean): void {
   assetDownloader.setCellularConsent(granted)
   showCellularConsent.value = false
 }
+
+// ========================================
+// Auto-Fetch Bootstrap & Start Asset Downloads
+// ========================================
+// Watch for conditions where we need to fetch bootstrap data or start downloads.
+// This handles the post-login flow where the cookie is now available.
+
+const authStore = useAuthStore()
+
+// Track if we're currently fetching to avoid duplicate calls
+const isFetchingBootstrap = ref(false)
+
+watch(
+  [
+    () => authStore.isAuthenticated,
+    () => bootstrapStore.isReady,
+    () => bootstrapStore.phase,
+    () => bootstrapStore.giftCatalog.length,
+    () => bootstrapStore.assetPhase,
+  ],
+  async ([isAuth, isReady, phase, giftCount, assetPhase]) => {
+    // Scenario 1: User is authenticated but bootstrap data not loaded
+    // This happens after login when navigation completes
+    if (isAuth && !isReady && phase === 'idle' && !isFetchingBootstrap.value) {
+      isFetchingBootstrap.value = true
+      try {
+        await bootstrapStore.fetchBootstrap()
+      } finally {
+        isFetchingBootstrap.value = false
+      }
+      return
+    }
+
+    // Scenario 2: Bootstrap ready, gifts available, start downloading
+    if (isAuth && isReady && giftCount > 0 && assetPhase === 'idle') {
+      bootstrapStore.startAssetDownload()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>

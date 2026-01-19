@@ -84,6 +84,188 @@ useInfiniteScroll(
   },
   { distance: 200 }
 )
+
+// ========================================
+// User Tracking
+// ========================================
+
+const roomStore = useRoomStore()
+const { api } = useApi()
+const { socket, connect, isConnected } = useAudioSocket()
+const { leaveRoom } = useRoomAudio()
+const toast = useToast()
+
+const isTracking = ref(false)
+const isJoiningRoom = ref(false)
+
+/**
+ * Ensure socket is connected, connecting if needed
+ */
+async function ensureSocketConnected(): Promise<boolean> {
+  if (isConnected.value && socket.value) {
+    return true
+  }
+  
+  // Try to connect
+  connect()
+  
+  // Wait for connection (max 5 seconds)
+  return new Promise((resolve) => {
+    const maxAttempts = 50 // 5 seconds with 100ms intervals
+    let attempts = 0
+    
+    const checkInterval = setInterval(() => {
+      attempts++
+      if (isConnected.value && socket.value) {
+        clearInterval(checkInterval)
+        resolve(true)
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval)
+        resolve(false)
+      }
+    }, 100)
+  })
+}
+
+/**
+ * Track user - find what room they're in and navigate there
+ */
+async function trackUser() {
+  if (!profile.value?.id || isTracking.value) return
+  
+  isTracking.value = true
+  
+  try {
+    // 0. Ensure socket is connected
+    const connected = await ensureSocketConnected()
+    if (!connected || !socket.value) {
+      toast.add({
+        title: 'Connection failed',
+        description: 'Could not connect to server',
+        color: 'error',
+      })
+      return
+    }
+    
+    // 1. Get target user's roomId via socket
+    const response = await new Promise<{ roomId: string | null }>((resolve, reject) => {
+      const timeoutId = setTimeout(() => reject(new Error('Timeout')), 5000)
+      
+      socket.value!.emit('user:getRoom', { userId: profile.value!.id }, (res: { roomId: string | null }) => {
+        clearTimeout(timeoutId)
+        resolve(res)
+      })
+    })
+    
+    if (!response.roomId) {
+      toast.add({
+        title: 'User not in a room',
+        description: `${profile.value.name} is not currently in any room`,
+        color: 'warning',
+        icon: 'i-lucide-user-x',
+      })
+      return
+    }
+    
+    // 2. Leave current room if in one
+    if (roomStore.currentRoom) {
+      leaveRoom()
+      roomStore.leaveRoom();
+    }
+    
+    // 3. Fetch full room data from API
+    const roomData = await api<{ status: string; data: import('~/types/bootstrap').BootstrapRoom }>(`/rooms/${response.roomId}`)
+    
+    if (roomData.status !== 'success' || !roomData.data) {
+      toast.add({
+        title: 'Room not found',
+        description: 'The room may have been closed',
+        color: 'error',
+      })
+      return
+    }
+    
+    // 4. Set as current room (triggers room UI)
+    roomStore.setCurrentRoom(roomData.data)
+    
+    toast.add({
+      title: 'Entering room',
+      description: `Joining ${roomData.data.name}`,
+      color: 'success',
+      icon: 'i-lucide-door-open',
+    })
+    
+  } catch (err) {
+    toast.add({
+      title: 'Tracking failed',
+      description: 'Could not locate user',
+      color: 'error',
+    })
+  } finally {
+    isTracking.value = false
+  }
+}
+
+/**
+ * Go to the user's room (for Room button)
+ */
+async function goToRoom() {
+  if (!profile.value?.room_id || isJoiningRoom.value) return
+  
+  isJoiningRoom.value = true
+  
+  try {
+    // 0. Ensure socket is connected first
+    const connected = await ensureSocketConnected()
+    if (!connected || !socket.value) {
+      toast.add({
+        title: 'Connection failed',
+        description: 'Could not connect to server',
+        color: 'error',
+      })
+      return
+    }
+    
+    // Leave current room if in one
+    if (roomStore.currentRoom) {
+      leaveRoom()
+      roomStore.leaveRoom();
+      // Clear any stale audio state before setting new room
+      roomStore.clearAudioState()
+    }
+
+    // Fetch full room data from API
+    const roomData = await api<{ status: string; data: import('~/types/bootstrap').BootstrapRoom }>(`/rooms/${profile.value.room_id}`)
+
+    if (roomData.status !== 'success' || !roomData.data) {
+      toast.add({
+        title: 'Room not found',
+        description: 'The room may have been closed',
+        color: 'error',
+      })
+      return
+    }
+    
+    // Set as current room (triggers room UI)
+    roomStore.setCurrentRoom(roomData.data)
+    
+    toast.add({
+      title: 'Entering room',
+      description: `Joining ${roomData.data.name}`,
+      color: 'success',
+      icon: 'i-lucide-door-open',
+    })
+  } catch (err) {
+    toast.add({
+      title: 'Failed to join room',
+      description: 'Could not access the room',
+      color: 'error',
+    })
+  } finally {
+    isJoiningRoom.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -282,7 +464,14 @@ useInfiniteScroll(
           rounded="rounded-lg"
         >
           <div class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
-            <UButton to="/" icon="i-lucide-locate-fixed" size="sm" class="pl-1 pr-2 gap-1">
+            <UButton
+              :loading="isTracking"
+              :disabled="isTracking"
+              icon="i-lucide-locate-fixed"
+              size="sm"
+              class="pl-1 pr-2 gap-1"
+              @click="trackUser"
+            >
               Track
             </UButton>
             <UButton to="/" icon="i-lucide-star" size="sm" class="pl-1 pr-2 gap-1">
@@ -290,10 +479,12 @@ useInfiniteScroll(
             </UButton>
             <UButton
               v-if="hasRoom"
-              :to="`/room/${profile?.room_id}`"
+              :loading="isJoiningRoom"
+              :disabled="isJoiningRoom"
               icon="i-lucide-video"
               size="sm"
               class="pl-1 pr-2 gap-1"
+              @click="goToRoom"
             >
               Room
             </UButton>

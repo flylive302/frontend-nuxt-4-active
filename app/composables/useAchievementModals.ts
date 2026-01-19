@@ -31,6 +31,11 @@ export interface IncomeTargetModalData {
   isOwnerView: boolean
 }
 
+type PendingModal =
+  | { type: 'badge'; data: BadgeModalData }
+  | { type: 'levelUp'; data: LevelUpModalData }
+  | { type: 'incomeTarget'; data: IncomeTargetModalData }
+
 // ========================================
 // State (module-level singleton)
 // ========================================
@@ -44,6 +49,9 @@ const levelUpModalData = ref<LevelUpModalData | null>(null)
 const incomeTargetModalOpen = ref(false)
 const incomeTargetModalData = ref<IncomeTargetModalData | null>(null)
 
+// Queue for modals waiting to be shown
+const pendingModals = ref<PendingModal[]>([])
+
 // ========================================
 // Composable
 // ========================================
@@ -51,29 +59,105 @@ const incomeTargetModalData = ref<IncomeTargetModalData | null>(null)
 /**
  * Composable for showing achievement celebration modals.
  * Uses module-level state for singleton pattern across components.
+ * Modals queue until gift playback finishes (if user is in a room).
  */
 export function useAchievementModals() {
+  // ========================================
+  // Queue Management
+  // ========================================
+
+  /**
+   * Check if modals can be shown right now.
+   * Returns true if user is not in a room, OR if in room and no gifts playing.
+   */
+  function canShowModal(): boolean {
+    const roomStore = useRoomStore()
+    const giftStore = useGiftStore()
+
+    // If not in a room, always allow modals
+    if (!roomStore.currentRoom) return true
+
+    // If in room, only allow when no gifts are playing
+    return !giftStore.isPlaying
+  }
+
+  /**
+   * Check if any achievement modal is currently open.
+   */
+  function isAnyModalOpen(): boolean {
+    return badgeModalOpen.value || levelUpModalOpen.value || incomeTargetModalOpen.value
+  }
+
+  /**
+   * Process the pending modal queue.
+   * Shows the next modal if conditions allow.
+   */
+  function processQueue(): void {
+    // Don't show if conditions not met or another modal is open
+    if (!canShowModal() || isAnyModalOpen()) return
+    if (pendingModals.value.length === 0) return
+
+    const next = pendingModals.value.shift()!
+    showModalByType(next)
+  }
+
+  /**
+   * Show a modal by its type from the queue.
+   */
+  function showModalByType(modal: PendingModal): void {
+    switch (modal.type) {
+      case 'badge':
+        badgeModalData.value = modal.data
+        badgeModalOpen.value = true
+        break
+      case 'levelUp':
+        levelUpModalData.value = modal.data
+        levelUpModalOpen.value = true
+        break
+      case 'incomeTarget':
+        incomeTargetModalData.value = modal.data
+        incomeTargetModalOpen.value = true
+        break
+    }
+  }
+
+  /**
+   * Enqueue a modal and try to show it immediately if conditions allow.
+   */
+  function enqueueModal(modal: PendingModal): void {
+    pendingModals.value.push(modal)
+    processQueue()
+  }
+
+  // Watch for gift playback to finish, then process queue
+  const giftStore = useGiftStore()
+  watch(
+    () => giftStore.isPlaying,
+    (isPlaying) => {
+      if (!isPlaying) {
+        // Delay slightly to ensure clean transition after gift animation
+        setTimeout(processQueue, 100)
+      }
+    }
+  )
+
   // ========================================
   // Badge Modal
   // ========================================
 
   /**
    * Show badge earned modal with animation.
+   * Queues if gift playback is in progress.
    */
   function showBadgeEarned(payload: BadgeEarnedPayload): void {
-    badgeModalData.value = {
+    const data: BadgeModalData = {
       badgeId: payload.badge_id,
       badgeName: payload.badge_name,
       badgeImage: payload.badge_image,
       category: payload.category,
       context: payload.context,
     }
-    badgeModalOpen.value = true
-
-    // Auto-dismiss after 4 seconds
-    setTimeout(() => {
-      closeBadgeModal()
-    }, 4000)
+    enqueueModal({ type: 'badge', data })
   }
 
   function closeBadgeModal(): void {
@@ -81,6 +165,8 @@ export function useAchievementModals() {
     // Clear data after animation completes
     setTimeout(() => {
       badgeModalData.value = null
+      // Process queue after modal closes
+      processQueue()
     }, 300)
   }
 
@@ -90,20 +176,16 @@ export function useAchievementModals() {
 
   /**
    * Show level up modal with celebration animation.
+   * Queues if gift playback is in progress.
    */
   function showLevelUp(payload: UserLevelUpPayload): void {
-    levelUpModalData.value = {
+    const data: LevelUpModalData = {
       type: payload.type,
       previousLevel: payload.previous_level,
       newLevel: payload.new_level,
       currentXp: payload.current_xp,
     }
-    levelUpModalOpen.value = true
-
-    // Auto-dismiss after 4 seconds
-    setTimeout(() => {
-      closeLevelUpModal()
-    }, 4000)
+    enqueueModal({ type: 'levelUp', data })
   }
 
   function closeLevelUpModal(): void {
@@ -111,6 +193,8 @@ export function useAchievementModals() {
     // Clear data after animation completes
     setTimeout(() => {
       levelUpModalData.value = null
+      // Process queue after modal closes
+      processQueue()
     }, 300)
   }
 
@@ -121,21 +205,17 @@ export function useAchievementModals() {
   /**
    * Show income target completion modal with celebration.
    * Used for agency income tier completions.
+   * Queues if gift playback is in progress.
    */
   function showIncomeTargetCompleted(payload: IncomeTargetCompletedPayload, isOwnerView = false): void {
-    incomeTargetModalData.value = {
+    const data: IncomeTargetModalData = {
       targetName: payload.name,
       tier: payload.tier,
       memberReward: payload.member_reward,
       ownerReward: payload.owner_reward,
       isOwnerView,
     }
-    incomeTargetModalOpen.value = true
-
-    // Auto-dismiss after 4 seconds
-    setTimeout(() => {
-      closeIncomeTargetModal()
-    }, 4000)
+    enqueueModal({ type: 'incomeTarget', data })
   }
 
   function closeIncomeTargetModal(): void {
@@ -143,6 +223,8 @@ export function useAchievementModals() {
     // Clear data after animation completes
     setTimeout(() => {
       incomeTargetModalData.value = null
+      // Process queue after modal closes
+      processQueue()
     }, 300)
   }
 
@@ -168,5 +250,10 @@ export function useAchievementModals() {
     incomeTargetModalData: readonly(incomeTargetModalData),
     showIncomeTargetCompleted,
     closeIncomeTargetModal,
+
+    // Queue utilities (exposed for testing)
+    pendingModals: readonly(pendingModals),
+    processQueue,
   }
 }
+

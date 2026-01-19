@@ -116,6 +116,41 @@ const avatarUrl = computed<string | null>(() => {
   return authStore.user?.avatar ?? null
 })
 
+// ========================================
+// Asset Management
+// ========================================
+
+const bootstrapStore = useBootstrapStore()
+const showAssetModal = ref(false)
+
+/**
+ * Icon based on current asset download status.
+ */
+const assetStatusIcon = computed(() => {
+  if (bootstrapStore.isDownloading) return 'i-lucide-loader-2'
+  if (bootstrapStore.isDownloadComplete) return 'i-lucide-check-circle'
+  return 'i-lucide-download'
+})
+
+/**
+ * Icon color based on asset status.
+ */
+const assetStatusIconColor = computed(() => {
+  if (bootstrapStore.isDownloading) return 'text-primary'
+  if (bootstrapStore.isDownloadComplete) return 'text-success'
+  return 'text-neutral-400'
+})
+
+/**
+ * Title text for asset status.
+ */
+const assetStatusTitle = computed(() => {
+  if (bootstrapStore.isDownloading) return 'Downloading...'
+  if (bootstrapStore.isDownloadComplete) return 'All Downloaded'
+  if (bootstrapStore.assetPhase === 'error') return 'Download Error'
+  return 'Ready to Download'
+})
+
 async function handleAvatarSelected(file: File) {
   try {
     isUploadingAvatar.value = true
@@ -279,6 +314,56 @@ watch(
           Submit
         </UButton>
       </UForm>
+
+      <!-- Asset Management Section -->
+      <div class="mt-8">
+        <h3 class="text-lg font-semibold text-white mb-3">Asset Management</h3>
+        
+        <div class="rounded-lg bg-neutral-900 p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800">
+                <UIcon 
+                  :name="assetStatusIcon" 
+                  :class="['h-5 w-5', assetStatusIconColor, bootstrapStore.isDownloading ? 'animate-spin' : '']" 
+                />
+              </div>
+              <div>
+                <p class="font-medium text-white">{{ assetStatusTitle }}</p>
+                <p class="text-sm text-neutral-400">
+                  {{ bootstrapStore.cachedAssetCount }} / {{ bootstrapStore.totalAssetCount }} assets
+                </p>
+              </div>
+            </div>
+            <UButton 
+              variant="outline" 
+              color="neutral"
+              icon="i-lucide-settings"
+              size="sm"
+              @click="showAssetModal = true"
+            >
+              Manage
+            </UButton>
+          </div>
+          
+          <!-- Progress bar when downloading -->
+          <div v-if="bootstrapStore.isDownloading" class="mt-3">
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
+              <div
+                class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out"
+                :style="{ width: `${bootstrapStore.downloadPercent}%` }"
+              />
+            </div>
+            <p class="mt-1 text-xs text-neutral-500">
+              {{ bootstrapStore.downloadPercent }}% complete
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Asset Manager Modal -->
+      <AssetManagerModal v-model="showAssetModal" />
     </div>
   </main>
 </template>
+

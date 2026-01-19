@@ -228,6 +228,17 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     await cacheStorage.initCacheStorage()
     await assetIndex.initAssetIndex()
 
+    // Debug: Log catalog state before filtering
+    log.debug('Gift catalog state:', {
+      totalGifts: giftCatalog.value.length,
+      sampleGift: giftCatalog.value[0] ? {
+        id: giftCatalog.value[0].id,
+        name: giftCatalog.value[0].name,
+        asset_type: giftCatalog.value[0].asset_type,
+        animation_url: giftCatalog.value[0].animation_url,
+      } : 'NO GIFTS',
+    })
+
     // Build queue from gift catalog
     const items: EnqueueItem[] = giftCatalog.value
       .filter((gift) => gift.animation_url && gift.asset_type !== 'image')
@@ -238,6 +249,13 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
         giftId: gift.id,
         sortOrder: gift.sort_order,
       }))
+
+    // Debug: Log filtered items count
+    log.debug('Filtered assets:', {
+      totalFiltered: items.length,
+      allWithAnimationUrl: giftCatalog.value.filter(g => g.animation_url).length,
+      nonImageAssets: giftCatalog.value.filter(g => g.asset_type !== 'image').length,
+    })
 
     if (items.length === 0) {
       log.debug('No assets to download')
@@ -329,6 +347,28 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   }
 
   // ========================================
+  // Asset Download Helpers
+  // ========================================
+
+  /** Count of cached/completed assets */
+  const cachedAssetCount = computed(() => assetProgress.value?.completed ?? 0)
+
+  /** Count of total assets to download */
+  const totalAssetCount = computed(() => assetProgress.value?.total ?? 0)
+
+  /** Download percentage (0-100) */
+  const downloadPercent = computed(() => {
+    if (!assetProgress.value || assetProgress.value.total === 0) return 0
+    return Math.round((assetProgress.value.completed / assetProgress.value.total) * 100)
+  })
+
+  /** Check if download is in progress */
+  const isDownloading = computed(() => assetPhase.value === 'downloading')
+
+  /** Check if all assets are downloaded */
+  const isDownloadComplete = computed(() => assetPhase.value === 'complete')
+
+  // ========================================
   // Return
   // ========================================
 
@@ -368,6 +408,13 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     startAssetDownload,
     enqueueAsset,
     setCellularConsent,
+
+    // Asset Download Helpers
+    cachedAssetCount,
+    totalAssetCount,
+    downloadPercent,
+    isDownloading,
+    isDownloadComplete,
   }
 }, {
   persist: {

@@ -203,19 +203,11 @@ async function processQueue(): Promise<void> {
 
 /**
  * Check if we should request cellular consent.
+ * Per user requirement: download silently on any network.
+ * Consent is no longer required for any asset type.
  */
-function shouldRequestConsent(item: DownloadQueueItem): boolean {
-  if (cellularConsentGiven) return false
-  if (item.priority === 'critical') return false
-  if (!isMeteredConnection()) return false
-
-  // Calculate remaining download size
-  const remainingSize = queue.reduce(
-    (sum, q) => sum + (q.sortOrder ?? 0) * 100000, // Estimate if no size
-    0
-  )
-
-  return remainingSize > ASSET_CONFIG.CELLULAR_THRESHOLD_BYTES
+function shouldRequestConsent(_item: DownloadQueueItem): boolean {
+  return false
 }
 
 /**

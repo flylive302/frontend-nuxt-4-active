@@ -18,8 +18,8 @@ const badgeDisplay = computed(() => {
   <article class="relative overflow-hidden border border-white/50" @click="roomStore.setCurrentRoom(props.room)">
     <figure class="h-full w-full">
       <NuxtImg
-          :src="props.room.logo"
-          :alt="props.room.name"
+          :src="props.room.logo ?? undefined"
+          :alt="props.room.name ?? undefined"
           class="h-full w-full object-cover"
           preload
       />

@@ -62,6 +62,7 @@ export const GENDER_LABELS: Record<ProfileGender, string> = {
  * Updated 2026-01-16: avatar is now string, removed gift coin totals
  */
 export interface UserProfile {
+  id: number
   name: string | null
   signature: string
   avatar: string | null  // Single URL - use Nuxt Image for transforms
