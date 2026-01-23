@@ -28,20 +28,6 @@ const todayTotal = computed(() => incomeStore.summary?.total_today ?? '0')
 const weekTotal = computed(() => incomeStore.summary?.total_this_week ?? '0')
 
 /**
- * Format amount for display.
- */
-function formatAmount(amount: string): string {
-  const value = parseFloat(amount)
-  if (value >= 1_000_000) {
-    return (value / 1_000_000).toFixed(2) + 'M'
-  }
-  if (value >= 1_000) {
-    return (value / 1_000).toFixed(2) + 'K'
-  }
-  return value.toFixed(2)
-}
-
-/**
  * Get icon for earning source.
  */
 function getSourceIcon(source: RecentEarning['source']): string {
@@ -89,11 +75,11 @@ function getSourceColor(source: RecentEarning['source']): string {
       <div class="grid grid-cols-2 gap-2 mb-3">
         <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <p class="text-xs text-muted">Today</p>
-          <p class="text-lg font-bold text-tertiary">+{{ formatAmount(todayTotal) }}</p>
+          <p class="text-lg font-bold text-tertiary">{{ formatCurrency(todayTotal) }}</p>
         </div>
         <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <p class="text-xs text-muted">This Week</p>
-          <p class="text-lg font-bold text-success">+{{ formatAmount(weekTotal) }}</p>
+          <p class="text-lg font-bold text-success">{{ formatCurrency(weekTotal) }}</p>
         </div>
       </div>
 
@@ -122,7 +108,7 @@ function getSourceColor(source: RecentEarning['source']): string {
 
           <!-- Amount -->
           <div class="text-right">
-            <p class="text-sm font-bold text-tertiary">+{{ formatAmount(earning.amount) }}</p>
+            <p class="text-sm font-bold text-tertiary">{{ formatCurrency(earning.amount) }}</p>
           </div>
         </div>
       </div>

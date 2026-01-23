@@ -17,15 +17,15 @@ const { badgeModalOpen, badgeModalData, closeBadgeModal } = useAchievementModals
 const categoryStyle = computed(() => {
   switch (badgeModalData.value?.category) {
     case 'wealth':
-      return { bgColor: 'bg-amber-500/20', textColor: 'text-amber-400', icon: 'i-heroicons-currency-dollar' }
+      return { bgColor: 'bg-tertiary/20', textColor: 'text-tertiary-400', icon: 'i-lucide-gem' }
     case 'charm':
-      return { bgColor: 'bg-pink-500/20', textColor: 'text-pink-400', icon: 'i-heroicons-heart' }
+      return { bgColor: 'bg-secondary/20', textColor: 'text-secondary-400', icon: 'i-lucide-coins' }
     case 'room':
-      return { bgColor: 'bg-blue-500/20', textColor: 'text-blue-400', icon: 'i-heroicons-home' }
+      return { bgColor: 'bg-primary/20', textColor: 'text-primary-400', icon: 'i-lucide-mic' }
     case 'special':
-      return { bgColor: 'bg-purple-500/20', textColor: 'text-purple-400', icon: 'i-heroicons-star' }
+      return { bgColor: 'bg-primary/20', textColor: 'text-primary-400', icon: 'i-lucide-sparkles' }
     default:
-      return { bgColor: 'bg-primary-500/20', textColor: 'text-primary-400', icon: 'i-heroicons-trophy' }
+      return { bgColor: 'bg-primary/20', textColor: 'text-primary-400', icon: 'i-lucide-medal' }
   }
 })
 
@@ -50,8 +50,7 @@ const contextDescription = computed(() => {
   <UModal
     v-model:open="badgeModalOpen"
     :ui="{
-      content: 'bg-transparent shadow-none',
-      overlay: 'bg-black/70 backdrop-blur-sm',
+      content: 'bg-transparent ring-0',
     }"
     @close="closeBadgeModal"
   >
@@ -75,7 +74,7 @@ const contextDescription = computed(() => {
           <!-- Confetti/Glow Effect -->
           <div class="pointer-events-none absolute inset-0 overflow-hidden">
             <div
-              class="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 animate-pulse rounded-full opacity-30"
+              class="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 animate-pulse rounded-full opacity-30 blur-xl"
               :class="categoryStyle.bgColor"
             />
           </div>
@@ -88,6 +87,7 @@ const contextDescription = computed(() => {
             >
               <NuxtImg
                 v-if="badgeModalData.badgeImage"
+                provider="imagekit"
                 :src="badgeModalData.badgeImage"
                 :alt="badgeModalData.badgeName"
                 class="h-16 w-16 object-contain drop-shadow-lg"

@@ -152,6 +152,7 @@ onMounted(async () => {
       :items="(countries as Country[])"
       :loading="loading || externalDetectingLocation"
       :disabled="disabled"
+      virtualize
       label-key="name"
       placeholder="Select your country"
       :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...' }"

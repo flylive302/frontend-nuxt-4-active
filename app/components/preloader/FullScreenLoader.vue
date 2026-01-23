@@ -64,7 +64,7 @@ const progress = computed(() => {
     >
       <!-- Logo -->
       <div class="mb-8">
-        <LogoApp class="h-16 w-auto" />
+        <LogoLarge class="h-16 w-auto" />
       </div>
 
       <!-- Spinner -->
