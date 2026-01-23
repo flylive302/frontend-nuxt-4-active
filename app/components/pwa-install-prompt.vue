@@ -91,24 +91,22 @@ function handleDismiss(): void {
     leave-to-class="opacity-0 translate-y-2"
   >
     <div
-      v-if="isVisible"
-      class="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl bg-gradient-to-r from-primary/20 to-secondary/20 p-4 shadow-xl ring-1 ring-primary/30"
+        v-if="isVisible"
+        class="fixed z-99 bottom-4 left-4 right-4 mx-auto max-w-md rounded-xl bg-linear-to-tl from-primary-950 to-neutral-950 p-3 shadow-lg shadow-primary-950"
     >
       <div class="flex items-center gap-3">
         <!-- Icon -->
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/20">
-          <NuxtImg
-            src="/logos/flylive-logo-icon.webp"
+        <NuxtImg
+            src="/logos/flylive-logo-sm.webp"
             alt="FlyLive"
-            class="h-8 w-8"
-            width="32"
+            class="h-12 w-auto"
+            width="auto"
             height="32"
-          />
-        </div>
+        />
 
         <!-- Content -->
         <div class="flex-1">
-          <h4 class="text-sm font-medium text-white">
+          <h4 class="text-md font-medium text-white">
             Install FlyLive
           </h4>
           <p class="text-xs text-neutral-400">

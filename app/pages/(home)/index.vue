@@ -112,7 +112,7 @@ const banners: Banner[] = [
     text: 'Country Event'
   }),
   createBanner('recharge_tycoon', {
-    lUserName: 'Darwaish',
+    lUserName: 'Darkish',
     lFrameName: 'frames/6',
     rUserName: 'Hori',
     rFrameName: 'frames/6',

@@ -81,11 +81,11 @@ const countryCodes = computed(() => countryOptions.value.map(c => c.code))
       </template>
 
       <template #item-leading="{ item }">
-        <UIcon :name="item.icon" class="w-5 h-5 shrink-0" />
+        <UIcon :name="item?.icon" class="w-5 h-5 shrink-0" />
       </template>
 
       <template #item-label="{ item }">
-        <span class="truncate">{{ item.label }}</span>
+        <span class="truncate">{{ item?.label }}</span>
       </template>
     </USelectMenu>
 

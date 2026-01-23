@@ -88,12 +88,41 @@
 
 .scrollbar::-webkit-scrollbar
 {
-    @apply rounded-full overflow-hidden h-1;
+    border-radius: 100%;
+    overflow: hidden;
+    height: 1em;
 }
 
 .scrollbar::-webkit-scrollbar-thumb
 {
     @apply bg-linear-to-r to-primary/60 rounded-full shadow-lg shadow-primary
+}
+
+/* Marquee animation - modern replacement for deprecated <marquee> */
+.marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.marquee-text {
+    display: inline-block;
+    animation: marquee-scroll 10s linear infinite;
+    animation-delay: 2s;
+    animation-fill-mode: backwards;
+}
+
+.marquee-text:hover,
+.marquee-text:focus {
+    animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-200%);
+    }
 }
 
 .safe-area-bottom {
