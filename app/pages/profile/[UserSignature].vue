@@ -61,7 +61,6 @@ const {
   hasAgency,
   hasRoom,
   allGifts,
-  formattedStats,
   wealthLevel,
   charmLevel,
   wealthBadgeSrc,
@@ -346,9 +345,9 @@ async function goToRoom() {
       <!-- User Stats -->
       <UserStats
         class="mt-1"
-        :wealth-xp="formattedStats.wealthXp"
-        :charm-xp="formattedStats.charmXp"
-        :visits="formattedStats.visits"
+        :wealth-xp="profile?.wealth_xp"
+        :charm-xp="profile?.charm_xp"
+        :visits="String(profile?.profile_visits)"
       />
 
       <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>

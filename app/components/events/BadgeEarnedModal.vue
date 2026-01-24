@@ -52,6 +52,7 @@ const contextDescription = computed(() => {
     :ui="{
       content: 'bg-transparent ring-0',
     }"
+    class="z-90"
     @close="closeBadgeModal"
   >
     <template #content>
@@ -66,7 +67,7 @@ const contextDescription = computed(() => {
       >
         <div
           v-if="badgeModalData"
-          class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-neutral-800 to-neutral-900 p-6 text-center shadow-2xl"
+          class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-linear-to-b from-neutral-800 to-neutral-900 p-6 text-center shadow-2xl"
           role="dialog"
           aria-labelledby="badge-modal-title"
           aria-describedby="badge-modal-description"

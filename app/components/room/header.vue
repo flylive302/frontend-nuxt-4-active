@@ -212,8 +212,10 @@ const openLeaveDrawer = (event: Event) => {
               </div>
 
               <!-- XP Info Box -->
-              <p v-if="!loading && levelStatus"
-                class="text-base font-bold bg-neutral-950 rounded-md px-2 py-1 leading-tight text-shadow-md inset-shadow-sm">
+              <p
+                v-if="!loading && levelStatus"
+                class="text-base font-bold bg-neutral-950 rounded-md px-2 py-1 leading-tight text-shadow-md inset-shadow-sm"
+              >
                 You have <span class="text-primary">{{ formattedCurrentXP }} (XP)</span>
                 You Need <span class="text-primary">{{ formattedXpRemaining }} (XP)</span>
                 Experience Points more to reach Level {{ nextLevel }}

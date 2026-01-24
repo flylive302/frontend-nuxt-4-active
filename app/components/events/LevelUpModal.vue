@@ -52,6 +52,7 @@ const formattedXp = computed(() => {
       content: 'bg-transparent shadow-none ring-0',
       overlay: 'bg-black/70 backdrop-blur-sm',
     }"
+    class="z-90"
     @close="closeLevelUpModal"
   >
     <template #content>

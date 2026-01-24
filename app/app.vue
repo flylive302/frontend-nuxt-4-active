@@ -139,7 +139,7 @@ watch(
     <!-- Storage Permission Banner (auto-shows on first visit) -->
     <StoragePermissionBanner />
 
-    <!-- PWA Install Prompt (auto-shows when browser fires beforeinstallprompt) -->
+    <!-- PWA Install Prompt (auto-shows when browser fires before install prompt) -->
     <PwaInstallPrompt />
 
     <!-- Update Available Toast (auto-shows when new SW version is ready) -->

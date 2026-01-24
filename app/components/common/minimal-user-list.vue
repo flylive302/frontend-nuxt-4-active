@@ -66,7 +66,7 @@ console.log(props.user)
             <span :class="{ 'marquee-text': isOverflowing }">{{ user.name }}</span>
           </h3>
           <UBadge
-              color="secondary"
+              :color="getGenderInfo(user.gender).color"
               :icon="getGenderInfo(user.gender).icon"
               size="xs"
               square
@@ -97,7 +97,7 @@ console.log(props.user)
       </div>
     </div>
 
-    <div v-if="slots.actions" class="flex">
+    <div v-if="slots.actions">
       <slot name="actions"/>
     </div>
   </div>

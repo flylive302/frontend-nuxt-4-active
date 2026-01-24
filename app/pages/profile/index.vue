@@ -47,7 +47,7 @@ onMounted(() => {
     <NavAlt sub-menu-to="/profile/edit">My Profile</NavAlt>
 
     <AltHero class="z-20">
-      <div class="flex flex-col justify-center min-h-[55vw] bg-gradient-to-br to-primary/30">
+      <div class="flex flex-col justify-center min-h-[55vw] bg-linear-to-br to-primary/30">
         <NuxtLink 
           v-if="authStore.user" 
           :to="{ path: '/profile/' + authStore.user.signature }" 

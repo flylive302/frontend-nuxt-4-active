@@ -31,10 +31,7 @@ const { countries } = useCountries()
 
 const form = ref<Form<LoginFormState> | null>(null)
 
-const { isSubmitting, generalError, getFieldError, handleSubmit } = useAuthForm({
-  formRef: form,
-  successMessage: 'Welcome back!',
-})
+const { isSubmitting, generalError, getFieldError, handleSubmit } = useAuthForm({ formRef: form })
 
 const phoneError = computed(() => getFieldError('phone'))
 

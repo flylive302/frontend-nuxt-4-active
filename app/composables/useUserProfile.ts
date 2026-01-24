@@ -20,12 +20,6 @@ interface UseUserProfileOptions {
   perPage?: number
 }
 
-interface FormattedStats {
-  visits: string
-  wealthXp: string
-  charmXp: string
-}
-
 // ========================================
 // Composable
 // ========================================
@@ -102,16 +96,6 @@ export function useUserProfile(
    * Whether the user has a room.
    */
   const hasRoom = computed(() => profile.value?.room_id !== null)
-
-  /**
-   * Formatted stats for display using currency utilities.
-   * Note: total_gift_coins_sent/received removed - use wealth_xp/charm_xp
-   */
-  const formattedStats = computed<FormattedStats>(() => ({
-    visits: String(profile.value?.profile_visits ?? 0),
-    wealthXp: formatCurrency(profile.value?.wealth_xp),
-    charmXp: formatCurrency(profile.value?.charm_xp),
-  }))
 
   /**
    * Wealth badge image URL from computed level info.
@@ -277,7 +261,6 @@ export function useUserProfile(
     hasAgency,
     hasRoom,
     allGifts,
-    formattedStats,
 
     // Level info
     wealthLevel,

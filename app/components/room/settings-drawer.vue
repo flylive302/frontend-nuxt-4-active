@@ -155,48 +155,34 @@ onMounted(async () => {
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-3 pb-4">
 
-        <!-- Room Info Section -->
-        <div class="rounded-xl p-4 shadow-sm border border-white/10 bg-elevated/50">
-          <div class="flex items-center gap-3">
-            <LazyUserAvatar :img="thisRoom?.logo" class="size-16" />
-            <div>
-              <h3 class="text-lg font-bold">{{ thisRoom?.name }}</h3>
-              <p class="text-sm text-muted">Level {{ thisRoom?.current_level ?? 0 }}</p>
-              <p class="text-xs text-muted">Owner: {{ thisRoom?.owner?.name }}</p>
-            </div>
-          </div>
-        </div>
-
         <!-- Admin Actions (Owner/Admin only) -->
         <template v-if="canManageMembers">
           <SectionTitle>Room Management</SectionTitle>
 
           <!-- Manage Members -->
           <UButton
+            color="info"
             icon="i-lucide-users"
-            color="primary"
-            variant="soft"
-            class="w-full justify-start"
+            trailing-icon="i-lucide-chevron-right"
+            variant="subtle"
+            size="xl"
+            class="w-full justify-center"
             @click="handleOpenMembersPanel"
           >
             Manage Members
-            <template #trailing>
-              <UIcon name="i-lucide-chevron-right" />
-            </template>
           </UButton>
 
           <!-- Invite User -->
           <UButton
-            icon="i-lucide-user-plus"
             color="success"
-            variant="soft"
-            class="w-full justify-start"
+            icon="i-lucide-user-plus"
+            trailing-icon="i-lucide-chevron-right"
+            variant="subtle"
+            size="xl"
+            class="w-full justify-center"
             @click="handleOpenInviteModal"
           >
             Invite User
-            <template #trailing>
-              <UIcon name="i-lucide-chevron-right" />
-            </template>
           </UButton>
         </template>
 
@@ -204,9 +190,11 @@ onMounted(async () => {
         <template v-if="membershipState === 'none'">
           <SectionTitle>Join This Room</SectionTitle>
           <UButton
+            color="info"
             icon="i-lucide-user-plus"
-            color="primary"
-            variant="soft"
+            trailing-icon="i-lucide-chevron-right"
+            variant="subtle"
+            size="xl"
             class="w-full justify-center"
             :loading="actionLoading"
             @click="handleRequestToJoin"
@@ -216,13 +204,14 @@ onMounted(async () => {
         </template>
 
         <!-- Pending Request Actions -->
-        <template v-else-if="membershipState === 'pending_request'">
+        <template v-else-if="membershipState == 'pending_request'">
           <SectionTitle>Join Request Pending</SectionTitle>
           <p class="text-sm text-muted text-center">Your request is awaiting approval.</p>
           <UButton
             icon="i-lucide-x"
             color="warning"
-            variant="soft"
+            variant="subtle"
+            size="xl"
             class="w-full justify-center"
             :loading="actionLoading"
             @click="handleCancelRequest"
@@ -239,8 +228,9 @@ onMounted(async () => {
             <UButton
               icon="i-lucide-check"
               color="success"
-              variant="soft"
-              class="flex-1 justify-center"
+              variant="subtle"
+              size="xl"
+              class="w-full justify-center"
               :loading="actionLoading"
               @click="handleAcceptInvitation"
             >
@@ -249,8 +239,9 @@ onMounted(async () => {
             <UButton
               icon="i-lucide-x"
               color="error"
-              variant="soft"
-              class="flex-1 justify-center"
+              variant="subtle"
+              size="xl"
+              class="w-full justify-center"
               :loading="actionLoading"
               @click="handleDeclineInvitation"
             >
@@ -265,7 +256,8 @@ onMounted(async () => {
           <UButton
             icon="i-lucide-log-out"
             color="error"
-            variant="soft"
+            variant="subtle"
+            size="xl"
             class="w-full justify-center"
             :loading="actionLoading"
             @click="handleLeaveRoom"

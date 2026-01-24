@@ -249,7 +249,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                       {{ entry.rank }}
                     </UBadge>
 
-                    <MinimalUserList :user="entry.user">
+                    <MinimalUserList class="grow" :user="entry.user">
                       <UButton size="xs" variant="soft" color="tertiary" icon="i-lucide-coins" class="mr-1 px-1">
                         {{ formatCurrency(entry.total_spent) }}
                       </UButton>

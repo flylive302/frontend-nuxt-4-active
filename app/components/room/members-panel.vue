@@ -10,6 +10,7 @@
 // ========================================
 
 import type { RoomMember, RoomJoinRequest } from "~/types/room";
+import MinimalUserList from "~/components/common/minimal-user-list.vue";
 
 // ========================================
 // Props
@@ -108,12 +109,6 @@ async function handleReject(request: RoomJoinRequest) {
 
 async function handleUnblock(userId: number) {
   await unblockUser(props.roomId, userId);
-}
-
-function handleMemberClick(member: RoomMember) {
-  // Open member profile modal
-  selectedMember.value = member;
-  showMemberProfile.value = true;
 }
 
 // Admin actions with optimistic updates
@@ -272,15 +267,12 @@ function getMemberActions(member: RoomMember) {
             v-for="tab in tabs"
             :key="tab.value"
             :color="activeTab === tab.value ? 'primary' : 'neutral'"
-            :variant="activeTab === tab.value ? 'solid' : 'ghost'"
-            size="sm"
+            :variant="activeTab === tab.value ? 'solid' : 'soft'"
+            :icon="tab.icon"
             @click="activeTab = tab.value"
           >
-            <UIcon :name="tab.icon" class="mr-1" />
             {{ tab.label }}
-            <UBadge v-if="tab.badge" color="error" size="xs" class="ml-1">{{
-              tab.badge
-            }}</UBadge>
+            <UBadge v-if="tab.badge" color="error" class="ml-1 font-bold px-1 py-0">{{ tab.badge }}</UBadge>
           </UButton>
         </div>
 
@@ -296,8 +288,8 @@ function getMemberActions(member: RoomMember) {
             No members yet
           </div>
           <div
-            v-else
             v-for="member in members.items"
+            v-else
             :key="member.id"
             class="flex items-center gap-3 p-2 rounded-lg bg-elevated/30 hover:bg-elevated/50 transition"
           >
@@ -351,47 +343,40 @@ function getMemberActions(member: RoomMember) {
             No pending requests
           </div>
           <div
-            v-else
             v-for="request in joinRequests.items"
+            v-else
             :key="request.id"
             class="bg-linear-to-bl to-neutral-950 rounded-lg border border-primary/30 overflow-hidden"
           >
             <!-- User Info -->
-            <div class="flex gap-2 p-2 border-b border-black">
-              <LazyUserAvatar :img="request.user?.avatar" class="size-12" />
-              <div class="flex-1">
-                <p class="font-semibold truncate">{{ request.user?.name }}</p>
-                <ProfileBadge
-                  v-if="request.user?.signature"
-                  :txt="request.user.signature"
-                />
-              </div>
-            </div>
+            <MinimalUserList :user="request.user">
+              <template #actions>
+                <!-- Request Message -->
+                <div v-if="request.message" class="p-2 bg-muted/20">
+                  <p class="text-sm italic">"{{ request.message }}"</p>
+                </div>
 
-            <!-- Request Message -->
-            <div v-if="request.message" class="p-2 bg-muted/20">
-              <p class="text-sm italic">"{{ request.message }}"</p>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex">
-              <UButton
-                color="success"
-                variant="soft"
-                class="flex-1 justify-center rounded-none"
-                @click="handleApprove(request)"
-              >
-                Approve
-              </UButton>
-              <UButton
-                variant="soft"
-                color="error"
-                class="flex-1 justify-center rounded-none"
-                @click="handleReject(request)"
-              >
-                Reject
-              </UButton>
-            </div>
+                <!-- Actions -->
+                <div class="flex">
+                  <UButton
+                      color="success"
+                      variant="soft"
+                      class="flex-1 justify-center rounded-none"
+                      @click="handleApprove(request)"
+                  >
+                    Approve
+                  </UButton>
+                  <UButton
+                      variant="soft"
+                      color="error"
+                      class="flex-1 justify-center rounded-none"
+                      @click="handleReject(request)"
+                  >
+                    Reject
+                  </UButton>
+                </div>
+              </template>
+            </MinimalUserList>
           </div>
         </div>
 
@@ -407,8 +392,8 @@ function getMemberActions(member: RoomMember) {
             No blocked users
           </div>
           <div
-            v-else
             v-for="block in blockedUsers"
+            v-else
             :key="block.id"
             class="flex items-center gap-3 p-2 rounded-lg bg-elevated/30"
           >

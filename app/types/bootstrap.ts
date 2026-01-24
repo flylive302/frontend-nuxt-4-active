@@ -16,14 +16,15 @@ export interface MinimalUser {
   id: number
   name: string
   signature: string
-  avatar: string | null
-  gender: string | null
-  email: string | null
-  phone: string | null
-  country: string | null
-  date_of_birth: string | null
+  phone: string
+  country: string
   wealth_xp: string
   charm_xp: string
+  frame: string | null
+  avatar: string | null
+  email: string | null
+  gender: string | null
+  date_of_birth: string | null
 }
 
 /**
@@ -36,15 +37,16 @@ export interface BootstrapUser {
   name: string
   signature: string
   avatar: string | null
+  frame: string | null
 
   // Phone (essential for auth)
-  phone: string | null
-  phone_country: string | null
-  phone_country_code: string | null
+  phone: string
+  phone_country: string
+  phone_country_code: string
 
   // Demographics
-  gender: 'male' | 'female' | null
-  date_of_birth: string | null
+  gender: 'male' | 'female'
+  date_of_birth: string
   email: string | null  // Added for profile editing
 
   // Economy

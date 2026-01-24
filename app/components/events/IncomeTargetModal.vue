@@ -56,6 +56,7 @@ const formattedReward = computed(() => {
       content: 'bg-transparent shadow-none border-none focus-outline-none ring-0',
       overlay: 'bg-neutral-950/20 backdrop-blur-xs',
     }"
+    class="z-90"
     @close="closeIncomeTargetModal"
   >
     <template #content>

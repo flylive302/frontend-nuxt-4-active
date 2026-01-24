@@ -1,5 +1,5 @@
 import type { User } from './auth';
-import type { BootstrapRoom } from './bootstrap';
+import type {BootstrapRoom, MinimalUser} from './bootstrap';
 
 /**
  * Room type alias for BootstrapRoom.
@@ -80,7 +80,7 @@ export interface RoomJoinRequest {
   room_id: number
   room?: BootstrapRoom
   user_id: number
-  user: User
+  user: MinimalUser
   status: RoomJoinRequestStatus
   message?: string
   created_at: string

@@ -244,7 +244,22 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Add self to participants
     if (authStore.user) {
-      const participant = userToParticipant(authStore.user, { isSpeaker: false });
+      const participant = userToParticipant(
+        {
+          id: authStore.user.id,
+          name: authStore.user.name,
+          signature: authStore.user.signature,
+          frame: authStore.user.frame,
+          email: authStore.user.email,
+          phone: authStore.user.phone,
+          avatar: authStore.user.avatar,
+          gender: authStore.user.gender,
+          country: authStore.user.phone_country_code,
+          date_of_birth: authStore.user.date_of_birth,
+          wealth_xp: authStore.user.wealth_xp,
+          charm_xp: authStore.user.charm_xp,
+        }, { isSpeaker: false }
+      );
       roomStore.addParticipant(participant);
     }
 
@@ -253,20 +268,24 @@ export function useRoomAudio(): UseRoomAudioReturn {
     if (response.participants && response.participants.length > 0) {
       log.debug('Adding', response.participants.length, 'existing participants');
       for (const p of response.participants) {
-        roomStore.addParticipant({
-          id: p.id,
-          name: p.name,
-          signature: p.signature,
-          email: p.email,
-          phone: p.phone,
-          avatar: p.avatar,
-          gender: p.gender,
-          country: p.country,
-          date_of_birth: p.date_of_birth,
-          wealth_xp: p.wealth_xp,
-          charm_xp: p.charm_xp,
-          isSpeaker: p.isSpeaker,
-        });
+        const participant = userToParticipant(
+            {
+              id: p.id,
+              name: p.name,
+              signature: p.signature,
+              frame: p.frame,
+              email: p.email,
+              phone: p.phone,
+              avatar: p.avatar,
+              gender: p.gender,
+              country: p.country,
+              date_of_birth: p.date_of_birth,
+              wealth_xp: p.wealth_xp,
+              charm_xp: p.charm_xp,
+            }, { isSpeaker: false }
+        );
+
+        roomStore.addParticipant(participant);
       }
     }
 
