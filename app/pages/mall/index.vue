@@ -54,13 +54,13 @@ const currentProps = computed(() => mallStore.catalog.items)
 
 onMounted(async () => {
   // Reset currentType to ensure fresh state on navigation
-  mallStore.currentType = null
+  mallStore.currentType = undefined
   
   // Fetch types first to populate tabs
   await mallStore.fetchTypes()
 
   // Set initial type to first available type after types are loaded
-  const firstType = mallStore.orderedTypes[0]?.type ?? null
+  const firstType = mallStore.orderedTypes[0]?.type ?? undefined
   mallStore.currentType = firstType
 
   // Now fetch catalog with correct type filter
@@ -72,8 +72,8 @@ onMounted(async () => {
 // ========================================
 
 async function handleTabChange(index: number): Promise<void> {
-  const type = mallStore.orderedTypes[index]?.type ?? null
-  await mallStore.setType(type as PropTypeEnum | null)
+  const type = mallStore.orderedTypes[index]?.type ?? undefined
+  await mallStore.setType(type as PropTypeEnum | undefined)
 }
 
 function handleSelectProp(prop: typeof mallStore.catalog.items[number]): void {

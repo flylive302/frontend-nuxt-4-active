@@ -38,7 +38,7 @@ const tabItems = computed(() => {
  * Selected tab value synced with store.
  */
 const selectedTab = computed({
-  get: () => mallStore.currentType ?? tabItems.value[0]?.value ?? null,
+  get: () => mallStore.currentType ?? tabItems.value[0]?.value ?? undefined,
   set: (val) => { mallStore.currentType = val as typeof mallStore.currentType },
 })
 
@@ -53,13 +53,13 @@ const currentUserProps = computed(() => mallStore.userProps.items)
 
 onMounted(async () => {
   // Reset currentType to ensure fresh state on navigation
-  mallStore.currentType = null
+  mallStore.currentType = undefined
   
   // Fetch types first, then set initial type before fetching user props
   await mallStore.fetchTypes()
   
   // Set initial type to first available type after types are loaded
-  const firstType = mallStore.orderedTypes[0]?.type ?? null
+  const firstType = mallStore.orderedTypes[0]?.type ?? undefined
   mallStore.currentType = firstType
   
   // Now fetch user props and equipped with correct type filter
@@ -74,8 +74,8 @@ onMounted(async () => {
 // ========================================
 
 async function handleTabChange(index: number): Promise<void> {
-  const type = mallStore.orderedTypes[index]?.type ?? null
-  mallStore.currentType = type as PropTypeEnum | null
+  const type = mallStore.orderedTypes[index]?.type ?? undefined
+  mallStore.currentType = type as PropTypeEnum | undefined
   // Refetch with new type filter for server-side filtering
   await mallStore.fetchUserProps({}, true)
 }

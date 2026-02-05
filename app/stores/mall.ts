@@ -82,7 +82,7 @@ export const useMallStore = defineStore('mall', () => {
   })
   const equippedLoading = ref(false)
 
-  const currentType = ref<PropType | null>(null)
+  const currentType = ref<PropType | undefined>(undefined)
   const currentStatus = ref<PropStatus | 'all'>('active')
   const selectedProp = ref<Prop | null>(null)
 
@@ -194,7 +194,7 @@ export const useMallStore = defineStore('mall', () => {
   /**
    * Set current type filter and refetch catalog.
    */
-  async function setType(type: PropType | null): Promise<void> {
+  async function setType(type: PropType | undefined): Promise<void> {
     currentType.value = type
     await fetchCatalog({}, true)
   }
@@ -489,7 +489,7 @@ export const useMallStore = defineStore('mall', () => {
       chat_bubble: null,
       entry_animation: null,
     }
-    currentType.value = null
+    currentType.value = undefined
     currentStatus.value = 'active'
     selectedProp.value = null
     isPurchasing.value = false
