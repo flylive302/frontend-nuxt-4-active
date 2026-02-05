@@ -70,8 +70,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
 
     const loginPayload: LoginPayload = {
       phone: normalizePhone(dialCode, phone),
-      phone_country: countryCode,
-      phone_country_code: dialCode,
+      country: countryCode,
       password,
       remember_me: rememberMe
     }

@@ -34,10 +34,10 @@ const props = withDefaults(defineProps<{
     />
     <!-- Frame layer (on top) -->
     <SvgaPlayer
-        v-if="props.animated && props.frameName"
-        class="relative min-w-full z-10"
-        :name="props.frameName"
-        height="auto"
+      v-if="props.animated && props.frameName"
+      class="relative min-w-full z-10"
+      :name="props.frameName"
+      height="auto"
     />
   </div>
 </template>

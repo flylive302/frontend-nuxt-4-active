@@ -70,8 +70,7 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
     await register({
       name,
       phone: normalizePhone(dialCode, phone),
-      phone_country: countryCode,
-      phone_country_code: dialCode,
+      country: countryCode,
       password,
     })
 

@@ -28,8 +28,8 @@ export interface AuthResponse {
 
 export interface LoginPayload {
   phone: string
-  phone_country: string
-  phone_country_code: string
+  country: string            // ISO 3166-1 alpha-2 (backend field)
+  dial_code?: string         // For display only, not sent to backend
   password?: string
   remember_me?: boolean
 }
@@ -38,8 +38,8 @@ export interface RegisterPayload {
   name: string
   email?: string
   phone: string
-  phone_country: string
-  phone_country_code: string
+  country: string            // ISO 3166-1 alpha-2 (backend field)
+  dial_code?: string         // For display only
   password?: string
   password_confirmation?: string
 }

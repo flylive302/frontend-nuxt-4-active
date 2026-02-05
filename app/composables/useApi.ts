@@ -2,6 +2,7 @@
 // Imports & Types
 // ========================================
 import { ofetch, type FetchContext, type FetchOptions } from 'ofetch'
+import { getClientType } from './useClientInfo'
 
 // ========================================
 // Types
@@ -38,6 +39,7 @@ function getClient(baseURL: string | undefined) {
       const token = useCookie('sanctum_token')
       const xsrfToken = useCookie('XSRF-TOKEN')
 
+      // Auth headers
       if (token.value) {
         headers.set('Authorization', `Bearer ${token.value}`)
       }
@@ -45,7 +47,12 @@ function getClient(baseURL: string | undefined) {
         headers.set('X-XSRF-TOKEN', xsrfToken.value)
       }
 
+      // Standard headers
       headers.set('Accept', 'application/json')
+
+      // Device tracking headers
+      headers.set('X-Correlation-ID', crypto.randomUUID())
+      headers.set('X-Client-Type', getClientType())
 
       options.headers = headers
       options.credentials = 'include'
