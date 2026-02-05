@@ -39,7 +39,7 @@ const tabItems = computed(() => {
  * Selected tab value synced with store.
  */
 const selectedTab = computed({
-  get: () => mallStore.currentType ?? tabItems.value[0]?.value ?? null,
+  get: () => mallStore.currentType ?? tabItems.value[0]?.value ?? undefined,
   set: (val) => { mallStore.currentType = val as typeof mallStore.currentType },
 })
 
