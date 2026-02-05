@@ -108,7 +108,7 @@ onMounted(() => {
       <RoomInfo />
 
       <!-- Seats Grid -->
-      <main class="grid grid-cols-5 gap-x-4">
+      <main class="grid grid-cols-5 gap-x-2">
         <RoomSeat v-for="i in 15" :key="i" :seat-id="i" />
       </main>
 

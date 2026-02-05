@@ -46,7 +46,7 @@ const avatarSrc = computed(() => {
   return seat.value?.user?.avatar || undefined;
 });
 
-// Display name
+// Display name+
 const displayName = computed(() => {
   if (isEmpty.value) {
     return isLocked.value ? 'Locked' : `Seat ${props.seatId}`;
@@ -57,23 +57,28 @@ const displayName = computed(() => {
 
 <template>
   <div
-class="flex flex-col items-center gap-0.5 h-21 text-center cursor-pointer rounded-xl transition-all duration-300"
-    :class="{ 'ring-2 ring-cyan-500 bg-cyan-500/10 animate-pulse': isInviteTarget }" @click="openDrawer">
+    class="flex flex-col items-center gap-0 h-24 text-center cursor-pointer rounded-xl transition-all duration-300"
+    :class="{ 'ring-2 ring-cyan-500 bg-cyan-500/10 animate-pulse': isInviteTarget }" @click="openDrawer"
+  >
     <!-- Avatar with audio indicators -->
     <div class="relative w-full">
       <!-- Occupied seat: show user avatar with animation -->
       <UserAvatar v-if="!isEmpty" :animated="true" :img="avatarSrc" class="relative z-20" />
       <!-- Locked empty seat: show lock image -->
       <UserAvatar
-v-else-if="isLocked" img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
-        class="relative z-20" />
+        v-else-if="isLocked"
+        img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
+        class="relative z-20"
+      />
       <!-- Empty seat: show default placeholder -->
       <UserAvatar v-else class="relative z-20" />
 
       <!-- Mute indicator -->
       <UIcon
-v-if="!isEmpty && isMuted" name="i-lucide-mic-off"
-        class="size-4 text-white absolute bottom-0 -right-1 z-20" />
+          v-if="!isEmpty && isMuted"
+          name="i-lucide-mic-off"
+          class="size-4 text-white absolute bottom-0 -right-1 z-20"
+      />
 
       <!-- Speaking indicator -->
       <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="mice_waves/8" />
@@ -81,6 +86,7 @@ v-if="!isEmpty && isMuted" name="i-lucide-mic-off"
     </div>
 
     <!-- User name -->
+    <p v-if="seat?.user" class="text-xs truncate font-semibold">{{ formatCurrency(seat.user?.charm_xp) }}</p>
     <p class="text-xs truncate font-semibold">{{ displayName }}</p>
   </div>
 </template>
