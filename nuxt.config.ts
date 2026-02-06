@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     ssr: false,
     devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
-    modules: ['@vite-pwa/nuxt', '@nuxthub/core', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+    modules: ['@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     pwa: {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
@@ -160,21 +160,8 @@ export default defineNuxtConfig({
                 'node_modules/mime/dist/src/Mime.js': 'undefined'
             }
         },
-        // Cloudflare Pages compatibility
-        preset: 'cloudflare-pages',
-        cloudflare: {
-            pages: {
-                routes: {
-                    exclude: ['/api/*']
-                }
-            }
-        }
-    },
-    hub: {
-        // Enable Node.js compatibility for Cloudflare Workers
-        bindings: {
-            compatibilityFlags: ['nodejs_compat']
-        }
+        // Vercel deployment
+        preset: 'vercel'
     },
     runtimeConfig: {
         public: {

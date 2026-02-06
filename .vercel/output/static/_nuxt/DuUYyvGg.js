@@ -1,0 +1,1 @@
+function e(t){if(!t)return 0;const r=parseFloat(t);return isNaN(r)?0:r}function n(t){const r=typeof t=="string"?e(t):t??0;return r>=1e6?`${(r/1e6).toFixed(1)}M`:r>=1e3?`${(r/1e3).toFixed(1)}K`:r.toFixed(0)}export{n as f};
