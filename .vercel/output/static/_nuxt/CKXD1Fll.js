@@ -1,1 +1,0 @@
-function h(e){if(!e)return null;try{const[a,s,o]=e.split("-");if(!a||!s||!o)return null;const u=parseInt(a,10),t=parseInt(s,10),c=parseInt(o,10);if(isNaN(u)||isNaN(t)||isNaN(c))return null;const n=new Date,i=n.getFullYear(),l=n.getMonth()+1,g=n.getDate();let r=i-u;return(l<t||l===t&&g<c)&&r--,r>=0?r:null}catch{return null}}export{h as g};

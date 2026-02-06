@@ -1,1 +1,0 @@
-import{bo as o,T as a,A as t}from"./CVP3TXIg.js";const i=o(async()=>{const e=a();if(!e.isAuthenticated)return t("/log-in");if(!e.user?.is_profile_complete)return t("/complete-profile-data")});export{i as default};
