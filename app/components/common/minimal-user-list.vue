@@ -66,7 +66,7 @@ console.log(props.user)
             <span :class="{ 'marquee-text': isOverflowing }">{{ user.name }}</span>
           </h3>
           <UBadge
-              :color="getGenderInfo(user.gender).color"
+              :color="getGenderInfo(user.gender).color as 'primary' | 'secondary' | 'tertiary' | 'neutral'"
               :icon="getGenderInfo(user.gender).icon"
               size="xs"
               square

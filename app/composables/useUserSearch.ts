@@ -96,6 +96,7 @@ export function useUserSearch() {
         phone: u.phone,
         country: u.country,
         avatar: u.avatar,
+        frame: u.frame,
       }))
 
       if (reset) {

@@ -7,6 +7,7 @@ import type {
   Seat,
 } from '~/types/audio';
 import { SEAT_COUNT, MAX_CHAT_MESSAGES } from '~/constants/room';
+import { createLogger } from '~/utils/logger';
 
 // ============================================
 // Types
@@ -240,14 +241,28 @@ export const useRoomStore = defineStore('roomStore', () => {
    */
   function updateSeat(seatIndex: number, user: RoomParticipant | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
+      const log = createLogger('[RoomStore]');
+      log.debug('updateSeat called:', {
+        seatIndex,
+        userId: user?.id,
+        userName: user?.name,
+        avatar: user?.avatar,
+        country: user?.country,
+      });
+
       const currentSeat = seats.value[seatIndex];
-      seats.value[seatIndex] = {
+      const newSeat: Seat = {
         index: seatIndex,
         user,
         isMuted,
         isActive: audioState.value.activeSpeakerId === user?.id,
         isLocked: currentSeat?.isLocked ?? false, // Preserve lock state
       };
+
+      // Force reactivity by creating new array reference
+      seats.value = seats.value.map((s, i) => i === seatIndex ? newSeat : s);
+
+      log.debug('Seat updated, avatar:', seats.value[seatIndex]?.user?.avatar);
 
       // Update participant's speaker status
       if (user) {

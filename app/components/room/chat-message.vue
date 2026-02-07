@@ -25,7 +25,7 @@ const formattedTime = computed(() => {
 <template>
   <div class="flex gap-2 py-1.5 px-2 hover:bg-white/5 rounded transition-colors">
     <!-- Avatar -->
-    <UserAvatar :img="message.avatar" :animated="true" size="xs" class="flex-shrink-0 size-10" />
+    <UserAvatar :img="message.avatar" :frame-name="message.frame" :animated="true" size="xs" class="shrink-0 size-10" />
 
     <!-- Content -->
     <div class="flex-1 min-w-0 bg-neutral-800 rounded-md p-2">
@@ -40,7 +40,7 @@ const formattedTime = computed(() => {
       </div>
 
       <!-- Message -->
-      <p class="text-xs text-gray-200 break-words">
+      <p class="text-xs text-gray-200 wrap-break-word">
         {{ message.content }}
       </p>
     </div>

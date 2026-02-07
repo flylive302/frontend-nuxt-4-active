@@ -215,6 +215,7 @@ export interface ChatMessageEvent {
   userId: number;
   userName: string;
   avatar?: string;
+  frame?: string;
   content: string;
   type: string;
   timestamp: number;

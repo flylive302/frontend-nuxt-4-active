@@ -172,7 +172,8 @@ const canManageMembers = computed(() => {
 
           <div class="flex flex-col items-center text-center relative z-10">
             <LazyUserAvatar
-              :img="currentSeat.user.avatar ?? undefined" 
+              :img="currentSeat.user.avatar ?? undefined"
+              :frame-name="currentSeat.user.frame ?? undefined"
               animated class="size-24" 
               @click="async () => {
                 try {
@@ -189,12 +190,18 @@ const canManageMembers = computed(() => {
 
             <div class="flex items-center gap-2 mt-1">
               <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
-              <UBadge color="secondary" :icon="getGenderInfo(currentSeat.user.gender).icon" size="sm"
-                class="w-fit text-white p-1">
+              <UBadge
+                  color="secondary"
+                  :icon="getGenderInfo(currentSeat.user.gender).icon"
+                  size="sm"
+                  class="w-fit text-white p-1"
+              >
                 {{ getAge(currentSeat.user.date_of_birth) }}
               </UBadge>
-              <UIcon :name="`i-flag-${currentSeat.user.country?.toLowerCase()}-4x3`"
-                class="rounded overflow-hidden h-6 size-8 shadow-lg" />
+              <UIcon
+                  :name="`i-flag-${currentSeat.user.country?.toLowerCase()}-4x3`"
+                  class="rounded overflow-hidden h-6 size-8 shadow-lg"
+              />
             </div>
 
           </div>

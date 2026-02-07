@@ -151,6 +151,14 @@ export function setupRoomEventHandlers({
 
   // Seat events
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
+    log.debug('seat:updated received:', {
+      seatIndex: event.seatIndex,
+      userId: event.user?.id,
+      userName: event.user?.name,
+      avatar: event.user?.avatar,
+      country: event.user?.country,
+      gender: event.user?.gender,
+    });
     roomStore.updateSeat(event.seatIndex, event.user, event.isMuted);
   });
 

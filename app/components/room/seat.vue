@@ -46,6 +46,15 @@ const avatarSrc = computed(() => {
   return seat.value?.user?.avatar || undefined;
 });
 
+// Avatar source - only set when seat is occupied
+const userFrame = computed(() => {
+  if (isEmpty.value) {
+    return undefined; // Don't pass img prop when empty
+  }
+  console.log(seat.value?.user?.frame)
+  return seat.value?.user?.frame || undefined;
+});
+
 // Display name+
 const displayName = computed(() => {
   if (isEmpty.value) {
@@ -63,7 +72,7 @@ const displayName = computed(() => {
     <!-- Avatar with audio indicators -->
     <div class="relative w-full">
       <!-- Occupied seat: show user avatar with animation -->
-      <UserAvatar v-if="!isEmpty" :animated="true" :img="avatarSrc" class="relative z-20" />
+      <UserAvatar v-if="!isEmpty" :animated="true" :frame-name="userFrame" :img="avatarSrc" class="relative z-20" />
       <!-- Locked empty seat: show lock image -->
       <UserAvatar
         v-else-if="isLocked"
