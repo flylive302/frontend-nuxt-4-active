@@ -24,6 +24,7 @@ export interface AuthResponse {
   token: string
   token_type: string
   expires_at: string
+  msab_token: string
 }
 
 export interface LoginPayload {

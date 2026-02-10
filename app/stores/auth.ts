@@ -17,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<BootstrapUser | null>(null)
   const token = ref<string | null>(null)
+  const msabToken = ref<string | null>(null)
   const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle')
 
   // ========================================
@@ -47,11 +48,19 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Set the MSAB audio server JWT.
+   */
+  function setMsabToken(newToken: string | null) {
+    msabToken.value = newToken
+  }
+
+  /**
    * Log out the current user.
    */
   function logout() {
     setUser(null)
     setToken(null)
+    setMsabToken(null)
     status.value = 'unauthenticated'
     navigateTo('/log-in')
   }
@@ -83,15 +92,17 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     token,
+    msabToken,
     status,
     isAuthenticated,
     setUser,
     setToken,
+    setMsabToken,
     logout,
     updateBalance,
   }
 }, {
   persist: {
-    pick: ['token'],
+    pick: ['token', 'msabToken'],
   },
 })

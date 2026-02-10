@@ -1,0 +1,1 @@
+import{d as e,o as s,c as a,f as r}from"./CnvGSHo7.js";const t={"aria-labelledby":"forgot-password-heading"},f=e({__name:"forgot-password",setup(n){return(d,o)=>(s(),a("main",t,[...o[0]||(o[0]=[r("h2",{id:"forgot-password-heading",class:"font-bold"},"Forgot Password",-1)])]))}});export{f as default};

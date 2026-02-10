@@ -172,10 +172,10 @@ export function useAudioSocket(): UseAudioSocketReturn {
    */
   function connect() {
     // Validate prerequisites
-    if (!authStore.token) {
+    if (!authStore.msabToken) {
       error.value = 'Authentication required';
       status.value = 'error';
-      log.error('Cannot connect: No auth token');
+      log.error('Cannot connect: No MSAB token');
       return;
     }
 
@@ -205,7 +205,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // Create new socket connection
     socket.value = io(serverUrl, {
       auth: {
-        token: authStore.token,
+        token: authStore.msabToken,
       },
       reconnection: true,
       reconnectionAttempts: 5,

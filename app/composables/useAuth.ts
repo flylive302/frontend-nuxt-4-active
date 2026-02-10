@@ -33,6 +33,7 @@ export function useAuth() {
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
+    authStore.setMsabToken(data.msab_token)
 
     // Note: fetchBootstrap is NOT called here because the cookie isn't
     // immediately available to the API client in the same request cycle.
@@ -58,6 +59,7 @@ export function useAuth() {
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
+    authStore.setMsabToken(data.msab_token)
 
     // Note: fetchBootstrap is NOT called here because the cookie isn't
     // immediately available to the API client in the same request cycle.

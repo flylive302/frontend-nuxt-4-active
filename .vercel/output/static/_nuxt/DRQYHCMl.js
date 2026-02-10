@@ -1,0 +1,1 @@
+import{_ as a}from"./DG24KOf2.js";import{aX as s,o as c,c as _,b as o,f as r,bp as m,E as l}from"./CnvGSHo7.js";const p={},d={class:"px-3 mb-28"};function u(e,f){const t=a,n=m;return c(),_("main",null,[o(t),r("div",d,[o(n,{class:"mx-auto"}),l(e.$slots,"default")])])}const B=s(p,[["render",u]]);export{B as default};
