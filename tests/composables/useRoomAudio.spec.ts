@@ -78,6 +78,8 @@ const mockMediasoup = {
   producer: ref(null),
   consumers: ref(new Map()),
   isProducing: ref(false),
+  isLocalMuted: ref(false),
+  isDeviceLoaded: ref(false),
   loadDevice: vi.fn().mockResolvedValue(undefined),
   createTransports: vi.fn().mockResolvedValue(undefined),
   startAudio: vi.fn().mockResolvedValue(undefined),
@@ -85,6 +87,7 @@ const mockMediasoup = {
   consumeProducer: vi.fn().mockResolvedValue(undefined),
   stopConsumer: vi.fn(),
   cleanup: vi.fn(),
+  toggleLocalMute: vi.fn().mockReturnValue(true),
 }
 
 // Mock useAudioSocket as global (Nuxt auto-import)
@@ -122,7 +125,7 @@ let mockRoomStore: {
   updateSeat: ReturnType<typeof vi.fn>
   clearSeat: ReturnType<typeof vi.fn>
   setParticipantMuted: ReturnType<typeof vi.fn>
-  setActiveSpeaker: ReturnType<typeof vi.fn>
+  setActiveSpeakers: ReturnType<typeof vi.fn>
   setSeatLocked: ReturnType<typeof vi.fn>
   setAudioConnected: ReturnType<typeof vi.fn>
   setAudioProducing: ReturnType<typeof vi.fn>
@@ -157,7 +160,7 @@ describe('useRoomAudio', () => {
       clearSeat: vi.fn(),
       setParticipantMuted: vi.fn(),
       setSeatLocked: vi.fn(),
-      setActiveSpeaker: vi.fn(),
+      setActiveSpeakers: vi.fn(),
       setAudioConnected: vi.fn(),
       setAudioProducing: vi.fn(),
       setAudioMuted: vi.fn(),
@@ -443,6 +446,130 @@ describe('useRoomAudio', () => {
       mockAudioSocket.status.value = 'connected'
 
       expect(roomAudio.isConnected.value).toBe(true)
+    })
+  })
+
+  describe('toggleLocalMute()', () => {
+    it('should emit audio:selfMute when muting', async () => {
+      mockRoomStore.currentRoom = { id: 'room-123' }
+      mockAudioSocket.status.value = 'connected'
+      mockMediasoup.producer.value = { id: 'producer-uuid' }
+      mockMediasoup.toggleLocalMute.mockReturnValue(true) // muted
+
+      // Mock the socket emit to call ack callback with success
+      mockSocket.value.emit.mockImplementation((
+        event: string,
+        _payload: unknown,
+        callback?: (response: unknown) => void
+      ) => {
+        if ((event === 'audio:selfMute' || event === 'audio:selfUnmute') && callback) {
+          callback({ success: true })
+        }
+      })
+
+      vi.resetModules()
+      vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+      vi.stubGlobal('useMediasoup', () => mockMediasoup)
+      vi.stubGlobal('useAuthStore', () => mockAuthStore)
+      vi.stubGlobal('useGiftStore', () => mockGiftStore)
+      vi.stubGlobal('useGiftData', () => mockGiftData)
+      vi.stubGlobal('useToast', () => mockToast)
+      vi.stubGlobal('navigateTo', vi.fn())
+      vi.stubGlobal('refundPendingCoins', vi.fn())
+      vi.stubGlobal('ref', ref)
+      vi.stubGlobal('computed', computed)
+      vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('onUnmounted', vi.fn())
+
+      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const roomAudio = useRoomAudio()
+
+      const result = roomAudio.toggleLocalMute()
+
+      expect(result).toBe(true)
+      expect(mockSocket.value.emit).toHaveBeenCalledWith(
+        'audio:selfMute',
+        { roomId: 'room-123', producerId: 'producer-uuid' },
+        expect.any(Function)
+      )
+    })
+
+    it('should emit audio:selfUnmute when unmuting', async () => {
+      mockRoomStore.currentRoom = { id: 'room-123' }
+      mockAudioSocket.status.value = 'connected'
+      mockMediasoup.producer.value = { id: 'producer-uuid' }
+      mockMediasoup.toggleLocalMute.mockReturnValue(false) // unmuted
+
+      mockSocket.value.emit.mockImplementation((
+        event: string,
+        _payload: unknown,
+        callback?: (response: unknown) => void
+      ) => {
+        if ((event === 'audio:selfMute' || event === 'audio:selfUnmute') && callback) {
+          callback({ success: true })
+        }
+      })
+
+      vi.resetModules()
+      vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+      vi.stubGlobal('useMediasoup', () => mockMediasoup)
+      vi.stubGlobal('useAuthStore', () => mockAuthStore)
+      vi.stubGlobal('useGiftStore', () => mockGiftStore)
+      vi.stubGlobal('useGiftData', () => mockGiftData)
+      vi.stubGlobal('useToast', () => mockToast)
+      vi.stubGlobal('navigateTo', vi.fn())
+      vi.stubGlobal('refundPendingCoins', vi.fn())
+      vi.stubGlobal('ref', ref)
+      vi.stubGlobal('computed', computed)
+      vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('onUnmounted', vi.fn())
+
+      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const roomAudio = useRoomAudio()
+
+      const result = roomAudio.toggleLocalMute()
+
+      expect(result).toBe(false)
+      expect(mockSocket.value.emit).toHaveBeenCalledWith(
+        'audio:selfUnmute',
+        { roomId: 'room-123', producerId: 'producer-uuid' },
+        expect.any(Function)
+      )
+    })
+
+    it('should not emit if no producer', async () => {
+      mockRoomStore.currentRoom = { id: 'room-123' }
+      mockAudioSocket.status.value = 'connected'
+      mockMediasoup.producer.value = null // no producer
+      mockMediasoup.toggleLocalMute.mockReturnValue(true)
+
+      vi.resetModules()
+      vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+      vi.stubGlobal('useMediasoup', () => mockMediasoup)
+      vi.stubGlobal('useAuthStore', () => mockAuthStore)
+      vi.stubGlobal('useGiftStore', () => mockGiftStore)
+      vi.stubGlobal('useGiftData', () => mockGiftData)
+      vi.stubGlobal('useToast', () => mockToast)
+      vi.stubGlobal('navigateTo', vi.fn())
+      vi.stubGlobal('refundPendingCoins', vi.fn())
+      vi.stubGlobal('ref', ref)
+      vi.stubGlobal('computed', computed)
+      vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('onUnmounted', vi.fn())
+
+      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const roomAudio = useRoomAudio()
+
+      roomAudio.toggleLocalMute()
+
+      expect(mockSocket.value.emit).not.toHaveBeenCalledWith(
+        'audio:selfMute',
+        expect.any(Object),
+        expect.any(Function)
+      )
     })
   })
 })

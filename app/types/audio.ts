@@ -135,8 +135,18 @@ export interface NewProducerEvent {
 
 export interface ActiveSpeakerEvent {
   userId: string;
-  volume: number;
+  activeSpeakers?: string[];
   timestamp: number;
+}
+
+export interface SelfMutePayload {
+  roomId: string;
+  producerId: string;
+}
+
+export interface SelfMuteResponse {
+  success?: boolean;
+  error?: string;
 }
 
 // ============================================
@@ -186,6 +196,7 @@ export interface SeatClearedEvent {
 export interface SeatUserMutedEvent {
   userId: number;
   isMuted: boolean;
+  selfMuted?: boolean;
 }
 
 export interface SeatLockedEvent {
@@ -274,7 +285,7 @@ export interface AudioState {
   isConnected: boolean;
   isProducing: boolean;
   isMuted: boolean;
-  activeSpeakerId: number | null;
+  activeSpeakerIds: number[];
 }
 
 /**

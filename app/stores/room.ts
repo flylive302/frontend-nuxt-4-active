@@ -33,7 +33,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     isConnected: false,
     isProducing: false,
     isMuted: false,
-    activeSpeakerId: null,
+    activeSpeakerIds: [],
   });
 
   // ========================================
@@ -167,12 +167,16 @@ export const useRoomStore = defineStore('roomStore', () => {
     audioState.value.isMuted = muted;
   }
 
-  function setActiveSpeaker(userId: number | null) {
-    audioState.value.activeSpeakerId = userId;
+  /**
+   * Set which speakers are currently active (top 3).
+   * @param userIds - Array of active speaker user IDs
+   */
+  function setActiveSpeakers(userIds: number[]) {
+    audioState.value.activeSpeakerIds = userIds;
 
     // Update seat active state
     seats.value.forEach((seat) => {
-      seat.isActive = seat.user?.id === userId;
+      seat.isActive = seat.user != null && userIds.includes(seat.user.id);
     });
   }
 
@@ -181,7 +185,7 @@ export const useRoomStore = defineStore('roomStore', () => {
       isConnected: false,
       isProducing: false,
       isMuted: false,
-      activeSpeakerId: null,
+      activeSpeakerIds: [],
     };
     participants.value.clear();
     messages.value = [];
@@ -242,6 +246,8 @@ export const useRoomStore = defineStore('roomStore', () => {
   function updateSeat(seatIndex: number, user: RoomParticipant | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
       const log = createLogger('[RoomStore]');
+
+      // DEBUG: Full dump of incoming user data
       log.debug('updateSeat called:', {
         seatIndex,
         userId: user?.id,
@@ -249,20 +255,25 @@ export const useRoomStore = defineStore('roomStore', () => {
         avatar: user?.avatar,
         country: user?.country,
       });
+      console.log('[RoomStore] FULL USER JSON:', JSON.stringify(user));
+      console.trace('[RoomStore] updateSeat call stack');
 
       const currentSeat = seats.value[seatIndex];
       const newSeat: Seat = {
         index: seatIndex,
-        user,
+        user: user ? { ...user } : null, // Shallow clone to avoid reference issues
         isMuted,
-        isActive: audioState.value.activeSpeakerId === user?.id,
+        isActive: user != null && audioState.value.activeSpeakerIds.includes(user.id),
         isLocked: currentSeat?.isLocked ?? false, // Preserve lock state
       };
+
+      console.log('[RoomStore] newSeat.user?.avatar:', newSeat.user?.avatar);
 
       // Force reactivity by creating new array reference
       seats.value = seats.value.map((s, i) => i === seatIndex ? newSeat : s);
 
-      log.debug('Seat updated, avatar:', seats.value[seatIndex]?.user?.avatar);
+      console.log('[RoomStore] AFTER MAP - avatar:', seats.value[seatIndex]?.user?.avatar);
+      console.log('[RoomStore] AFTER MAP - FULL SEAT:', JSON.stringify(seats.value[seatIndex]));
 
       // Update participant's speaker status
       if (user) {
@@ -390,7 +401,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     setAudioConnected,
     setProducing,
     setMuted,
-    setActiveSpeaker,
+    setActiveSpeakers,
     clearAudioState,
 
     // Participant actions

@@ -8,7 +8,7 @@
  * @see useRoomEventHandlers.ts - Socket event handlers
  * @see useRoomGifts.ts - Gift queue processing
  */
-import type { JoinRoomResponse } from '~/types/audio';
+import type { JoinRoomResponse, SelfMutePayload, SelfMuteResponse } from '~/types/audio';
 import { userToParticipant } from '~/types/audio';
 import type { Ref, ComputedRef } from 'vue';
 import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
@@ -96,7 +96,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     isDeviceLoaded,
     isProducing,
     isLocalMuted,
-    toggleLocalMute,
+    toggleLocalMute: toggleMediasoupMute,
+    producer,
   } = useMediasoup(socket);
 
   // ========================================
@@ -139,6 +140,32 @@ export function useRoomAudio(): UseRoomAudioReturn {
   async function startAudio(): Promise<void> {
     await startMediasoupAudio();
     roomStore.setProducing(true);
+  }
+
+  /**
+   * Toggle local mute and notify the server.
+   * Wraps the mediasoup track toggle to also emit audio:selfMute/audio:selfUnmute,
+   * allowing the server to pause the producer and stop processing empty RTP packets.
+   */
+  function toggleLocalMute(): boolean {
+    const isMuted = toggleMediasoupMute();
+    const roomId = getCurrentRoomId();
+    const producerId = producer.value?.id;
+
+    if (roomId && producerId) {
+      const event = isMuted ? 'audio:selfMute' : 'audio:selfUnmute';
+      emitAsync<SelfMutePayload, SelfMuteResponse>(event, { roomId, producerId })
+        .then((res) => {
+          if (res.error) {
+            log.warn(`${event} failed:`, res.error);
+          }
+        })
+        .catch((err) => {
+          log.warn(`${event} emit error:`, err);
+        });
+    }
+
+    return isMuted;
   }
 
   // ========================================

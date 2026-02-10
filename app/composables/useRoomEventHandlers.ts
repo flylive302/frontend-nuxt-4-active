@@ -146,7 +146,12 @@ export function setupRoomEventHandlers({
   });
 
   socket.on('speaker:active', (event: ActiveSpeakerEvent) => {
-    roomStore.setActiveSpeaker(parseInt(event.userId));
+    // Use enriched activeSpeakers array (top 3) if available, fallback to single userId
+    const ids = event.activeSpeakers
+      ? event.activeSpeakers.map((id) => parseInt(id))
+      : [parseInt(event.userId)];
+
+    roomStore.setActiveSpeakers(ids);
   });
 
   // Seat events
@@ -183,6 +188,9 @@ export function setupRoomEventHandlers({
 
   socket.on('seat:userMuted', (event: SeatUserMutedEvent) => {
     roomStore.setParticipantMuted(event.userId, event.isMuted);
+    if (event.selfMuted !== undefined) {
+      log.debug('User', event.userId, event.isMuted ? 'self-muted' : 'self-unmuted');
+    }
   });
 
   socket.on('seat:locked', (event: SeatLockedEvent) => {
