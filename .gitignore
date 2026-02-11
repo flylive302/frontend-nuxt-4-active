@@ -6,6 +6,7 @@
 .cache
 .kiro
 .nuxtrc
+.vercel
 dist
 
 # Node dependencies

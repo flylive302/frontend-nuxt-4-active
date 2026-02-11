@@ -51,14 +51,13 @@ const userFrame = computed(() => {
   if (isEmpty.value) {
     return undefined; // Don't pass img prop when empty
   }
-  console.log(seat.value?.user?.frame)
   return seat.value?.user?.frame || undefined;
 });
 
 // Display name+
 const displayName = computed(() => {
   if (isEmpty.value) {
-    return isLocked.value ? 'Locked' : `Seat ${props.seatId}`;
+    return isLocked.value ? 'Locked' : `${props.seatId}`;
   }
   return seat.value?.user?.name || 'Unknown';
 });

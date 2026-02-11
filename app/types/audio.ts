@@ -27,13 +27,14 @@ export interface SocketErrorEvent {
 
 export interface JoinRoomPayload {
   roomId: string;
+  seatCount?: number;
 }
 
 export interface JoinRoomResponse {
   rtpCapabilities?: RtpCapabilities;
   participants?: RoomParticipant[];
-  seats?: { seatIndex: number; user: RoomParticipant | null; isMuted: boolean }[];
-  lockedSeats?: number[]; // Added: List of locked seat indices
+  seats?: { seatIndex: number; userId: number; isMuted: boolean }[];
+  lockedSeats?: number[];
   existingProducers?: { producerId: string; userId: number }[];
   error?: string;
 }
@@ -58,6 +59,20 @@ export interface RoomClosedEvent {
 }
 
 // ============================================
+// UNIFIED MEDIA RESPONSE
+// ============================================
+
+/**
+ * Unified response wrapper for all media socket events.
+ * All media event callbacks return this shape with the actual data nested inside `data`.
+ */
+export interface MediaResponse<T = Record<string, unknown>> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+
+// ============================================
 // TRANSPORT EVENTS
 // ============================================
 
@@ -66,14 +81,14 @@ export interface TransportCreatePayload {
   roomId: string;
 }
 
-export interface TransportCreateResponse {
-  id?: string;
-  iceParameters?: IceParameters;
-  iceCandidates?: IceCandidate[];
-  dtlsParameters?: DtlsParameters;
-  error?: string;
-  details?: Record<string, unknown>;
+export interface TransportCreateData {
+  id: string;
+  iceParameters: IceParameters;
+  iceCandidates: IceCandidate[];
+  dtlsParameters: DtlsParameters;
 }
+
+export type TransportCreateResponse = MediaResponse<TransportCreateData>;
 
 export interface TransportConnectPayload {
   roomId: string;
@@ -97,10 +112,11 @@ export interface AudioProducePayload {
   rtpParameters: RtpParameters;
 }
 
-export interface AudioProduceResponse {
-  id?: string;
-  error?: string;
+export interface AudioProduceData {
+  id: string;
 }
+
+export type AudioProduceResponse = MediaResponse<AudioProduceData>;
 
 export interface AudioConsumePayload {
   roomId: string;
@@ -109,13 +125,14 @@ export interface AudioConsumePayload {
   rtpCapabilities: RtpCapabilities;
 }
 
-export interface AudioConsumeResponse {
-  id?: string;
-  producerId?: string;
-  kind?: 'audio';
-  rtpParameters?: RtpParameters;
-  error?: string;
+export interface AudioConsumeData {
+  id: string;
+  producerId: string;
+  kind: 'audio';
+  rtpParameters: RtpParameters;
 }
+
+export type AudioConsumeResponse = MediaResponse<AudioConsumeData>;
 
 export interface ConsumerResumePayload {
   roomId: string;
@@ -185,7 +202,7 @@ export interface SeatResponse {
 
 export interface SeatUpdatedEvent {
   seatIndex: number;
-  user: RoomParticipant | null;
+  userId: number;
   isMuted: boolean;
 }
 
@@ -206,7 +223,7 @@ export interface SeatLockedEvent {
 
 export interface SeatInviteReceivedEvent {
   seatIndex: number;
-  invitedBy: { id: number; name: string };
+  invitedById: number;
   expiresAt: number;
   targetUserId: number;
 }
@@ -245,8 +262,6 @@ export interface GiftSendPayload {
 
 export interface GiftReceivedEvent {
   senderId: number;
-  senderName: string;
-  senderAvatar: string;
   roomId: string;
   giftId: number;
   recipientId: number;

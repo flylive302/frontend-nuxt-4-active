@@ -28,8 +28,8 @@ export interface MinimalUser {
 }
 
 /**
- * Bootstrap user (18 fields) - authenticated user from bootstrap.
- * Replaces full User type for bootstrap response.
+ * Bootstrap user - authenticated user from bootstrap.
+ * Returned by: GET /bootstrap, POST /auth/login, POST /auth/register, GET /auth/user
  */
 export interface BootstrapUser {
   // Identity
@@ -39,30 +39,28 @@ export interface BootstrapUser {
   avatar: string | null
   frame: string | null
 
-  // Phone (essential for auth)
-  phone: string
-  phone_country: string
-  phone_country_code: string
+  // Contact & Location
+  phone: string | null          // E.164 format
+  country: string | null        // ISO 2-letter code
 
   // Demographics
-  gender: 'male' | 'female'
-  date_of_birth: string
-  email: string | null  // Added for profile editing
+  gender: string | null
+  date_of_birth: string | null  // YYYY-MM-DD
 
   // Economy
-  coins: string
-  diamonds: string
-  wealth_xp: string
-  charm_xp: string
+  coins: string                 // Integer as string
+  diamonds: string              // Integer as string
+  wealth_xp: string             // Integer as string
+  charm_xp: string              // Integer as string
 
   // Profile
   is_profile_complete: boolean
 
   // Block status (auth-time checks)
   is_blocked: boolean
-  blocked_at: string | null
+  blocked_at: string | null     // ISO 8601
   blocked_reason: string | null
-  locked_until: string | null
+  locked_until: string | null   // ISO 8601
 }
 
 // ========================================

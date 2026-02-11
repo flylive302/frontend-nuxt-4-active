@@ -62,15 +62,15 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       { type: 'consumer', roomId }
     );
 
-    if (consumerResponse.error || !consumerResponse.id) {
+    if (!consumerResponse.success || !consumerResponse.data) {
       throw new Error(consumerResponse.error || 'Failed to create consumer transport');
     }
 
     consumerTransport.value = device.value.createRecvTransport({
-      id: consumerResponse.id,
-      iceParameters: consumerResponse.iceParameters!,
-      iceCandidates: consumerResponse.iceCandidates!,
-      dtlsParameters: consumerResponse.dtlsParameters!,
+      id: consumerResponse.data.id,
+      iceParameters: consumerResponse.data.iceParameters,
+      iceCandidates: consumerResponse.data.iceCandidates,
+      dtlsParameters: consumerResponse.data.dtlsParameters,
     });
 
     // Handle consumer transport connection
@@ -87,8 +87,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
           dtlsParameters,
         })
           .then((response) => {
-            if (response.error) {
-              errback(new Error(response.error));
+            if (!response.success) {
+              errback(new Error(response.error || 'Transport connect failed'));
             } else {
               callback();
             }
@@ -130,15 +130,15 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       { type: 'producer', roomId: currentRoomId.value }
     );
 
-    if (response.error || !response.id) {
+    if (!response.success || !response.data) {
       throw new Error(response.error || 'Failed to create producer transport');
     }
 
     producerTransport.value = device.value.createSendTransport({
-      id: response.id,
-      iceParameters: response.iceParameters!,
-      iceCandidates: response.iceCandidates!,
-      dtlsParameters: response.dtlsParameters!,
+      id: response.data.id,
+      iceParameters: response.data.iceParameters,
+      iceCandidates: response.data.iceCandidates,
+      dtlsParameters: response.data.dtlsParameters,
     });
 
     // Handle producer transport connection
@@ -155,8 +155,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
           dtlsParameters,
         })
           .then((response) => {
-            if (response.error) {
-              errback(new Error(response.error));
+            if (!response.success) {
+              errback(new Error(response.error || 'Transport connect failed'));
             } else {
               callback();
             }
@@ -180,10 +180,10 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
           rtpParameters,
         })
           .then((response) => {
-            if (response.error || !response.id) {
+            if (!response.success || !response.data) {
               errback(new Error(response.error || 'Failed to produce'));
             } else {
-              callback({ id: response.id });
+              callback({ id: response.data.id });
             }
           })
           .catch(errback);

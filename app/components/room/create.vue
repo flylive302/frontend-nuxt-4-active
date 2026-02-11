@@ -46,7 +46,7 @@ type RoomSchema = z.infer<typeof ROOM_SCHEMA>
 const formRef = ref<Form<RoomSchema> | null>(null)
 const state = reactive<Partial<RoomSchema>>({
   name: '',
-  country: authStore.user?.phone_country || undefined, // Fallback to undefined if null/empty
+  country: authStore.user?.country || undefined, // Fallback to undefined if null/empty
   logo: undefined,
 })
 
@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
     </UFormField>
     
     <!-- Country Selection (Only if missing) -->
-    <UFormField v-if="!authStore.user?.phone_country" label="Country" name="country" required>
+    <UFormField v-if="!authStore.user?.country" label="Country" name="country" required>
         <USelect
             v-model="state.country"
             :items="['us', 'uk', 'ca', 'de', 'fr', 'in', 'cn', 'jp', 'br', 'sa', 'ae', 'kw', 'qa', 'bh', 'om', 'lb', 'pk']" 

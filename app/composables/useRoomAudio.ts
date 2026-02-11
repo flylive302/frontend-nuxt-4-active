@@ -156,7 +156,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
       const event = isMuted ? 'audio:selfMute' : 'audio:selfUnmute';
       emitAsync<SelfMutePayload, SelfMuteResponse>(event, { roomId, producerId })
         .then((res) => {
-          if (res.error) {
+          if (!res.success) {
             log.warn(`${event} failed:`, res.error);
           }
         })
@@ -249,11 +249,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
       });
     }
 
-    // Join room via socket (send owner ID so server can cache it)
+    // Join room via socket (send owner ID and seat count so server can configure room)
     const ownerId = roomStore.currentRoom?.owner?.id;
-    const response = await emitAsync<{ roomId: string; ownerId?: number }, JoinRoomResponse>(
+    const seatCount = roomStore.currentRoom?.max_seats;
+    const response = await emitAsync<{ roomId: string; ownerId?: number; seatCount?: number }, JoinRoomResponse>(
       'room:join',
-      { roomId, ownerId }
+      { roomId, ownerId, seatCount }
     );
 
     if (response.error || !response.rtpCapabilities) {
@@ -277,11 +278,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
           name: authStore.user.name,
           signature: authStore.user.signature,
           frame: authStore.user.frame,
-          email: authStore.user.email,
-          phone: authStore.user.phone,
+          email: null,
+          phone: authStore.user.phone ?? '',
           avatar: authStore.user.avatar,
           gender: authStore.user.gender,
-          country: authStore.user.phone_country_code,
+          country: authStore.user.country ?? '',
           date_of_birth: authStore.user.date_of_birth,
           wealth_xp: authStore.user.wealth_xp,
           charm_xp: authStore.user.charm_xp,
@@ -319,7 +320,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // 2. Initialize seats from server state
     if (response.seats) {
       response.seats.forEach((seat) => {
-        roomStore.updateSeat(seat.seatIndex, seat.user, seat.isMuted);
+        roomStore.updateSeat(seat.seatIndex, seat.userId, seat.isMuted);
       });
     }
 

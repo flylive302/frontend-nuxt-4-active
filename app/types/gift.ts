@@ -81,20 +81,10 @@ export interface GiftSendPayload {
 }
 
 /**
- * Event received when a gift is sent in the room
- * Event: 'gift:received'
+ * Event received when a gift is sent in the room.
+ * Re-exported from audio.ts (single source of truth for socket event types).
  */
-export interface GiftReceivedEvent {
-  senderId: number;
-  senderName: string;
-  senderAvatar?: string;
-  roomId: string;
-  giftId: number;
-  recipientId: number;
-  quantity: number;
-  gift?: Gift;
-  totalValue?: number;
-}
+export type { GiftReceivedEvent } from './audio';
 
 // ============================================
 // GIFT TRANSACTION RESPONSE TYPES

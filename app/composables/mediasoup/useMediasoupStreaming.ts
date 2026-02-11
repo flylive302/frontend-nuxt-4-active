@@ -143,16 +143,16 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       rtpCapabilities: device.value.rtpCapabilities,
     });
 
-    if (response.error || !response.id) {
+    if (!response.success || !response.data) {
       log.error('Failed to consume:', response.error);
       return;
     }
 
     const consumer = await consumerTransport.value.consume({
-      id: response.id,
-      producerId: response.producerId!,
-      kind: response.kind!,
-      rtpParameters: response.rtpParameters!,
+      id: response.data.id,
+      producerId: response.data.producerId,
+      kind: response.data.kind,
+      rtpParameters: response.data.rtpParameters,
     });
 
     consumers.value.set(producerId, consumer);
@@ -163,7 +163,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       consumerId: consumer.id,
     });
 
-    if (resumeResponse.error) {
+    if (!resumeResponse.success) {
       log.error('Failed to resume consumer:', resumeResponse.error);
       return;
     }

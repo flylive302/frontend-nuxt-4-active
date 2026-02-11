@@ -115,15 +115,11 @@ function handleClose(): void {
           <div class="max-w-50 mx-auto">
             <!-- Frame: UserAvatar with frame -->
             <template v-if="prop.type === 'frame'">
-              <div class="w-full">
-                <UserAvatar
+              <UserAvatar
                   :animated="true"
                   :frame-name="prop.asset_url"
                   :img="authStore?.user?.avatar ?? undefined"
-                  :frame-girth="54"
-                  :top="50"
-                />
-              </div>
+              />
             </template>
 
             <!-- Entry Animation / Chat Bubble: SvgaPlayer -->

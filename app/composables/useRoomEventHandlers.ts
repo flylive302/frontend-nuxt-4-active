@@ -158,13 +158,9 @@ export function setupRoomEventHandlers({
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
     log.debug('seat:updated received:', {
       seatIndex: event.seatIndex,
-      userId: event.user?.id,
-      userName: event.user?.name,
-      avatar: event.user?.avatar,
-      country: event.user?.country,
-      gender: event.user?.gender,
+      userId: event.userId,
     });
-    roomStore.updateSeat(event.seatIndex, event.user, event.isMuted);
+    roomStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
   });
 
   socket.on('seat:cleared', (event: SeatClearedEvent) => {
@@ -201,10 +197,13 @@ export function setupRoomEventHandlers({
   socket.on('seat:invite:received', (event: SeatInviteReceivedEvent) => {
     // Only show toast if this invite is for the current user
     if (event.targetUserId === authStore.user?.id) {
+      const inviter = roomStore.participants.get(event.invitedById);
+      const inviterName = inviter?.name ?? 'Someone';
+
       toast.add({
         id: `seat-invite-${event.seatIndex}`,
         title: 'Seat Invitation',
-        description: `${event.invitedBy.name} invited you to Seat ${event.seatIndex + 1}`,
+        description: `${inviterName} invited you to Seat ${event.seatIndex + 1}`,
         color: 'primary',
         duration: 30000,
         actions: [
@@ -236,6 +235,9 @@ export function setupRoomEventHandlers({
     // Skip if current user is the sender (they already see optimistic playback)
     if (event.senderId === authStore.user?.id) return;
 
+    // Look up sender from participants store
+    const sender = roomStore.participants.get(event.senderId);
+
     // Get gift data to enqueue playback
     const { getGiftById } = useGiftData();
     const gift = getGiftById(event.giftId);
@@ -252,8 +254,8 @@ export function setupRoomEventHandlers({
         giftStore.enqueuePlayback({
           gift,
           senderId: event.senderId,
-          senderName: event.senderName,
-          senderAvatar: event.senderAvatar,
+          senderName: sender?.name ?? 'Unknown',
+          senderAvatar: sender?.avatar ?? undefined,
           recipientIds: [event.recipientId],
           quantity: event.quantity,
         });

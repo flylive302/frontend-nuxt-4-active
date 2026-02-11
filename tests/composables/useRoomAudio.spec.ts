@@ -75,7 +75,7 @@ const mockAudioSocket = {
 
 const mockMediasoup = {
   device: ref(null),
-  producer: ref(null),
+  producer: ref(null as { id: string } | null),
   consumers: ref(new Map()),
   isProducing: ref(false),
   isLocalMuted: ref(false),

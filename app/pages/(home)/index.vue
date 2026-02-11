@@ -19,7 +19,7 @@ const { fetchRooms } = useRoom()
 const authStore = useAuthStore()
 
 // Initial selection defaults to user's country (if supported) or 'pk'
-const userCountry = authStore.user?.phone_country?.toLowerCase()
+const userCountry = authStore.user?.country?.toLowerCase()
 const selectedCountry = ref<string>(userCountry || 'pk')
 
 const { data: roomsResponse } = await useAsyncData(

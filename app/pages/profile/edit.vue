@@ -206,11 +206,6 @@ watch(
         formState.gender = GENDER_STRING_TO_NUMBER[user.gender] ?? undefined
       }
 
-      // Initialize email if empty
-      if (user.email && !formState.email) {
-        formState.email = user.email
-      }
-
       // Initialize dateOfBirth if empty
       if (user.date_of_birth && !formState.dateOfBirth) {
         try {

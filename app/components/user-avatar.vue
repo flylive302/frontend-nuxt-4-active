@@ -1,50 +1,63 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
-  frameName?: string    // SVGA name, e.g. "frames/admin/cs_leader"
-  img?: string | undefined | null // avatar url
-  top?: number          // % for absolute center point
-  left?: number         // % for absolute center point
-  frameGirth?: number
+  frameName?: string
+  img?: string | undefined | null
   animated?: boolean
-  lazy?: boolean        // Enable lazy loading (default: true for performance)
 }>(), {
-  frameName: 'frames/5',
+  frameName: '',
   img: undefined,
-  top: 55,
-  left: 50,
-  frameGirth: 70,
   animated: false,
-  lazy: true,
 });
+
+// Use computed for performance (caching) and reactivity.
+// Without computed/ref, values won't update when props change.
+const frameConfig = computed(() => {
+  const parts = props.frameName?.split('-') ?? []
+
+  // Custom format: name-girth-padding-top-left
+  if (parts.length === 5) {
+    const [name, girth, padd, top, left] = parts
+    return {
+      name: name || 'frames/5',
+      padding: `${padd}%`,
+      style: {
+        // Fix scaling: convert string to number before division
+        transform: `scale(${+(girth || 100) / 100})`,
+        top: top || '0%',
+        left: left || '0%'
+      }
+    }
+  }
+
+  // Fallback defaults
+  return {
+    name: 'frames/5',
+    padding: '16%',
+    style: {
+      transform: `scale(${+(110) / 100})`,
+      top: '0%',
+      left: '0%'
+    }
+  }
+})
 </script>
 
 <template>
   <div class="relative aspect-square cursor-pointer">
-    <!-- Avatar Image -->
-    <NuxtImg
-        class="absolute-middle aspect-square rounded-full object-contain"
-        :src="props.img ?? 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp'"
-        alt="avatar"
-        :loading="lazy ? 'lazy' : 'eager'"
-        :style="{
-          top: `${props.top}%`,
-          left: `${props.left}%`,
-          width: `${props.frameGirth}%`
-        }"
-    />
-    <!-- Frame layer (on top) -->
-    <SvgaPlayer
-      v-if="props.animated && props.frameName"
-      class="relative min-w-full z-10"
-      :name="props.frameName"
-      height="auto"
-    />
+    <div class="relative" :style="{ padding: frameConfig.padding }">
+      <!-- Avatar Image -->
+      <NuxtImg
+        class="aspect-square rounded-full object-contain w-full"
+        :src="props.img ?? 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp'" alt="avatar"
+        loading="lazy"
+      />
+      <!-- Frame layer (on top) -->
+      <SvgaPlayer
+        v-if="props.animated && frameConfig.name"
+        class="absolute" height="auto"
+        :name="frameConfig.name"
+        :style="frameConfig.style"
+      />
+    </div>
   </div>
 </template>
-
-<style scoped>
-.absolute-middle {
-  position: absolute;
-  transform: translate(-50%, -50%);
-}
-</style>

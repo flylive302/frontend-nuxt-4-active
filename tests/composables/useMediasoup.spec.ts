@@ -71,25 +71,31 @@ vi.stubGlobal('RTCPeerConnection', vi.fn().mockImplementation(() => ({
 describe('useMediasoup', () => {
   const mockSocket = ref({
     emit: vi.fn((event: string, payload: unknown, callback?: (response: unknown) => void) => {
-      // Simulate server responses
+      // Simulate server responses (MSAB wrapped format)
       if (callback) {
         if (event === 'transport:create') {
           callback({
-            id: 'transport-123',
-            iceParameters: {},
-            iceCandidates: [],
-            dtlsParameters: {},
+            success: true,
+            data: {
+              id: 'transport-123',
+              iceParameters: {},
+              iceCandidates: [],
+              dtlsParameters: {},
+            },
           })
         } else if (event === 'transport:connect') {
           callback({ success: true })
         } else if (event === 'audio:produce') {
-          callback({ id: 'producer-123' })
+          callback({ success: true, data: { id: 'producer-123' } })
         } else if (event === 'audio:consume') {
           callback({
-            id: 'consumer-123',
-            producerId: 'producer-456',
-            kind: 'audio',
-            rtpParameters: {},
+            success: true,
+            data: {
+              id: 'consumer-123',
+              producerId: 'producer-456',
+              kind: 'audio',
+              rtpParameters: {},
+            },
           })
         } else if (event === 'consumer:resume') {
           callback({ success: true })

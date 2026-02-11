@@ -88,11 +88,13 @@ export function useSeatActions({
     // Update local seat state for the current user
     // (Socket.IO's socket.to() excludes sender, so we update locally)
     if (response.success && authStore.user) {
+      // Ensure current user is in participants map for updateSeat lookup
       const currentUser = userToParticipant({
         ...authStore.user,
-        country: authStore.user.phone_country
+        email: null,
       } as MinimalUser, { isSpeaker: true, seatIndex });
-      roomStore.updateSeat(seatIndex, currentUser, false);
+      roomStore.addParticipant(currentUser);
+      roomStore.updateSeat(seatIndex, authStore.user.id, false);
     }
 
     return response.success ?? false;

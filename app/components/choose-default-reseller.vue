@@ -316,11 +316,8 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       <div class="max-w-20 flex flex-col justify-center">
         <UserAvatar
             :img="selectedReseller.avatar || undefined"
+            frame-name="frames/admin/coin_reseller-116-20-0-0"
             animated
-            lazy
-            :frame-girth="54"
-            :top="48"
-            frame-name="frames/admin/coin_reseller"
         />
       </div>
 

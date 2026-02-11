@@ -239,41 +239,29 @@ export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
   /**
    * Update a seat with user and mute state.
+   * Looks up the user from the participants store by userId.
    * @param seatIndex - Zero-based seat index (0-14)
-   * @param user - Participant to assign, or null to clear
+   * @param userId - User ID to assign, or null to clear
    * @param isMuted - Whether user is server-muted
    */
-  function updateSeat(seatIndex: number, user: RoomParticipant | null, isMuted: boolean) {
+  function updateSeat(seatIndex: number, userId: number | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
       const log = createLogger('[RoomStore]');
+      const user = userId !== null ? participants.value.get(userId) ?? null : null;
 
-      // DEBUG: Full dump of incoming user data
-      log.debug('updateSeat called:', {
-        seatIndex,
-        userId: user?.id,
-        userName: user?.name,
-        avatar: user?.avatar,
-        country: user?.country,
-      });
-      console.log('[RoomStore] FULL USER JSON:', JSON.stringify(user));
-      console.trace('[RoomStore] updateSeat call stack');
+      log.debug('updateSeat:', { seatIndex, userId, userName: user?.name });
 
       const currentSeat = seats.value[seatIndex];
       const newSeat: Seat = {
         index: seatIndex,
-        user: user ? { ...user } : null, // Shallow clone to avoid reference issues
+        user: user ? { ...user } : null,
         isMuted,
         isActive: user != null && audioState.value.activeSpeakerIds.includes(user.id),
-        isLocked: currentSeat?.isLocked ?? false, // Preserve lock state
+        isLocked: currentSeat?.isLocked ?? false,
       };
-
-      console.log('[RoomStore] newSeat.user?.avatar:', newSeat.user?.avatar);
 
       // Force reactivity by creating new array reference
       seats.value = seats.value.map((s, i) => i === seatIndex ? newSeat : s);
-
-      console.log('[RoomStore] AFTER MAP - avatar:', seats.value[seatIndex]?.user?.avatar);
-      console.log('[RoomStore] AFTER MAP - FULL SEAT:', JSON.stringify(seats.value[seatIndex]));
 
       // Update participant's speaker status
       if (user) {

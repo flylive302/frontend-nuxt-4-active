@@ -1,1 +1,0 @@
-import{bo as r,T as i,A as t}from"./_B5ndHNj.js";const u=r(o=>{const e=i();if(!e.isAuthenticated)return t("/log-in");if(e.user?.is_profile_complete===!0&&o.path==="/complete-profile-data")return t("/")});export{u as default};
