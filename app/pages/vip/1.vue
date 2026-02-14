@@ -39,7 +39,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   2: {
     level: 2,
-    color: '#57541b',
+    color: '#5a441a',
     privileges: [
       { icon: 'badge.png', name: 'Elite Badge' },
       { icon: 'frame.png', name: 'Gold Frame' },
@@ -48,7 +48,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   3: {
     level: 3,
-    color: '#40b65c',
+    color: '#1f5e33',
     privileges: [
       { icon: 'badge.png', name: 'Premium Badge' },
       { icon: 'frame.png', name: 'Emerald Frame' },
@@ -57,7 +57,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   4: {
     level: 4,
-    color: '#c88226',
+    color: '#2a667b',
     privileges: [
       { icon: 'badge.png', name: 'Royal Badge' },
       { icon: 'frame.png', name: 'Bronze Frame' },
@@ -66,7 +66,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   5: {
     level: 5,
-    color: '#a04fd5',
+    color: '#2d1757',
     privileges: [
       { icon: 'badge.png', name: 'Noble Badge' },
       { icon: 'frame.png', name: 'Purple Frame' },
@@ -75,7 +75,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   6: {
     level: 6,
-    color: '#d41ee1',
+    color: '#57195e',
     privileges: [
       { icon: 'badge.png', name: 'Supreme Badge' },
       { icon: 'frame.png', name: 'Magenta Frame' },
@@ -84,7 +84,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   7: {
     level: 7,
-    color: '#2332d6',
+    color: '#321609',
     privileges: [
       { icon: 'badge.png', name: 'Legend Badge' },
       { icon: 'frame.png', name: 'Sapphire Frame' },
@@ -93,7 +93,7 @@ const VIP_CONFIGS: Record<VipLevel, VipConfig> = {
   },
   8: {
     level: 8,
-    color: '#ff1111',
+    color: '#562913',
     privileges: [
       { icon: 'badge.png', name: 'Mythic Badge' },
       { icon: 'frame.png', name: 'Ruby Frame' },
@@ -231,7 +231,7 @@ const setActiveVip = (level: VipLevel) => {
               v-for="level in VIP_LEVELS"
               :key="`vip-tab-${level}`"
               variant="soft"
-              class="min-w-fit shrink-0 rounded-none bg-gradient-to-b transition-transform duration-200"
+              class="min-w-fit shrink-0 rounded-none bg-linear-to-b transition-transform duration-200"
               :class="activeVip === level ? 'scale-110 to-tertiary' : 'to-muted'"
               :aria-pressed="activeVip === level"
               :aria-label="`Select VIP Level ${level}`"
@@ -240,6 +240,8 @@ const setActiveVip = (level: VipLevel) => {
             VIP {{ level }}
           </UButton>
         </div>
+
+        <div class="text-lg font-bold text-white text-center">PRICE 90000 / 7 Days</div>
 
         <!-- Action Buttons -->
         <div class="flex gap-2 px-3 py-2">
