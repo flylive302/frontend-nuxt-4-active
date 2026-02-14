@@ -6,8 +6,8 @@ import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { Colors } from '~/types/colors'
 import type { CoinRequest } from '~/types/coin-request'
-import { useCoinRequests } from '~/composables/useCoinRequests'
-import { useColorClasses } from '~/composables/useColorClasses'
+import { useCoinRequests } from '~/composables/economy/useCoinRequests'
+import { useColorClasses } from '~/composables/shared/useColorClasses'
 
 // ========================================
 // Props & Emits

@@ -7,7 +7,7 @@ import type {
   CoinRequestPaginatedResponse,
   CreateCoinRequestPayload
 } from '~/types/coin-request'
-import { useApi } from './useApi'
+import { useApi } from '../shared/useApi'
 
 // ========================================
 // Composable

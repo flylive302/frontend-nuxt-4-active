@@ -4,8 +4,8 @@
 // ========================================
 import { ref, computed, watch } from 'vue'
 import { useDebounce } from '@vueuse/core'
-import { useUserSearch } from '~/composables/useUserSearch'
-import { useColorClasses } from '~/composables/useColorClasses'
+import { useUserSearch } from '~/composables/user/useUserSearch'
+import { useColorClasses } from '~/composables/shared/useColorClasses'
 import type { MinimalUser } from '~/types/bootstrap'
 
 // ========================================

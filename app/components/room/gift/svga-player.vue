@@ -4,7 +4,7 @@
  *
  * Plays SVGA animation gift assets with completion callback.
  */
-import { useSvgaPlayer } from '~/composables/useSvgaPlayer';
+import { useSvgaPlayer } from '~/composables/gift/useSvgaPlayer';
 
 const props = withDefaults(
   defineProps<{

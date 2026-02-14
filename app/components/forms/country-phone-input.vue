@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Country } from '~/composables/usePhoneSchema'
-import { useCountries } from '~/composables/useCountries'
+import type { Country } from '~/composables/auth/usePhoneSchema'
+import { useCountries } from '~/composables/shared/useCountries'
 
 interface Props {
   disabled?: boolean

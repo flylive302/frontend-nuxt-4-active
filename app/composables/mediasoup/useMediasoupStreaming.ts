@@ -3,7 +3,7 @@ import type {
   AudioConsumeResponse,
   ConsumerResumeResponse,
 } from '~/types/audio';
-import type { AudioSocket } from '../useAudioSocket';
+import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
 import { useMediasoupTransports } from './useMediasoupTransports';
 import { createEmitAsync } from '~/utils/socket';

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoomAudio } from '~/composables/useRoomAudio'
+import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[SeatDrawer]')

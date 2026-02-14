@@ -3,8 +3,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, toRef } from 'vue'
 import type { CoinRequest, CoinRequestStatus } from '~/types/coin-request'
-import { useCoinRequests } from '~/composables/useCoinRequests'
-import { useColorClasses } from '~/composables/useColorClasses'
+import { useCoinRequests } from '~/composables/economy/useCoinRequests'
+import { useColorClasses } from '~/composables/shared/useColorClasses'
 import type { Colors } from '~/types/colors'
 
 defineOptions({ name: 'CoinRequestsList' })

@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   Prop,
   PropType,
@@ -47,6 +48,7 @@ interface UserPropsState {
 // ========================================
 
 export const useMallStore = defineStore('mall', () => {
+  const log = createLogger('[MallStore]')
   const { api, normalizeError } = useApi()
   const toast = useToast()
 
@@ -90,6 +92,16 @@ export const useMallStore = defineStore('mall', () => {
   const isPurchasing = ref(false)
   const isEquipping = ref<number | null>(null)
 
+  /** Timestamp of last successful data fetch */
+  const lastFetchedAt = ref<number | null>(null)
+
+  // ========================================
+  // Constants
+  // ========================================
+
+  /** Data is considered stale after 5 minutes */
+  const STALE_TIME = 5 * 60 * 1000
+
   // ========================================
   // Computed
   // ========================================
@@ -119,6 +131,14 @@ export const useMallStore = defineStore('mall', () => {
     return userProps.value.items.filter(p => p.type === currentType.value)
   })
 
+  /**
+   * Whether cached data needs refreshing.
+   */
+  const needsRefresh = computed<boolean>(() => {
+    if (!lastFetchedAt.value) return true
+    return Date.now() - lastFetchedAt.value > STALE_TIME
+  })
+
   // ========================================
   // Catalog Actions
   // ========================================
@@ -134,10 +154,11 @@ export const useMallStore = defineStore('mall', () => {
 
     try {
       const response = await api<PropTypesResponse>('/props/types')
-      console.log('[MallStore] fetchTypes response:', response)
+      log.debug('fetchTypes response:', response)
       types.value = response.data.types
+      lastFetchedAt.value = Date.now()
     } catch (err) {
-      console.error('[MallStore] fetchTypes failed:', err)
+      log.error('fetchTypes failed:', err)
     } finally {
       typesLoading.value = false
     }
@@ -170,9 +191,9 @@ export const useMallStore = defineStore('mall', () => {
         queryParams.cursor = catalog.value.cursor
       }
 
-      console.log('[MallStore] fetchCatalog queryParams:', queryParams)
+      log.debug('fetchCatalog queryParams:', queryParams)
       const response = await api<PropListResponse>('/props', { params: queryParams })
-      console.log('[MallStore] fetchCatalog response:', response)
+      log.debug('fetchCatalog response:', response)
 
       if (reset) {
         catalog.value.items = response.data.props
@@ -185,7 +206,7 @@ export const useMallStore = defineStore('mall', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       catalog.value.error = normalized.message
-      console.error('[MallStore] fetchCatalog failed:', err)
+      log.error('fetchCatalog failed:', err)
     } finally {
       catalog.value.loading = false
     }
@@ -244,7 +265,7 @@ export const useMallStore = defineStore('mall', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       userProps.value.error = normalized.message
-      console.error('[MallStore] fetchUserProps failed:', err)
+      log.error('fetchUserProps failed:', err)
     } finally {
       userProps.value.loading = false
     }
@@ -263,7 +284,7 @@ export const useMallStore = defineStore('mall', () => {
       const response = await api<EquippedPropsResponse>('/user/props/equipped')
       equipped.value = response.data.equipped
     } catch (err) {
-      console.error('[MallStore] fetchEquipped failed:', err)
+      log.error('fetchEquipped failed:', err)
     } finally {
       equippedLoading.value = false
     }
@@ -320,7 +341,7 @@ export const useMallStore = defineStore('mall', () => {
         })
       }
 
-      console.error('[MallStore] purchaseProp failed:', err)
+      log.error('purchaseProp failed:', err)
       return false
     } finally {
       isPurchasing.value = false
@@ -384,7 +405,7 @@ export const useMallStore = defineStore('mall', () => {
         color: 'error',
       })
 
-      console.error('[MallStore] equipProp failed:', err)
+      log.error('equipProp failed:', err)
       return false
     } finally {
       isEquipping.value = null
@@ -437,7 +458,7 @@ export const useMallStore = defineStore('mall', () => {
         color: 'error',
       })
 
-      console.error('[MallStore] unequipProp failed:', err)
+      log.error('unequipProp failed:', err)
       return false
     } finally {
       isEquipping.value = null
@@ -494,6 +515,7 @@ export const useMallStore = defineStore('mall', () => {
     selectedProp.value = null
     isPurchasing.value = false
     isEquipping.value = null
+    lastFetchedAt.value = null
   }
 
   // ========================================
@@ -513,11 +535,13 @@ export const useMallStore = defineStore('mall', () => {
     selectedProp,
     isPurchasing,
     isEquipping,
+    lastFetchedAt,
 
     // Computed
     orderedTypes,
     currentEquipped,
     filteredUserProps,
+    needsRefresh,
 
     // Catalog Actions
     fetchTypes,

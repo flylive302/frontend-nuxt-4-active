@@ -2,7 +2,7 @@
 // Imports & Types
 // ========================================
 import type { ApiResponse, ResellerApiRow, UpdateDefaultResellerRequest } from '~/types/reseller'
-import { useApi } from './useApi'
+import { useApi } from '../shared/useApi'
 
 // ========================================
 // Composable

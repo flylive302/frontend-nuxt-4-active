@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRoomAudio } from '~/composables/useRoomAudio'
+import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
 import type { LeaderboardPeriod } from '~/types/leaderboard'
 import MinimalUserList from "~/components/common/minimal-user-list.vue";

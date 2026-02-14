@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   TransactionsByDate,
   TransactionSummary,
@@ -30,6 +31,7 @@ interface TransactionState {
 // ========================================
 
 export const useTransactionStore = defineStore('transactions', () => {
+  const log = createLogger('[TransactionStore]')
   const { api, normalizeError } = useApi()
 
   // ========================================
@@ -145,7 +147,7 @@ export const useTransactionStore = defineStore('transactions', () => {
     } catch (error) {
       const err = normalizeError(error)
       transactions.value.error = err.message
-      console.error('[TransactionStore] fetch failed:', error)
+      log.error('fetch failed:', error)
     } finally {
       transactions.value.loading = false
     }
@@ -200,7 +202,7 @@ export const useTransactionStore = defineStore('transactions', () => {
 
       summary.value = response.data
     } catch (error) {
-      console.error('[TransactionStore] fetchSummary failed:', error)
+      log.error('fetchSummary failed:', error)
     } finally {
       summaryLoading.value = false
     }

@@ -92,7 +92,7 @@ describe('useAudioSocket', () => {
     it('should fail if no auth token', async () => {
       mockAuthStore.token = null
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
       connect()
 
@@ -103,7 +103,7 @@ describe('useAudioSocket', () => {
     it('should set status to connecting with valid auth token', async () => {
       mockAuthStore.token = 'valid-token'
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
       connect()
 
@@ -113,7 +113,7 @@ describe('useAudioSocket', () => {
     it('should register all event handlers', async () => {
       mockAuthStore.token = 'valid-token'
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect } = useAudioSocket()
       connect()
 
@@ -131,7 +131,7 @@ describe('useAudioSocket', () => {
     it('should disconnect and cleanup', async () => {
       mockAuthStore.token = 'valid-token'
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, disconnect, status } = useAudioSocket()
       connect()
       disconnect()
@@ -142,7 +142,7 @@ describe('useAudioSocket', () => {
     })
 
     it('should handle disconnect when not connected', async () => {
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { disconnect, status } = useAudioSocket()
       disconnect()
 
@@ -152,7 +152,7 @@ describe('useAudioSocket', () => {
 
   describe('connection status', () => {
     it('should have initial status as disconnected', async () => {
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { status, isConnected } = useAudioSocket()
 
       expect(status.value).toBe('disconnected')
@@ -164,7 +164,7 @@ describe('useAudioSocket', () => {
     it('should update status on connect handler', async () => {
       mockAuthStore.token = 'valid-token'
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
       connect()
 
@@ -183,7 +183,7 @@ describe('useAudioSocket', () => {
     it('should handle disconnect event', async () => {
       mockAuthStore.token = 'valid-token'
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
       connect()
 
@@ -201,7 +201,7 @@ describe('useAudioSocket', () => {
     it('should handle connect_error event', async () => {
       mockAuthStore.token = 'valid-token'
 
-      const { useAudioSocket } = await import('../../app/composables/useAudioSocket')
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
       connect()
 

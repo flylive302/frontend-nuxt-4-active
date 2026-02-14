@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   IncomeTarget,
   IncomeSummary,
@@ -28,6 +29,7 @@ interface HistoryState {
 // ========================================
 
 export const useIncomeStore = defineStore('income', () => {
+  const log = createLogger('[IncomeStore]')
   const { api, normalizeError } = useApi()
 
   // ========================================
@@ -39,6 +41,16 @@ export const useIncomeStore = defineStore('income', () => {
   const isLoading = ref(false)
   const isTargetLoading = ref(false)
   const error = ref<string | null>(null)
+
+  /** Timestamp of last successful data fetch */
+  const lastFetchedAt = ref<number | null>(null)
+
+  // ========================================
+  // Constants
+  // ========================================
+
+  /** Data is considered stale after 5 minutes */
+  const STALE_TIME = 5 * 60 * 1000
 
   const history = ref<HistoryState>({
     items: [],
@@ -92,6 +104,14 @@ export const useIncomeStore = defineStore('income', () => {
    */
   const recentEarnings = computed(() => summary.value?.recent_earnings ?? [])
 
+  /**
+   * Whether cached data needs refreshing.
+   */
+  const needsRefresh = computed<boolean>(() => {
+    if (!lastFetchedAt.value) return true
+    return Date.now() - lastFetchedAt.value > STALE_TIME
+  })
+
   // ========================================
   // Actions
   // ========================================
@@ -113,7 +133,7 @@ export const useIncomeStore = defineStore('income', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
-      console.error('[IncomeStore] fetchStats failed:', err)
+      log.error('fetchStats failed:', err)
     } finally {
       isLoading.value = false
     }
@@ -133,7 +153,7 @@ export const useIncomeStore = defineStore('income', () => {
 
       activeTarget.value = response.data
     } catch (err) {
-      console.error('[IncomeStore] fetchActiveTarget failed:', err)
+      log.error('fetchActiveTarget failed:', err)
       activeTarget.value = null
     } finally {
       isTargetLoading.value = false
@@ -178,7 +198,7 @@ export const useIncomeStore = defineStore('income', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       history.value.error = normalized.message
-      console.error('[IncomeStore] fetchHistory failed:', err)
+      log.error('fetchHistory failed:', err)
     } finally {
       history.value.loading = false
     }
@@ -190,6 +210,7 @@ export const useIncomeStore = defineStore('income', () => {
    */
   async function fetchAll(): Promise<void> {
     await Promise.all([fetchStats(), fetchActiveTarget()])
+    lastFetchedAt.value = Date.now()
   }
 
   /**
@@ -247,6 +268,7 @@ export const useIncomeStore = defineStore('income', () => {
       hasMore: true,
       cursor: null,
     }
+    lastFetchedAt.value = null
   }
 
   // ========================================
@@ -261,6 +283,7 @@ export const useIncomeStore = defineStore('income', () => {
     isTargetLoading,
     error,
     history,
+    lastFetchedAt,
 
     // Computed
     hasActiveTarget,
@@ -268,6 +291,7 @@ export const useIncomeStore = defineStore('income', () => {
     daysRemaining,
     coinsToComplete,
     recentEarnings,
+    needsRefresh,
 
     // Actions
     fetchStats,

@@ -192,7 +192,7 @@ describe('useRoomAudio', () => {
       })
       mockAudioSocket.status.value = 'connected'
 
-      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const _roomAudio = useRoomAudio()
 
       // Note: joinRoom will try to connect and wait for socket
@@ -206,7 +206,7 @@ describe('useRoomAudio', () => {
       mockRoomStore.currentRoom = { id: 'room-123' }
       mockAudioSocket.status.value = 'connected'
 
-      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const roomAudio = useRoomAudio()
 
       roomAudio.leaveRoom()
@@ -231,7 +231,7 @@ describe('useRoomAudio', () => {
         })
         mockAudioSocket.status.value = 'connected'
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         const result = await roomAudio.takeSeat(0)
@@ -257,7 +257,7 @@ describe('useRoomAudio', () => {
         })
         mockAudioSocket.status.value = 'connected'
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         const result = await roomAudio.takeSeat(0)
@@ -280,7 +280,7 @@ describe('useRoomAudio', () => {
         })
         mockAudioSocket.status.value = 'connected'
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         const result = await roomAudio.leaveSeat()
@@ -305,7 +305,7 @@ describe('useRoomAudio', () => {
         })
         mockAudioSocket.status.value = 'connected'
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         const result = await roomAudio.assignUserToSeat(42, 3)
@@ -333,7 +333,7 @@ describe('useRoomAudio', () => {
         })
         mockAudioSocket.status.value = 'connected'
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         const result = await roomAudio.muteUser(42)
@@ -349,7 +349,7 @@ describe('useRoomAudio', () => {
         mockRoomStore.currentRoom = { id: 'room-123' }
         mockAudioSocket.status.value = 'connected'
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         roomAudio.sendChatMessage('Hello world')
@@ -385,7 +385,7 @@ describe('useRoomAudio', () => {
         vi.stubGlobal('shallowRef', shallowRef)
         vi.stubGlobal('onUnmounted', vi.fn())
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         roomAudio.sendChatMessage('Hello world')
@@ -420,7 +420,7 @@ describe('useRoomAudio', () => {
         vi.stubGlobal('shallowRef', shallowRef)
         vi.stubGlobal('onUnmounted', vi.fn())
 
-        const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
         const roomAudio = useRoomAudio()
 
         roomAudio.sendGift(123, 42, 5)
@@ -437,7 +437,7 @@ describe('useRoomAudio', () => {
 
   describe('connection status', () => {
     it('should expose connection status', async () => {
-      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const roomAudio = useRoomAudio()
 
       expect(roomAudio.connectionStatus.value).toBe('disconnected')
@@ -482,7 +482,7 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('shallowRef', shallowRef)
       vi.stubGlobal('onUnmounted', vi.fn())
 
-      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const roomAudio = useRoomAudio()
 
       const result = roomAudio.toggleLocalMute()
@@ -526,7 +526,7 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('shallowRef', shallowRef)
       vi.stubGlobal('onUnmounted', vi.fn())
 
-      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const roomAudio = useRoomAudio()
 
       const result = roomAudio.toggleLocalMute()
@@ -560,7 +560,7 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('shallowRef', shallowRef)
       vi.stubGlobal('onUnmounted', vi.fn())
 
-      const { useRoomAudio } = await import('../../app/composables/useRoomAudio')
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const roomAudio = useRoomAudio()
 
       roomAudio.toggleLocalMute()

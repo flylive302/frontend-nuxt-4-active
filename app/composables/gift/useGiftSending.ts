@@ -20,10 +20,8 @@ const _pendingRefund = ref(0);
 export function refundPendingCoins(): void {
   if (_pendingRefund.value > 0) {
     const authStore = useAuthStore();
-    if (authStore.user) {
-      const currentCoins = Number(authStore.user.coins ?? 0);
-      authStore.user.coins = String(currentCoins + _pendingRefund.value);
-    }
+    const currentCoins = Number(authStore.user?.coins ?? 0);
+    authStore.patchBalance({ coins: String(currentCoins + _pendingRefund.value) });
     _pendingRefund.value = 0;
   }
 }
@@ -36,6 +34,12 @@ export function useGiftSending() {
   const authStore = useAuthStore();
   const { sendGift: emitGift } = useRoomAudio();
   const toast = useToast();
+
+  // Initialize preload watcher (extracted from gift store — SRP fix)
+  useGiftPreload(
+    toRef(giftStore, 'selectedGift'),
+    toRef(giftStore, 'selectedRecipients')
+  );
 
   // ========================================
   // State
@@ -192,19 +196,17 @@ export function useGiftSending() {
    * Deduct coins from user balance (optimistic update)
    */
   function deductCoins(amount: number): void {
-    if (authStore.user) {
-      const currentCoins = Number(authStore.user.coins ?? 0);
-      authStore.user.coins = String(Math.max(0, currentCoins - amount));
-    }
+    const currentCoins = Number(authStore.user?.coins ?? 0);
+    authStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
   }
 
   /**
    * Refund coins to user balance (called on error rollback)
    */
   function refundCoins(amount: number): void {
-    if (authStore.user && amount > 0) {
-      const currentCoins = Number(authStore.user.coins ?? 0);
-      authStore.user.coins = String(currentCoins + amount);
+    if (amount > 0) {
+      const currentCoins = Number(authStore.user?.coins ?? 0);
+      authStore.patchBalance({ coins: String(currentCoins + amount) });
     }
   }
 

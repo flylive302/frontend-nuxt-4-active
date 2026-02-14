@@ -8,33 +8,29 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   RoomMember,
   RoomJoinRequest,
   RoomInvitation,
   RoomLevelProgress,
 } from '~/types/room'
+import type { PaginatedList } from '~/types/shared'
+import { createPaginatedList } from '~/types/shared'
 
 // ========================================
 // Types
 // ========================================
 
-/**
- * Generic paginated state for cursor-based pagination.
- */
-interface PaginatedState<T> {
-  items: T[]
-  loading: boolean
-  error: string | null
-  hasMore: boolean
-  cursor: string | null
-}
+// PaginatedList<T> is imported from ~/types/shared
 
 // ========================================
 // Store Definition
 // ========================================
 
 export const useRoomMembershipStore = defineStore('roomMembership', () => {
+  const log = createLogger('[RoomMembershipStore]')
+
   // ========================================
   // State
   // ========================================
@@ -44,45 +40,15 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   const levelLoading = ref(false)
   const levelError = ref<string | null>(null)
 
-  const members = ref<PaginatedState<RoomMember>>({
-    items: [],
-    loading: false,
-    error: null,
-    hasMore: true,
-    cursor: null,
-  })
+  const members = ref<PaginatedList<RoomMember>>(createPaginatedList())
 
-  const joinRequests = ref<PaginatedState<RoomJoinRequest>>({
-    items: [],
-    loading: false,
-    error: null,
-    hasMore: true,
-    cursor: null,
-  })
+  const joinRequests = ref<PaginatedList<RoomJoinRequest>>(createPaginatedList())
 
-  const myJoinRequests = ref<PaginatedState<RoomJoinRequest>>({
-    items: [],
-    loading: false,
-    error: null,
-    hasMore: true,
-    cursor: null,
-  })
+  const myJoinRequests = ref<PaginatedList<RoomJoinRequest>>(createPaginatedList())
 
-  const receivedInvitations = ref<PaginatedState<RoomInvitation>>({
-    items: [],
-    loading: false,
-    error: null,
-    hasMore: true,
-    cursor: null,
-  })
+  const receivedInvitations = ref<PaginatedList<RoomInvitation>>(createPaginatedList())
 
-  const sentInvitations = ref<PaginatedState<RoomInvitation>>({
-    items: [],
-    loading: false,
-    error: null,
-    hasMore: true,
-    cursor: null,
-  })
+  const sentInvitations = ref<PaginatedList<RoomInvitation>>(createPaginatedList())
 
   /**
    * Current user's room membership (null if not a member).
@@ -118,11 +84,11 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * Reset all lists.
    */
   function resetLists(): void {
-    members.value = { items: [], loading: false, error: null, hasMore: true, cursor: null }
-    joinRequests.value = { items: [], loading: false, error: null, hasMore: true, cursor: null }
-    myJoinRequests.value = { items: [], loading: false, error: null, hasMore: true, cursor: null }
-    receivedInvitations.value = { items: [], loading: false, error: null, hasMore: true, cursor: null }
-    sentInvitations.value = { items: [], loading: false, error: null, hasMore: true, cursor: null }
+    members.value = createPaginatedList()
+    joinRequests.value = createPaginatedList()
+    myJoinRequests.value = createPaginatedList()
+    receivedInvitations.value = createPaginatedList()
+    sentInvitations.value = createPaginatedList()
   }
 
   /**
@@ -205,7 +171,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * @param currentViewedRoomId - The room ID the user is currently viewing (from roomStore)
    */
   function onJoinRequestApproved(data: { room_id: number; user_id: number }, currentViewedRoomId?: number | null): void {
-    console.log('[roomMembershipStore] onJoinRequestApproved called with:', data, 'currentViewedRoomId:', currentViewedRoomId)
+    log.debug('onJoinRequestApproved called with:', data, 'currentViewedRoomId:', currentViewedRoomId)
     
     // Clear pending request (with null check)
     myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== data.room_id)
@@ -213,7 +179,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     // Set myMembership if it's for the current room
     const isCurrentRoom = data.room_id === currentViewedRoomId || data.room_id === currentRoomId.value
     if (isCurrentRoom) {
-      console.log('[roomMembershipStore] Setting myMembership for current room')
+      log.debug('Setting myMembership for current room')
       myMembership.value = {
         id: 0,
         room_id: data.room_id,
@@ -224,9 +190,9 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
         joined_at: new Date().toISOString(),
         user: null as any, // Will be refetched from API
       } as RoomMember
-      console.log('[roomMembershipStore] myMembership set to:', myMembership.value)
+      log.debug('myMembership set to:', myMembership.value)
     } else {
-      console.log('[roomMembershipStore] Room ID mismatch, not setting myMembership. data.room_id:', data.room_id, 'currentRoomId:', currentRoomId.value)
+      log.debug('Room ID mismatch, not setting myMembership. data.room_id:', data.room_id, 'currentRoomId:', currentRoomId.value)
     }
   }
 
@@ -234,7 +200,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * Handle join_request_rejected event - clear pending request.
    */
   function onJoinRequestRejected(data: { room_id: number }): void {
-    console.log('[roomMembershipStore] onJoinRequestRejected called with:', data)
+    log.debug('onJoinRequestRejected called with:', data)
     myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== data.room_id)
   }
 

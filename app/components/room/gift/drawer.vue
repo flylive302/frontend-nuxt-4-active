@@ -6,8 +6,8 @@
  * gift browsing, and send controls.
  */
 import type { Gift } from '~/types/gift';
-import { useGiftData } from '~/composables/useGiftData';
-import { useGiftSending } from '~/composables/useGiftSending';
+import { useGiftData } from '~/composables/gift/useGiftData';
+import { useGiftSending } from '~/composables/gift/useGiftSending';
 import { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 
 // Quantity options for select (mutable array for USelect compatibility)

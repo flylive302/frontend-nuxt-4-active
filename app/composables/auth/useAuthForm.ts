@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { useApi } from './useApi'
+import { useApi } from '../shared/useApi'
 
 /**
  * Field error object shape used by Nuxt UI Form component at runtime.

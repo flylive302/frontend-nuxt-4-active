@@ -21,7 +21,7 @@ import type {
   SeatInviteReceivedEvent,
 } from '~/types/audio';
 import type { AudioSocket } from './useAudioSocket';
-import { refundPendingCoins } from './useGiftSending';
+import { refundPendingCoins } from '../gift/useGiftSending';
 import { createLogger } from '~/utils/logger';
 
 // ============================================

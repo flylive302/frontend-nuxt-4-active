@@ -79,9 +79,10 @@ onMounted(() => {
     <div class="p-3 mb-12">
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
-      <NavProfileItem to="/levels/wealth" icon="i-lucide-crown" txt="Levels" />
+      <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
-      
+      <NavProfileItem to="/vip/1" icon="i-lucide-crown" txt="VIP" />
+
       <!-- Agency Section -->
       <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>
       

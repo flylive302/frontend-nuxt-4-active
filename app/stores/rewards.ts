@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   UserReward,
   RewardStats,
@@ -28,6 +29,7 @@ interface RewardListState {
 // ========================================
 
 export const useRewardsStore = defineStore('rewards', () => {
+  const log = createLogger('[RewardsStore]')
   const { api, normalizeError } = useApi()
   const toast = useToast()
 
@@ -54,6 +56,16 @@ export const useRewardsStore = defineStore('rewards', () => {
   const stats = ref<RewardStats | null>(null)
   const statsLoading = ref(false)
   const claimingId = ref<number | null>(null)
+
+  /** Timestamp of last successful data fetch */
+  const lastFetchedAt = ref<number | null>(null)
+
+  // ========================================
+  // Constants
+  // ========================================
+
+  /** Data is considered stale after 5 minutes */
+  const STALE_TIME = 5 * 60 * 1000
 
   // ========================================
   // Computed
@@ -83,6 +95,14 @@ export const useRewardsStore = defineStore('rewards', () => {
    * Check if there are any claimable rewards.
    */
   const hasClaimableRewards = computed(() => pending.value.items.length > 0)
+
+  /**
+   * Whether cached data needs refreshing.
+   */
+  const needsRefresh = computed<boolean>(() => {
+    if (!lastFetchedAt.value) return true
+    return Date.now() - lastFetchedAt.value > STALE_TIME
+  })
 
   // ========================================
   // Actions
@@ -126,7 +146,7 @@ export const useRewardsStore = defineStore('rewards', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       pending.value.error = normalized.message
-      console.error('[RewardsStore] fetchPending failed:', err)
+      log.error('fetchPending failed:', err)
     } finally {
       pending.value.loading = false
     }
@@ -170,7 +190,7 @@ export const useRewardsStore = defineStore('rewards', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       history.value.error = normalized.message
-      console.error('[RewardsStore] fetchHistory failed:', err)
+      log.error('fetchHistory failed:', err)
     } finally {
       history.value.loading = false
     }
@@ -190,7 +210,7 @@ export const useRewardsStore = defineStore('rewards', () => {
 
       stats.value = response.data
     } catch (err) {
-      console.error('[RewardsStore] fetchStats failed:', err)
+      log.error('fetchStats failed:', err)
     } finally {
       statsLoading.value = false
     }
@@ -224,17 +244,13 @@ export const useRewardsStore = defineStore('rewards', () => {
         stats.value.last_claimed_at = new Date().toISOString()
       }
 
-      // Update user balance if provided
+      // Update user balance if provided (via authStore API — no direct mutation)
       if (response.data.new_balance) {
         const authStore = useAuthStore()
-        if (authStore.user) {
-          if (response.data.new_balance.coins) {
-            authStore.user.coins = response.data.new_balance.coins
-          }
-          if (response.data.new_balance.diamonds) {
-            authStore.user.diamonds = response.data.new_balance.diamonds
-          }
-        }
+        authStore.patchBalance({
+          ...(response.data.new_balance.coins && { coins: response.data.new_balance.coins }),
+          ...(response.data.new_balance.diamonds && { diamonds: response.data.new_balance.diamonds }),
+        })
       }
 
       toast.add({
@@ -251,7 +267,7 @@ export const useRewardsStore = defineStore('rewards', () => {
         description: normalized.message,
         color: 'error',
       })
-      console.error('[RewardsStore] claim failed:', err)
+      log.error('claim failed:', err)
       return false
     } finally {
       claimingId.value = null
@@ -305,6 +321,7 @@ export const useRewardsStore = defineStore('rewards', () => {
    */
   async function fetchAll(): Promise<void> {
     await Promise.all([fetchPending({}, true), fetchStats()])
+    lastFetchedAt.value = Date.now()
   }
 
   /**
@@ -328,6 +345,7 @@ export const useRewardsStore = defineStore('rewards', () => {
     stats.value = null
     statsLoading.value = false
     claimingId.value = null
+    lastFetchedAt.value = null
   }
 
   // ========================================
@@ -341,6 +359,7 @@ export const useRewardsStore = defineStore('rewards', () => {
     stats,
     statsLoading,
     claimingId,
+    lastFetchedAt,
 
     // Computed
     pendingCount,
@@ -348,6 +367,7 @@ export const useRewardsStore = defineStore('rewards', () => {
     totalPendingCoins,
     isClaiming,
     hasClaimableRewards,
+    needsRefresh,
 
     // Actions
     fetchPending,

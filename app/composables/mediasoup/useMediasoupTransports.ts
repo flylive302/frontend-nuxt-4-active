@@ -5,7 +5,7 @@ import type {
   TransportConnectResponse,
   AudioProduceResponse,
 } from '~/types/audio';
-import type { AudioSocket } from '../useAudioSocket';
+import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';

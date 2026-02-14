@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   Notification,
   NotificationListResponse,
@@ -18,6 +19,7 @@ import type {
 // ========================================
 
 export const useNotificationStore = defineStore('notification', () => {
+  const log = createLogger('[NotificationStore]')
   const { api } = useApi()
   const toast = useToast()
 
@@ -136,7 +138,7 @@ export const useNotificationStore = defineStore('notification', () => {
       lastFetched.value = Date.now()
     } catch (err) {
       error.value = 'Failed to load notifications'
-      console.error('[NotificationStore] fetchNotifications failed:', err)
+      log.error('fetchNotifications failed:', err)
     } finally {
       loading.value = false
     }
@@ -151,7 +153,7 @@ export const useNotificationStore = defineStore('notification', () => {
       const response = await api<UnreadCountResponse>('/notifications/unread-count')
       unreadCount.value = response.data.count
     } catch (err) {
-      console.error('[NotificationStore] fetchUnreadCount failed:', err)
+      log.error('fetchUnreadCount failed:', err)
     }
   }
 
@@ -171,7 +173,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
       return true
     } catch (err) {
-      console.error('[NotificationStore] markAsRead failed:', err)
+      log.error('markAsRead failed:', err)
       return false
     }
   }
@@ -195,7 +197,7 @@ export const useNotificationStore = defineStore('notification', () => {
       return true
     } catch (err) {
       toast.add({ title: 'Error', description: 'Failed to mark all as read.', color: 'error' })
-      console.error('[NotificationStore] markAllAsRead failed:', err)
+      log.error('markAllAsRead failed:', err)
       return false
     }
   }
@@ -212,7 +214,7 @@ export const useNotificationStore = defineStore('notification', () => {
   async function initialize(): Promise<void> {
     await fetchNotifications(true)
     await fetchUnreadCount()
-    console.log('[NotificationStore] Initialized (socket-based, no polling)')
+    log.info('Initialized (socket-based, no polling)')
   }
 
   /**

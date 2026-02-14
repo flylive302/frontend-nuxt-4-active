@@ -7,8 +7,8 @@ import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { computed, reactive, ref } from 'vue'
 import { navigateTo } from 'nuxt/app'
-import type { PhoneModel } from '~/composables/usePhoneSchema'
-import { usePhoneSchema, normalizePhone } from '~/composables/usePhoneSchema'
+import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
+import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
 import type { NationalIdImage } from '~/types/upload'
 
 // ========================================

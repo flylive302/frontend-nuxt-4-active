@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { ref, toRef } from "vue";
-import { useSvgaPlayer } from "~/composables/useSvgaPlayer";
+import { useSvgaPlayer } from '~/composables/gift/useSvgaPlayer';
 
 const props = withDefaults(defineProps<{
   name: string;

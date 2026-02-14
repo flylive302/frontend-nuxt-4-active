@@ -115,7 +115,7 @@ describe('useMediasoup', () => {
 
   describe('device state', () => {
     it('should have initial state as null', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       expect(mediasoup.device.value).toBeNull()
@@ -126,7 +126,7 @@ describe('useMediasoup', () => {
 
   describe('loadDevice()', () => {
     it('should create device and load RTP capabilities', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       const rtpCapabilities = {
@@ -144,7 +144,7 @@ describe('useMediasoup', () => {
 
   describe('cleanup()', () => {
     it('should clean up all resources', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       // Setup some state
@@ -159,7 +159,7 @@ describe('useMediasoup', () => {
 
   describe('audio production', () => {
     it('should check device is loaded before starting audio', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       // Try to start audio without loading device - should throw
@@ -169,7 +169,7 @@ describe('useMediasoup', () => {
 
   describe('stopAudio()', () => {
     it('should be callable when no producer', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       // Should not throw
@@ -179,14 +179,14 @@ describe('useMediasoup', () => {
 
   describe('consumer management', () => {
     it('should track consumers in map', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       expect(mediasoup.consumers.value.size).toBe(0)
     })
 
     it('should stop consumer by producer id', async () => {
-      const { useMediasoup } = await import('../../app/composables/useMediasoup')
+      const { useMediasoup } = await import('../../app/composables/mediasoup/useMediasoup')
       const mediasoup = useMediasoup(mockSocket as unknown as Parameters<typeof useMediasoup>[0])
 
       // Should not throw when consumer doesn't exist

@@ -1,8 +1,8 @@
 // app/composables/useCountries.ts
 // "wts my cmd code" style: single responsibility, documented, cached, re-usable across pages/components.
 
-import type { Country } from '~/composables/usePhoneSchema'
-import { useGeolocation } from '~/composables/useGeolocation'
+import type { Country } from '~/composables/auth/usePhoneSchema'
+import { useGeolocation } from '~/composables/shared/useGeolocation'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Countries]');

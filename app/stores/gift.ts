@@ -2,19 +2,12 @@
  * Gift Store
  *
  * Centralized state management for gift selection, sending, and playback.
+ * Side-effects (preload watch/debounce) have been extracted to useGiftPreload composable (SRP).
  */
 import { defineStore } from 'pinia';
 import type { Gift, GiftPlaybackItem } from '~/types/gift';
 import { MAX_PLAYBACK_QUEUE_SIZE } from '~/constants/gift';
 import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
-
-// ============================================
-// Module-level Cached Composables
-// ============================================
-// These are cached to prevent recreating them on each debounce call
-
-let _giftAssetCache: ReturnType<typeof useGiftAssetCache> | null = null;
-let _roomAudio: { prepareGift: (giftId: number, recipientIds: number[]) => void } | null = null;
 
 export const useGiftStore = defineStore('giftStore', () => {
   // ========================================
@@ -137,45 +130,6 @@ export const useGiftStore = defineStore('giftStore', () => {
   function setQuantity(qty: number) {
     selectedQuantity.value = qty as (typeof GIFT_QUANTITY_OPTIONS)[number];
   }
-
-  // ========================================
-  // Preload Trigger (Auto-trigger on selection)
-  // ========================================
-
-  /**
-   * Debounced preload function to prevent excessive triggers
-   * when user is rapidly changing selection.
-   * 
-   * Uses module-level cached composables to avoid recreation on each call.
-   */
-  const debouncedPreload = useDebounceFn(
-    async (gift: Gift, recipients: number[]) => {
-      // Initialize cached composables on first call
-      if (!_giftAssetCache) _giftAssetCache = useGiftAssetCache();
-      if (!_roomAudio) _roomAudio = useRoomAudio();
-
-      // 1. Preload locally for sender (instant playback)
-      await _giftAssetCache.preloadGift(gift);
-
-      // 2. Send prepare signal to recipients
-      _roomAudio.prepareGift(gift.id, recipients);
-    },
-    300
-  );
-
-  /**
-   * Watch for gift + recipient selection and trigger preload
-   * - Preloads locally for sender
-   * - Sends gift:prepare signal to recipients
-   * - Optimized: Only tracks gift changes and recipient count (not deep array)
-   */
-  watch(
-    [selectedGift, () => selectedRecipients.value.length],
-    ([gift, _count]) => {
-      if (!gift || selectedRecipients.value.length === 0) return;
-      debouncedPreload(gift, selectedRecipients.value);
-    }
-  );
 
 
   // ========================================

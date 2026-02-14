@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import { normalizePhone, usePhoneSchema } from '~/composables/usePhoneSchema'
-import { useCountries } from '~/composables/useCountries'
-import { useAuthForm } from '~/composables/useAuthForm'
+import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchema'
+import { useCountries } from '~/composables/shared/useCountries'
+import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
 import type {LoginPayload} from "~/types/auth";
 import SocialAuth from "~/components/social-auth.vue";

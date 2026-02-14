@@ -92,8 +92,18 @@ export default defineNuxtConfig({
     imports: {
         dirs: [
             'composables',
-            'composables/agency',
+            'composables/shared',
+            'composables/auth',
             'composables/room',
+            'composables/room/audio',
+            'composables/gift',
+            'composables/agency',
+            'composables/economy',
+            'composables/progression',
+            'composables/user',
+            'composables/notification',
+            'composables/income',
+            'composables/mediasoup',
         ],
     },
     app: {

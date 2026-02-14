@@ -85,6 +85,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Patch specific balance fields without requiring all values.
+   * Use this when only a subset of balance fields changes (e.g., reward claims).
+   */
+  function patchBalance(partial: Partial<Pick<BootstrapUser, 'coins' | 'diamonds' | 'wealth_xp' | 'charm_xp'>>) {
+    if (user.value) {
+      user.value = {
+        ...user.value,
+        ...partial,
+      }
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -100,6 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
     setMsabToken,
     logout,
     updateBalance,
+    patchBalance,
   }
 }, {
   persist: {

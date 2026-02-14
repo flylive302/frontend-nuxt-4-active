@@ -3,7 +3,7 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import type { LevelStatus } from '~/types/levels'
 
 // ========================================
@@ -77,25 +77,29 @@ export const useLevelsStore = defineStore('levels', () => {
   }
 
   /**
-   * Update wealth XP and recalculate progress.
-   * Called from balance.updated event.
-   * Auto-advances level when XP crosses threshold for responsive UI.
+   * Generic XP recalculation for a given level category.
+   * Shared logic for both wealth and charm — eliminates DRY violation.
    */
-  function updateWealthXp(currentXp: number): void {
-    if (!wealthLevel.value) return
-    
+  function updateXp(
+    category: 'wealth' | 'charm',
+    currentXp: number,
+    targetRef: Ref<LevelStatus | null>
+  ): void {
+    if (!targetRef.value) return
+
     const bootstrapStore = useBootstrapStore()
-    const config = bootstrapStore.config?.wealth_levels ?? []
+    const configKey = category === 'wealth' ? 'wealth_levels' : 'charm_levels'
+    const config = bootstrapStore.config?.[configKey] ?? []
     if (config.length === 0) return
-    
+
     // Sort config by level to ensure correct iteration
     const sortedConfig = [...config].sort((a, b) => a.level - b.level)
-    
+
     // Find the correct level based on current XP
     let newLevel = 0
     let newLevelName = sortedConfig[0]?.name ?? 'Level 0'
     let newBadgeId: number | null = null
-    
+
     for (const level of sortedConfig) {
       if (currentXp >= level.required_xp) {
         newLevel = level.level
@@ -105,32 +109,32 @@ export const useLevelsStore = defineStore('levels', () => {
         break
       }
     }
-    
+
     // Get badge from bootstrapStore if badge_id exists
     const badge = newBadgeId ? bootstrapStore.getBadgeById(newBadgeId) : null
-    
+
     // Find thresholds for progress calculation
     const currentLevelConfig = sortedConfig.find(l => l.level === newLevel)
     const nextLevelConfig = sortedConfig.find(l => l.level === newLevel + 1)
-    
+
     const currentThreshold = currentLevelConfig?.required_xp ?? 0
     const nextThreshold = nextLevelConfig?.required_xp ?? currentThreshold
-    
+
     // Calculate progress within current level
     const xpInLevel = currentXp - currentThreshold
     const xpNeeded = nextThreshold - currentThreshold
     const progress = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100
     const remaining = Math.max(0, nextThreshold - currentXp)
-    
+
     // Build next_level info
     const nextLevel = nextLevelConfig ? {
       level: nextLevelConfig.level,
       name: nextLevelConfig.name,
       required_xp: nextLevelConfig.required_xp,
     } : null
-    
-    wealthLevel.value = {
-      ...wealthLevel.value,
+
+    targetRef.value = {
+      ...targetRef.value,
       current_level: newLevel,
       level_name: newLevelName,
       current_xp: currentXp,
@@ -143,69 +147,19 @@ export const useLevelsStore = defineStore('levels', () => {
   }
 
   /**
+   * Update wealth XP and recalculate progress.
+   * Called from balance.updated event.
+   */
+  function updateWealthXp(currentXp: number): void {
+    updateXp('wealth', currentXp, wealthLevel)
+  }
+
+  /**
    * Update charm XP and recalculate progress.
    * Called from balance.updated event.
-   * Auto-advances level when XP crosses threshold for responsive UI.
    */
   function updateCharmXp(currentXp: number): void {
-    if (!charmLevel.value) return
-    
-    const bootstrapStore = useBootstrapStore()
-    const config = bootstrapStore.config?.charm_levels ?? []
-    if (config.length === 0) return
-    
-    // Sort config by level to ensure correct iteration
-    const sortedConfig = [...config].sort((a, b) => a.level - b.level)
-    
-    // Find the correct level based on current XP
-    let newLevel = 0
-    let newLevelName = sortedConfig[0]?.name ?? 'Level 0'
-    let newBadgeId: number | null = null
-    
-    for (const level of sortedConfig) {
-      if (currentXp >= level.required_xp) {
-        newLevel = level.level
-        newLevelName = level.name
-        newBadgeId = level.badge_id
-      } else {
-        break
-      }
-    }
-    
-    // Get badge from bootstrapStore if badge_id exists
-    const badge = newBadgeId ? bootstrapStore.getBadgeById(newBadgeId) : null
-    
-    // Find thresholds for progress calculation
-    const currentLevelConfig = sortedConfig.find(l => l.level === newLevel)
-    const nextLevelConfig = sortedConfig.find(l => l.level === newLevel + 1)
-    
-    const currentThreshold = currentLevelConfig?.required_xp ?? 0
-    const nextThreshold = nextLevelConfig?.required_xp ?? currentThreshold
-    
-    // Calculate progress within current level
-    const xpInLevel = currentXp - currentThreshold
-    const xpNeeded = nextThreshold - currentThreshold
-    const progress = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100
-    const remaining = Math.max(0, nextThreshold - currentXp)
-    
-    // Build next_level info
-    const nextLevel = nextLevelConfig ? {
-      level: nextLevelConfig.level,
-      name: nextLevelConfig.name,
-      required_xp: nextLevelConfig.required_xp,
-    } : null
-    
-    charmLevel.value = {
-      ...charmLevel.value,
-      current_level: newLevel,
-      level_name: newLevelName,
-      current_xp: currentXp,
-      progress_percentage: progress,
-      xp_remaining: remaining,
-      xp_for_next_level: nextThreshold,
-      badge: badge ? { id: badge.id, name: badge.name, image_url: badge.image_url ?? '' } : null,
-      next_level: nextLevel,
-    }
+    updateXp('charm', currentXp, charmLevel)
   }
 
   /**

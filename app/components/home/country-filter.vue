@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCountries } from '~/composables/useCountries'
+import { useCountries } from '~/composables/shared/useCountries'
 
 const props = defineProps<{
   modelValue: string

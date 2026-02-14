@@ -6,7 +6,7 @@
  */
 import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift';
 import { GIFT_CATEGORY_CONFIG } from '~/types/gift';
-import { useApi, type NormalizedError } from './useApi';
+import { useApi, type NormalizedError } from '../shared/useApi';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[GiftData]');

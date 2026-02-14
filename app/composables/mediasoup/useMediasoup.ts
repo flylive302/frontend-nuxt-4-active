@@ -10,10 +10,10 @@
  * This maintains backward compatibility while improving code organization.
  */
 import type { Ref } from 'vue';
-import type { AudioSocket } from './useAudioSocket';
-import { useMediasoupDevice } from './mediasoup/useMediasoupDevice';
-import { useMediasoupTransports } from './mediasoup/useMediasoupTransports';
-import { useMediasoupStreaming } from './mediasoup/useMediasoupStreaming';
+import type { AudioSocket } from '../room/useAudioSocket';
+import { useMediasoupDevice } from './useMediasoupDevice';
+import { useMediasoupTransports } from './useMediasoupTransports';
+import { useMediasoupStreaming } from './useMediasoupStreaming';
 
 /**
  * Mediasoup composable - unified facade for WebRTC functionality.

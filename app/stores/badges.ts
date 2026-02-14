@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { createLogger } from '~/utils/logger'
 import type {
   Badge,
   UserBadge,
@@ -38,6 +39,7 @@ interface UserBadgeListState {
 // ========================================
 
 export const useBadgesStore = defineStore('badges', () => {
+  const log = createLogger('[BadgesStore]')
   const { api, normalizeError } = useApi()
   const toast = useToast()
 
@@ -66,6 +68,16 @@ export const useBadgesStore = defineStore('badges', () => {
   const currentCategory = ref<BadgeCategory | null>(null)
   const isTogglingDisplay = ref<number | null>(null)
 
+  /** Timestamp of last successful data fetch */
+  const lastFetchedAt = ref<number | null>(null)
+
+  // ========================================
+  // Constants
+  // ========================================
+
+  /** Data is considered stale after 5 minutes */
+  const STALE_TIME = 5 * 60 * 1000
+
   // ========================================
   // Computed
   // ========================================
@@ -76,6 +88,14 @@ export const useBadgesStore = defineStore('badges', () => {
   const displayedBadges = computed(() =>
     userBadges.value.items.filter(b => b.is_displayed)
   )
+
+  /**
+   * Whether cached data needs refreshing.
+   */
+  const needsRefresh = computed<boolean>(() => {
+    if (!lastFetchedAt.value) return true
+    return Date.now() - lastFetchedAt.value > STALE_TIME
+  })
 
   /**
    * Hidden badges (is_displayed = false).
@@ -132,10 +152,11 @@ export const useBadgesStore = defineStore('badges', () => {
 
       catalog.value.items = response.data
       catalog.value.hasMore = false
+      lastFetchedAt.value = Date.now()
     } catch (err) {
       const normalized = normalizeError(err)
       catalog.value.error = normalized.message
-      console.error('[BadgesStore] fetchCatalog failed:', err)
+      log.error('fetchCatalog failed:', err)
     } finally {
       catalog.value.loading = false
     }
@@ -153,7 +174,7 @@ export const useBadgesStore = defineStore('badges', () => {
 
       categories.value = response.data
     } catch (err) {
-      console.error('[BadgesStore] fetchCategories failed:', err)
+      log.error('fetchCategories failed:', err)
     }
   }
 
@@ -184,7 +205,7 @@ export const useBadgesStore = defineStore('badges', () => {
     } catch (err) {
       const normalized = normalizeError(err)
       userBadges.value.error = normalized.message
-      console.error('[BadgesStore] fetchUserBadges failed:', err)
+      log.error('fetchUserBadges failed:', err)
     } finally {
       userBadges.value.loading = false
     }
@@ -202,7 +223,7 @@ export const useBadgesStore = defineStore('badges', () => {
 
       stats.value = response.data
     } catch (err) {
-      console.error('[BadgesStore] fetchStats failed:', err)
+      log.error('fetchStats failed:', err)
     }
   }
 
@@ -244,7 +265,7 @@ export const useBadgesStore = defineStore('badges', () => {
         description: normalized.message,
         color: 'error',
       })
-      console.error('[BadgesStore] toggleDisplay failed:', err)
+      log.error('toggleDisplay failed:', err)
       return false
     } finally {
       isTogglingDisplay.value = null
@@ -303,6 +324,7 @@ export const useBadgesStore = defineStore('badges', () => {
     stats.value = null
     currentCategory.value = null
     isTogglingDisplay.value = null
+    lastFetchedAt.value = null
   }
 
   // ========================================
@@ -317,10 +339,12 @@ export const useBadgesStore = defineStore('badges', () => {
     stats,
     currentCategory,
     isTogglingDisplay,
+    lastFetchedAt,
 
     // Computed
     displayedBadges,
     hiddenBadges,
+    needsRefresh,
 
     // Methods
     hasUserBadge,

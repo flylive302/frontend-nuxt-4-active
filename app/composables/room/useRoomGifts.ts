@@ -5,7 +5,7 @@
  * Uses module-level state for the gift queue to prevent duplicates.
  */
 import { ref, type Ref } from 'vue';
-import { GIFT_QUEUE_INTERVAL_MS } from '../constants/gift';
+import { GIFT_QUEUE_INTERVAL_MS } from '../../constants/gift';
 import type { AudioSocket } from './useAudioSocket';
 
 // ============================================

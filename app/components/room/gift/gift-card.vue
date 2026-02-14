@@ -5,7 +5,7 @@
  * Displays a single gift item in the gift grid.
  */
 import type { Gift } from '~/types/gift';
-import { useGiftData } from '~/composables/useGiftData';
+import { useGiftData } from '~/composables/gift/useGiftData';
 
 withDefaults(
   defineProps<{

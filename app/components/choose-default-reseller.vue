@@ -3,9 +3,9 @@ import { ref, computed, toRef, onMounted, watch } from 'vue'
 import { useDebounce } from '@vueuse/core'
 import type { Colors } from '~/types/colors'
 import type { ResellerApiRow } from '~/types/reseller'
-import { useResellers } from '~/composables/useResellers'
-import { useColorClasses } from '~/composables/useColorClasses'
-import type { NormalizedError } from '~/composables/useApi'
+import { useResellers } from '~/composables/economy/useResellers'
+import { useColorClasses } from '~/composables/shared/useColorClasses'
+import type { NormalizedError } from '~/composables/shared/useApi'
 
 defineOptions({ name: 'ChooseDefaultReseller' })
 

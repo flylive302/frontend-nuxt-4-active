@@ -5,7 +5,7 @@
  */
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
-import { useRoomAudio } from '~/composables/useRoomAudio';
+import { useRoomAudio } from '~/composables/room/useRoomAudio';
 
 const roomStore = useRoomStore();
 const { sendChatMessage } = useRoomAudio();

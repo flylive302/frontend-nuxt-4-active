@@ -6,7 +6,7 @@
  * Uses cached Blob URLs from preloader for instant playback.
  * NO loop attribute - video plays once and emits 'ended'.
  */
-import { useGiftAssetCache } from '~/composables/useGiftAssetCache';
+import { useGiftAssetCache } from '~/composables/gift/useGiftAssetCache';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[VideoPlayer]');
