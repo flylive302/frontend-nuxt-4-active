@@ -6,7 +6,7 @@
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { ref, reactive, computed, onMounted } from 'vue'
-import type { ExchangeInfo, ExchangeResult } from '~/types/exchange'
+import type { ExchangeInfo, ExchangeResult } from '~/types/economy/exchange'
 import { formatCurrency } from '~/utils/currency'
 
 // ========================================
@@ -381,8 +381,8 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
       <h2 class="text-lg font-bold leading-tight">
         Request Payout of your Diamonds in <span class="text-success">Real Money</span>.
       </h2>
-      <ChooseDefaultReseller color="secondary" />
-      <FromConversionRequest color="secondary" class="mb-18 mt-4" />
+      <EconomyChooseDefaultReseller color="secondary" />
+      <EconomyFromConversionRequest color="secondary" class="mb-18 mt-4" />
     </section>
   </main>
 </template>

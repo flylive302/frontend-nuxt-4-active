@@ -19,7 +19,7 @@ import type {
   SeatUserMutedEvent,
   SeatLockedEvent,
   SeatInviteReceivedEvent,
-} from '~/types/audio';
+} from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { refundPendingCoins } from '../gift/useGiftSending';
 import { createLogger } from '~/utils/logger';

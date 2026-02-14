@@ -8,8 +8,8 @@
  * @see useRoomEventHandlers.ts - Socket event handlers
  * @see useRoomGifts.ts - Gift queue processing
  */
-import type { JoinRoomResponse, SelfMutePayload, SelfMuteResponse } from '~/types/audio';
-import { userToParticipant } from '~/types/audio';
+import type { JoinRoomResponse, SelfMutePayload, SelfMuteResponse } from '~/types/room/audio';
+import { userToParticipant } from '~/types/room/audio';
 import type { Ref, ComputedRef } from 'vue';
 import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';

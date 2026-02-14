@@ -2,7 +2,7 @@
 // Agency Join Requests Composable
 // ========================================
 
-import type { AgencyJoinRequest, JoinAgencyRequest } from '~/types/agency'
+import type { AgencyJoinRequest, JoinAgencyRequest } from '~/types/agency/agency'
 
 // ========================================
 // Composable

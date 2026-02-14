@@ -8,12 +8,12 @@ import type {
   ImageUploadAuthParams,
   ImageUploadResult,
   ImageUploadProgress,
-} from '~/types/upload'
+} from '~/types/asset/upload'
 import {
   IMAGEKIT_UPLOAD_URL,
   MAX_IMAGE_SIZE,
   ALLOWED_IMAGE_TYPES,
-} from '~/types/upload'
+} from '~/types/asset/upload'
 
 // ========================================
 // Types

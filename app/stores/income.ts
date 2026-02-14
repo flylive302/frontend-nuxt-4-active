@@ -10,7 +10,7 @@ import type {
   IncomeSummary,
   IncomeTargetHistory,
   GetIncomeHistoryParams,
-} from '~/types/income'
+} from '~/types/income/income'
 
 // ========================================
 // Types

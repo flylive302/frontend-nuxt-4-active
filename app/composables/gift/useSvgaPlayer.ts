@@ -5,7 +5,7 @@
  * Uses SVGAPlayer-Web-Lite: https://github.com/svga/SVGAPlayer-Web-Lite
  */
 import type { Ref } from 'vue';
-import type { SvgaPlayer, SvgaPlugin } from '@/types/svga';
+import type { SvgaPlayer, SvgaPlugin } from '@/types/asset/svga';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[SvgaPlayer]');

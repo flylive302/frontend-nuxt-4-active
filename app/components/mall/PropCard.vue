@@ -2,8 +2,8 @@
 <!-- Displays a catalog prop with purchase option -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Prop } from '~/types/prop'
-import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/types/prop'
+import type { Prop } from '~/types/mall/prop'
+import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/types/mall/prop'
 
 // ========================================
 // Props & Emits

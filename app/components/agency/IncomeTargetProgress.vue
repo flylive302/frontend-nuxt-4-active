@@ -2,7 +2,7 @@
 <!-- Displays active income target with progress bar -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { INCOME_STATUS_COLORS, INCOME_STATUS_LABELS } from '~/types/income'
+import { INCOME_STATUS_COLORS, INCOME_STATUS_LABELS } from '~/types/income/income'
 
 // ========================================
 // Props

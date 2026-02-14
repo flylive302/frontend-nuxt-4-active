@@ -2,7 +2,7 @@
 // Agency Formatting Utilities
 // ========================================
 
-import type { AgencyInvitationStatus, AgencyJoinRequestStatus } from '~/types/agency'
+import type { AgencyInvitationStatus, AgencyJoinRequestStatus } from '~/types/agency/agency'
 
 // ========================================
 // Types

@@ -20,8 +20,8 @@ import type {
   PropPurchaseResponse,
   PropEquipResponse,
   PropStatus,
-} from '~/types/prop'
-import { PROP_TYPE_ORDER } from '~/types/prop'
+} from '~/types/mall/prop'
+import { PROP_TYPE_ORDER } from '~/types/mall/prop'
 
 // ========================================
 // Types

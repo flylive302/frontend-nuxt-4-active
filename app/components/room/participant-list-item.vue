@@ -1,7 +1,7 @@
 <!-- ~/components/room/participant-list-item.vue -->
 <script setup lang="ts">
-import type { RoomParticipant } from '~/types/audio'
-import MinimalUserList from "~/components/common/minimal-user-list.vue";
+import type { RoomParticipant } from '~/types/room/audio'
+
 
 defineOptions({ name: 'ParticipantListItem' })
 const { myMembership } = useRoomMembers();

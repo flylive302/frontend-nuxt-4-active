@@ -6,7 +6,7 @@
 import { z } from 'zod'
 import { useRoom } from '~/composables/room/useRoom'
 import type { FormError, Form } from '@nuxt/ui'
-import FileUpload from '~/components/common/file-upload.vue'
+
 
 // ========================================
 // Emits

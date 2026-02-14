@@ -3,7 +3,7 @@
 // ========================================
 
 import type { Socket } from 'socket.io-client'
-import type { IncomeTargetCompletedPayload } from '~/types/socket-events'
+import type { IncomeTargetCompletedPayload } from '~/types/room/socket-events'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[IncomeEvents]')

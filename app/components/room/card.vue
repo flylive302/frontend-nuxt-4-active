@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {Room} from "~/types/room";
+import type {Room} from "~/types/room/room";
 const roomStore = useRoomStore();
 
 const props = defineProps<{

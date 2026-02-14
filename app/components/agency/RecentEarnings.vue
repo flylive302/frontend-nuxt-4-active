@@ -2,7 +2,7 @@
 <!-- Displays recent income earnings in a collapsible list -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { RecentEarning } from '~/types/income'
+import type { RecentEarning } from '~/types/income/income'
 
 // ========================================
 // Props

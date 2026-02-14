@@ -3,8 +3,8 @@
 // ========================================
 
 import type { Socket } from 'socket.io-client'
-import type { ConfigInvalidatePayload } from '~/types/socket-events'
-import type { AssetInvalidatePayload } from '~/types/asset'
+import type { ConfigInvalidatePayload } from '~/types/room/socket-events'
+import type { AssetInvalidatePayload } from '~/types/asset/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import * as assetDownloader from '~/services/assetDownloader'

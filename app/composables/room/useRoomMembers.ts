@@ -2,7 +2,7 @@
 // Room Members Composable
 // ========================================
 
-import type { RoomMember, RoomMemberRole, GetRoomMembersParams } from '~/types/room'
+import type { RoomMember, RoomMemberRole, GetRoomMembersParams } from '~/types/room/room'
 
 /**
  * Composable for managing room members.

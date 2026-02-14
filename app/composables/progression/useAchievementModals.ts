@@ -2,7 +2,7 @@
 // Achievement Modals Composable
 // ========================================
 
-import type { BadgeEarnedPayload, UserLevelUpPayload, IncomeTargetCompletedPayload } from '~/types/socket-events'
+import type { BadgeEarnedPayload, UserLevelUpPayload, IncomeTargetCompletedPayload } from '~/types/room/socket-events'
 
 // ========================================
 // Types

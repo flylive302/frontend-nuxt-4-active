@@ -3,8 +3,8 @@
 // Imports & Types
 // ========================================
 
-import type { AgencyMemberRole } from '~/types/agency'
-import { AGENCY_ROLE_CONFIG } from '~/types/agency'
+import type { AgencyMemberRole } from '~/types/agency/agency'
+import { AGENCY_ROLE_CONFIG } from '~/types/agency/agency'
 
 // ========================================
 // Props

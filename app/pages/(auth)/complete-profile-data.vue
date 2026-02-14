@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { Form } from '@nuxt/ui'
-import FileUpload from "~/components/common/file-upload.vue";
-import type {UpdateProfilePayload, GenderOption} from "~/types/auth";
+
+import type {UpdateProfilePayload, GenderOption} from "~/types/user/auth";
 
 definePageMeta({
   layout: 'auth',

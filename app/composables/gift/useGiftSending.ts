@@ -4,7 +4,7 @@
  * Handles gift sending with balance validation, socket emission,
  * and playback triggering.
  */
-import type { Gift } from '~/types/gift';
+import type { Gift } from '~/types/gift/gift';
 
 // ========================================
 // Module-level shared state (for use in socket callbacks)

@@ -7,8 +7,8 @@
 // Triggered when clicking a user from participants list.
 // ========================================
 
-import type { RoomParticipant } from '~/types/audio'
-import type { BlockUserRequest } from '~/types/room'
+import type { RoomParticipant } from '~/types/room/audio'
+import type { BlockUserRequest } from '~/types/room/room'
 
 // ========================================
 // Props

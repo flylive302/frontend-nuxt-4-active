@@ -18,7 +18,7 @@ import {
   isDownloading,
   getQueueLength,
 } from '~/services/assetDownloader'
-import type { EnqueueItem } from '~/types/asset'
+import type { EnqueueItem } from '~/types/asset/asset'
 
 // ========================================
 // Mocks

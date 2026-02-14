@@ -5,7 +5,7 @@
 
 import { onMounted, ref, computed } from 'vue'
 import UserInviteDialog from '~/components/agency/UserInviteDialog.vue'
-import type { MinimalUser } from '~/types/bootstrap'
+import type { MinimalUser } from '~/types/user/bootstrap'
 
 // ========================================
 // Imports from Utils

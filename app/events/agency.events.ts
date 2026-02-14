@@ -9,7 +9,7 @@ import type {
   AgencyStatusPayload,
   AgencyMemberJoinedPayload,
   AgencyMemberLeftPayload,
-} from '~/types/socket-events'
+} from '~/types/room/socket-events'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[AgencyEvents]')

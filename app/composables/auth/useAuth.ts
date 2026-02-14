@@ -1,7 +1,7 @@
 // ========================================
 // Imports & Types
 // ========================================
-import type { AuthResponse, User, LoginPayload, RegisterPayload, UpdateProfilePayload } from '~/types/auth'
+import type { AuthResponse, User, LoginPayload, RegisterPayload, UpdateProfilePayload } from '~/types/user/auth'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Auth]')

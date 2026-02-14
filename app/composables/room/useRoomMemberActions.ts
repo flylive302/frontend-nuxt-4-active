@@ -2,7 +2,7 @@
 // Room Member Actions Composable
 // ========================================
 
-import type { UpdateMemberRoleRequest } from '~/types/room'
+import type { UpdateMemberRoleRequest } from '~/types/room/room'
 
 /**
  * Composable for member management actions.

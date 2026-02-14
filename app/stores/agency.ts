@@ -14,7 +14,7 @@ import type {
   AgencyInvitation,
   AgencyJoinRequest,
   AgencyListFilters,
-} from '~/types/agency'
+} from '~/types/agency/agency'
 
 // ========================================
 // Types

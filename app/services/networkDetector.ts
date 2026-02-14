@@ -2,7 +2,7 @@
 // Network Detector Service
 // ========================================
 
-import type { NetworkInfo } from '~/types/asset'
+import type { NetworkInfo } from '~/types/asset/asset'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[NetworkDetector]')

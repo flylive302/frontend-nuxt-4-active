@@ -3,7 +3,7 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import type { BootstrapUser } from '~/types/bootstrap'
+import type { BootstrapUser } from '~/types/user/bootstrap'
 
 /**
  * @deprecated Use BootstrapUser directly

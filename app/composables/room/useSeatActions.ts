@@ -4,9 +4,9 @@
  * Handles all seat-related operations for room audio.
  * Extracted from useRoomAudio.ts for modularity.
  */
-import type { SeatResponse } from '~/types/audio';
-import { userToParticipant } from '~/types/audio';
-import type { MinimalUser } from '~/types/bootstrap';
+import type { SeatResponse } from '~/types/room/audio';
+import { userToParticipant } from '~/types/room/audio';
+import type { MinimalUser } from '~/types/user/bootstrap';
 
 // ============================================
 // Types

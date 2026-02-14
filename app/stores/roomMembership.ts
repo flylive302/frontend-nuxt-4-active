@@ -14,7 +14,7 @@ import type {
   RoomJoinRequest,
   RoomInvitation,
   RoomLevelProgress,
-} from '~/types/room'
+} from '~/types/room/room'
 import type { PaginatedList } from '~/types/shared'
 import { createPaginatedList } from '~/types/shared'
 

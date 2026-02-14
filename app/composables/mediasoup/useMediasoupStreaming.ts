@@ -2,7 +2,7 @@ import type { types as mediasoupTypes } from 'mediasoup-client';
 import type {
   AudioConsumeResponse,
   ConsumerResumeResponse,
-} from '~/types/audio';
+} from '~/types/room/audio';
 import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
 import { useMediasoupTransports } from './useMediasoupTransports';

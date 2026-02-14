@@ -5,7 +5,7 @@
 
 import { h, computed, resolveComponent } from 'vue';
 import type { ColumnDef } from '@tanstack/vue-table';
-import type { LevelConfig } from '~/types/bootstrap';
+import type { LevelConfig } from '~/types/user/bootstrap';
 
 // ========================================
 // Stores

@@ -6,7 +6,7 @@ import type {
   CoinRequestApiResponse,
   CoinRequestPaginatedResponse,
   CreateCoinRequestPayload
-} from '~/types/coin-request'
+} from '~/types/economy/coin-request'
 import { useApi } from '../shared/useApi'
 
 // ========================================

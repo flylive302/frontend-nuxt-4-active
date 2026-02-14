@@ -1,4 +1,4 @@
-import type { CreateRoomPayload, RoomResponse, RoomsResponse } from "~/types/room";
+import type { CreateRoomPayload, RoomResponse, RoomsResponse } from "~/types/room/room";
 
 export function useRoom() {
     // ========================================

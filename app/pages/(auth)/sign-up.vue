@@ -7,7 +7,6 @@ import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchem
 import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
-import SocialAuth from "~/components/social-auth.vue";
 
 definePageMeta({
   layout: 'auth',
@@ -83,7 +82,7 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 <template>
   <main>
 
-    <SocialAuth />
+    <AuthSocialAuth />
 
     <USeparator color="primary" class="my-4" label="OR" />
     <!-- General error alert - displayed at top of form when registration fails -->

@@ -9,8 +9,8 @@
 // - Blocked: Blocked users list
 // ========================================
 
-import type { RoomMember, RoomJoinRequest } from "~/types/room";
-import MinimalUserList from "~/components/common/minimal-user-list.vue";
+import type { RoomMember, RoomJoinRequest } from "~/types/room/room";
+
 
 // ========================================
 // Props

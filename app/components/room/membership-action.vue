@@ -11,7 +11,7 @@
 // - Member → "Leave Room"
 // ========================================
 
-import type { RoomMembershipState } from '~/types/room'
+import type { RoomMembershipState } from '~/types/room/room'
 
 // ========================================
 // Props

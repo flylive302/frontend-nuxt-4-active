@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { Form } from '@nuxt/ui'
-import FileUpload from "~/components/common/file-upload.vue";
-import type {UpdateProfilePayload, GenderOption} from "~/types/auth";
+
+import type {UpdateProfilePayload, GenderOption} from "~/types/user/auth";
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[ProfileEdit]');
@@ -357,7 +357,7 @@ watch(
       </div>
 
       <!-- Asset Manager Modal -->
-      <AssetManagerModal v-model="showAssetModal" />
+      <SystemAssetManagerModal v-model="showAssetModal" />
     </div>
   </main>
 </template>

@@ -173,7 +173,7 @@ async function trackUser() {
     }
     
     // 3. Fetch full room data from API
-    const roomData = await api<{ status: string; data: import('~/types/bootstrap').BootstrapRoom }>(`/rooms/${response.roomId}`)
+    const roomData = await api<{ status: string; data: import('~/types/user/bootstrap').BootstrapRoom }>(`/rooms/${response.roomId}`)
     
     if (roomData.status !== 'success' || !roomData.data) {
       toast.add({
@@ -234,7 +234,7 @@ async function goToRoom() {
     }
 
     // Fetch full room data from API
-    const roomData = await api<{ status: string; data: import('~/types/bootstrap').BootstrapRoom }>(`/rooms/${profile.value.room_id}`)
+    const roomData = await api<{ status: string; data: import('~/types/user/bootstrap').BootstrapRoom }>(`/rooms/${profile.value.room_id}`)
 
     if (roomData.status !== 'success' || !roomData.data) {
       toast.add({

@@ -1,5 +1,5 @@
 import { Device } from 'mediasoup-client';
-import type { RtpCapabilities } from '~/types/audio';
+import type { RtpCapabilities } from '~/types/room/audio';
 import { createLogger } from '~/utils/logger';
 
 // ============================================

@@ -5,7 +5,7 @@
  * Side-effects (preload watch/debounce) have been extracted to useGiftPreload composable (SRP).
  */
 import { defineStore } from 'pinia';
-import type { Gift, GiftPlaybackItem } from '~/types/gift';
+import type { Gift, GiftPlaybackItem } from '~/types/gift/gift';
 import { MAX_PLAYBACK_QUEUE_SIZE } from '~/constants/gift';
 import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 

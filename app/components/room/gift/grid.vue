@@ -4,7 +4,7 @@
  *
  * Displays gifts in a responsive grid with selection.
  */
-import type { Gift } from '~/types/gift';
+import type { Gift } from '~/types/gift/gift';
 
 defineProps<{
   gifts: Gift[];

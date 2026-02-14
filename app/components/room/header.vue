@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LevelConfig } from '~/types/bootstrap';
+import type { LevelConfig } from '~/types/user/bootstrap';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[RoomHeader]');

@@ -5,7 +5,7 @@
  * Main gift sending interface with recipient selection,
  * gift browsing, and send controls.
  */
-import type { Gift } from '~/types/gift';
+import type { Gift } from '~/types/gift/gift';
 import { useGiftData } from '~/composables/gift/useGiftData';
 import { useGiftSending } from '~/composables/gift/useGiftSending';
 import { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';

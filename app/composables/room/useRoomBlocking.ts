@@ -2,7 +2,7 @@
 // Room Blocking Composable
 // ========================================
 
-import type { RoomBlock, BlockUserRequest } from '~/types/room'
+import type { RoomBlock, BlockUserRequest } from '~/types/room/room'
 
 /**
  * Composable for managing room blocking.

@@ -86,6 +86,10 @@ export default defineNuxtConfig({
             ]
         }
     },
+    components: [
+        { path: '~/components/common', pathPrefix: false },
+        '~/components',
+    ],
     pinia: {
         storesDirs: ['./stores/**'],
     },

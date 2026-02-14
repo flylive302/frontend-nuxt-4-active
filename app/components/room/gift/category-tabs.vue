@@ -4,7 +4,7 @@
  *
  * Horizontal scrollable tabs for gift categories.
  */
-import type { GiftCategoryGroup } from '~/types/gift';
+import type { GiftCategoryGroup } from '~/types/gift/gift';
 
 defineProps<{
   categories: GiftCategoryGroup[];

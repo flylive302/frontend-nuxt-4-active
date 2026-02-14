@@ -6,7 +6,7 @@
 // Modal with user search for sending room invitations.
 // ========================================
 
-import type { User } from '~/types/auth'
+import type { User } from '~/types/user/auth'
 
 // ========================================
 // Props

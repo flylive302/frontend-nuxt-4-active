@@ -100,7 +100,7 @@ vi.stubGlobal('useMediasoup', () => mockMediasoup)
 // Mock Types Module (path alias resolution)
 // ============================================
 
-vi.mock('~/types/audio', () => ({
+vi.mock('~/types/room/audio', () => ({
   userToParticipant: (user: Record<string, unknown>) => ({
     id: user.id,
     name: user.name,
@@ -202,17 +202,42 @@ describe('useRoomAudio', () => {
   })
 
   describe('leaveRoom()', () => {
-    it('should cleanup and disconnect', async () => {
+    it('should emit room:leave and cleanup without disconnecting socket', async () => {
       mockRoomStore.currentRoom = { id: 'room-123' }
       mockAudioSocket.status.value = 'connected'
+
+      // Reset module cache to ensure singleton picks up current mockRoomStore
+      vi.resetModules()
+      vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+      vi.stubGlobal('useMediasoup', () => mockMediasoup)
+      vi.stubGlobal('useAuthStore', () => mockAuthStore)
+      vi.stubGlobal('useGiftStore', () => mockGiftStore)
+      vi.stubGlobal('useGiftData', () => mockGiftData)
+      vi.stubGlobal('useToast', () => mockToast)
+      vi.stubGlobal('navigateTo', vi.fn())
+      vi.stubGlobal('refundPendingCoins', vi.fn())
+      vi.stubGlobal('ref', ref)
+      vi.stubGlobal('computed', computed)
+      vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('onUnmounted', vi.fn())
 
       const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
       const roomAudio = useRoomAudio()
 
       roomAudio.leaveRoom()
 
-      // Key assertion: disconnect should be called when leaving room
-      expect(mockAudioSocket.disconnect).toHaveBeenCalled()
+      // Should emit room:leave event
+      expect(mockSocket.value.emit).toHaveBeenCalledWith('room:leave', { roomId: 'room-123' })
+
+      // Should clean up mediasoup resources
+      expect(mockMediasoup.cleanup).toHaveBeenCalled()
+
+      // Should clear audio state in store
+      expect(mockRoomStore.clearAudioState).toHaveBeenCalled()
+
+      // Should NOT disconnect — socket stays alive for app-wide events
+      expect(mockAudioSocket.disconnect).not.toHaveBeenCalled()
     })
   })
 

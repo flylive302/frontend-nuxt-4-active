@@ -3,7 +3,7 @@
 // ========================================
 
 import { ref } from 'vue'
-import type { MinimalUser } from '~/types/bootstrap'
+import type { MinimalUser } from '~/types/user/bootstrap'
 
 // ========================================
 // Types

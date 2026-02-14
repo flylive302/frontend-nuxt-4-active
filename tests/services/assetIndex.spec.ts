@@ -16,7 +16,7 @@ import {
   updateLastAccessed,
   count,
 } from '~/services/assetIndex'
-import type { AssetMetadata } from '~/types/asset'
+import type { AssetMetadata } from '~/types/asset/asset'
 
 // ========================================
 // Mocks

@@ -3,8 +3,8 @@
 // Imports & Types
 // ========================================
 
-import type { AgencyStatus } from '~/types/agency'
-import { AGENCY_STATUS_CONFIG } from '~/types/agency'
+import type { AgencyStatus } from '~/types/agency/agency'
+import { AGENCY_STATUS_CONFIG } from '~/types/agency/agency'
 
 // ========================================
 // Props

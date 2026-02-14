@@ -2,8 +2,8 @@
 <!-- Displays a single reward with claim functionality -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { UserReward } from '~/types/reward'
-import { REWARD_TYPE_ICONS, REWARD_TYPE_COLORS } from '~/types/reward'
+import type { UserReward } from '~/types/progression/reward'
+import { REWARD_TYPE_ICONS, REWARD_TYPE_COLORS } from '~/types/progression/reward'
 
 // ========================================
 // Props & Emits

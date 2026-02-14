@@ -2,7 +2,7 @@
 // Room Level Composable
 // ========================================
 
-import type { RoomLevelProgress } from '~/types/room'
+import type { RoomLevelProgress } from '~/types/room/room'
 
 /**
  * Composable for managing room level progress.

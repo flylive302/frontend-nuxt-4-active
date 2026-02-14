@@ -7,7 +7,7 @@ import type {
   LeaderboardEntry,
   LeaderboardPeriod,
   GiftLeaderboardResponse,
-} from '~/types/leaderboard'
+} from '~/types/progression/leaderboard'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[useRoomGiftLeaderboard]')

@@ -7,9 +7,9 @@ import type {
   BootstrapResponse,
   BootstrapConfig,
   LevelBadge,
-} from '~/types/bootstrap'
-import type { Gift } from '~/types/gift'
-import type { DownloadProgress, EnqueueItem, EnqueueOptions } from '~/types/asset'
+} from '~/types/user/bootstrap'
+import type { Gift } from '~/types/gift/gift'
+import type { DownloadProgress, EnqueueItem, EnqueueOptions } from '~/types/asset/asset'
 import { CACHE_TTL, isStale } from '~/constants/cache'
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as assetDownloader from '~/services/assetDownloader'

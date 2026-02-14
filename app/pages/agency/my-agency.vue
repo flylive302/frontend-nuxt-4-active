@@ -234,7 +234,7 @@ onMounted(async () => {
           <!-- Owner-Only Settings -->
           <template v-if="isOwner">
             <!-- Coin Reseller -->
-            <ChooseDefaultReseller
+            <EconomyChooseDefaultReseller
                 agency-mode
                 :initial-reseller="agencyCoinReseller"
                 color="primary"

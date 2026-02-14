@@ -2,7 +2,7 @@
 // Asset Index Service (IndexedDB)
 // ========================================
 
-import type { AssetMetadata } from '~/types/asset'
+import type { AssetMetadata } from '~/types/asset/asset'
 import { ASSET_CONFIG } from '~/constants/asset'
 import { createLogger } from '~/utils/logger'
 

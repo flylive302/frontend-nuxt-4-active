@@ -2,8 +2,8 @@
 <!-- Displays a single badge with optional toggle display functionality -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Badge, UserBadge } from '~/types/badge'
-import { BADGE_CATEGORY_COLORS, BADGE_RARITY_COLORS } from '~/types/badge'
+import type { Badge, UserBadge } from '~/types/progression/badge'
+import { BADGE_CATEGORY_COLORS, BADGE_RARITY_COLORS } from '~/types/progression/badge'
 
 // ========================================
 // Props & Emits

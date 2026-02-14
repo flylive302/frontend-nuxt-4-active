@@ -3,7 +3,7 @@
  * ChatMessage - Individual chat message component
  * Displays a single ephemeral chat message with user info
  */
-import type { ChatMessageEvent } from '~/types/audio';
+import type { ChatMessageEvent } from '~/types/room/audio';
 
 const props = defineProps<{
   message: ChatMessageEvent;

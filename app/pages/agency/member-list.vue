@@ -4,7 +4,7 @@
 // ========================================
 
 import { onMounted } from 'vue'
-import type { AgencyMember } from '~/types/agency'
+import type { AgencyMember } from '~/types/agency/agency'
 import { formatAgencyDate } from '~/utils/agency-format'
 
 // ========================================

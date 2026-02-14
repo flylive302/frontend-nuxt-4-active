@@ -9,7 +9,7 @@
  */
 import { watch, type Ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import type { Gift } from '~/types/gift'
+import type { Gift } from '~/types/gift/gift'
 
 // ========================================
 // Module-level Cached Composables

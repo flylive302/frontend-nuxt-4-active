@@ -6,7 +6,7 @@ import type { Socket } from 'socket.io-client'
 import type {
   BalanceUpdatedPayload,
   RewardEarnedPayload,
-} from '~/types/socket-events'
+} from '~/types/room/socket-events'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[EconomyEvents]')

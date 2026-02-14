@@ -2,7 +2,7 @@
 // Room Join Requests Composable
 // ========================================
 
-import type { RoomJoinRequest, JoinRoomRequest } from '~/types/room'
+import type { RoomJoinRequest, JoinRoomRequest } from '~/types/room/room'
 
 /**
  * Composable for managing room join requests.

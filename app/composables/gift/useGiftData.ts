@@ -4,8 +4,8 @@
  * Handles gift data fetching, caching, and category grouping.
  * Uses backend API: GET /api/v1/gifts/all
  */
-import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift';
-import { GIFT_CATEGORY_CONFIG } from '~/types/gift';
+import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift/gift';
+import { GIFT_CATEGORY_CONFIG } from '~/types/gift/gift';
 import { useApi, type NormalizedError } from '../shared/useApi';
 import { createLogger } from '~/utils/logger';
 

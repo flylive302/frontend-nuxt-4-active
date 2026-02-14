@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
-import type { SocketErrorEvent } from '~/types/audio';
+import type { SocketErrorEvent } from '~/types/room/audio';
 import { createLogger } from '~/utils/logger';
 import { registerRealtimeEventHandlers, resetRealtimeHandlers } from './useRealtimeEvents';
 

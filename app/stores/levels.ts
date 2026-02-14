@@ -4,7 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed, type Ref } from 'vue'
-import type { LevelStatus } from '~/types/levels'
+import type { LevelStatus } from '~/types/progression/levels'
 
 // ========================================
 // Store Definition

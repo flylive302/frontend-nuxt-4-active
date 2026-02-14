@@ -124,26 +124,26 @@ watch(
     <!-- PWA Components -->
 
     <!-- Download Progress Bar (top of screen during asset download) -->
-    <DownloadProgressBar 
+    <SystemDownloadProgressBar 
       :progress="bootstrapStore.assetProgress"
       :visible="bootstrapStore.assetPhase === 'downloading'"
     />
 
     <!-- Cellular Data Consent Modal -->
-    <CellularConsentModal
+    <SystemCellularConsentModal
       v-model="showCellularConsent"
       :size-bytes="pendingDownloadSize"
       @consent="handleCellularConsent"
     />
 
     <!-- Storage Permission Banner (auto-shows on first visit) -->
-    <StoragePermissionBanner />
+    <SystemStoragePermissionBanner />
 
     <!-- PWA Install Prompt (auto-shows when browser fires before install prompt) -->
-    <PwaInstallPrompt />
+    <SystemPwaInstallPrompt />
 
     <!-- Update Available Toast (auto-shows when new SW version is ready) -->
-    <UpdateAvailableToast />
+    <SystemUpdateAvailableToast />
 
     <!-- Achievement Modals (triggered by socket events) -->
     <EventsBadgeEarnedModal />

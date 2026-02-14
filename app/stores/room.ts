@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia';
-import type { BootstrapRoom as Room } from '~/types/bootstrap';
+import type { BootstrapRoom as Room } from '~/types/user/bootstrap';
 import type {
   RoomParticipant,
   ChatMessageEvent,
   AudioState,
   Seat,
-} from '~/types/audio';
+} from '~/types/room/audio';
 import { SEAT_COUNT, MAX_CHAT_MESSAGES } from '~/constants/room';
 import { createLogger } from '~/utils/logger';
 

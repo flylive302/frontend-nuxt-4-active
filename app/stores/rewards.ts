@@ -10,7 +10,7 @@ import type {
   RewardStats,
   GetRewardsParams,
   RewardPagination,
-} from '~/types/reward'
+} from '~/types/progression/reward'
 
 // ========================================
 // Types

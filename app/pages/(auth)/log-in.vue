@@ -4,8 +4,7 @@ import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchem
 import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
-import type {LoginPayload} from "~/types/auth";
-import SocialAuth from "~/components/social-auth.vue";
+import type {LoginPayload} from "~/types/user/auth";
 
 definePageMeta({
   layout: 'auth',
@@ -84,7 +83,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
 <template>
   <main aria-labelledby="login-heading">
 
-    <SocialAuth />
+    <AuthSocialAuth />
 
     <USeparator color="primary" class="my-4" label="OR" />
 

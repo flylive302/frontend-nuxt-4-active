@@ -286,7 +286,7 @@ function handleCropCancel() {
     </div>
 
     <!-- Crop Modal -->
-    <CommonImageUploadModal
+    <ImageUploadModal
       v-if="crop && isCropModalOpen"
       v-model="isCropModalOpen"
       :image-file="selectedFile"

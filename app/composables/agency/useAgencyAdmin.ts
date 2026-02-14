@@ -2,7 +2,7 @@
 // Agency Admin Composable
 // ========================================
 
-import type { KickMemberRequest } from '~/types/agency'
+import type { KickMemberRequest } from '~/types/agency/agency'
 
 // ========================================
 // Composable

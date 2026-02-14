@@ -9,7 +9,7 @@ import { computed, reactive, ref } from 'vue'
 import { navigateTo } from 'nuxt/app'
 import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
 import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
-import type { NationalIdImage } from '~/types/upload'
+import type { NationalIdImage } from '~/types/asset/upload'
 
 // ========================================
 // Page Configuration
@@ -382,7 +382,7 @@ function getUploadStatusColor(status: string): string {
         </UFormField>
 
         <!-- Default Reseller -->
-        <ChooseDefaultReseller v-model="coinResellerId" color="primary" />
+        <EconomyChooseDefaultReseller v-model="coinResellerId" color="primary" />
 
         <!-- Submit Button -->
         <UButton

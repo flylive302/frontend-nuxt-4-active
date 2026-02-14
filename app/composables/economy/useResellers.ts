@@ -1,7 +1,7 @@
 // ========================================
 // Imports & Types
 // ========================================
-import type { ApiResponse, ResellerApiRow, UpdateDefaultResellerRequest } from '~/types/reseller'
+import type { ApiResponse, ResellerApiRow, UpdateDefaultResellerRequest } from '~/types/economy/reseller'
 import { useApi } from '../shared/useApi'
 
 // ========================================

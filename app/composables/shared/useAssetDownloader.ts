@@ -2,7 +2,7 @@
 // Asset Downloader Composable
 // ========================================
 
-import type { DownloadProgress, EnqueueOptions } from '~/types/asset'
+import type { DownloadProgress, EnqueueOptions } from '~/types/asset/asset'
 import * as assetDownloader from '~/services/assetDownloader'
 import { createLogger } from '~/utils/logger'
 

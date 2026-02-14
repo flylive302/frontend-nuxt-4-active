@@ -2,7 +2,7 @@
 // Agency Invitations Composable
 // ========================================
 
-import type { AgencyInvitation, SendInvitationRequest, UserAgencyResponse } from '~/types/agency'
+import type { AgencyInvitation, SendInvitationRequest, UserAgencyResponse } from '~/types/agency/agency'
 
 // ========================================
 // Composable

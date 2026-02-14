@@ -11,7 +11,7 @@ import type {
   TransactionTypeFilter,
   GetTransactionsParams,
   TransactionPagination,
-} from '~/types/wallet'
+} from '~/types/economy/wallet'
 
 // ========================================
 // Types

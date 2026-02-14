@@ -4,7 +4,7 @@
 // ========================================
 
 import { onMounted } from 'vue'
-import type { AgencyJoinRequest } from '~/types/agency'
+import type { AgencyJoinRequest } from '~/types/agency/agency'
 
 // ========================================
 // Imports from Utils

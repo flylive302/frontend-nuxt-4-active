@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getGenderInfo } from '~/utils/gender'
 import { getAge } from '~/utils/date'
-import type { MinimalUser } from '~/types/bootstrap'
+import type { MinimalUser } from '~/types/user/bootstrap'
 import { useSlots } from 'vue';
 
 const props = defineProps<{

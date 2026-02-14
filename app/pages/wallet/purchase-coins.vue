@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { CoinRequest } from '~/types/coin-request'
+import type { CoinRequest } from '~/types/economy/coin-request'
 import {formatCurrency} from "~/utils/currency";
 
 definePageMeta({
@@ -75,7 +75,7 @@ const authStore = useAuthStore()
     <section class="px-3">
       <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
       <p class="text-sm text-muted mb-4">Keep your default reseller or select a Different One</p>
-      <ChooseDefaultReseller color="tertiary" />
+      <EconomyChooseDefaultReseller color="tertiary" />
 
       <!-- Form - Hidden when pending request exists -->
       <Transition
@@ -86,7 +86,7 @@ const authStore = useAuthStore()
         leave-from-class="opacity-100 scale-100"
         leave-to-class="opacity-0 scale-95"
       >
-        <FromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
+        <EconomyFromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
       </Transition>
 
       <!-- Pending Notice -->
@@ -103,14 +103,14 @@ const authStore = useAuthStore()
       <USeparator color="tertiary" class="my-6" />
 
       <!-- Coin Requests List Component -->
-      <CoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
+      <EconomyCoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
 
       <USeparator color="tertiary" class="my-6" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
       <div class="flex flex-col gap-3">
-        <ListItemPurchaseCoins />
-        <ListItemPurchaseCoins :coins="3200" :price="1.55" />
-        <ListItemPurchaseCoins :coins="6400" :price="3.25" />
+        <EconomyListItemPurchaseCoins />
+        <EconomyListItemPurchaseCoins :coins="3200" :price="1.55" />
+        <EconomyListItemPurchaseCoins :coins="6400" :price="3.25" />
       </div>
     </section>
     <div class="h-14" />

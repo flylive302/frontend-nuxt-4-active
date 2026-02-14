@@ -2,7 +2,7 @@
 // Room Invitations Composable
 // ========================================
 
-import type { RoomInvitation, InviteToRoomRequest, RoomMemberPagination } from '~/types/room'
+import type { RoomInvitation, InviteToRoomRequest, RoomMemberPagination } from '~/types/room/room'
 
 /**
  * Composable for managing room invitations.

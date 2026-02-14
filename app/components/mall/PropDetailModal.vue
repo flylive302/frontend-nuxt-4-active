@@ -2,8 +2,8 @@
 <!-- Modal for viewing prop details and purchasing -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Prop } from '~/types/prop'
-import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/types/prop'
+import type { Prop } from '~/types/mall/prop'
+import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/types/mall/prop'
 import { useAuthStore } from '~/stores/auth'
 
 // ========================================

@@ -1,5 +1,5 @@
 <script setup>
-import {useRoom} from "~/composables/useRoom";
+
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[HomeFooter]');

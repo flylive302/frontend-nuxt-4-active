@@ -7,7 +7,7 @@ import type {
   UserAgencyResponse,
   LeaveAgencyRequest,
   ChangeCoinResellerRequest 
-} from '~/types/agency'
+} from '~/types/agency/agency'
 
 // ========================================
 // Composable

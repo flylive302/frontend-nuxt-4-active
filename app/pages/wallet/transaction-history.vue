@@ -3,8 +3,7 @@
 // Imports
 // ========================================
 
-import TransactionItem from '~/components/transaction-item.vue'
-import type { TransactionTypeFilter } from '~/types/wallet'
+import type { TransactionTypeFilter } from '~/types/economy/wallet'
 
 // ========================================
 // Page Configuration
@@ -164,7 +163,7 @@ onMounted(async () => {
           <icon name="i-lucide-chevron-down" />
         </div>
         <template #content>
-          <TransactionItem
+          <EconomyTransactionItem
             v-for="transaction in day.transactions"
             :key="transaction.id"
             :transaction="transaction"

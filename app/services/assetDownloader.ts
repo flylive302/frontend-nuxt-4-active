@@ -8,7 +8,7 @@ import type {
   DownloadQueueItem,
   EnqueueItem,
   EnqueueOptions,
-} from '~/types/asset'
+} from '~/types/asset/asset'
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'

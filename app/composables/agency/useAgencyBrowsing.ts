@@ -2,7 +2,7 @@
 // Agency Browsing Composable
 // ========================================
 
-import type { Agency, AgencyMember, AgencyListFilters, CreateAgencyRequest } from '~/types/agency'
+import type { Agency, AgencyMember, AgencyListFilters, CreateAgencyRequest } from '~/types/agency/agency'
 
 // ========================================
 // Composable

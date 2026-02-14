@@ -12,7 +12,7 @@ import type {
   BadgeCategory,
   BadgeCategoryInfo,
   GetBadgesParams,
-} from '~/types/badge'
+} from '~/types/progression/badge'
 
 // ========================================
 // Types

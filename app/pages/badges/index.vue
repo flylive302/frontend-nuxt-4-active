@@ -4,8 +4,8 @@
 // ========================================
 
 import BadgeCard from '~/components/badges/BadgeCard.vue'
-import type { BadgeCategory } from '~/types/badge'
-import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ICONS } from '~/types/badge'
+import type { BadgeCategory } from '~/types/progression/badge'
+import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ICONS } from '~/types/progression/badge'
 
 // ========================================
 // Page Configuration

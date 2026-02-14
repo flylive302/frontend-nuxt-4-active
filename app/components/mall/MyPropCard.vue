@@ -2,8 +2,8 @@
 <!-- Displays a user's owned prop with equip/unequip -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { UserProp } from '~/types/prop'
-import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/types/prop'
+import type { UserProp } from '~/types/mall/prop'
+import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/types/mall/prop'
 
 // ========================================
 // Props & Emits

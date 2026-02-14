@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
-import { PROP_TYPE_LABELS } from '~/types/prop'
-import type { PropType as PropTypeEnum } from '~/types/prop'
+import { PROP_TYPE_LABELS } from '~/types/mall/prop'
+import type { PropType as PropTypeEnum } from '~/types/mall/prop'
 import {useAuthStore} from "~/stores/auth";
 
 // ========================================

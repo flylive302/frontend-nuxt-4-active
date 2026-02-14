@@ -32,6 +32,12 @@ vi.mock('socket.io-client', () => ({
   io: vi.fn(() => mockSocket),
 }))
 
+// Mock useRealtimeEvents to prevent cascade into real Pinia stores
+vi.mock('../../app/composables/room/useRealtimeEvents', () => ({
+  registerRealtimeEventHandlers: vi.fn(),
+  resetRealtimeHandlers: vi.fn(),
+}))
+
 // ============================================
 // Mock Nuxt Auto-imports
 // ============================================
@@ -57,7 +63,7 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('shallowRef', shallowRef)
 
 // Mock useAuthStore - needs to be a function that returns the store
-let mockAuthStore = { token: null as string | null }
+let mockAuthStore = { token: null as string | null, msabToken: null as string | null }
 vi.stubGlobal('useAuthStore', () => mockAuthStore)
 
 // ============================================
@@ -72,7 +78,7 @@ describe('useAudioSocket', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockSocket.connected = false
-    mockAuthStore = { token: null }
+    mockAuthStore = { token: null, msabToken: null }
     
     // Re-stub all globals after module reset
     vi.stubGlobal('useRuntimeConfig', () => mockRuntimeConfig)
@@ -90,7 +96,7 @@ describe('useAudioSocket', () => {
 
   describe('connect()', () => {
     it('should fail if no auth token', async () => {
-      mockAuthStore.token = null
+      mockAuthStore.msabToken = null
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
@@ -101,7 +107,7 @@ describe('useAudioSocket', () => {
     })
 
     it('should set status to connecting with valid auth token', async () => {
-      mockAuthStore.token = 'valid-token'
+      mockAuthStore.msabToken = 'valid-token'
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
@@ -111,7 +117,7 @@ describe('useAudioSocket', () => {
     })
 
     it('should register all event handlers', async () => {
-      mockAuthStore.token = 'valid-token'
+      mockAuthStore.msabToken = 'valid-token'
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect } = useAudioSocket()
@@ -129,7 +135,7 @@ describe('useAudioSocket', () => {
 
   describe('disconnect()', () => {
     it('should disconnect and cleanup', async () => {
-      mockAuthStore.token = 'valid-token'
+      mockAuthStore.msabToken = 'valid-token'
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, disconnect, status } = useAudioSocket()
@@ -162,7 +168,7 @@ describe('useAudioSocket', () => {
 
   describe('event handlers', () => {
     it('should update status on connect handler', async () => {
-      mockAuthStore.token = 'valid-token'
+      mockAuthStore.msabToken = 'valid-token'
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
@@ -181,7 +187,7 @@ describe('useAudioSocket', () => {
     })
 
     it('should handle disconnect event', async () => {
-      mockAuthStore.token = 'valid-token'
+      mockAuthStore.msabToken = 'valid-token'
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
@@ -199,7 +205,7 @@ describe('useAudioSocket', () => {
     })
 
     it('should handle connect_error event', async () => {
-      mockAuthStore.token = 'valid-token'
+      mockAuthStore.msabToken = 'valid-token'
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()

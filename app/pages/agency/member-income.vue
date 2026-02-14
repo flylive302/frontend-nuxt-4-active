@@ -4,7 +4,7 @@
 // ========================================
 
 import { onMounted, ref, computed } from 'vue'
-import type { MemberIncome, MemberIncomePagination } from '~/types/memberIncome'
+import type { MemberIncome, MemberIncomePagination } from '~/types/income/memberIncome'
 
 // ========================================
 // Page Configuration

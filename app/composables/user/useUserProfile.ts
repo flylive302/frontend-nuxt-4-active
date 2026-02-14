@@ -6,7 +6,7 @@ import type {
   UserProfile,
   ProfileGiftReceived,
   UserProfileResponse,
-} from '~/types/user-profile'
+} from '~/types/user/user-profile'
 import { formatCurrency } from '~/utils/currency'
 import type { LevelInfo } from '~/stores/bootstrap'
 import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/stores/bootstrap'

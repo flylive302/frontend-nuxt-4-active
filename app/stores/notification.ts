@@ -9,7 +9,7 @@ import type {
   Notification,
   NotificationListResponse,
   UnreadCountResponse,
-} from '~/types/notification'
+} from '~/types/notification/notification'
 
 // Note: Polling has been removed in favor of realtime socket events.
 // See useRealtimeEvents.ts for notification.new and notification.read handlers.

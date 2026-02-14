@@ -2,7 +2,7 @@
 // Agency Composables - Shared Types
 // ========================================
 
-import type { Agency, AgencyMember } from '~/types/agency'
+import type { Agency, AgencyMember } from '~/types/agency/agency'
 
 // ========================================
 // State Types

@@ -5,7 +5,7 @@
 
 import { h, ref, computed, resolveComponent } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
-import type { LevelConfig, LevelStatus } from '~/types/bootstrap'
+import type { LevelConfig, LevelStatus } from '~/types/user/bootstrap'
 import { getAge } from '~/utils/date'
 
 // ========================================
