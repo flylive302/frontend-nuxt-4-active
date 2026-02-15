@@ -12,7 +12,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@googlemaps/markerclusterer": "^2.6.2",
     "@internationalized/date": "^3.9.0",
     "@nuxt/eslint": "^1.9.0",
     "@nuxt/image": "^1.11.0",

@@ -127,7 +127,10 @@ export default defineNuxtConfig({
             link: [
                 { rel: 'manifest', href: '/manifest.webmanifest' },
                 { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
-                { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+                { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+                // Preconnect to critical domains for faster resource loading
+                { rel: 'preconnect', href: 'https://ik.imagekit.io', crossorigin: '' },
+                { rel: 'dns-prefetch', href: 'https://ik.imagekit.io' }
             ]
         },
         pageTransition: { name: 'page', mode: 'out-in' }
@@ -148,7 +151,7 @@ export default defineNuxtConfig({
             include: ['svga/dist/index.esm.min.js']
         },
         build: {
-            chunkSizeWarningLimit: 2000,
+            chunkSizeWarningLimit: 500,
             rollupOptions: {
                 onwarn(warning, warn) {
                     if (warning.code === 'EVAL' && warning.id?.includes('svga')) {
@@ -157,12 +160,33 @@ export default defineNuxtConfig({
                     warn(warning)
                 },
                 output: {
+                    /**
+                     * Granular vendor chunking strategy.
+                     *
+                     * Splits node_modules into purpose-based chunks so users only download
+                     * code for the features they actually use on the current page.
+                     *
+                     * Core chunks load at app init. Feature chunks load on demand.
+                     */
                     manualChunks(id: string) {
-                        if (id.includes('node_modules')) {
-                            if (id.includes('svga')) return 'svga'
-                            if (id.includes('mapbox') || id.includes('googlemaps')) return 'maps'
-                            return 'vendor'
-                        }
+                        if (!id.includes('node_modules')) return
+
+                        // ── Core: loaded at app init / login ──
+                        if (id.includes('socket.io'))              return 'core-realtime'
+                        if (id.includes('zod'))                    return 'core-validation'
+
+                        // ── Room: loaded when user joins a room ──
+                        if (id.includes('mediasoup'))              return 'room-audio'
+                        if (id.includes('svga'))                   return 'room-animations'
+
+                        // ── Feature: loaded on specific pages ──
+                        if (id.includes('vue-advanced-cropper'))   return 'feature-cropper'
+                        if (id.includes('libphonenumber'))         return 'feature-phone'
+                        if (id.includes('internationalized/date')) return 'feature-dates'
+                        if (id.includes('vue-virtual-scroller'))   return 'feature-scroller'
+
+                        // Let Vite handle remaining deps organically via its
+                        // module graph analysis (vue, pinia, nuxt, vueuse, etc.)
                     }
                 }
             }
@@ -174,8 +198,8 @@ export default defineNuxtConfig({
                 'node_modules/mime/dist/src/Mime.js': 'undefined'
             }
         },
-        // Vercel deployment
-        preset: 'vercel'
+        // Cloudflare Pages deployment
+        preset: 'cloudflare_pages'
     },
     runtimeConfig: {
         public: {
