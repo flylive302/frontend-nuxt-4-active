@@ -21,7 +21,12 @@ const badgeDisplay = computed(() => {
           :src="props.room.logo ?? undefined"
           :alt="props.room.name ?? undefined"
           class="h-full w-full object-cover"
-          preload
+          :width="384"
+          :height="384"
+          format="webp"
+          densities="x1 x2"
+          sizes="50vw"
+          loading="lazy"
       />
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>

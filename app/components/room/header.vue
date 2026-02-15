@@ -309,6 +309,6 @@ const openLeaveDrawer = (event: Event) => {
   </header>
 
   <!-- Settings Drawer (Owner/Admin only) -->
-  <RoomSettingsDrawer v-model:open="settingsOpen" />
+  <LazyRoomSettingsDrawer v-model:open="settingsOpen" />
 
 </template>

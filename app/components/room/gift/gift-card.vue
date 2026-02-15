@@ -34,6 +34,12 @@ const { formatGiftPrice } = useGiftData();
         :src="gift.thumbnail_url"
         :alt="gift.label ?? gift.name"
         class="w-full aspect-square object-contain rounded"
+        :width="128"
+        :height="128"
+        format="webp"
+        densities="x1 x2"
+        sizes="128px"
+        loading="lazy"
       />
     </div>
 

@@ -57,6 +57,6 @@ defineExpose({ restart });
 
 <template>
   <div class="w-full h-full flex items-center justify-center">
-    <NuxtImg :src="src" class="max-w-full max-h-full object-contain" />
+    <NuxtImg :src="src" class="max-w-full max-h-full object-contain" format="webp" loading="eager" />
   </div>
 </template>

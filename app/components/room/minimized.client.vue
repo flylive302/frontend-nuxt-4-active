@@ -67,7 +67,10 @@ watch([winW, winH], () => {
           provider="imagekit"
           src="/siteAssets/room/room-card-top.webp"
           alt="Minimized Room Preview"
+          :width="64"
+          :height="64"
           :quality="10"
+          format="webp"
           class="h-full w-full object-cover rounded-full border pointer-events-none"
       />
     </div>

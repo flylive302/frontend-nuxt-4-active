@@ -1,4 +1,4 @@
-<script setup lang="ts">
+ <script setup lang="ts">
 /**
  * RoomShell - Main room container component
  * Integrates header, seats, chat panel, and gifting drawer
@@ -95,8 +95,11 @@ onMounted(() => {
     <!-- Background Image -->
     <div class="absolute inset-0 z-0 tint-500">
       <NuxtImg
-          :src="roomStore.currentRoom?.logo ?? 'https://ik.imagekit.io/flylive/siteAssets/rooms/eagle3.webp'"  
+          :src="roomStore.currentRoom?.logo ?? 'https://ik.imagekit.io/flylive/siteAssets/rooms/eagle3.webp'"
           class="bg-fixed object-cover size-full"
+          format="webp"
+          sizes="100vw"
+          loading="eager"
       />
     </div>
 
@@ -112,7 +115,7 @@ onMounted(() => {
         <RoomSeat v-for="i in 15" :key="i" :seat-id="i" />
       </main>
 
-      <RoomSeatDrawer title="Room Seat Drawer" description="Room Seat Description" />
+      <LazyRoomSeatDrawer title="Room Seat Drawer" description="Room Seat Description" />
 
       <!-- Bottom Section: Chat + Controls -->
       <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
@@ -136,7 +139,7 @@ onMounted(() => {
           />
           <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
 
-          <RoomGiftDrawer />
+          <LazyRoomGiftDrawer />
         </div>
 
       </div>
@@ -144,7 +147,7 @@ onMounted(() => {
     </div>
 
     <!-- Gift Playback Modal (full-screen, outside content area) -->
-    <RoomGiftPlaybackModal />
+    <LazyRoomGiftPlaybackModal />
 
   </div>
 </template>
