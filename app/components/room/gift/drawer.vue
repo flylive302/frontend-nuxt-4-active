@@ -51,8 +51,7 @@ async function handleSend() {
 <template>
   <UDrawer v-model:open="isOpen" title="Send Gift" description="Send gifts to speakers in the room">
     <!-- Trigger Button -->
-    <NuxtImg src="/room/gift-box.png" alt="gifts" class="w-12 cursor-pointer" />
-
+    <NuxtImg :src="resolveAssetUrl('/room/gift-box.png')" alt="gifts" class="w-12 cursor-pointer" />
     <template #content>
       <div class="p-2 space-y-3">
 

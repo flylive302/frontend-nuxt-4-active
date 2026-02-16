@@ -112,7 +112,7 @@ const activeVip = ref<VipLevel>(1)
 
 const currentVipConfig = computed(() => VIP_CONFIGS[activeVip.value])
 
-const assetBasePath = computed(() => `/parsedAnimations/vip/${activeVip.value}`)
+const assetBasePath = computed(() => resolveAssetUrl(`/parsedAnimations/vip/${activeVip.value}`))
 
 // Computed styles for dynamic colors
 const bgStyle = computed(() => ({

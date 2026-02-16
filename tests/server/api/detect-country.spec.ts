@@ -2,22 +2,31 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Mock } from 'vitest'
 import type { H3Event } from 'h3'
 
-const getRequestIPMock = vi.fn<(event: unknown, opts?: unknown) => string | null>()
+const getRequestIPMock = vi.fn()
+const getHeaderMock = vi.fn()
 
 vi.mock('h3', () => ({
-  getRequestIP: getRequestIPMock
+  getRequestIP: getRequestIPMock,
+  getHeader: getHeaderMock
 }))
 
 describe('detect-country handler', () => {
   let handler: (event: H3Event) => Promise<{ country_code: string | null }>
 
   beforeEach(async () => {
+    vi.clearAllMocks()
     await vi.resetModules()
-    getRequestIPMock.mockReset()
+    
+    // Default mocks
+    getRequestIPMock.mockReturnValue(null)
+    getHeaderMock.mockReturnValue(null)
+
+    // Setup global context for Nuxt
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(globalThis as any).defineEventHandler = (fn: unknown) => fn
+    ;(globalThis as any).defineEventHandler = (fn: any) => fn
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(globalThis as any).$fetch = vi.fn()
+    
     handler = (await import('../../../server/api/detect-country')).default
   })
 
@@ -29,23 +38,47 @@ describe('detect-country handler', () => {
     delete (globalThis as any).$fetch
   })
 
-  it('returns null for localhost addresses', async () => {
-    getRequestIPMock.mockReturnValueOnce('127.0.0.1')
-
-    await expect(handler({} as unknown as H3Event)).resolves.toEqual({ country_code: null })
+  it('prioritizes cf-ipcountry header if present', async () => {
+    getHeaderMock.mockReturnValue('FR')
+    
+    const result = await handler({} as H3Event)
+    
+    expect(result).toEqual({ country_code: 'FR' })
+    expect(getHeaderMock).toHaveBeenCalledWith(expect.anything(), 'cf-ipcountry')
+    // Should NOT fetch geojs
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((globalThis as any).$fetch).not.toHaveBeenCalled()
   })
 
-  it('fetches GeoJS for non-localhost addresses', async () => {
+  it('ignores invalid cf-ipcountry header values', async () => {
+    getHeaderMock.mockReturnValue('XX') // existing logic ignores 'XX'
+    
+    // returns null if no IP fallback
+    const result = await handler({} as H3Event)
+    expect(result).toEqual({ country_code: null })
+  })
+
+  it('returns null for localhost addresses when no cf-ipcountry', async () => {
+    getRequestIPMock.mockReturnValue('127.0.0.1')
+    getHeaderMock.mockReturnValue(null)
+
+    await expect(handler({} as H3Event)).resolves.toEqual({ country_code: null })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((globalThis as any).$fetch).not.toHaveBeenCalled()
+  })
+
+  it('fetches GeoJS for non-localhost addresses when no cf-ipcountry', async () => {
+    getHeaderMock.mockReturnValue(null)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fetchMock = (globalThis as any).$fetch as unknown as Mock
     fetchMock.mockResolvedValueOnce({ country: 'us' })
-    getRequestIPMock.mockReturnValueOnce('203.0.113.5')
+    getRequestIPMock.mockReturnValue('203.0.113.5')
 
-    await expect(handler({} as unknown as H3Event)).resolves.toEqual({ country_code: 'US' })
-    expect(fetchMock).toHaveBeenCalledWith('https://get.geojs.io/v1/ip/country/203.0.113.5.json', {
-      timeout: 3000
-    })
+    await expect(handler({} as H3Event)).resolves.toEqual({ country_code: 'US' })
+    
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('https://get.geojs.io/v1/ip/country/203.0.113.5.json'),
+      expect.objectContaining({ timeout: 3000 })
+    )
   })
 })

@@ -10,6 +10,7 @@
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
+import { resolveAnimationUrl } from '~/utils/assetUrl'
 
 // ========================================
 // Module-level Singleton Caches
@@ -103,7 +104,7 @@ export function useGiftAssetCache() {
     } else {
       // Fallback if plugin not available
       try {
-        await $fetch(`/parsedAnimations/${name}.json`);
+        await $fetch(resolveAnimationUrl(name));
         log.debug('✅ SVGA cached (fallback):', name);
       } catch (error) {
         log.warn('❌ SVGA failed:', name, error);

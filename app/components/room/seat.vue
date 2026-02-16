@@ -89,7 +89,7 @@ const displayName = computed(() => {
       />
 
       <!-- Speaking indicator -->
-      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="mice_waves/8" />
+      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="vip/1/mice_wave" />
 
     </div>
 

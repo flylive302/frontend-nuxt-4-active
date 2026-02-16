@@ -47,18 +47,18 @@ export default defineNuxtConfig({
             // Explicit glob patterns to avoid dev mode warnings
             globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,webp}'],
             runtimeCaching: [
-                // Gift videos - Cache First (30 days)
+                // R2 CDN Assets - Gift videos (30 days)
                 {
-                    urlPattern: /\/room\/gifts\/.*\.(webm|mp4)$/i,
+                    urlPattern: /(?:assets\.flyliveapp\.com|\/room)\/.*\.(webm|mp4)$/i,
                     handler: 'CacheFirst',
                     options: {
                         cacheName: 'gift-videos',
                         expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }
                     }
                 },
-                // SVGA JSON - Cache First (30 days)
+                // R2 CDN Assets - SVGA JSON (30 days)
                 {
-                    urlPattern: /\/parsedAnimations\/.*\.json$/i,
+                    urlPattern: /(?:assets\.flyliveapp\.com|\/parsedAnimations)\/.*\.json$/i,
                     handler: 'CacheFirst',
                     options: {
                         cacheName: 'svga-cache',
@@ -130,7 +130,9 @@ export default defineNuxtConfig({
                 { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
                 // Preconnect to critical domains for faster resource loading
                 { rel: 'preconnect', href: 'https://ik.imagekit.io', crossorigin: '' },
-                { rel: 'dns-prefetch', href: 'https://ik.imagekit.io' }
+                { rel: 'dns-prefetch', href: 'https://ik.imagekit.io' },
+                { rel: 'preconnect', href: 'https://assets.flyliveapp.com', crossorigin: '' },
+                { rel: 'dns-prefetch', href: 'https://assets.flyliveapp.com' }
             ]
         },
         pageTransition: { name: 'page', mode: 'out-in' }
@@ -205,7 +207,8 @@ export default defineNuxtConfig({
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
-            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'ws://localhost:3030'
+            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'ws://localhost:3030',
+            assetCdnUrl: process.env.NUXT_PUBLIC_ASSET_CDN_URL || 'https://assets.flyliveapp.com'
         }
     },
 })
