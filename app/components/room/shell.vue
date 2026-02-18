@@ -126,6 +126,7 @@ onMounted(() => {
 
         <!-- Side Controls & Gifting -->
         <div class="flex flex-col items-center gap-3 justify-end">
+          <LazyRoomGiftDrawer />
           <!-- Volume Control (placeholder for future) -->
           <UButton icon="i-lucide-volume-2" size="md" variant="subtle" />
           <!-- Mic Mute/Unmute - only show when producing audio -->
@@ -138,8 +139,6 @@ onMounted(() => {
               @click="() => { toggleLocalMute() }"
           />
           <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
-
-          <LazyRoomGiftDrawer />
         </div>
 
       </div>
