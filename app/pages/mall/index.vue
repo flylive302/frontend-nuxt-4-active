@@ -105,7 +105,7 @@ async function handleLoadMore(): Promise<void> {
       <template #second-link-text>My Props</template>
     </NavAlt>
 
-    <AltHero class="z-10" image-src="/siteAssets/alt-hero/secondary.webp">
+    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
       <div class="p-2 bg-linear-to-br to-secondary/30">
         <UserAvatar :animated="true" :frame-name="authStore?.user?.frame ?? undefined" :img="authStore?.user?.avatar ?? undefined" class="max-w-[40vw] mx-auto" />
       </div>

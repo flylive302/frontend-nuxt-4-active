@@ -89,7 +89,7 @@ const displayName = computed(() => {
       />
 
       <!-- Speaking indicator -->
-      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="vip/1/mice_wave" />
+      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="https://assets.flyliveapp.com/parsedAnimations/vip/1/mice_wave.json" />
 
     </div>
 

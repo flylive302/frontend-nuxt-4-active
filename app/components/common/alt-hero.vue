@@ -3,7 +3,7 @@ withDefaults(defineProps<{
   imageSrc?: string
   blur?: number
 }>(), {
-  imageSrc: '/siteAssets/alt-hero/primary.webp',
+  imageSrc: 'https://ik.imagekit.io/flylive/siteAssets/alt-hero/primary.webp',
   blur: 2
 })
 
@@ -12,14 +12,12 @@ withDefaults(defineProps<{
 <template>
   <div class="relative w-full">
     <NuxtImg
-        provider="imagekit"
         :src="imageSrc"
         format="webp"
         densities="x1 x2"
         sizes="320px"
         width="100%"
         class="min-w-full"
-        :modifiers="{ effectSharpen: 1 }"
     />
     <div class="px-3 pt-[20vw] absolute inset-0">
       <BgGlass

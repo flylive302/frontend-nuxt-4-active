@@ -228,20 +228,18 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
       <template #second-link-text>Diamonds</template>
     </NavAlt>
     
-    <AltHero class="z-10" image-src="/siteAssets/alt-hero/secondary.webp">
+    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
       <div class="flex p-2 bg-linear-to-br to-secondary/40">
         <div class="flex flex-col justify-end items-center">
           <NuxtImg 
-            provider="imagekit" 
-            src="/siteAssets/props/prop-diamond.svg" 
+            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg" 
             format="webp" 
             class="w-14" 
           />
         </div>
         <div class="flex-auto flex flex-col justify-between items-center">
           <NuxtImg 
-            provider="imagekit" 
-            src="/siteAssets/props/flylive-diamond.webp" 
+            src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp" 
             class="w-full mb-2 max-w-28" 
           />
           <UButton 
@@ -255,8 +253,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
         </div>
         <div class="flex flex-col justify-end">
           <NuxtImg 
-            provider="imagekit" 
-            src="/siteAssets/props/prop-diamond.svg" 
+            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg" 
             format="webp" 
             class="transform -scale-x-100 w-14" 
           />
@@ -327,7 +324,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
           <p class="font-semibold text-base leading-none">Change in Balances after Exchange:</p>
           <div class="flex items-center gap-2 bg-linear-to-br from-neutral-950 to-primary-950 px-2 py-1 inset-shadow-sm ring ring-primary/50 rounded-md">
             <div class="flex items-center gap-1 w-full">
-              <NuxtImg provider="imagekit" src="/siteAssets/props/flylive-diamond.webp" class="w-8" />
+              <NuxtImg src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp" class="w-8" />
               <p class="text-base font-semibold leading-none">
                 Diamonds: <br> 
                 <span class="text-secondary-400 font-bold text-base">
@@ -339,7 +336,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
             <USeparator color="primary" orientation="vertical" class="h-8" />
 
             <div class="flex items-center gap-1 w-full">
-              <NuxtImg provider="imagekit" src="/siteAssets/props/flylive_coin.webp" class="w-8" />
+              <NuxtImg src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp" class="w-8" />
               <p class="text-base font-semibold leading-none">
                 Coins: <br>
                 <span class="text-success font-semibold text-base ml-1">

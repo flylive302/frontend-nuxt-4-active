@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
   /** Rarity level for styling */
   rarity?: GiftRarity
 }>(), {
-  badgeSrc: '/siteAssets/badges/badge-profile-1.webp',
+  badgeSrc: 'https://ik.imagekit.io/flylive/siteAssets/badges/badge-profile-1.webp',
   itemName: 'Item Name',
   quantity: undefined,
   rarity: 'common',

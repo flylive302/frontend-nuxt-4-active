@@ -68,7 +68,7 @@ const backgroundClass = computed(() =>
  * Get thumbnail URL with fallback.
  */
 const thumbnailUrl = computed(() => 
-  props.transaction.thumbnail_url ?? '/siteAssets/badges/badge-charm-level-1.webp'
+  props.transaction.thumbnail_url ?? 'https://ik.imagekit.io/flylive/siteAssets/badges/badge-charm-level-1.webp'
 )
 
 /**

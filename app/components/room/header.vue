@@ -200,7 +200,7 @@ const openLeaveDrawer = (event: Event) => {
               <div class="flex items-center justify-between">
                 <SectionTitle class="mt-1">Levels</SectionTitle>
                 <ProfileBadge 
-                  :badge-src="currentBadge?.image_url ?? '/badges/profile-1.webp'"
+                  :badge-src="currentBadge?.image_url ?? 'https://ik.imagekit.io/flylive/badges/profile-1.webp'"
                   :txt="thisRoom?.current_level ?? 0" 
                 />
               </div>

@@ -38,23 +38,19 @@ const authStore = useAuthStore()
       <template #first-link-text>Coins</template>
       <template #second-link-text>Diamonds</template>
     </NavAlt>
-    <AltHero image-src="/siteAssets/alt-hero/tertiary.webp">
+    <AltHero image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
       <div class="flex p-2 bg-linear-to-br to-tertiary/30">
         <div class="flex flex-col justify-end">
           <NuxtImg
-              provider="imagekit"
-              src="/siteAssets/props/prop-recharge.webp"
-              :modifiers="{ effectSharpen: 1 }"
+              src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
               class="transform -scale-x-100 w-20"
           />
         </div>
         <div class="flex-auto flex flex-col justify-between items-center">
           <NuxtImg
-              provider="imagekit"
-              src="/siteAssets/props/flylive_coin.webp"
+              src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp"
               density="3x"
               class="mb-2 w-44"
-              :modifiers="{ effectSharpen: 1 }"
           />
           <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">
             {{ formatCurrency(authStore.user?.coins) }}
@@ -62,10 +58,8 @@ const authStore = useAuthStore()
         </div>
         <div class="flex flex-col justify-end">
           <NuxtImg
-              provider="imagekit"
-              src="/siteAssets/props/prop-recharge.webp"
+              src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
               class="w-20"
-              :modifiers="{ effectSharpen: 1 }"
           />
         </div>
       </div>

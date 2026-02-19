@@ -87,7 +87,7 @@ const tableData = computed<RoomLevelRow[]>(() =>
       level: item.name,
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
-        badgeSrc: badge?.image_url || '/badges/room/level_1.webp',
+        badgeSrc: badge?.image_url || 'https://ik.imagekit.io/flylive/badges/room/level_1.webp',
         color: 'primary',
         txt: String(item.level),
         class: item.level === currentLevel.value 

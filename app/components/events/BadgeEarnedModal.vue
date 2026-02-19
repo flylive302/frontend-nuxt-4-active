@@ -88,7 +88,6 @@ const contextDescription = computed(() => {
             >
               <NuxtImg
                 v-if="badgeModalData.badgeImage"
-                provider="imagekit"
                 :src="badgeModalData.badgeImage"
                 :alt="badgeModalData.badgeName"
                 class="h-16 w-16 object-contain drop-shadow-lg"

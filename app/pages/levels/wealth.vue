@@ -132,7 +132,7 @@ const tableData = computed<WealthLevelRow[]>(() =>
       level: item.name,
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
-        badgeSrc: badge?.image_url || '/badges/wealth/level_1.webp',
+        badgeSrc: badge?.image_url || 'https://ik.imagekit.io/flylive/badges/wealth/level_1.webp',
         color: 'tertiary',
         txt: String(item.level),
         class: item.level === currentLevel.value ? 'border border-tertiary bg-tertiary/10 rounded-md px-2 py-1 inset-shadow-sm ' : '',
@@ -154,7 +154,7 @@ watchEffect(() => {
       <template #second-link-text>Charm Level</template>
     </NavAlt>
 
-    <AltHero class="z-10" image-src="/siteAssets/alt-hero/tertiary.webp">
+    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
       <div class="p-2 w-full h-full bg-gradient-to-br to-tertiary/50 backdrop-blur-sm">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
@@ -217,8 +217,7 @@ watchEffect(() => {
       <!-- Level Description -->
       <div class="flex gap-2 items-center">
         <NuxtImg
-          provider="imagekit"
-          :src="currentBadge?.image_url == null ? '/badges/wealth/level_1.webp' : currentBadge?.image_url"
+          :src="currentBadge?.image_url == null ? 'https://ik.imagekit.io/flylive/badges/wealth/level_1.webp' : currentBadge?.image_url"
           class="w-8 relative z-10 shrink-0"
           width="18"
           height="18"

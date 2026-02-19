@@ -29,8 +29,7 @@ const items = [
       </aside>
 
       <NuxtImg
-          provider="imagekit"
-          src="/siteAssets/room/room-card-top.webp"
+          src="https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp"
           preload
       />
     </div>

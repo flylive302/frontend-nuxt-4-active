@@ -1,5 +1,3 @@
-import { resolveAnimationUrl } from '~/utils/assetUrl'
-
 export default defineNuxtPlugin(async () => {
     const { Player } = await import((`svga/dist/index.esm.min.js`));
 
@@ -8,20 +6,20 @@ export default defineNuxtPlugin(async () => {
     /**
      * Fetch and cache SVGA animation data.
      * Exposed for preloading - uses the same cache as createSvgaPlayer.
-     * Resolves through CDN in production, local public/ in dev.
+     * Expects a full URL to the SVGA JSON file.
      */
-    const fetchAnimation = (name: string): Promise<unknown> => {
-        if (!cache.has(name)) {
-            cache.set(name, $fetch<unknown>(resolveAnimationUrl(name)));
+    const fetchAnimation = (url: string): Promise<unknown> => {
+        if (!cache.has(url)) {
+            cache.set(url, $fetch<unknown>(url));
         }
-        return cache.get(name)!;
+        return cache.get(url)!;
     };
 
     /**
      * Check if an animation is already cached
      */
-    const isCached = (name: string): boolean => {
-        return cache.has(name);
+    const isCached = (url: string): boolean => {
+        return cache.has(url);
     };
 
     const createSvgaPlayer = async (options: {

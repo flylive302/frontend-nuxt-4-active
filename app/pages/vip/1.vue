@@ -112,7 +112,7 @@ const activeVip = ref<VipLevel>(1)
 
 const currentVipConfig = computed(() => VIP_CONFIGS[activeVip.value])
 
-const assetBasePath = computed(() => resolveAssetUrl(`/parsedAnimations/vip/${activeVip.value}`))
+const assetBasePath = computed(() => `https://assets.flyliveapp.com/parsedAnimations/vip/${activeVip.value}`)
 
 // Computed styles for dynamic colors
 const bgStyle = computed(() => ({
@@ -145,7 +145,7 @@ const setActiveVip = (level: VipLevel) => {
     <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
       <SvgaPlayer
           :key="`vip-card-${activeVip}`"
-          :name="`vip/${activeVip}/card`"
+          :name="`https://assets.flyliveapp.com/parsedAnimations/vip/${activeVip}/card.json`"
           class="-mt-22"
       />
     </div>
@@ -172,7 +172,7 @@ const setActiveVip = (level: VipLevel) => {
         <div class="flex w-[62.5%] flex-col items-center justify-center">
           <SvgaPlayer
               :key="`vip-card-${activeVip}`"
-              :name="`vip/${activeVip}/emblem`"
+              :name="`https://assets.flyliveapp.com/parsedAnimations/vip/${activeVip}/emblem.json`"
               class="w-full h-auto"
           />
         </div>

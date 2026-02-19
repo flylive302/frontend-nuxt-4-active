@@ -87,7 +87,6 @@ function handleToggle(): void {
       :src="badge.image_url"
       :alt="badge.name"
       class="size-16 mx-auto mb-2 object-contain"
-      provider="imagekit"
     />
 
     <!-- Badge Name -->

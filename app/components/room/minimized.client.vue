@@ -64,8 +64,7 @@ watch([winW, winH], () => {
   >
     <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50" @click="roomStore.maximizeRoom()">
       <NuxtImg
-          provider="imagekit"
-          src="/siteAssets/room/room-card-top.webp"
+          src="https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp"
           alt="Minimized Room Preview"
           :width="64"
           :height="64"

@@ -12,7 +12,7 @@ withDefaults(defineProps<{
   showBadge?: boolean
 }>(), {
   color: "primary",
-  badgeSrc: "/badges/profile-1.webp",
+  badgeSrc: "https://ik.imagekit.io/flylive/badges/profile-1.webp",
   txt: "UserSignature",
   imgAlt: "User badge",
   showBadge: true,
@@ -32,7 +32,6 @@ const variantMap: Record<BadgeColor, string> = {
   <div class="flex items-center w-fit">
     <NuxtImg
         v-if="showBadge"
-        provider="imagekit"
         :src="badgeSrc"
         :alt="imgAlt"
         class="w-6 relative z-10 shrink-0"

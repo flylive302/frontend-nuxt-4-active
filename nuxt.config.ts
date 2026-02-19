@@ -143,11 +143,7 @@ export default defineNuxtConfig({
             colors: ['primary', 'secondary', 'tertiary', 'info', 'success', 'warning', 'error']
         }
     },
-    image: {
-        imagekit: {
-            baseURL: 'https://ik.imagekit.io/flylive'
-        }
-    },
+    image: {},
     vite: {
         optimizeDeps: {
             include: ['svga/dist/index.esm.min.js']
@@ -207,8 +203,7 @@ export default defineNuxtConfig({
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
-            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'ws://localhost:3030',
-            assetCdnUrl: process.env.NUXT_PUBLIC_ASSET_CDN_URL || 'https://assets.flyliveapp.com'
+            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'ws://localhost:3030'
         }
     },
 })

@@ -35,8 +35,8 @@ export interface LevelInfo {
 // Constants
 // ========================================
 
-export const DEFAULT_WEALTH_BADGE = '/badges/wealth/level_0.webp'
-export const DEFAULT_CHARM_BADGE = '/badges/charm/level_0.webp'
+export const DEFAULT_WEALTH_BADGE = 'https://ik.imagekit.io/flylive/badges/wealth/level_0.webp'
+export const DEFAULT_CHARM_BADGE = 'https://ik.imagekit.io/flylive/badges/charm/level_0.webp'
 
 // ========================================
 // Store Definition

@@ -156,8 +156,7 @@ onMounted(async () => {
         <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <div class="flex items-center justify-center gap-2 mb-1">
             <NuxtImg 
-              provider="imagekit" 
-              src="/siteAssets/props/flylive-diamond.webp" 
+              src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp" 
               class="w-6" 
               alt="Diamonds"
             />
@@ -171,8 +170,7 @@ onMounted(async () => {
         <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <div class="flex items-center justify-center gap-2 mb-1">
             <NuxtImg 
-              provider="imagekit" 
-              src="/siteAssets/props/flylive_coin.webp" 
+              src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp" 
               class="w-6" 
               alt="Coins"
             />

@@ -23,37 +23,37 @@ interface Props {
 // ---- Static config (frozen for perf)
 const TYPE_CONFIG = Object.freeze({
   cp: {
-    banner: '/siteAssets/banners/cp.webp',
-    header: '/siteAssets/banners/cp-header.webp',
-    decor: '/siteAssets/banners/decor-main-content.webp',
+    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/cp.webp',
+    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/cp-header.webp',
+    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-main-content.webp',
     shadowClass: 'shadow-primary/30',
     textShadow: 'text-shadow-primary'
   },
   country: {
-    banner: '/siteAssets/banners/country.webp',
-    header: '/siteAssets/banners/country-header.svg',
-    decor: '/siteAssets/banners/decor-recharge-tycoon.webp',
+    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/country.webp',
+    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
+    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
     shadowClass: 'shadow-success/30',
     textShadow: 'text-shadow-success'
   },
   pretty_id: {
-    banner: '/siteAssets/banners/pretty-id.webp',
-    header: '/siteAssets/banners/country-header.svg',
-    decor: '/siteAssets/banners/decor-recharge-tycoon.webp',
+    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/pretty-id.webp',
+    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
+    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
     shadowClass: 'shadow-secondary/30',
     textShadow: 'text-shadow-secondary'
   },
   recharge_tycoon: {
-    banner: '/siteAssets/banners/recharge-tycoon.webp',
-    header: '/siteAssets/banners/country-header.svg',
-    decor: '/siteAssets/banners/decor-recharge-tycoon.webp',
+    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/recharge-tycoon.webp',
+    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
+    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
     shadowClass: 'shadow-tertiary/30',
     textShadow: 'text-shadow-tertiary'
   },
   supreme_recharge: {
-    banner: '/siteAssets/banners/supreme-recharge.webp',
-    header: '/siteAssets/banners/country-header.svg',
-    decor: '/siteAssets/banners/decor-recharge-tycoon.webp',
+    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/supreme-recharge.webp',
+    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
+    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
     shadowClass: 'shadow-secondary/30',
     textShadow: 'text-shadow-secondary'
   }
@@ -98,7 +98,6 @@ const headingId = `duel-card-title-${props.type}`
   >
     <!-- Decorative banner background -->
     <NuxtImg
-        provider="imagekit"
         :src="config.banner"
         alt=""
         aria-hidden="true"
@@ -109,7 +108,6 @@ const headingId = `duel-card-title-${props.type}`
       <!-- Header -->
       <header class="relative flex items-center justify-center">
         <NuxtImg
-            provider="imagekit"
             :src="config.header"
             alt=""
             aria-hidden="true"
@@ -142,7 +140,6 @@ const headingId = `duel-card-title-${props.type}`
         </figure>
         <!-- Decor element -->
         <NuxtImg
-            provider="imagekit"
             :src="config.decor"
             alt=""
             aria-hidden="true"
