@@ -53,6 +53,11 @@ export interface BootstrapUser {
   wealth_xp: string             // Integer as string
   charm_xp: string              // Integer as string
 
+  // VIP
+  vip_level: number             // 0 = no VIP, 1-8 = VIP level
+  vip_level_id: number | null   // FK to vip_levels table
+  vip_expires_at: string | null // ISO 8601
+
   // Profile
   is_profile_complete: boolean
 

@@ -8,6 +8,7 @@
  */
 import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift';
 import { createLogger } from '~/utils/logger';
+import { resolveVideoUrl } from '~/utils/platform';
 
 const log = createLogger('[GiftPlayback]');
 const authStore = useAuthStore();
@@ -152,7 +153,7 @@ function handleComboTimeout() {
           <RoomGiftVideoPlayer
             v-if="currentPlayback.gift.asset_type === 'video'"
             ref="videoPlayerRef"
-            :src="currentPlayback.gift.animation_url ?? ''"
+            :src="resolveVideoUrl(currentPlayback.gift.animation_url ?? '')"
             @ended="handleComplete"
           />
 

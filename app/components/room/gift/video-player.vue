@@ -47,7 +47,7 @@ const videoType = computed(() => {
   if (url.includes('.mov')) return 'video/quicktime';
   if (url.includes('.ogg')) return 'video/ogg';
   // Default fallback
-  return 'video/mp4';
+  return 'video/webm';
 });
 
 // On mount, try to get from cache or preload

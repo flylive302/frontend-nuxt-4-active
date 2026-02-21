@@ -98,6 +98,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Update VIP level from realtime event.
+   */
+  function patchVip(vip: {
+    vip_level: number
+    vip_level_id: number | null
+    vip_expires_at: string | null
+  }) {
+    if (user.value) {
+      user.value = {
+        ...user.value,
+        vip_level: vip.vip_level,
+        vip_level_id: vip.vip_level_id,
+        vip_expires_at: vip.vip_expires_at,
+      }
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -114,6 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     updateBalance,
     patchBalance,
+    patchVip,
   }
 }, {
   persist: {

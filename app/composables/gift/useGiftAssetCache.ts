@@ -10,6 +10,7 @@
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
+import { resolveVideoUrl } from '~/utils/platform'
 
 // ========================================
 // Module-level Singleton Caches
@@ -34,7 +35,10 @@ export function useGiftAssetCache() {
    * Preload a video asset and store as Blob URL.
    * Uses L1 memory -> L2 Cache Storage -> L3 Network strategy.
    */
-  async function preloadVideo(url: string): Promise<string> {
+  async function preloadVideo(rawUrl: string): Promise<string> {
+    // Resolve platform-specific URL (e.g., .webm → .mov on iOS)
+    const url = resolveVideoUrl(rawUrl);
+
     // L1: Memory cache (hot)
     if (videoCache.has(url)) {
       return videoCache.get(url)!;

@@ -81,7 +81,7 @@ onMounted(() => {
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
-      <NavProfileItem to="/vip/1" icon="i-lucide-crown" txt="VIP" />
+      <NavProfileItem to="/vip" icon="i-lucide-crown" txt="VIP" />
 
       <!-- Agency Section -->
       <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>

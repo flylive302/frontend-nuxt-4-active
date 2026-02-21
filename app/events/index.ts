@@ -10,6 +10,7 @@ import { registerRoomMembershipEvents } from './room-membership.events'
 import { registerIncomeEvents } from './income.events'
 import { registerAgencyEvents } from './agency.events'
 import { registerSystemEvents } from './system.events'
+import { registerVipEvents } from './vip.events'
 
 /**
  * Register all domain-specific socket event handlers.
@@ -33,4 +34,5 @@ export function registerAllEventHandlers(socket: Socket): void {
   registerIncomeEvents(socket)
   registerAgencyEvents(socket)
   registerSystemEvents(socket)
+  registerVipEvents(socket)
 }

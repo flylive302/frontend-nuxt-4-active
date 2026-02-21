@@ -16,6 +16,7 @@ import * as assetDownloader from '~/services/assetDownloader'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
+import { resolveVideoUrl } from '~/utils/platform'
 
 const log = createLogger('[BootstrapStore]')
 
@@ -243,7 +244,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     const items: EnqueueItem[] = giftCatalog.value
       .filter((gift) => gift.animation_url && gift.asset_type !== 'image')
       .map((gift, index) => ({
-        url: gift.animation_url!,
+        url: resolveVideoUrl(gift.animation_url!),
         assetType: gift.asset_type === 'svga' ? 'svga' : 'video',
         priority: index < ASSET_CONFIG.CRITICAL_COUNT ? 'critical' : 'normal',
         giftId: gift.id,

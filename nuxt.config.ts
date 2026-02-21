@@ -108,6 +108,7 @@ export default defineNuxtConfig({
             'composables/notification',
             'composables/income',
             'composables/mediasoup',
+            'composables/vip',
         ],
     },
     app: {
