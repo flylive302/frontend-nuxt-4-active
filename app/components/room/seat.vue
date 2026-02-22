@@ -66,7 +66,7 @@ const displayName = computed(() => {
 <template>
   <div
     class="flex flex-col items-center gap-0 h-24 text-center cursor-pointer rounded-xl transition-all duration-300"
-    :class="{ 'ring-2 ring-cyan-500 bg-cyan-500/10 animate-pulse': isInviteTarget }" @click="openDrawer"
+    :class="{ 'ring-2 ring-secondary bg-secondary/10 animate-pulse': isInviteTarget }" @click="openDrawer"
   >
     <!-- Avatar with audio indicators -->
     <div class="relative w-full">
@@ -93,8 +93,13 @@ const displayName = computed(() => {
 
     </div>
 
-    <!-- User name -->
     <p v-if="seat?.user" class="text-xs truncate font-semibold">{{ formatCurrency(seat.user?.charm_xp) }}</p>
-    <p class="text-xs truncate font-semibold">{{ displayName }}</p>
+
+    <p v-if="displayName == props.seatId.toString()" class="text-xs font-semibold w-full leading-none">{{ displayName }}</p>
+
+    <div v-else class="w-full marquee-container">
+      <p class="text-xs font-semibold w-full marquee-text leading-none">{{ displayName }}</p>
+    </div>
+
   </div>
 </template>

@@ -29,6 +29,15 @@ const giftQueue: QueuedGift[] = [];
 /** Whether the gift queue is currently being processed */
 const isProcessingGiftQueue = ref(false);
 
+/**
+ * Clear the gift queue and reset processing state.
+ * Called on room leave to prevent stale gifts from being sent.
+ */
+export function clearGiftQueue(): void {
+  giftQueue.length = 0;
+  isProcessingGiftQueue.value = false;
+}
+
 // ============================================
 // Queue Processor
 // ============================================

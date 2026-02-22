@@ -57,7 +57,7 @@ const progress = computed(() => {
   >
     <div
       v-if="isVisible"
-      class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-neutral-950"
+      class="fixed inset-0 z-999 flex flex-col items-center justify-center bg-neutral-950"
       role="status"
       aria-live="polite"
       aria-label="Loading application"
@@ -75,7 +75,7 @@ const progress = computed(() => {
       <!-- Progress Bar -->
       <div class="mb-4 w-48 overflow-hidden rounded-full bg-neutral-800">
         <div 
-          class="h-1.5 rounded-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-500"
+          class="h-1.5 rounded-full bg-linear-to-r from-info-500 to-primary-400 transition-all duration-500"
           :style="{ width: `${progress}%` }"
         />
       </div>

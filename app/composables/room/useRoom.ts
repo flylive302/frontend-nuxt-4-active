@@ -72,6 +72,7 @@ export function useRoom() {
         if (response.status === "success") {
             roomStore.setUserRoom(response.data);
             roomStore.setCurrentRoom(response.data);
+            await navigateTo(`/room/${response.data.id}`);
             toast.add({ title: response.message, color: 'success' })
             return response;
         } else {

@@ -372,18 +372,17 @@ onUnmounted(() => {
             format="webp"
         />
 
-        <!-- Recharge Progress -->
-        <div
-            v-if="rechargeProgress?.has_active_event"
-            class="px-3 pt-3"
-        >
-          <VipRechargeProgress
-              :progress="rechargeProgress"
-              :level-color="activeLevel.color"
-          />
-        </div>
-
-        <div class="overflow-scroll h-[42vh]">
+        <div class="overflow-scroll h-[42vh] pb-32">
+          <!-- Recharge Progress -->
+          <div
+              v-if="rechargeProgress?.has_active_event"
+              class="px-3 pt-3"
+          >
+            <VipRechargeProgress
+                :progress="rechargeProgress"
+                :level-color="activeLevel.color"
+            />
+          </div>
           <!-- VIP Props Section -->
           <div v-if="activeLevelProps.length > 0" class="px-3">
             <h3 class="text-sm font-bold text-white/70 mb-2 uppercase tracking-wide">
@@ -476,14 +475,14 @@ onUnmounted(() => {
             </UButton>
           </div>
 
-          <div class="text-lg font-bold text-white text-center">
+          <div class="text-md font-bold text-white text-center">
             PRICE {{ formattedPrice }}
           </div>
 
           <!-- Action Buttons -->
           <div class="flex gap-2 px-3 py-2">
             <UButton
-                size="xl"
+                size="md"
                 variant="soft"
                 color="tertiary"
                 class="w-full justify-center"
@@ -493,7 +492,7 @@ onUnmounted(() => {
               Gift
             </UButton>
             <UButton
-                size="xl"
+                size="md"
                 variant="solid"
                 color="tertiary"
                 class="w-full justify-center"

@@ -1,59 +1,20 @@
 <script setup lang="ts">
-import { useDraggable, useWindowSize } from '@vueuse/core'
-import { ref, watch } from 'vue'
+import { onMounted, nextTick } from 'vue';
 import { createLogger } from '~/utils/logger';
+import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
 const log = createLogger('[RoomMinimizedClient]');
 
- 
 const roomStore = useRoomStore();
-const {leaveRoom} = useRoomAudio();
+const { leaveRoom } = useRoomAudio();
 
-const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
+const { dragEl, position, setPosition, winW, winH, elW, elH } = useBoundedDrag();
 
-const { width: winW, height: winH } = useWindowSize()
-
-// Element dimensions - measure actual rendered size for accurate clamping
-const elW = ref(0)
-const elH = ref(0)
-
-const dragEl = ref<HTMLElement | null>(null)
-
-// Position refs - these will be updated by useDraggable
-const x = ref(0)
-const y = ref(0)
-
-// Setup draggable with position binding
-const { position } = useDraggable(dragEl, {
-  initialValue: { x: x.value, y: y.value },
-  onMove: (pos) => {
-    pos.x = clamp(pos.x, 0, winW.value - elW.value)
-    pos.y = clamp(pos.y, 0, winH.value - elH.value)
-  }
-})
-
-// Measure actual element size
-if (dragEl.value) {
-  const rect = dragEl.value.getBoundingClientRect()
-  elW.value = rect.width
-  elH.value = rect.height
-}
-
-position.value = {
-  x: winW.value - elW.value - 95,
-  y: winH.value - elH.value - 140
-}
-
-
-// Keep in bounds on window resize
-watch([winW, winH], () => {
-  if (!dragEl.value) return
-
-  position.value = {
-    x: clamp(position.value.x, 0, winW.value - elW.value),
-    y: clamp(position.value.y, 0, winH.value - elH.value)
-  }
-})
+// Set initial position after mount when element dimensions are known
+onMounted(async () => {
+  await nextTick();
+  setPosition(winW.value - elW.value - 95, winH.value - elH.value - 140);
+});
 </script>
 
 <template>
@@ -62,7 +23,7 @@ watch([winW, winH], () => {
       :style="`left: ${position.x}px; top: ${position.y}px;`"
       class="fixed flex justify-center items-center z-50 touch-none cursor-move"
   >
-    <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50" @click="roomStore.maximizeRoom()">
+    <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50" @click="() => { roomStore.maximizeRoom(); navigateTo(`/room/${roomStore.currentRoom?.id}`) }">
       <NuxtImg
           src="https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp"
           alt="Minimized Room Preview"
@@ -80,6 +41,7 @@ watch([winW, winH], () => {
           try {
             leaveRoom();
             roomStore.leaveRoom();
+            await navigateTo('/', { replace: true });
           } catch (error) {
             log.error('Failed to leave room:', error);
           }

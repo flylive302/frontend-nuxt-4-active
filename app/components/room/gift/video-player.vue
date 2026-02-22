@@ -99,7 +99,7 @@ defineExpose({ restart });
 <template>
   <video
     ref="videoRef"
-    class="min-w-screen object-contain"
+    class="w-full h-auto object-contain"
     :autoplay="autoplay"
     preload="auto"
     playsinline

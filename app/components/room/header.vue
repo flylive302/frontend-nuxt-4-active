@@ -113,9 +113,11 @@ const authStore = useAuthStore();
 const { myJoinRequests } = useRoomJoinRequests();
 const { receivedInvitations, fetchReceivedInvitations } = useRoomInvitations();
 
-// Fetch invitations on mount to check if user has pending invitations
+// Fetch invitations on mount (guarded: skip if already loaded to avoid refetch on re-mount)
 onMounted(() => {
-  fetchReceivedInvitations(true);
+  if (!receivedInvitations.value.items.length) {
+    fetchReceivedInvitations(true);
+  }
 });
 
 /** Current user's membership state for this room */

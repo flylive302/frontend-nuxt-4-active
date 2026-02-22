@@ -115,6 +115,10 @@ export function setupRoomEventHandlers({
 }: UseRoomEventHandlersParams): void {
   const log = createLogger('[RoomEvents]');
 
+  // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
+  const { getGiftById } = useGiftData();
+  const { preloadGift } = useGiftAssetCache();
+
   // Room events
   socket.on('room:userJoined', (event: UserJoinedEvent) => {
     roomStore.addParticipant(event.user);
@@ -239,7 +243,6 @@ export function setupRoomEventHandlers({
     const sender = roomStore.participants.get(event.senderId);
 
     // Get gift data to enqueue playback
-    const { getGiftById } = useGiftData();
     const gift = getGiftById(event.giftId);
 
     if (gift) {
@@ -286,9 +289,6 @@ export function setupRoomEventHandlers({
   socket.on('gift:prepare', async (event: GiftPrepareEvent) => {
     // Only preload if this user is the intended recipient
     if (event.recipientId !== authStore.user?.id) return;
-
-    const { getGiftById } = useGiftData();
-    const { preloadGift } = useGiftAssetCache();
 
     const gift = getGiftById(event.giftId);
     if (gift) {

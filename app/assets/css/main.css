@@ -26,7 +26,7 @@
     --color-neutral-700: #404040;
     --color-neutral-800: #262626;
     --color-neutral-900: #171717;
-    --color-neutral-950: #0A0A0A;
+    --color-neutral-950: #000A0A;
 
 }
 
@@ -41,7 +41,7 @@
 
 .page-enter-active,
 .page-leave-active {
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.1s ease, opacity 0.1s ease;
 }
 .page-enter-from {
     opacity: 0;
@@ -52,48 +52,16 @@
     transform: translateX(-2.5rem);
 }
 
-.show-room-shell {
-    opacity: 1;
-    animation: circleIn 0.5s ease-in-out 1 forwards;
-}
-
-@keyframes circleIn {
-    from
-    {
-        clip-path: circle(0% at 50% 50%);
-    }
-    to
-    {
-        clip-path: circle(100% at 50% 50%);
-    }
-}
-
-.hide-room-shell {
-    animation: circleOut 0.5s ease-in-out 1 forwards;
-}
-
-@keyframes circleOut {
-    from
-    {
-        opacity: 1;
-        clip-path: circle(100% at 50% 50%);
-    }
-    to
-    {
-        opacity: 0;
-        clip-path: circle(0% at 50% 50%);
-    }
-}
 
 
-.scrollbar::-webkit-scrollbar
+.scrollbar-horizontal::-webkit-scrollbar
 {
     border-radius: 100%;
     overflow: hidden;
-    height: 1em;
+    height: 0.2em;
 }
 
-.scrollbar::-webkit-scrollbar-thumb
+.scrollbar-horizontal::-webkit-scrollbar-thumb
 {
     @apply bg-linear-to-r to-primary/60 rounded-full shadow-lg shadow-primary
 }
@@ -106,7 +74,7 @@
 
 .marquee-text {
     display: inline-block;
-    animation: marquee-scroll 10s linear infinite;
+    animation: marquee-scroll 6s linear infinite;
     animation-delay: 2s;
     animation-fill-mode: backwards;
 }
@@ -121,24 +89,10 @@
         transform: translateX(0);
     }
     100% {
-        transform: translateX(-200%);
+        transform: translateX(-110%);
     }
 }
 
 .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 20px);
-}
-
-body {
-    width: 100% !important;
-    min-height: 100vh !important;
-    pointer-events: auto !important;
-}
-.lock-body {
-    position: fixed !important;
-    inset: 0 !important;
-}
-
-.unlock-body {
-    position: relative !important;
 }

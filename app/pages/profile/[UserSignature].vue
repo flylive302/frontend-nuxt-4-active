@@ -184,8 +184,9 @@ async function trackUser() {
       return
     }
     
-    // 4. Set as current room (triggers room UI)
+    // 4. Set as current room (triggers room UI) and navigate
     roomStore.setCurrentRoom(roomData.data)
+    await navigateTo(`/room/${roomData.data.id}`)
     
     toast.add({
       title: 'Entering room',
@@ -245,8 +246,9 @@ async function goToRoom() {
       return
     }
     
-    // Set as current room (triggers room UI)
+    // Set as current room (triggers room UI) and navigate
     roomStore.setCurrentRoom(roomData.data)
+    await navigateTo(`/room/${roomData.data.id}`)
     
     toast.add({
       title: 'Entering room',

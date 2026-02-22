@@ -20,6 +20,7 @@ type Consumer = mediasoupTypes.Consumer;
 // ============================================
 const producer = ref<Producer | null>(null);
 const consumers = ref<Map<string, Consumer>>(new Map());
+const audioElements = new Map<string, HTMLAudioElement>();
 const isLocalMuted = ref(false);
 
 // ============================================
@@ -168,9 +169,10 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    // Attach to audio element
+    // Attach to audio element (tracked for cleanup)
     const audio = new Audio();
     audio.srcObject = new MediaStream([consumer.track]);
+    audioElements.set(producerId, audio);
 
     // Try to play, handling autoplay policy
     const playAudio = async () => {
@@ -222,8 +224,17 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (consumer) {
       consumer.close();
       consumers.value.delete(producerId);
-      log.debug('Stopped consuming producer:', producerId);
     }
+
+    // Clean up associated audio element
+    const audio = audioElements.get(producerId);
+    if (audio) {
+      audio.pause();
+      audio.srcObject = null;
+      audioElements.delete(producerId);
+    }
+
+    log.debug('Stopped consuming producer:', producerId);
   }
 
   /**
@@ -236,6 +247,13 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // Close all consumers
     consumers.value.forEach((consumer) => consumer.close());
     consumers.value.clear();
+
+    // Clean up all audio elements to prevent memory leaks
+    audioElements.forEach((audio) => {
+      audio.pause();
+      audio.srcObject = null;
+    });
+    audioElements.clear();
 
     log.debug('Streaming cleanup complete');
   }

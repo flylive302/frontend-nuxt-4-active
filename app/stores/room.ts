@@ -9,6 +9,8 @@ import type {
 import { SEAT_COUNT, MAX_CHAT_MESSAGES } from '~/constants/room';
 import { createLogger } from '~/utils/logger';
 
+const storeLog = createLogger('[RoomStore]');
+
 // ============================================
 // Types
 // ============================================
@@ -24,6 +26,7 @@ export const useRoomStore = defineStore('roomStore', () => {
   const currentRoom = ref<Room | null>(null);
   const userRoom = ref<Room | null>(null); // Room owned by authenticated user
   const isMinimized = ref(false);
+  const previousRoute = ref('/');  // Route to navigate back to on minimize
   const status = ref<StatusType>('idle');
 
   // ========================================
@@ -96,6 +99,7 @@ export const useRoomStore = defineStore('roomStore', () => {
   function minimizeRoom() {
     if (currentRoom.value) {
       isMinimized.value = true;
+      navigateTo(previousRoute.value, { replace: true });
     }
   }
 
@@ -106,6 +110,9 @@ export const useRoomStore = defineStore('roomStore', () => {
   }
 
   function setCurrentRoom(room: Room | null) {
+    // Save current route so minimizeRoom can navigate back
+    const route = useRoute();
+    previousRoute.value = route.fullPath;
     currentRoom.value = room;
     isMinimized.value = false;
   }
@@ -127,11 +134,8 @@ export const useRoomStore = defineStore('roomStore', () => {
    */
   function updateRoomLevel(level: number, xp: string) {
     if (currentRoom.value) {
-      currentRoom.value = {
-        ...currentRoom.value,
-        current_level: level,
-        room_xp: xp,
-      };
+      currentRoom.value.current_level = level;
+      currentRoom.value.room_xp = xp;
     }
   }
 
@@ -141,10 +145,7 @@ export const useRoomStore = defineStore('roomStore', () => {
    */
   function updateParticipantCount(count: number) {
     if (currentRoom.value) {
-      currentRoom.value = {
-        ...currentRoom.value,
-        participant_count: count,
-      };
+      currentRoom.value.participant_count = count;
     }
   }
 
@@ -174,9 +175,12 @@ export const useRoomStore = defineStore('roomStore', () => {
   function setActiveSpeakers(userIds: number[]) {
     audioState.value.activeSpeakerIds = userIds;
 
-    // Update seat active state
+    // Only mutate seats whose active state actually changed
     seats.value.forEach((seat) => {
-      seat.isActive = seat.user != null && userIds.includes(seat.user.id);
+      const shouldBeActive = seat.user != null && userIds.includes(seat.user.id);
+      if (seat.isActive !== shouldBeActive) {
+        seat.isActive = shouldBeActive;
+      }
     });
   }
 
@@ -246,10 +250,9 @@ export const useRoomStore = defineStore('roomStore', () => {
    */
   function updateSeat(seatIndex: number, userId: number | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
-      const log = createLogger('[RoomStore]');
       const user = userId !== null ? participants.value.get(userId) ?? null : null;
 
-      log.debug('updateSeat:', { seatIndex, userId, userName: user?.name });
+      storeLog.debug('updateSeat:', { seatIndex, userId, userName: user?.name });
 
       const currentSeat = seats.value[seatIndex];
       const newSeat: Seat = {
@@ -260,8 +263,8 @@ export const useRoomStore = defineStore('roomStore', () => {
         isLocked: currentSeat?.isLocked ?? false,
       };
 
-      // Force reactivity by creating new array reference
-      seats.value = seats.value.map((s, i) => i === seatIndex ? newSeat : s);
+      // Direct index assignment — Vue tracks ref array element mutations
+      seats.value[seatIndex] = newSeat;
 
       // Update participant's speaker status
       if (user) {
@@ -322,12 +325,11 @@ export const useRoomStore = defineStore('roomStore', () => {
    * @param message - Chat message event from server
    */
   function addMessage(message: ChatMessageEvent) {
-    messages.value.push(message);
-
-    // Keep last MAX_CHAT_MESSAGES messages to prevent memory issues
-    if (messages.value.length > MAX_CHAT_MESSAGES) {
-      messages.value = messages.value.slice(-MAX_CHAT_MESSAGES);
+    // Ring buffer: remove oldest before adding to avoid allocation from slice
+    if (messages.value.length >= MAX_CHAT_MESSAGES) {
+      messages.value.shift();
     }
+    messages.value.push(message);
   }
 
   function clearMessages() {

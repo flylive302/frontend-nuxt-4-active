@@ -160,10 +160,10 @@ onMounted(async () => {
       class="w-full"
       @update:model-value="onCountryChange"
     >
-      <template #leading="{ modelValue }">
+      <template #leading>
         <UIcon
-          v-if="(modelValue as Country)?.code"
-          :name="getFlagIconName((modelValue as Country).code)"
+          v-if="selectedCountry?.code"
+          :name="getFlagIconName(selectedCountry.code)"
           class="size-5 rounded overflow-hidden h-4"
         />
         <UIcon v-else :name="DEFAULT_FLAG_ICON" />

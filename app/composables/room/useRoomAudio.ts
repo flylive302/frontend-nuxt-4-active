@@ -13,7 +13,7 @@ import { userToParticipant } from '~/types/room/audio';
 import type { Ref, ComputedRef } from 'vue';
 import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
-import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
+import { useRoomGifts, clearGiftQueue, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
@@ -250,11 +250,15 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
 
     // Join room via socket (send owner ID and seat count so server can configure room)
-    const ownerId = roomStore.currentRoom?.owner?.id;
-    const seatCount = roomStore.currentRoom?.max_seats;
-    const response = await emitAsync<{ roomId: string; ownerId?: number; seatCount?: number }, JoinRoomResponse>(
+    // Fall back to authStore.user.id — createRoom response may not populate owner object
+    const ownerId = roomStore.currentRoom?.owner?.id ?? authStore.user?.id;
+    const seatCount = roomStore.currentRoom?.max_seats ?? 15;
+
+    log.debug('room:join payload:', { roomId, ownerId, seatCount, hasOwner: !!roomStore.currentRoom?.owner });
+
+    const response = await emitAsync<{ roomId: string; ownerId: number; seatCount: number }, JoinRoomResponse>(
       'room:join',
-      { roomId, ownerId, seatCount }
+      { roomId, ownerId: ownerId!, seatCount }
     );
 
     if (response.error || !response.rtpCapabilities) {
@@ -357,6 +361,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Cleanup mediasoup
     cleanupMediasoup();
+
+    // Clear pending gift queue to prevent stale gifts
+    clearGiftQueue();
 
     // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
     // Socket is managed by socket.client.ts plugin, disconnects only on logout

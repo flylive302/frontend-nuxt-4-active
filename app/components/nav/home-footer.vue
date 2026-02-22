@@ -18,6 +18,7 @@ async function handleMyRoomClick() {
 
     if (roomStore.userRoom !== null) {
       roomStore.setCurrentRoom(roomStore.userRoom);
+      await navigateTo(`/room/${roomStore.userRoom.id}`);
       createRoomOpen.value = false;
     } else {
       createRoomOpen.value = true;

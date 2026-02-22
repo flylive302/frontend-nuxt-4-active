@@ -33,10 +33,13 @@ export interface RoomsResponse {
   message: string;
   data: BootstrapRoom[];
   meta: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
+    pagination: {
+      current_page: number;
+      last_page: number;
+      per_page: number;
+      total: number;
+    };
+    active_countries: string[];
   }
 }
 

@@ -15,7 +15,7 @@ const badgeDisplay = computed(() => {
 </script>
 
 <template>
-  <article class="relative overflow-hidden border border-white/50" @click="roomStore.setCurrentRoom(props.room)">
+  <article class="relative overflow-hidden border border-white/50" @click="() => { roomStore.setCurrentRoom(props.room); navigateTo(`/room/${props.room.id}`) }">
     <figure class="h-full w-full">
       <NuxtImg
           :src="props.room.logo ?? undefined"

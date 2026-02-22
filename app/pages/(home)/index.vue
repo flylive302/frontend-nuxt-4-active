@@ -18,23 +18,27 @@ const roomRef = ref(null)
 const { fetchRooms } = useRoom()
 const authStore = useAuthStore()
 
-// Initial selection defaults to user's country (if supported) or 'pk'
-const userCountry = authStore.user?.country?.toLowerCase()
-const selectedCountry = ref<string>(userCountry || 'pk')
+// Default to "All" — shows rooms from every country
+const selectedCountry = ref<string>('')
 
 const { data: roomsResponse } = await useAsyncData(
   'home-rooms',
   async () => {
-    return await fetchRooms({ page: 1, country: selectedCountry.value })
+    const params: { page: number; country?: string } = { page: 1 }
+    if (selectedCountry.value) params.country = selectedCountry.value
+    return await fetchRooms(params)
   },
   {
-    watch: [selectedCountry]
+    watch: [selectedCountry],
+    // Always fetch fresh data — active_countries must be current
+    getCachedData: () => undefined,
   }
 )
 
 const carouselRooms = computed(() => roomsResponse.value?.data?.slice(0, 5) || [])
 const initialListRooms = computed(() => roomsResponse.value?.data?.slice(5) || [])
 const roomsMeta = computed(() => roomsResponse.value?.meta)
+const activeCountries = computed(() => roomsResponse.value?.meta?.active_countries ?? [])
 
 const fetchRoomsList = async ({ page }: { page: number }) => {
   if (page === 1) {
@@ -43,7 +47,9 @@ const fetchRoomsList = async ({ page }: { page: number }) => {
       meta: roomsMeta.value
     }
   }
-  return await fetchRooms({ page, country: selectedCountry.value })
+  const params: { page: number; country?: string } = { page }
+  if (selectedCountry.value) params.country = selectedCountry.value
+  return await fetchRooms(params)
 }
 
 // Wrapper to satisfy InfiniteScroll prop type requirements and avoid template casting
@@ -57,6 +63,11 @@ useIntersectionObserver(bannerRef, ([entry]) => {
 
 useIntersectionObserver(roomRef, ([entry]) => {
   roomAutoplay.value = entry?.isIntersecting ? { delay: ROOM_AUTOPLAY_DELAY_MS } : undefined
+})
+
+// Preload room page chunk so entering a room is instant
+onMounted(() => {
+  preloadRouteComponents('/room/0')
 })
 
 // ---- Types
@@ -165,8 +176,8 @@ const banners: Banner[] = [
     </div>
 
 
-    <!-- Country Filter Tab -->
-    <HomeCountryFilter v-model="selectedCountry" />
+    <!-- Country Filter -->
+    <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" />
 
 
     <div ref="roomRef">
@@ -192,7 +203,7 @@ const banners: Banner[] = [
 
     <div class="mx-3">
       <InfiniteScroll
-        :key="selectedCountry"
+        :key="selectedCountry || '__all__'"
         :fetcher="infiniteScrollFetcher"
         :initial-page="1"
         :per-page="15"

@@ -3,36 +3,85 @@
  * Gift Playback Modal
  *
  * Full-screen modal that plays gift animations.
+ * Click to minimize into a draggable pip, click again to restore.
  * Routes to correct player based on asset type.
  * Includes safety timeout to prevent stuck modals.
  */
 import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift';
 import { createLogger } from '~/utils/logger';
 import { resolveVideoUrl } from '~/utils/platform';
+import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
 const log = createLogger('[GiftPlayback]');
 const authStore = useAuthStore();
 const giftStore = useGiftStore();
 const { combo } = useGiftSending();
 
-// Player refs for combo restart
+// ========================================
+// Player Refs
+// ========================================
+
 const videoPlayerRef = ref<{ restart: () => void } | null>(null);
 const svgaPlayerRef = ref<{ restart: () => void } | null>(null);
 const staticDisplayRef = ref<{ restart: () => void } | null>(null);
 
-// Current playback from store
+// ========================================
+// State
+// ========================================
+
 const currentPlayback = computed(() => giftStore.currentPlayback);
 const isOpen = computed(() => giftStore.isPlaying);
-
-// Check if the current user is the sender of the gift
 const isSender = computed(() => authStore.user?.id === currentPlayback.value?.senderId);
-
-// Combo button visibility (independent of animation state)
 const isComboButtonVisible = ref(false);
+const isMinimized = ref(false);
+const isPositioned = ref(false);
+
+// ========================================
+// Draggable (active only when minimized)
+// ========================================
+
+const { dragEl, position, setPosition, winW, winH } = useBoundedDrag();
+
+/**
+ * Toggle between fullscreen and minimized states
+ */
+function toggleMinimize() {
+  isMinimized.value = !isMinimized.value;
+
+  if (isMinimized.value) {
+    isPositioned.value = false;
+    // Set position directly — bypass clamp until element is measured
+    nextTick(() => {
+      nextTick(() => {
+        position.value = {
+          x: winW.value - 80 - 16,
+          y: winH.value - 240,
+        };
+        isPositioned.value = true;
+      });
+    });
+  } else {
+    isPositioned.value = false;
+  }
+}
+
+// Set initial position for testing
+onMounted(() => {
+  nextTick(() => {
+    nextTick(() => {
+      position.value = {
+        x: winW.value - 80 - 16,
+        y: winH.value - 240,
+      };
+      isPositioned.value = true;
+    });
+  });
+});
 
 // ========================================
 // Playback Timeout (Safety Net)
 // ========================================
+
 let playbackTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -56,8 +105,11 @@ function startPlaybackTimeout() {
   }, GIFT_PLAYBACK_TIMEOUT_MS);
 }
 
-// Show combo button when playback starts (only for sender)
-// Also start the safety timeout
+// ========================================
+// Watchers
+// ========================================
+
+// Reset state when playback starts/stops
 watch(isOpen, (open) => {
   if (open) {
     startPlaybackTimeout();
@@ -71,11 +123,9 @@ watch(isOpen, (open) => {
 });
 
 // Watch for combo restarts from other users (timestamp changes)
-// This triggers player restart when receiver gets a combo gift
 watch(
   () => currentPlayback.value?.timestamp,
   (newTimestamp, oldTimestamp) => {
-    // Only restart if both timestamps exist (not initial load) and differ
     if (newTimestamp && oldTimestamp && newTimestamp !== oldTimestamp) {
       const assetType = currentPlayback.value?.gift.asset_type;
       if (assetType === 'video') {
@@ -85,15 +135,17 @@ watch(
       } else if (assetType === 'image') {
         staticDisplayRef.value?.restart();
       }
-      // Reset combo button visibility on restart (only for sender)
       if (isSender.value) {
         isComboButtonVisible.value = true;
       }
-      // Reset timeout for combo
       startPlaybackTimeout();
     }
   }
 );
+
+// ========================================
+// Handlers
+// ========================================
 
 /**
  * Handle playback completion
@@ -103,9 +155,6 @@ function handleComplete() {
   giftStore.onPlaybackComplete();
 }
 
-// Cleanup timeout on unmount
-onBeforeUnmount(clearPlaybackTimeout);
-
 /**
  * Handle combo button click
  */
@@ -113,7 +162,6 @@ async function handleCombo() {
   const success = await combo();
 
   if (success) {
-    // Restart the current player
     const assetType = currentPlayback.value?.gift.asset_type;
     if (assetType === 'video') {
       videoPlayerRef.value?.restart();
@@ -129,53 +177,42 @@ async function handleCombo() {
  * Handle combo timeout (combo button expires)
  */
 function handleComboTimeout() {
-  // Hide combo button, let animation finish naturally
   isComboButtonVisible.value = false;
 }
+
+// Cleanup timeout on unmount
+onBeforeUnmount(clearPlaybackTimeout);
 </script>
 
 <template>
-  <UModal
-    :open="isOpen"
-    fullscreen
-    :dismissible="false"
-    :overlay="false"
-    :ui="{
-      content: 'bg-transparent border-none rounded-none',
-    }"
-    title="Gift Playing Model"
-    description="Gift Playing Model"
+  <div
+    v-if="isOpen"
+    ref="dragEl"
+    :style="isMinimized && isPositioned
+      ? `left: ${position.x}px; top: ${position.y}px; width: 80px; height: 120px;`
+      : ''
+    "
+    :class="[
+      'gift-playback-container',
+      isMinimized ? 'gift-playback--minimized' : 'gift-playback--fullscreen',
+    ]"
+    class="flex items-center justify-center bg-white/30 backdrop-blur-sm"
+    @click="toggleMinimize"
   >
-    <template #content>
-      <div class="size-full flex items-center justify-center">
-        <template v-if="currentPlayback">
-          <!-- Video Player -->
-          <RoomGiftVideoPlayer
-            v-if="currentPlayback.gift.asset_type === 'video'"
-            ref="videoPlayerRef"
-            :src="resolveVideoUrl(currentPlayback.gift.animation_url ?? '')"
-            @ended="handleComplete"
-          />
+    <template v-if="currentPlayback">
+      <!-- Video Player -->
+      <RoomGiftVideoPlayer v-if="currentPlayback.gift.asset_type === 'video'" ref="videoPlayerRef" class="w-full"
+        :src="resolveVideoUrl(currentPlayback.gift.animation_url ?? '')" @ended="handleComplete" />
 
-          <!-- SVGA Player -->
-          <RoomGiftSvgaPlayer
-            v-else-if="currentPlayback.gift.asset_type === 'svga'"
-            ref="svgaPlayerRef"
-            :name="currentPlayback.gift.animation_url ?? ''"
-            @complete="handleComplete"
-          />
+      <!-- SVGA Player -->
+      <RoomGiftSvgaPlayer v-else-if="currentPlayback.gift.asset_type === 'svga'" ref="svgaPlayerRef" class="w-full"
+        :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete" />
 
-          <!-- Static Image -->
-          <RoomGiftStaticDisplay
-            v-else
-            ref="staticDisplayRef"
-            :src="currentPlayback.gift.thumbnail_url"
-            @timeout="handleComplete"
-          />
-        </template>
-      </div>
+      <!-- Static Image -->
+      <RoomGiftStaticDisplay v-else ref="staticDisplayRef" class="w-full" :src="currentPlayback.gift.thumbnail_url"
+        @timeout="handleComplete" />
     </template>
-  </UModal>
+  </div>
 
   <!-- Combo Button (only visible during playback and before timeout) -->
   <RoomGiftComboButton
@@ -184,3 +221,26 @@ function handleComboTimeout() {
     @timeout="handleComboTimeout"
   />
 </template>
+
+<style scoped>
+.gift-playback-container {
+  position: fixed;
+  z-index: 9999;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fullscreen state */
+.gift-playback--fullscreen {
+  inset: 0;
+  background: hsl(var(--color-info) / 0.1);
+}
+
+/* Minimized draggable pip */
+.gift-playback--minimized {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  touch-action: none;
+  cursor: move;
+}
+</style>
