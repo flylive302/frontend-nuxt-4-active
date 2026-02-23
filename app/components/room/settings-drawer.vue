@@ -308,7 +308,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <UDrawer v-model:open="open" title="Room Settings" description="Room settings and configuration.">
+  <UDrawer 
+    v-model:open="open" 
+    title="Room Settings" 
+    description="Room settings and configuration."
+    style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
+  >
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-3 pb-4 max-h-[80vh] overflow-y-auto">
 

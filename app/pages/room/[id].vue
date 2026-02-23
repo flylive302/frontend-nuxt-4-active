@@ -121,30 +121,28 @@ onMounted(() => {
 });
 
 // ========================================
-// Global Theme Override
+// Global Theme Variable Injection (for Room scope only)
 // ========================================
-const uiPrimary = useCssVar('--ui-primary', typeof document !== 'undefined' ? document.documentElement : null);
-const originalPrimary = ref('');
-
-onMounted(() => {
-  originalPrimary.value = uiPrimary.value ?? '#000000';
-});
+const roomThemeVar = useCssVar('--room-theme', typeof document !== 'undefined' ? document.documentElement : null);
 
 watchEffect(() => {
   if (roomStore.currentRoom?.primary_color) {
-    uiPrimary.value = roomStore.currentRoom.primary_color || originalPrimary.value;
+    roomThemeVar.value = roomStore.currentRoom.primary_color;
   } else {
-    uiPrimary.value = originalPrimary.value;
+    roomThemeVar.value = ''; // Reset when no custom color
   }
 });
 
 onUnmounted(() => {
-  uiPrimary.value = originalPrimary.value; // Reset on leave
+  roomThemeVar.value = ''; // Clean up when leaving room
 });
 </script>
 
 <template>
-  <div class="absolute inset-0 z-50 p-1 pb-6 max-h-screen bg-elevated">
+  <div 
+    class="absolute inset-0 z-50 p-1 pb-6 max-h-screen bg-elevated"
+    :style="roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}"
+  >
     <template v-if="roomStore.currentRoom">
       <!-- Background Image (prefer background field, fallback to logo) -->
       <div class="absolute inset-0 z-0 tint-500">
@@ -190,7 +188,7 @@ onUnmounted(() => {
             />
 
             <!-- Volume Control with Popover -->
-            <UPopover v-model:open="volumePopoverOpen" :ui="{ content: 'p-2' }">
+            <UPopover v-model:open="volumePopoverOpen" :ui="{ content: 'p-2' }" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));">
               <UButton
                 :icon="volumeIcon"
                 size="md"

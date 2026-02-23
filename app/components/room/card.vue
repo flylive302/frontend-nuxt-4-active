@@ -9,6 +9,10 @@
 
 import type { Room } from '~/types/room/room'
 
+defineOptions({
+  inheritAttrs: false
+})
+
 // ========================================
 // Props
 // ========================================
@@ -95,7 +99,7 @@ function enterRoom(): void {
 </script>
 
 <template>
-  <article class="relative overflow-hidden aspect-9/16 h-[40vh] w-full rounded-3xl" @click="handleRoomClick">
+  <article v-bind="$attrs" class="relative overflow-hidden aspect-9/16 h-72 w-full rounded-3xl" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
           :src="props.room.background ?? 'https://ik.imagekit.io/flylive/siteAssets/rooms/eagle3.webp'"
@@ -120,9 +124,9 @@ function enterRoom(): void {
         >
           <!-- Live dot -->
           <span class="relative inline-flex">
-              <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
-              <span class="relative inline-block size-2 rounded-full bg-success"/>
-            </span>
+            <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
+            <span class="relative inline-block size-2 rounded-full bg-success"/>
+          </span>
 
           <!-- Text -->
           <p class="text-sm font-semibold truncate">

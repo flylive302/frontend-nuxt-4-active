@@ -233,6 +233,7 @@ async function handleDeclineInvitation() {
         <UDrawer
             title="Room Information Drawer"
             description="Room Information and Level Status."
+            style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
         >
           <div class="w-10">
             <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="thisRoom?.owner?.frame ?? undefined" />
@@ -372,6 +373,7 @@ async function handleDeclineInvitation() {
         v-model:open="open"
         title="Close Or Minimize Room"
         description="Close Or Minimize Room to go back to the room page"
+        style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
       >
         <UButton
           icon="i-lucide-x"
@@ -416,6 +418,6 @@ async function handleDeclineInvitation() {
   </header>
 
   <!-- Members Panel (Owner/Admin only) -->
-  <RoomMembersPanel v-if="canManageMembers" v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" />
+  <RoomMembersPanel v-if="canManageMembers" v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));" />
 
 </template>

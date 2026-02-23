@@ -319,6 +319,7 @@ function getMemberActions(member: RoomMember) {
             <UDropdownMenu
               v-if="canManageMembers && member.role !== 'owner'"
               :items="getMemberActions(member)"
+              style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
             >
               <UButton
                 icon="i-lucide-more-vertical"
