@@ -1,7 +1,7 @@
 // ========================================
 // Socket Event Payload Types
 // ========================================
-// Real-time events from MSAB - 17 total
+// Real-time events from MSAB - 21 total
 
 // ========================================
 // Economy Events
@@ -76,6 +76,50 @@ export interface RoomLevelUpPayload {
  */
 export interface RoomParticipantCountPayload {
   count: number
+}
+
+/**
+ * room.updated - Fired when room settings are changed.
+ */
+export interface RoomUpdatedPayload {
+  room_id: number
+  updated_fields: string[]
+  room: {
+    id: number
+    name: string
+    background: string | null
+    primary_color: string | null
+    type: string
+    is_password_protected: boolean
+    max_seats: number
+  }
+  updated_by: number
+}
+
+/**
+ * room.invitation_cancelled - Fired when an invitation is cancelled.
+ */
+export interface RoomInvitationCancelledPayload {
+  room_id: number
+  room_name: string
+  invitation_id: number
+}
+
+/**
+ * room.join_request_cancelled - Fired when a join request is cancelled.
+ */
+export interface RoomJoinRequestCancelledPayload {
+  room_id: number
+  request_id: number
+  user_id: number
+}
+
+/**
+ * room.user_unblocked - Fired when a user is unblocked from a room.
+ */
+export interface RoomUserUnblockedPayload {
+  room_id: number
+  room_name: string
 }
 
 // ========================================
@@ -184,6 +228,10 @@ export interface ServerToClientEvents {
   // Room
   'room.level_up': (payload: RoomLevelUpPayload) => void
   'room.participant_count': (payload: RoomParticipantCountPayload) => void
+  'room.updated': (payload: RoomUpdatedPayload) => void
+  'room.invitation_cancelled': (payload: RoomInvitationCancelledPayload) => void
+  'room.join_request_cancelled': (payload: RoomJoinRequestCancelledPayload) => void
+  'room.user_unblocked': (payload: RoomUserUnblockedPayload) => void
 
   // Income
   'income_target.completed': (payload: IncomeTargetCompletedPayload) => void

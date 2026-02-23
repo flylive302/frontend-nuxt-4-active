@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
 import type { LeaderboardPeriod } from '~/types/progression/leaderboard'
+import type { LeaderboardEntry } from '~/types/progression/leaderboard'
 
 
 // ========================================
@@ -30,10 +31,12 @@ const {
 
 // Map entries to add flat `id` for vue-virtual-scroller key-field
 const leaderboardItems = computed(() =>
-  leaderboardEntries.value.map(entry => ({
-    ...entry,
-    id: entry.user.id, // Flat id for key-field
-  }))
+  leaderboardEntries.value
+    .filter((entry: LeaderboardEntry) => entry.user !== null)
+    .map((entry: LeaderboardEntry) => ({
+      ...entry,
+      id: entry.user_id,
+    }))
 )
 
 // ========================================
@@ -44,7 +47,7 @@ const periodTabs = [
   { label: 'Daily', value: 'daily' },
   { label: 'Weekly', value: 'weekly' },
   { label: 'Monthly', value: 'monthly' },
-  { label: 'All Time', value: 'all' },
+  { label: 'All Time', value: 'all_time' },
 ]
 
 const activePeriod = ref<LeaderboardPeriod>('daily')
@@ -251,7 +254,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
 
                     <MinimalUserList class="grow" :user="entry.user">
                       <UButton size="xs" variant="soft" color="tertiary" icon="i-lucide-coins" class="mr-1 px-1">
-                        {{ formatCurrency(entry.total_spent) }}
+                        {{ formatCurrency(entry.total_value) }}
                       </UButton>
                     </MinimalUserList>
                   </div>

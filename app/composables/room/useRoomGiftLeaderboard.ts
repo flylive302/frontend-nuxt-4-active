@@ -13,18 +13,12 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[useRoomGiftLeaderboard]')
 
 // ========================================
-// Constants
-// ========================================
-
-const PER_PAGE = 20
-
-// ========================================
 // Composable
 // ========================================
 
 /**
  * Composable for fetching and managing room gift leaderboard data.
- * Supports cursor pagination, period filtering, and request cancellation.
+ * Supports period filtering and request cancellation.
  *
  * @param roomId - The room ID to fetch leaderboard for
  * @returns Reactive state and actions for leaderboard management
@@ -41,21 +35,14 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
   const loading = ref(false)
   const refreshing = ref(false)
   const error = ref<string | null>(null)
-  const cursor = ref<string | null>(null)
-  const hasMore = ref(true)
   const hasFetched = ref(false)
 
   // AbortController for request cancellation
   let abortController: AbortController | null = null
 
   // ========================================
-  // Computed
+  // Helpers
   // ========================================
-
-  /**
-   * Whether more entries can be loaded.
-   */
-  const canLoadMore = computed(() => hasMore.value && !loading.value)
 
   /**
    * Get the current room ID (supports reactive getter).
@@ -68,7 +55,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
 
   /**
    * Fetch leaderboard entries from API.
-   * @param reset - If true, clears existing entries and resets pagination
+   * @param reset - If true, clears existing entries before fetching
    */
   async function fetch(reset = false): Promise<void> {
     // Guard: Prevent duplicate requests
@@ -89,13 +76,8 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     // Reset state if requested
     if (reset) {
       entries.value = []
-      cursor.value = null
-      hasMore.value = true
       error.value = null
     }
-
-    // Guard: No more data to fetch
-    if (!hasMore.value && !reset) return
 
     loading.value = true
     log.debug('Fetching leaderboard', { roomId: currentRoomId, period: period.value, reset })
@@ -104,10 +86,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
       // Build query params
       const params: Record<string, string> = {
         period: period.value,
-        per_page: String(PER_PAGE),
-      }
-      if (cursor.value && !reset) {
-        params.cursor = cursor.value
       }
 
       const response = await api<GiftLeaderboardResponse>(
@@ -119,18 +97,10 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
         }
       )
 
-      log.debug('Leaderboard response', { count: response.data.length, hasNext: !!response.meta.pagination.next_cursor })
+      log.debug('Leaderboard response', { count: response.data.leaderboard.length })
 
-      // Append or replace entries
-      if (reset) {
-        entries.value = response.data
-      } else {
-        entries.value.push(...response.data)
-      }
-
-      // Update pagination state
-      cursor.value = response.meta.pagination.next_cursor
-      hasMore.value = response.meta.pagination.next_cursor !== null
+      // Extract leaderboard array from nested response
+      entries.value = response.data.leaderboard
       error.value = null
     } catch (err) {
       // Ignore aborted requests
@@ -144,7 +114,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     } finally {
       loading.value = false
       refreshing.value = false
-      hasFetched.value = true  // Always mark as fetched so UI shows empty/error state
+      hasFetched.value = true
     }
   }
 
@@ -168,14 +138,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
   }
 
   /**
-   * Load more entries (next page).
-   */
-  async function loadMore(): Promise<void> {
-    if (!canLoadMore.value) return
-    await fetch(false)
-  }
-
-  /**
    * Reset state completely.
    */
   function reset(): void {
@@ -188,8 +150,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     loading.value = false
     refreshing.value = false
     error.value = null
-    cursor.value = null
-    hasMore.value = true
     hasFetched.value = false
   }
 
@@ -215,17 +175,12 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     loading,
     refreshing,
     error,
-    hasMore,
     hasFetched,
-
-    // Computed
-    canLoadMore,
 
     // Actions
     fetch,
     refresh,
     setPeriod,
-    loadMore,
     reset,
   }
 }

@@ -46,6 +46,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   toggleLocalMute: () => boolean;
   /** Whether audio system is ready (device loaded + room joined) */
   isAudioReady: ComputedRef<boolean>;
+  /** Set volume for all consumer audio (0-1) */
+  setVolume: (volume: number) => void;
 }
 
 // ============================================
@@ -98,6 +100,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     isLocalMuted,
     toggleLocalMute: toggleMediasoupMute,
     producer,
+    setVolume: setMediasoupVolume,
   } = useMediasoup(socket);
 
   // ========================================
@@ -402,5 +405,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     isLocalMuted,
     toggleLocalMute,
     isAudioReady,
+
+    // Volume
+    setVolume: setMediasoupVolume,
   };
 }

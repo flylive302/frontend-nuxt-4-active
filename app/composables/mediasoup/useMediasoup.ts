@@ -68,6 +68,10 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     consumeProducer: streamingComposable.consumeProducer,
     stopConsumer: streamingComposable.stopConsumer,
 
+    // Volume
+    setVolume: streamingComposable.setVolume,
+    getVolume: streamingComposable.getVolume,
+
     // Combined cleanup
     cleanup,
   };

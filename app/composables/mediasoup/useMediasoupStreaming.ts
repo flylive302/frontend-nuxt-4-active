@@ -22,6 +22,7 @@ const producer = ref<Producer | null>(null);
 const consumers = ref<Map<string, Consumer>>(new Map());
 const audioElements = new Map<string, HTMLAudioElement>();
 const isLocalMuted = ref(false);
+const currentVolume = ref(1);
 
 // ============================================
 // Composable
@@ -172,6 +173,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // Attach to audio element (tracked for cleanup)
     const audio = new Audio();
     audio.srcObject = new MediaStream([consumer.track]);
+    audio.volume = currentVolume.value;
     audioElements.set(producerId, audio);
 
     // Try to play, handling autoplay policy
@@ -258,19 +260,48 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     log.debug('Streaming cleanup complete');
   }
 
+  /**
+   * Set volume for all consumer audio elements.
+   * Value is clamped between 0 and 1.
+   *
+   * @param volume - Volume level (0–1)
+   */
+  function setVolume(volume: number): void {
+    const clamped = Math.max(0, Math.min(1, volume));
+    currentVolume.value = clamped;
+
+    audioElements.forEach((audio) => {
+      audio.volume = clamped;
+    });
+
+    log.debug('Volume set to:', clamped, `(${audioElements.size} elements)`);
+  }
+
+  /**
+   * Get current volume level.
+   * @returns Current volume (0–1)
+   */
+  function getVolume(): number {
+    return currentVolume.value;
+  }
+
   // ========================================
   // Return
   // ========================================
   return {
     producer,
     consumers,
+    audioElements,
     isProducing,
     isLocalMuted,
+    currentVolume,
     startAudio,
     stopAudio,
     toggleLocalMute,
     consumeProducer,
     stopConsumer,
     cleanup,
+    setVolume,
+    getVolume,
   };
 }

@@ -108,11 +108,15 @@ export function useRoomMembers() {
   }
 
   /**
-   * Leave current room membership.
+   * Leave room membership.
+   * @param roomId - Optional room ID to leave. If omitted, leaves first active membership.
    */
-  async function leaveRoomMembership(): Promise<boolean> {
+  async function leaveRoomMembership(roomId?: number): Promise<boolean> {
     try {
-      await api('/user/room/leave', { method: 'POST' })
+      await api('/user/room/leave', {
+        method: 'POST',
+        body: roomId ? { room_id: roomId } : undefined,
+      })
       store.myMembership = null
       toast.add({
         title: 'Left Room',

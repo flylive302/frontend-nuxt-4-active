@@ -3,11 +3,9 @@
 // Room Settings Drawer
 // ========================================
 //
-// Accessible via gear icon in room header.
-// Contains role-based actions:
-// - Owner/Admin: Manage Members, Invite User
-// - Members: View Info, Leave Room
-// - Non-members: Request to Join, Accept/Decline Invite
+// Owner: Full room editing (logo, background, name, type, password, color, seats)
+// Members: Room info + leave
+// Non-members: Join/leave actions
 // ========================================
 
 // ========================================
@@ -15,8 +13,6 @@
 // ========================================
 
 const open = defineModel<boolean>('open', { default: false })
-const showMembersPanel = ref(false)
-const showInviteModal = ref(false)
 
 // ========================================
 // Stores & Composables
@@ -26,56 +22,34 @@ const roomStore = useRoomStore()
 const { requestToJoin, cancelJoinRequest, myJoinRequests } = useRoomJoinRequests()
 const { acceptInvitation, declineInvitation, receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
 const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers()
+const { api, normalizeError } = useApi()
+const { createUploadState } = useImageUpload()
+const toast = useToast()
 
 // ========================================
 // Computed
 // ========================================
 
 const thisRoom = computed(() => roomStore.currentRoom)
-
-/** Current user is room owner */
 const isRoomOwner = computed(() => roomStore.isRoomOwner)
-
-/** Current user can manage members (owner or admin) */
-const canManageMembers = computed(() => {
-  // Owner can always manage
-  if (isRoomOwner.value) return true
-  // Admin members can also manage
-  if (myMembership.value?.role === 'admin') return true
-  return false
-})
 
 /** Membership state for current user */
 const membershipState = computed(() => {
   if (!thisRoom.value) return 'none'
-  
   const roomId = thisRoom.value.id
-  
-  // Owner is always a member
   if (isRoomOwner.value) return 'owner'
-  
-  // Check actual membership from API
-  // If myMembership exists, user is a member of the current room
-  if (myMembership.value) {
-    return myMembership.value.role === 'admin' ? 'admin' : 'member'
-  }
-  
-  // Check if we have a pending join request for this room
+  if (myMembership.value) return myMembership.value.role === 'admin' ? 'admin' : 'member'
   const pendingRequest = myJoinRequests.value.items.find(
     (r) => r && (r.room_id === roomId || r.room?.id === roomId) && r.status === 'pending'
   )
   if (pendingRequest) return 'pending_request'
-  
-  // Check if we have a pending invitation for this room
   const pendingInvite = receivedInvitations.value.items.find(
     (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
   )
   if (pendingInvite) return 'has_invitation'
-  
   return 'none'
 })
 
-/** Get pending invitation ID */
 const pendingInvitationId = computed(() => {
   if (!thisRoom.value) return undefined
   const roomId = thisRoom.value.id
@@ -85,22 +59,201 @@ const pendingInvitationId = computed(() => {
   return pendingInvite?.id
 })
 
-/** Loading state for actions */
+const canEdit = computed(() => isRoomOwner.value)
+
+// ========================================
+// Form State (Owner Only)
+// ========================================
+
+const editName = ref('')
+const editPassword = ref('')
+const editType = ref<'public' | 'private'>('public')
+const editColor = ref('')
+const editMaxSeats = ref(15)
+const saving = ref(false)
+
+// ========================================
+// Logo Upload State
+// ========================================
+
+const logoUpload = createUploadState()
+const logoPreview = ref<string | null>(null)
+const logoFile = ref<File | null>(null)
+const isLogoUploading = computed(() => logoUpload.state.value.status === 'uploading')
+
+function handleLogoFileSelected(file: File): void {
+  logoFile.value = file
+  if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
+  logoPreview.value = URL.createObjectURL(file)
+}
+
+// ========================================
+// Background Upload State
+// ========================================
+
+const bgUpload = createUploadState()
+const bgPreview = ref<string | null>(null)
+const bgFile = ref<File | null>(null)
+const isBgUploading = computed(() => bgUpload.state.value.status === 'uploading')
+
+function handleBgFileSelected(file: File): void {
+  bgFile.value = file
+  if (bgPreview.value) URL.revokeObjectURL(bgPreview.value)
+  bgPreview.value = URL.createObjectURL(file)
+}
+
+// ========================================
+// Sync form on open
+// ========================================
+
+watch(open, (isOpen) => {
+  if (isOpen && thisRoom.value) {
+    editName.value = thisRoom.value.name ?? ''
+    editPassword.value = ''
+    editType.value = thisRoom.value.is_private ? 'private' : 'public'
+    editColor.value = thisRoom.value.primary_color ?? ''
+    editMaxSeats.value = thisRoom.value.max_seats ?? 15
+    logoPreview.value = thisRoom.value.logo ?? null
+    bgPreview.value = thisRoom.value.background ?? null
+    logoFile.value = null
+    bgFile.value = null
+  }
+})
+
+// ========================================
+// Theme Color Palette
+// ========================================
+
+const THEME_COLORS = [
+  { label: 'Rose', value: '#e11d48' },
+  { label: 'Orange', value: '#ea580c' },
+  { label: 'Amber', value: '#d97706' },
+  { label: 'Emerald', value: '#059669' },
+  { label: 'Cyan', value: '#0891b2' },
+  { label: 'Blue', value: '#2563eb' },
+  { label: 'Violet', value: '#7c3aed' },
+  { label: 'Pink', value: '#db2777' },
+] as const
+
+const typeOptions = [
+  { label: 'Public', value: 'public' },
+  { label: 'Private', value: 'private' },
+]
+
+const seatOptions = [5, 10, 15].map((n) => ({
+  label: `${n} seats`,
+  value: n,
+}))
+
+// ========================================
+// Action Loading
+// ========================================
+
 const actionLoading = ref(false)
 
 // ========================================
-// Handlers
+// Handlers — Room Settings
 // ========================================
 
-function handleOpenMembersPanel() {
-  showMembersPanel.value = true
-  open.value = false
+/** Save all room settings */
+async function handleSaveSettings(): Promise<void> {
+  if (!thisRoom.value || !canEdit.value) return
+
+  saving.value = true
+  try {
+    const body: Record<string, unknown> = {}
+
+    if (editName.value && editName.value !== thisRoom.value.name) {
+      body.name = editName.value
+    }
+    if (editPassword.value) {
+      body.password = editPassword.value
+    }
+    if (editType.value !== (thisRoom.value.is_private ? 'private' : 'public')) {
+      body.type = editType.value
+    }
+    if (editColor.value) {
+      body.primary_color = editColor.value
+    }
+    if (editMaxSeats.value !== thisRoom.value.max_seats) {
+      body.max_seats = editMaxSeats.value
+    }
+
+    // Upload logo if changed
+    if (logoFile.value) {
+      const result = await logoUpload.upload(logoFile.value, 'rooms')
+      if (!result || !result.url) {
+        toast.add({ title: 'Upload Failed', description: 'Failed to upload logo.', color: 'error' })
+        saving.value = false
+        return
+      }
+      body.logo_url = result.url
+      body.logo_file_id = result.fileId
+    }
+
+    // Upload background if changed
+    if (bgFile.value) {
+      const result = await bgUpload.upload(bgFile.value, 'rooms')
+      if (!result || !result.url) {
+        toast.add({ title: 'Upload Failed', description: 'Failed to upload background.', color: 'error' })
+        saving.value = false
+        return
+      }
+      body.background_url = result.url
+      body.background_file_id = result.fileId
+    }
+
+    if (Object.keys(body).length === 0) {
+      toast.add({ title: 'No Changes', description: 'Nothing to update.', color: 'info' })
+      saving.value = false
+      return
+    }
+
+    // Send PATCH — response includes updated room data
+    const response = await api<{ data: Record<string, unknown> }>(`/rooms/${thisRoom.value.id}`, { method: 'PATCH', body })
+
+    // Merge response into current room, preserving owner (not eager-loaded in resource)
+    if (response.data && thisRoom.value) {
+      const preserved = { owner: thisRoom.value.owner, owner_id: thisRoom.value.owner_id }
+      Object.assign(thisRoom.value, response.data, preserved)
+    }
+
+    toast.add({ title: 'Settings Saved', description: 'Room settings updated.', color: 'success' })
+    logoFile.value = null
+    bgFile.value = null
+  } catch (err) {
+    const normalized = normalizeError(err)
+    toast.add({ title: 'Error', description: normalized.message, color: 'error' })
+  } finally {
+    saving.value = false
+  }
 }
 
-function handleOpenInviteModal() {
-  showInviteModal.value = true
-  open.value = false
+/** Remove password protection */
+async function handleRemovePassword(): Promise<void> {
+  if (!thisRoom.value || !canEdit.value) return
+  saving.value = true
+  try {
+    const response = await api<{ data: Record<string, unknown> }>(`/rooms/${thisRoom.value.id}`, { method: 'PATCH', body: { password: '' } })
+
+    // Merge response, preserving owner
+    if (response.data && thisRoom.value) {
+      const preserved = { owner: thisRoom.value.owner, owner_id: thisRoom.value.owner_id }
+      Object.assign(thisRoom.value, response.data, preserved)
+    }
+
+    toast.add({ title: 'Password Removed', description: 'Room is no longer password protected.', color: 'success' })
+  } catch (err) {
+    const normalized = normalizeError(err)
+    toast.add({ title: 'Error', description: normalized.message, color: 'error' })
+  } finally {
+    saving.value = false
+  }
 }
+
+// ========================================
+// Handlers — Membership Actions
+// ========================================
 
 async function handleRequestToJoin() {
   if (!thisRoom.value) return
@@ -133,156 +286,217 @@ async function handleDeclineInvitation() {
 
 async function handleLeaveRoom() {
   actionLoading.value = true
-  const success = await leaveRoomMembership()
+  const success = await leaveRoomMembership(thisRoom.value?.id)
   actionLoading.value = false
   if (success) {
     open.value = false
   }
 }
 
-// Fetch invitations and membership on mount
+// ========================================
+// Lifecycle
+// ========================================
+
 onMounted(async () => {
-  await Promise.all([
-    fetchReceivedInvitations(true),
-    fetchMyMembership()
-  ])
+  await Promise.all([fetchReceivedInvitations(true), fetchMyMembership()])
+})
+
+onBeforeUnmount(() => {
+  if (logoPreview.value && logoFile.value) URL.revokeObjectURL(logoPreview.value)
+  if (bgPreview.value && bgFile.value) URL.revokeObjectURL(bgPreview.value)
 })
 </script>
 
 <template>
-  <!-- Settings Drawer -->
-  <UDrawer v-model:open="open" title="Room Settings" description="Manage room settings and members.">
+  <UDrawer v-model:open="open" title="Room Settings" description="Room settings and configuration.">
     <template #content>
-      <div class="px-3 mt-3 flex flex-col gap-3 pb-4">
+      <div class="px-3 mt-3 flex flex-col gap-3 pb-4 max-h-[80vh] overflow-y-auto">
 
-        <!-- Admin Actions (Owner/Admin only) -->
-        <template v-if="canManageMembers">
-          <SectionTitle>Room Management</SectionTitle>
+        <!-- Room Info (everyone) -->
+        <SectionTitle>Room Information</SectionTitle>
+        <div class="bg-neutral-800 rounded-lg p-3 space-y-2">
+          <div class="flex items-center gap-3">
+            <UserAvatar :img="thisRoom?.logo" :animated="true" class="w-12" />
+            <div>
+              <h3 class="text-base font-bold">{{ thisRoom?.name }}</h3>
+              <p v-if="thisRoom?.description" class="text-sm text-muted">{{ thisRoom?.description }}</p>
+            </div>
+          </div>
+          <div class="flex gap-2 mt-2">
+            <UBadge v-if="thisRoom?.is_password_protected" color="warning" variant="subtle" size="sm">
+              Password Protected
+            </UBadge>
+            <UBadge v-if="thisRoom?.is_private" color="info" variant="subtle" size="sm">
+              Private
+            </UBadge>
+            <UBadge v-else color="success" variant="subtle" size="sm">
+              Public
+            </UBadge>
+          </div>
+        </div>
 
-          <!-- Manage Members -->
-          <UButton
-            color="info"
-            icon="i-lucide-users"
-            trailing-icon="i-lucide-chevron-right"
-            variant="subtle"
-            size="xl"
-            class="w-full justify-center"
-            @click="handleOpenMembersPanel"
-          >
-            Manage Members
-          </UButton>
+        <!-- Owner: Room Settings Form -->
+        <template v-if="canEdit">
+          <SectionTitle>Edit Settings</SectionTitle>
+          <div class="bg-neutral-800 rounded-lg p-3 space-y-4">
 
-          <!-- Invite User -->
-          <UButton
-            color="success"
-            icon="i-lucide-user-plus"
-            trailing-icon="i-lucide-chevron-right"
-            variant="subtle"
-            size="xl"
-            class="w-full justify-center"
-            @click="handleOpenInviteModal"
-          >
-            Invite User
-          </UButton>
+            <!-- Logo Upload (1:1 square) -->
+            <UFormField label="Room Logo (Square)">
+              <div class="flex justify-center">
+                <FileUpload
+                  :current-image="logoPreview"
+                  :loading="isLogoUploading"
+                  crop
+                  :aspect-ratio="1"
+                  shape="circle"
+                  size="lg"
+                  label="Room Logo"
+                  @file-selected="handleLogoFileSelected"
+                />
+              </div>
+            </UFormField>
+
+            <!-- Logo Upload Progress -->
+            <div v-if="isLogoUploading" class="space-y-1">
+              <p class="text-xs text-center text-muted">Uploading logo...</p>
+              <UProgress :value="logoUpload.state.value.progress" size="xs" color="primary" />
+            </div>
+
+            <!-- Background Upload (9:16) -->
+            <UFormField label="Room Background (9:16)">
+              <div class="flex justify-center">
+                <FileUpload
+                  :current-image="bgPreview"
+                  :loading="isBgUploading"
+                  crop
+                  :aspect-ratio="9 / 16"
+                  shape="rounded"
+                  size="xl"
+                  label="Room Background"
+                  @file-selected="handleBgFileSelected"
+                />
+              </div>
+            </UFormField>
+
+            <!-- Background Upload Progress -->
+            <div v-if="isBgUploading" class="space-y-1">
+              <p class="text-xs text-center text-muted">Uploading background...</p>
+              <UProgress :value="bgUpload.state.value.progress" size="xs" color="primary" />
+            </div>
+
+            <!-- Theme Color -->
+            <UFormField label="Theme Color">
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="color in THEME_COLORS"
+                  :key="color.value"
+                  type="button"
+                  class="size-8 rounded-full border-2 transition-all cursor-pointer hover:scale-110"
+                  :class="editColor === color.value ? 'border-white scale-110 ring-2 ring-white/30' : 'border-transparent'"
+                  :style="{ backgroundColor: color.value }"
+                  :title="color.label"
+                  @click="editColor = color.value"
+                />
+              </div>
+            </UFormField>
+
+            <!-- Room Name -->
+            <UFormField label="Room Name">
+              <UInput v-model="editName" placeholder="Enter room name" icon="i-lucide-type" size="lg" class="w-full" />
+            </UFormField>
+
+            <!-- Room Type -->
+            <UFormField label="Room Type">
+              <USelect v-model="editType" :items="typeOptions" value-key="value" size="lg" class="w-full" />
+            </UFormField>
+
+            <!-- Max Seats -->
+            <UFormField label="Max Seats">
+              <USelect v-model="editMaxSeats" :items="seatOptions" value-key="value" size="lg" class="w-full" />
+            </UFormField>
+
+            <!-- Password -->
+            <UFormField label="Set / Change Password">
+              <UInput
+                v-model="editPassword"
+                type="password"
+                placeholder="Leave blank to keep current"
+                icon="i-lucide-lock"
+                size="lg"
+                class="w-full"
+              />
+            </UFormField>
+
+            <!-- Remove Password -->
+            <UButton
+              v-if="thisRoom?.is_password_protected"
+              icon="i-lucide-unlock"
+              color="warning"
+              variant="soft"
+              size="sm"
+              class="w-full justify-center"
+              :loading="saving"
+              @click="handleRemovePassword"
+            >
+              Remove Password
+            </UButton>
+
+            <!-- Save Button -->
+            <UButton
+              icon="i-lucide-save"
+              color="primary"
+              size="xl"
+              class="w-full justify-center"
+              :loading="saving"
+              @click="handleSaveSettings"
+            >
+              Save Changes
+            </UButton>
+          </div>
         </template>
 
-        <!-- Non-Member Actions (for users not yet in the room) -->
+        <!-- Membership Actions -->
+        <SectionTitle>Membership</SectionTitle>
+
         <template v-if="membershipState === 'none'">
-          <SectionTitle>Join This Room</SectionTitle>
-          <UButton
-            color="info"
-            icon="i-lucide-user-plus"
-            trailing-icon="i-lucide-chevron-right"
-            variant="subtle"
-            size="xl"
-            class="w-full justify-center"
-            :loading="actionLoading"
-            @click="handleRequestToJoin"
-          >
+          <UButton color="info" icon="i-lucide-user-plus" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleRequestToJoin">
             Request to Join
           </UButton>
         </template>
 
-        <!-- Pending Request Actions -->
-        <template v-else-if="membershipState == 'pending_request'">
-          <SectionTitle>Join Request Pending</SectionTitle>
+        <template v-else-if="membershipState === 'pending_request'">
           <p class="text-sm text-muted text-center">Your request is awaiting approval.</p>
-          <UButton
-            icon="i-lucide-x"
-            color="warning"
-            variant="subtle"
-            size="xl"
-            class="w-full justify-center"
-            :loading="actionLoading"
-            @click="handleCancelRequest"
-          >
+          <UButton icon="i-lucide-x" color="warning" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleCancelRequest">
             Cancel Request
           </UButton>
         </template>
 
-        <!-- Has Invitation Actions -->
         <template v-else-if="membershipState === 'has_invitation'">
-          <SectionTitle>You've Been Invited!</SectionTitle>
           <p class="text-sm text-muted text-center mb-2">The room owner has invited you to join.</p>
           <div class="flex gap-2">
-            <UButton
-              icon="i-lucide-check"
-              color="success"
-              variant="subtle"
-              size="xl"
-              class="w-full justify-center"
-              :loading="actionLoading"
-              @click="handleAcceptInvitation"
-            >
+            <UButton icon="i-lucide-check" color="success" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleAcceptInvitation">
               Accept
             </UButton>
-            <UButton
-              icon="i-lucide-x"
-              color="error"
-              variant="subtle"
-              size="xl"
-              class="w-full justify-center"
-              :loading="actionLoading"
-              @click="handleDeclineInvitation"
-            >
+            <UButton icon="i-lucide-x" color="error" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleDeclineInvitation">
               Decline
             </UButton>
           </div>
         </template>
 
-        <!-- Member Actions (for regular members - show Leave Room) -->
         <template v-else-if="membershipState === 'member' || membershipState === 'admin'">
-          <SectionTitle>Membership</SectionTitle>
-          <UButton
-            icon="i-lucide-log-out"
-            color="error"
-            variant="subtle"
-            size="xl"
-            class="w-full justify-center"
-            :loading="actionLoading"
-            @click="handleLeaveRoom"
-          >
+          <UButton icon="i-lucide-log-out" color="error" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleLeaveRoom">
             Leave Room
           </UButton>
         </template>
 
-        <!-- Close Button -->
-        <UButton
-          color="neutral"
-          variant="subtle"
-          icon="i-lucide-x"
-          class="justify-center mt-4"
-          @click="open = false"
-        >
+        <template v-else-if="membershipState === 'owner'">
+          <p class="text-sm text-muted text-center">You are the room owner.</p>
+        </template>
+
+        <UButton color="neutral" variant="subtle" icon="i-lucide-x" class="justify-center mt-4" @click="open = false">
           Close
         </UButton>
       </div>
     </template>
   </UDrawer>
-
-  <!-- Members Panel (separate drawer) -->
-  <RoomMembersPanel v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" />
-
-  <!-- Invite User Modal (separate modal) -->
-  <RoomInviteUserModal v-model:open="showInviteModal" :room-id="thisRoom?.id ?? 0" />
 </template>

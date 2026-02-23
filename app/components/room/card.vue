@@ -1,28 +1,107 @@
 <script setup lang="ts">
-import type {Room} from "~/types/room/room";
-const roomStore = useRoomStore();
+// ========================================
+// Room Card
+// ========================================
+//
+// Displays a room in the room grid.
+// Password-protected rooms show a prompt before entering.
+// ========================================
+
+import type { Room } from '~/types/room/room'
+
+// ========================================
+// Props
+// ========================================
 
 const props = defineProps<{
   room: Room
 }>()
 
-// Compute badge display based on room status
-const badgeDisplay = computed(() => {
-  if (!props.room.is_live) return null;
-  return `Live / ${props.room.participant_count}`;
-});
+// ========================================
+// Dependencies
+// ========================================
 
+const roomStore = useRoomStore()
+const authStore = useAuthStore()
+
+// ========================================
+// Computed
+// ========================================
+
+/** Live badge label */
+const badgeDisplay = computed(() => {
+  if (!props.room.is_live) return null
+  return `Live / ${props.room.participant_count}`
+})
+
+/** Whether the current user owns this room */
+const isOwner = computed(() => authStore.user?.id === props.room.owner_id)
+
+// ========================================
+// Password Prompt State
+// ========================================
+
+const showPasswordPrompt = ref(false)
+const entering = ref(false)
+
+const { api } = useApi()
+
+// ========================================
+// Navigation
+// ========================================
+
+/**
+ * Handle room card click.
+ * For password-protected rooms (non-owner): attempt passwordless join first.
+ * If backend says 403 → room is truly locked → show password prompt.
+ * This handles stale `is_password_protected` data when room was made public.
+ */
+async function handleRoomClick(): Promise<void> {
+  if (entering.value) return
+
+  // Owners always enter directly
+  if (isOwner.value) {
+    enterRoom()
+    return
+  }
+
+  // If room appears password-protected, verify with backend first
+  if (props.room.is_password_protected) {
+    entering.value = true
+    try {
+      // Try joining without password — backend grants access if room is now public
+      await api(`/rooms/${props.room.id}/join`, { method: 'POST', body: {} })
+      // Access granted (room is actually public now)
+      enterRoom()
+    } catch {
+      // 403 = still password-protected → show prompt
+      showPasswordPrompt.value = true
+    } finally {
+      entering.value = false
+    }
+    return
+  }
+
+  enterRoom()
+}
+
+/**
+ * Navigate to the room page.
+ */
+function enterRoom(): void {
+  roomStore.setCurrentRoom(props.room)
+  navigateTo(`/room/${props.room.id}`)
+}
 </script>
 
 <template>
-  <article class="relative overflow-hidden border border-white/50" @click="() => { roomStore.setCurrentRoom(props.room); navigateTo(`/room/${props.room.id}`) }">
+  <article class="relative overflow-hidden aspect-9/16 h-[40vh] w-full rounded-3xl" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-          :src="props.room.logo ?? undefined"
+          :src="props.room.background ?? 'https://ik.imagekit.io/flylive/siteAssets/rooms/eagle3.webp'"
           :alt="props.room.name ?? undefined"
-          class="h-full w-full object-cover"
+          class="h-auto w-full object-cover"
           :width="384"
-          :height="384"
           format="webp"
           densities="x1 x2"
           sizes="50vw"
@@ -58,12 +137,26 @@ const badgeDisplay = computed(() => {
             rounded="rounded-full"
             class="flex items-center gap-1 px-2 w-fit rounded-full border border-white/60"
         >
+          <!-- Lock icon for password-protected rooms -->
+          <UIcon v-if="props.room.is_password_protected" name="i-lucide-lock" class="size-3 text-warning" />
           <p class="text-sm font-semibold truncate">
             {{ props.room.name }}
           </p>
         </BgGlass>
       </template>
     </aside>
-  </article>
-</template>
 
+    <!-- Password lock indicator (top-right) -->
+    <div v-if="props.room.is_password_protected" class="absolute top-2 right-2">
+      <UIcon name="i-lucide-lock" class="size-4 text-warning drop-shadow-lg" />
+    </div>
+  </article>
+
+  <!-- Password Prompt Modal -->
+  <RoomPasswordPromptModal
+    v-if="showPasswordPrompt"
+    v-model:open="showPasswordPrompt"
+    :room="props.room"
+    @success="enterRoom"
+  />
+</template>

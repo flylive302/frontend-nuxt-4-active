@@ -169,6 +169,7 @@ onBeforeUnmount(() => {
           :current-image="logoPreview"
           :loading="isUploading"
           crop
+          :aspect-ratio="1"
           shape="rounded"
           label="Room Logo"
           @file-selected="handleFileSelected"

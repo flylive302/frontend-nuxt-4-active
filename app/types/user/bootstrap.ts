@@ -147,13 +147,21 @@ export interface BootstrapRoom {
   name: string
   description: string | null
   logo: string | null
+  background: string | null
+  primary_color: string | null
   topic: string | null
+  type: 'public' | 'private'
+  type_label: string
+  is_private: boolean
+  is_password_protected: boolean
+  country: string
   room_xp: string
   current_level: number
   sort_order: number
   is_live: boolean
   participant_count: number
   max_seats: number
+  owner_id: number
   owner: MinimalUser
 }
 

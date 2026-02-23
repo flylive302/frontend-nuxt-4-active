@@ -11,7 +11,7 @@ import type { MinimalUser } from '~/types/user/bootstrap'
 /**
  * Available leaderboard time periods.
  */
-export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'all'
+export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'all_time'
 
 // ========================================
 // API Types
@@ -22,35 +22,22 @@ export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'all'
  */
 export interface LeaderboardEntry {
   rank: number
-  user: MinimalUser
-  total_spent: number
+  user_id: number
+  user: MinimalUser | null
+  total_value: string
   gift_count: number
 }
 
 /**
- * Pagination metadata from API response.
- */
-export interface LeaderboardPagination {
-  path: string
-  per_page: number
-  next_cursor: string | null
-  prev_cursor: string | null
-}
-
-/**
  * Full API response for gift leaderboard.
+ * GET /api/v1/rooms/{room}/gift-leaderboard
  */
 export interface GiftLeaderboardResponse {
-  status: 'success' | 'error'
+  success: boolean
   message: string
-  data: LeaderboardEntry[]
-  meta: {
-    pagination: LeaderboardPagination
-    room_id: number
+  data: {
     period: LeaderboardPeriod
-    period_start: string | null
-    period_end: string
-    timestamp: string
-    correlation_id: string
+    room_id: number
+    leaderboard: LeaderboardEntry[]
   }
 }
