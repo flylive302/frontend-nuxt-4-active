@@ -40,7 +40,7 @@ const isPositioned = ref(false);
 // Draggable (active only when minimized)
 // ========================================
 
-const { dragEl, position, setPosition, winW, winH } = useBoundedDrag();
+const { dragEl, position, setPosition, winW, winH, isDragging } = useBoundedDrag();
 
 /**
  * Toggle between fullscreen and minimized states
@@ -189,14 +189,16 @@ onBeforeUnmount(clearPlaybackTimeout);
     v-if="isOpen"
     ref="dragEl"
     :style="isMinimized && isPositioned
-      ? `left: ${position.x}px; top: ${position.y}px; width: 80px; height: 120px;`
+      ? `transform: translate3d(${position.x}px, ${position.y}px, 0); width: 80px; height: 120px;`
       : ''
     "
     :class="[
-      'gift-playback-container',
-      isMinimized ? 'gift-playback--minimized' : 'gift-playback--fullscreen',
+      'gift-playback-container flex items-center justify-center',
+      isMinimized 
+        ? 'gift-playback--minimized bg-black/50' 
+        : 'gift-playback--fullscreen bg-white/20',
+      isDragging ? '!transition-none' : ''
     ]"
-    class="flex items-center justify-center bg-white/30 backdrop-blur-sm"
     @click="toggleMinimize"
   >
     <template v-if="currentPlayback">
@@ -237,6 +239,9 @@ onBeforeUnmount(clearPlaybackTimeout);
 
 /* Minimized draggable pip */
 .gift-playback--minimized {
+  top: 0;
+  left: 0;
+  margin: 0;
   border-radius: 0.5rem;
   overflow: hidden;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);

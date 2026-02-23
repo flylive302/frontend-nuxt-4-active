@@ -37,7 +37,7 @@ export function useBoundedDrag(options?: UseBoundedDragOptions) {
   const { width: elW, height: elH } = useElementSize(dragEl);
 
   // Setup draggable with clamped movement on all 4 sides
-  const { position } = useDraggable(dragEl, {
+  const { position, isDragging } = useDraggable(dragEl, {
     initialValue: { x: 0, y: 0 },
     onMove: (pos) => {
       pos.x = clamp(pos.x, EDGE_PADDING, winW.value - elW.value - EDGE_PADDING);
@@ -80,5 +80,7 @@ export function useBoundedDrag(options?: UseBoundedDragOptions) {
     elW,
     /** Reactive element height */
     elH,
+    /** Whether the user is actively dragging */
+    isDragging,
   };
 }
