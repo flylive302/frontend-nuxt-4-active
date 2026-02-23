@@ -119,6 +119,28 @@ const volumeIcon = computed(() => {
 onMounted(() => {
   setVolume(volume.value);
 });
+
+// ========================================
+// Global Theme Override
+// ========================================
+const uiPrimary = useCssVar('--ui-primary', typeof document !== 'undefined' ? document.documentElement : null);
+const originalPrimary = ref('');
+
+onMounted(() => {
+  originalPrimary.value = uiPrimary.value ?? '#000000';
+});
+
+watchEffect(() => {
+  if (roomStore.currentRoom?.primary_color) {
+    uiPrimary.value = roomStore.currentRoom.primary_color || originalPrimary.value;
+  } else {
+    uiPrimary.value = originalPrimary.value;
+  }
+});
+
+onUnmounted(() => {
+  uiPrimary.value = originalPrimary.value; // Reset on leave
+});
 </script>
 
 <template>

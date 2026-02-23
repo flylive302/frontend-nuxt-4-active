@@ -227,7 +227,7 @@ async function handleDeclineInvitation() {
   <header class="flex justify-between items-center">
 
     <!-- Left Section -->
-    <div class="rounded-md flex items-center bg-primary/10 border border-primary-700 gap-1 backdrop-blur-xl">
+    <div class="rounded-md flex items-center bg-primary/10 gap-1 backdrop-blur-xl">
       <!-- Level Drawer (Members Only) -->
       <template v-if="isMember">
         <UDrawer
@@ -353,41 +353,41 @@ async function handleDeclineInvitation() {
     <div class="flex items-center ml-auto gap-2">
       <!-- Members Button (Owner/Admin only) -->
       <UButton
-          v-if="canManageMembers"
-          icon="i-lucide-users"
-          size="xl"
-          class="rounded-full cursor-pointer shadow-lg shadow-primary-950/50 border border-primary-600 backdrop-blur-xs"
-          variant="soft"
-          @click="showMembersPanel = true"
+        v-if="canManageMembers"
+        icon="i-lucide-users"
+        size="xl"
+        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-xs"
+        variant="soft"
+        @click="showMembersPanel = true"
       />
 
       <UButton
-          icon="i-lucide-share-2"
-          size="xl"
-          class="rounded-full cursor-pointer shadow-lg shadow-primary-950/50 border border-primary-600 backdrop-blur-xs"
-          variant="soft"
+        icon="i-lucide-share-2"
+        size="xl"
+        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-xs"
+        variant="soft"
       />
 
       <UDrawer
-          v-model:open="open"
-          title="Close Or Minimize Room"
-          description="Close Or Minimize Room to go back to the room page"
+        v-model:open="open"
+        title="Close Or Minimize Room"
+        description="Close Or Minimize Room to go back to the room page"
       >
         <UButton
-            icon="i-lucide-x"
-            size="xl"
-            class="rounded-full border border-primary-600 cursor-pointer shadow-lg shadow-primary-950/50 backdrop-blur-xs"
-            variant="subtle"
-            @click="openLeaveDrawer"
+          icon="i-lucide-x"
+          size="xl"
+          class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-xs"
+          variant="soft"
+          @click="openLeaveDrawer"
         />
 
         <template #content>
           <div class="px-3 mt-2">
             <div class="p-4 bg-neutral-800 rounded-t-lg inset-shadow-sm inset-shadow-neutral-800 flex items-center justify-between gap-4">
               <UButton
-                  icon="i-lucide-minimize" color="secondary" size="xl" variant="subtle"
-                  class="w-full justify-center"
-                  @click="roomStore.minimizeRoom();open = false"
+                icon="i-lucide-minimize" color="secondary" size="xl" variant="subtle"
+                class="w-full justify-center"
+                @click="roomStore.minimizeRoom();open = false"
               >
                 Minimize
               </UButton>
