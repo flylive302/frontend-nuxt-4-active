@@ -76,7 +76,7 @@ const activeLevel = computed(() => levels.value[activeIndex.value] ?? null)
  */
 const assetBasePath = computed(() =>
   activeLevel.value
-    ? `https://assets.flyliveapp.com/parsedAnimations/vip/${activeLevel.value.level}`
+    ? `https://assets.flyliveapp.com/vip/${activeLevel.value.level}`
     : '',
 )
 
@@ -319,9 +319,9 @@ onUnmounted(() => {
 
     <template v-else-if="activeLevel">
       <!-- Background Animation -->
-      <<SvgaPlayer
+      <SvgaPlayer
         :key="`vip-card-${activeLevel.level}`"
-        :name="`${assetBasePath}/card.json`"
+        :name="`${assetBasePath}/card.svga`"
         class="absolute inset-0 z-0 -mt-28 pointer-events-none"
       />
       <!-- User VIP Status Banner -->
@@ -357,7 +357,7 @@ onUnmounted(() => {
           <div class="flex w-[60%] flex-col items-center justify-center">
             <SvgaPlayer
                 :key="`vip-emblem-${activeLevel.level}`"
-                :name="`${assetBasePath}/emblem.json`"
+                :name="`${assetBasePath}/emblem.svga`"
                 class="w-full h-auto"
             />
           </div>

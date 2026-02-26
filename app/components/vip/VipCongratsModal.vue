@@ -33,7 +33,7 @@ const emit = defineEmits<{
  * Asset base path for VIP level animations.
  */
 const assetBasePath = computed(() =>
-  `https://assets.flyliveapp.com/parsedAnimations/vip/${props.vipLevel}`,
+  `https://assets.flyliveapp.com/vip/${props.vipLevel}`,
 )
 
 // ========================================
@@ -70,7 +70,7 @@ function handleClose(): void {
         <div class="relative z-10 w-48 h-48 mb-4">
           <SvgaPlayer
             :key="`congrats-badge-${vipLevel}`"
-            :name="`${assetBasePath}/emblem.json`"
+            :name="`${assetBasePath}/emblem.svga`"
             class="w-full h-full"
           />
         </div>
@@ -134,7 +134,7 @@ function handleClose(): void {
         <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-30">
           <SvgaPlayer
             :key="`congrats-card-${vipLevel}`"
-            :name="`${assetBasePath}/card.json`"
+            :name="`${assetBasePath}/card.svga`"
             class="w-full h-full"
           />
         </div>

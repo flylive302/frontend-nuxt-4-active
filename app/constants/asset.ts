@@ -42,7 +42,7 @@ export const ASSET_CONFIG = {
  */
 export const WORKBOX_CACHES = {
   GIFT_VIDEOS: 'gift-videos',
-  SVGA_CACHE: 'svga-cache',
+  SVGA_CACHE: 'svga-cache',   // SVGA animations (.svga)
   CDN_IMAGES: 'cdn-images',
   API_CACHE: 'api-cache',
 } as const

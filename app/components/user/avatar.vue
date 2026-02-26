@@ -7,9 +7,6 @@
 // Constants
 // ========================================
 
-/** CDN base for parsed SVGA animation JSON files */
-const ANIMATION_CDN_BASE = 'https://assets.flyliveapp.com/parsedAnimations'
-
 /** Default padding when no frame is equipped */
 const DEFAULT_PADDING = '16%'
 
@@ -19,7 +16,7 @@ const DEFAULT_PADDING = '16%'
 
 const props = withDefaults(defineProps<{
   frameName?: string
-  /** Full CDN URL override — when provided, bypasses short-name resolution */
+  /** Full CDN URL — provided by backend (e.g. https://assets.flyliveapp.com/frames/7.svga) */
   frameAssetUrl?: string
   img?: string | undefined | null
   animated?: boolean
@@ -31,20 +28,6 @@ const props = withDefaults(defineProps<{
 });
 
 // ========================================
-// Helpers
-// ========================================
-
-/**
- * Resolve a short SVGA animation name to the full CDN URL.
- * If the name is already a full URL (starts with http), returns it as-is.
- */
-function resolveAnimationUrl(name: string): string {
-  if (!name) return ''
-  if (name.startsWith('http')) return name
-  return `${ANIMATION_CDN_BASE}/${name}.json`
-}
-
-// ========================================
 // Computed
 // ========================================
 
@@ -54,23 +37,21 @@ function resolveAnimationUrl(name: string): string {
  * frameName format: `{name}-{scale}-{padding}-{top}-{left}`
  * e.g. `vip_1_frame-100-26-0%-0%`
  *
- * The SVGA source URL is resolved in order:
- * 1. `frameAssetUrl` prop (full CDN URL from mall/equipped data)
- * 2. Short name extracted from frameName → resolved via CDN base
+ * The SVGA source URL is resolved from the `frameAssetUrl` prop,
+ * which contains the full CDN URL from the backend database.
  */
 const frameConfig = computed(() => {
   const parts = props.frameName?.split('-') ?? []
 
   // Custom format: name-girth-padding-top-left
   if (parts.length === 5) {
-    const [name, girth, padd, top, left] = parts
-    if (!name) return null
+    const [, girth, padd, top, left] = parts
 
-    // Prefer explicit asset URL, fall back to resolving the short name
-    const svgaUrl = props.frameAssetUrl || resolveAnimationUrl(name)
+    // frameAssetUrl must be provided — full URL from backend DB
+    if (!props.frameAssetUrl) return null
 
     return {
-      name: svgaUrl,
+      name: props.frameAssetUrl,
       padding: `${padd}%`,
       style: {
         transform: `scale(${+(girth || 100) / 100})`,
@@ -80,13 +61,10 @@ const frameConfig = computed(() => {
     }
   }
 
-  // frameName without display params — resolve as plain animation name
-  if (props.frameName || props.frameAssetUrl) {
-    const svgaUrl = props.frameAssetUrl || resolveAnimationUrl(props.frameName)
-    if (!svgaUrl) return null
-
+  // frameName or frameAssetUrl provided — use the full URL directly
+  if (props.frameAssetUrl) {
     return {
-      name: svgaUrl,
+      name: props.frameAssetUrl,
       padding: DEFAULT_PADDING,
       style: {
         transform: `scale(${110 / 100})`,

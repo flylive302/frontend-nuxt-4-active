@@ -32,10 +32,10 @@ const authStore = useAuthStore()
 // ========================================
 
 /**
- * Whether the prop uses SVGA animation (JSON asset).
+ * Whether the prop uses SVGA animation.
  */
 const isSvgaAsset = computed(() =>
-  props.prop?.asset_url?.endsWith('.json') ?? false,
+  props.prop?.asset_url?.endsWith('.svga') ?? false,
 )
 
 /**

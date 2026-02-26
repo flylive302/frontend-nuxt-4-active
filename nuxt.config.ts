@@ -56,9 +56,9 @@ export default defineNuxtConfig({
                         expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }
                     }
                 },
-                // R2 CDN Assets - SVGA JSON (30 days)
+                // R2 CDN Assets - SVGA animations (30 days)
                 {
-                    urlPattern: /(?:assets\.flyliveapp\.com|\/parsedAnimations)\/.*\.json$/i,
+                    urlPattern: /(?:assets\.flyliveapp\.com)\/.*\.svga$/i,
                     handler: 'CacheFirst',
                     options: {
                         cacheName: 'svga-cache',
