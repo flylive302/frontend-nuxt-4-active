@@ -102,7 +102,7 @@ function enterRoom(): void {
   <article v-bind="$attrs" class="relative overflow-hidden aspect-9/16 h-72 w-full rounded-3xl" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-          :src="props.room.background ?? 'https://ik.imagekit.io/flylive/siteAssets/rooms/eagle3.webp'"
+          :src="props.room.background ?? 'https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp'"
           :alt="props.room.name ?? undefined"
           class="h-auto w-full object-cover"
           :width="384"

@@ -20,8 +20,8 @@ export interface UseAudioSocketReturn {
   status: Ref<ConnectionStatus>;
   /** Connection error message if any */
   error: Ref<string | null>;
-  /** Connect to the audio server with auth token */
-  connect: () => void;
+  /** Connect to the audio server. Pass targetUrl for regional routing. */
+  connect: (targetUrl?: string) => void;
   /** Disconnect from the audio server */
   disconnect: () => void;
   /** Whether currently connected */
@@ -37,6 +37,9 @@ export interface UseAudioSocketReturn {
 const socket = shallowRef<AudioSocket | null>(null);
 const status = ref<ConnectionStatus>('disconnected');
 const error = ref<string | null>(null);
+
+/** Tracks the URL the socket is currently connected to */
+let _connectedUrl: string | null = null;
 
 // ============================================
 // Cached Dependencies (Module-level)
@@ -169,8 +172,13 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
   /**
    * Connect to the audio server with the current auth token.
+   *
+   * @param targetUrl - Optional regional WebSocket URL. When provided,
+   *   the connection will only be skipped if already connected to this
+   *   exact URL. When omitted, uses the default config URL and skips
+   *   if any connection is active.
    */
-  function connect() {
+  function connect(targetUrl?: string) {
     // Validate prerequisites
     if (!authStore.msabToken) {
       error.value = 'Authentication required';
@@ -179,7 +187,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
       return;
     }
 
-    const serverUrl = config.public.audioServerUrl as string;
+    const serverUrl = targetUrl || (config.public.audioServerUrl as string);
     if (!serverUrl) {
       error.value = 'Audio server URL not configured';
       status.value = 'error';
@@ -187,22 +195,31 @@ export function useAudioSocket(): UseAudioSocketReturn {
       return;
     }
 
-    // Don't reconnect if already connected
+    // URL-aware skip: if targetUrl provided, skip only if connected to SAME URL.
+    // If no targetUrl, skip if connected to any URL (existing behavior).
     if (socket.value?.connected) {
-      log.debug('Already connected');
-      return;
+      if (targetUrl && _connectedUrl !== targetUrl) {
+        // Connected to a different region — force reconnect
+        log.debug('Reconnecting to regional URL:', targetUrl);
+      } else {
+        log.debug('Already connected');
+        return;
+      }
     }
 
     // Clean up existing socket if any
     if (socket.value) {
       socket.value.removeAllListeners();
       socket.value.disconnect();
+      // Reset handler flag so global events re-register on the new socket
+      resetRealtimeHandlers();
     }
 
     status.value = 'connecting';
     error.value = null;
 
     // Create new socket connection
+    _connectedUrl = serverUrl;
     socket.value = io(serverUrl, {
       auth: {
         token: authStore.msabToken,
@@ -235,6 +252,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
     status.value = 'disconnected';
     error.value = null;
+    _connectedUrl = null;
     // Reset handlers so they can be re-registered on next connect
     resetRealtimeHandlers();
     log.debug('Disconnected by client');

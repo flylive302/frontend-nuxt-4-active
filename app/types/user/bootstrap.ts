@@ -159,6 +159,8 @@ export interface BootstrapRoom {
   current_level: number
   sort_order: number
   is_live: boolean
+  /** AWS region hosting this room's MSAB instance (null when not live) */
+  hosting_region: string | null
   participant_count: number
   max_seats: number
   owner_id: number

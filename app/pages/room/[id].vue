@@ -147,7 +147,7 @@ onUnmounted(() => {
       <!-- Background Image (prefer background field, fallback to logo) -->
       <div class="absolute inset-0 z-0 tint-500">
         <NuxtImg
-          :src="roomStore.currentRoom?.background ?? 'https://ik.imagekit.io/flylive/siteAssets/rooms/eagle3.webp'"
+          :src="roomStore.currentRoom?.background ?? 'https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp'"
           class="bg-fixed object-cover size-full"
           format="webp"
           sizes="100vw"

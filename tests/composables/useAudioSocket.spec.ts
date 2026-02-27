@@ -223,4 +223,79 @@ describe('useAudioSocket', () => {
       }
     })
   })
+
+  describe('connect(targetUrl) — regional routing', () => {
+    it('should connect to the specified URL instead of config URL', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      const { io: mockIo } = await import('socket.io-client')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect, status } = useAudioSocket()
+      connect('wss://mumbai.audio.flyliveapp.com')
+
+      expect(status.value).toBe('connecting')
+      expect(mockIo).toHaveBeenCalledWith('wss://mumbai.audio.flyliveapp.com', expect.any(Object))
+    })
+
+    it('should skip if already connected to the same URL', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      const { io: mockIo } = await import('socket.io-client')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+
+      // First connect
+      connect('wss://mumbai.audio.flyliveapp.com')
+      mockSocket.connected = true
+
+      // Second connect to same URL — should skip
+      connect('wss://mumbai.audio.flyliveapp.com')
+      expect(mockIo).toHaveBeenCalledTimes(1)
+    })
+
+    it('should force-reconnect when connected to a different URL', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      const { io: mockIo } = await import('socket.io-client')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+
+      // First connect to Mumbai
+      connect('wss://mumbai.audio.flyliveapp.com')
+      mockSocket.connected = true
+
+      // Second connect to Frankfurt — should force-reconnect
+      connect('wss://frankfurt.audio.flyliveapp.com')
+      expect(mockIo).toHaveBeenCalledTimes(2)
+      expect(mockSocket.removeAllListeners).toHaveBeenCalled()
+      expect(mockSocket.disconnect).toHaveBeenCalled()
+    })
+
+    it('should reset realtime handlers on teardown for URL change', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      const { resetRealtimeHandlers } = await import('../../app/composables/room/useRealtimeEvents')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+
+      // First connect
+      connect('wss://mumbai.audio.flyliveapp.com')
+      mockSocket.connected = true
+
+      // Force-reconnect to different URL
+      connect('wss://frankfurt.audio.flyliveapp.com')
+      expect(resetRealtimeHandlers).toHaveBeenCalled()
+    })
+
+    it('should fall back to config URL when no targetUrl provided', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      const { io: mockIo } = await import('socket.io-client')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+      connect()
+
+      expect(mockIo).toHaveBeenCalledWith('ws://localhost:3030', expect.any(Object))
+    })
+  })
 })

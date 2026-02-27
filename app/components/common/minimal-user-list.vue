@@ -43,7 +43,6 @@ const charmLevel = computed(() =>
     bootstrapStore.getLevelFromXp(props.user.charm_xp, 'charm')
 )
 
-console.log(props.user)
 </script>
 
 <template>

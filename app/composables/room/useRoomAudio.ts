@@ -18,6 +18,7 @@ import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
+import { REGION_ENDPOINTS } from '~/constants/audio';
 
 // ============================================
 // Types
@@ -206,8 +207,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * Connects to audio server, joins room, and sets up transports.
    */
   async function joinRoom(roomId: string): Promise<void> {
-    // Connect to audio server
-    connect();
+    // Connect to the correct regional MSAB endpoint
+    const hostingRegion = roomStore.currentRoom?.hosting_region;
+    const regionalUrl = hostingRegion ? REGION_ENDPOINTS[hostingRegion] : undefined;
+    connect(regionalUrl);
 
     // Wait for connection
     await new Promise<void>((resolve, reject) => {
