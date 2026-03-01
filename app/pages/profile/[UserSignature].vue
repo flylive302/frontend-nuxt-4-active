@@ -266,7 +266,6 @@ async function goToRoom() {
     isJoiningRoom.value = false
   }
 }
-
 </script>
 
 <template>
@@ -317,11 +316,11 @@ async function goToRoom() {
       <AltHero class="z-20">
         <div class="flex flex-col justify-center min-h-[55vw] bg-linear-to-br to-primary/30">
           <div class="flex px-3">
-            <UserAvatar
-              :animated="true"
+            <UserAvatar 
+              :animated="true" 
               :img="profile?.avatar || undefined"
-              :frame-name="profile?.frame"
-              class="w-24"
+              :frame-asset-url="profile?.frame ?? undefined"
+              class="w-24" 
             />
             <div class="px-3">
               <h1 class="text-lg font-bold">{{ profile?.name || 'Anonymous' }}</h1>

@@ -1,3 +1,6 @@
+<script setup lang="ts">
+const open = defineModel < boolean > ('open', { default: false })
+</script>
 <template>
   <header class="fixed inset-x-0 top-0 z-50">
     <BgGlass
@@ -39,13 +42,8 @@
               />
             </svg>
           </UButton>
-          <UButton
-              aria-label="Search"
-              icon="i-lucide-search"
-              size="xl"
-              color="primary"
-              variant="ghost"
-          />
+          <UButton aria-label="Search" icon="i-lucide-search" size="xl" color="primary" variant="ghost" @click="open = true" />
+          <UserSearchDrawer v-model:open="open" title="Search User" description="Search users and visit their Profile." />
         </div>
       </nav>
     </BgGlass>

@@ -28,6 +28,7 @@ const open = defineModel<boolean>("open", { default: false });
 const activeTab = ref("members");
 const selectedMember = ref<RoomMember | null>(null);
 const showMemberProfile = ref(false);
+const showInviteModal = ref(false);
 
 // ========================================
 // Composables
@@ -278,6 +279,18 @@ function getMemberActions(member: RoomMember) {
 
         <!-- Members Tab -->
         <div v-if="activeTab === 'members'" class="space-y-2">
+          <!-- Invite User Button (owner/admin only) -->
+          <UButton
+            v-if="canManageMembers"
+            icon="i-lucide-user-plus"
+            color="primary"
+            variant="soft"
+            class="w-full justify-center mb-2"
+            @click="showInviteModal = true"
+          >
+            Invite User
+          </UButton>
+          <RoomInviteUserModal v-model:open="showInviteModal" :room-id="props.roomId" />
           <div v-if="membersLoading" class="flex justify-center py-8">
             <UIcon name="i-lucide-loader-2" class="animate-spin size-8" />
           </div>

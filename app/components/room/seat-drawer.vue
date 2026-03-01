@@ -173,8 +173,8 @@ const canManageMembers = computed(() => {
           <div class="flex flex-col items-center text-center relative z-10">
             <LazyUserAvatar
               :img="currentSeat.user.avatar ?? undefined"
-              :frame-name="currentSeat.user.frame ?? undefined"
-              animated class="size-24" 
+              :frame-asset-url="currentSeat.user.frame ?? undefined"
+              :animated="true" class="size-24" 
               @click="async () => {
                 try {
                   isOpen = false;

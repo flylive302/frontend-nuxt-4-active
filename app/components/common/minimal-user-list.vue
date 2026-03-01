@@ -51,7 +51,8 @@ const charmLevel = computed(() =>
     <div class="flex grow shadow-lg shadow-primary/10 pb-1">
       <UserAvatar
           :img="user.avatar"
-          animated
+          :animated="true"
+          :frame-name="user.frame ?? undefined"
           class="w-14 ml-1"
           @click="async () => {
           roomStore.minimizeRoom();

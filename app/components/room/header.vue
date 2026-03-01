@@ -281,7 +281,7 @@ async function handleDeclineInvitation() {
       <!-- Membership Action (Non-Members) -->
       <template v-else>
         <div class="w-10">
-          <UserAvatar :animated="true" :img="thisRoom?.logo" />
+          <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="thisRoom?.owner?.frame ?? undefined" />
         </div>
 
         <!-- Request to Join -->
