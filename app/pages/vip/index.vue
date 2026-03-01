@@ -342,7 +342,7 @@ onUnmounted(() => {
           <!-- Badge Section (3/8 width) -->
           <div class="flex w-[40%] flex-col items-center justify-center">
             <NuxtImg
-                :src="`${assetBasePath}/badge.png`"
+                :src="`${assetBasePath}/badge.webp`"
                 :alt="`VIP ${activeLevel.level} Badge`"
                 loading="lazy"
                 format="webp"
@@ -365,7 +365,7 @@ onUnmounted(() => {
 
         <!-- Border Image -->
         <NuxtImg
-            :src="`${assetBasePath}/border.png`"
+            :src="`${assetBasePath}/border.webp`"
             :alt="`VIP ${activeLevel.level} Border Decoration`"
             class="w-full h-auto"
             loading="lazy"
