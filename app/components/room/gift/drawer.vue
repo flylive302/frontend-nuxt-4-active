@@ -51,7 +51,7 @@ async function handleSend() {
 <template>
   <UDrawer v-model:open="isOpen" title="Send Gift" description="Send gifts to speakers in the room">
     <!-- Trigger Button -->
-    <NuxtImg src="https://assets.flyliveapp.com/shared/room/gift.webp" alt="gifts" class="w-16 ring ring-info cursor-pointer" />
+    <NuxtImg src="https://assets.flyliveapp.com/shared/room/gift.webp" alt="gifts" width="70px" class="cursor-pointer" />
     <template #content>
       <div class="p-2 space-y-3">
 
