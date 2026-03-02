@@ -5,6 +5,7 @@
  * Extracted from useRoomAudio.ts for modularity.
  */
 import type {
+  RoomParticipant,
   UserJoinedEvent,
   UserLeftEvent,
   RoomClosedEvent,
@@ -62,6 +63,7 @@ const ROOM_EVENT_NAMES = [
   'room:userJoined',
   'room:userLeft',
   'room:closed',
+  'user:profile_updated',
   'audio:newProducer',
   'speaker:active',
   'seat:updated',
@@ -139,6 +141,12 @@ export function setupRoomEventHandlers({
     });
     leaveRoom();
     navigateTo('/');
+  });
+
+  // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change
+  socket.on('user:profile_updated', (event: { user_id: number; profile: Partial<RoomParticipant> }) => {
+    roomStore.updateParticipantProfile(event.user_id, event.profile);
+    log.debug('Profile updated for user:', event.user_id);
   });
 
   // Audio events

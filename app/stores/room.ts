@@ -225,6 +225,28 @@ export const useRoomStore = defineStore('roomStore', () => {
     }
   }
 
+  /**
+   * Update a participant's profile data in-place.
+   * Called when MSAB broadcasts `user:profile_updated` after a backend profile change.
+   * Also refreshes the user's seat snapshot so seated users show fresh data.
+   *
+   * @param userId - User whose profile changed
+   * @param profile - Partial profile fields to merge (name, avatar, frame, etc.)
+   */
+  function updateParticipantProfile(userId: number, profile: Partial<RoomParticipant>) {
+    const participant = participants.value.get(userId);
+    if (!participant) return;
+
+    // Merge profile fields into existing participant (preserve room-specific fields)
+    Object.assign(participant, profile);
+
+    // Refresh seat snapshot if user is seated
+    const seat = seats.value.find((s) => s.user?.id === userId);
+    if (seat && seat.user) {
+      seat.user = { ...participant };
+    }
+  }
+
   function setParticipantMuted(userId: number, isMuted: boolean) {
     const participant = participants.value.get(userId);
     if (participant) {
@@ -397,6 +419,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     // Participant actions
     addParticipant,
     removeParticipant,
+    updateParticipantProfile,
     setParticipantMuted,
 
     // Seat actions
