@@ -38,11 +38,14 @@ export function useSvgaPlayer(
   /** Playback ID to invalidate stale callbacks when restarting */
   let playbackId = 0;
 
+  /** Guard flag — prevents stale async loads from assigning to unmounted components */
+  let isDestroyed = false;
+
   /**
    * Load and initialize the SVGA player
    */
   const load = async () => {
-    if (!canvas.value) return;
+    if (!canvas.value || isDestroyed) return;
     
     // Defensive check - ensure name ref has a value
     const animationName = options.name?.value;
@@ -59,12 +62,20 @@ export function useSvgaPlayer(
 
     try {
       // Create new player instance
-      player.value = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
+      const newPlayer = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
         canvas: canvas.value,
         name: animationName,
         loop: options.loop?.value ?? 1,
         autoplay: options.autoplay?.value ?? true,
       });
+
+      // Guard: component unmounted during async load — discard the player
+      if (isDestroyed) {
+        newPlayer?.destroy();
+        return;
+      }
+
+      player.value = newPlayer;
 
       // Register event callbacks
       if (player.value) {
@@ -131,6 +142,7 @@ export function useSvgaPlayer(
 
   // Cleanup on unmount
   onBeforeUnmount(() => {
+    isDestroyed = true;
     player.value?.destroy();
     player.value = null;
   });

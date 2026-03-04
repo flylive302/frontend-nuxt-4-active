@@ -109,6 +109,26 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     return map
   })
 
+  /**
+   * Pre-sorted wealth level configs (ascending by required_xp).
+   * Cached as computed — only re-sorts when config changes.
+   */
+  const sortedWealthLevels = computed(() =>
+    config.value ? [...config.value.wealth_levels].sort((a, b) => a.required_xp - b.required_xp) : []
+  )
+
+  /**
+   * Pre-sorted charm level configs (ascending by required_xp).
+   */
+  const sortedCharmLevels = computed(() =>
+    config.value ? [...config.value.charm_levels].sort((a, b) => a.required_xp - b.required_xp) : []
+  )
+
+  /**
+   * Persistent set of gift IDs for O(1) deduplication.
+   */
+  const giftIdSet = computed(() => new Set(giftCatalog.value.map(g => g.id)))
+
   // ========================================
   // Actions
   // ========================================
@@ -170,8 +190,8 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    * Append gifts to catalog (for pagination).
    */
   function appendGifts(gifts: Gift[]) {
-    const existingIds = new Set(giftCatalog.value.map(g => g.id))
-    const newGifts = gifts.filter(g => !existingIds.has(g.id))
+    const currentIds = giftIdSet.value
+    const newGifts = gifts.filter(g => !currentIds.has(g.id))
     giftCatalog.value.push(...newGifts)
   }
 
@@ -315,12 +335,9 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     if (!config.value) return { level: 0, name: 'Unknown', badge: null }
 
     const xpNum = typeof xp === 'string' ? parseFloat(xp) : (xp ?? 0)
-    const levels = category === 'wealth'
-      ? config.value.wealth_levels
-      : config.value.charm_levels
+    const sorted = category === 'wealth' ? sortedWealthLevels.value : sortedCharmLevels.value
 
-    // Sort ascending and find highest matching level
-    const sorted = [...levels].sort((a, b) => a.required_xp - b.required_xp)
+    // Find highest matching level from pre-sorted cache
     const matched = sorted.filter(l => xpNum >= l.required_xp).pop()
 
     if (!matched) return { level: 0, name: 'Beginner', badge: null }

@@ -7,7 +7,6 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 import { createLogger } from '~/utils/logger'
 import type {
   RoomMember,
@@ -188,7 +187,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
         status: 'active',
         created_at: new Date().toISOString(),
         joined_at: new Date().toISOString(),
-        user: null as any, // Will be refetched from API
+        user: null as unknown as RoomMember['user'], // Placeholder — refetched from API
       } as RoomMember
       log.debug('myMembership set to:', myMembership.value)
     } else {

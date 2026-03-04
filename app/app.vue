@@ -41,6 +41,7 @@ function handleCellularConsent(granted: boolean): void {
 // This handles the post-login flow where the cookie is now available.
 
 const authStore = useAuthStore()
+const levelsStore = useLevelsStore()
 
 // Track if we're currently fetching to avoid duplicate calls
 const isFetchingBootstrap = ref(false)
@@ -59,7 +60,13 @@ watch(
     if (isAuth && !isReady && phase === 'idle' && !isFetchingBootstrap.value) {
       isFetchingBootstrap.value = true
       try {
-        await bootstrapStore.fetchBootstrap()
+        const data = await bootstrapStore.fetchBootstrap()
+
+        // Seed dependent stores — mirrors bootstrap.client.ts plugin logic
+        if (data) {
+          authStore.setUser(data.user)
+          levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
+        }
       } finally {
         isFetchingBootstrap.value = false
       }

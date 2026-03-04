@@ -245,6 +245,14 @@ export const useRoomStore = defineStore('roomStore', () => {
     if (seat && seat.user) {
       seat.user = { ...participant };
     }
+
+    // Refresh room owner snapshot so header avatar stays current
+    if (currentRoom.value?.owner?.id === userId) {
+      currentRoom.value = {
+        ...currentRoom.value,
+        owner: { ...currentRoom.value.owner, ...profile },
+      };
+    }
   }
 
   function setParticipantMuted(userId: number, isMuted: boolean) {
@@ -347,9 +355,9 @@ export const useRoomStore = defineStore('roomStore', () => {
    * @param message - Chat message event from server
    */
   function addMessage(message: ChatMessageEvent) {
-    // Ring buffer: remove oldest before adding to avoid allocation from slice
+    // Splice oldest at head instead of shift() to avoid O(n) reindex
     if (messages.value.length >= MAX_CHAT_MESSAGES) {
-      messages.value.shift();
+      messages.value.splice(0, 1);
     }
     messages.value.push(message);
   }
@@ -377,6 +385,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     currentRoom,
     userRoom,
     isMinimized,
+    previousRoute,
     status,
 
     // Audio state
@@ -438,6 +447,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   };
 }, {
   persist: {
-    pick: ['userRoom'],
+    pick: ['userRoom', 'currentRoom', 'isMinimized', 'previousRoute'],
   },
 });

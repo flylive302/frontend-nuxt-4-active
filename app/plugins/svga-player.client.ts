@@ -5,6 +5,10 @@
  * The Parser fetches .svga binaries, decompresses (zlib), decodes (protobuf),
  * and creates ImageBitmaps — all in a WebWorker for off-thread performance.
  *
+ * IMPORTANT: The Parser uses a single WebWorker internally. Calling parser.load()
+ * concurrently overwrites the worker.onmessage handler, causing earlier loads to
+ * hang forever. All loads are therefore serialized through a queue chain.
+ *
  * @see https://github.com/svga/SVGAPlayer-Web-Lite
  */
 export default defineNuxtPlugin(async () => {
@@ -17,15 +21,28 @@ export default defineNuxtPlugin(async () => {
     const cache = new Map<string, Promise<unknown>>();
 
     /**
+     * Serialization chain — ensures only one parser.load() runs at a time.
+     * Each new load awaits the previous one before starting.
+     */
+    let loadChain: Promise<void> = Promise.resolve();
+
+    /**
      * Parse and cache an SVGA animation from a URL.
      * Uses the Parser's WebWorker for off-thread decompression and decoding.
-     * Exposed for preloading — uses the same cache as createSvgaPlayer.
+     * Loads are serialized to prevent concurrent WebWorker callback overwrites.
      *
-     * @param url - Full URL to the .svga file on CDN
+     * @param url - URL to the .svga file
      */
     const fetchAnimation = (url: string): Promise<unknown> => {
         if (!cache.has(url)) {
-            cache.set(url, parser.load(url));
+            // Chain this load behind the previous one
+            const loadPromise = loadChain.then(() => parser.load(url));
+
+            // Extend the chain — next load waits for this one to finish
+            // Use .catch() on the chain so a single failure doesn't block the queue
+            loadChain = loadPromise.then(() => {}, () => {});
+
+            cache.set(url, loadPromise);
         }
         return cache.get(url)!;
     };

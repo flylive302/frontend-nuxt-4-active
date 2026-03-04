@@ -3,7 +3,6 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 import { createLogger } from '~/utils/logger'
 import type {
   Notification,
@@ -218,9 +217,8 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   /**
-   * Handle WebSocket notification event.
-   * This will be used when backend implements real-time.
-   * For now, it's a no-op placeholder.
+   * Handle incoming real-time notification from socket event.
+   * Inserts the notification at the top of the list and updates unread count.
    */
   function handleRealtimeNotification(notification: Notification): void {
     // Check if already exists

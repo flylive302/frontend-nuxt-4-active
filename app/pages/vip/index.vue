@@ -47,12 +47,18 @@ const { currentLevel, isVip, expiresAt, fetchLevels, purchaseVip, giftVip, fetch
 // State
 // ========================================
 
+// Note: levels & activeIndex declared below, preloader watches reactively
+
+
 const levels = ref<VipLevel[]>([])
 const activeIndex = ref(0)
 const isLoadingLevels = ref(true)
 const isPurchasing = ref(false)
 const isGiftModalOpen = ref(false)
 const rechargeProgress = ref<RechargeProgress | null>(null)
+
+// Preload all VIP SVGA assets progressively into plugin cache
+useVipSvgaPreloader(levels, activeIndex)
 
 // Prop preview modal
 const selectedProp = ref<VipProp | null>(null)
@@ -76,7 +82,7 @@ const activeLevel = computed(() => levels.value[activeIndex.value] ?? null)
  */
 const assetBasePath = computed(() =>
   activeLevel.value
-    ? `https://assets.flyliveapp.com/vip/${activeLevel.value.level}`
+    ? `/vip/${activeLevel.value.level}`
     : '',
 )
 
@@ -310,44 +316,34 @@ onUnmounted(() => {
     </NavAlt>
 
     <!-- Loading State -->
-    <div
-      v-if="isLoadingLevels"
-      class="flex h-full items-center justify-center"
-    >
+    <div v-if="isLoadingLevels" class="flex h-full items-center justify-center">
       <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-white/60" />
     </div>
 
     <template v-else-if="activeLevel">
       <!-- Background Animation -->
-      <SvgaPlayer
-        :key="`vip-card-${activeLevel.level}`"
-        :name="`${assetBasePath}/card.svga`"
-        class="absolute inset-0 z-0 -mt-28 pointer-events-none"
-      />
+      <SvgaPlayer :key="`vip-card-${activeLevel.level}`" :name="`${assetBasePath}/card.svga`"
+        class="absolute inset-0 z-0 -mt-20 pointer-events-none" />
       <!-- User VIP Status Banner -->
-      <div v-if="isVip" class="absolute w-7/8 ml-7 z-10 p-2 mt-4 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm">
+      <div v-if="isVip"
+        class="absolute w-7/8 ml-7 mt-18 z-10 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm">
         <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-amber-400" />
         <span class="text-sm font-medium text-white">
           VIP {{ currentLevel }}
         </span>
-        <span v-if="formattedExpiry" class="ml-auto text-xs text-white/60">
+        <span v-if="formattedExpiry" class="ml-auto text-xs font-bold text-white bg-tertiary px-2 rounded-full">
           Expires {{ formattedExpiry }}
         </span>
       </div>
 
       <!-- Main Content -->
-      <div class="relative z-10 overflow-y-auto mt-14">
+      <div class="relative z-10 overflow-y-auto mt-24">
         <!-- VIP Header Section -->
         <div class="flex px-3">
           <!-- Badge Section (3/8 width) -->
           <div class="flex w-[40%] flex-col items-center justify-center">
-            <NuxtImg
-                :src="`${assetBasePath}/badge.webp`"
-                :alt="`VIP ${activeLevel.level} Badge`"
-                loading="lazy"
-                format="webp"
-                class="w-full h-auto"
-            />
+            <NuxtImg :src="`${assetBasePath}/badge.webp`" :alt="`VIP ${activeLevel.level} Badge`" loading="lazy"
+              format="webp" class="w-full h-auto" />
             <h2 class="text-lg font-bold mt-2">
               {{ activeLevel.privileges.length }} Privileges
             </h2>
@@ -355,33 +351,19 @@ onUnmounted(() => {
 
           <!-- Emblem Section (5/8 width) -->
           <div class="flex w-[60%] flex-col items-center justify-center">
-            <SvgaPlayer
-                :key="`vip-emblem-${activeLevel.level}`"
-                :name="`${assetBasePath}/emblem.svga`"
-                class="w-full h-auto"
-            />
+            <SvgaPlayer :key="`vip-emblem-${activeLevel.level}`" :name="`${assetBasePath}/emblem.svga`"
+              class="w-full h-auto" />
           </div>
         </div>
 
         <!-- Border Image -->
-        <NuxtImg
-            :src="`${assetBasePath}/border.webp`"
-            :alt="`VIP ${activeLevel.level} Border Decoration`"
-            class="w-full h-auto"
-            loading="lazy"
-            format="webp"
-        />
+        <NuxtImg :src="`${assetBasePath}/border.webp`" :alt="`VIP ${activeLevel.level} Border Decoration`"
+          class="w-full h-auto" loading="lazy" format="webp" />
 
         <div class="overflow-scroll h-[42vh] pb-32">
           <!-- Recharge Progress -->
-          <div
-              v-if="rechargeProgress?.has_active_event"
-              class="px-3 pt-3"
-          >
-            <VipRechargeProgress
-                :progress="rechargeProgress"
-                :level-color="activeLevel.color"
-            />
+          <div v-if="rechargeProgress?.has_active_event" class="px-3 pt-3">
+            <VipRechargeProgress :progress="rechargeProgress" :level-color="activeLevel.color" />
           </div>
           <!-- VIP Props Section -->
           <div v-if="activeLevelProps.length > 0" class="px-3">
@@ -389,27 +371,14 @@ onUnmounted(() => {
               VIP Props
             </h3>
             <div class="grid grid-cols-3 gap-2">
-              <div
-                  v-for="prop in activeLevelProps"
-                  :key="`vip-prop-${activeLevel.level}-${prop.id}`"
-                  class="flex flex-col items-center justify-center gap-2 cursor-pointer"
-                  @click="handlePropPreview(prop)"
-              >
+              <div v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
+                class="flex flex-col items-center justify-center gap-2 cursor-pointer" @click="handlePropPreview(prop)">
                 <div
-                    class="flex aspect-square w-full items-center justify-center rounded-md px-2 ring-2 transition-all duration-300 overflow-hidden"
-                    :style="privilegeBoxStyle"
-                >
-                  <img
-                      v-if="prop.thumbnail_url"
-                      :src="prop.thumbnail_url"
-                      :alt="prop.name"
-                      class="w-full h-full object-contain"
-                  >
-                  <UIcon
-                      v-else
-                      name="i-heroicons-gift"
-                      class="h-8 w-8 text-white/90"
-                  />
+                  class="flex aspect-square w-full items-center justify-center rounded-md px-2 ring-2 transition-all duration-300 overflow-hidden"
+                  :style="privilegeBoxStyle">
+                  <img v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
+                    class="w-full h-full object-contain">
+                  <UIcon v-else name="i-heroicons-gift" class="h-8 w-8 text-white/90" />
                 </div>
                 <p class="text-sm font-bold text-center leading-tight">
                   {{ prop.name }}
@@ -424,19 +393,12 @@ onUnmounted(() => {
               Privileges
             </h3>
             <div class="grid grid-cols-3 gap-2">
-              <div
-                  v-for="privilege in nonPropPrivileges"
-                  :key="`privilege-${activeLevel.level}-${privilege}`"
-                  class="flex flex-col items-center justify-center gap-2"
-              >
+              <div v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`"
+                class="flex flex-col items-center justify-center gap-2">
                 <div
-                    class="flex aspect-square w-full items-center justify-center rounded-md px-2 ring-2 transition-all duration-300"
-                    :style="privilegeBoxStyle"
-                >
-                  <UIcon
-                      :name="VIP_PRIVILEGE_ICONS[privilege] ?? 'i-heroicons-star'"
-                      class="h-8 w-8 text-white/90"
-                  />
+                  class="flex aspect-square w-full items-center justify-center rounded-md px-2 ring-2 transition-all duration-300"
+                  :style="privilegeBoxStyle">
+                  <UIcon :name="VIP_PRIVILEGE_ICONS[privilege] ?? 'i-heroicons-star'" class="h-8 w-8 text-white/90" />
                 </div>
                 <p class="text-sm font-bold text-center leading-tight">
                   {{ VIP_PRIVILEGE_LABELS[privilege] ?? privilege }}
@@ -448,29 +410,16 @@ onUnmounted(() => {
       </div>
 
       <!-- Footer Controls -->
-      <footer
-          aria-label="VIP Level Selection"
-          class="fixed inset-x-2 bottom-4 z-50"
-      >
-        <BgGlass
-            class="border border-white/40"
-            frost-blur-radius="blur(8px)"
-            :noise-frequency="0.009"
-            :noise-strength="200"
-            rounded="rounded-lg"
-        >
+      <footer aria-label="VIP Level Selection" class="fixed inset-x-2 bottom-4 z-50">
+        <BgGlass class="border border-white/40" frost-blur-radius="blur(8px)" :noise-frequency="0.009"
+          :noise-strength="200" rounded="rounded-lg">
           <!-- VIP Level Tabs -->
           <div class="flex w-full overflow-x-auto scrollbar-hide">
-            <UButton
-                v-for="(level, index) in levels"
-                :key="`vip-tab-${level.level}`"
-                variant="soft"
-                class="min-w-fit shrink-0 rounded-none bg-linear-to-b transition-transform duration-200"
-                :class="activeIndex === index ? 'scale-110 to-tertiary' : 'to-muted'"
-                :aria-pressed="activeIndex === index"
-                :aria-label="`Select VIP Level ${level.level}`"
-                @click="setActiveLevel(index)"
-            >
+            <UButton v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
+              class="min-w-fit shrink-0 rounded-none bg-linear-to-b transition-transform duration-200"
+              :class="activeIndex === index ? 'scale-110 to-tertiary' : 'to-muted'"
+              :aria-pressed="activeIndex === index" :aria-label="`Select VIP Level ${level.level}`"
+              @click="setActiveLevel(index)">
               VIP {{ level.level }}
             </UButton>
           </div>
@@ -481,25 +430,13 @@ onUnmounted(() => {
 
           <!-- Action Buttons -->
           <div class="flex gap-2 px-3 py-2">
-            <UButton
-                size="md"
-                variant="soft"
-                color="tertiary"
-                class="w-full justify-center"
-                aria-label="Gift VIP to a friend"
-                @click="handleGiftOpen"
-            >
+            <UButton size="md" variant="soft" color="tertiary" class="w-full justify-center"
+              aria-label="Gift VIP to a friend" @click="handleGiftOpen">
               Gift
             </UButton>
-            <UButton
-                size="md"
-                variant="solid"
-                color="tertiary"
-                class="w-full justify-center"
-                :loading="isPurchasing"
-                :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
-                @click="handlePurchase"
-            >
+            <UButton size="md" variant="solid" color="tertiary" class="w-full justify-center" :loading="isPurchasing"
+              :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
+              @click="handlePurchase">
               {{ purchaseLabel }}
             </UButton>
           </div>
@@ -508,30 +445,15 @@ onUnmounted(() => {
     </template>
 
     <!-- VIP Gift Modal -->
-    <VipGiftModal
-      v-if="activeLevel"
-      v-model:open="isGiftModalOpen"
-      :level-name="`VIP ${activeLevel.level}`"
-      :price="activeLevel.price"
-      @confirm="handleGiftConfirm"
-    />
+    <VipGiftModal v-if="activeLevel" v-model:open="isGiftModalOpen" :level-name="`VIP ${activeLevel.level}`"
+      :price="activeLevel.price" @confirm="handleGiftConfirm" />
 
     <!-- VIP Prop Preview Modal -->
-    <VipPropPreviewModal
-      :prop="selectedProp"
-      :open="isPropPreviewOpen"
-      @close="handlePropPreviewClose"
-    />
+    <VipPropPreviewModal :prop="selectedProp" :open="isPropPreviewOpen" @close="handlePropPreviewClose" />
 
     <!-- VIP Congratulations Modal -->
-    <VipCongratsModal
-      :open="isCongratsOpen"
-      :vip-level="congratsLevel"
-      :vip-name="congratsLevelData.name"
-      :vip-color="congratsLevelData.color"
-      :vip-props="congratsLevelData.props"
-      @close="handleCongratsClose"
-    />
+    <VipCongratsModal :open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
+      :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props" @close="handleCongratsClose" />
   </main>
 </template>
 

@@ -37,11 +37,10 @@ onMounted(async () => {
 
     <UButton
         class="-ml-2" size="sm" icon="i-lucide-x"
-        @click="async () => {
+        @click="() => {
           try {
             leaveRoom();
             roomStore.leaveRoom();
-            await navigateTo('/', { replace: true });
           } catch (error) {
             log.error('Failed to leave room:', error);
           }

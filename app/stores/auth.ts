@@ -5,11 +5,6 @@
 import { defineStore } from 'pinia'
 import type { BootstrapUser } from '~/types/user/bootstrap'
 
-/**
- * @deprecated Use BootstrapUser directly
- */
-export type User = BootstrapUser
-
 export const useAuthStore = defineStore('auth', () => {
   // ========================================
   // State

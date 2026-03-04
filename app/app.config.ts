@@ -7,7 +7,7 @@ const compoundButtonVariants = accentButtonColors.flatMap(color =>
         variant,
         class: color === 'primary' && variant === 'solid'
             ? 'text-primary-50'
-            : 'text-primary-50'
+            : ''
     }))
 )
 

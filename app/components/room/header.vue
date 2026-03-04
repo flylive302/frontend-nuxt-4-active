@@ -182,14 +182,17 @@ const memberActionLoading = ref(false);
 // ========================================
 
 /**
- * Handle opening the leave drawer
+ * Handle opening the leave drawer.
  * Blurs the trigger button first to avoid "Blocked aria-hidden" warning
- * caused by the drawer trying to hide the focused element's container
+ * caused by the drawer trying to hide the focused element's container.
+ * Also prefetches the target navigation route for instant transition.
  */
 const openLeaveDrawer = (event: Event) => {
   const target = event.currentTarget as HTMLElement | null;
   target?.blur();
   open.value = true;
+  // Prefetch the route we'll navigate to on minimize
+  preloadRouteComponents(roomStore.previousRoute ?? '/');
 };
 
 async function handleRequestToJoin() {

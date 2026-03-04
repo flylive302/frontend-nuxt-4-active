@@ -3,7 +3,6 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 import { createLogger } from '~/utils/logger'
 import type {
   UserReward,
@@ -278,15 +277,11 @@ export const useRewardsStore = defineStore('rewards', () => {
    * Claim all pending rewards.
    */
   async function claimAll(): Promise<number> {
-    let claimedCount = 0
-    const rewardsToClam = [...pending.value.items]
-
-    for (const reward of rewardsToClam) {
-      const success = await claim(reward.id)
-      if (success) claimedCount++
-    }
-
-    return claimedCount
+    const rewardsToClaim = [...pending.value.items]
+    const results = await Promise.allSettled(
+      rewardsToClaim.map(reward => claim(reward.id))
+    )
+    return results.filter(r => r.status === 'fulfilled' && r.value).length
   }
 
   /**
