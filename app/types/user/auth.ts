@@ -46,7 +46,8 @@ export interface RegisterPayload {
 }
 
 export interface UpdateProfilePayload {
-  gender: number
-  email: string
-  date_of_birth: string
+  name?: string
+  gender?: number
+  email?: string
+  date_of_birth?: string
 }

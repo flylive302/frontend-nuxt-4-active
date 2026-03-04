@@ -30,9 +30,17 @@ const ICON_NON_BINARY = 'i-lucide-non-binary' as const
 const ICON_HELP_CIRCLE = 'i-lucide-help-circle' as const
 const ICON_DEFAULT_GENDER = 'i-lucide-venus-and-mars' as const
 
+const NAME_MIN_LENGTH = 2 as const
+const NAME_MAX_LENGTH = 255 as const
+
 const formSchema = z.object({
-  gender: z.number().min(1, 'Please select a gender'),
-  email: z.email('Invalid email'),
+  name: z.string()
+      .min(NAME_MIN_LENGTH, `Name must be at least ${NAME_MIN_LENGTH} characters`)
+      .max(NAME_MAX_LENGTH, `Name must be at most ${NAME_MAX_LENGTH} characters`)
+      .optional()
+      .or(z.literal('')),
+  gender: z.number().min(1, 'Please select a gender').optional(),
+  email: z.email('Invalid email').optional().or(z.literal('')),
   dateOfBirth: z
       .custom<DateValue>(
           (value) => value instanceof CalendarDate,
@@ -59,7 +67,8 @@ const formSchema = z.object({
             return age >= MINIMUM_AGE_REQUIREMENT
           },
           { message: `You must be at least ${MINIMUM_AGE_REQUIREMENT} years old` }
-      ),
+      )
+      .optional(),
 })
 
 type FormSchema = z.infer<typeof formSchema>
@@ -78,6 +87,7 @@ const calendarDefaultDate = new CalendarDate(
 )
 
 const formState = reactive<Partial<FormSchema>>({
+  name: '',
   gender: undefined,
   email: '',
   dateOfBirth: undefined,
@@ -92,6 +102,7 @@ const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldEr
   formRef,
 })
 
+const nameError = computed(() => getFieldError('name'))
 const emailError = computed(() => getFieldError('email'))
 const genderError = computed(() => getFieldError('gender'))
 const dateOfBirthError = computed(() => getFieldError('dateOfBirth') || getFieldError('date_of_birth'))
@@ -182,11 +193,22 @@ async function handleFormSubmit(): Promise<void> {
  * Builds the profile update payload from validated form data.
  */
 function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfilePayload {
-  return {
-    gender: validatedFormData.gender,
-    email: validatedFormData.email,
-    date_of_birth: validatedFormData.dateOfBirth.toString(),
+  const payload: UpdateProfilePayload = {}
+
+  if (validatedFormData.name) {
+    payload.name = validatedFormData.name
   }
+  if (validatedFormData.gender !== undefined) {
+    payload.gender = validatedFormData.gender
+  }
+  if (validatedFormData.email) {
+    payload.email = validatedFormData.email
+  }
+  if (validatedFormData.dateOfBirth) {
+    payload.date_of_birth = validatedFormData.dateOfBirth.toString()
+  }
+
+  return payload
 }
 
 // Initialize form state with existing user data
@@ -195,6 +217,11 @@ watch(
     () => authStore.user,
     (user) => {
       if (!user) return
+
+      // Initialize name if empty
+      if (user.name && !formState.name) {
+        formState.name = user.name
+      }
 
       // Initialize gender if empty
       // BootstrapUser.gender is 'male' | 'female' | null, form uses numeric IDs
@@ -261,7 +288,17 @@ watch(
       </div>
 
       <UForm ref="formRef" :schema="formSchema" :state="(formState as Partial<FormSchema>)" class="space-y-3" @submit="handleFormSubmit">
-        <UFormField label="Gender" name="gender" required :error="genderError">
+        <UFormField label="Name" name="name" :error="nameError">
+          <UInput
+              v-model="formState.name"
+              class="w-full"
+              size="lg"
+              icon="i-lucide-user"
+              placeholder="Enter your name"
+          />
+        </UFormField>
+
+        <UFormField label="Gender" name="gender" :error="genderError">
           <USelect
               v-model.number="formState.gender"
               :items="genderOptions"
@@ -272,7 +309,7 @@ watch(
           />
         </UFormField>
 
-        <UFormField label="Date of Birth" name="dateOfBirth" required :error="dateOfBirthError">
+        <UFormField label="Date of Birth" name="dateOfBirth" :error="dateOfBirthError">
           <UPopover>
             <UButton
                 color="neutral"
@@ -289,7 +326,7 @@ watch(
           </UPopover>
         </UFormField>
 
-        <UFormField label="Email" name="email" required :error="emailError">
+        <UFormField label="Email" name="email" :error="emailError">
           <UInput
               v-model="formState.email"
               class="w-full"
