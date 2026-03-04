@@ -28,7 +28,7 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   /** Join a room with audio capabilities */
   joinRoom: (roomId: string) => Promise<void>;
   /** Leave the current room */
-  leaveRoom: () => void;
+  leaveRoom: (roomId?: string) => void;
   /** Start producing audio (take a seat first) */
   startAudio: () => Promise<void>;
   /** Stop producing audio */
@@ -360,9 +360,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * Leave the current room and clean up all resources.
    * NOTE: Socket stays connected for app-wide events.
    */
-  function leaveRoom(): void {
-    if (socket.value && roomStore.currentRoom) {
-      socket.value.emit('room:leave', { roomId: roomStore.currentRoom.id.toString() });
+  function leaveRoom(roomId?: string): void {
+    const targetRoomId = roomId ?? roomStore.currentRoom?.id?.toString();
+    if (socket.value && targetRoomId) {
+      socket.value.emit('room:leave', { roomId: targetRoomId });
     }
 
     // Cleanup mediasoup

@@ -30,8 +30,9 @@ const isJoining = ref(false);
  */
 export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
+  const authStore = useAuthStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
-  const { connect: connectSocket } = useAudioSocket();
+  const { connect: connectSocket, isConnected } = useAudioSocket();
   const toast = useToast();
 
   // ========================================
@@ -40,7 +41,21 @@ export function useRoomLifecycle(): void {
   // Pre-connect the WebSocket immediately so the handshake completes
   // before the user clicks a room. This eliminates ~500ms+ of delay
   // on first room entry (TLS + WebSocket upgrade).
-  connectSocket();
+  // Guard: only attempt if MSAB token is already available.
+  if (authStore.msabToken) {
+    connectSocket();
+  }
+
+  // Watch for token to become available and connect when ready
+  const stopTokenWatch = watch(
+    () => authStore.msabToken,
+    (newToken) => {
+      if (newToken && !isConnected.value) {
+        connectSocket();
+        stopTokenWatch();
+      }
+    },
+  );
   // ========================================
   // Watcher 1: Room Join / Leave / Switch
   // ========================================
@@ -55,7 +70,7 @@ export function useRoomLifecycle(): void {
 
       // Case 2: Room Changed (switched rooms)
       if (oldRoom && newRoom && oldRoom.id !== newRoom.id) {
-        leaveRoom(); // Leave old room first
+        leaveRoom(String(oldRoom.id)); // Leave old room first (pass explicit ID since currentRoom is already updated)
         // Fall through to join new room
       }
 
