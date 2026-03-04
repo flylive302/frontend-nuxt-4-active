@@ -253,6 +253,9 @@ export function setupRoomEventHandlers({
     // Skip if current user is the sender (they already see optimistic playback)
     if (event.senderId === authStore.user?.id) return;
 
+    // Skip if room is minimized — gifts are room-specific and should not accumulate
+    if (roomStore.isMinimized) return;
+
     // Look up sender from participants store
     const sender = roomStore.participants.get(event.senderId);
 

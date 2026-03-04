@@ -1,13 +1,25 @@
 <script setup lang="ts">
 /**
  * ChatMessage - Individual chat message component
- * Displays a single ephemeral chat message with user info
+ * Displays a single ephemeral chat message with user info.
+ *
+ * Resolves avatar/frame/name from the live participants Map (same pattern as seat.vue)
+ * so profile updates are reflected immediately across all messages.
+ * Falls back to snapshot fields for users who have left the room.
  */
 import type { ChatMessageEvent } from '~/types/room/audio';
 
 const props = defineProps<{
   message: ChatMessageEvent;
 }>();
+
+const roomStore = useRoomStore();
+
+// Resolve live participant data; fall back to message snapshot for departed users
+const participant = computed(() => roomStore.participants.get(props.message.userId));
+const displayName = computed(() => participant.value?.name ?? props.message.userName);
+const displayAvatar = computed(() => participant.value?.avatar ?? props.message.avatar);
+const displayFrame = computed(() => participant.value?.frame ?? props.message.frame);
 
 // Format timestamp to relative time
 const formattedTime = computed(() => {
@@ -25,14 +37,14 @@ const formattedTime = computed(() => {
 <template>
   <div class="flex gap-2 py-1.5 px-2 hover:bg-white/5 rounded transition-colors">
     <!-- Avatar -->
-    <UserAvatar :img="message.avatar" :frame-asset-url="message.frame" :animated="true" size="xs" class="shrink-0 size-10" />
+    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" size="xs" class="shrink-0 size-10" />
 
     <!-- Content -->
     <div class="flex-1 min-w-0 bg-neutral-800 rounded-md p-2">
       <!-- Header -->
       <div class="flex items-center gap-1.5">
         <span class="text-xs font-medium text-primary-400 truncate">
-          {{ message.userName }}
+          {{ displayName }}
         </span>
         <span class="text-[10px] text-gray-500">
           {{ formattedTime }}

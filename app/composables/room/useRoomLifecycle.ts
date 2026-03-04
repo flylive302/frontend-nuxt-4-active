@@ -31,6 +31,7 @@ const isJoining = ref(false);
 export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
   const authStore = useAuthStore();
+  const giftStore = useGiftStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
   const { connect: connectSocket, isConnected } = useAudioSocket();
   const toast = useToast();
@@ -99,7 +100,19 @@ export function useRoomLifecycle(): void {
   );
 
   // ========================================
-  // Watcher 2: Reconnection After Tab Focus
+  // Watcher 2: Clear Gift Playback on Minimize
+  // ========================================
+  watch(
+    () => roomStore.isMinimized,
+    (minimized) => {
+      if (minimized) {
+        giftStore.clearPlayback();
+      }
+    },
+  );
+
+  // ========================================
+  // Watcher 3: Reconnection After Tab Focus
   // ========================================
   const isFocused = useWindowFocus();
   watch(isFocused, async (focused) => {

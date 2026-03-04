@@ -54,6 +54,18 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       throw new Error('Device not loaded');
     }
 
+    // Defensive: close stale transports from previous room session
+    if (consumerTransport.value) {
+      consumerTransport.value.close();
+      consumerTransport.value = null;
+      log.debug('Closed stale consumer transport before re-creation');
+    }
+    if (producerTransport.value) {
+      producerTransport.value.close();
+      producerTransport.value = null;
+      log.debug('Closed stale producer transport before re-creation');
+    }
+
     currentRoomId.value = roomId;
 
     // Create consumer transport (for receiving audio)

@@ -207,6 +207,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * Connects to audio server, joins room, and sets up transports.
    */
   async function joinRoom(roomId: string): Promise<void> {
+    // Clear any stale gift playback from previous room
+    giftStore.clearPlayback();
+
     // Connect to the correct regional MSAB endpoint
     const hostingRegion = roomStore.currentRoom?.hosting_region;
     const regionalUrl = hostingRegion ? REGION_ENDPOINTS[hostingRegion] : undefined;
@@ -371,6 +374,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Clear pending gift queue to prevent stale gifts
     clearGiftQueue();
+
+    // Stop any playing gift animation and flush playback queue
+    giftStore.clearPlayback();
 
     // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
     // Socket is managed by socket.client.ts plugin, disconnects only on logout

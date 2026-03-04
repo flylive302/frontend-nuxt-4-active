@@ -37,6 +37,7 @@ const mockGiftStore = {
   enqueuePlayback: vi.fn(),
   restartCurrentPlayback: vi.fn(),
   removeRecipient: vi.fn(),
+  clearPlayback: vi.fn(),
 }
 vi.stubGlobal('useGiftStore', () => mockGiftStore)
 
