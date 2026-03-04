@@ -82,7 +82,7 @@ const activeLevel = computed(() => levels.value[activeIndex.value] ?? null)
  */
 const assetBasePath = computed(() =>
   activeLevel.value
-    ? `/vip/${activeLevel.value.level}`
+    ? `https://assets.flyliveapp.com/vip/${activeLevel.value.level}`
     : '',
 )
 
