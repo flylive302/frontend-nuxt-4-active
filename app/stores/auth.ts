@@ -116,6 +116,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Patch profile fields from a realtime `user:profile_updated` event.
+   * Merges only the supplied fields into the current user, leaving everything else intact.
+   */
+  function patchProfile(partial: Partial<BootstrapUser>) {
+    if (user.value) {
+      user.value = { ...user.value, ...partial }
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -133,6 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
     updateBalance,
     patchBalance,
     patchVip,
+    patchProfile,
   }
 }, {
   persist: {

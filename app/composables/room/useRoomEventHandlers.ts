@@ -146,6 +146,12 @@ export function setupRoomEventHandlers({
   // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change
   socket.on('user:profile_updated', (event: { user_id: number; profile: Partial<RoomParticipant> }) => {
     roomStore.updateParticipantProfile(event.user_id, event.profile);
+
+    // Also patch local user if the update is for the authenticated user
+    if (event.user_id === authStore.user?.id) {
+      authStore.patchProfile(event.profile);
+    }
+
     log.debug('Profile updated for user:', event.user_id);
   });
 
