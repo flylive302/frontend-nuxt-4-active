@@ -134,14 +134,22 @@ export function useGiftSending() {
       }
 
       // Start playback immediately (optimistic)
-      giftStore.enqueuePlayback({
+      const playbackItem = {
         gift: selectedGift,
         senderId: authStore.user!.id,
         senderName: authStore.user!.name ?? 'Unknown',
         senderAvatar: authStore.user!.avatar ?? undefined,
         recipientIds: [...selectedRecipients],
         quantity: selectedQuantity,
-      });
+      };
+
+      if (giftStore.isPlaying) {
+        // Sender's new gift replaces current playback immediately
+        giftStore.interruptAndPlay(playbackItem);
+      } else {
+        // Nothing playing — enqueue (auto-starts via playNext)
+        giftStore.enqueuePlayback(playbackItem);
+      }
 
       // Reset selection for next send
       giftStore.setQuantity(1);

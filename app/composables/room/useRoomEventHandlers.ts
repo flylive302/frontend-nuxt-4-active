@@ -143,13 +143,23 @@ export function setupRoomEventHandlers({
     navigateTo('/');
   });
 
-  // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change
+  // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change.
+  // Financial fields (coins, diamonds, wealth_xp, charm_xp) are stripped as a safety
+  // net — they are handled exclusively by `balance.updated` to avoid data races.
+  const FINANCIAL_FIELDS = ['coins', 'diamonds', 'wealth_xp', 'charm_xp'] as const;
+
   socket.on('user:profile_updated', (event: { user_id: number; profile: Partial<RoomParticipant> }) => {
-    roomStore.updateParticipantProfile(event.user_id, event.profile);
+    // Strip financial fields to prevent overwriting data from balance.updated
+    const safeProfile = { ...event.profile };
+    for (const field of FINANCIAL_FIELDS) {
+      delete (safeProfile as Record<string, unknown>)[field];
+    }
+
+    roomStore.updateParticipantProfile(event.user_id, safeProfile);
 
     // Also patch local user if the update is for the authenticated user
     if (event.user_id === authStore.user?.id) {
-      authStore.patchProfile(event.profile);
+      authStore.patchProfile(safeProfile);
     }
 
     log.debug('Profile updated for user:', event.user_id);
