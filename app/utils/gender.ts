@@ -13,7 +13,7 @@ export const GenderMap: Record<number, { label: string, icon: string, color: str
   1: { label: 'Male', icon: 'i-lucide-mars-stroke', color: 'secondary' },
   2: { label: 'Female', icon: 'i-lucide-venus', color: 'primary' },
   3: { label: 'Non-Binary', icon: 'i-lucide-gender-non-binary', color: 'tertiary' },
-  4: { label: 'Not Specified', icon: 'i-lucide-gender-neutral', color: 'neutral' },
+  4: { label: 'Not Specified', icon: 'i-lucide-transgender', color: 'neutral' },
 }
 
 /**
@@ -25,14 +25,14 @@ export const GenderMap: Record<number, { label: string, icon: string, color: str
  */
 export function getGenderInfo(gender: number | string | null | undefined): { label: string, icon: string, color: string } {
   if (gender === null || gender === undefined || gender === '') {
-    return GenderMap[4] ?? { label: 'Not Specified', icon: 'i-lucide-gender-neutral', color: 'neutral' } // Default to Not Specified
+    return GenderMap[4] ?? { label: 'Not Specified', icon: 'i-lucide-transgender', color: 'neutral' } // Default to Not Specified
   }
 
   const id = typeof gender === 'string' ? parseInt(gender, 10) : gender
 
   if (isNaN(id)) {
-    return GenderMap[4] ?? { label: 'Not Specified', icon: 'i-lucide-gender-neutral', color: 'neutral' }
+    return GenderMap[4] ?? { label: 'Not Specified', icon: 'i-lucide-transgender', color: 'neutral' }
   }
 
-  return GenderMap[id] ?? { label: 'Not Specified', icon: 'i-lucide-gender-neutral', color: 'neutral' }
+  return GenderMap[id] ?? { label: 'Not Specified', icon: 'i-lucide-transgender', color: 'neutral' }
 }

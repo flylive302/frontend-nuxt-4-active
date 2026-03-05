@@ -210,9 +210,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear any stale gift playback from previous room
     giftStore.clearPlayback();
 
-    // Connect to the correct regional MSAB endpoint
+    // Connect to the correct regional MSAB endpoint (production only).
+    // In development, always use the local MSAB URL from config to avoid
+    // connecting to production endpoints that reject localhost origins.
+    const isDev = import.meta.dev;
     const hostingRegion = roomStore.currentRoom?.hosting_region;
-    const regionalUrl = hostingRegion ? REGION_ENDPOINTS[hostingRegion] : undefined;
+    const regionalUrl = !isDev && hostingRegion ? REGION_ENDPOINTS[hostingRegion] : undefined;
     connect(regionalUrl);
 
     // Wait for connection

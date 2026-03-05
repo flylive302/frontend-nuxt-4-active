@@ -370,7 +370,11 @@ export const useRoomStore = defineStore('roomStore', () => {
   // Legacy Seat UI Actions
   // ========================================
   function openSeat(seatId: number) {
-    activeSeat.value = seatId;
+    // Clear first so re-clicking the same seat triggers the watcher
+    activeSeat.value = null;
+    nextTick(() => {
+      activeSeat.value = seatId;
+    });
   }
 
   function closeSeat() {

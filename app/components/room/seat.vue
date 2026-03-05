@@ -65,7 +65,7 @@ const displayName = computed(() => {
 
 <template>
   <div
-    class="flex flex-col items-center gap-0 h-24 text-center cursor-pointer rounded-xl transition-all duration-300"
+    class="flex flex-col items-center gap-0 h-26 text-center cursor-pointer rounded-xl transition-all duration-300"
     :class="{ 'ring-2 ring-secondary bg-secondary/10 animate-pulse': isInviteTarget }" @click="openDrawer"
   >
     <!-- Avatar with audio indicators -->

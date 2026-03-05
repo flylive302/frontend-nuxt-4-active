@@ -8,6 +8,9 @@ const props = defineProps<{
   user: MinimalUser
 }>()
 
+console.log(props.user);
+
+
 // ========================================
 // Composables
 // ========================================
@@ -52,7 +55,7 @@ const charmLevel = computed(() =>
       <UserAvatar
           :img="user.avatar"
           :animated="true"
-          :frame-name="user.frame ?? undefined"
+          :frame-asset-url="user.frame ?? undefined"
           class="w-14 ml-1"
           @click="async () => {
           roomStore.minimizeRoom();

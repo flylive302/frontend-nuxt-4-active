@@ -97,6 +97,7 @@ export function useUserSearch() {
         country: u.country,
         avatar: u.avatar,
         frame: u.frame,
+        vip_level: u.vip_level,
       }))
 
       if (reset) {

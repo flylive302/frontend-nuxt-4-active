@@ -5,6 +5,7 @@ import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[SeatDrawer]')
 
+const bootstrapStore = useBootstrapStore()
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
 const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, isAudioReady } = useRoomAudio()
@@ -45,6 +46,8 @@ const isSeatLocked = computed(() => currentSeat.value?.isLocked ?? false)
 
 // Check if current user is room owner
 const isRoomOwner = computed(() => roomStore.isRoomOwner)
+
+const isVip = computed(() => (currentSeat.value?.user?.vip_level ?? 0) > 0)
 
 // Check if current user is already seated somewhere else
 const currentUserSeatIndex = computed(() => {
@@ -158,34 +161,62 @@ const canManageMembers = computed(() => {
   if (myMembership.value?.role === 'admin') return true
   return false
 })
+
+/**
+ * Get wealth level info from user's XP.
+ */
+const wealthLevel = computed(() =>
+    bootstrapStore.getLevelFromXp(currentSeat.value?.user?.wealth_xp ?? '0', 'wealth')
+)
+
+/**
+ * Get charm level info from user's XP.
+ */
+const charmLevel = computed(() =>
+    bootstrapStore.getLevelFromXp(currentSeat.value?.user?.charm_xp ?? '0', 'charm')
+)
 </script>
 
 <template>
-  <UDrawer v-model:open="isOpen" title="Seat Options" description="Manage seat actions like joining, leaving, muting, or locking.">
+  <UDrawer 
+    v-model:open="isOpen" 
+    title="Seat Options" 
+    :class="isVip ? 'min-h-9/12' : ''" 
+    description="Manage seat actions like joining, leaving, muting, or locking."
+    :ui="{
+      content: 'bg-transparent backdrop-blur-xs',
+      overlay: 'bg-white/10',
+      handle: 'border-4 border-primary',
+    }"
+  >
     <template #content>
-      <div class="px-3 mt-3 flex flex-col gap-2 pb-4">
+      <!-- Background Animation -->
+      <div v-if="isVip" class="absolute z-0">
+        <SvgaPlayer 
+          :key="`vip-card-${currentSeat?.user?.vip_level}`" 
+          :name="`https://assets.flyliveapp.com/vip/${currentSeat?.user?.vip_level}/card.svga`" 
+          class="pointer-events-none -mt-28" />
+      </div>
+      
+      <div class="relative z-10 px-3" :class="isVip ? 'mt-34' : 'my-8'">
 
-        <div v-if="currentSeat?.user" class="rounded-xl p-4 shadow-sm border border-white/10 bg-elevated/50 relative overflow-hidden">
-          <!-- Background decoration -->
-          <div class="absolute -right-6 -top-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none animate-pulse" />
-          <div class="absolute -left-6 -bottom-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none animate-pulse" />
+        <div v-if="currentSeat?.user" class="flex justify-center w-full gap-4 items-center relative z-10">
+          <LazyUserAvatar
+            :img="currentSeat.user.avatar ?? undefined"
+            :frame-asset-url="currentSeat.user.frame ?? undefined"
+            :animated="true" class="size-30" 
+            @click="async () => {
+              try {
+                isOpen = false;
+                roomStore.minimizeRoom();
+                navigateTo(`/profile/${currentSeat?.user?.signature}`);
+              } catch (error) {
+                log.error('Failed to navigate to profile:', error);
+              }
+            }"
+          />
 
-          <div class="flex flex-col items-center text-center relative z-10">
-            <LazyUserAvatar
-              :img="currentSeat.user.avatar ?? undefined"
-              :frame-asset-url="currentSeat.user.frame ?? undefined"
-              :animated="true" class="size-24" 
-              @click="async () => {
-                try {
-                  isOpen = false;
-                  roomStore.minimizeRoom();
-                  navigateTo(`/profile/${currentSeat?.user?.signature}`);
-                } catch (error) {
-                  log.error('Failed to navigate to profile:', error);
-                }
-              }"
-            />
-
+          <div>
             <h3 class="text-xl font-bold">{{ currentSeat.user.name }}</h3>
 
             <div class="flex items-center gap-2 mt-1">
@@ -199,86 +230,94 @@ const canManageMembers = computed(() => {
                 {{ getAge(currentSeat.user.date_of_birth) }}
               </UBadge>
               <UIcon
-                  :name="`i-flag-${currentSeat.user.country?.toLowerCase()}-4x3`"
-                  class="rounded overflow-hidden h-6 size-8 shadow-lg"
+                :name="`i-flag-${currentSeat.user.country?.toLowerCase()}-4x3`"
+                class="rounded overflow-hidden h-6 size-8 shadow-lg"
               />
             </div>
+            <ProfileBadge
+              v-if="wealthLevel.badge"
+              :badge-src="wealthLevel.badge.image_url"
+              color="tertiary"
+              :txt="String(wealthLevel.level)"
+            />
+            <ProfileBadge
+              v-if="charmLevel.badge"
+              :badge-src="charmLevel.badge.image_url"
+              color="secondary"
+              :txt="String(charmLevel.level)"
+            />
+          </div>
 
+        </div>
+
+        <div class="flex justify-center gap-2 my-4">
+          <div class="flex gap-2">
+            <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
+            <UButton
+              v-if="(isSeatEmpty && !isSeatLocked)"
+              class="rounded-xl text-white" 
+              size="xl" variant="solid" square color="success" 
+              :loading="isLoading"
+              :disabled="!isAudioReady"
+              @click="handleTakeSeat"
+            >
+              <!-- {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }} -->
+              <template v-if="!isAudioReady">(Loading...)</template>
+              <UIcon v-else name="i-lucide-mic" size="xl" class="size-6" />
+            </UButton>
+
+            <!-- Leave Seat button - only show if current user occupies this seat -->
+            <UButton
+              v-if="isCurrentUserSeat"
+              class="rounded-xl text-white" 
+              size="xl" variant="solid" square color="error" 
+              :loading="isLoading" icon="i-lucide-mic-off" 
+              @click="handleLeaveSeat"
+            />
+          </div>
+
+          <div v-if="canManageMembers" class="flex gap-2">
+            <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
+            <UButton
+              v-if="!isSeatEmpty && !isCurrentUserSeat" 
+              class="rounded-xl text-white"
+              size="xl" variant="solid" 
+              :color="isSeatMuted ? 'success' : 'warning'" 
+              :loading="isLoading"
+              :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'" 
+              @click="handleToggleMute"
+            />
+
+            <!-- Lock/Unlock Seat - Owner only -->
+            <UButton
+              class="rounded-xl text-white" 
+              size="xl" variant="solid" square
+              :color="isSeatLocked ? 'success' : 'error'" 
+              :loading="isLoading"
+              :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'" 
+              @click="handleToggleLock"
+            />
+
+            <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
+            <UButton 
+              v-if="isSeatEmpty" 
+              class="rounded-xl text-white" size="xl"
+              variant="solid" color="info" :loading="isLoading" 
+              square
+              icon="i-lucide-user-plus" 
+              @click="handleStartInvite"
+            />
           </div>
         </div>
-
-
-        <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
-        <UButton
-          v-if="(isSeatEmpty && !isSeatLocked)"
-          class="rounded-lg justify-center" 
-          size="xl" variant="soft" color="success" 
-          :loading="isLoading"
-          :disabled="!isAudioReady"
-          icon="i-lucide-mic" 
-          @click="handleTakeSeat"
-        >
-          {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }}
-          <template v-if="!isAudioReady">(Loading...)</template>
-        </UButton>
-
-        <!-- Leave Seat button - only show if current user occupies this seat -->
-        <UButton
-          v-if="isCurrentUserSeat" 
-          class="rounded-lg justify-center" 
-          size="xl" variant="soft" color="error" 
-          :loading="isLoading" icon="i-lucide-mic-off" 
-          @click="handleLeaveSeat"
-        >
-          Leave Seat {{ seatId }}
-        </UButton>
-
-        <div v-if="canManageMembers" class="space-y-2">
-          <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
-          <UButton
-            v-if="!isSeatEmpty && !isCurrentUserSeat" 
-            class="w-full justify-center rounded-lg"
-            size="xl" variant="soft" 
-            :color="isSeatMuted ? 'success' : 'warning'" 
-            :loading="isLoading"
-            :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'" 
-            @click="handleToggleMute"
-          >
-            {{ isSeatMuted ? 'Unmute' : 'Mute' }} Seat
-          </UButton>
-
-
-          <!-- Lock/Unlock Seat - Owner only -->
-          <UButton
-            class="w-full justify-center rounded-lg" 
-            size="xl" variant="soft"
-            :color="isSeatLocked ? 'success' : 'error'" 
-            :loading="isLoading"
-            :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'" 
-            @click="handleToggleLock"
-          >
-            {{ isSeatLocked ? 'Unlock' : 'Lock' }} Seat
-          </UButton>
-
-          <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
-          <UButton 
-            v-if="isSeatEmpty" 
-            class="w-full justify-center rounded-lg" size="xl"
-            variant="soft" color="info" :loading="isLoading" 
-            icon="i-lucide-user-plus" 
-            @click="handleStartInvite"
-          >
-            Invite User to Seat {{ seatId }}
-          </UButton>
-        </div>
-
+<!-- 
         <UButton
           color="neutral" variant="soft" icon="i-lucide-x"
-          class="justify-center mt-2 shadow-md shadow-neutral-800" 
+          class="justify-center mt-2 w-full shadow-md shadow-neutral-800" 
           @click="isOpen = false"
         >
           Cancel
-        </UButton>
+        </UButton> -->
+
       </div>
     </template>
   </UDrawer>

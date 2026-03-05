@@ -25,6 +25,7 @@ export interface MinimalUser {
   email: string | null
   gender: string | null
   date_of_birth: string | null
+  vip_level: number
 }
 
 /**

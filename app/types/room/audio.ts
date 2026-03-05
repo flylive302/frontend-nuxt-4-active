@@ -332,6 +332,7 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     date_of_birth: user.date_of_birth,
     wealth_xp: user.wealth_xp,
     charm_xp: user.charm_xp,
+    vip_level: user.vip_level,
     isSpeaker: false,
     isMuted: false,
     ...overrides,
