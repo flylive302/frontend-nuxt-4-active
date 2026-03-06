@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { CoinRequest } from '~/types/economy/coin-request'
-import {formatCurrency} from "~/utils/currency";
+import { formatCurrency } from '~/utils/currency'
 
 definePageMeta({
   layout: 'alt',
@@ -9,11 +9,19 @@ definePageMeta({
 })
 
 // ========================================
+// Composables
+// ========================================
+const authStore = useAuthStore()
+
+// ========================================
 // State
 // ========================================
 const hasPendingRequest = ref(false)
 const isLoadingRequests = ref(true)
-const coinRequestsListRef = ref<{ addRequest: (r: CoinRequest) => void } | null>(null)
+const coinRequestsListRef = ref<{
+  addRequest: (r: CoinRequest) => void
+  loadRequests: () => Promise<void>
+} | null>(null)
 
 // ========================================
 // Event Handlers
@@ -28,8 +36,17 @@ function handleRequestCreated(request: CoinRequest): void {
   hasPendingRequest.value = true
 }
 
-// Balance updates handled via socket 'balance.updated' event
-const authStore = useAuthStore()
+// ========================================
+// Balance Update → Refresh Coin Requests
+// ========================================
+// When `balance.updated` fires via socket, authStore.user.coins is updated.
+// Watch it to refresh coin request data (e.g., a pending request was approved).
+watch(
+  () => authStore.user?.coins,
+  () => {
+    coinRequestsListRef.value?.loadRequests()
+  }
+)
 </script>
 
 <template>
@@ -58,8 +75,8 @@ const authStore = useAuthStore()
         </div>
         <div class="flex flex-col justify-end">
           <NuxtImg
-              src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
-              class="w-20"
+            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
+            class="w-20"
           />
         </div>
       </div>
@@ -99,13 +116,13 @@ const authStore = useAuthStore()
       <!-- Coin Requests List Component -->
       <EconomyCoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
 
-      <USeparator color="tertiary" class="my-6" label="OR" />
+      <!-- <USeparator color="tertiary" class="my-6" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
       <div class="flex flex-col gap-3">
         <EconomyListItemPurchaseCoins />
         <EconomyListItemPurchaseCoins :coins="3200" :price="1.55" />
         <EconomyListItemPurchaseCoins :coins="6400" :price="3.25" />
-      </div>
+      </div> -->
     </section>
     <div class="h-14" />
   </main>

@@ -13,6 +13,9 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 /** Typed Socket interface for audio server communication */
 export type AudioSocket = Socket;
 
+/** Callback invoked after Socket.IO auto-reconnects */
+type ReconnectCallback = () => void;
+
 export interface UseAudioSocketReturn {
   /** The Socket.IO socket instance */
   socket: Ref<AudioSocket | null>;
@@ -26,6 +29,8 @@ export interface UseAudioSocketReturn {
   disconnect: () => void;
   /** Whether currently connected */
   isConnected: ComputedRef<boolean>;
+  /** Register a callback to fire after Socket.IO auto-reconnects */
+  onReconnect: (cb: ReconnectCallback) => void;
 }
 
 // ============================================
@@ -40,6 +45,9 @@ const error = ref<string | null>(null);
 
 /** Tracks the URL the socket is currently connected to */
 let _connectedUrl: string | null = null;
+
+/** Callback to invoke after Socket.IO auto-reconnection */
+let _reconnectCallback: ReconnectCallback | null = null;
 
 // ============================================
 // Cached Dependencies (Module-level)
@@ -144,6 +152,16 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'connected';
     error.value = null;
     log.debug('Reconnected after', attemptNumber, 'attempts');
+
+    // Re-register app-wide realtime event handlers on new socket session
+    if (socket.value) {
+      registerRealtimeEventHandlers(socket.value);
+    }
+
+    // Notify lifecycle layer so it can re-join the room
+    if (_reconnectCallback) {
+      _reconnectCallback();
+    }
   }
 
   /** Handle server-sent error events */
@@ -259,6 +277,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'disconnected';
     error.value = null;
     _connectedUrl = null;
+    _reconnectCallback = null;
     // Reset handlers so they can be re-registered on next connect
     resetRealtimeHandlers();
     log.debug('Disconnected by client');
@@ -272,6 +291,14 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // ========================================
   // Return
   // ========================================
+  /**
+   * Register a callback to fire after Socket.IO auto-reconnects.
+   * Used by useRoomLifecycle to re-join the room after a temporary disconnect.
+   */
+  function onReconnect(cb: ReconnectCallback): void {
+    _reconnectCallback = cb;
+  }
+
   return {
     socket,
     status,
@@ -279,5 +306,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     connect,
     disconnect,
     isConnected,
+    onReconnect,
   };
 }

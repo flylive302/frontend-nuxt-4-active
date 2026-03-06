@@ -88,8 +88,12 @@ async function handleUnequip(userPropId: number): Promise<void> {
   await mallStore.unequipProp(userPropId)
 }
 
-function handleSelectUserProp(_userProp: UserProp): void {
-  // Could open a detail view in the future
+function handleSelectUserProp(userProp: UserProp): void {
+  mallStore.selectUserProp(userProp)
+}
+
+function handleCloseModal(): void {
+  mallStore.selectUserProp(null)
 }
 
 async function handleLoadMore(): Promise<void> {
@@ -170,7 +174,7 @@ async function handleLoadMore(): Promise<void> {
       </div>
 
       <!-- Props Grid -->
-      <div v-else class="grid grid-cols-3 gap-2 mt-4">
+      <div v-else class="grid grid-cols-2 gap-2 mt-4">
         <MallMyPropCard
           v-for="userProp in currentUserProps"
           :key="userProp.id"
@@ -194,6 +198,16 @@ async function handleLoadMore(): Promise<void> {
         </UButton>
       </div>
     </div>
+
+    <!-- Detail Modal -->
+    <MallMyPropDetailModal
+      :user-prop="mallStore.selectedUserProp"
+      :open="!!mallStore.selectedUserProp"
+      :is-equipping="mallStore.isEquipping === mallStore.selectedUserProp?.id"
+      @close="handleCloseModal"
+      @equip="handleEquip"
+      @unequip="handleUnequip"
+    />
   </main>
 </template>
 

@@ -96,7 +96,7 @@ const formState = reactive<Partial<FormSchema>>({
 const formRef = ref<Form<FormSchema> | null>(null)
 
 const authStore = useAuthStore()
-const { updateProfile, uploadAvatar } = useAuth()
+const { updateProfile, uploadAvatar, uploadCoverImage } = useAuth()
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,
@@ -118,6 +118,9 @@ const selectedGenderIcon = computed<string>(() => {
 })
 
 const isUploadingAvatar = ref(false)
+const avatarProgress = ref(-1)
+const isUploadingCoverImage = ref(false)
+const coverProgress = ref(-1)
 const toast = useToast()
 
 /**
@@ -125,6 +128,13 @@ const toast = useToast()
  */
 const avatarUrl = computed<string | null>(() => {
   return authStore.user?.avatar ?? null
+})
+
+/**
+ * User's cover image URL.
+ */
+const coverImageUrl = computed<string | null>(() => {
+  return authStore.user?.cover_image ?? null
 })
 
 // ========================================
@@ -165,7 +175,10 @@ const assetStatusTitle = computed(() => {
 async function handleAvatarSelected(file: File) {
   try {
     isUploadingAvatar.value = true
-    await uploadAvatar(file)
+    avatarProgress.value = 0
+    await uploadAvatar(file, (percent) => {
+      avatarProgress.value = percent
+    })
   } catch {
     toast.add({
       title: 'Upload Failed',
@@ -174,6 +187,26 @@ async function handleAvatarSelected(file: File) {
     })
   } finally {
     isUploadingAvatar.value = false
+    avatarProgress.value = -1
+  }
+}
+
+async function handleCoverImageSelected(file: File) {
+  try {
+    isUploadingCoverImage.value = true
+    coverProgress.value = 0
+    await uploadCoverImage(file, (percent) => {
+      coverProgress.value = percent
+    })
+  } catch {
+    toast.add({
+      title: 'Upload Failed',
+      description: 'Failed to upload cover image. Please try again.',
+      color: 'error',
+    })
+  } finally {
+    isUploadingCoverImage.value = false
+    coverProgress.value = -1
   }
 }
 
@@ -277,10 +310,30 @@ watch(
           icon="i-lucide-alert-circle"
       />
 
+      <!-- Cover Image Upload (rectangular, 45:32 crop) -->
+      <div class="mb-6">
+        <FileUpload
+            :current-image="coverImageUrl"
+            :loading="isUploadingCoverImage"
+            :progress="coverProgress"
+            crop
+            :aspect-ratio="45 / 32"
+            shape="rounded"
+            container-class="w-full aspect-[45/32]"
+            icon="i-lucide-image"
+            label="Upload cover image"
+            :max-size="5"
+            @file-selected="handleCoverImageSelected"
+        />
+        <p class="text-lg text-center font-semibold mt-2">Upload Cover Image</p>
+      </div>
+
+      <!-- Avatar Upload (circular) -->
       <div class="mb-2">
         <FileUpload
             :current-image="avatarUrl"
             :loading="isUploadingAvatar"
+            :progress="avatarProgress"
             crop
             @file-selected="handleAvatarSelected"
         />
@@ -390,7 +443,17 @@ watch(
               {{ bootstrapStore.downloadPercent }}% complete
             </p>
           </div>
+
         </div>
+        <UButton 
+            class="w-full justify-center mt-4 mb-12" 
+            icon="i-lucide-power-off" 
+            size="xl" 
+            variant="subtle"
+            @click="authStore.logout"
+          >
+            Logout
+          </UButton>
       </div>
 
       <!-- Asset Manager Modal -->

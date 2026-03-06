@@ -87,13 +87,13 @@ function handleSelect(): void {
       class="aspect-square relative bg-muted/20 cursor-pointer"
       @click="handleSelect"
     >
-      <img 
+      <NuxtImg 
         v-if="userProp.thumbnail_url"
         :src="userProp.thumbnail_url"
         :alt="userProp.name"
-        class="w-full h-full object-cover"
+        class="p-2 w-full h-full object-cover"
         loading="lazy"
-      >
+      />
       <div v-else class="w-full h-full flex items-center justify-center">
         <icon :name="icon" class="size-10" :class="iconColor" />
       </div>
@@ -103,8 +103,8 @@ function handleSelect(): void {
         v-if="isEquipped" 
         class="absolute top-1.5 right-1.5"
       >
-        <UBadge color="primary" size="xs" variant="solid">
-          <icon name="i-lucide-check" class="size-3 mr-0.5" />
+        <UBadge color="primary" size="xs" variant="solid" class="text-white">
+          <UIcon name="i-lucide-circle-check-big" class="size-3 mr-0.5" />
           ON
         </UBadge>
       </div>

@@ -46,23 +46,25 @@ onMounted(() => {
   <main>
     <NavAlt sub-menu-to="/profile/edit">My Profile</NavAlt>
 
-    <AltHero class="z-20">
-      <div class="flex flex-col justify-center min-h-[55vw] bg-linear-to-br to-primary/30">
-        <NuxtLink 
-          v-if="authStore.user" 
-          :to="{ path: '/profile/' + authStore.user.signature }" 
-          class="flex px-3"
-        >
-          <UserAvatar :animated="true" :frame-asset-url="authStore?.user?.frame ?? undefined" :img="authStore.user.avatar ?? undefined" class="w-24" />
-          <div class="px-3">
-            <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
-            <ProfileBadge :txt="authStore?.user?.signature || undefined" />
-            <div class="flex gap-2">
-              <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
-              <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
-            </div>
-          </div>
+    <AltHero class="z-20" :image-src="authStore.user?.cover_image ?? undefined">
+      <div class="flex items-center justify-center min-h-[55vw] gap-2 bg-linear-to-br to-primary/30">
+        <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }">
+          <UserAvatar 
+            :animated="true" 
+            :frame-asset-url="authStore?.user?.frame ?? undefined" 
+            :img="authStore.user?.avatar ?? undefined" 
+            class="w-24" 
+          />
         </NuxtLink>
+
+        <div class="px-3">
+          <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
+          <ProfileBadge :txt="authStore?.user?.signature || undefined" />
+          <div class="flex gap-2">
+            <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
+            <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
+          </div>
+        </div>
       </div>
     </AltHero>
 
@@ -72,11 +74,12 @@ onMounted(() => {
       :charm-xp="authStore.user?.charm_xp ?? '0'"
     />
 
-    <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
+    <!-- 
+      <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
+      <EventsProfileCard /> 
+    -->
 
-    <EventsProfileCard />
-
-    <div class="p-3 mb-12">
+    <div class="px-4 mt-3 mb-12">
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
@@ -135,14 +138,6 @@ onMounted(() => {
         txt="Create Agency" 
       />
       
-      <UButton 
-        class="w-full justify-center mt-4" 
-        icon="i-lucide-power-off" 
-        size="xl" 
-        @click="authStore.logout"
-      >
-        Logout
-      </UButton>
     </div>
   </main>
 </template>

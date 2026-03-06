@@ -17,7 +17,7 @@ withDefaults(defineProps<{
         densities="x1 x2"
         sizes="320px"
         width="100%"
-        class="min-w-full"
+        class="min-w-full h-64 object-cover"
     />
     <div class="px-3 pt-[20vw] absolute inset-0">
       <BgGlass

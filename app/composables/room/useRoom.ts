@@ -118,7 +118,7 @@ export function useRoom() {
             if (response.status === 'success' && response.data) {
                 // Only update if this is still the current room (user may have left)
                 if (roomStore.currentRoom?.id === roomId) {
-                    roomStore.setCurrentRoom(response.data)
+                    roomStore.refreshCurrentRoom(response.data)
                 }
             }
         } catch {

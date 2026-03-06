@@ -133,7 +133,7 @@ function handleTabChange(value: string | number): void {
   activeTab.value = value as CoinRequestStatus | 'all'
 }
 
-defineExpose({ addRequest, hasPendingRequest, isLoading })
+defineExpose({ addRequest, loadRequests, hasPendingRequest, isLoading })
 </script>
 
 <template>

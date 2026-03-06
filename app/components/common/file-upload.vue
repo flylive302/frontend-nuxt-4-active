@@ -32,6 +32,8 @@ interface Props {
   accept?: string
   /** Aspect ratio for cropper (default: 1 for square) */
   aspectRatio?: number
+  /** Custom container class (overrides size-based dimensions) */
+  containerClass?: string
   /** Enable image cropping modal */
   crop?: boolean
   /** Current image URL (normalized string, not object) */
@@ -52,6 +54,8 @@ interface Props {
   outputFormat?: 'image/jpeg' | 'image/png' | 'image/webp'
   /** Output quality for cropped image (0-1, JPEG/WebP only) */
   outputQuality?: number
+  /** Upload progress percentage (0-100). When set, shows a progress bar instead of spinner. */
+  progress?: number
   /** Shape variant: 'circle' | 'square' | 'rounded' */
   shape?: Shape
   /** Size variant: 'sm' | 'md' | 'lg' | 'xl' */
@@ -80,6 +84,7 @@ const props = withDefaults(defineProps<Props>(), {
   aspectRatio: 0.8,
   outputFormat: 'image/jpeg',
   outputQuality: 0.9,
+  progress: -1,
 })
 
 const emit = defineEmits<Emits>()
@@ -92,8 +97,11 @@ const localError = ref<string | null>(null)
 // ========================================
 // Computed Styles & Logic
 // ========================================
-const sizeClasses = computed(() => SIZE_MAP[props.size])
+const resolvedContainerClass = computed(() =>
+  props.containerClass ?? SIZE_MAP[props.size].container
+)
 const shapeClass = computed(() => SHAPE_MAP[props.shape])
+const showProgress = computed(() => props.progress >= 0 && props.progress <= 100)
 
 const realStencilComponent = computed(() => {
   if (props.stencilComponent) return props.stencilComponent
@@ -240,7 +248,7 @@ function handleCropCancel() {
         :class="shapeClass" :aria-label="label"
         @click="triggerFileInput" @keydown="handleKeyDown"
       >
-        <div class="relative overflow-hidden ring-2 ring-primary inset-shadow-sm" :class="[sizeClasses.container, shapeClass]">
+        <div class="relative overflow-hidden ring-2 ring-primary inset-shadow-sm" :class="[resolvedContainerClass, shapeClass]">
           <NuxtImg
               v-if="currentImage"
               :src="currentImage"
@@ -251,21 +259,30 @@ function handleCropCancel() {
               v-else
               class="flex h-full w-full items-center justify-center bg-elevated text-gray-400"
           >
-            <UIcon :name="icon" :class="sizeClasses.icon" />
+            <UIcon :name="icon" :class="SIZE_MAP[size].icon" />
           </div>
           <!-- Hover Overlay -->
           <div class="absolute inset-0 flex items-center justify-center bg-elevated opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-            <UIcon name="i-lucide-camera" class="text-white" :class="sizeClasses.hoverIcon" />
+            <UIcon name="i-lucide-camera" class="text-white" :class="SIZE_MAP[size].hoverIcon" />
           </div>
         </div>
         
-        <!-- Loading State -->
+        <!-- Loading / Progress State -->
         <div 
           v-if="loading" 
-          class="absolute inset-0 flex items-center justify-center bg-elevated"
+          class="absolute inset-0 flex flex-col items-center justify-center bg-elevated gap-2"
           :class="shapeClass"
         >
-          <UIcon name="i-lucide-loader-2" class="animate-spin text-primary" :class="sizeClasses.loader" />
+          <template v-if="showProgress">
+            <span class="text-sm font-semibold text-primary">{{ progress }}%</span>
+            <div class="w-3/4 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+              <div
+                class="h-full bg-primary transition-all duration-200 ease-out rounded-full"
+                :style="{ width: `${progress}%` }"
+              />
+            </div>
+          </template>
+          <UIcon v-else name="i-lucide-loader-2" class="animate-spin text-primary" :class="SIZE_MAP[size].loader" />
         </div>
       </div>
 

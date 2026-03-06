@@ -136,6 +136,37 @@ export function useAuth() {
   }
 
   /**
+   * Uploads and updates the user's profile cover image.
+   * Uses ImageKit CDN for direct client-side upload with progress tracking.
+   *
+   * @param file - The image file to upload.
+   * @param onProgress - Optional callback for upload progress (0-100).
+   * @returns The updated user data.
+   */
+  async function uploadCoverImage(
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<User> {
+    // Step 1: Upload to ImageKit CDN
+    const { uploadImage } = useImageUpload()
+    const result = await uploadImage(file, 'covers', { onProgress })
+
+    // Step 2: Submit URL to API
+    await fetchCsrfToken()
+    const { data } = await api<{ data: User }>('/profile/cover-image', {
+      method: 'PUT',
+      body: {
+        url: result.url,
+        file_id: result.fileId,
+      },
+    })
+
+    authStore.setUser(data)
+    toast.add({ title: 'Cover image updated successfully', color: 'success' })
+    return data
+  }
+
+  /**
    * Refresh the MSAB JWT to ensure the audio server gets fresh user data.
    * Called before socket pre-connect so the JWT payload matches current DB state.
    * Silent failure — falls back to existing (potentially stale) token.
@@ -159,6 +190,7 @@ export function useAuth() {
     logout,
     updateProfile,
     uploadAvatar,
+    uploadCoverImage,
     refreshMsabToken,
   }
 }

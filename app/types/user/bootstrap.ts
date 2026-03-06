@@ -22,6 +22,7 @@ export interface MinimalUser {
   charm_xp: string
   frame: string | null
   avatar: string | null
+  cover_image: string | null
   email: string | null
   gender: string | null
   date_of_birth: string | null
@@ -38,6 +39,7 @@ export interface BootstrapUser {
   name: string
   signature: string
   avatar: string | null
+  cover_image: string | null
   frame: string | null
 
   // Contact & Location

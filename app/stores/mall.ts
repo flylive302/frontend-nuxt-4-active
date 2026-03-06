@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import { createLogger } from '~/utils/logger'
+import { useAuthStore } from '~/stores/auth'
 import type {
   Prop,
   PropType,
@@ -50,6 +51,7 @@ export const useMallStore = defineStore('mall', () => {
   const log = createLogger('[MallStore]')
   const { api, normalizeError } = useApi()
   const toast = useToast()
+  const authStore = useAuthStore()
 
   // ========================================
   // State
@@ -86,6 +88,7 @@ export const useMallStore = defineStore('mall', () => {
   const currentType = ref<PropType | undefined>(undefined)
   const currentStatus = ref<PropStatus | 'all'>('active')
   const selectedProp = ref<Prop | null>(null)
+  const selectedUserProp = ref<UserProp | null>(null)
 
   // Action states
   const isPurchasing = ref(false)
@@ -378,6 +381,12 @@ export const useMallStore = defineStore('mall', () => {
       asset_url: prop.asset_url,
     }
 
+    // Sync auth store optimistically for frame type
+    const previousFrame = prop.type === 'frame' ? (authStore.user?.frame ?? null) : null
+    if (prop.type === 'frame') {
+      authStore.patchProfile({ frame: prop.asset_url })
+    }
+
     try {
       await api<PropEquipResponse>(`/props/${userPropId}/equip`, { method: 'POST' })
 
@@ -395,6 +404,11 @@ export const useMallStore = defineStore('mall', () => {
       if (previousEquipped) {
         const prevProp = userProps.value.items.find(p => p.id === previousEquipped.id)
         if (prevProp) prevProp.is_equipped = true
+      }
+
+      // Rollback auth store frame
+      if (prop.type === 'frame') {
+        authStore.patchProfile({ frame: previousFrame })
       }
 
       const normalized = normalizeError(err)
@@ -429,6 +443,12 @@ export const useMallStore = defineStore('mall', () => {
     prop.is_equipped = false
     equipped.value[prop.type] = null
 
+    // Sync auth store optimistically for frame type
+    const previousFrame = prop.type === 'frame' ? (authStore.user?.frame ?? null) : null
+    if (prop.type === 'frame') {
+      authStore.patchProfile({ frame: null })
+    }
+
     try {
       await api(`/props/${userPropId}/unequip`, { method: 'POST' })
 
@@ -448,6 +468,11 @@ export const useMallStore = defineStore('mall', () => {
           name: prop.name,
           asset_url: prop.asset_url,
         }
+      }
+
+      // Rollback auth store frame
+      if (prop.type === 'frame') {
+        authStore.patchProfile({ frame: previousFrame })
       }
 
       const normalized = normalizeError(err)
@@ -473,6 +498,13 @@ export const useMallStore = defineStore('mall', () => {
    */
   function selectProp(prop: Prop | null): void {
     selectedProp.value = prop
+  }
+
+  /**
+   * Select a user prop for detail/preview view.
+   */
+  function selectUserProp(userProp: UserProp | null): void {
+    selectedUserProp.value = userProp
   }
 
   /**
@@ -512,6 +544,7 @@ export const useMallStore = defineStore('mall', () => {
     currentType.value = undefined
     currentStatus.value = 'active'
     selectedProp.value = null
+    selectedUserProp.value = null
     isPurchasing.value = false
     isEquipping.value = null
     lastFetchedAt.value = null
@@ -532,6 +565,7 @@ export const useMallStore = defineStore('mall', () => {
     currentType,
     currentStatus,
     selectedProp,
+    selectedUserProp,
     isPurchasing,
     isEquipping,
     lastFetchedAt,
@@ -558,6 +592,7 @@ export const useMallStore = defineStore('mall', () => {
 
     // UI Helpers
     selectProp,
+    selectUserProp,
     setStatus,
     reset,
   }

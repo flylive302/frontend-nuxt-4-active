@@ -208,8 +208,8 @@ const charmLevel = computed(() =>
             @click="async () => {
               try {
                 isOpen = false;
-                roomStore.minimizeRoom();
-                navigateTo(`/profile/${currentSeat?.user?.signature}`);
+                roomStore.isMinimized = true;
+                await navigateTo(`/profile/${currentSeat?.user?.signature}`);
               } catch (error) {
                 log.error('Failed to navigate to profile:', error);
               }

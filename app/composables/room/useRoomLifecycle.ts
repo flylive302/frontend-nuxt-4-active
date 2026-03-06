@@ -33,7 +33,7 @@ export function useRoomLifecycle(): void {
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
-  const { connect: connectSocket, disconnect: disconnectSocket, isConnected } = useAudioSocket();
+  const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect } = useAudioSocket();
   const { refreshMsabToken } = useAuth();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
@@ -143,6 +143,35 @@ export function useRoomLifecycle(): void {
       } catch {
         // Silent fail - user is back, will see error if needed
       }
+    }
+  });
+
+  // ========================================
+  // Watcher 4: Auto Re-Join After Socket Reconnection
+  // ========================================
+  // When Socket.IO auto-reconnects (after a temporary disconnect caused by
+  // backgrounding, network blip, etc.), the MSAB server has already cleaned
+  // up the user's room presence. Re-join to restore seat, owner status, etc.
+  onReconnect(async () => {
+    if (!roomStore.currentRoom) return;
+
+    const roomId = String(roomStore.currentRoom.id);
+    log.debug('Socket reconnected — re-joining room:', roomId);
+
+    if (isJoining.value) return; // Prevent double-join
+    isJoining.value = true;
+
+    try {
+      // Refresh room metadata from API (may have changed while disconnected)
+      fetchRoomById(roomStore.currentRoom.id);
+
+      // Re-join the audio room on MSAB server
+      await joinRoom(roomId);
+      log.debug('Successfully re-joined room after reconnect');
+    } catch (error) {
+      log.error('Failed to re-join room after reconnect:', error);
+    } finally {
+      isJoining.value = false;
     }
   });
 }

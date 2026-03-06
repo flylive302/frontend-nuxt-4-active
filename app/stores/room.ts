@@ -117,6 +117,14 @@ export const useRoomStore = defineStore('roomStore', () => {
     isMinimized.value = false;
   }
 
+  /**
+   * Refresh currentRoom data without resetting isMinimized or previousRoute.
+   * Used by fetchRoomById to update stale persisted data in-place.
+   */
+  function refreshCurrentRoom(room: Room) {
+    currentRoom.value = room;
+  }
+
   function setUserRoom(room: Room | null) {
     userRoom.value = room;
   }
@@ -415,6 +423,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     maximizeRoom,
     updateStatus,
     setCurrentRoom,
+    refreshCurrentRoom,
     setUserRoom,
     leaveRoom,
     updateRoomLevel,

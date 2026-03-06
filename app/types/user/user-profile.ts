@@ -66,6 +66,7 @@ export interface UserProfile {
   name: string | null
   signature: string
   avatar: string | null  // Single URL - use Nuxt Image for transforms
+  cover_image: string | null
   frame: string
   gender: ProfileGender | null
   wealth_xp: string   // Use instead of total_gift_coins_sent

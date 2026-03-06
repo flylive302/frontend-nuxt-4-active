@@ -8,6 +8,7 @@
  */
 export type ImageUploadFolder =
   | 'avatars'
+  | 'covers'
   | 'rooms'
   | 'agencies/logos'
   | 'agencies/national-ids'

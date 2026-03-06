@@ -313,11 +313,11 @@ async function goToRoom() {
 
     <!-- Profile Content -->
     <template v-else-if="hasProfile">
-      <AltHero class="z-20">
-        <div class="flex flex-col justify-center min-h-[55vw] bg-linear-to-br to-primary/30">
-          <div class="flex px-3">
+      <AltHero class="z-20" :image-src="profile?.cover_image ?? undefined">
+        <!-- Profile Info (above background) -->
+          <div class="relative flex px-3 min-h-[55vw] justify-center items-center bg-linear-to-br to-primary/30">
             <UserAvatar 
-              :animated="true" 
+              :animated="true"
               :img="profile?.avatar || undefined"
               :frame-asset-url="profile?.frame ?? undefined"
               class="w-24" 
@@ -340,7 +340,6 @@ async function goToRoom() {
               </div>
             </div>
           </div>
-        </div>
       </AltHero>
 
       <!-- User Stats -->
