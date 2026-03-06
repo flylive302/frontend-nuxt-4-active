@@ -49,7 +49,7 @@ const {
   unblockUser,
   blockUser,
 } = useRoomBlocking();
-const { kickMember, updateMemberRole } = useRoomMemberActions();
+const { updateMemberRole } = useRoomMemberActions();
 const roomStore = useRoomStore();
 
 // ========================================
@@ -77,7 +77,11 @@ const tabs = computed(() => [
 ]);
 
 /** Can current user manage members (owner or admin) */
-const canManageMembers = computed(() => roomStore.isRoomOwner);
+const { myMembership } = useRoomMembers()
+const canManageMembers = computed(() => {
+  if (roomStore.isRoomOwner) return true
+  return myMembership.value?.role === 'admin'
+});
 
 // ========================================
 // Watchers
@@ -113,9 +117,9 @@ async function handleUnblock(userId: number) {
 }
 
 // Admin actions with optimistic updates
-async function handleKickMember(member: RoomMember) {
+async function handleRemoveMember(member: RoomMember) {
   const userId = member.user_id ?? member.user?.id;
-  console.log("[members-panel] handleKickMember called:", userId);
+  console.log("[members-panel] handleRemoveMember called:", userId);
   if (!userId) return;
 
   // Optimistic: remove from list immediately
@@ -123,10 +127,12 @@ async function handleKickMember(member: RoomMember) {
   const originalMembers = [...membershipStore.members.items];
   membershipStore.members.items = membershipStore.members.items.filter(m => m.user_id !== userId);
 
-  const success = await kickMember(props.roomId, userId);
+  const success = await blockUser(props.roomId, { user_id: userId });
   if (!success) {
     // Revert on error
     membershipStore.members.items = originalMembers;
+  } else {
+    fetchBlockedUsers(props.roomId);
   }
 }
 
@@ -223,9 +229,9 @@ function getMemberActions(member: RoomMember) {
     ],
     [
       {
-        label: "Kick from Room",
+        label: "Remove from Room",
         icon: "i-lucide-user-x",
-        onSelect: () => handleKickMember(member),
+        onSelect: () => handleRemoveMember(member),
       },
     ],
     [

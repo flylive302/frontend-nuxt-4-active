@@ -81,7 +81,7 @@ export function enqueue(items: EnqueueItem[]): void {
   progress.total = queue.length + activeDownloads.size
   notifyProgress()
 
-  log.debug('Enqueued', items.length, 'items, queue size:', queue.length)
+
 }
 
 /**
@@ -118,7 +118,7 @@ export function clear(): void {
     bytesTotal: 0,
   }
   notifyProgress()
-  log.debug('Queue cleared')
+
 }
 
 // ========================================
@@ -132,7 +132,7 @@ export function start(): void {
   if (isProcessing) return
   isProcessing = true
   isPaused = false
-  log.debug('Starting download processing')
+
   processQueue()
 }
 
@@ -141,7 +141,7 @@ export function start(): void {
  */
 export function pause(): void {
   isPaused = true
-  log.debug('Download paused')
+
 }
 
 /**
@@ -149,7 +149,7 @@ export function pause(): void {
  */
 export function resume(): void {
   isPaused = false
-  log.debug('Download resumed')
+
   processQueue()
 }
 
@@ -173,7 +173,7 @@ async function processQueue(): Promise<void> {
   if (queue.length === 0 && activeDownloads.size === 0) {
     isProcessing = false
     notifyComplete()
-    log.debug('All downloads complete')
+
     return
   }
 
@@ -222,7 +222,7 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
     // Check if already cached
     const cached = await cacheStorage.hasAsset(item.url)
     if (cached) {
-      log.debug('Already cached:', item.url)
+
       handleSuccess(item)
       return
     }
@@ -274,7 +274,7 @@ function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {
     progress.bytesDownloaded += sizeBytes
   }
   notifyProgress()
-  log.debug('Downloaded:', item.url)
+
   processQueue()
 }
 

@@ -34,17 +34,17 @@ export function useAssetPreloader() {
     )
 
     if (giftsToPreload.length === 0) {
-      log.debug('No gifts to preload')
+
       return
     }
 
-    log.debug('Starting idle preload for', giftsToPreload.length, 'gifts')
+
 
     let index = 0
 
     function preloadNext(): void {
       if (index >= giftsToPreload.length) {
-        log.debug('Idle preload complete')
+
         return
       }
 

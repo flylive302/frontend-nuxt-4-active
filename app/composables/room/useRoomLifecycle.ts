@@ -33,18 +33,19 @@ export function useRoomLifecycle(): void {
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
-  const { connect: connectSocket, isConnected } = useAudioSocket();
+  const { connect: connectSocket, disconnect: disconnectSocket, isConnected } = useAudioSocket();
+  const { refreshMsabToken } = useAuth();
+  const { fetchRoomById } = useRoom();
   const toast = useToast();
 
   // ========================================
   // Eager Socket Pre-Connection
   // ========================================
-  // Pre-connect the WebSocket immediately so the handshake completes
-  // before the user clicks a room. This eliminates ~500ms+ of delay
-  // on first room entry (TLS + WebSocket upgrade).
-  // Guard: only attempt if MSAB token is already available.
+  // Pre-connect the WebSocket so the handshake completes before the user
+  // opens a room. Refresh the MSAB JWT first so the socket connects with
+  // the latest user profile data from the database (avatar, name, etc.).
   if (authStore.msabToken) {
-    connectSocket();
+    refreshMsabToken().then(() => connectSocket());
   }
 
   // Watch for token to become available and connect when ready
@@ -100,13 +101,29 @@ export function useRoomLifecycle(): void {
   );
 
   // ========================================
-  // Watcher 2: Clear Gift Playback on Minimize
+  // Watcher 2: Minimize / Maximize Lifecycle
   // ========================================
   watch(
     () => roomStore.isMinimized,
-    (minimized) => {
+    async (minimized) => {
       if (minimized) {
+        // Minimized → clear gift playback to save resources
         giftStore.clearPlayback();
+      } else if (roomStore.currentRoom) {
+        // Un-minimized → refresh room metadata from API (may be stale)
+        fetchRoomById(roomStore.currentRoom.id);
+
+        // If socket disconnected while minimized, rejoin the room
+        if (connectionStatus.value === 'disconnected') {
+          try {
+            await refreshMsabToken();
+            disconnectSocket();
+            connectSocket();
+            await joinRoom(String(roomStore.currentRoom.id));
+          } catch {
+            // Silent fail
+          }
+        }
       }
     },
   );
@@ -117,8 +134,11 @@ export function useRoomLifecycle(): void {
   const isFocused = useWindowFocus();
   watch(isFocused, async (focused) => {
     if (focused && roomStore.currentRoom && connectionStatus.value === 'disconnected') {
-      // Tab regained focus and we're in a room but disconnected
+      // Tab regained focus — refresh JWT + reconnect socket for fresh user data
       try {
+        await refreshMsabToken();
+        disconnectSocket();
+        connectSocket();
         await joinRoom(String(roomStore.currentRoom.id));
       } catch {
         // Silent fail - user is back, will see error if needed

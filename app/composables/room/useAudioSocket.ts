@@ -205,6 +205,12 @@ export function useAudioSocket(): UseAudioSocketReturn {
         log.debug('Already connected');
         return;
       }
+    } else if (status.value === 'connecting') {
+      // Already in the process of connecting — skip unless targeting a different URL
+      if (!targetUrl || _connectedUrl === serverUrl) {
+        log.debug('Connection already in progress, skipping');
+        return;
+      }
     }
 
     // Clean up existing socket if any

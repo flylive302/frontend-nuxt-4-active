@@ -46,7 +46,7 @@ const roomStore = useRoomStore()
 // Composables
 // ========================================
 
-const { kickMember, updateMemberRole } = useRoomMemberActions()
+const { updateMemberRole } = useRoomMemberActions()
 const { blockUser } = useRoomBlocking()
 
 // ========================================
@@ -57,9 +57,10 @@ const { blockUser } = useRoomBlocking()
 const isRoomOwner = computed(() => roomStore.isRoomOwner)
 
 /** Current user can manage members (owner or admin) */
+const { myMembership } = useRoomMembers()
 const canManageMembers = computed(() => {
-  // For now, just owner - later can add admin check
-  return isRoomOwner.value
+  if (isRoomOwner.value) return true
+  return myMembership.value?.role === 'admin'
 })
 
 /** Is viewing own profile */
@@ -78,7 +79,12 @@ const participantRole = computed((): 'owner' | 'admin' | 'member' => {
   if (props.participant?.id === roomStore.currentRoom?.owner?.id) {
     return 'owner'
   }
-  // TODO: Get actual role from membership data when available
+  // Check from members list
+  const membershipStore = useRoomMembershipStore()
+  const member = membershipStore.members.items.find(
+    m => m.user_id === props.participant?.id || m.user?.id === props.participant?.id
+  )
+  if (member) return member.role as 'owner' | 'admin' | 'member'
   return 'member'
 })
 
@@ -123,40 +129,36 @@ const adminActions = computed(() => {
     }
   }
 
-  // Kick and ban section
+  // Remove from room (owner + admin) — uses block API with no duration
   items.push([
     {
-      label: 'Kick from Room',
+      label: 'Remove from Room',
       icon: 'i-lucide-user-minus',
       color: 'warning' as const,
-      click: handleKick,
-    },
-    {
-      label: 'Block (Permanent)',
-      icon: 'i-lucide-ban',
-      color: 'error' as const,
       click: () => handleBlock('permanent'),
     },
   ])
 
-  // Temporary ban section
-  items.push([
-    {
-      label: 'Temp Ban 2 hours',
-      icon: 'i-lucide-clock',
-      click: () => handleBlock('2h'),
-    },
-    {
-      label: 'Temp Ban 24 hours',
-      icon: 'i-lucide-clock',
-      click: () => handleBlock('24h'),
-    },
-    {
-      label: 'Temp Ban 7 days',
-      icon: 'i-lucide-clock',
-      click: () => handleBlock('7d'),
-    },
-  ])
+  // Timed bans (owner only)
+  if (isRoomOwner.value) {
+    items.push([
+      {
+        label: 'Temp Ban 2 hours',
+        icon: 'i-lucide-clock',
+        click: () => handleBlock('2h'),
+      },
+      {
+        label: 'Temp Ban 24 hours',
+        icon: 'i-lucide-clock',
+        click: () => handleBlock('24h'),
+      },
+      {
+        label: 'Temp Ban 7 days',
+        icon: 'i-lucide-clock',
+        click: () => handleBlock('7d'),
+      },
+    ])
+  }
 
   return items
 })
@@ -165,21 +167,6 @@ const adminActions = computed(() => {
 // Handlers
 // ========================================
 
-async function handleKick() {
-  if (!props.participant) return
-
-  loading.value = true
-  try {
-    const success = await kickMember(props.roomId, props.participant.id)
-    if (success) {
-      emit('memberUpdated')
-      open.value = false
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
 async function handleBlock(duration: '2h' | '24h' | '7d' | 'permanent') {
   if (!props.participant) return
 
@@ -187,7 +174,7 @@ async function handleBlock(duration: '2h' | '24h' | '7d' | 'permanent') {
   try {
     const request: BlockUserRequest = {
       user_id: props.participant.id,
-      duration,
+      duration: duration === 'permanent' ? undefined : duration,
     }
     const success = await blockUser(props.roomId, request)
     if (success) {

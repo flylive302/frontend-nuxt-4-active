@@ -25,7 +25,7 @@ export type NotificationType =
   // Membership events
   | 'member_joined'
   | 'member_left'
-  | 'member_kicked'
+  | 'member_removed'
   | 'member_promoted'
   | 'member_demoted'
   // Agency events
@@ -144,7 +144,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<NotificationType, NotificationType
   // Membership
   member_joined: { icon: 'i-lucide-users', color: 'success' },
   member_left: { icon: 'i-lucide-user-minus', color: 'warning' },
-  member_kicked: { icon: 'i-lucide-ban', color: 'error' },
+  member_removed: { icon: 'i-lucide-ban', color: 'error' },
   member_promoted: { icon: 'i-lucide-arrow-up', color: 'success' },
   member_demoted: { icon: 'i-lucide-arrow-down', color: 'warning' },
   

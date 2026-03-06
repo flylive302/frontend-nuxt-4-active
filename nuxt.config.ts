@@ -38,7 +38,8 @@ export default defineNuxtConfig({
         },
         devOptions: {
             enabled: true,
-            type: 'module'
+            type: 'module',
+            suppressWarnings: true
         },
         workbox: {
             // Note: navigateFallback removed - not compatible with SPA.
@@ -49,7 +50,7 @@ export default defineNuxtConfig({
             runtimeCaching: [
                 // R2 CDN Assets - Gift videos (30 days)
                 {
-                    urlPattern: /(?:assets\.flyliveapp\.com|\/room)\/.*\.(webm|mp4)$/i,
+                    urlPattern: /(?:assets\.flyliveapp\.com|\/room)\/.*\.(webm|mov)$/i,
                     handler: 'CacheFirst',
                     options: {
                         cacheName: 'gift-videos',

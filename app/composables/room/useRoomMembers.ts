@@ -55,6 +55,9 @@ export function useRoomMembers() {
    * Fetch room members with pagination.
    */
   async function fetchMembers(roomId: number, params: GetRoomMembersParams = {}, reset = false): Promise<void> {
+    // Set current room context so socket event handlers can match room_id
+    store.setRoom(roomId)
+
     if (reset) {
       store.members.items = []
       store.members.cursor = null
@@ -92,14 +95,33 @@ export function useRoomMembers() {
   }
 
   /**
-   * Fetch current user's room membership.
-   * Returns the membership object if user is a member, null otherwise.
+   * Fetch current user's room memberships and resolve the one for the current room.
+   * The API returns a collection; we find the membership matching the current room.
    */
   async function fetchMyMembership(): Promise<RoomMember | null> {
     try {
-      const response = await api<{ success: boolean; data: RoomMember | null }>('/user/room')
-      store.myMembership = response.data
-      return response.data
+      const response = await api<{ success: boolean; data: RoomMember[] | RoomMember | null }>('/user/room')
+      const data = response.data
+
+      // Handle array response (collection of memberships)
+      if (Array.isArray(data)) {
+        if (data.length === 0) {
+          store.myMembership = null
+          return null
+        }
+        // Find membership for the current room
+        const roomStore = useRoomStore()
+        const currentRoomId = roomStore.currentRoom?.id
+        const match = currentRoomId
+          ? data.find(m => m.room_id === currentRoomId)
+          : data[0]
+        store.myMembership = match ?? null
+        return store.myMembership
+      }
+
+      // Handle single object response (backward compat)
+      store.myMembership = data
+      return data
     } catch (err) {
       // 404 or error means user is not a member
       store.myMembership = null
@@ -111,11 +133,10 @@ export function useRoomMembers() {
    * Leave room membership.
    * @param roomId - Optional room ID to leave. If omitted, leaves first active membership.
    */
-  async function leaveRoomMembership(roomId?: number): Promise<boolean> {
+  async function leaveRoomMembership(roomId: number): Promise<boolean> {
     try {
-      await api('/user/room/leave', {
-        method: 'POST',
-        body: roomId ? { room_id: roomId } : undefined,
+      await api(`/rooms/${roomId}/membership`, {
+        method: 'DELETE',
       })
       store.myMembership = null
       toast.add({

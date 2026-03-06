@@ -62,6 +62,7 @@ export type RoomMemberStatus = 'active' | 'muted' | 'banned'
  */
 export interface RoomMember {
   id: number
+  room_id: number
   user_id: number
   user: User
   role: RoomMemberRole

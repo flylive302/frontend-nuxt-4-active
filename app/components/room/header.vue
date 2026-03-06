@@ -106,76 +106,20 @@ const levelStatus = computed(() => {
 });
 
 // ========================================
-// Membership State (for non-members)
+// Membership (for Members Button)
 // ========================================
 
-const authStore = useAuthStore();
-const { myJoinRequests, requestToJoin, cancelJoinRequest } = useRoomJoinRequests();
-const { receivedInvitations, fetchReceivedInvitations, acceptInvitation, declineInvitation } = useRoomInvitations();
 const { myMembership, fetchMyMembership } = useRoomMembers();
 
-// Fetch invitations and membership on mount
-onMounted(async () => {
-  await Promise.all([
-    receivedInvitations.value.items.length ? undefined : fetchReceivedInvitations(true),
-    fetchMyMembership(),
-  ]);
-});
-
-/** Current user's membership state for this room */
-const membershipState = computed(() => {
-  if (!thisRoom.value) return 'none';
-  
-  const roomId = thisRoom.value.id;
-  
-  // Owner is always a member
-  if (roomStore.isRoomOwner) return 'member';
-  
-  // Check actual membership from API
-  if (myMembership.value) return 'member';
-  
-  // Check if we have a pending join request for this room
-  const pendingRequest = myJoinRequests.value.items.find(
-    (r) => r && (r.room_id === roomId || r.room?.id === roomId) && r.status === 'pending'
-  );
-  if (pendingRequest) return 'pending_request';
-  
-  // Check if we have a pending invitation for this room
-  const pendingInvite = receivedInvitations.value.items.find(
-    (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
-  );
-  if (pendingInvite) return 'has_invitation';
-  
-  return 'none';
-});
-
-/** Get invitation ID if user has a pending invitation */
-const pendingInvitationId = computed(() => {
-  if (!thisRoom.value) return undefined;
-  const roomId = thisRoom.value.id;
-  const pendingInvite = receivedInvitations.value.items.find(
-    (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
-  );
-  return pendingInvite?.id;
-});
-
-/** Should show membership action (non-owner, non-members) */
-const showMembershipAction = computed(() => {
-  return membershipState.value !== 'member' && !roomStore.isRoomOwner;
-});
+onMounted(() => fetchMyMembership());
 
 /** Whether current user can manage members (owner or admin) */
 const canManageMembers = computed(() => {
   if (roomStore.isRoomOwner) return true;
-  if (myMembership.value?.role === 'admin') return true;
+  const membership = myMembership.value;
+  if (membership?.room_id === thisRoom.value?.id && membership?.role === 'admin') return true;
   return false;
 });
-
-/** Whether user is a member (for showing level vs join UI) */
-const isMember = computed(() => membershipState.value === 'member');
-
-/** Loading state for membership actions */
-const memberActionLoading = ref(false);
 
 // ========================================
 // Handlers
@@ -194,35 +138,6 @@ const openLeaveDrawer = (event: Event) => {
   // Prefetch the route we'll navigate to on minimize
   preloadRouteComponents(roomStore.previousRoute ?? '/');
 };
-
-async function handleRequestToJoin() {
-  if (!thisRoom.value) return;
-  memberActionLoading.value = true;
-  await requestToJoin(thisRoom.value.id);
-  memberActionLoading.value = false;
-}
-
-async function handleCancelRequest() {
-  if (!thisRoom.value) return;
-  memberActionLoading.value = true;
-  await cancelJoinRequest(thisRoom.value.id);
-  memberActionLoading.value = false;
-}
-
-async function handleAcceptInvitation() {
-  if (!pendingInvitationId.value) return;
-  memberActionLoading.value = true;
-  await acceptInvitation(pendingInvitationId.value);
-  await fetchMyMembership();
-  memberActionLoading.value = false;
-}
-
-async function handleDeclineInvitation() {
-  if (!pendingInvitationId.value) return;
-  memberActionLoading.value = true;
-  await declineInvitation(pendingInvitationId.value);
-  memberActionLoading.value = false;
-}
 </script>
 
 <template>
@@ -231,112 +146,53 @@ async function handleDeclineInvitation() {
 
     <!-- Left Section -->
     <div class="rounded-md flex items-center bg-primary/10 gap-1 backdrop-blur-xl">
-      <!-- Level Drawer (Members Only) -->
-      <template v-if="isMember">
-        <UDrawer
-            title="Room Information Drawer"
-            description="Room Information and Level Status."
-            style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
-        >
-          <div class="w-10">
-            <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="thisRoom?.owner?.frame ?? undefined" />
-            <p class="text-xs text-center">LvL. {{ thisRoom?.current_level != null ? thisRoom.current_level : 0 }}</p>
-          </div>
-
-          <template #content>
-            <div class="px-3">
-              <SectionTitle class="mb-3">Room Details</SectionTitle>
-              <div class="px-2 pt-3 pb-12 bg-neutral-800 rounded-t-lg inset-shadow-sm inset-shadow-neutral-800 gap-4">
-                <RoomDetails />
-
-                <div class="flex items-center justify-between">
-                  <SectionTitle class="mt-1">Levels</SectionTitle>
-                  <ProfileBadge 
-                    :badge-src="currentBadge?.image_url ?? 'https://ik.imagekit.io/flylive/badges/profile-1.webp'"
-                    :txt="thisRoom?.current_level ?? 0" 
-                  />
-                </div>
-                <!-- Progress Bar -->
-                <UProgress :model-value="progressValue" color="primary" class="mt-2" />
-                <div class="flex justify-between items-center">
-                  <p class="text-md font-bold">LvL: {{ currentLevel }}</p>
-                  <p class="text-md font-bold">LvL: {{ nextLevel }}</p>
-                </div>
-
-                <!-- XP Info Box -->
-                <p
-                  v-if="!loading && levelStatus"
-                  class="text-base font-bold bg-neutral-950 rounded-md px-2 py-1 leading-tight text-shadow-md inset-shadow-sm"
-                >
-                  You have <span class="text-primary">{{ formattedCurrentXP }} (XP)</span>
-                  You Need <span class="text-primary">{{ formattedXpRemaining }} (XP)</span>
-                  Experience Points more to reach Level {{ nextLevel }}
-                </p>
-                <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
-              
-                <!-- Room Actions -->
-              </div>
-            </div>
-          </template>
-        </UDrawer>
-      </template>
-
-      <!-- Membership Action (Non-Members) -->
-      <template v-else>
+      <!-- Level Drawer -->
+      <UDrawer
+          title="Room Information Drawer"
+          description="Room Information and Level Status."
+          style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
+      >
         <div class="w-10">
           <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="thisRoom?.owner?.frame ?? undefined" />
+          <p class="text-xs text-center">LvL. {{ thisRoom?.current_level != null ? thisRoom.current_level : 0 }}</p>
         </div>
 
-        <!-- Request to Join -->
-        <UButton
-          v-if="membershipState === 'none'"
-          icon="i-lucide-user-plus"
-          size="xs"
-          color="info"
-          variant="soft"
-          :loading="memberActionLoading"
-          @click="handleRequestToJoin"
-        >
-          Join
-        </UButton>
+        <template #content>
+          <div class="px-3">
+            <SectionTitle class="mb-3">Room Details</SectionTitle>
+            <div class="px-2 pt-3 pb-12 bg-neutral-800 rounded-t-lg inset-shadow-sm inset-shadow-neutral-800 gap-4">
+              <RoomDetails />
 
-        <!-- Cancel Pending Request -->
-        <UButton
-          v-else-if="membershipState === 'pending_request'"
-          icon="i-lucide-clock"
-          size="xs"
-          color="warning"
-          variant="soft"
-          :loading="memberActionLoading"
-          @click="handleCancelRequest"
-        >
-          Pending
-        </UButton>
+              <div class="flex items-center justify-between">
+                <SectionTitle class="mt-1">Levels</SectionTitle>
+                <ProfileBadge 
+                  :badge-src="currentBadge?.image_url ?? 'https://ik.imagekit.io/flylive/badges/profile-1.webp'"
+                  :txt="thisRoom?.current_level ?? 0" 
+                />
+              </div>
+              <!-- Progress Bar -->
+              <UProgress :model-value="progressValue" color="primary" class="mt-2" />
+              <div class="flex justify-between items-center">
+                <p class="text-md font-bold">LvL: {{ currentLevel }}</p>
+                <p class="text-md font-bold">LvL: {{ nextLevel }}</p>
+              </div>
 
-        <!-- Accept / Decline Invitation -->
-        <div v-else-if="membershipState === 'has_invitation'" class="flex gap-1">
-          <UButton
-            icon="i-lucide-check"
-            size="xs"
-            color="success"
-            variant="soft"
-            :loading="memberActionLoading"
-            @click="handleAcceptInvitation"
-          >
-            Accept
-          </UButton>
-          <UButton
-            icon="i-lucide-x"
-            size="xs"
-            color="error"
-            variant="soft"
-            :loading="memberActionLoading"
-            @click="handleDeclineInvitation"
-          >
-            Deny
-          </UButton>
-        </div>
-      </template>
+              <!-- XP Info Box -->
+              <p
+                v-if="!loading && levelStatus"
+                class="text-base font-bold bg-neutral-950 rounded-md px-2 py-1 leading-tight text-shadow-md inset-shadow-sm"
+              >
+                You have <span class="text-primary">{{ formattedCurrentXP }} (XP)</span>
+                You Need <span class="text-primary">{{ formattedXpRemaining }} (XP)</span>
+                Experience Points more to reach Level {{ nextLevel }}
+              </p>
+              <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
+            
+              <!-- Room Actions -->
+            </div>
+          </div>
+        </template>
+      </UDrawer>
 
       <div>
         <div class="flex items-center justify-between gap-2 pr-1">

@@ -40,12 +40,12 @@ function openDatabase(): Promise<IDBDatabase> {
         store.createIndex('priority', 'priority', { unique: false })
         store.createIndex('downloadedAt', 'downloadedAt', { unique: false })
 
-        log.debug('Created IndexedDB store:', ASSET_CONFIG.IDB_STORE)
+
       }
     }
 
     request.onsuccess = () => {
-      log.debug('IndexedDB opened:', ASSET_CONFIG.IDB_NAME)
+
       resolve(request.result)
     }
 
@@ -90,7 +90,7 @@ export async function initAssetIndex(): Promise<void> {
 
   try {
     await openDatabase()
-    log.debug('Asset index initialized')
+
   } catch (e) {
     log.error('Failed to initialize asset index:', e)
   }
@@ -103,7 +103,7 @@ export async function upsert(metadata: AssetMetadata): Promise<void> {
   try {
     const store = await getStore('readwrite')
     await promisifyRequest(store.put(metadata))
-    log.debug('Upserted metadata:', metadata.url)
+
   } catch (e) {
     log.error('Failed to upsert metadata:', e)
     throw e
@@ -131,7 +131,7 @@ export async function remove(url: string): Promise<void> {
   try {
     const store = await getStore('readwrite')
     await promisifyRequest(store.delete(url))
-    log.debug('Deleted metadata:', url)
+
   } catch (e) {
     log.error('Failed to delete metadata:', e)
   }

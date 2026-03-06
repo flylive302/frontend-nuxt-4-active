@@ -29,6 +29,7 @@ import { createPaginatedList } from '~/types/shared'
 
 export const useRoomMembershipStore = defineStore('roomMembership', () => {
   const log = createLogger('[RoomMembershipStore]')
+  const roomStore = useRoomStore()
 
   // ========================================
   // State
@@ -106,10 +107,18 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   // ========================================
 
   /**
+   * Check if a room_id matches the current room context.
+   * Falls back to roomStore.currentRoom.id when currentRoomId is not yet set.
+   */
+  function isCurrentRoom(roomId: number): boolean {
+    return roomId === currentRoomId.value || roomId === roomStore.currentRoom?.id
+  }
+
+  /**
    * Handle member.joined event - add new member to list.
    */
   function onMemberJoined(data: { room_id: number; member: RoomMember }): void {
-    if (data.room_id !== currentRoomId.value) return
+    if (!isCurrentRoom(data.room_id)) return
     
     // Add member if not already in list
     const exists = members.value.items.some(m => m.user_id === data.member.user_id)
@@ -122,25 +131,17 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * Handle member.left event - remove member from list.
    */
   function onMemberLeft(data: { room_id: number; user_id: number }): void {
-    if (data.room_id !== currentRoomId.value) return
+    if (!isCurrentRoom(data.room_id)) return
     
     members.value.items = members.value.items.filter(m => m.user_id !== data.user_id)
   }
 
   /**
-   * Handle member.kicked event - remove member from list.
+   * Handle member.removed event — remove member from list.
+   * Unified handler for both instant removal and timed/permanent bans.
    */
-  function onMemberKicked(data: { room_id: number; user_id: number }): void {
-    if (data.room_id !== currentRoomId.value) return
-    
-    members.value.items = members.value.items.filter(m => m.user_id !== data.user_id)
-  }
-
-  /**
-   * Handle member.blocked event - remove member from list.
-   */
-  function onMemberBlocked(data: { room_id: number; user_id: number }): void {
-    if (data.room_id !== currentRoomId.value) return
+  function onMemberRemoved(data: { room_id: number; user_id: number }): void {
+    if (!isCurrentRoom(data.room_id)) return
     
     members.value.items = members.value.items.filter(m => m.user_id !== data.user_id)
   }
@@ -149,7 +150,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    * Handle member.role_changed event - update member's role.
    */
   function onMemberRoleChanged(data: { room_id: number; user_id: number; new_role: string }): void {
-    if (data.room_id !== currentRoomId.value) return
+    if (!isCurrentRoom(data.room_id)) return
     
     const member = members.value.items.find(m => m.user_id === data.user_id)
     if (member) {
@@ -176,8 +177,8 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== data.room_id)
     
     // Set myMembership if it's for the current room
-    const isCurrentRoom = data.room_id === currentViewedRoomId || data.room_id === currentRoomId.value
-    if (isCurrentRoom) {
+    const roomMatch = isCurrentRoom(data.room_id)
+    if (roomMatch) {
       log.debug('Setting myMembership for current room')
       myMembership.value = {
         id: 0,
@@ -201,6 +202,21 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   function onJoinRequestRejected(data: { room_id: number }): void {
     log.debug('onJoinRequestRejected called with:', data)
     myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== data.room_id)
+  }
+
+  /**
+   * Handle join_request_cancelled event - remove from owner's pending requests.
+   */
+  function onJoinRequestCancelled(data: { room_id: number; request_id: number; user_id: number }): void {
+    if (!isCurrentRoom(data.room_id)) return
+    joinRequests.value.items = joinRequests.value.items.filter(r => r.id !== data.request_id)
+  }
+
+  /**
+   * Handle invitation_cancelled event - remove from user's received invitations.
+   */
+  function onInvitationCancelled(data: { room_id: number; invitation_id: number }): void {
+    receivedInvitations.value.items = receivedInvitations.value.items.filter(i => i.id !== data.invitation_id)
   }
 
   // ========================================
@@ -231,10 +247,11 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     // Socket Event Handlers
     onMemberJoined,
     onMemberLeft,
-    onMemberKicked,
-    onMemberBlocked,
+    onMemberRemoved,
     onMemberRoleChanged,
     onJoinRequestApproved,
     onJoinRequestRejected,
+    onJoinRequestCancelled,
+    onInvitationCancelled,
   }
 })

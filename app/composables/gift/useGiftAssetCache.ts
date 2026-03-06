@@ -57,7 +57,7 @@ export function useGiftAssetCache() {
         if (cachedUrl) {
           videoCache.set(url, cachedUrl)
           await assetIndex.updateLastAccessed(url)
-          log.debug('✅ Video from cache storage:', url)
+
           return cachedUrl
         }
 
@@ -73,7 +73,7 @@ export function useGiftAssetCache() {
         // Store in L1 (Memory) for speed
         const blobUrl = URL.createObjectURL(blob);
         videoCache.set(url, blobUrl);
-        log.debug('✅ Video cached (network):', url);
+
         
         return blobUrl;
       } catch (error) {
@@ -100,7 +100,7 @@ export function useGiftAssetCache() {
     if (svgaPlugin?.fetchAnimation) {
       try {
         await svgaPlugin.fetchAnimation(name);
-        log.debug('✅ SVGA cached:', name);
+
       } catch (error) {
         log.warn('❌ SVGA failed:', name, error);
       }
@@ -108,7 +108,7 @@ export function useGiftAssetCache() {
       // Fallback if plugin not available
       try {
         await $fetch(name);
-        log.debug('✅ SVGA cached (fallback):', name);
+
       } catch (error) {
         log.warn('❌ SVGA failed:', name, error);
       }

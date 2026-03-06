@@ -38,12 +38,12 @@ export function useAssetDownloader() {
     })
 
     unsubComplete = assetDownloader.onComplete(() => {
-      log.debug('Downloads complete')
+
       isDownloading.value = false
     })
 
     unsubConsent = assetDownloader.onNeedConsent((sizeBytes) => {
-      log.debug('Cellular consent needed:', sizeBytes, 'bytes')
+
       needsConsent.value = true
       consentSizeBytes.value = sizeBytes
     })
@@ -52,7 +52,7 @@ export function useAssetDownloader() {
     progress.value = assetDownloader.getProgress()
     isDownloading.value = assetDownloader.isDownloading()
 
-    log.debug('Subscriptions initialized')
+
   }
 
   /**
@@ -82,7 +82,7 @@ export function useAssetDownloader() {
     assetDownloader.setCellularConsent(true)
     const { trackCellularConsentGiven } = useTelemetry()
     trackCellularConsentGiven()
-    log.debug('Cellular consent granted')
+
   }
 
   /**
@@ -93,7 +93,7 @@ export function useAssetDownloader() {
     assetDownloader.setCellularConsent(false)
     const { trackCellularConsentDenied } = useTelemetry()
     trackCellularConsentDenied()
-    log.debug('Cellular consent denied')
+
   }
 
   /**

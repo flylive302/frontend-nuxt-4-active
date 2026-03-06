@@ -36,8 +36,8 @@ export interface LevelInfo {
 // Constants
 // ========================================
 
-export const DEFAULT_WEALTH_BADGE = 'https://ik.imagekit.io/flylive/badges/wealth/level_0.webp'
-export const DEFAULT_CHARM_BADGE = 'https://ik.imagekit.io/flylive/badges/charm/level_0.webp'
+export const DEFAULT_WEALTH_BADGE = 'https://assets.flyliveapp.com/badges/wealth/level_0.webp'
+export const DEFAULT_CHARM_BADGE = 'https://assets.flyliveapp.com/badges/charm/level_0.webp'
 
 // ========================================
 // Store Definition
@@ -167,10 +167,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       lastBootstrapAt.value = Date.now()
       phase.value = 'complete'
 
-      log.debug('Bootstrap complete', {
-        gifts: data.gifts.catalog.length,
-        wealthLevels: data.config.wealth_levels.length,
-      })
+
 
       trackBootstrapCompleted(Date.now() - startTime)
       return data
@@ -213,7 +210,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     if (type === 'all' || type === 'gifts') {
       giftCatalog.value = []
     }
-    log.debug('Config invalidated:', type)
+
   }
 
   /**
@@ -250,15 +247,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     await assetIndex.initAssetIndex()
 
     // Debug: Log catalog state before filtering
-    log.debug('Gift catalog state:', {
-      totalGifts: giftCatalog.value.length,
-      sampleGift: giftCatalog.value[0] ? {
-        id: giftCatalog.value[0].id,
-        name: giftCatalog.value[0].name,
-        asset_type: giftCatalog.value[0].asset_type,
-        animation_url: giftCatalog.value[0].animation_url,
-      } : 'NO GIFTS',
-    })
+
 
     // Build queue from gift catalog
     const items: EnqueueItem[] = giftCatalog.value
@@ -272,14 +261,10 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       }))
 
     // Debug: Log filtered items count
-    log.debug('Filtered assets:', {
-      totalFiltered: items.length,
-      allWithAnimationUrl: giftCatalog.value.filter(g => g.animation_url).length,
-      nonImageAssets: giftCatalog.value.filter(g => g.asset_type !== 'image').length,
-    })
+
 
     if (items.length === 0) {
-      log.debug('No assets to download')
+
       assetPhase.value = 'complete'
       return
     }
@@ -294,7 +279,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
 
     assetDownloader.onComplete(() => {
       assetPhase.value = 'complete'
-      log.debug('Asset download complete')
+
     })
 
     // Enqueue and start
@@ -302,7 +287,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     assetDownloader.enqueue(items)
     assetDownloader.start()
 
-    log.debug('Started asset download:', items.length, 'items')
+
   }
 
   /**

@@ -6,7 +6,7 @@ import type { UpdateMemberRoleRequest } from '~/types/room/room'
 
 /**
  * Composable for member management actions.
- * Handles kick and role updates.
+ * Handles role updates. Removal is handled via the block API in useRoomBlocking.
  */
 export function useRoomMemberActions() {
   const { api, normalizeError } = useApi()
@@ -15,27 +15,6 @@ export function useRoomMemberActions() {
   // ========================================
   // Actions
   // ========================================
-
-  /**
-   * Kick a member from room.
-   */
-  async function kickMember(roomId: number, userId: number): Promise<boolean> {
-    try {
-      await api(`/rooms/${roomId}/members/${userId}`, { method: 'DELETE' })
-
-      toast.add({
-        title: 'Member Removed',
-        description: 'Member has been kicked from the room.',
-        color: 'warning',
-      })
-
-      return true
-    } catch (err) {
-      const normalized = normalizeError(err)
-      toast.add({ title: 'Error', description: normalized.message, color: 'error' })
-      return false
-    }
-  }
 
   /**
    * Update member role (promote/demote).
@@ -71,7 +50,6 @@ export function useRoomMemberActions() {
   // ========================================
 
   return {
-    kickMember,
     updateMemberRole,
   }
 }

@@ -198,13 +198,13 @@ const charmLevel = computed(() =>
           class="pointer-events-none -mt-28" />
       </div>
       
-      <div class="relative z-10 px-3" :class="isVip ? 'mt-34' : 'my-8'">
+      <div class="relative z-10 px-3" :class="isVip ? 'mt-32' : 'my-8'">
 
-        <div v-if="currentSeat?.user" class="flex justify-center w-full gap-4 items-center relative z-10">
+        <div v-if="currentSeat?.user" class="flex flex-col justify-center items-center relative z-10">
           <LazyUserAvatar
             :img="currentSeat.user.avatar ?? undefined"
             :frame-asset-url="currentSeat.user.frame ?? undefined"
-            :animated="true" class="size-30" 
+            :animated="true" class="size-32" 
             @click="async () => {
               try {
                 isOpen = false;
@@ -216,11 +216,10 @@ const charmLevel = computed(() =>
             }"
           />
 
-          <div>
+          <div class="text-center">
             <h3 class="text-xl font-bold">{{ currentSeat.user.name }}</h3>
 
-            <div class="flex items-center gap-2 mt-1">
-              <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+            <div class="flex items-center gap-2 justify-center">
               <UBadge
                   color="secondary"
                   :icon="getGenderInfo(currentSeat.user.gender).icon"
@@ -234,23 +233,28 @@ const charmLevel = computed(() =>
                 class="rounded overflow-hidden h-6 size-8 shadow-lg"
               />
             </div>
-            <ProfileBadge
+
+            <div class="flex items-center gap-1 justify-center mt-1">
+              <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+              <ProfileBadge
               v-if="wealthLevel.badge"
               :badge-src="wealthLevel.badge.image_url"
               color="tertiary"
               :txt="String(wealthLevel.level)"
-            />
-            <ProfileBadge
+              />
+              <ProfileBadge
               v-if="charmLevel.badge"
               :badge-src="charmLevel.badge.image_url"
               color="secondary"
               :txt="String(charmLevel.level)"
-            />
+              />
+            </div>
+          
           </div>
 
         </div>
 
-        <div class="flex justify-center gap-2 my-4">
+        <div class="flex justify-center gap-2 mt-12">
           <div class="flex gap-2">
             <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
             <UButton
@@ -263,7 +267,7 @@ const charmLevel = computed(() =>
             >
               <!-- {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }} -->
               <template v-if="!isAudioReady">(Loading...)</template>
-              <UIcon v-else name="i-lucide-mic" size="xl" class="size-6" />
+              <UIcon v-else name="i-lucide-plane-takeoff" size="xl" class="size-6" />
             </UButton>
 
             <!-- Leave Seat button - only show if current user occupies this seat -->
@@ -271,7 +275,7 @@ const charmLevel = computed(() =>
               v-if="isCurrentUserSeat"
               class="rounded-xl text-white" 
               size="xl" variant="solid" square color="error" 
-              :loading="isLoading" icon="i-lucide-mic-off" 
+              :loading="isLoading" icon="i-lucide-plane-landing" 
               @click="handleLeaveSeat"
             />
           </div>

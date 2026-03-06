@@ -103,8 +103,32 @@ export function useRoom() {
         });
     }
 
+    /**
+     * Re-fetch a specific room's data from the API.
+     * Used to refresh stale persisted `currentRoom` data on page refresh
+     * or when returning from minimized state.
+     * Silent failure — stale data is better than no data.
+     */
+    async function fetchRoomById(roomId: number): Promise<void> {
+        try {
+            const response = await api<RoomResponse>(`/rooms/${roomId}`, {
+                method: 'GET',
+            })
+
+            if (response.status === 'success' && response.data) {
+                // Only update if this is still the current room (user may have left)
+                if (roomStore.currentRoom?.id === roomId) {
+                    roomStore.setCurrentRoom(response.data)
+                }
+            }
+        } catch {
+            // Silent — persisted data is acceptable fallback
+        }
+    }
+
     return {
         fetchUserRoom,
+        fetchRoomById,
         createRoom,
         fetchRooms
     }

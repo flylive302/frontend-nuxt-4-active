@@ -62,6 +62,20 @@ export function useRoomJoinRequests() {
     }
   }
 
+  /**
+   * Fetch user's own pending join requests from backend.
+   * Hydrates myJoinRequests so state persists across page refreshes.
+   */
+  async function fetchMyJoinRequests(): Promise<void> {
+    try {
+      const response = await api<{ success: true; data: RoomJoinRequest[] }>('/user/room/join-requests/mine')
+      store.myJoinRequests.items = response.data
+      store.myJoinRequests.hasMore = false
+    } catch (err) {
+      console.error('[useRoomJoinRequests] fetchMyJoinRequests failed:', err)
+    }
+  }
+
   // ========================================
   // Admin Actions
   // ========================================
@@ -83,11 +97,13 @@ export function useRoomJoinRequests() {
     store.joinRequests.error = null
 
     try {
-      // Note: roomId is not used in path - backend gets it from user's membership
+      // Pass room_id so admins (not just owners) can access join requests
       const response = await api<{
         success: true
         data: RoomJoinRequest[]
-      }>('/user/room/join-requests')
+      }>('/user/room/join-requests', {
+        params: { room_id: roomId },
+      })
 
       store.joinRequests.items = response.data
       store.joinRequests.hasMore = false // No pagination for this endpoint
@@ -145,6 +161,7 @@ export function useRoomJoinRequests() {
     // User Actions
     requestToJoin,
     cancelJoinRequest,
+    fetchMyJoinRequests,
 
     // Admin Actions
     fetchJoinRequests,

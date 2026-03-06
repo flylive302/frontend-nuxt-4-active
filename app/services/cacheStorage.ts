@@ -26,7 +26,7 @@ async function getCache(): Promise<Cache | null> {
 
   if (!cachePromise) {
     cachePromise = caches.open(ASSET_CONFIG.CACHE_NAME)
-    log.debug('Opening cache:', ASSET_CONFIG.CACHE_NAME)
+
   }
 
   return cachePromise
@@ -54,7 +54,7 @@ export async function initCacheStorage(): Promise<void> {
 
   // Pre-open the cache
   await getCache()
-  log.debug('Cache storage initialized')
+
 }
 
 // ========================================
@@ -81,7 +81,7 @@ export async function putAsset(url: string, blob: Blob): Promise<void> {
     })
 
     await cache.put(url, response)
-    log.debug('Cached asset:', url, `(${blob.size} bytes)`)
+
   } catch (e) {
     log.error('Failed to cache asset:', url, e)
     throw e
@@ -103,7 +103,7 @@ export async function getAsset(url: string): Promise<string | null> {
 
     const blob = await response.blob()
     const blobUrl = URL.createObjectURL(blob)
-    log.debug('Cache hit:', url)
+
     return blobUrl
   } catch (e) {
     log.error('Failed to get cached asset:', url, e)
@@ -139,7 +139,7 @@ export async function deleteAsset(url: string): Promise<boolean> {
   try {
     const deleted = await cache.delete(url)
     if (deleted) {
-      log.debug('Deleted from cache:', url)
+
     }
     return deleted
   } catch (e) {
@@ -186,7 +186,7 @@ export async function getTotalSize(): Promise<number> {
       }
     }
 
-    log.debug('Total cache size:', totalSize, 'bytes')
+
     return totalSize
   } catch (e) {
     log.error('Failed to calculate cache size:', e)

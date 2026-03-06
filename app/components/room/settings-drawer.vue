@@ -19,7 +19,7 @@ const open = defineModel<boolean>('open', { default: false })
 // ========================================
 
 const roomStore = useRoomStore()
-const { requestToJoin, cancelJoinRequest, myJoinRequests } = useRoomJoinRequests()
+const { requestToJoin, cancelJoinRequest, fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
 const { acceptInvitation, declineInvitation, receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
 const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers()
 const { api, normalizeError } = useApi()
@@ -38,13 +38,15 @@ const membershipState = computed(() => {
   if (!thisRoom.value) return 'none'
   const roomId = thisRoom.value.id
   if (isRoomOwner.value) return 'owner'
-  if (myMembership.value) return myMembership.value.role === 'admin' ? 'admin' : 'member'
+  if (myMembership.value && myMembership.value.room_id === roomId) {
+    return myMembership.value.role === 'admin' ? 'admin' : 'member'
+  }
   const pendingRequest = myJoinRequests.value.items.find(
     (r) => r && (r.room_id === roomId || r.room?.id === roomId) && r.status === 'pending'
   )
   if (pendingRequest) return 'pending_request'
   const pendingInvite = receivedInvitations.value.items.find(
-    (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
+    (inv) => inv && (inv.room_id === roomId || inv.room?.id === roomId) && inv.status === 'pending'
   )
   if (pendingInvite) return 'has_invitation'
   return 'none'
@@ -54,12 +56,19 @@ const pendingInvitationId = computed(() => {
   if (!thisRoom.value) return undefined
   const roomId = thisRoom.value.id
   const pendingInvite = receivedInvitations.value.items.find(
-    (inv) => inv && (inv.room?.id === roomId) && inv.status === 'pending'
+    (inv) => inv && (inv.room_id === roomId || inv.room?.id === roomId) && inv.status === 'pending'
   )
   return pendingInvite?.id
 })
 
-const canEdit = computed(() => isRoomOwner.value)
+/** Whether current user can edit room settings (owner or admin) */
+const canEdit = computed(() => {
+  if (isRoomOwner.value) return true
+  return membershipState.value === 'admin'
+})
+
+/** Whether current user is the room owner (for password-only controls) */
+const isOwnerOnly = computed(() => isRoomOwner.value)
 
 // ========================================
 // Form State (Owner Only)
@@ -298,7 +307,7 @@ async function handleLeaveRoom() {
 // ========================================
 
 onMounted(async () => {
-  await Promise.all([fetchReceivedInvitations(true), fetchMyMembership()])
+  await Promise.all([fetchReceivedInvitations(true), fetchMyMembership(), fetchMyJoinRequests()])
 })
 
 onBeforeUnmount(() => {
@@ -316,30 +325,6 @@ onBeforeUnmount(() => {
   >
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-3 pb-4 max-h-[80vh] overflow-y-auto">
-
-        <!-- Room Info (everyone) -->
-        <SectionTitle>Room Information</SectionTitle>
-        <div class="bg-neutral-800 rounded-lg p-3 space-y-2">
-          <div class="flex items-center gap-3">
-            <UserAvatar :img="thisRoom?.logo" :animated="true" class="w-12" />
-            <div>
-              <h3 class="text-base font-bold">{{ thisRoom?.name }}</h3>
-              <p v-if="thisRoom?.description" class="text-sm text-muted">{{ thisRoom?.description }}</p>
-            </div>
-          </div>
-          <div class="flex gap-2 mt-2">
-            <UBadge v-if="thisRoom?.is_password_protected" color="warning" variant="subtle" size="sm">
-              Password Protected
-            </UBadge>
-            <UBadge v-if="thisRoom?.is_private" color="info" variant="subtle" size="sm">
-              Private
-            </UBadge>
-            <UBadge v-else color="success" variant="subtle" size="sm">
-              Public
-            </UBadge>
-          </div>
-        </div>
-
         <!-- Owner: Room Settings Form -->
         <template v-if="canEdit">
           <SectionTitle>Edit Settings</SectionTitle>
@@ -405,13 +390,13 @@ onBeforeUnmount(() => {
               </div>
             </UFormField>
 
-            <!-- Room Name -->
-            <UFormField label="Room Name">
+            <!-- Room Name (Owner Only) -->
+            <UFormField v-if="isOwnerOnly" label="Room Name">
               <UInput v-model="editName" placeholder="Enter room name" icon="i-lucide-type" size="lg" class="w-full" />
             </UFormField>
 
-            <!-- Room Type -->
-            <UFormField label="Room Type">
+            <!-- Room Type (Owner Only) -->
+            <UFormField v-if="isOwnerOnly" label="Room Type">
               <USelect v-model="editType" :items="typeOptions" value-key="value" size="lg" class="w-full" />
             </UFormField>
 
@@ -420,31 +405,33 @@ onBeforeUnmount(() => {
               <USelect v-model="editMaxSeats" :items="seatOptions" value-key="value" size="lg" class="w-full" />
             </UFormField>
 
-            <!-- Password -->
-            <UFormField label="Set / Change Password">
-              <UInput
-                v-model="editPassword"
-                type="password"
-                placeholder="Leave blank to keep current"
-                icon="i-lucide-lock"
-                size="lg"
-                class="w-full"
-              />
-            </UFormField>
+            <!-- Password (Owner Only) -->
+            <template v-if="isOwnerOnly">
+              <UFormField label="Set / Change Password">
+                <UInput
+                  v-model="editPassword"
+                  type="password"
+                  placeholder="Leave blank to keep current"
+                  icon="i-lucide-lock"
+                  size="lg"
+                  class="w-full"
+                />
+              </UFormField>
 
-            <!-- Remove Password -->
-            <UButton
-              v-if="thisRoom?.is_password_protected"
-              icon="i-lucide-unlock"
-              color="warning"
-              variant="soft"
-              size="sm"
-              class="w-full justify-center"
-              :loading="saving"
-              @click="handleRemovePassword"
-            >
-              Remove Password
-            </UButton>
+              <!-- Remove Password -->
+              <UButton
+                v-if="thisRoom?.is_password_protected"
+                icon="i-lucide-unlock"
+                color="warning"
+                variant="soft"
+                size="sm"
+                class="w-full justify-center"
+                :loading="saving"
+                @click="handleRemovePassword"
+              >
+                Remove Password
+              </UButton>
+            </template>
 
             <!-- Save Button -->
             <UButton

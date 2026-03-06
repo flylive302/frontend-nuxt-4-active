@@ -135,11 +135,30 @@ export function useAuth() {
     return data
   }
 
+  /**
+   * Refresh the MSAB JWT to ensure the audio server gets fresh user data.
+   * Called before socket pre-connect so the JWT payload matches current DB state.
+   * Silent failure — falls back to existing (potentially stale) token.
+   */
+  async function refreshMsabToken(): Promise<void> {
+    try {
+      const { data } = await api<{ data: { msab_token: string } }>('/auth/msab-token/refresh', {
+        method: 'POST',
+      })
+      authStore.setMsabToken(data.msab_token)
+      log.debug('MSAB token refreshed')
+    } catch (err) {
+      // Non-blocking — stale JWT is better than no JWT
+      log.warn('Failed to refresh MSAB token:', err)
+    }
+  }
+
   return {
     login,
     register,
     logout,
     updateProfile,
     uploadAvatar,
+    refreshMsabToken,
   }
 }
