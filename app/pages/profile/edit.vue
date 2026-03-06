@@ -299,7 +299,7 @@ watch(
   <main>
     <NavAlt back-to="/profile">Edit Profile</NavAlt>
     <div class="h-20" />
-    <div class="px-3">
+    <div class="px-4">
       <UAlert
           v-if="generalError"
           :description="generalError"
@@ -309,6 +309,18 @@ watch(
           class="mb-4"
           icon="i-lucide-alert-circle"
       />
+      
+      <!-- Avatar Upload (circular) -->
+      <div class="mb-2">
+        <FileUpload
+            :current-image="avatarUrl"
+            :loading="isUploadingAvatar"
+            :progress="avatarProgress"
+            crop
+            @file-selected="handleAvatarSelected"
+        />
+        <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
+      </div>
 
       <!-- Cover Image Upload (rectangular, 45:32 crop) -->
       <div class="mb-6">
@@ -326,18 +338,6 @@ watch(
             @file-selected="handleCoverImageSelected"
         />
         <p class="text-lg text-center font-semibold mt-2">Upload Cover Image</p>
-      </div>
-
-      <!-- Avatar Upload (circular) -->
-      <div class="mb-2">
-        <FileUpload
-            :current-image="avatarUrl"
-            :loading="isUploadingAvatar"
-            :progress="avatarProgress"
-            crop
-            @file-selected="handleAvatarSelected"
-        />
-        <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
       </div>
 
       <UForm ref="formRef" :schema="formSchema" :state="(formState as Partial<FormSchema>)" class="space-y-3" @submit="handleFormSubmit">

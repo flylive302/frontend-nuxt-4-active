@@ -101,6 +101,7 @@ const resolvedContainerClass = computed(() =>
   props.containerClass ?? SIZE_MAP[props.size].container
 )
 const shapeClass = computed(() => SHAPE_MAP[props.shape])
+const isCustomSized = computed(() => !!props.containerClass)
 const showProgress = computed(() => props.progress >= 0 && props.progress <= 100)
 
 const realStencilComponent = computed(() => {
@@ -245,7 +246,7 @@ function handleCropCancel() {
       <div 
         role="button" tabindex="0"
         class="relative group cursor-pointer"
-        :class="shapeClass" :aria-label="label"
+        :class="[shapeClass, { 'w-full': isCustomSized }]" :aria-label="label"
         @click="triggerFileInput" @keydown="handleKeyDown"
       >
         <div class="relative overflow-hidden ring-2 ring-primary inset-shadow-sm" :class="[resolvedContainerClass, shapeClass]">
