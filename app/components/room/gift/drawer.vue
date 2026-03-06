@@ -18,6 +18,8 @@ const authStore = useAuthStore();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending } = useGiftSending();
 
+const { haptic } = useHaptics()
+
 // Track drawer open state
 const isOpen = ref(false);
 
@@ -38,6 +40,7 @@ watch(isOpen, (open) => {
  */
 function handleSelectGift(gift: Gift) {
   giftStore.selectGift(gift);
+  haptic('nudge');
 }
 
 /**
@@ -45,6 +48,7 @@ function handleSelectGift(gift: Gift) {
  */
 async function handleSend() {
   await send();
+  haptic('success');
 }
 </script>
 
