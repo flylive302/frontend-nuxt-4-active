@@ -4,7 +4,7 @@
  * Handles gift sending with balance validation, socket emission,
  * and playback triggering.
  */
-import type { Gift } from '~/types/gift/gift';
+
 
 // ========================================
 // Module-level shared state (for use in socket callbacks)
@@ -73,21 +73,6 @@ export function useGiftSending() {
   // ========================================
   // Methods
   // ========================================
-
-  /**
-   * Calculate cost for a specific gift/recipients/quantity combination
-   */
-  function calculateCost(gift: Gift, recipientCount: number, quantity: number): number {
-    return gift.price * recipientCount * quantity;
-  }
-
-  /**
-   * Check if user can afford a specific amount
-   */
-  function checkBalance(amount: number): boolean {
-    const coins = Number(authStore.user?.coins ?? 0);
-    return coins >= amount;
-  }
 
   /**
    * Send the currently selected gift to selected recipients
@@ -171,13 +156,13 @@ export function useGiftSending() {
       return false;
     }
 
-    const comboCost = calculateCost(
-      currentPlayback.gift,
-      currentPlayback.recipientIds.length,
-      currentPlayback.quantity
-    );
+    const comboCost = currentPlayback.gift.price
+      * currentPlayback.recipientIds.length
+      * currentPlayback.quantity;
 
-    if (!checkBalance(comboCost)) {
+    const coins = Number(authStore.user?.coins ?? 0);
+
+    if (coins < comboCost) {
       toast.add({
         title: 'Insufficient balance for combo',
         description: 'Please top up your coins.',
@@ -208,16 +193,6 @@ export function useGiftSending() {
     authStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
   }
 
-  /**
-   * Refund coins to user balance (called on error rollback)
-   */
-  function refundCoins(amount: number): void {
-    if (amount > 0) {
-      const currentCoins = Number(authStore.user?.coins ?? 0);
-      authStore.patchBalance({ coins: String(currentCoins + amount) });
-    }
-  }
-
   // ========================================
   // Return
   // ========================================
@@ -232,11 +207,8 @@ export function useGiftSending() {
     canSend,
 
     // Methods
-    calculateCost,
-    checkBalance,
     send,
     combo,
     deductCoins,
-    refundCoins,
   };
 }

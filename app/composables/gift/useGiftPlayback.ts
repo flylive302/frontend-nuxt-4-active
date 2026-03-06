@@ -1,79 +1,198 @@
 /**
  * Gift Playback Composable
  *
- * Orchestrates gift playback with support for combo mode.
- * Provides unified interface for restarting animations across player types.
+ * Single source of truth for gift playback orchestration.
+ * Manages player refs, playback timeout, combo state, and minimize toggle.
+ * Used by playback-modal.vue as a thin presentation component.
  */
+import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift'
+import { createLogger } from '~/utils/logger'
+
+// ========================================
+// Types
+// ========================================
 
 interface PlaybackController {
-  restart: () => void;
+  restart: () => void
 }
 
+// ========================================
+// Composable
+// ========================================
+
 export function useGiftPlayback() {
-  const giftStore = useGiftStore();
+  const log = createLogger('[GiftPlayback]')
+  const giftStore = useGiftStore()
+  const authStore = useAuthStore()
 
-  // Player refs for restart control
-  const videoPlayerRef = ref<PlaybackController | null>(null);
-  const svgaPlayerRef = ref<PlaybackController | null>(null);
-  const staticDisplayRef = ref<PlaybackController | null>(null);
+  // ========================================
+  // Player Refs
+  // ========================================
 
-  // Playback state from store
-  const currentPlayback = computed(() => giftStore.currentPlayback);
-  const isPlaying = computed(() => giftStore.isPlaying);
-  const comboCount = computed(() => giftStore.comboCount);
+  const videoPlayerRef = ref<PlaybackController | null>(null)
+  const svgaPlayerRef = ref<PlaybackController | null>(null)
+  const staticDisplayRef = ref<PlaybackController | null>(null)
 
-  /**
-   * Handle playback completion - advances to next in queue
-   */
-  function handleComplete() {
-    giftStore.onPlaybackComplete();
+  // ========================================
+  // State
+  // ========================================
+
+  const currentPlayback = computed(() => giftStore.currentPlayback)
+  const isPlaying = computed(() => giftStore.isPlaying)
+  const comboCount = computed(() => giftStore.comboCount)
+  const isSender = computed(() => authStore.user?.id === currentPlayback.value?.senderId)
+  const isComboButtonVisible = ref(false)
+  const isMinimized = ref(false)
+
+  // ========================================
+  // Playback Timeout (Safety Net)
+  // ========================================
+
+  let playbackTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+  /** Clear the playback timeout */
+  function clearPlaybackTimeout(): void {
+    if (playbackTimeoutId) {
+      clearTimeout(playbackTimeoutId)
+      playbackTimeoutId = null
+    }
+  }
+
+  /** Start the playback timeout — force completes if animation stalls */
+  function startPlaybackTimeout(): void {
+    clearPlaybackTimeout()
+    playbackTimeoutId = setTimeout(() => {
+      log.warn('Timeout reached — force closing playback')
+      handleComplete()
+    }, GIFT_PLAYBACK_TIMEOUT_MS)
+  }
+
+  // ========================================
+  // Core Methods
+  // ========================================
+
+  /** Handle playback completion — advances to next in queue */
+  function handleComplete(): void {
+    clearPlaybackTimeout()
+    giftStore.onPlaybackComplete()
   }
 
   /**
-   * Restart current animation (for combo mode)
-   * Routes to the correct player based on asset type
+   * Restart current animation (for combo mode).
+   * Routes to the correct player based on asset type.
    */
-  function restartCurrentPlayer() {
-    const assetType = currentPlayback.value?.gift.asset_type;
+  function restartCurrentPlayer(): void {
+    const assetType = currentPlayback.value?.gift.asset_type
 
     switch (assetType) {
       case 'video':
-        videoPlayerRef.value?.restart();
-        break;
+        videoPlayerRef.value?.restart()
+        break
       case 'svga':
-        svgaPlayerRef.value?.restart();
-        break;
+        svgaPlayerRef.value?.restart()
+        break
       case 'image':
-        staticDisplayRef.value?.restart();
-        break;
+        staticDisplayRef.value?.restart()
+        break
     }
   }
 
-  /**
-   * Register a player ref for restart control
-   */
+  /** Register a player ref for restart control */
   function registerPlayer(
     type: 'video' | 'svga' | 'static',
-    controller: PlaybackController | null
-  ) {
+    controller: PlaybackController | null,
+  ): void {
     switch (type) {
       case 'video':
-        videoPlayerRef.value = controller;
-        break;
+        videoPlayerRef.value = controller
+        break
       case 'svga':
-        svgaPlayerRef.value = controller;
-        break;
+        svgaPlayerRef.value = controller
+        break
       case 'static':
-        staticDisplayRef.value = controller;
-        break;
+        staticDisplayRef.value = controller
+        break
     }
   }
+
+  // ========================================
+  // Combo Handling
+  // ========================================
+
+  /**
+   * Handle combo button click — deducts coins, emits socket, restarts animation.
+   * Delegates the actual sending to useGiftSending.combo().
+   */
+  async function handleCombo(comboFn: () => Promise<boolean>): Promise<void> {
+    const success = await comboFn()
+
+    if (success) {
+      restartCurrentPlayer()
+      startPlaybackTimeout()
+    }
+  }
+
+  /** Handle combo timeout (combo button expires) */
+  function handleComboTimeout(): void {
+    isComboButtonVisible.value = false
+  }
+
+  // ========================================
+  // Minimize Toggle
+  // ========================================
+
+  function toggleMinimize(): void {
+    isMinimized.value = !isMinimized.value
+  }
+
+  // ========================================
+  // Watchers
+  // ========================================
+
+  // Reset state when playback starts/stops
+  watch(isPlaying, (open) => {
+    if (open) {
+      startPlaybackTimeout()
+      if (isSender.value) {
+        isComboButtonVisible.value = true
+      }
+    }
+    else {
+      clearPlaybackTimeout()
+      isComboButtonVisible.value = false
+      isMinimized.value = false
+    }
+  })
+
+  // Watch for combo restarts from other users (timestamp changes)
+  watch(
+    () => currentPlayback.value?.timestamp,
+    (newTimestamp, oldTimestamp) => {
+      if (newTimestamp && oldTimestamp && newTimestamp !== oldTimestamp) {
+        restartCurrentPlayer()
+        if (isSender.value) {
+          isComboButtonVisible.value = true
+        }
+        startPlaybackTimeout()
+      }
+    },
+  )
+
+  // Cleanup timeout on scope disposal
+  onScopeDispose(clearPlaybackTimeout)
+
+  // ========================================
+  // Return
+  // ========================================
 
   return {
     // State
     currentPlayback,
     isPlaying,
     comboCount,
+    isSender,
+    isComboButtonVisible,
+    isMinimized,
 
     // Player refs (for template binding)
     videoPlayerRef,
@@ -84,5 +203,9 @@ export function useGiftPlayback() {
     handleComplete,
     restartCurrentPlayer,
     registerPlayer,
-  };
+    handleCombo,
+    handleComboTimeout,
+    toggleMinimize,
+    clearPlaybackTimeout,
+  }
 }

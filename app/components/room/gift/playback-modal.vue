@@ -2,55 +2,43 @@
 /**
  * Gift Playback Modal
  *
- * Full-screen modal that plays gift animations.
+ * Thin presentation component for gift animations.
  * Click to minimize into a draggable pip, click again to restore.
- * Routes to correct player based on asset type.
- * Includes safety timeout to prevent stuck modals.
+ * All business logic lives in useGiftPlayback composable.
  */
-import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift';
-import { createLogger } from '~/utils/logger';
 import { resolveVideoUrl } from '~/utils/platform';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
-const log = createLogger('[GiftPlayback]');
-const authStore = useAuthStore();
-const giftStore = useGiftStore();
 const { combo } = useGiftSending();
-
-// ========================================
-// Player Refs
-// ========================================
-
-const videoPlayerRef = ref<{ restart: () => void } | null>(null);
-const svgaPlayerRef = ref<{ restart: () => void } | null>(null);
-const staticDisplayRef = ref<{ restart: () => void } | null>(null);
-
-// ========================================
-// State
-// ========================================
-
-const currentPlayback = computed(() => giftStore.currentPlayback);
-const isOpen = computed(() => giftStore.isPlaying);
-const isSender = computed(() => authStore.user?.id === currentPlayback.value?.senderId);
-const isComboButtonVisible = ref(false);
-const isMinimized = ref(false);
-const isPositioned = ref(false);
+const {
+  currentPlayback,
+  isPlaying,
+  isComboButtonVisible,
+  isMinimized,
+  videoPlayerRef,
+  svgaPlayerRef,
+  staticDisplayRef,
+  handleComplete,
+  handleCombo,
+  handleComboTimeout,
+  toggleMinimize,
+} = useGiftPlayback();
 
 // ========================================
 // Draggable (active only when minimized)
 // ========================================
 
-const { dragEl, position, setPosition, winW, winH, isDragging } = useBoundedDrag();
+const { dragEl, position, winW, winH, isDragging } = useBoundedDrag();
+const isPositioned = ref(false);
 
 /**
- * Toggle between fullscreen and minimized states
+ * Wrap toggleMinimize to handle drag positioning
  */
-function toggleMinimize() {
-  isMinimized.value = !isMinimized.value;
+function onToggleMinimize() {
+  toggleMinimize();
 
   if (isMinimized.value) {
     isPositioned.value = false;
-    // Set position directly — bypass clamp until element is measured
     nextTick(() => {
       nextTick(() => {
         position.value = {
@@ -65,7 +53,7 @@ function toggleMinimize() {
   }
 }
 
-// Set initial position for testing
+// Set initial position
 onMounted(() => {
   nextTick(() => {
     nextTick(() => {
@@ -78,115 +66,17 @@ onMounted(() => {
   });
 });
 
-// ========================================
-// Playback Timeout (Safety Net)
-// ========================================
-
-let playbackTimeoutId: ReturnType<typeof setTimeout> | null = null;
-
 /**
- * Clear the playback timeout
+ * Handle combo button click — delegates to composable
  */
-function clearPlaybackTimeout() {
-  if (playbackTimeoutId) {
-    clearTimeout(playbackTimeoutId);
-    playbackTimeoutId = null;
-  }
+async function onCombo() {
+  await handleCombo(combo);
 }
-
-/**
- * Start the playback timeout - force completes if animation stalls
- */
-function startPlaybackTimeout() {
-  clearPlaybackTimeout();
-  playbackTimeoutId = setTimeout(() => {
-    log.warn('Timeout reached - force closing modal');
-    handleComplete();
-  }, GIFT_PLAYBACK_TIMEOUT_MS);
-}
-
-// ========================================
-// Watchers
-// ========================================
-
-// Reset state when playback starts/stops
-watch(isOpen, (open) => {
-  if (open) {
-    startPlaybackTimeout();
-    if (isSender.value) {
-      isComboButtonVisible.value = true;
-    }
-  } else {
-    clearPlaybackTimeout();
-    isComboButtonVisible.value = false;
-  }
-});
-
-// Watch for combo restarts from other users (timestamp changes)
-watch(
-  () => currentPlayback.value?.timestamp,
-  (newTimestamp, oldTimestamp) => {
-    if (newTimestamp && oldTimestamp && newTimestamp !== oldTimestamp) {
-      const assetType = currentPlayback.value?.gift.asset_type;
-      if (assetType === 'video') {
-        videoPlayerRef.value?.restart();
-      } else if (assetType === 'svga') {
-        svgaPlayerRef.value?.restart();
-      } else if (assetType === 'image') {
-        staticDisplayRef.value?.restart();
-      }
-      if (isSender.value) {
-        isComboButtonVisible.value = true;
-      }
-      startPlaybackTimeout();
-    }
-  }
-);
-
-// ========================================
-// Handlers
-// ========================================
-
-/**
- * Handle playback completion
- */
-function handleComplete() {
-  clearPlaybackTimeout();
-  giftStore.onPlaybackComplete();
-}
-
-/**
- * Handle combo button click
- */
-async function handleCombo() {
-  const success = await combo();
-
-  if (success) {
-    const assetType = currentPlayback.value?.gift.asset_type;
-    if (assetType === 'video') {
-      videoPlayerRef.value?.restart();
-    } else if (assetType === 'svga') {
-      svgaPlayerRef.value?.restart();
-    } else if (assetType === 'image') {
-      staticDisplayRef.value?.restart();
-    }
-  }
-}
-
-/**
- * Handle combo timeout (combo button expires)
- */
-function handleComboTimeout() {
-  isComboButtonVisible.value = false;
-}
-
-// Cleanup timeout on unmount
-onBeforeUnmount(clearPlaybackTimeout);
 </script>
 
 <template>
   <div
-    v-if="isOpen"
+    v-if="isPlaying"
     ref="dragEl"
     :style="isMinimized && isPositioned
       ? `transform: translate3d(${position.x}px, ${position.y}px, 0); width: 80px; height: 120px;`
@@ -194,12 +84,12 @@ onBeforeUnmount(clearPlaybackTimeout);
     "
     :class="[
       'gift-playback-container flex items-center justify-center',
-      isMinimized 
-        ? 'gift-playback--minimized bg-black/50' 
+      isMinimized
+        ? 'gift-playback--minimized bg-black/50'
         : 'gift-playback--fullscreen bg-white/20',
       isDragging ? '!transition-none' : ''
     ]"
-    @click="toggleMinimize"
+    @click="onToggleMinimize"
   >
     <template v-if="currentPlayback">
       <!-- Video Player -->
@@ -218,8 +108,8 @@ onBeforeUnmount(clearPlaybackTimeout);
 
   <!-- Combo Button (only visible during playback and before timeout) -->
   <RoomGiftComboButton
-    v-if="isOpen && isComboButtonVisible"
-    @click="handleCombo"
+    v-if="isPlaying && isComboButtonVisible"
+    @click="onCombo"
     @timeout="handleComboTimeout"
   />
 </template>
