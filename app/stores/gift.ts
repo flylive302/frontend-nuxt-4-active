@@ -45,6 +45,14 @@ export const useGiftStore = defineStore('giftStore', () => {
       .map((seat) => seat.user!);
   });
 
+  // Prune stale recipients when eligible users change (e.g. speaker leaves seat)
+  watch(eligibleRecipients, (eligible) => {
+    const eligibleIds = new Set(eligible.map((r) => r.id));
+    selectedRecipients.value = selectedRecipients.value.filter(
+      (id) => eligibleIds.has(id),
+    );
+  });
+
   // ========================================
   // Computed: Cost Calculation
   // ========================================
