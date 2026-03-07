@@ -23,6 +23,7 @@ import type {
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { refundPendingCoins } from '../gift/useGiftSending';
+import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { createLogger } from '~/utils/logger';
 
 // ============================================
@@ -75,6 +76,9 @@ const ROOM_EVENT_NAMES = [
   'gift:received',
   'gift:error',
   'gift:prepare',
+  'lucky:result',
+  'lucky:room_announcement',
+  'lucky:app_announcement',
 ] as const;
 
 // ============================================
@@ -87,11 +91,13 @@ const ROOM_EVENT_NAMES = [
  */
 export function cleanupRoomEventHandlers(socket: AudioSocket): void {
   const log = createLogger('[RoomEvents]');
-  log.debug('Cleaning up room event handlers');
+  // log.debug('Cleaning up room event handlers');
   
   for (const eventName of ROOM_EVENT_NAMES) {
     socket.off(eventName);
   }
+
+  cleanupLuckyEventHandlers(socket);
 }
 
 // ============================================
@@ -124,13 +130,13 @@ export function setupRoomEventHandlers({
   // Room events
   socket.on('room:userJoined', (event: UserJoinedEvent) => {
     roomStore.addParticipant(event.user);
-    log.debug('User joined:', event.user.name);
+    // log.debug('User joined:', event.user.name);
   });
 
   socket.on('room:userLeft', (event: UserLeftEvent) => {
     roomStore.removeParticipant(event.userId);
     giftStore.removeRecipient(event.userId);
-    log.debug('User left:', event.userId);
+    // log.debug('User left:', event.userId);
   });
 
   socket.on('room:closed', (event: RoomClosedEvent) => {
@@ -162,12 +168,12 @@ export function setupRoomEventHandlers({
       authStore.patchProfile(safeProfile);
     }
 
-    log.debug('Profile updated for user:', event.user_id);
+    // log.debug('Profile updated for user:', event.user_id);
   });
 
   // Audio events
   socket.on('audio:newProducer', async (event: NewProducerEvent) => {
-    log.debug('New producer from user:', event.userId);
+    // log.debug('New producer from user:', event.userId);
     if (roomStore.currentRoom) {
       await consumeProducer(event.producerId, roomStore.currentRoom.id.toString());
     }
@@ -184,10 +190,7 @@ export function setupRoomEventHandlers({
 
   // Seat events
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
-    log.debug('seat:updated received:', {
-      seatIndex: event.seatIndex,
-      userId: event.userId,
-    });
+    // log.debug('seat:updated received:', { seatIndex: event.seatIndex, userId: event.userId });
     roomStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
   });
 
@@ -200,7 +203,7 @@ export function setupRoomEventHandlers({
 
     // If current user was kicked, stop their audio
     if (wasCurrentUserSeated) {
-      log.debug('User was kicked from seat, stopping audio');
+      // log.debug('User was kicked from seat, stopping audio');
       stopAudio();
       toast.add({
         title: 'Removed from seat',
@@ -213,7 +216,7 @@ export function setupRoomEventHandlers({
   socket.on('seat:userMuted', (event: SeatUserMutedEvent) => {
     roomStore.setParticipantMuted(event.userId, event.isMuted);
     if (event.selfMuted !== undefined) {
-      log.debug('User', event.userId, event.isMuted ? 'self-muted' : 'self-unmuted');
+      // log.debug('User', event.userId, event.isMuted ? 'self-muted' : 'self-unmuted');
     }
   });
 
@@ -316,10 +319,12 @@ export function setupRoomEventHandlers({
   socket.on('gift:prepare', async (event: GiftPrepareEvent) => {
     // Only preload if this user is the intended recipient
     if (event.recipientId !== authStore.user?.id) return;
-
     const gift = getGiftById(event.giftId);
     if (gift) {
       await preloadGift(gift);
     }
   });
+
+  // Lucky gift event handlers (floating multipliers, SVGA announcements)
+  setupLuckyEventHandlers(socket);
 }

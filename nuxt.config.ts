@@ -102,6 +102,7 @@ export default defineNuxtConfig({
             'composables/room',
             'composables/room/audio',
             'composables/gift',
+            'composables/lucky',
             'composables/agency',
             'composables/economy',
             'composables/progression',

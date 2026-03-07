@@ -15,6 +15,7 @@ import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEvent
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, clearGiftQueue, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
+import { clearLuckyState } from '../lucky/useLuckyGift';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
@@ -266,7 +267,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     const ownerId = roomStore.currentRoom?.owner?.id ?? authStore.user?.id;
     const seatCount = roomStore.currentRoom?.max_seats ?? 15;
 
-    log.debug('room:join payload:', { roomId, ownerId, seatCount, hasOwner: !!roomStore.currentRoom?.owner });
+    // log.debug('room:join payload:', { roomId, ownerId, seatCount, hasOwner: !!roomStore.currentRoom?.owner });
 
     const response = await emitAsync<{ roomId: string; ownerId: number; seatCount: number }, JoinRoomResponse>(
       'room:join',
@@ -302,6 +303,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
           date_of_birth: authStore.user.date_of_birth,
           wealth_xp: authStore.user.wealth_xp,
           charm_xp: authStore.user.charm_xp,
+          cover_image: authStore.user.cover_image ?? null,
+          vip_level: authStore.user.vip_level ?? 0,
         }, { isSpeaker: false }
       );
       roomStore.addParticipant(participant);
@@ -310,7 +313,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Handle initial room state from server
     // 1. Add existing participants
     if (response.participants && response.participants.length > 0) {
-      log.debug('Adding', response.participants.length, 'existing participants');
+      // log.debug('Adding', response.participants.length, 'existing participants');
       for (const p of response.participants) {
         const participant = userToParticipant(
             {
@@ -326,6 +329,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
               date_of_birth: p.date_of_birth,
               wealth_xp: p.wealth_xp,
               charm_xp: p.charm_xp,
+              cover_image: p.cover_image ?? null,
+              vip_level: p.vip_level ?? 0,
             }, { isSpeaker: false }
         );
 
@@ -349,7 +354,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // 3. Consume existing producers (listen to active speakers)
     if (response.existingProducers && response.existingProducers.length > 0) {
-      log.debug('Consuming', response.existingProducers.length, 'existing producers');
+      // log.debug('Consuming', response.existingProducers.length, 'existing producers');
       for (const producer of response.existingProducers) {
         try {
           await consumeProducer(producer.producerId, roomId);
@@ -359,7 +364,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
       }
     }
 
-    log.debug('Joined room:', roomId);
+    // log.debug('Joined room:', roomId);
   }
 
   /**
@@ -378,6 +383,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear pending gift queue to prevent stale gifts
     clearGiftQueue();
 
+    // Clear lucky animation state
+    clearLuckyState();
+
     // Stop any playing gift animation and flush playback queue
     giftStore.clearPlayback();
 
@@ -387,7 +395,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear room state
     roomStore.clearAudioState();
 
-    log.debug('Left room (socket stays connected)');
+    // log.debug('Left room (socket stays connected)');
   }
 
 

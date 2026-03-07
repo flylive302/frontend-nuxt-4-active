@@ -17,7 +17,6 @@ const log = createLogger('[EconomyEvents]')
  */
 export function registerEconomyEvents(socket: Socket): void {
   socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
-    log.debug('balance.updated', payload)
 
     // Update auth store (coins, diamonds, XP values on user object)
     const authStore = useAuthStore()

@@ -16,13 +16,12 @@ const DEFAULT_PADDING = '16%'
 
 const props = withDefaults(defineProps<{
   frameName?: string
-  /** Full CDN URL — provided by backend (e.g. https://assets.flyliveapp.com/frames/7.svga) */
   frameAssetUrl?: string
   img?: string | undefined | null
   animated?: boolean
 }>(), {
   frameName: '',
-  frameAssetUrl: 'https://assets.flyliveapp.com/frames/7.svga',
+  frameAssetUrl: 'https://assets.flyliveapp.com/frames/8.svga',
   img: undefined,
   animated: false,
 });

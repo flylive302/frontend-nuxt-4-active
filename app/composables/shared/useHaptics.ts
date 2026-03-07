@@ -44,11 +44,11 @@ export function useHaptics() {
   // ========================================
 
   if (import.meta.client) {
-    import('web-haptics/vue').then(({ useWebHaptics }) => {
-      const instance = useWebHaptics()
-      _trigger = instance.trigger
-      _cancel = instance.cancel
-      isHapticsSupported.value = instance.isSupported
+    import('web-haptics').then(({ WebHaptics }) => {
+      const haptics = new WebHaptics()
+      _trigger = (input) => haptics.trigger(input)
+      _cancel = () => haptics.cancel()
+      isHapticsSupported.value = WebHaptics.isSupported
     })
   }
 
