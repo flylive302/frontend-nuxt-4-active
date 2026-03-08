@@ -24,3 +24,9 @@ export const GIFT_PLAYBACK_TIMEOUT_MS = 15000;
 
 /** Default gift category to show when drawer opens */
 export const DEFAULT_GIFT_CATEGORY = 'normal' as const;
+
+/** Duration of lucky gift fly animation in milliseconds (sender → center → receiver) */
+export const LUCKY_FLY_DURATION_MS = 2000;
+
+/** Size of the lucky gift fly thumbnail in pixels */
+export const LUCKY_FLY_THUMBNAIL_SIZE = 64;

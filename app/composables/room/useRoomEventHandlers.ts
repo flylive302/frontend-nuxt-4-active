@@ -24,6 +24,7 @@ import type {
 import type { AudioSocket } from './useAudioSocket';
 import { refundPendingCoins } from '../gift/useGiftSending';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
+import { useLuckyFly } from '../lucky/useLuckyFly';
 import { createLogger } from '~/utils/logger';
 
 // ============================================
@@ -125,6 +126,7 @@ export function setupRoomEventHandlers({
 
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
+  const { triggerFly } = useLuckyFly();
   const { preloadGift } = useGiftAssetCache();
 
   // Room events
@@ -276,7 +278,13 @@ export function setupRoomEventHandlers({
     const gift = getGiftById(event.giftId);
 
     if (gift) {
-      // Check if this is a combo (same gift+sender as current playback)
+      // Lucky gifts use fly animation (thumbnail: sender → center → receiver)
+      if (gift.category === 'lucky') {
+        triggerFly(gift.thumbnail_url, event.senderId, event.recipientId);
+        return;
+      }
+
+      // Non-lucky gifts use fullscreen playback modal
       const current = giftStore.currentPlayback;
       const isCombo = current && current.gift.id === gift.id && current.senderId === event.senderId;
 
@@ -300,7 +308,11 @@ export function setupRoomEventHandlers({
     // Rollback coins on error using module-level function (avoids inject() issues)
     refundPendingCoins();
 
-    if (event.error === 'insufficient_balance') {
+    // MSAB sends { code, reason }; normalize for display
+    const errorCode = String(event.code ?? event.error ?? '');
+    const errorMessage = event.reason ?? event.message;
+
+    if (errorCode === '4002' || errorCode === 'insufficient_balance') {
       toast.add({
         title: 'Insufficient balance',
         description: 'Please top up your coins to send gifts.',
@@ -309,7 +321,7 @@ export function setupRoomEventHandlers({
     } else {
       toast.add({
         title: 'Gift failed',
-        description: event.message || 'Failed to send gift. Please try again.',
+        description: errorMessage || 'Failed to send gift. Please try again.',
         color: 'error',
       });
     }

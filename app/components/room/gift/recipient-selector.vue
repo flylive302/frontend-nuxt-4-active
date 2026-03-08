@@ -42,7 +42,7 @@ function isSelected(userId: number): boolean {
     </UButton>
 
     <!-- Recipient Avatars -->
-    <div class="flex items-center justify-between gap-1 overflow-x-auto scrollbar-thin w-full">
+    <div class="flex items-center gap-1 overflow-x-auto scrollbar-thin w-full">
       <template v-if="recipients.length > 0">
         <div
             v-for="recipient in recipients"

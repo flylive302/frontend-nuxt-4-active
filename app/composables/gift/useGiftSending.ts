@@ -4,7 +4,20 @@
  * Handles gift sending with balance validation, socket emission,
  * and playback triggering.
  */
+import type { Gift } from '~/types/gift/gift';
 
+
+// ========================================
+// Types
+// ========================================
+
+/** Context for lucky gift combo resending */
+interface LuckyComboContext {
+  readonly gift: Gift;
+  readonly senderId: number;
+  readonly recipientIds: readonly number[];
+  readonly quantity: number;
+}
 
 // ========================================
 // Module-level shared state (for use in socket callbacks)
@@ -12,6 +25,12 @@
 
 /** Track pending transaction amount for potential rollback */
 const _pendingRefund = ref(0);
+
+/** Last sent lucky gift context — drives combo resending */
+const _lastLuckyContext = ref<LuckyComboContext | null>(null);
+
+/** Whether the lucky combo button should be visible */
+const _isLuckyComboActive = ref(false);
 
 /**
  * Refund coins to user balance (can be called from socket callbacks)
@@ -33,6 +52,7 @@ export function useGiftSending() {
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
   const { sendGift: emitGift } = useRoomAudio();
+  const { triggerFly } = useLuckyFly();
   const toast = useToast();
 
   // Initialize preload watcher (extracted from gift store — SRP fix)
@@ -50,6 +70,10 @@ export function useGiftSending() {
 
   /** Expose module-level pending refund for internal use */
   const pendingRefund = _pendingRefund;
+
+  /** Module-level lucky combo state aliases */
+  const lastLuckyContext = _lastLuckyContext;
+  const isLuckyComboActive = _isLuckyComboActive;
 
   // ========================================
   // Computed
@@ -119,21 +143,42 @@ export function useGiftSending() {
       }
 
       // Start playback immediately (optimistic)
-      const playbackItem = {
-        gift: selectedGift,
-        senderId: authStore.user!.id,
-        senderName: authStore.user!.name ?? 'Unknown',
-        senderAvatar: authStore.user!.avatar ?? undefined,
-        recipientIds: [...selectedRecipients],
-        quantity: selectedQuantity,
-      };
+      // Lucky gifts use fly animation, all others use fullscreen playback modal
+      if (selectedGift.category === 'lucky') {
+        for (const recipientId of selectedRecipients) {
+          triggerFly(selectedGift.thumbnail_url, authStore.user!.id, recipientId);
+        }
 
-      if (giftStore.isPlaying) {
-        // Sender's new gift replaces current playback immediately
-        giftStore.interruptAndPlay(playbackItem);
+        // Activate lucky combo button
+        lastLuckyContext.value = {
+          gift: selectedGift,
+          senderId: authStore.user!.id,
+          recipientIds: [...selectedRecipients],
+          quantity: selectedQuantity,
+        };
+        isLuckyComboActive.value = true;
+        giftStore.resetCombo();
+        giftStore.incrementCombo();
       } else {
-        // Nothing playing — enqueue (auto-starts via playNext)
-        giftStore.enqueuePlayback(playbackItem);
+        // Deactivate lucky combo when switching to non-lucky gift
+        endLuckyCombo();
+
+        const playbackItem = {
+          gift: selectedGift,
+          senderId: authStore.user!.id,
+          senderName: authStore.user!.name ?? 'Unknown',
+          senderAvatar: authStore.user!.avatar ?? undefined,
+          recipientIds: [...selectedRecipients],
+          quantity: selectedQuantity,
+        };
+
+        if (giftStore.isPlaying) {
+          // Sender's new gift replaces current playback immediately
+          giftStore.interruptAndPlay(playbackItem);
+        } else {
+          // Nothing playing — enqueue (auto-starts via playNext)
+          giftStore.enqueuePlayback(playbackItem);
+        }
       }
 
       // Reset selection for next send
@@ -186,6 +231,51 @@ export function useGiftSending() {
   }
 
   /**
+   * Handle lucky combo click — resend same lucky gift, deduct coins, trigger fly.
+   * @returns true if combo was successful
+   */
+  async function luckyCombo(): Promise<boolean> {
+    const ctx = lastLuckyContext.value;
+    if (!ctx) return false;
+
+    const comboCost = ctx.gift.price * ctx.recipientIds.length * ctx.quantity;
+    const coins = Number(authStore.user?.coins ?? 0);
+
+    if (coins < comboCost) {
+      toast.add({
+        title: 'Insufficient balance for combo',
+        description: 'Please top up your coins.',
+        color: 'error',
+      });
+      return false;
+    }
+
+    // Emit socket event for each recipient
+    for (const recipientId of ctx.recipientIds) {
+      emitGift(ctx.gift.id, recipientId, ctx.quantity);
+    }
+
+    // Deduct coins and play fly animation
+    deductCoins(comboCost);
+    for (const recipientId of ctx.recipientIds) {
+      triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
+    }
+
+    // Increment combo counter
+    giftStore.incrementCombo();
+
+    return true;
+  }
+
+  /**
+   * End lucky combo (called on combo timeout or when switching to non-lucky gift)
+   */
+  function endLuckyCombo(): void {
+    isLuckyComboActive.value = false;
+    lastLuckyContext.value = null;
+  }
+
+  /**
    * Deduct coins from user balance (optimistic update)
    */
   function deductCoins(amount: number): void {
@@ -200,6 +290,7 @@ export function useGiftSending() {
     // State
     isSending,
     pendingRefund,
+    isLuckyComboActive: readonly(isLuckyComboActive),
 
     // Computed
     totalCost,
@@ -209,6 +300,8 @@ export function useGiftSending() {
     // Methods
     send,
     combo,
+    luckyCombo,
+    endLuckyCombo,
     deductCoins,
   };
 }

@@ -5,10 +5,10 @@
  * Main gift sending interface with recipient selection,
  * gift browsing, and send controls.
  */
-import type { Gift } from '~/types/gift/gift';
-import { useGiftData } from '~/composables/gift/useGiftData';
-import { useGiftSending } from '~/composables/gift/useGiftSending';
-import { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
+import type { Gift } from "~/types/gift/gift";
+import { useGiftData } from "~/composables/gift/useGiftData";
+import { useGiftSending } from "~/composables/gift/useGiftSending";
+import { GIFT_QUANTITY_OPTIONS } from "~/constants/gift";
 
 // Quantity options for select (mutable array for USelect compatibility)
 const quantityOptions = [...GIFT_QUANTITY_OPTIONS];
@@ -18,7 +18,7 @@ const authStore = useAuthStore();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending } = useGiftSending();
 
-const { haptic } = useHaptics()
+const { haptic } = useHaptics();
 
 // Track drawer open state
 const isOpen = ref(false);
@@ -40,25 +40,36 @@ watch(isOpen, (open) => {
  */
 function handleSelectGift(gift: Gift) {
   giftStore.selectGift(gift);
-  haptic('nudge');
+  haptic("nudge");
 }
 
 /**
  * Handle send button click
  */
 async function handleSend() {
-  await send();
-  haptic('success');
+  const success = await send();
+  if (success) {
+    isOpen.value = false;
+    haptic("success");
+  }
 }
 </script>
 
 <template>
-  <UDrawer v-model:open="isOpen" title="Send Gift" description="Send gifts to speakers in the room">
+  <UDrawer
+    v-model:open="isOpen"
+    title="Send Gift"
+    description="Send gifts to speakers in the room"
+  >
     <!-- Trigger Button -->
-    <NuxtImg src="https://assets.flyliveapp.com/shared/room/gift.webp" alt="gifts" width="70px" class="cursor-pointer" />
+    <NuxtImg
+      src="https://assets.flyliveapp.com/shared/room/gift.webp"
+      alt="gifts"
+      width="70px"
+      class="cursor-pointer"
+    />
     <template #content>
       <div class="p-2 space-y-3">
-
         <!-- Recipient Selector -->
         <RoomGiftRecipientSelector />
 
@@ -74,13 +85,25 @@ async function handleSend() {
         </RoomGiftCategoryTabs>
 
         <!-- Send Controls -->
-        <div class="flex items-center justify-between pt-1 border-t border-muted">
+        <div
+          class="flex items-center justify-between pt-1 border-t border-muted"
+        >
           <!-- Coin Balance -->
           <div class="flex items-center">
-            <UButton icon="i-lucide-coins" variant="subtle" color="warning" size="sm">
+            <UButton
+              icon="i-lucide-coins"
+              variant="subtle"
+              color="warning"
+              size="sm"
+            >
               {{ (authStore.user?.coins ?? 0).toLocaleString() }}
             </UButton>
-            <UButton to="/wallet/purchase-coins" variant="soft" color="primary" size="xs">
+            <UButton
+              to="/wallet/purchase-coins"
+              variant="soft"
+              color="primary"
+              size="xs"
+            >
               Recharge
             </UButton>
           </div>
@@ -90,26 +113,28 @@ async function handleSend() {
             <div v-if="totalCost > 0" class="text-sm">
               <span class="text-gray-400">Total:</span>
               <span class="font-bold text-warning ml-1">
-              🪙 {{ totalCost.toLocaleString() }}
-            </span>
+                🪙 {{ totalCost.toLocaleString() }}
+              </span>
             </div>
 
             <!-- Quantity Selector -->
             <UFieldGroup class="flex items-center">
               <USelect
-                  :model-value="giftStore.selectedQuantity"
-                  :items="quantityOptions"
-                  size="sm"
-                  class="w-20 rounded-full overflow-hidden"
-                  @update:model-value="(val: number) => giftStore.setQuantity(val)"
+                :model-value="giftStore.selectedQuantity"
+                :items="quantityOptions"
+                size="sm"
+                class="w-20 rounded-full overflow-hidden"
+                @update:model-value="
+                  (val: number) => giftStore.setQuantity(val)
+                "
               />
               <!-- Send Button -->
               <UButton
-                  :disabled="!canSend || isSending"
-                  :loading="isSending"
-                  size="sm"
-                  trailing-icon="i-lucide-send"
-                  @click="handleSend"
+                :disabled="!canSend || isSending"
+                :loading="isSending"
+                size="sm"
+                trailing-icon="i-lucide-send"
+                @click="handleSend"
               >
                 Send
               </UButton>

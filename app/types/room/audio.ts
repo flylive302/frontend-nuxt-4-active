@@ -270,7 +270,11 @@ export interface GiftReceivedEvent {
 
 export interface GiftErrorEvent {
   transactionId: string;
-  error: 'insufficient_balance' | 'invalid_gift' | string;
+  code: number | string;
+  reason: string;
+  /** @deprecated Use `code` — kept for backward compatibility */
+  error?: 'insufficient_balance' | 'invalid_gift' | string;
+  /** @deprecated Use `reason` — kept for backward compatibility */
   message?: string;
 }
 

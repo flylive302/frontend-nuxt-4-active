@@ -15,6 +15,7 @@ definePageMeta({
 
 const roomStore = useRoomStore();
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
+const { isLuckyComboActive, luckyCombo, endLuckyCombo } = useGiftSending();
 const {
   floatingMultipliers,
   roomAnnouncement,
@@ -24,6 +25,11 @@ const {
   isAppAnnouncementVisible,
   dismissAppAnnouncement,
 } = useLuckyGift();
+
+/** Handle lucky combo button click */
+async function onLuckyCombo() {
+  await luckyCombo();
+}
 
 // ========================================
 // Route Guard — redirect home if no room in store
@@ -263,6 +269,16 @@ onUnmounted(() => {
 
       <!-- Gift Playback Modal (full-screen, outside content area) -->
       <LazyRoomGiftPlaybackModal />
+
+      <!-- Lucky Gift Fly Animation (thumbnail: sender → center → receiver) -->
+      <LuckyGiftFly />
+
+      <!-- Lucky Gift Combo Button (visible after sending a lucky gift) -->
+      <RoomGiftComboButton
+        v-if="isLuckyComboActive"
+        @click="onLuckyCombo"
+        @timeout="endLuckyCombo"
+      />
 
       <!-- Settings Drawer (inside root to avoid aria-hidden issues) -->
       <LazyRoomSettingsDrawer v-model:open="settingsOpen" />
