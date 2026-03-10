@@ -25,6 +25,22 @@ export default defineNuxtPlugin(async () => {
   const bootstrapStore = useBootstrapStore()
   const levelsStore = useLevelsStore()
 
+  // Skip bootstrap on guest-only routes (log-in, sign-up, forgot-password)
+  // These pages never need bootstrap data, and stale tokens cause 401 noise
+  const route = useRoute()
+  const middleware = route.meta.middleware
+  const isGuestRoute = Array.isArray(middleware)
+    ? middleware.includes('guest')
+    : middleware === 'guest'
+
+  if (isGuestRoute) {
+    if (authStore.token) {
+      log.debug('Guest route with stale token, clearing')
+      authStore.logout()
+    }
+    return
+  }
+
   // Read token from Pinia persisted state first (survives PWA refresh)
   // Fall back to cookie for backwards compatibility
   const storedToken = authStore.token

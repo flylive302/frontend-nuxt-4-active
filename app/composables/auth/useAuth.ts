@@ -2,6 +2,7 @@
 // Imports & Types
 // ========================================
 import type { AuthResponse, User, LoginPayload, RegisterPayload, UpdateProfilePayload } from '~/types/user/auth'
+import type { ProfileSyncFields } from '~/types/user/profile-sync'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Auth]')
@@ -100,6 +101,16 @@ export function useAuth() {
     })
 
     authStore.setUser(data)
+
+    // Push profile changes directly through socket for immediate room propagation
+    emitProfileSync({
+      name: data.name,
+      signature: data.signature ?? undefined,
+      avatar: data.avatar ?? undefined,
+      frame: data.frame ?? null,
+      gender: data.gender ?? undefined,
+    })
+
     toast.add({ title: 'Profile updated', color: 'success' })
     return data
   }
@@ -131,6 +142,10 @@ export function useAuth() {
     })
 
     authStore.setUser(data)
+
+    // Push avatar change directly through socket for immediate room propagation
+    emitProfileSync({ avatar: data.avatar ?? undefined })
+
     toast.add({ title: 'Avatar updated successfully', color: 'success' })
     return data
   }
@@ -166,6 +181,30 @@ export function useAuth() {
     return data
   }
 
+  // ========================================
+  // Helpers
+  // ========================================
+
+  /**
+   * Push updated profile fields directly through the audio socket.
+   * Provides instant room propagation without waiting for the queued
+   * Laravel → SNS/HTTP → MSAB pipeline.
+   *
+   * Best-effort / fire-and-forget — silent on failure.
+   */
+  function emitProfileSync(fields: ProfileSyncFields): void {
+    try {
+      const { socket } = useAudioSocket()
+      if (!socket.value?.connected) return
+
+      socket.value.emit('user:profileSync', { profile: fields })
+      log.debug('Profile sync emitted', Object.keys(fields))
+    } catch {
+      // Silent — this is a best-effort optimization.
+      // The server-side SyncProfileToMsab listener provides eventual consistency.
+    }
+  }
+
   /**
    * Refresh the MSAB JWT to ensure the audio server gets fresh user data.
    * Called before socket pre-connect so the JWT payload matches current DB state.
@@ -192,5 +231,6 @@ export function useAuth() {
     uploadAvatar,
     uploadCoverImage,
     refreshMsabToken,
+    emitProfileSync,
   }
 }

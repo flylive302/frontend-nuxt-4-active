@@ -22,6 +22,7 @@ import type {
   PropStatus,
 } from '~/types/mall/prop'
 import { PROP_TYPE_ORDER } from '~/types/mall/prop'
+import type { ProfileSyncFields } from '~/types/user/profile-sync'
 
 // ========================================
 // Types
@@ -395,6 +396,11 @@ export const useMallStore = defineStore('mall', () => {
         color: 'success',
       })
 
+      // Push frame change to room participants via socket for instant propagation
+      if (prop.type === 'frame') {
+        emitFrameSync(prop.asset_url)
+      }
+
       return true
     } catch (err) {
       // Rollback on error
@@ -456,6 +462,11 @@ export const useMallStore = defineStore('mall', () => {
         title: 'Prop Unequipped',
         color: 'neutral',
       })
+
+      // Push frame removal to room participants via socket for instant propagation
+      if (prop.type === 'frame') {
+        emitFrameSync(null)
+      }
 
       return true
     } catch (err) {
@@ -548,6 +559,24 @@ export const useMallStore = defineStore('mall', () => {
     isPurchasing.value = false
     isEquipping.value = null
     lastFetchedAt.value = null
+  }
+
+  // ========================================
+  // Helpers
+  // ========================================
+
+  /**
+   * Push frame change through the audio socket for immediate room propagation.
+   * Best-effort / fire-and-forget.
+   */
+  function emitFrameSync(frame: string | null): void {
+    try {
+      const { emitProfileSync } = useAuth()
+      const fields: ProfileSyncFields = { frame }
+      emitProfileSync(fields)
+    } catch {
+      // Silent — server-side SyncProfileToMsab provides eventual consistency
+    }
   }
 
   // ========================================
