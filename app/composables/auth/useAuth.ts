@@ -17,6 +17,7 @@ export function useAuth() {
   const authStore = useAuthStore()
   const { api, fetchCsrfToken } = useApi()
   const toast = useToast()
+  const { socket: audioSocket } = useAudioSocket()
 
   /**
    * Authenticates a user with the provided credentials.
@@ -194,14 +195,12 @@ export function useAuth() {
    */
   function emitProfileSync(fields: ProfileSyncFields): void {
     try {
-      const { socket } = useAudioSocket()
-      if (!socket.value?.connected) return
+      if (!audioSocket.value?.connected) return
 
-      socket.value.emit('user:profileSync', { profile: fields })
+      audioSocket.value.emit('user:profileSync', { profile: fields })
       log.debug('Profile sync emitted', Object.keys(fields))
     } catch {
       // Silent — this is a best-effort optimization.
-      // The server-side SyncProfileToMsab listener provides eventual consistency.
     }
   }
 

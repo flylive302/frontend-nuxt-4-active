@@ -22,7 +22,6 @@ import type {
   PropStatus,
 } from '~/types/mall/prop'
 import { PROP_TYPE_ORDER } from '~/types/mall/prop'
-import type { ProfileSyncFields } from '~/types/user/profile-sync'
 
 // ========================================
 // Types
@@ -53,6 +52,7 @@ export const useMallStore = defineStore('mall', () => {
   const { api, normalizeError } = useApi()
   const toast = useToast()
   const authStore = useAuthStore()
+  const { emitProfileSync } = useAuth()
 
   // ========================================
   // State
@@ -571,11 +571,9 @@ export const useMallStore = defineStore('mall', () => {
    */
   function emitFrameSync(frame: string | null): void {
     try {
-      const { emitProfileSync } = useAuth()
-      const fields: ProfileSyncFields = { frame }
-      emitProfileSync(fields)
+      emitProfileSync({ frame })
     } catch {
-      // Silent — server-side SyncProfileToMsab provides eventual consistency
+      // Silent — best-effort optimization
     }
   }
 
