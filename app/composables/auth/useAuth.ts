@@ -195,20 +195,12 @@ export function useAuth() {
    */
   function emitProfileSync(fields: ProfileSyncFields): void {
     try {
-      if (!audioSocket.value?.connected) {
-        console.warn('[ProfileSync] Socket not connected — cannot emit', {
-          socketExists: !!audioSocket.value,
-          connected: audioSocket.value?.connected,
-        })
-        return
-      }
+      if (!audioSocket.value?.connected) return
 
-      console.warn('[ProfileSync] Emitting user:profileSync', fields)
-      audioSocket.value.emit('user:profileSync', { profile: fields }, (ack: unknown) => {
-        console.warn('[ProfileSync] Server ack:', ack)
-      })
-    } catch (err) {
-      console.error('[ProfileSync] Error:', err)
+      audioSocket.value.emit('user:profileSync', { profile: fields })
+      log.debug('Profile sync emitted', Object.keys(fields))
+    } catch {
+      // Silent — Laravel SyncProfileToMsab provides cross-region consistency.
     }
   }
 
