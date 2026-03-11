@@ -98,6 +98,13 @@
 }
 
 
-.squircle-card {
+.squircle {
     corner-shape: superellipse(1);
+}
+
+
+.flex-middle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

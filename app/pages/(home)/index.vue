@@ -159,7 +159,7 @@ const banners: Banner[] = [
           class-names
           :ui="{
             container: 'mt-4',
-            item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100'
+            item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
           }"
           class=""
       >

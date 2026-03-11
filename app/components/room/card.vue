@@ -99,7 +99,7 @@ function enterRoom(): void {
 </script>
 
 <template>
-  <article v-bind="$attrs" class="relative overflow-hidden h-72 w-full rounded-3xl" @click="handleRoomClick">
+  <article v-bind="$attrs" class="relative h-72 w-full rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
           :src="props.room.background ?? 'https://ik.imagekit.io/flylive/room/5.gif'"
