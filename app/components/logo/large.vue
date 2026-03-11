@@ -1,3 +1,3 @@
 <template>
-  <NuxtImg preload src="/logos/flylive-logo-xl.webp" fetchpriority="high" class="max-w-full h-auto"/>
+  <NuxtImg preload src="/logos/flylive-logo-xl.webp" fetchpriority="high" class="h-auto"/>
 </template>

@@ -20,6 +20,7 @@ defineProps<{
 
 <template>
   <div class="lucky-float-container" aria-hidden="true">
+
     <TransitionGroup name="lucky-float">
       <div
         v-for="floater in floaters"
@@ -28,7 +29,7 @@ defineProps<{
         :class="floater.colorClass"
         :style="{ '--x-offset': `${(floater.id % 3) * 20 - 30}px` }"
       >
-        <span class="lucky-float-multiplier text-white">
+        <span class="lucky-float-multiplier flex-middle">
           ×{{ floater.multiplier }}
         </span>
       </div>
@@ -49,21 +50,26 @@ defineProps<{
 }
 
 .lucky-float-item {
+  --color-tiny: rgba(241, 174, 73, 0.99);
   position: absolute;
-  bottom: 0;
+  bottom: 10%;
   left: 50%;
   font-weight: 800;
   font-size: 1.5rem;
+  width: 1.8rem;
+  height: 1.8rem;
   text-shadow: 0 2px 8px rgba(92, 92, 92, 0.5);
   white-space: nowrap;
   animation: floatUp 2s ease-out forwards;
   transform: translateX(var(--x-offset, 0));
+  border-radius: 100%;
 }
 
 /* Tier color classes */
 .lucky-float--tiny {
-  color: #a0aec0;
-  font-size: 1.1rem;
+  color: white;
+  background: var(--color-tiny);
+  font-size: 1rem;
 }
 
 .lucky-float--good {

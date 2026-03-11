@@ -99,17 +99,17 @@ function enterRoom(): void {
 </script>
 
 <template>
-  <article v-bind="$attrs" class="relative h-72 w-full rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
+  <article v-bind="$attrs" class="relative h-72 max-w-60 rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-          :src="props.room.background ?? 'https://ik.imagekit.io/flylive/room/5.gif'"
-          :alt="props.room.name ?? undefined"
-          class="h-auto w-full object-cover"
-          :width="384"
-          format="webp"
-          densities="x1 x2"
-          sizes="50vw"
-          loading="lazy"
+        :src="props.room.background ?? 'https://ik.imagekit.io/flylive/room/5.gif'"
+        :alt="props.room.name ?? undefined"
+        class="h-auto w-full object-cover"
+        :width="384"
+        format="webp"
+        densities="x1 x2"
+        sizes="50vw"
+        loading="lazy"
       />
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
@@ -120,12 +120,12 @@ function enterRoom(): void {
         <mask id="squircle-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="350px" height="350px">
           <rect width="250px" height="350px" fill="white"/>
           <rect
-              x="8px"
-              y="8px"
-              width="220px"
-              height="250px"
-              rx="24"
-              fill="black"
+            x="8px"
+            y="8px"
+            width="220px"
+            height="250px"
+            rx="24"
+            fill="black"
           />
         </mask>
       </defs>
@@ -162,3 +162,8 @@ function enterRoom(): void {
     @success="enterRoom"
   />
 </template>
+
+<style scoped>
+
+
+</style>
