@@ -155,8 +155,8 @@ watchEffect(() => {
       <template #second-link-text>Charm Level</template>
     </NavAlt>
 
-    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
-      <div class="p-2 w-full h-full bg-gradient-to-br to-secondary-900 backdrop-blur-sm">
+    <AltHero class="bg-linear-to-br to-secondary/10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
+      <div class="p-2">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
           <UserAvatar :animated="true" :img="authStore.user?.avatar ?? undefined" class="col-span-2" />
@@ -173,11 +173,11 @@ watchEffect(() => {
             </template>
           </div>
           <div class="col-span-2 flex flex-col justify-center">
-            <ProfileBadge 
+            <ProfileBadge
               v-if="currentBadge"
-              :badge-src="currentBadge.image_url" 
-              class="ml-auto" 
-              color="secondary" 
+              :badge-src="currentBadge.image_url"
+              class="ml-auto"
+              color="secondary"
               :txt="String(currentLevel)"
             />
             <div v-else-if="loading" class="w-10 h-10 bg-muted rounded-full ml-auto animate-pulse" />
@@ -192,19 +192,19 @@ watchEffect(() => {
         </div>
 
         <!-- XP Info Box -->
-        <p 
-          v-if="!loading && levelStatus" 
+        <p
+          v-if="!loading && levelStatus"
           class="text-base font-bold bg-elevated rounded-md border-2 border-secondary px-2 py-1 leading-tight text-shadow-md"
         >
-          You have <span class="text-secondary">{{ currentXP }} (XP)</span> 
-          You Need <span class="text-secondary">{{ xpRemaining }} (XP)</span> 
+          You have <span class="text-secondary">{{ currentXP }} (XP)</span>
+          You Need <span class="text-secondary">{{ xpRemaining }} (XP)</span>
           Experience Points more to reach Level {{ nextLevel }}
         </p>
         <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
       </div>
     </AltHero>
 
-    <div class="px-3 mt-2">
+    <div class="px-3 my-8">
       <!-- Error State -->
       <UAlert
         v-if="error"

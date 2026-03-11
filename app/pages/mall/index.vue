@@ -105,14 +105,16 @@ async function handleLoadMore(): Promise<void> {
       <template #second-link-text>My Props</template>
     </NavAlt>
 
-    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
-      <div class="p-2 bg-linear-to-br to-secondary/30">
-        <UserAvatar :animated="true" :frame-asset-url="authStore?.user?.frame ?? undefined"
-          :img="authStore?.user?.avatar ?? undefined" class="max-w-[40vw] mx-auto" />
-      </div>
+    <AltHero class="bg-linear-to-br to-secondary/30" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
+      <UserAvatar
+          :animated="true"
+          :frame-asset-url="authStore?.user?.frame ?? undefined"
+          :img="authStore?.user?.avatar ?? undefined"
+          class="max-w-[40vw] mx-auto"
+      />
     </AltHero>
 
-    <div class="px-3 mb-32 overflow-hidden">
+    <div class="px-3 mb-32 mt-8 overflow-hidden">
       <!-- Loading Skeleton for Tabs -->
       <div v-if="mallStore.typesLoading" class="mt-6 flex gap-2">
         <USkeleton v-for="i in 4" :key="i" class="h-8 w-20 rounded-full" />

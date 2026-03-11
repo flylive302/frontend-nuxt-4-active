@@ -55,35 +55,32 @@ watch(
       <template #first-link-text>Coins</template>
       <template #second-link-text>Diamonds</template>
     </NavAlt>
-    <AltHero image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
-      <div class="flex p-2 bg-linear-to-br to-tertiary/30">
-        <div class="flex flex-col justify-end">
-          <NuxtImg
-              src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
-              class="transform -scale-x-100 w-20"
-          />
-        </div>
-        <div class="flex-auto flex flex-col justify-between items-center">
-          <NuxtImg
-              src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp"
-              density="3x"
-              class="mb-2 w-44"
-          />
-          <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">
-            {{ formatCurrency(authStore.user?.coins) }}
-          </UButton>
-        </div>
-        <div class="flex flex-col justify-end">
-          <NuxtImg
+    <AltHero class="bg-linear-to-br to-tertiary/30 p-2" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
+      <div class="flex flex-col justify-end h-full">
+        <NuxtImg
+            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
+            class="transform -scale-x-100 w-20"
+        />
+      </div>
+      <div class="flex flex-col items-center">
+        <NuxtImg
+            src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp"
+            density="3x"
+            class="mt-2 w-36"
+        />
+        <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">
+          {{ formatCurrency(authStore.user?.coins) }}
+        </UButton>
+      </div>
+      <div class="flex flex-col justify-end h-full">
+        <NuxtImg
             src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
             class="w-20"
-          />
-        </div>
+        />
       </div>
     </AltHero>
-    <div class="h-[12vw]" />
 
-    <section class="px-3">
+    <section class="px-3 mt-8">
       <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
       <p class="text-sm text-muted mb-4">Keep your default reseller or select a Different One</p>
       <EconomyChooseDefaultReseller color="tertiary" />

@@ -99,7 +99,7 @@ function enterRoom(): void {
 </script>
 
 <template>
-  <article v-bind="$attrs" class="relative overflow-hidden aspect-9/16 h-72 w-full rounded-3xl" @click="handleRoomClick">
+  <article v-bind="$attrs" class="relative overflow-hidden h-72 w-full rounded-3xl" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
           :src="props.room.background ?? 'https://ik.imagekit.io/flylive/room/5.gif'"
@@ -114,40 +114,38 @@ function enterRoom(): void {
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
 
-    <!-- Overlay content -->
-    <aside class="pointer-events-none absolute inset-0 p-3 flex items-end">
-      <template v-if="badgeDisplay">
-        <BgGlass
-            frost-blur-radius="blur(4px)"
-            rounded="rounded-full"
-            class="flex items-center gap-1 px-1 w-fit rounded-full border border-white/60"
-        >
-          <!-- Live dot -->
-          <span class="relative inline-flex">
-            <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
-            <span class="relative inline-block size-2 rounded-full bg-success"/>
-          </span>
+    <!-- SVG mask definition — sibling of aside, inside article -->
+    <svg width="0" height="0" class="absolute">
+      <defs>
+        <mask id="squircle-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="350px" height="350px">
+          <rect width="250px" height="350px" fill="white"/>
+          <rect
+              x="8px"
+              y="8px"
+              width="220px"
+              height="250px"
+              rx="24"
+              fill="black"
+          />
+        </mask>
+      </defs>
+    </svg>
 
-          <!-- Text -->
-          <p class="text-sm font-semibold truncate">
-            {{ props.room.name }} - {{ badgeDisplay }}
-          </p>
-        </BgGlass>
-      </template>
-      <!-- Show room name only if not live -->
-      <template v-else>
-        <BgGlass
-            frost-blur-radius="blur(4px)"
-            rounded="rounded-full"
-            class="flex items-center gap-1 px-2 w-fit rounded-full border border-white/60"
-        >
-          <!-- Lock icon for password-protected rooms -->
-          <UIcon v-if="props.room.is_password_protected" name="i-lucide-lock" class="size-3 text-warning" />
-          <p class="text-sm font-semibold truncate">
-            {{ props.room.name }}
-          </p>
-        </BgGlass>
-      </template>
+    <!-- Overlay content -->
+    <aside class="absolute inset-0 px-4 pb-1 flex items-end backdrop-blur-xl" style="mask: url(#squircle-mask);">
+
+      <div class="flex items-center gap-1">
+        <!-- Live dot -->
+        <span v-if="badgeDisplay" class="relative inline-flex">
+          <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
+          <span class="relative inline-block size-2 rounded-full bg-success"/>
+        </span>
+
+        <!-- Text -->
+        <p class="text-md truncate font-bold">
+          {{ props.room.name }} - {{ badgeDisplay }}
+        </p>
+      </div>
     </aside>
 
     <!-- Password lock indicator (top-right) -->

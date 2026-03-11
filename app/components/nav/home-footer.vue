@@ -34,71 +34,63 @@ async function handleMyRoomClick() {
       aria-label="Primary"
       class="fixed inset-x-2 z-50 bottom-4"
   >
-    <BgGlass
-        class="border border-white/40"
-        frost-blur-radius="blur(8px)"
-        :noise-frequency="0.009"
-        :noise-strength="200"
-        rounded="rounded-lg"
-    >
-      <div class="grid grid-cols-5 items-center gap-8 px-2 touch-manipulation select-none">
-        <UButton
-            square
-            to="/"
-            aria-label="Home"
-            icon="i-lucide-house"
-            size="xl"
-            color="primary"
-            variant="solid"
-            class="justify-center"
-        />
-        <UButton
-            square
-            aria-label="Contacts"
-            icon="i-lucide-contact-round"
-            size="xl"
-            color="primary"
-            variant="soft"
-            class="justify-center size-10"
-        />
-        <UButton
-            square
-            aria-label="My Room"
-            icon="i-lucide-door-open"
-            size="xl"
-            color="primary"
-            variant="soft"
-            class="justify-center size-10"
-            @click="handleMyRoomClick"
-        />
+    <div class="grid grid-cols-5 items-center gap-8 px-2 py-1 touch-manipulation select-none ring-2 ring-white/15 rounded-xl backdrop-blur-lg bg-linear-to-br to-white/10">
+      <UButton
+          square
+          to="/"
+          aria-label="Home"
+          icon="i-lucide-house"
+          size="xl"
+          color="primary"
+          variant="solid"
+          class="justify-center"
+      />
+      <UButton
+          square
+          aria-label="Contacts"
+          icon="i-lucide-contact-round"
+          size="xl"
+          color="primary"
+          variant="soft"
+          class="justify-center size-10"
+      />
+      <UButton
+          square
+          aria-label="My Room"
+          icon="i-lucide-door-open"
+          size="xl"
+          color="primary"
+          variant="soft"
+          class="justify-center size-10"
+          @click="handleMyRoomClick"
+      />
 
-        <UButton
-            square
-            to="/notifications"
-            aria-label="Notifications"
-            icon="i-lucide-bell-plus"
-            size="xl"
-            color="primary"
-            variant="soft"
-            class="justify-center size-10 relative"
-        >
+      <UButton
+          square
+          to="/notifications"
+          aria-label="Notifications"
+          icon="i-lucide-bell-plus"
+          size="xl"
+          color="primary"
+          variant="soft"
+          class="justify-center size-10 relative"
+      >
           <span
-            v-if="notificationStore.unreadBadge"
-            class="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center"
+              v-if="notificationStore.unreadBadge"
+              class="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center"
           >
             {{ notificationStore.unreadBadge }}
           </span>
-        </UButton>
-        <!-- Profile -->
-        <NuxtLink
-            to="/profile"
-            aria-label="Profile"
-            class="justify-self-end"
-        >
-          <UserAvatar class="w-13" :animated="true" :frame-asset-url="authStore?.user?.frame ?? undefined" :img="authStore.user?.avatar || undefined" />
-        </NuxtLink>
-      </div>
-    </BgGlass>
+      </UButton>
+      <!-- Profile -->
+      <NuxtLink
+          to="/profile"
+          aria-label="Profile"
+          class="justify-self-end"
+      >
+        <UserAvatar class="w-13" :animated="true" :frame-asset-url="authStore?.user?.frame ?? undefined" :img="authStore.user?.avatar || undefined" />
+      </NuxtLink>
+    </div>
     <UDrawer v-model:open="createRoomOpen" title="Create your Room" description="Start your journey by creating your own room.">
       <template #content>
         <div class="safe-area-bottom p-4 pb-8">

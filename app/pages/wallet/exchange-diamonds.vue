@@ -228,36 +228,35 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
       <template #second-link-text>Diamonds</template>
     </NavAlt>
     
-    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
-      <div class="flex p-2 bg-linear-to-br to-secondary/40">
-        <div class="flex flex-col justify-end items-center">
-          <NuxtImg 
-            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg" 
-            format="webp" 
-            class="w-14" 
-          />
-        </div>
-        <div class="flex-auto flex flex-col justify-between items-center">
-          <NuxtImg 
-            src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp" 
-            class="w-full mb-2 max-w-28" 
-          />
-          <UButton 
-            to="/wallet/transaction-history" 
-            color="secondary" 
-            icon="i-lucide-gem" 
+    <AltHero class="bg-linear-to-br to-secondary/40 p-2" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
+      <div class="flex flex-col justify-end h-full">
+        <NuxtImg
+            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg"
+            format="webp"
+            class="w-14"
+        />
+      </div>
+      <div class="flex flex-col items-center justify-end size-full">
+        <NuxtImg
+            src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp"
+            density="3x"
+            class="mb-4 w-36"
+        />
+        <UButton
+            to="/wallet/transaction-history"
+            color="secondary"
+            icon="i-lucide-gem"
             trailing-icon="i-lucide-history"
-          >
-            {{ formatCurrency(userDiamonds) }}
-          </UButton>
-        </div>
-        <div class="flex flex-col justify-end">
-          <NuxtImg 
-            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg" 
-            format="webp" 
-            class="transform -scale-x-100 w-14" 
-          />
-        </div>
+        >
+          {{ formatCurrency(userDiamonds) }}
+        </UButton>
+      </div>
+      <div class="flex flex-col justify-end h-full">
+        <NuxtImg
+            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg"
+            format="webp"
+            class="transform -scale-x-100 w-14"
+        />
       </div>
     </AltHero>
     

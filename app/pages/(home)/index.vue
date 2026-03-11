@@ -158,10 +158,10 @@ const banners: Banner[] = [
           :items="banners"
           class-names
           :ui="{
-            container: 'pt-3 px-3',
-            item: 'basis-1/1 transition duration-800 ease-in-out scale-10 [&.is-snapped]:scale-100'
+            container: 'mt-4',
+            item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100'
           }"
-          class="mb-1"
+          class=""
       >
         <template #default="{ item }">
           <EventsBanners
@@ -177,7 +177,7 @@ const banners: Banner[] = [
 
 
     <!-- Country Filter -->
-    <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" />
+    <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />
 
 
     <div ref="roomRef">
@@ -192,11 +192,7 @@ const banners: Banner[] = [
           class="mb-6"
       >
         <template #default="{ item }">
-          <RoomCard
-            v-if="item"
-            :room="item"
-            class="aspect-9/12 rounded-xl"
-          />
+          <RoomCard v-if="item" :room="item"/>
         </template>
       </UCarousel>
     </div>

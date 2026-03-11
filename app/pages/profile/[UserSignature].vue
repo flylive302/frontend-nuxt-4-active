@@ -313,33 +313,30 @@ async function goToRoom() {
 
     <!-- Profile Content -->
     <template v-else-if="hasProfile">
-      <AltHero class="z-20" :image-src="profile?.cover_image ?? undefined">
-        <!-- Profile Info (above background) -->
-          <div class="relative flex px-3 min-h-[55vw] justify-center items-center bg-linear-to-br to-primary/30">
-            <UserAvatar 
-              :animated="true"
-              :img="profile?.avatar || undefined"
-              :frame-asset-url="profile?.frame ?? undefined"
-              class="w-24" 
+      <AltHero class="bg-linear-to-br to-primary/30" :image-src="profile?.cover_image ?? undefined">
+        <UserAvatar
+            :animated="true"
+            :img="profile?.avatar || undefined"
+            :frame-asset-url="profile?.frame ?? undefined"
+            class="w-24"
+        />
+        <div class="px-3">
+          <h1 class="text-lg font-bold">{{ profile?.name || 'Anonymous' }}</h1>
+          <ProfileBadge :txt="profile?.signature" />
+          <div class="flex gap-2 mt-1">
+            <!-- Dynamic level badges computed from user's XP -->
+            <ProfileBadge
+                :badge-src="wealthBadgeSrc"
+                color="tertiary"
+                :txt="String(wealthLevel)"
             />
-            <div class="px-3">
-              <h1 class="text-lg font-bold">{{ profile?.name || 'Anonymous' }}</h1>
-              <ProfileBadge :txt="profile?.signature" />
-              <div class="flex gap-2 mt-1">
-                <!-- Dynamic level badges computed from user's XP -->
-                <ProfileBadge
-                  :badge-src="wealthBadgeSrc"
-                  color="tertiary"
-                  :txt="String(wealthLevel)"
-                />
-                <ProfileBadge
-                  :badge-src="charmBadgeSrc"
-                  color="secondary"
-                  :txt="String(charmLevel)"
-                />
-              </div>
-            </div>
+            <ProfileBadge
+                :badge-src="charmBadgeSrc"
+                color="secondary"
+                :txt="String(charmLevel)"
+            />
           </div>
+        </div>
       </AltHero>
 
       <!-- User Stats -->

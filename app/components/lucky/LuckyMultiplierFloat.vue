@@ -26,9 +26,9 @@ defineProps<{
         :key="floater.id"
         class="lucky-float-item"
         :class="floater.colorClass"
-        :style="{ '--x-offset': `${(floater.id % 5) * 15 - 30}px` }"
+        :style="{ '--x-offset': `${(floater.id % 3) * 20 - 30}px` }"
       >
-        <span class="lucky-float-multiplier">
+        <span class="lucky-float-multiplier text-white">
           ×{{ floater.multiplier }}
         </span>
       </div>
@@ -39,9 +39,8 @@ defineProps<{
 <style scoped>
 .lucky-float-container {
   position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 30%;
+  left: 0;
   width: 200px;
   height: 200px;
   pointer-events: none;
@@ -55,9 +54,9 @@ defineProps<{
   left: 50%;
   font-weight: 800;
   font-size: 1.5rem;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 8px rgba(92, 92, 92, 0.5);
   white-space: nowrap;
-  animation: floatUp 2.5s ease-out forwards;
+  animation: floatUp 2s ease-out forwards;
   transform: translateX(var(--x-offset, 0));
 }
 

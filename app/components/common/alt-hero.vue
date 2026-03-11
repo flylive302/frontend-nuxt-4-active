@@ -7,6 +7,10 @@ withDefaults(defineProps<{
   blur: 2
 })
 
+defineOptions({
+  inheritAttrs: false
+});
+
 </script>
 
 <template>
@@ -17,17 +21,12 @@ withDefaults(defineProps<{
         densities="x1 x2"
         sizes="320px"
         width="100%"
-        class="min-w-full h-64 object-cover"
+        class="min-w-full aspect-rectangle object-cover"
     />
-    <div class="px-3 pt-[20vw] absolute inset-0">
-      <BgGlass
-          :noise-frequency="0.0001"
-          :noise-strength="10"
-          :frost-blur-radius="`blur(${blur}px)`"
-          class="w-full border border-white/40"
-      >
+    <div class="px-3 pt-[15vw] absolute inset-0">
+      <div class="flex items-center justify-center h-full border-3 border-white/5 rounded-2xl backdrop-blur-xs mt-6" v-bind="$attrs">
         <slot />
-      </BgGlass>
+      </div>
     </div>
   </div>
 </template>

@@ -154,8 +154,8 @@ watchEffect(() => {
       <template #second-link-text>Charm Level</template>
     </NavAlt>
 
-    <AltHero class="z-10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
-      <div class="p-2 w-full h-full bg-gradient-to-br to-tertiary/50 backdrop-blur-sm">
+    <AltHero class="bg-linear-to-br to-tertiary/10" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
+      <div class="p-2">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
           <UserAvatar :animated="true" :img="authStore.user?.avatar ?? undefined" class="col-span-2" />
@@ -203,7 +203,7 @@ watchEffect(() => {
       </div>
     </AltHero>
 
-    <div class="px-3 mt-2">
+    <div class="px-3 my-8">
       <!-- Error State -->
       <UAlert
         v-if="error"

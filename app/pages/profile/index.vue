@@ -46,24 +46,22 @@ onMounted(() => {
   <main>
     <NavAlt sub-menu-to="/profile/edit">My Profile</NavAlt>
 
-    <AltHero class="z-20" :image-src="authStore.user?.cover_image ?? undefined">
-      <div class="flex items-center justify-center min-h-[55vw] gap-2 bg-linear-to-br to-primary/30">
-        <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }">
-          <UserAvatar 
-            :animated="true" 
-            :frame-asset-url="authStore?.user?.frame ?? undefined" 
-            :img="authStore.user?.avatar ?? undefined" 
-            class="w-24" 
-          />
-        </NuxtLink>
+    <AltHero class="bg-linear-to-br to-primary/10" :image-src="authStore.user?.cover_image ?? undefined">
+      <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }">
+        <UserAvatar
+            :animated="true"
+            :frame-asset-url="authStore?.user?.frame ?? undefined"
+            :img="authStore.user?.avatar ?? undefined"
+            class="w-24"
+        />
+      </NuxtLink>
 
-        <div class="px-3">
-          <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
-          <ProfileBadge :txt="authStore?.user?.signature || undefined" />
-          <div class="flex gap-2">
-            <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
-            <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
-          </div>
+      <div class="px-3">
+        <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
+        <ProfileBadge :txt="authStore?.user?.signature || undefined" />
+        <div class="flex gap-2">
+          <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
+          <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
         </div>
       </div>
     </AltHero>
