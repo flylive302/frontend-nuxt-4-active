@@ -41,7 +41,8 @@ watch(
   () => roomStore.currentRoom,
   (room) => {
     if (!room) {
-      navigateTo('/', { replace: true });
+      const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+      navigateTo(target, { replace: true });
     }
   },
   { immediate: true },

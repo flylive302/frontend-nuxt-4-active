@@ -148,7 +148,8 @@ export function setupRoomEventHandlers({
       color: 'warning',
     });
     leaveRoom();
-    navigateTo('/');
+    const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+    navigateTo(target, { replace: true });
   });
 
   // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change.

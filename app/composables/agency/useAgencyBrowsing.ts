@@ -118,9 +118,12 @@ export function useAgencyBrowsing() {
     store.currentAgency.membersLoading = true
 
     try {
-      const params = {
-        cursor: store.currentAgency.membersCursor,
+      const params: Record<string, unknown> = {
         per_page: 20,
+      }
+
+      if (store.currentAgency.membersCursor) {
+        params.cursor = store.currentAgency.membersCursor
       }
 
       const response = await api<{
