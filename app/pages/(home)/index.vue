@@ -16,7 +16,6 @@ const roomRef = ref(null)
 
 // ---- Room Logic
 const { fetchRooms } = useRoom()
-const authStore = useAuthStore()
 
 // Default to "All" — shows rooms from every country
 const selectedCountry = ref<string>('')
@@ -192,7 +191,7 @@ const banners: Banner[] = [
           class="mb-6"
       >
         <template #default="{ item }">
-          <RoomCard v-if="item" :room="item"/>
+          <RoomCard v-if="item" :room="item" class="h-72 max-w-60"/>
         </template>
       </UCarousel>
     </div>
@@ -207,7 +206,7 @@ const banners: Banner[] = [
         <template #cell="{ cell }">
           <RoomCard
             :room="cell"
-            class="w-full aspect-9/12 rounded-md"
+            class="h-56 max-w-40 mb-4"
           />
         </template>
       </InfiniteScroll>

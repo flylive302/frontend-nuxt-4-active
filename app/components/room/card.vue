@@ -99,13 +99,13 @@ function enterRoom(): void {
 </script>
 
 <template>
-  <article v-bind="$attrs" class="relative h-72 max-w-60 rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
+  <article v-bind="$attrs" class="relative rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-        :src="props.room.background ?? 'https://ik.imagekit.io/flylive/room/5.gif'"
+        :src="props.room.background ?? 'https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp'"
         :alt="props.room.name ?? undefined"
-        class="h-auto w-full object-cover"
         :width="384"
+        class="h-auto w-full object-cover"
         format="webp"
         densities="x1 x2"
         sizes="50vw"
@@ -114,17 +114,20 @@ function enterRoom(): void {
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
 
-    <!-- SVG mask definition — sibling of aside, inside article -->
+    <!-- SVG mask definition — responsive via objectBoundingBox (0–1 coords) -->
     <svg width="0" height="0" class="absolute">
       <defs>
-        <mask id="squircle-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="350px" height="350px">
-          <rect width="250px" height="350px" fill="white"/>
+        <mask id="squircle-mask" maskContentUnits="objectBoundingBox">
+          <!-- Full area visible -->
+          <rect width="1" height="1" fill="white"/>
+          <!-- Cutout: inset ~3% each side, top 72% punched out -->
           <rect
-            x="8px"
-            y="8px"
-            width="220px"
-            height="250px"
-            rx="24"
+            x="0.04"
+            y="0.03"
+            width="0.92"
+            height="0.85"
+            rx="0.06"
+            ry="0.06"
             fill="black"
           />
         </mask>
@@ -162,8 +165,3 @@ function enterRoom(): void {
     @success="enterRoom"
   />
 </template>
-
-<style scoped>
-
-
-</style>
