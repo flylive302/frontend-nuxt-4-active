@@ -131,7 +131,8 @@ onMounted(() => {
             class="flex gap-2 p-2 border-b border-black shadow-lg shadow-primary-950/50"
           >
             <UserAvatar
-              :img="request.user?.avatar || undefined" animated
+              :img="request.user?.avatar ?? undefined"
+              :animated="true"
               class="size-12"
             />
 

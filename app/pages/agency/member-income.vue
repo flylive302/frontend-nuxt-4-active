@@ -220,9 +220,9 @@ onMounted(async () => {
           <div class="flex gap-2">
             <!-- Avatar -->
             <UserAvatar
-                :img="member.avatar_url || undefined"
+                :img="member.avatar_url ?? undefined"
+                :animated="true"
                 class="w-12 shrink-0"
-                animated
             />
 
             <!-- Info -->

@@ -80,7 +80,7 @@ async function handleMyRoomClick() {
             class="w-13"
             :animated="true"
             :frame-asset-url="authStore?.user?.frame ?? undefined"
-            :img="authStore.user?.avatar || undefined"
+            :img="authStore.user?.avatar ?? undefined"
         />
       </NuxtLink>
     </div>

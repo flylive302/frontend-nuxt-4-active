@@ -146,9 +146,9 @@ onMounted(async () => {
           <div class="flex items-center gap-3">
             <!-- Avatar -->
             <UserAvatar
-              :img="member.user.avatar || undefined"
+              :img="member.user.avatar ?? undefined"
+              :animated="true"
               class="w-12 shrink-0"
-              animated
             />
             
             <!-- Info -->

@@ -8,7 +8,6 @@ const props = defineProps<{
   user: MinimalUser
 }>()
 
-console.log(props.user);
 
 
 // ========================================
@@ -52,15 +51,15 @@ const charmLevel = computed(() =>
   <div class="overflow-hidden relative rounded-lg bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 shadow-md shadow-neutral-900">
 
     <div class="flex grow shadow-lg shadow-primary/10 pb-1">
-      <UserAvatar
-          :img="user.avatar"
-          :animated="true"
-          :frame-asset-url="user.frame ?? undefined"
-          class="w-14 ml-1"
-          @click="async () => {
+      <UserAvatar 
+        :img="user.avatar" 
+        animated 
+        :frame-asset-url="user.frame ?? undefined" 
+        class="w-14 ml-1"
+        @click="async () => {
           roomStore.minimizeRoom();
           navigateTo(`/profile/${user.signature}`);
-        }"
+        }" 
       />
 
       <div class="flex flex-col justify-center min-h-full px-2">

@@ -134,9 +134,9 @@ onMounted(() => {
             >
               <div class="flex items-center gap-3">
                 <UserAvatar
-                  :img="invitation.user?.avatar || undefined"
+                  :img="invitation.user?.avatar ?? undefined"
+                  :animated="true"
                   class="w-10 shrink-0"
-                  animated
                 />
                 <div class="flex-1 min-w-0">
                   <p class="font-semibold truncate">{{ invitation.user?.name }}</p>
@@ -174,9 +174,9 @@ onMounted(() => {
             >
               <div class="flex items-center gap-3">
                 <UserAvatar
-                  :img="invitation.user?.avatar || undefined"
+                  :img="invitation.user?.avatar ?? undefined"
+                  :animated="true"
                   class="w-8 shrink-0"
-                  animated
                 />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate text-sm">{{ invitation.user?.name }}</p>

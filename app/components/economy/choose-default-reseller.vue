@@ -315,9 +315,9 @@ const paletteGroups = computed<CommandGroup[]>(() => [
     <div v-if="selectedReseller" class="mt-2 flex gap-2 rounded-md p-2 shadow-md" :class="[gradientClass]">
       <div class="max-w-20 flex flex-col justify-center">
         <UserAvatar
-            :img="selectedReseller.avatar || undefined"
+            :img="selectedReseller.avatar ?? undefined"
             frame-name="frames/admin/coin_reseller-116-20-0-0"
-            animated
+            :animated="true"
         />
       </div>
 

@@ -159,7 +159,7 @@ watchEffect(() => {
       <div class="p-2">
         <!-- User Info Grid -->
         <div class="grid grid-cols-9 gap-1">
-          <UserAvatar :animated="true" :img="authStore.user?.avatar ?? undefined" class="col-span-2" />
+          <UserAvatar :animated="true" :frame-asset-url="authStore?.user?.frame ?? undefined" :img="authStore.user?.avatar ?? undefined" class="col-span-2" />
           <div class="col-span-5 flex flex-col justify-center">
             <p v-if="loading" class="text-base font-semibold animate-pulse">Loading...</p>
             <template v-else-if="user">
