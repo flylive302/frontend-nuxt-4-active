@@ -61,7 +61,14 @@ function processGiftQueue(socket: Ref<AudioSocket | null>) {
 
     const gift = giftQueue.shift();
     if (gift) {
-      socket.value.emit('gift:send', gift);
+      // GF-017: Re-verify seat at emit time (queue delay may make original check stale)
+      const roomStore = useRoomStore();
+      const stillSeated = roomStore.seats.some(
+        (seat) => seat.user !== null && seat.user.id === gift.recipientId,
+      );
+      if (stillSeated) {
+        socket.value.emit('gift:send', gift);
+      }
     }
 
     // Schedule next if queue still has items
@@ -106,6 +113,13 @@ export function useRoomGifts({
   function sendGift(giftId: number, recipientId: number, quantity: number = 1): void {
     const roomId = getCurrentRoomId();
     if (!socket.value || !roomId) return;
+
+    // GF-017: Last line of defense — verify recipient is seated before queuing
+    const roomStore = useRoomStore();
+    const isRecipientSeated = roomStore.seats.some(
+      (seat) => seat.user !== null && seat.user.id === recipientId,
+    );
+    if (!isRecipientSeated) return;
 
     // Push to queue for background processing
     giftQueue.push({

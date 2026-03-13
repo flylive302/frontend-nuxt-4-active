@@ -51,6 +51,7 @@ export function useGiftSending() {
   // ========================================
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
+  const roomStore = useRoomStore();
   const { sendGift: emitGift } = useRoomAudio();
   const { triggerFly } = useLuckyFly();
   const toast = useToast();
@@ -93,6 +94,26 @@ export function useGiftSending() {
    * Whether send is allowed
    */
   const canSend = computed(() => giftStore.canSend);
+
+  // ========================================
+  // Helpers
+  // ========================================
+
+  /**
+   * GF-017: Get the set of user IDs currently seated in the room.
+   * Reads roomStore.seats directly (not through Pinia computed indirection)
+   * for guaranteed fresh reactivity.
+   */
+  function getSeatedUserIds(): Set<number> {
+    const currentUserId = authStore.user?.id;
+    const ids = new Set<number>();
+    for (const seat of roomStore.seats) {
+      if (seat.user !== null && seat.user.id !== currentUserId) {
+        ids.add(seat.user.id);
+      }
+    }
+    return ids;
+  }
 
   // ========================================
   // Methods
@@ -201,8 +222,16 @@ export function useGiftSending() {
       return false;
     }
 
+    // GF-017: Filter against currently seated recipients (direct seat read)
+    const seatedIds = getSeatedUserIds();
+    const validRecipients = currentPlayback.recipientIds.filter(id => seatedIds.has(id));
+    if (validRecipients.length === 0) {
+      giftStore.clearPlayback();
+      return false;
+    }
+
     const comboCost = currentPlayback.gift.price
-      * currentPlayback.recipientIds.length
+      * validRecipients.length
       * currentPlayback.quantity;
 
     const coins = Number(authStore.user?.coins ?? 0);
@@ -216,8 +245,8 @@ export function useGiftSending() {
       return false;
     }
 
-    // Emit socket event for each recipient again
-    for (const recipientId of currentPlayback.recipientIds) {
+    // Emit socket event for each valid (seated) recipient
+    for (const recipientId of validRecipients) {
       emitGift(currentPlayback.gift.id, recipientId, currentPlayback.quantity);
     }
 
@@ -238,7 +267,15 @@ export function useGiftSending() {
     const ctx = lastLuckyContext.value;
     if (!ctx) return false;
 
-    const comboCost = ctx.gift.price * ctx.recipientIds.length * ctx.quantity;
+    // GF-017: Filter against currently seated recipients (direct seat read)
+    const seatedIds = getSeatedUserIds();
+    const validRecipients = ctx.recipientIds.filter(id => seatedIds.has(id));
+    if (validRecipients.length === 0) {
+      endLuckyCombo();
+      return false;
+    }
+
+    const comboCost = ctx.gift.price * validRecipients.length * ctx.quantity;
     const coins = Number(authStore.user?.coins ?? 0);
 
     if (coins < comboCost) {
@@ -250,14 +287,14 @@ export function useGiftSending() {
       return false;
     }
 
-    // Emit socket event for each recipient
-    for (const recipientId of ctx.recipientIds) {
+    // Emit socket event for each valid (seated) recipient
+    for (const recipientId of validRecipients) {
       emitGift(ctx.gift.id, recipientId, ctx.quantity);
     }
 
     // Deduct coins and play fly animation
     deductCoins(comboCost);
-    for (const recipientId of ctx.recipientIds) {
+    for (const recipientId of validRecipients) {
       triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
     }
 
@@ -282,6 +319,35 @@ export function useGiftSending() {
     const currentCoins = Number(authStore.user?.coins ?? 0);
     authStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
   }
+
+  // ========================================
+  // GF-017: Auto-end combo when all recipients leave seats
+  // ========================================
+  watch(
+    () => roomStore.seats.map(s => s.user?.id ?? null),
+    () => {
+      const seatedIds = getSeatedUserIds();
+
+      // Auto-end regular combo
+      if (giftStore.currentPlayback) {
+        const hasSeatedRecipient = giftStore.currentPlayback.recipientIds
+          .some(id => seatedIds.has(id));
+        if (!hasSeatedRecipient) {
+          giftStore.clearPlayback();
+        }
+      }
+
+      // Auto-end lucky combo
+      if (lastLuckyContext.value) {
+        const hasSeatedRecipient = lastLuckyContext.value.recipientIds
+          .some(id => seatedIds.has(id));
+        if (!hasSeatedRecipient) {
+          endLuckyCombo();
+        }
+      }
+    },
+    { deep: true },
+  );
 
   // ========================================
   // Return
