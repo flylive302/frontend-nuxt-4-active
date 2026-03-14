@@ -48,7 +48,7 @@ const totalDiamonds = computed(() =>
 )
 
 const totalCoinsContributed = computed(() => 
-  members.value.reduce((sum, m) => sum + m.total_coins_contributed, 0)
+  members.value.reduce((sum, m) => sum + m.total_coins_contributed * 3.3333, 0)
 )
 
 // ========================================
@@ -252,8 +252,8 @@ onMounted(async () => {
                 size="sm"
             />
             <p class="text-xs text-white mt-1">
-              {{ member.current_target.earned_coins.toLocaleString() }} /
-              {{ member.current_target.required_coins.toLocaleString() }} coins
+              {{ (member.current_target.earned_coins * 3.333333).toLocaleString() }} /
+              {{ (member.current_target.required_coins * 3.333333).toLocaleString() }} coins
             </p>
 
             <p class="text-sm text-info bg-info/10 px-2 py-1 absolute bottom-0 right-0">
