@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { Form } from '@nuxt/ui'
+import type { Country } from '~/composables/auth/usePhoneSchema'
 
 import type {UpdateProfilePayload, GenderOption} from "~/types/user/auth";
 
@@ -27,41 +28,8 @@ const ICON_NON_BINARY = 'i-lucide-non-binary' as const
 const ICON_HELP_CIRCLE = 'i-lucide-help-circle' as const
 const ICON_DEFAULT_GENDER = 'i-lucide-venus-and-mars' as const
 
-const formSchema = z.object({
-  gender: z.number().min(1, 'Please select a gender'),
-  email: z.email('Invalid email'),
-  dateOfBirth: z
-    .custom<DateValue>(
-      (value) => value instanceof CalendarDate,
-      { message: 'Please select a valid date of birth' }
-    )
-    .refine(
-      (selectedDate) => {
-        // Use @internationalized/date for consistent comparison
-        // This avoids timezone issues by comparing calendar dates directly
-        const now = today(getLocalTimeZone())
-
-        // Calculate age based on year difference
-        let age = now.year - selectedDate.year
-
-        // Adjust if birthday hasn't occurred yet this year
-        // Compare (month, day) tuples
-        if (
-          now.month < selectedDate.month ||
-          (now.month === selectedDate.month && now.day < selectedDate.day)
-        ) {
-          age--
-        }
-
-        return age >= MINIMUM_AGE_REQUIREMENT
-      },
-      { message: `You must be at least ${MINIMUM_AGE_REQUIREMENT} years old` }
-    ),
-})
-
-type FormSchema = z.infer<typeof formSchema>
-
-type FormState = Partial<Omit<FormSchema, 'dateOfBirth'>> & { dateOfBirth: DateValue | null }
+const INVALID_FLAG_CODES = new Set(['an'])
+const DEFAULT_FLAG_ICON = 'i-lucide-earth'
 
 const genderOptions: GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
@@ -78,25 +46,79 @@ const calendarDefaultDate = new CalendarDate(
 
 const authStore = useAuthStore()
 
-// Pre-fill from social auth data (or any existing user data)
-const rawDob = authStore.user?.date_of_birth as string | undefined
-const userDob = rawDob
-  ? (() => {
-      const d = new Date(rawDob)
-      return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate())
-    })()
-  : null
+// ========================================
+// Determine which fields are missing
+// ========================================
 
-const formState = reactive<FormState>({
-  gender: authStore.user?.gender != null ? Number(authStore.user.gender) : undefined,
-  email: authStore.user?.email ?? '',
-  dateOfBirth: userDob,
+const needsGender = computed(() => authStore.user?.gender == null)
+const needsEmail = computed(() => !authStore.user?.email)
+const needsDateOfBirth = computed(() => !authStore.user?.date_of_birth)
+const needsCountry = computed(() => !authStore.user?.country)
+const needsAvatar = computed(() => !authStore.user?.avatar)
+
+/** True when there are fields the user still needs to fill in */
+const hasMissingFields = computed(() =>
+  needsGender.value || needsEmail.value || needsDateOfBirth.value || needsCountry.value
+)
+
+// ========================================
+// Dynamic Zod Schema — only validates shown fields
+// ========================================
+
+const formSchema = computed(() => {
+  const shape: Record<string, z.ZodTypeAny> = {}
+
+  if (needsGender.value) {
+    shape.gender = z.number().min(1, 'Please select a gender')
+  }
+
+  if (needsEmail.value) {
+    shape.email = z.string().email('Invalid email')
+  }
+
+  if (needsDateOfBirth.value) {
+    shape.dateOfBirth = z
+      .custom<DateValue>(
+        (value) => value instanceof CalendarDate,
+        { message: 'Please select a valid date of birth' }
+      )
+      .refine(
+        (selectedDate) => {
+          const now = today(getLocalTimeZone())
+          let age = now.year - selectedDate.year
+          if (
+            now.month < selectedDate.month ||
+            (now.month === selectedDate.month && now.day < selectedDate.day)
+          ) {
+            age--
+          }
+          return age >= MINIMUM_AGE_REQUIREMENT
+        },
+        { message: `You must be at least ${MINIMUM_AGE_REQUIREMENT} years old` }
+      )
+  }
+
+  if (needsCountry.value) {
+    shape.country = z.string().min(2, 'Please select a country')
+  }
+
+  return z.object(shape)
 })
 
-const dateOfBirthModel = ref<CalendarDate | undefined>(userDob ?? undefined)
 
-// Computed wrapper for UCalendar v-model compatibility
-// UCalendar expects DateValue from @nuxt/ui, but we use CalendarDate from @internationalized/date
+// ========================================
+// Form State
+// ========================================
+
+const formState = reactive<Record<string, any>>({
+  gender: undefined,
+  email: '',
+  dateOfBirth: null as DateValue | null,
+  country: '',
+})
+
+const dateOfBirthModel = ref<CalendarDate | undefined>(undefined)
+
 const calendarModel = computed({
   get: () => dateOfBirthModel.value as DateValue | undefined,
   set: (value: DateValue | undefined) => {
@@ -112,8 +134,52 @@ watch(dateOfBirthModel, (value) => {
   formState.dateOfBirth = value ?? null
 })
 
-const formRef = ref<Form<FormSchema> | null>(null)
+// ========================================
+// Country Picker (standalone, no phone)
+// ========================================
 
+const { countries, loading: countriesLoading, ensureLoaded, detectIfAllowed } = useCountries()
+
+const selectedCountry = ref<Country | undefined>(undefined)
+
+function getFlagIconName(code: string): string {
+  const normalized = (code || '').toLowerCase()
+  if (INVALID_FLAG_CODES.has(normalized)) return DEFAULT_FLAG_ICON
+  return `i-flag-${normalized}-4x3`
+}
+
+function onCountryChange(country: Country | undefined): void {
+  if (!country) return
+  selectedCountry.value = country
+  formState.country = country.code
+}
+
+onMounted(async () => {
+  if (needsCountry.value) {
+    await ensureLoaded()
+    const detected = await detectIfAllowed()
+    if (detected) {
+      onCountryChange(detected)
+    }
+  }
+})
+
+// ========================================
+// Gender Icon
+// ========================================
+
+const selectedGenderIcon = computed<string>(() => {
+  const matchedOption = genderOptions.find(
+    (option) => option.value === formState.gender
+  )
+  return matchedOption?.icon ?? ICON_DEFAULT_GENDER
+})
+
+// ========================================
+// Avatar Upload
+// ========================================
+
+const formRef = ref<Form<any> | null>(null)
 const { updateProfile, uploadAvatar } = useAuth()
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
@@ -123,23 +189,11 @@ const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldEr
 const emailError = computed(() => getFieldError('email'))
 const genderError = computed(() => getFieldError('gender'))
 const dateOfBirthError = computed(() => getFieldError('dateOfBirth') || getFieldError('date_of_birth'))
-
-/**
- * Determines the icon to display based on the selected gender option.
- */
-const selectedGenderIcon = computed<string>(() => {
-  const matchedOption = genderOptions.find(
-    (option) => option.value === formState.gender
-  )
-  return matchedOption?.icon ?? ICON_DEFAULT_GENDER
-})
+const countryError = computed(() => getFieldError('country'))
 
 const isUploadingAvatar = ref(false)
 const toast = useToast()
 
-/**
- * User's avatar URL (BootstrapUser.avatar is now a string directly).
- */
 const avatarUrl = computed<string | null>(() => {
   return authStore.user?.avatar ?? null
 })
@@ -159,30 +213,39 @@ async function handleAvatarSelected(file: File) {
   }
 }
 
-/**
- * Handles form submission by validating data, preparing the API payload,
- * and updating the user's profile information.
- */
+// ========================================
+// Form Submission
+// ========================================
+
 async function handleFormSubmit(): Promise<void> {
   await handleSubmit(async () => {
-    const profilePayload = buildProfileUpdatePayload(formState as FormSchema)
+    const profilePayload = buildProfileUpdatePayload()
     await updateProfile(profilePayload)
     await navigateTo('/')
   })
 }
 
-/**
- * Builds the profile update payload from validated form data.
- */
-function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfilePayload {
-  return {
-    gender: validatedFormData.gender,
-    email: validatedFormData.email,
-    date_of_birth: validatedFormData.dateOfBirth.toString(),
+function buildProfileUpdatePayload(): UpdateProfilePayload {
+  const payload: UpdateProfilePayload = {}
+
+  if (needsGender.value && formState.gender !== undefined) {
+    payload.gender = formState.gender
   }
+  if (needsEmail.value && formState.email) {
+    payload.email = formState.email
+  }
+  if (needsDateOfBirth.value && formState.dateOfBirth) {
+    payload.date_of_birth = formState.dateOfBirth.toString()
+  }
+  if (needsCountry.value && formState.country) {
+    payload.country = formState.country
+  }
+
+  return payload
 }
 
 </script>
+
 
 <template>
   <main>
@@ -198,9 +261,10 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
 
     <SectionTitle class="my-3">Complete your Profile</SectionTitle>
 
-
+    <!-- Avatar + Welcome Section — always shown -->
     <div class="my-3 flex gap-2">
       <FileUpload
+        v-if="needsAvatar"
         :current-image="avatarUrl"
         :loading="isUploadingAvatar"
         crop
@@ -211,18 +275,30 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
           Hy! {{authStore.user?.name}}. here is your Signature
           <UBadge color="success" variant="soft" icon="i-lucide-pen-tool" class="text-success-200 text-md font-semibold">{{authStore.user?.signature}}</UBadge>
         </h1>
-        <p class="text-sm text-warning-400"> <UIcon name="i-lucide-arrow-left" class="animate-pulse"/> You may Please Upload your profile picture from the input on left.</p>
+        <p v-if="needsAvatar" class="text-sm text-warning-400"> <UIcon name="i-lucide-arrow-left" class="animate-pulse"/> You may Please Upload your profile picture from the input on left.</p>
       </div>
     </div>
 
+    <!-- If all required fields are filled, show a success message -->
+    <div v-if="!hasMissingFields" class="text-center py-8">
+      <UIcon name="i-lucide-check-circle" class="size-12 text-success mb-4" />
+      <p class="text-lg text-success-400 font-semibold">Your profile is complete!</p>
+      <UButton class="mt-4" variant="solid" color="primary" @click="navigateTo('/', { replace: true })">
+        Continue to App
+      </UButton>
+    </div>
+
+    <!-- Dynamic form: only shows missing fields -->
     <UForm
+      v-else
       ref="formRef"
       :schema="formSchema"
-      :state="{ ...formState, dateOfBirth: formState.dateOfBirth ?? undefined } as Partial<FormSchema>"
+      :state="formState"
       class="space-y-3"
       @submit="handleFormSubmit"
     >
-      <UFormField label="Gender" name="gender" required :error="genderError">
+      <!-- Gender -->
+      <UFormField v-if="needsGender" label="Gender" name="gender" required :error="genderError">
         <USelect 
           v-model.number="formState.gender" 
           :items="genderOptions" 
@@ -233,7 +309,8 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
         />
       </UFormField>
 
-      <UFormField label="Date of Birth" name="dateOfBirth" required :error="dateOfBirthError">
+      <!-- Date of Birth -->
+      <UFormField v-if="needsDateOfBirth" label="Date of Birth" name="dateOfBirth" required :error="dateOfBirthError">
         <UPopover>
           <UButton 
             color="neutral" 
@@ -254,7 +331,8 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
         </UPopover>
       </UFormField>
 
-      <UFormField label="Email" name="email" required :error="emailError">
+      <!-- Email -->
+      <UFormField v-if="needsEmail" label="Email" name="email" required :error="emailError">
         <UInput 
           v-model="formState.email" 
           class="w-full" 
@@ -262,6 +340,45 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
           icon="i-lucide-at-sign"
           placeholder="email@example.com" 
         />
+      </UFormField>
+
+      <!-- Country -->
+      <UFormField v-if="needsCountry" label="Country" name="country" required :error="countryError">
+        <USelectMenu
+          v-model="selectedCountry"
+          :items="(countries as Country[])"
+          :loading="countriesLoading"
+          virtualize
+          label-key="name"
+          placeholder="Select your country"
+          :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...' }"
+          size="lg"
+          class="w-full"
+          @update:model-value="onCountryChange"
+        >
+          <template #leading>
+            <UIcon
+              v-if="selectedCountry?.code"
+              :name="getFlagIconName(selectedCountry.code)"
+              class="size-5 rounded overflow-hidden h-4"
+            />
+            <UIcon v-else :name="DEFAULT_FLAG_ICON" />
+          </template>
+
+          <template #item-leading="{ item }">
+            <UIcon
+              v-if="(item as Country)?.code"
+              :name="getFlagIconName((item as Country).code)"
+              class="size-5 rounded overflow-hidden h-4"
+            />
+          </template>
+
+          <template #item-label="{ item }">
+            <template v-if="item">
+              {{ (item as Country).name }}
+            </template>
+          </template>
+        </USelectMenu>
       </UFormField>
 
       <UButton 
@@ -276,4 +393,3 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
     </UForm>
   </main>
 </template>
-

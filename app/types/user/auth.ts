@@ -55,4 +55,5 @@ export interface UpdateProfilePayload {
   gender?: number
   email?: string
   date_of_birth?: string
+  country?: string
 }
