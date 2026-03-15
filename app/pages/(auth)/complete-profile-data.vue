@@ -76,13 +76,24 @@ const calendarDefaultDate = new CalendarDate(
   DEFAULT_CALENDAR_DAY
 )
 
+const authStore = useAuthStore()
+
+// Pre-fill from social auth data (or any existing user data)
+const rawDob = authStore.user?.date_of_birth as string | undefined
+const userDob = rawDob
+  ? (() => {
+      const d = new Date(rawDob)
+      return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate())
+    })()
+  : null
+
 const formState = reactive<FormState>({
-  gender: undefined,
-  email: '',
-  dateOfBirth: null,
+  gender: authStore.user?.gender != null ? Number(authStore.user.gender) : undefined,
+  email: authStore.user?.email ?? '',
+  dateOfBirth: userDob,
 })
 
-const dateOfBirthModel = ref<CalendarDate | undefined>(undefined)
+const dateOfBirthModel = ref<CalendarDate | undefined>(userDob ?? undefined)
 
 // Computed wrapper for UCalendar v-model compatibility
 // UCalendar expects DateValue from @nuxt/ui, but we use CalendarDate from @internationalized/date
@@ -103,7 +114,6 @@ watch(dateOfBirthModel, (value) => {
 
 const formRef = ref<Form<FormSchema> | null>(null)
 
-const authStore = useAuthStore()
 const { updateProfile, uploadAvatar } = useAuth()
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({

@@ -65,13 +65,12 @@ type LoginFormState = z.infer<typeof loginSchema.value>
  */
 async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
   await handleSubmit(async () => {
-    const { password, rememberMe, dialCode, phone, countryCode } = event.data
+    const { password, dialCode, phone, countryCode } = event.data
 
     const loginPayload: LoginPayload = {
       phone: normalizePhone(dialCode, phone),
       country: countryCode,
-      password,
-      remember_me: rememberMe
+      password
     }
 
     await login(loginPayload)

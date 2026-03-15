@@ -10,8 +10,8 @@ export default defineNuxtPlugin(() => {
     const authStore = useAuthStore()
     const token = useCookie('sanctum_token')
 
-    // Set token if available (bootstrap plugin will fetch user data)
-    if (token.value) {
+    // Set token if available and not already set (avoids cookie→store→cookie cycle)
+    if (token.value && token.value !== authStore.token) {
         authStore.setToken(token.value)
     }
 })

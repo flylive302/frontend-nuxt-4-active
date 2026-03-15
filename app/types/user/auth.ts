@@ -6,6 +6,12 @@
 export type { BootstrapUser as User } from './bootstrap'
 
 // ========================================
+// Social Auth
+// ========================================
+
+export type SocialProvider = 'google' | 'facebook' | 'apple'
+
+// ========================================
 // Gender Options (for forms)
 // ========================================
 
@@ -32,7 +38,6 @@ export interface LoginPayload {
   country: string            // ISO 3166-1 alpha-2 (backend field)
   dial_code?: string         // For display only, not sent to backend
   password?: string
-  remember_me?: boolean
 }
 
 export interface RegisterPayload {

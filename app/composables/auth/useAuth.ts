@@ -222,6 +222,17 @@ export function useAuth() {
     }
   }
 
+  /**
+   * Gets the OAuth redirect URL for a social provider.
+   * The frontend should redirect the user to this URL to start the OAuth flow.
+   * @param provider - The social provider to authenticate with.
+   * @returns The redirect URL to the OAuth provider.
+   */
+  async function getSocialRedirectUrl(provider: string): Promise<string> {
+    const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
+    return data.redirect_url
+  }
+
   return {
     login,
     register,
@@ -231,5 +242,6 @@ export function useAuth() {
     uploadCoverImage,
     refreshMsabToken,
     emitProfileSync,
+    getSocialRedirectUrl,
   }
 }

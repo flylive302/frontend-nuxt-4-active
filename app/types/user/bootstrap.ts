@@ -45,6 +45,7 @@ export interface BootstrapUser {
   // Contact & Location
   phone: string | null          // E.164 format
   country: string | null        // ISO 2-letter code
+  email: string | null
 
   // Demographics
   gender: string | null
