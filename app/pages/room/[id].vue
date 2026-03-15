@@ -181,6 +181,9 @@ onUnmounted(() => {
 
         <RoomInfo />
 
+        <!-- Audio Player (music playback) -->
+        <RoomAudioPlayer />
+
         <!-- Seats Grid -->
         <main class="grid grid-cols-5 gap-x-2">
           <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? 15)" :key="i" :seat-id="i" />

@@ -30,12 +30,15 @@ export interface JoinRoomPayload {
   seatCount?: number;
 }
 
+import type { MusicPlayerJoinState } from './audio-player';
+
 export interface JoinRoomResponse {
   rtpCapabilities?: RtpCapabilities;
   participants?: RoomParticipant[];
   seats?: { seatIndex: number; userId: number; isMuted: boolean }[];
   lockedSeats?: number[];
   existingProducers?: { producerId: string; userId: number }[];
+  musicPlayer?: MusicPlayerJoinState | null;
   error?: string;
 }
 

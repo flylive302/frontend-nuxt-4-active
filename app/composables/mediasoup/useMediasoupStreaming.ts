@@ -18,7 +18,8 @@ type Consumer = mediasoupTypes.Consumer;
 // ============================================
 // Shared State (Module-level Singleton)
 // ============================================
-const producer = ref<Producer | null>(null);
+const producer = shallowRef<Producer | null>(null);
+const musicProducer = shallowRef<Producer | null>(null);
 const consumers = ref<Map<string, Consumer>>(new Map());
 const audioElements = new Map<string, HTMLAudioElement>();
 const isLocalMuted = ref(false);
@@ -97,6 +98,50 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       producer.value = null;
       isLocalMuted.value = false;
       log.debug('Stopped producing audio');
+    }
+  }
+
+  /**
+   * Produce an arbitrary MediaStreamTrack (e.g. from the audio player).
+   * Creates producer transport if needed. Stores in musicProducer.
+   *
+   * @param track - The MediaStreamTrack to produce
+   * @returns The created Producer, or null on failure
+   */
+  async function produceTrack(track: MediaStreamTrack): Promise<void> {
+    // Create producer transport if needed
+    if (!producerTransport.value) {
+      await createProducerTransport();
+    }
+
+    if (!producerTransport.value) {
+      log.error('Cannot produce track: no producer transport');
+      return;
+    }
+
+    musicProducer.value = await producerTransport.value.produce({ track });
+
+    musicProducer.value.on('transportclose', () => {
+      log.debug('Music producer transport closed');
+      musicProducer.value = null;
+    });
+
+    musicProducer.value.on('trackended', () => {
+      log.debug('Music producer track ended');
+      stopMusicProducer();
+    });
+
+    log.debug('Started producing music track:', musicProducer.value.id);
+  }
+
+  /**
+   * Stop producing the music track and close the music producer.
+   */
+  function stopMusicProducer(): void {
+    if (musicProducer.value) {
+      musicProducer.value.close();
+      musicProducer.value = null;
+      log.debug('Stopped producing music');
     }
   }
 
@@ -246,6 +291,9 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // Close producer
     stopAudio();
 
+    // Close music producer
+    stopMusicProducer();
+
     // Close all consumers
     consumers.value.forEach((consumer) => consumer.close());
     consumers.value.clear();
@@ -290,6 +338,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   // ========================================
   return {
     producer,
+    musicProducer,
     consumers,
     audioElements,
     isProducing,
@@ -297,6 +346,8 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     currentVolume,
     startAudio,
     stopAudio,
+    produceTrack,
+    stopMusicProducer,
     toggleLocalMute,
     consumeProducer,
     stopConsumer,

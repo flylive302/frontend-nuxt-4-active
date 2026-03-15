@@ -20,6 +20,7 @@ import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 import { REGION_ENDPOINTS } from '~/constants/audio';
+import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 
 // ============================================
 // Types
@@ -50,6 +51,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   isAudioReady: ComputedRef<boolean>;
   /** Set volume for all consumer audio (0-1) */
   setVolume: (volume: number) => void;
+  /** Audio player composable for music playback */
+  audioPlayer: ReturnType<typeof import('./audio/useRoomAudioPlayer').useRoomAudioPlayer>;
 }
 
 // ============================================
@@ -198,6 +201,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     socket,
     getCurrentRoomId,
   });
+
+  // Audio player (music playback through mediasoup)
+  const audioPlayer = useRoomAudioPlayer(socket);
 
   // ========================================
   // Room Lifecycle
@@ -364,6 +370,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
       }
     }
 
+    // 4. Initialize audio player state from join response
+    if (response.musicPlayer) {
+      audioPlayer.initFromJoinState(response.musicPlayer);
+    }
+    audioPlayer.setupListeners();
+
     // log.debug('Joined room:', roomId);
   }
 
@@ -388,6 +400,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Stop any playing gift animation and flush playback queue
     giftStore.clearPlayback();
+
+    // Cleanup audio player
+    audioPlayer.cleanup(targetRoomId ?? undefined);
 
     // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
     // Socket is managed by socket.client.ts plugin, disconnects only on logout
@@ -429,5 +444,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Volume
     setVolume: setMediasoupVolume,
+
+    // Audio player
+    audioPlayer,
   };
 }
