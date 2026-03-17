@@ -89,6 +89,7 @@ export interface TransportCreateData {
   iceParameters: IceParameters;
   iceCandidates: IceCandidate[];
   dtlsParameters: DtlsParameters;
+  iceServers?: RTCIceServer[];
 }
 
 export type TransportCreateResponse = MediaResponse<TransportCreateData>;

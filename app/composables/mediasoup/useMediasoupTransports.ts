@@ -83,6 +83,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       iceParameters: consumerResponse.data.iceParameters,
       iceCandidates: consumerResponse.data.iceCandidates,
       dtlsParameters: consumerResponse.data.dtlsParameters,
+      iceServers: consumerResponse.data.iceServers,
     });
 
     // Handle consumer transport connection
@@ -151,6 +152,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       iceParameters: response.data.iceParameters,
       iceCandidates: response.data.iceCandidates,
       dtlsParameters: response.data.dtlsParameters,
+      iceServers: response.data.iceServers,
     });
 
     // Handle producer transport connection

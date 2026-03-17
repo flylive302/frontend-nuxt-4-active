@@ -40,6 +40,7 @@ const playerState = reactive<AudioPlayerState>({
 let audioContext: AudioContext | null = null;
 let audioBuffer: AudioBuffer | null = null;
 let sourceNode: AudioBufferSourceNode | null = null;
+let sourceNodeStarted = false; // track whether start() was called — stop() without start() throws InvalidStateError
 let gainNode: GainNode | null = null;
 let destinationNode: MediaStreamAudioDestinationNode | null = null;
 let positionInterval: ReturnType<typeof setInterval> | null = null;
@@ -206,6 +207,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     // Start playback
     sourceNode.start(0, playbackStartOffset);
+    sourceNodeStarted = true;
     playbackStartTime = ctx.currentTime;
 
     // Update state
@@ -265,11 +267,14 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     const clampedPos = Math.max(0, Math.min(position, audioBuffer.duration));
 
-    // Stop current source
+    // Stop current source (only call stop() if start() was previously called)
     if (sourceNode) {
       sourceNode.onended = null;
-      sourceNode.stop();
+      if (sourceNodeStarted) {
+        try { sourceNode.stop(); } catch { /* already stopped */ }
+      }
       sourceNode.disconnect();
+      sourceNodeStarted = false;
     }
 
     // Create new source at the seek position
@@ -290,6 +295,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     if (playerState.status === 'playing') {
       sourceNode.start(0, clampedPos);
+      sourceNodeStarted = true;
       playbackStartTime = audioContext.currentTime;
     }
 
@@ -309,9 +315,12 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     // Stop and disconnect Web Audio nodes
     if (sourceNode) {
       sourceNode.onended = null;
-      try { sourceNode.stop(); } catch { /* already stopped */ }
+      if (sourceNodeStarted) {
+        try { sourceNode.stop(); } catch { /* already stopped */ }
+      }
       sourceNode.disconnect();
       sourceNode = null;
+      sourceNodeStarted = false;
     }
     if (gainNode) {
       gainNode.disconnect();
