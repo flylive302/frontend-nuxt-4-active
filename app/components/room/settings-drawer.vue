@@ -19,12 +19,23 @@ const open = defineModel<boolean>('open', { default: false })
 // ========================================
 
 const roomStore = useRoomStore()
+const authStore = useAuthStore()
 const { requestToJoin, cancelJoinRequest, fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
 const { acceptInvitation, declineInvitation, receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
 const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers()
 const { api, normalizeError } = useApi()
 const { createUploadState } = useImageUpload()
+const { socket } = useAudioSocket()
 const toast = useToast()
+
+// Music player (restricted to canEdit users)
+const {
+  playerState: musicPlayerState,
+  isMusicPlayingInRoom,
+  loadFile: loadMusicFile,
+  play: playMusic,
+} = useRoomAudioPlayer(socket)
+const { produceTrack, stopMusicProducer: _stopMusicProducer } = useMediasoupStreaming(socket)
 
 // ========================================
 // Computed
@@ -69,6 +80,47 @@ const canEdit = computed(() => {
 
 /** Whether current user is the room owner (for password-only controls) */
 const isOwnerOnly = computed(() => isRoomOwner.value)
+
+// ========================================
+// Music Player State (Owner / Admin only)
+// ========================================
+
+const showMusicUploader = ref(false)
+const isMusicLoading = ref(false)
+
+/** True when no music is playing or this user is the current music player. */
+const canPlayMusic = computed(() =>
+  !isMusicPlayingInRoom.value || musicPlayerState.userId === authStore.user?.id
+)
+
+const currentRoomId = computed(() => roomStore.currentRoom?.id?.toString() ?? '')
+
+/**
+ * Load the selected audio file and start streaming it to all room participants.
+ */
+async function handleMusicFileSelected(file: File): Promise<void> {
+  isMusicLoading.value = true
+  try {
+    await loadMusicFile(file)
+    showMusicUploader.value = false
+    await handleMusicPlay()
+  } catch (err) {
+    console.error('[SettingsDrawer] Failed to load audio file:', err)
+    toast.add({ title: 'Music Error', description: 'Failed to load audio file.', color: 'error' })
+  } finally {
+    isMusicLoading.value = false
+  }
+}
+
+/**
+ * Acquire the MSAB music mutex and produce the audio track via mediasoup.
+ */
+async function handleMusicPlay(): Promise<void> {
+  if (!currentRoomId.value) return
+  const track = await playMusic(currentRoomId.value)
+  if (!track) return
+  await produceTrack(track)
+}
 
 // ========================================
 // Form State (Owner Only)
@@ -433,6 +485,24 @@ onBeforeUnmount(() => {
               </UButton>
             </template>
 
+            <!-- Play Music (Owner / Admin only) -->
+            <div class="border-t border-neutral-700 pt-3">
+              <UButton
+                v-if="canPlayMusic"
+                icon="i-lucide-music"
+                color="primary"
+                variant="subtle"
+                size="lg"
+                class="w-full justify-center"
+                @click="showMusicUploader = true"
+              >
+                Play Music
+              </UButton>
+              <p v-else class="text-xs text-neutral-400 text-center">
+                Music is currently being played by another user.
+              </p>
+            </div>
+
             <!-- Save Button -->
             <UButton
               icon="i-lucide-save"
@@ -446,6 +516,13 @@ onBeforeUnmount(() => {
             </UButton>
           </div>
         </template>
+
+        <!-- Audio File Picker (triggered from Play Music button) -->
+        <RoomAudioPlayerUploader
+          v-model:open="showMusicUploader"
+          :is-loading="isMusicLoading"
+          @file-selected="handleMusicFileSelected"
+        />
 
         <!-- Membership Actions -->
         <SectionTitle>Membership</SectionTitle>

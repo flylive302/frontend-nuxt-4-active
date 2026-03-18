@@ -1,19 +1,20 @@
 <script setup lang="ts">
 /**
- * RoomAudioPlayer — Main audio player container
+ * RoomAudioPlayer — Draggable floating music player panel.
  *
- * Displays the currently playing track info, progress bar,
- * and playback controls. Visible to all room participants.
- * Only the active music player (or room owner) can interact with controls.
+ * Only visible to the room participant who is actively playing music.
+ * All other users receive no UI — audio reaches them silently via mediasoup.
+ * Play Music trigger lives in RoomSettingsDrawer (owner / admin only).
  */
+import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 import { useRoomAudioPlayer } from '~/composables/room/audio/useRoomAudioPlayer';
 
 // ========================================
 // Dependencies
 // ========================================
 
-const roomStore = useRoomStore();
 const authStore = useAuthStore();
+const roomStore = useRoomStore();
 const { socket } = useAudioSocket();
 
 const {
@@ -21,9 +22,6 @@ const {
   isPlaying,
   isPaused,
   isActive,
-  isMusicPlayingInRoom,
-  loadFile,
-  play,
   pause,
   resume,
   seek,
@@ -31,43 +29,62 @@ const {
   setVolume,
 } = useRoomAudioPlayer(socket);
 
-// Access streaming to produce the music track through mediasoup
-const { produceTrack, stopMusicProducer } = useMediasoupStreaming(socket);
+// Access streaming to stop the music producer on stop
+const { stopMusicProducer } = useMediasoupStreaming(socket);
+
+// ========================================
+// Draggable
+// ========================================
+
+const { dragEl, position, setPosition, winW, winH, elW, elH, isDragging } = useBoundedDrag();
+
+// Position bottom-right once the element has been measured.
+// useElementSize relies on ResizeObserver which fires asynchronously,
+// so elW / elH are 0 at mount time → watch until they are non-zero.
+const _stopInitPos = watch(
+  [elW, elH],
+  ([w, h]) => {
+    if (w > 0 && h > 0) {
+      setPosition(winW.value - w - 12, winH.value - h - 100);
+      _stopInitPos();          // only need to run once
+    }
+  },
+  { immediate: true },
+);
 
 // ========================================
 // State
 // ========================================
 
-const showUploader = ref(false);
 const localVolume = ref(1);
-const isLoading = ref(false);
 
 // ========================================
 // Computed
 // ========================================
 
 const currentRoomId = computed(() => roomStore.currentRoom?.id?.toString() ?? '');
-const isMyMusic = computed(() => playerState.userId === authStore.user?.id);
-const canControl = computed(() => isMyMusic.value);
-const canPlayMusic = computed(() => !isMusicPlayingInRoom.value || isMyMusic.value);
 
-/** Progress percentage for the progress bar */
+/** Only truthy for the participant who is actively controlling music. */
+const isMyMusic = computed(() => playerState.userId === authStore.user?.id);
+
+/** Progress percentage for the progress bar (0–100). */
 const progress = computed(() => {
   if (playerState.duration <= 0) return 0;
   return (playerState.position / playerState.duration) * 100;
 });
 
-/** Formatted time display (MM:SS / MM:SS) */
+/** Formatted time display (MM:SS / MM:SS). */
 const timeDisplay = computed(() => {
-  const pos = formatTime(playerState.position);
-  const dur = formatTime(playerState.duration);
-  return `${pos} / ${dur}`;
+  return `${formatTime(playerState.position)} / ${formatTime(playerState.duration)}`;
 });
 
 // ========================================
 // Helpers
 // ========================================
 
+/**
+ * Format seconds to MM:SS string.
+ */
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -78,94 +95,58 @@ function formatTime(seconds: number): string {
 // Handlers
 // ========================================
 
-async function handleFileSelected(file: File) {
-  isLoading.value = true;
-  try {
-    await loadFile(file);
-    showUploader.value = false;
-
-    // Auto-play after loading
-    await handlePlay();
-  } catch (err) {
-    console.error('Failed to load audio file:', err);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-async function handlePlay() {
-  if (!currentRoomId.value) return;
-
-  // Get the media track from the audio player (Web Audio API → MediaStreamTrack)
-  const track = await play(currentRoomId.value);
-  if (!track) return;
-
-  // Produce the music track through mediasoup so all room listeners hear it
-  await produceTrack(track);
-}
-
-async function handlePause() {
+async function handlePause(): Promise<void> {
   await pause();
 }
 
-async function handleResume() {
+async function handleResume(): Promise<void> {
   await resume();
 }
 
-async function handleStop() {
+async function handleStop(): Promise<void> {
   if (!currentRoomId.value) return;
-  // Stop the mediasoup music producer first
+  // Stop the mediasoup music producer first, then release the MSAB mutex
   stopMusicProducer();
-  // Then stop the audio player (releases mutex, cleans up Web Audio)
   await stop(currentRoomId.value);
 }
 
-function handleSeek(event: MouseEvent) {
-  if (!canControl.value) return;
+function handleSeek(event: MouseEvent): void {
   const target = event.currentTarget as HTMLElement;
   const rect = target.getBoundingClientRect();
   const percent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
   seek(percent * playerState.duration);
 }
 
-function handleVolumeChange(vol: number) {
+function handleVolumeChange(vol: number): void {
   localVolume.value = vol;
   setVolume(vol);
 }
 </script>
 
 <template>
-  <div class="room-audio-player">
-    <!-- Idle State: Show play music button -->
-    <div v-if="!isActive && !isMusicPlayingInRoom" class="flex items-center gap-2">
-      <UButton
-        v-if="canPlayMusic"
-        icon="i-lucide-music"
-        size="sm"
-        variant="subtle"
-        class="shadow-md shadow-primary-950/50"
-        @click="showUploader = true"
-      >
-        Play Music
-      </UButton>
-    </div>
+  <!--
+    Rendered for every room participant, but only visible to the
+    person actively playing music (isActive && isMyMusic).
+  -->
+  <div
+    v-if="isActive && isMyMusic"
+    ref="dragEl"
+    :style="`left: ${position.x}px; top: ${position.y}px;`"
+    class="fixed z-50 touch-none"
+    :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
+  >
+    <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-900/90 backdrop-blur-xl shadow-xl ring-1 ring-white/10 min-w-52 max-w-72">
 
-    <!-- Active State: Show player UI -->
-    <div
-      v-if="isActive || isMusicPlayingInRoom"
-      class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 backdrop-blur-xl"
-    >
-      <!-- Track Info -->
+      <!-- Drag Handle + Track Info -->
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-semibold truncate">
+        <p class="text-xs font-semibold truncate select-none">
           <UIcon name="i-lucide-music" class="inline-block mr-1 text-primary" />
           {{ playerState.title || 'Unknown Track' }}
         </p>
 
         <!-- Progress Bar (clickable for seek) -->
         <div
-          class="mt-1 h-1 bg-neutral-700 rounded-full cursor-pointer overflow-hidden"
-          :class="{ 'cursor-default': !canControl }"
+          class="mt-1.5 h-1 bg-neutral-700 rounded-full cursor-pointer overflow-hidden"
           @click="handleSeek"
         >
           <div
@@ -174,11 +155,11 @@ function handleVolumeChange(vol: number) {
           />
         </div>
 
-        <p class="text-[10px] text-neutral-400 mt-0.5">{{ timeDisplay }}</p>
+        <p class="text-[10px] text-neutral-400 mt-0.5 select-none">{{ timeDisplay }}</p>
       </div>
 
-      <!-- Controls (only for the music player) -->
-      <div v-if="canControl" class="flex items-center gap-1">
+      <!-- Playback Controls -->
+      <div class="flex items-center gap-1 shrink-0">
         <!-- Pause / Resume -->
         <UButton
           v-if="isPlaying"
@@ -208,8 +189,8 @@ function handleVolumeChange(vol: number) {
         />
       </div>
 
-      <!-- Volume (only for the music player) -->
-      <div v-if="canControl" class="flex items-center gap-1 ml-1">
+      <!-- Volume Control -->
+      <div class="flex items-center gap-1 shrink-0">
         <UIcon
           :name="localVolume > 0 ? 'i-lucide-volume-2' : 'i-lucide-volume-x'"
           class="text-neutral-400 text-xs"
@@ -225,12 +206,5 @@ function handleVolumeChange(vol: number) {
         />
       </div>
     </div>
-
-    <!-- File Picker Drawer -->
-    <RoomAudioPlayerUploader
-      v-model:open="showUploader"
-      :is-loading="isLoading"
-      @file-selected="handleFileSelected"
-    />
   </div>
 </template>

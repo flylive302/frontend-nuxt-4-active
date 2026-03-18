@@ -181,7 +181,7 @@ onUnmounted(() => {
 
         <RoomInfo />
 
-        <!-- Audio Player (music playback) -->
+        <!-- Audio Player: draggable floating panel, only rendered for the active music controller -->
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->
