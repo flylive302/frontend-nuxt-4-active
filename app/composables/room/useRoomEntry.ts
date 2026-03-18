@@ -59,10 +59,16 @@ export function useRoomEntry() {
       await api(`/rooms/${room.id}/join`, { method: 'POST', body: {} })
       // Access granted (room is public or has no password)
       doEnterRoom(room)
-    } catch {
-      // 403 = password required → show prompt
-      pendingRoom.value = room
-      showPasswordPrompt.value = true
+    } catch (error: any) {
+      const status = error?.statusCode ?? error?.status ?? error?.data?.statusCode
+      if (status === 403) {
+        // Password required → show prompt
+        pendingRoom.value = room
+        showPasswordPrompt.value = true
+      } else {
+        const toast = useToast()
+        toast.add({ title: 'Failed to join room', color: 'error' })
+      }
     } finally {
       entering.value = false
     }

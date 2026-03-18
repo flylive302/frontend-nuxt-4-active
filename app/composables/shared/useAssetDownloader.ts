@@ -19,14 +19,11 @@ const log = createLogger('[useAssetDownloader]')
 export function useAssetDownloader() {
   // Reactive state
   const progress = ref<DownloadProgress | null>(null)
-  const needsConsent = ref(false)
-  const consentSizeBytes = ref(0)
   const isDownloading = ref(false)
 
   // Subscriptions cleanup
   let unsubProgress: (() => void) | null = null
   let unsubComplete: (() => void) | null = null
-  let unsubConsent: (() => void) | null = null
 
   /**
    * Initialize subscriptions.
@@ -42,12 +39,6 @@ export function useAssetDownloader() {
       isDownloading.value = false
     })
 
-    unsubConsent = assetDownloader.onNeedConsent((sizeBytes) => {
-
-      needsConsent.value = true
-      consentSizeBytes.value = sizeBytes
-    })
-
     // Get initial state
     progress.value = assetDownloader.getProgress()
     isDownloading.value = assetDownloader.isDownloading()
@@ -61,10 +52,8 @@ export function useAssetDownloader() {
   function cleanup(): void {
     unsubProgress?.()
     unsubComplete?.()
-    unsubConsent?.()
     unsubProgress = null
     unsubComplete = null
-    unsubConsent = null
   }
 
   /**
@@ -74,27 +63,7 @@ export function useAssetDownloader() {
     assetDownloader.enqueueManual(url, options)
   }
 
-  /**
-   * Grant cellular consent and resume downloads.
-   */
-  function grantConsent(): void {
-    needsConsent.value = false
-    assetDownloader.setCellularConsent(true)
-    const { trackCellularConsentGiven } = useTelemetry()
-    trackCellularConsentGiven()
 
-  }
-
-  /**
-   * Deny cellular consent and pause downloads.
-   */
-  function denyConsent(): void {
-    needsConsent.value = false
-    assetDownloader.setCellularConsent(false)
-    const { trackCellularConsentDenied } = useTelemetry()
-    trackCellularConsentDenied()
-
-  }
 
   /**
    * Start download processing.
@@ -126,14 +95,10 @@ export function useAssetDownloader() {
   return {
     // State
     progress: readonly(progress),
-    needsConsent: readonly(needsConsent),
-    consentSizeBytes: readonly(consentSizeBytes),
     isDownloading: readonly(isDownloading),
 
     // Actions
     enqueue,
-    grantConsent,
-    denyConsent,
     start,
     pause,
     resume,

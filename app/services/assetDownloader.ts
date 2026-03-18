@@ -12,7 +12,6 @@ import type {
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
-import { isMeteredConnection } from '~/services/networkDetector'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[AssetDownloader]')
@@ -40,16 +39,13 @@ let progress: DownloadProgress = {
 /** Subscriptions */
 type ProgressCallback = (progress: DownloadProgress) => void
 type CompleteCallback = () => void
-type ConsentCallback = (sizeBytes: number) => void
 
 const progressCallbacks = new Set<ProgressCallback>()
 const completeCallbacks = new Set<CompleteCallback>()
-const consentCallbacks = new Set<ConsentCallback>()
 
 /** Flow control */
 let isPaused = false
 let isProcessing = false
-let cellularConsentGiven = false
 
 // ========================================
 // Queue Management
@@ -153,15 +149,7 @@ export function resume(): void {
   processQueue()
 }
 
-/**
- * Set cellular consent (allows downloads on metered connections).
- */
-export function setCellularConsent(granted: boolean): void {
-  cellularConsentGiven = granted
-  if (granted) {
-    resume()
-  }
-}
+
 
 /**
  * Process the next items in the queue.
@@ -186,29 +174,12 @@ async function processQueue(): Promise<void> {
     const item = queue.shift()
     if (!item) break
 
-    // Check cellular consent for non-critical, large downloads
-    if (shouldRequestConsent(item)) {
-      // Put item back and pause
-      queue.unshift(item)
-      isPaused = true
-      notifyNeedConsent()
-      return
-    }
-
     // Start download
     activeDownloads.add(item.url)
     downloadItem(item)
   }
 }
 
-/**
- * Check if we should request cellular consent.
- * Per user requirement: download silently on any network.
- * Consent is no longer required for any asset type.
- */
-function shouldRequestConsent(_item: DownloadQueueItem): boolean {
-  return false
-}
 
 /**
  * Download a single item.
@@ -324,25 +295,12 @@ export function onComplete(callback: CompleteCallback): () => void {
   return () => completeCallbacks.delete(callback)
 }
 
-/**
- * Subscribe to consent needed event.
- */
-export function onNeedConsent(callback: ConsentCallback): () => void {
-  consentCallbacks.add(callback)
-  return () => consentCallbacks.delete(callback)
-}
-
 function notifyProgress(): void {
   progressCallbacks.forEach((cb) => cb({ ...progress }))
 }
 
 function notifyComplete(): void {
   completeCallbacks.forEach((cb) => cb())
-}
-
-function notifyNeedConsent(): void {
-  const remainingSize = queue.reduce((sum, q) => sum + (q.sortOrder ?? 100000), 0)
-  consentCallbacks.forEach((cb) => cb(remainingSize))
 }
 
 // ========================================

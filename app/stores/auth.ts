@@ -38,7 +38,11 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function setToken(newToken: string | null) {
     token.value = newToken
-    const cookie = useCookie('sanctum_token')
+    const cookie = useCookie('sanctum_token', {
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+    })
     cookie.value = newToken
   }
 

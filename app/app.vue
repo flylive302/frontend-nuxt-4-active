@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import * as assetDownloader from '~/services/assetDownloader'
 
 // Lazy-load minimized room button — only loaded when user joins a room
 const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
@@ -14,25 +13,7 @@ const bootstrapStore = useBootstrapStore()
 // Watchers survive across all route changes — audio stays connected
 useRoomLifecycle()
 
-// ========================================
-// Cellular Consent Modal State
-// ========================================
 
-const showCellularConsent = ref(false)
-const pendingDownloadSize = ref(0)
-
-onMounted(() => {
-  // Listen for cellular consent requests from asset downloader
-  assetDownloader.onNeedConsent((sizeBytes) => {
-    pendingDownloadSize.value = sizeBytes
-    showCellularConsent.value = true
-  })
-})
-
-function handleCellularConsent(granted: boolean): void {
-  assetDownloader.setCellularConsent(granted)
-  showCellularConsent.value = false
-}
 
 // ========================================
 // Auto-Fetch Bootstrap & Start Asset Downloads
@@ -104,12 +85,7 @@ watch(
       :visible="bootstrapStore.assetPhase === 'downloading'"
     />
 
-    <!-- Cellular Data Consent Modal -->
-    <SystemCellularConsentModal
-      v-model="showCellularConsent"
-      :size-bytes="pendingDownloadSize"
-      @consent="handleCellularConsent"
-    />
+
 
     <!-- Storage Permission Banner (auto-shows on first visit) -->
     <SystemStoragePermissionBanner />

@@ -71,9 +71,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   /** Last bootstrap timestamp */
   const lastBootstrapAt = ref<number | null>(null)
 
-  /** Cellular consent for non-critical asset downloads (persisted) */
-  const cellularConsentGiven = ref(false)
-
   /** Asset download phase */
   const assetPhase = ref<'idle' | 'downloading' | 'complete' | 'error'>('idle')
 
@@ -269,9 +266,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       return
     }
 
-    // Set cellular consent from persisted state
-    assetDownloader.setCellularConsent(cellularConsentGiven.value)
-
     // Subscribe to progress
     assetDownloader.onProgress((progress) => {
       assetProgress.value = progress
@@ -297,14 +291,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     assetDownloader.enqueueManual(url, options)
   }
 
-  /**
-   * Set cellular consent for non-critical asset downloads.
-   */
-  function setCellularConsent(granted: boolean): void {
-    cellularConsentGiven.value = granted
-    assetDownloader.setCellularConsent(granted)
-  }
-
   // ========================================
   // Level/Badge Utilities
   // ========================================
@@ -322,8 +308,14 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     const xpNum = typeof xp === 'string' ? parseFloat(xp) : (xp ?? 0)
     const sorted = category === 'wealth' ? sortedWealthLevels.value : sortedCharmLevels.value
 
-    // Find highest matching level from pre-sorted cache
-    const matched = sorted.filter(l => xpNum >= l.required_xp).pop()
+    // Find highest matching level via reverse scan (early exit)
+    let matched: (typeof sorted)[number] | undefined
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (xpNum >= sorted[i]!.required_xp) {
+        matched = sorted[i]
+        break
+      }
+    }
 
     if (!matched) return { level: 0, name: 'Beginner', badge: null }
 
@@ -384,7 +376,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     giftTotal,
     levelBadges,
     lastBootstrapAt,
-    cellularConsentGiven,
 
     // Getters
     isReady,
@@ -410,7 +401,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     assetError,
     startAssetDownload,
     enqueueAsset,
-    setCellularConsent,
 
     // Asset Download Helpers
     cachedAssetCount,
@@ -421,6 +411,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   }
 }, {
   persist: {
-    pick: ['config', 'giftCatalog', 'giftTotal', 'levelBadges', 'lastBootstrapAt', 'cellularConsentGiven'],
+    pick: ['config', 'giftCatalog', 'giftTotal', 'levelBadges', 'lastBootstrapAt'],
   },
 })
