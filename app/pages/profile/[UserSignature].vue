@@ -91,8 +91,8 @@ useInfiniteScroll(
 const roomStore = useRoomStore()
 const { api } = useApi()
 const { socket, connect, isConnected } = useAudioSocket()
-const { leaveRoom } = useRoomAudio()
 const toast = useToast()
+const { enterRoom: doRoomEntry, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
 
 const isTracking = ref(false)
 const isJoiningRoom = ref(false)
@@ -166,13 +166,7 @@ async function trackUser() {
       return
     }
     
-    // 2. Leave current room if in one
-    if (roomStore.currentRoom) {
-      leaveRoom()
-      roomStore.leaveRoom();
-    }
-    
-    // 3. Fetch full room data from API
+    // 2. Fetch full room data from API
     const roomData = await api<{ status: string; data: import('~/types/user/bootstrap').BootstrapRoom }>(`/rooms/${response.roomId}`)
     
     if (roomData.status !== 'success' || !roomData.data) {
@@ -184,16 +178,8 @@ async function trackUser() {
       return
     }
     
-    // 4. Set as current room (triggers room UI) and navigate
-    roomStore.setCurrentRoom(roomData.data)
-    await navigateTo(`/room/${roomData.data.id}`)
-    
-    toast.add({
-      title: 'Entering room',
-      description: `Joining ${roomData.data.name}`,
-      color: 'success',
-      icon: 'i-lucide-door-open',
-    })
+    // 3. Enter room via centralized entry (handles password gating)
+    await doRoomEntry(roomData.data)
     
   } catch (err) {
     toast.add({
@@ -226,14 +212,6 @@ async function goToRoom() {
       return
     }
     
-    // Leave current room if in one
-    if (roomStore.currentRoom) {
-      leaveRoom()
-      roomStore.leaveRoom();
-      // Clear any stale audio state before setting new room
-      roomStore.clearAudioState()
-    }
-
     // Fetch full room data from API
     const roomData = await api<{ status: string; data: import('~/types/user/bootstrap').BootstrapRoom }>(`/rooms/${profile.value.room_id}`)
 
@@ -246,16 +224,8 @@ async function goToRoom() {
       return
     }
     
-    // Set as current room (triggers room UI) and navigate
-    roomStore.setCurrentRoom(roomData.data)
-    await navigateTo(`/room/${roomData.data.id}`)
-    
-    toast.add({
-      title: 'Entering room',
-      description: `Joining ${roomData.data.name}`,
-      color: 'success',
-      icon: 'i-lucide-door-open',
-    })
+    // Enter room via centralized entry (handles password gating)
+    await doRoomEntry(roomData.data)
   } catch (err) {
     toast.add({
       title: 'Failed to join room',
@@ -493,6 +463,13 @@ async function goToRoom() {
           </div>
         </BgGlass>
       </footer>
+    <!-- Password Prompt Modal (for password-protected rooms) -->
+    <RoomPasswordPromptModal
+      v-if="showPasswordPrompt && pendingRoom"
+      v-model:open="showPasswordPrompt"
+      :room="pendingRoom"
+      @success="onPasswordSuccess"
+    />
     </template>
   </main>
 </template>

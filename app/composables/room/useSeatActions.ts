@@ -50,6 +50,8 @@ export interface UseSeatActionsReturn {
   acceptInvite: () => Promise<boolean>;
   /** Decline pending invite */
   declineInvite: () => Promise<boolean>;
+  /** Admin/Owner: Kick user from room */
+  kickUser: (userId: number) => Promise<boolean>;
 }
 
 // ============================================
@@ -284,6 +286,31 @@ export function useSeatActions({
     return response.success ?? false;
   }
 
+  /**
+   * Kick user from the room (admin/owner only).
+   * Emits room:kick — server handles seat clearing, socket removal, and broadcasting.
+   */
+  async function kickUser(userId: number): Promise<boolean> {
+    const roomId = getCurrentRoomId();
+    if (!roomId) return false;
+
+    const response = await emitAsync<{ roomId: string; userId: number }, SeatResponse>('room:kick', {
+      roomId,
+      userId,
+    });
+
+    if (response.error) {
+      toast.add({ title: 'Cannot kick user', description: response.error, color: 'error' });
+      return false;
+    }
+
+    if (response.success) {
+      toast.add({ title: 'User kicked', description: 'User has been removed from the room.', color: 'success' });
+    }
+
+    return response.success ?? false;
+  }
+
   return {
     takeSeat,
     leaveSeat,
@@ -296,5 +323,6 @@ export function useSeatActions({
     inviteToSeat,
     acceptInvite,
     declineInvite,
+    kickUser,
   };
 }

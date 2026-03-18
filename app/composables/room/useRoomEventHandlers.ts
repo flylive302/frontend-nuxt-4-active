@@ -65,6 +65,7 @@ const ROOM_EVENT_NAMES = [
   'room:userJoined',
   'room:userLeft',
   'room:closed',
+  'room:kicked',
   'user:profile_updated',
   'audio:newProducer',
   'speaker:active',
@@ -146,6 +147,19 @@ export function setupRoomEventHandlers({
       title: 'Room closed',
       description: `The room has been closed: ${event.reason}`,
       color: 'warning',
+    });
+    leaveRoom();
+    const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+    navigateTo(target, { replace: true });
+  });
+
+  // Kick — admin/owner removed user from the room
+  socket.on('room:kicked', (_event: { roomId: string; reason: string }) => {
+    toast.add({
+      title: 'Kicked from room',
+      description: 'You have been removed from the room by an admin.',
+      color: 'error',
+      icon: 'i-lucide-log-out',
     });
     leaveRoom();
     const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';

@@ -25,8 +25,7 @@ const props = defineProps<{
 // Dependencies
 // ========================================
 
-const roomStore = useRoomStore()
-const authStore = useAuthStore()
+const { enterRoom, showPasswordPrompt, pendingRoom, entering, onPasswordSuccess } = useRoomEntry()
 
 // ========================================
 // Computed
@@ -38,63 +37,16 @@ const badgeDisplay = computed(() => {
   return `Live / ${props.room.participant_count}`
 })
 
-/** Whether the current user owns this room */
-const isOwner = computed(() => authStore.user?.id === props.room.owner_id)
-
-// ========================================
-// Password Prompt State
-// ========================================
-
-const showPasswordPrompt = ref(false)
-const entering = ref(false)
-
-const { api } = useApi()
-
 // ========================================
 // Navigation
 // ========================================
 
 /**
  * Handle room card click.
- * For password-protected rooms (non-owner): attempt passwordless join first.
- * If backend says 403 → room is truly locked → show password prompt.
- * This handles stale `is_password_protected` data when room was made public.
+ * Delegates to useRoomEntry for password-protected room handling.
  */
-async function handleRoomClick(): Promise<void> {
-  if (entering.value) return
-
-  // Owners always enter directly
-  if (isOwner.value) {
-    enterRoom()
-    return
-  }
-
-  // If room appears password-protected, verify with backend first
-  if (props.room.is_password_protected) {
-    entering.value = true
-    try {
-      // Try joining without password — backend grants access if room is now public
-      await api(`/rooms/${props.room.id}/join`, { method: 'POST', body: {} })
-      // Access granted (room is actually public now)
-      enterRoom()
-    } catch {
-      // 403 = still password-protected → show prompt
-      showPasswordPrompt.value = true
-    } finally {
-      entering.value = false
-    }
-    return
-  }
-
-  enterRoom()
-}
-
-/**
- * Navigate to the room page.
- */
-function enterRoom(): void {
-  roomStore.setCurrentRoom(props.room)
-  navigateTo(`/room/${props.room.id}`)
+function handleRoomClick(): void {
+  enterRoom(props.room)
 }
 </script>
 
@@ -159,9 +111,9 @@ function enterRoom(): void {
 
   <!-- Password Prompt Modal -->
   <RoomPasswordPromptModal
-    v-if="showPasswordPrompt"
+    v-if="showPasswordPrompt && pendingRoom"
     v-model:open="showPasswordPrompt"
-    :room="props.room"
-    @success="enterRoom"
+    :room="pendingRoom"
+    @success="onPasswordSuccess"
   />
 </template>

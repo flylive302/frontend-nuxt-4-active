@@ -8,7 +8,7 @@ const log = createLogger('[SeatDrawer]')
 const bootstrapStore = useBootstrapStore()
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
-const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, isAudioReady } = useRoomAudio()
+const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
 const { myMembership } = useRoomMembers()
 
 const isLoading = ref(false)
@@ -148,6 +148,26 @@ async function handleToggleLock() {
     roomStore.closeSeat()
   } catch (error) {
     log.error('Failed to toggle lock:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * Handle kicking a user from the room (admin/owner only)
+ */
+async function handleKickUser() {
+  const userId = currentSeat.value?.user?.id
+  if (!userId) return
+
+  isLoading.value = true
+  try {
+    const success = await kickUser(userId)
+    if (success) {
+      roomStore.closeSeat()
+    }
+  } catch (error) {
+    log.error('Failed to kick user:', error)
   } finally {
     isLoading.value = false
   }
@@ -310,6 +330,16 @@ const charmLevel = computed(() =>
               square
               icon="i-lucide-user-plus" 
               @click="handleStartInvite"
+            />
+
+            <!-- Kick User from Room - Admin/Owner only, when seat is occupied by another user -->
+            <UButton
+              v-if="!isSeatEmpty && !isCurrentUserSeat"
+              class="rounded-xl text-white"
+              size="xl" variant="solid" square color="error"
+              :loading="isLoading"
+              icon="i-lucide-log-out"
+              @click="handleKickUser"
             />
           </div>
         </div>

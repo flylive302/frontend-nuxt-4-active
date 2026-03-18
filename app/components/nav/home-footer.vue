@@ -8,6 +8,7 @@ const roomStore = useRoomStore();
 const notificationStore = useNotificationStore();
 const route = useRoute();
 const room = useRoom();
+const { enterRoom: doRoomEntry } = useRoomEntry();
 
 const createRoomOpen = ref(false);
 const navRef = ref(null);
@@ -42,8 +43,7 @@ async function handleMyRoomClick() {
   try {
     await room.fetchUserRoom();
     if (roomStore.userRoom) {
-      roomStore.setCurrentRoom(roomStore.userRoom);
-      await navigateTo(`/room/${roomStore.userRoom.id}`);
+      doRoomEntry(roomStore.userRoom);
     } else {
       createRoomOpen.value = true;
     }

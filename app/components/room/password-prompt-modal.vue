@@ -30,6 +30,7 @@ const open = defineModel<boolean>('open', { default: false })
 const password = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+const showPassword = ref(false)
 
 const { api, normalizeError } = useApi()
 
@@ -69,6 +70,7 @@ watch(open, (isOpen) => {
   if (!isOpen) {
     password.value = ''
     errorMessage.value = ''
+    showPassword.value = false
   }
 })
 </script>
@@ -90,14 +92,26 @@ watch(open, (isOpen) => {
         <UFormField label="Enter Room Password" :error="errorMessage || undefined">
           <UInput
             v-model="password"
-            type="password"
+            :type="showPassword ? 'text' : 'password'"
             placeholder="Enter password..."
             icon="i-lucide-lock"
             size="xl"
             class="w-full"
             autofocus
             @keydown.enter="handleSubmit"
-          />
+          >
+            <template #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                size="sm"
+                :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                :padded="false"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </UInput>
         </UFormField>
 
         <UButton

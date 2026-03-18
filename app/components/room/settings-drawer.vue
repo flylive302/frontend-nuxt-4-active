@@ -132,6 +132,7 @@ const editType = ref<'public' | 'private'>('public')
 const editColor = ref('')
 const editMaxSeats = ref(15)
 const saving = ref(false)
+const showSettingsPassword = ref(false)
 
 // ========================================
 // Logo Upload State
@@ -462,12 +463,24 @@ onBeforeUnmount(() => {
               <UFormField label="Set / Change Password">
                 <UInput
                   v-model="editPassword"
-                  type="password"
+                  :type="showSettingsPassword ? 'text' : 'password'"
                   placeholder="Leave blank to keep current"
                   icon="i-lucide-lock"
                   size="lg"
                   class="w-full"
-                />
+                >
+                  <template #trailing>
+                    <UButton
+                      color="neutral"
+                      variant="link"
+                      size="sm"
+                      :icon="showSettingsPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                      :aria-label="showSettingsPassword ? 'Hide password' : 'Show password'"
+                      :padded="false"
+                      @click="showSettingsPassword = !showSettingsPassword"
+                    />
+                  </template>
+                </UInput>
               </UFormField>
 
               <!-- Remove Password -->
