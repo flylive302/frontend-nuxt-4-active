@@ -131,8 +131,11 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   // ========================================
 
   /**
-   * Fetch bootstrap data from API.
-   * Seeds auth, levels, and other stores.
+   * Fetch bootstrap data from API in two phases:
+   * 1. Critical: user + config (fast, unblocks UI)
+   * 2. Deferred: gifts + user_data (background, non-blocking)
+   *
+   * Uses LT-4 partial bootstrap endpoint (?fields=).
    */
   async function fetchBootstrap(): Promise<BootstrapResponse | null> {
     if (phase.value === 'loading') {
@@ -148,26 +151,31 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     error.value = null
 
     try {
-      // Laravel wraps response in { status, message, data: BootstrapResponse }
-      const response = await api<{ status: string; message: string; data: BootstrapResponse }>('/bootstrap')
-      const data = response.data
+      // Phase 1: Critical path — user identity + config (fast)
+      const criticalResponse = await api<{ status: string; message: string; data: Partial<BootstrapResponse> }>(
+        '/bootstrap?fields=user,config'
+      )
+      const criticalData = criticalResponse.data
 
-      // Store config
-      config.value = data.config
-      levelBadges.value = data.config.level_badges
+      // Apply critical data immediately
+      if (criticalData.config) {
+        config.value = criticalData.config
+        levelBadges.value = criticalData.config.level_badges
+      }
 
-      // Store gifts (initial batch)
-      giftCatalog.value = data.gifts.catalog
-      giftTotal.value = data.gifts.total
-
-      // Mark complete
+      // Mark phase complete — UI can render with user + config
       lastBootstrapAt.value = Date.now()
       phase.value = 'complete'
 
-
+      // Phase 2: Deferred — gifts + user_data (background, non-blocking)
+      fetchDeferredData().catch((e) => {
+        log.warn('Deferred bootstrap data failed (non-critical):', e)
+      })
 
       trackBootstrapCompleted(Date.now() - startTime)
-      return data
+
+      // Return a merged response for callers that need the full shape
+      return criticalData as BootstrapResponse
     } catch (e) {
       // Log raw error for debugging
       log.error('Bootstrap raw error:', e)
@@ -177,6 +185,28 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       log.error('Bootstrap failed:', normalized.message, normalized)
       trackBootstrapFailed(normalized.message)
       return null
+    }
+  }
+
+  /**
+   * Fetch deferred bootstrap sections (gifts + user_data) in the background.
+   * Failures here are non-critical — the app remains usable.
+   */
+  async function fetchDeferredData(): Promise<void> {
+    try {
+      const deferredResponse = await api<{ status: string; message: string; data: Partial<BootstrapResponse> }>(
+        '/bootstrap?fields=gifts,user_data'
+      )
+      const data = deferredResponse.data
+
+      if (data.gifts) {
+        giftCatalog.value = data.gifts.catalog
+        giftTotal.value = data.gifts.total
+      }
+
+      log.info('Deferred bootstrap data loaded')
+    } catch (e) {
+      log.warn('Failed to load deferred bootstrap data:', e)
     }
   }
 
@@ -411,6 +441,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   }
 }, {
   persist: {
-    pick: ['config', 'giftCatalog', 'giftTotal', 'levelBadges', 'lastBootstrapAt'],
+    pick: ['config', 'levelBadges', 'lastBootstrapAt'],
   },
 })

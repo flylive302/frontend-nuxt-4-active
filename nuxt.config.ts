@@ -47,6 +47,8 @@ export default defineNuxtConfig({
             navigateFallbackDenylist: [/^\/api/],
             // Explicit glob patterns to avoid dev mode warnings
             globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,webp}'],
+            // LT-1: Include custom asset download handler in generated SW
+            importScripts: ['/sw-asset-handler.js'],
             runtimeCaching: [
                 // R2 CDN Assets - Gift videos (30 days)
                 {

@@ -18,8 +18,8 @@ export const ASSET_CONFIG = {
   /** IndexedDB object store name */
   IDB_STORE: 'metadata',
 
-  /** Maximum concurrent downloads */
-  MAX_CONCURRENT: 3,
+  /** Maximum concurrent downloads (HTTP/2 supports 6+ parallel streams) */
+  MAX_CONCURRENT: 6,
 
   /** Maximum retry attempts per download */
   MAX_RETRIES: 2,

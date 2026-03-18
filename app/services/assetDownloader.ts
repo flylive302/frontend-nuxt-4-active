@@ -53,12 +53,17 @@ let isProcessing = false
 
 /**
  * Enqueue items for download.
+ * Performs a batch cache pre-check to skip already-cached assets (1 cache.keys()
+ * call instead of N serial cache.match() calls).
  * Items are sorted by priority (lower sortOrder = higher priority).
  */
-export function enqueue(items: EnqueueItem[]): void {
+export async function enqueue(items: EnqueueItem[]): Promise<void> {
+  // Batch pre-check: get all cached URLs in one call
+  const cachedUrls = new Set(await cacheStorage.getCachedUrls())
+
   for (const item of items) {
-    // Skip if already in queue or active
-    if (queue.some((q) => q.url === item.url) || activeDownloads.has(item.url)) {
+    // Skip if already cached, in queue, or active
+    if (cachedUrls.has(item.url) || queue.some((q) => q.url === item.url) || activeDownloads.has(item.url)) {
       continue
     }
 
@@ -76,8 +81,6 @@ export function enqueue(items: EnqueueItem[]): void {
 
   progress.total = queue.length + activeDownloads.size
   notifyProgress()
-
-
 }
 
 /**
@@ -183,6 +186,9 @@ async function processQueue(): Promise<void> {
 
 /**
  * Download a single item.
+ *
+ * LT-1: Delegates to the Service Worker via postMessage when available.
+ * Falls back to main-thread fetch when SW is unavailable (SSR, dev, or unsupported).
  */
 async function downloadItem(item: DownloadQueueItem): Promise<void> {
   item.status = 'downloading'
@@ -190,15 +196,32 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
   notifyProgress()
 
   try {
-    // Check if already cached
-    const cached = await cacheStorage.hasAsset(item.url)
-    if (cached) {
+    // LT-1: Try Service Worker delegation first
+    const sw = navigator?.serviceWorker?.controller
+    if (sw) {
+      const result = await downloadViaSW(sw, item.url)
 
-      handleSuccess(item)
-      return
+      if (result.success) {
+        // Store metadata in IndexedDB (still on main thread — lightweight)
+        const metadata: AssetMetadata = {
+          url: item.url,
+          assetType: item.assetType,
+          priority: item.priority,
+          sizeBytes: result.sizeBytes ?? 0,
+          giftId: item.giftId,
+          downloadedAt: Date.now(),
+          lastAccessedAt: Date.now(),
+          retryCount: item.retryCount,
+        }
+        await assetIndex.upsert(metadata)
+        handleSuccess(item, result.sizeBytes)
+        return
+      } else {
+        throw new Error(result.error ?? 'SW download failed')
+      }
     }
 
-    // Fetch the asset
+    // Fallback: main-thread fetch (no SW available)
     const response = await fetch(item.url)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
@@ -232,6 +255,37 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
   } catch (e) {
     handleError(item, e as Error)
   }
+}
+
+/**
+ * Delegate download to the Service Worker and wait for result.
+ * Returns a promise that resolves with the SW's response message.
+ */
+function downloadViaSW(
+  sw: ServiceWorker,
+  url: string,
+): Promise<{ success: boolean; sizeBytes?: number; error?: string }> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      navigator.serviceWorker.removeEventListener('message', handler)
+      resolve({ success: false, error: 'SW download timeout' })
+    }, 30_000) // 30s timeout
+
+    function handler(event: MessageEvent) {
+      if (event.data?.type === 'ASSET_DOWNLOAD_RESULT' && event.data.url === url) {
+        clearTimeout(timeout)
+        navigator.serviceWorker.removeEventListener('message', handler)
+        resolve({
+          success: event.data.success,
+          sizeBytes: event.data.sizeBytes,
+          error: event.data.error,
+        })
+      }
+    }
+
+    navigator.serviceWorker.addEventListener('message', handler)
+    sw.postMessage({ type: 'ASSET_DOWNLOAD', url })
+  })
 }
 
 /**
