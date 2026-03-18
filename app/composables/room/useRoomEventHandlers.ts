@@ -280,6 +280,12 @@ export function setupRoomEventHandlers({
 
   // Gift events
   socket.on('gift:received', (event: GiftReceivedEvent) => {
+    // Accumulate gift coin value for seat display (all clients, including sender)
+    const giftForValue = getGiftById(event.giftId);
+    if (giftForValue) {
+      roomStore.addSeatGiftValue(event.recipientId, giftForValue.price * event.quantity);
+    }
+
     // Skip if current user is the sender (they already see optimistic playback)
     if (event.senderId === authStore.user?.id) return;
 

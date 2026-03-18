@@ -163,6 +163,11 @@ export function useGiftSending() {
         emitGift(selectedGift.id, recipientId, selectedQuantity);
       }
 
+      // Sender-side gift value accumulation (sender is excluded from gift:received broadcast)
+      for (const recipientId of selectedRecipients) {
+        roomStore.addSeatGiftValue(recipientId, selectedGift.price * selectedQuantity);
+      }
+
       // Start playback immediately (optimistic)
       // Lucky gifts use fly animation, all others use fullscreen playback modal
       if (selectedGift.category === 'lucky') {
@@ -253,6 +258,11 @@ export function useGiftSending() {
     // Deduct coins for combo
     deductCoins(comboCost);
 
+    // Sender-side gift value accumulation
+    for (const recipientId of validRecipients) {
+      roomStore.addSeatGiftValue(recipientId, currentPlayback.gift.price * currentPlayback.quantity);
+    }
+
     // Increment combo counter
     giftStore.incrementCombo();
 
@@ -296,6 +306,11 @@ export function useGiftSending() {
     deductCoins(comboCost);
     for (const recipientId of validRecipients) {
       triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
+    }
+
+    // Sender-side gift value accumulation
+    for (const recipientId of validRecipients) {
+      roomStore.addSeatGiftValue(recipientId, ctx.gift.price * ctx.quantity);
     }
 
     // Increment combo counter

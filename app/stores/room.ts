@@ -58,6 +58,12 @@ export const useRoomStore = defineStore('roomStore', () => {
   );
 
   // ========================================
+  // Seat Gift Totals (ephemeral per-session)
+  // ========================================
+  /** Cumulative coin value of gifts received per seated user (userId → total coins) */
+  const seatGiftTotals = ref<Map<number, number>>(new Map());
+
+  // ========================================
   // Chat Messages (Ephemeral)
   // ========================================
   const messages = ref<ChatMessageEvent[]>([]);
@@ -200,6 +206,7 @@ export const useRoomStore = defineStore('roomStore', () => {
       activeSpeakerIds: [],
     };
     participants.value.clear();
+    seatGiftTotals.value.clear();
     messages.value = [];
     seats.value = Array.from({ length: SEAT_COUNT }, (_, i) => ({
       index: i,
@@ -223,6 +230,7 @@ export const useRoomStore = defineStore('roomStore', () => {
 
   function removeParticipant(userId: number) {
     participants.value.delete(userId);
+    seatGiftTotals.value.delete(userId);
 
     // Clear from seat if present
     const seat = seats.value.find((s) => s.user?.id === userId);
@@ -332,6 +340,11 @@ export const useRoomStore = defineStore('roomStore', () => {
         isLocked: seat?.isLocked ?? false, // Preserve lock state
       };
 
+      // Clear gift total for this user
+      if (user) {
+        seatGiftTotals.value.delete(user.id);
+      }
+
       // Update participant's speaker status
       if (user) {
         const participant = participants.value.get(user.id);
@@ -353,6 +366,16 @@ export const useRoomStore = defineStore('roomStore', () => {
     if (seatIndex >= 0 && seatIndex < seats.value.length && seat) {
       seat.isLocked = isLocked;
     }
+  }
+
+  /**
+   * Accumulate gift coin value for a seated user.
+   * @param userId - Recipient user ID
+   * @param coinValue - Coin value to add (gift price × quantity)
+   */
+  function addSeatGiftValue(userId: number, coinValue: number) {
+    const current = seatGiftTotals.value.get(userId) ?? 0;
+    seatGiftTotals.value.set(userId, current + coinValue);
   }
 
   // ========================================
@@ -448,6 +471,10 @@ export const useRoomStore = defineStore('roomStore', () => {
     updateSeat,
     clearSeat,
     setSeatLocked,
+
+    // Seat gift totals
+    seatGiftTotals,
+    addSeatGiftValue,
 
     // Chat actions
     addMessage,

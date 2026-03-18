@@ -61,6 +61,12 @@ const displayName = computed(() => {
   }
   return seat.value?.user?.name || 'Unknown';
 });
+
+// Cumulative coin value of gifts received during this session
+const seatGiftTotal = computed(() => {
+  if (!seat.value?.user) return 0;
+  return roomStore.seatGiftTotals.get(seat.value.user.id) ?? 0;
+});
 </script>
 
 <template>
@@ -95,7 +101,7 @@ const displayName = computed(() => {
 
     </div>
 
-    <p v-if="seat?.user" class="text-xs truncate font-semibold">{{ formatCurrency(seat.user?.charm_xp) }}</p>
+    <p v-if="seat?.user" class="text-xs truncate font-semibold">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 
     <p v-if="displayName == props.seatId.toString()" class="text-xs font-semibold w-full leading-none">{{ displayName }}</p>
 
