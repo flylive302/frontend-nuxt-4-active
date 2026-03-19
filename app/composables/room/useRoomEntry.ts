@@ -47,6 +47,13 @@ export function useRoomEntry() {
   async function enterRoom(room: Room): Promise<void> {
     if (entering.value) return
 
+    // Same-room shortcut — if already in this room, just navigate back
+    // without any leave/rejoin cycle. Preserves seat, owner status, and audio.
+    if (roomStore.currentRoom?.id === room.id) {
+      navigateTo(`/room/${room.id}`)
+      return
+    }
+
     // Owner bypass — owners always enter their own room
     if (authStore.user?.id === room.owner_id) {
       doEnterRoom(room)
@@ -79,8 +86,14 @@ export function useRoomEntry() {
    * Handles room switching (leaves current room first).
    */
   function doEnterRoom(room: Room): void {
+    // Same-room shortcut — just navigate, skip leave/rejoin entirely
+    if (roomStore.currentRoom?.id === room.id) {
+      navigateTo(`/room/${room.id}`)
+      return
+    }
+
     // Leave current room if switching (lifecycle watcher handles audio cleanup)
-    if (roomStore.currentRoom && roomStore.currentRoom.id !== room.id) {
+    if (roomStore.currentRoom) {
       roomStore.leaveRoom()
     }
 

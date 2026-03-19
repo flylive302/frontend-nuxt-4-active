@@ -165,8 +165,14 @@ async function trackUser() {
       })
       return
     }
+
+    // 2. Same-room shortcut — if already in this room, just navigate back
+    if (roomStore.currentRoom && String(roomStore.currentRoom.id) === String(response.roomId)) {
+      navigateTo(`/room/${response.roomId}`)
+      return
+    }
     
-    // 2. Fetch full room data from API
+    // 3. Fetch full room data from API
     const roomData = await api<{ status: string; data: import('~/types/user/bootstrap').BootstrapRoom }>(`/rooms/${response.roomId}`)
     
     if (roomData.status !== 'success' || !roomData.data) {
@@ -178,7 +184,7 @@ async function trackUser() {
       return
     }
     
-    // 3. Enter room via centralized entry (handles password gating)
+    // 4. Enter room via centralized entry (handles password gating)
     await doRoomEntry(roomData.data)
     
   } catch (err) {
@@ -197,6 +203,12 @@ async function trackUser() {
  */
 async function goToRoom() {
   if (!profile.value?.room_id || isJoiningRoom.value) return
+
+  // Same-room shortcut — if already in this user's room, just navigate back
+  if (roomStore.currentRoom && roomStore.currentRoom.id === profile.value.room_id) {
+    navigateTo(`/room/${profile.value.room_id}`)
+    return
+  }
   
   isJoiningRoom.value = true
   
