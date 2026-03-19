@@ -41,8 +41,7 @@ function handleRequestCreated(request: CoinRequest): void {
 // Coin Request Status → Refresh List
 // ========================================
 // When `coin_request.status_changed` fires via socket, refresh the list
-// to reflect the updated status (approved/rejected). This replaces the
-// old approach of watching authStore.user.coins as an indirect proxy.
+// to reflect the updated status (approved/rejected).
 watch(lastCoinRequestUpdate, () => {
   coinRequestsListRef.value?.loadRequests()
 })
