@@ -84,21 +84,25 @@ export default defineNuxtPlugin(async () => {
       return
     }
 
-    // Seed auth store with user
-    authStore.setUser(data.user)
+    // Seed auth store with user (always present in Phase 1 response)
+    if (data.user) {
+      authStore.setUser(data.user)
+    }
 
-    // Seed levels store
-    levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
+    // Seed levels store (only present if user_data was requested/returned)
+    if (data.user_data?.levels) {
+      levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
+    }
 
     log.debug('Bootstrap complete, stores seeded')
 
-    // Start asset download in background
-    if (data.gifts.catalog.length > 0) {
+    // Start asset download in background (gifts come from deferred Phase 2)
+    if (data.gifts?.catalog?.length > 0) {
       bootstrapStore.startAssetDownload()
     }
   } catch (e) {
     log.error('Bootstrap failed:', e)
-    // Clear token if bootstrap fails (likely auth issue)
-    authStore.logout()
+    // Only logout on auth errors (401), not on runtime crashes
+    // Runtime errors (TypeError, etc.) should not wipe the session
   }
 })

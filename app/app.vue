@@ -45,8 +45,12 @@ watch(
 
         // Seed dependent stores — mirrors bootstrap.client.ts plugin logic
         if (data) {
-          authStore.setUser(data.user)
-          levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
+          if (data.user) {
+            authStore.setUser(data.user)
+          }
+          if (data.user_data?.levels) {
+            levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
+          }
         }
       } finally {
         isFetchingBootstrap.value = false
