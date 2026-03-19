@@ -1,6 +1,7 @@
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import type { SocketErrorEvent } from '~/types/room/audio';
+import type { BootstrapResponse } from '~/types/user/bootstrap';
 import { createLogger } from '~/utils/logger';
 import { registerRealtimeEventHandlers, resetRealtimeHandlers } from './useRealtimeEvents';
 
@@ -58,6 +59,7 @@ let _reconnectCallback: ReconnectCallback | null = null;
 let _config: ReturnType<typeof useRuntimeConfig> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
+let _apiInstance: ReturnType<typeof useApi> | null = null;
 
 // ============================================
 // Composable
@@ -78,6 +80,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
   if (!_config) _config = useRuntimeConfig();
   if (!_authStore) _authStore = useAuthStore();
   if (!_toast) _toast = useToast();
+  if (!_apiInstance) _apiInstance = useApi();
 
   // Use cached references
   const config = _config;
@@ -157,6 +160,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (socket.value) {
       registerRealtimeEventHandlers(socket.value);
     }
+
+    // Refresh balance from API to catch events missed during disconnect
+    refreshBalance();
 
     // Notify lifecycle layer so it can re-join the room
     if (_reconnectCallback) {
@@ -249,9 +255,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
         token: authStore.msabToken,
       },
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelayMax: 30000,
       timeout: 10000,
       transports: ['websocket', 'polling'],
     });
@@ -281,6 +287,26 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // Reset handlers so they can be re-registered on next connect
     resetRealtimeHandlers();
     log.debug('Disconnected by client');
+  }
+
+  /**
+   * Refresh balance from API after reconnection.
+   * Non-blocking — failure is logged but does not affect socket state.
+   */
+  async function refreshBalance(): Promise<void> {
+    try {
+      const response = await _apiInstance!.api<BootstrapResponse>('/bootstrap');
+      if (response?.user) {
+        authStore.updateBalance({
+          coins: response.user.coins,
+          diamonds: response.user.diamonds,
+          wealth_xp: response.user.wealth_xp,
+          charm_xp: response.user.charm_xp,
+        });
+      }
+    } catch (err) {
+      log.debug('Balance refresh after reconnect failed (non-blocking)', err);
+    }
   }
 
 

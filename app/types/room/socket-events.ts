@@ -31,6 +31,16 @@ export interface RewardEarnedPayload {
   }
 }
 
+/**
+ * coin_request.status_changed - Fired when a coin request is approved/rejected.
+ */
+export interface CoinRequestStatusChangedPayload {
+  coin_request_id: number
+  status: 'approved' | 'rejected' | 'cancelled'
+  approved_amount: number | null
+  asset_type: string | null
+}
+
 // ========================================
 // Achievement Events
 // ========================================
@@ -220,6 +230,7 @@ export interface ServerToClientEvents {
   // Economy
   'balance.updated': (payload: BalanceUpdatedPayload) => void
   'reward.earned': (payload: RewardEarnedPayload) => void
+  'coin_request.status_changed': (payload: CoinRequestStatusChangedPayload) => void
 
   // Achievement
   'badge.earned': (payload: BadgeEarnedPayload) => void

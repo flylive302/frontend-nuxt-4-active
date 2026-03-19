@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import type { CoinRequest } from '~/types/economy/coin-request'
 import { formatCurrency } from '~/utils/currency'
+import { lastCoinRequestUpdate } from '~/events/economy.events'
 
 definePageMeta({
   layout: 'alt',
@@ -37,16 +38,14 @@ function handleRequestCreated(request: CoinRequest): void {
 }
 
 // ========================================
-// Balance Update → Refresh Coin Requests
+// Coin Request Status → Refresh List
 // ========================================
-// When `balance.updated` fires via socket, authStore.user.coins is updated.
-// Watch it to refresh coin request data (e.g., a pending request was approved).
-watch(
-  () => authStore.user?.coins,
-  () => {
-    coinRequestsListRef.value?.loadRequests()
-  }
-)
+// When `coin_request.status_changed` fires via socket, refresh the list
+// to reflect the updated status (approved/rejected). This replaces the
+// old approach of watching authStore.user.coins as an indirect proxy.
+watch(lastCoinRequestUpdate, () => {
+  coinRequestsListRef.value?.loadRequests()
+})
 </script>
 
 <template>
