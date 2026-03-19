@@ -146,6 +146,14 @@ const tableData = computed<CharmLevelRow[]>(() =>
 watchEffect(() => {
   loading.value = !bootstrapStore.isReady
 })
+
+// Sync levels store with fresh authStore XP on mount
+// (covers case where socket isn't connected and bootstrap served cached levels)
+onMounted(() => {
+  if (authStore.user?.charm_xp) {
+    levelsStore.updateCharmXp(parseFloat(authStore.user.charm_xp))
+  }
+})
 </script>
 
 <template>

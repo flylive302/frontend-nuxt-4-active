@@ -145,6 +145,14 @@ const tableData = computed<WealthLevelRow[]>(() =>
 watchEffect(() => {
   loading.value = !bootstrapStore.isReady
 })
+
+// Sync levels store with fresh authStore XP on mount
+// (covers case where socket isn't connected and bootstrap served cached levels)
+onMounted(() => {
+  if (authStore.user?.wealth_xp) {
+    levelsStore.updateWealthXp(parseFloat(authStore.user.wealth_xp))
+  }
+})
 </script>
 
 <template>
