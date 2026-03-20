@@ -204,6 +204,12 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
         giftTotal.value = data.gifts.total
       }
 
+      // Seed levels store from deferred user_data
+      if (data.user_data?.levels) {
+        const levelsStore = useLevelsStore()
+        levelsStore.setLevels(data.user_data.levels.wealth, data.user_data.levels.charm)
+      }
+
       log.info('Deferred bootstrap data loaded')
     } catch (e) {
       log.warn('Failed to load deferred bootstrap data:', e)
