@@ -42,8 +42,9 @@ export default defineNuxtConfig({
             suppressWarnings: true
         },
         workbox: {
-            // Note: navigateFallback removed - not compatible with SPA.
-            // For SPAs, the cached index.html serves all routes, then Vue Router handles /offline
+            // Disable navigateFallback - Cloudflare Pages handles SPA routing.
+            // Without this, @vite-pwa auto-adds navigateFallback:'/' causing non-precached-url error.
+            navigateFallback: undefined,
             navigateFallbackDenylist: [/^\/api/],
             // Explicit glob patterns to avoid dev mode warnings
             globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,webp}'],
