@@ -52,7 +52,8 @@ export const useMallStore = defineStore('mall', () => {
   const { api, normalizeError } = useApi()
   const toast = useToast()
   const authStore = useAuthStore()
-  const { emitProfileSync } = useAuth()
+  const userStore = useUserStore()
+  const { emitProfileSync } = useProfileActions()
 
   // ========================================
   // State
@@ -385,7 +386,7 @@ export const useMallStore = defineStore('mall', () => {
     // Sync auth store optimistically for frame type
     const previousFrame = prop.type === 'frame' ? (authStore.user?.frame ?? null) : null
     if (prop.type === 'frame') {
-      authStore.patchProfile({ frame: prop.asset_url })
+      userStore.patchProfile({ frame: prop.asset_url })
     }
 
     try {
@@ -414,7 +415,7 @@ export const useMallStore = defineStore('mall', () => {
 
       // Rollback auth store frame
       if (prop.type === 'frame') {
-        authStore.patchProfile({ frame: previousFrame })
+        userStore.patchProfile({ frame: previousFrame })
       }
 
       const normalized = normalizeError(err)
@@ -452,7 +453,7 @@ export const useMallStore = defineStore('mall', () => {
     // Sync auth store optimistically for frame type
     const previousFrame = prop.type === 'frame' ? (authStore.user?.frame ?? null) : null
     if (prop.type === 'frame') {
-      authStore.patchProfile({ frame: null })
+      userStore.patchProfile({ frame: null })
     }
 
     try {
@@ -483,7 +484,7 @@ export const useMallStore = defineStore('mall', () => {
 
       // Rollback auth store frame
       if (prop.type === 'frame') {
-        authStore.patchProfile({ frame: previousFrame })
+        userStore.patchProfile({ frame: previousFrame })
       }
 
       const normalized = normalizeError(err)

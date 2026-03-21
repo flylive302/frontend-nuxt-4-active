@@ -39,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   function setToken(newToken: string | null) {
     token.value = newToken
     const cookie = useCookie('sanctum_token', {
+      maxAge: 90 * 24 * 60 * 60, // 90 days — matches backend Sanctum expiration
       secure: true,
       sameSite: 'lax',
       path: '/',
@@ -55,74 +56,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Log out the current user.
+   * State-only — navigation belongs in the composable REACT stage.
    */
   function logout() {
     setUser(null)
     setToken(null)
     setMsabToken(null)
     status.value = 'unauthenticated'
-    navigateTo('/log-in')
-  }
-
-  /**
-   * Update user balance from realtime event.
-   */
-  function updateBalance(balance: {
-    coins: string
-    diamonds: string
-    wealth_xp: string
-    charm_xp: string
-  }) {
-    if (user.value) {
-      user.value = {
-        ...user.value,
-        coins: balance.coins,
-        diamonds: balance.diamonds,
-        wealth_xp: balance.wealth_xp,
-        charm_xp: balance.charm_xp,
-      }
-    }
-  }
-
-  /**
-   * Patch specific balance fields without requiring all values.
-   * Use this when only a subset of balance fields changes (e.g., reward claims).
-   */
-  function patchBalance(partial: Partial<Pick<BootstrapUser, 'coins' | 'diamonds' | 'wealth_xp' | 'charm_xp'>>) {
-    if (user.value) {
-      user.value = {
-        ...user.value,
-        ...partial,
-      }
-    }
-  }
-
-  /**
-   * Update VIP level from realtime event.
-   */
-  function patchVip(vip: {
-    vip_level: number
-    vip_level_id: number | null
-    vip_expires_at: string | null
-  }) {
-    if (user.value) {
-      user.value = {
-        ...user.value,
-        vip_level: vip.vip_level,
-        vip_level_id: vip.vip_level_id,
-        vip_expires_at: vip.vip_expires_at,
-      }
-    }
-  }
-
-  /**
-   * Patch profile fields from a realtime `user:profile_updated` event.
-   * Merges only the supplied fields into the current user, leaving everything else intact.
-   */
-  function patchProfile(partial: Partial<BootstrapUser>) {
-    if (user.value) {
-      user.value = { ...user.value, ...partial }
-    }
   }
 
   // ========================================
@@ -139,10 +79,6 @@ export const useAuthStore = defineStore('auth', () => {
     setToken,
     setMsabToken,
     logout,
-    updateBalance,
-    patchBalance,
-    patchVip,
-    patchProfile,
   }
 }, {
   persist: {

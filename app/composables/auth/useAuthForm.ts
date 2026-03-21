@@ -92,20 +92,6 @@ export function useAuthForm(options: UseAuthFormOptions) {
         await options.onSuccess(result)
       }
     } catch (error: unknown) {
-      // ===== TEMP DEBUG — REMOVE AFTER FIXING =====
-      console.error('[handleSubmit] RAW ERROR:', error)
-      console.error('[handleSubmit] Error type:', typeof error)
-      console.error('[handleSubmit] Error constructor:', (error as any)?.constructor?.name)
-      console.error('[handleSubmit] Error message:', (error as any)?.message)
-      console.error('[handleSubmit] Error name:', (error as any)?.name)
-      console.error('[handleSubmit] Error status:', (error as any)?.response?.status)
-      console.error('[handleSubmit] Error statusCode:', (error as any)?.statusCode)
-      console.error('[handleSubmit] Error statusText:', (error as any)?.response?.statusText)
-      console.error('[handleSubmit] Error response._data:', (error as any)?.response?._data)
-      console.error('[handleSubmit] Error data:', (error as any)?.data)
-      console.error('[handleSubmit] Error keys:', error ? Object.keys(error as any) : 'null')
-      console.error('[handleSubmit] Error stack:', (error as any)?.stack)
-      // ===== END TEMP DEBUG =====
 
       const normalizedError = normalizeError(error)
 

@@ -1,33 +1,39 @@
 // ========================================
-// Imports & Types
+// Auth Actions Composable
 // ========================================
-import type { AuthResponse, User, LoginPayload, RegisterPayload, UpdateProfilePayload } from '~/types/user/auth'
-import type { ProfileSyncFields } from '~/types/user/profile-sync'
+// Handles authentication actions: login, register, logout, social redirect, MSAB token refresh.
+// Profile management is in useProfileActions.ts.
+
+import type { AuthResponse, LoginPayload, RegisterPayload } from '~/types/user/auth'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Auth]')
 
-// ========================================
-// Composable
-// ========================================
-export function useAuth() {
+export function useAuthActions() {
   // ========================================
-  // Composables / Injected Dependencies
+  // Dependencies
   // ========================================
+
   const authStore = useAuthStore()
   const { api, fetchCsrfToken } = useApi()
   const toast = useToast()
-  const { socket: audioSocket } = useAudioSocket()
+
+  // ========================================
+  // Actions
+  // ========================================
 
   /**
    * Authenticates a user with the provided credentials.
-   * Fetches CSRF token, performs login, updates store, and shows success toast.
-   * @param credentials - The user's login credentials.
-   * @returns The auth response data if successful.
+   *
+   * GATE:    Fetch CSRF token
+   * EXECUTE: POST /auth/login → update store
+   * REACT:   Show success toast
    */
   async function login(credentials: LoginPayload): Promise<AuthResponse> {
+    // GATE
     await fetchCsrfToken()
 
+    // EXECUTE
     const { data } = await api<{ data: AuthResponse }>('/auth/login', {
       method: 'POST',
       body: credentials,
@@ -41,19 +47,23 @@ export function useAuth() {
     // immediately available to the API client in the same request cycle.
     // The bootstrap.client.ts plugin will fetch data after navigation.
 
+    // REACT
     toast.add({ title: 'Welcome back!', color: 'success' })
     return data
   }
 
   /**
    * Registers a new user with the provided payload.
-   * Fetches CSRF token, performs registration, updates store, and shows success toast.
-   * @param payload - The registration data.
-   * @returns The auth response data if successful.
+   *
+   * GATE:    Fetch CSRF token
+   * EXECUTE: POST /auth/register → update store
+   * REACT:   Show success toast
    */
   async function register(payload: RegisterPayload): Promise<AuthResponse> {
+    // GATE
     await fetchCsrfToken()
 
+    // EXECUTE
     const { data } = await api<{ data: AuthResponse }>('/auth/register', {
       method: 'POST',
       body: payload,
@@ -67,6 +77,7 @@ export function useAuth() {
     // immediately available to the API client in the same request cycle.
     // The bootstrap.client.ts plugin will fetch data after navigation.
 
+    // REACT
     toast.add({ title: 'Account created!', color: 'success' })
     return data
   }
@@ -75,132 +86,21 @@ export function useAuth() {
    * Logs out the current user.
    * Calls the logout API, clears the store, and redirects to log in.
    * Ignores API errors during logout to ensure local cleanup always happens.
+   *
+   * EXECUTE: POST /auth/logout → clear store
+   * REACT:   Navigate to login page
    */
   async function logout(): Promise<void> {
     try {
+      // EXECUTE
       await api('/auth/logout', { method: 'POST' })
     } catch (error) {
       // Ignore logout errors from API, we still want to clear local state
       log.warn('Logout API error (ignored):', error)
     } finally {
       authStore.logout()
+      // REACT
       await navigateTo('/log-in')
-    }
-  }
-
-  /**
-   * Updates the user's profile information.
-   * @param payload - The profile data to update.
-   * @returns The updated user data.
-   */
-  async function updateProfile(payload: UpdateProfilePayload): Promise<User> {
-    await fetchCsrfToken()
-
-    const { data } = await api<{ data: User }>('/profile', {
-      method: 'PUT',
-      body: payload,
-    })
-
-    authStore.setUser(data)
-
-    // Push profile changes directly through socket for immediate room propagation
-    emitProfileSync({
-      name: data.name,
-      signature: data.signature ?? undefined,
-      avatar: data.avatar ?? undefined,
-      frame: data.frame ?? null,
-      gender: data.gender ?? undefined,
-    })
-
-    toast.add({ title: 'Profile updated', color: 'success' })
-    return data
-  }
-
-  /**
-   * Uploads and updates the user's profile avatar.
-   * Uses ImageKit CDN for direct client-side upload with progress tracking.
-   *
-   * @param file - The image file to upload.
-   * @param onProgress - Optional callback for upload progress (0-100).
-   * @returns The updated user data.
-   */
-  async function uploadAvatar(
-    file: File,
-    onProgress?: (percent: number) => void
-  ): Promise<User> {
-    // Step 1: Upload to ImageKit CDN
-    const { uploadImage } = useImageUpload()
-    const result = await uploadImage(file, 'avatars', { onProgress })
-
-    // Step 2: Submit URL to API (PUT method per migration guide)
-    await fetchCsrfToken()
-    const { data } = await api<{ data: User }>('/profile/avatar', {
-      method: 'PUT',
-      body: {
-        url: result.url,
-        file_id: result.fileId,
-      },
-    })
-
-    authStore.setUser(data)
-
-    // Push avatar change directly through socket for immediate room propagation
-    emitProfileSync({ avatar: data.avatar ?? undefined })
-
-    toast.add({ title: 'Avatar updated successfully', color: 'success' })
-    return data
-  }
-
-  /**
-   * Uploads and updates the user's profile cover image.
-   * Uses ImageKit CDN for direct client-side upload with progress tracking.
-   *
-   * @param file - The image file to upload.
-   * @param onProgress - Optional callback for upload progress (0-100).
-   * @returns The updated user data.
-   */
-  async function uploadCoverImage(
-    file: File,
-    onProgress?: (percent: number) => void
-  ): Promise<User> {
-    // Step 1: Upload to ImageKit CDN
-    const { uploadImage } = useImageUpload()
-    const result = await uploadImage(file, 'covers', { onProgress })
-
-    // Step 2: Submit URL to API
-    await fetchCsrfToken()
-    const { data } = await api<{ data: User }>('/profile/cover-image', {
-      method: 'PUT',
-      body: {
-        url: result.url,
-        file_id: result.fileId,
-      },
-    })
-
-    authStore.setUser(data)
-    toast.add({ title: 'Cover image updated successfully', color: 'success' })
-    return data
-  }
-
-  // ========================================
-  // Helpers
-  // ========================================
-
-  /**
-   * Push updated profile fields directly through the audio socket.
-   * Provides instant room propagation without waiting for the queued
-   * Laravel → SNS/HTTP → MSAB pipeline.
-   *
-   * Best-effort / fire-and-forget — silent on failure.
-   */
-  function emitProfileSync(fields: ProfileSyncFields): void {
-    try {
-      if (!audioSocket.value?.connected) return
-
-      audioSocket.value.emit('user:profileSync', { profile: fields })
-      log.debug('Profile sync emitted', Object.keys(fields))
-    } catch {
-      // Silent — Laravel SyncProfileToMsab provides cross-region consistency.
     }
   }
 
@@ -208,6 +108,8 @@ export function useAuth() {
    * Refresh the MSAB JWT to ensure the audio server gets fresh user data.
    * Called before socket pre-connect so the JWT payload matches current DB state.
    * Silent failure — falls back to existing (potentially stale) token.
+   *
+   * EXECUTE: POST /auth/msab-token/refresh → update store
    */
   async function refreshMsabToken(): Promise<void> {
     try {
@@ -225,23 +127,28 @@ export function useAuth() {
   /**
    * Gets the OAuth redirect URL for a social provider.
    * The frontend should redirect the user to this URL to start the OAuth flow.
-   * @param provider - The social provider to authenticate with.
-   * @returns The redirect URL to the OAuth provider.
+   *
+   * EXECUTE: GET /auth/social/{provider}/redirect
    */
   async function getSocialRedirectUrl(provider: string): Promise<string> {
     const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
     return data.redirect_url
   }
 
+  // ========================================
+  // Return
+  // ========================================
+
   return {
     login,
     register,
     logout,
-    updateProfile,
-    uploadAvatar,
-    uploadCoverImage,
     refreshMsabToken,
-    emitProfileSync,
     getSocialRedirectUrl,
   }
 }
+
+/**
+ * @deprecated Use `useAuthActions()` instead. This alias exists for backward compatibility.
+ */
+export const useAuth = useAuthActions

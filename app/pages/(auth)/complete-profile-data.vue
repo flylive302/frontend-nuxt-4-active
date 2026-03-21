@@ -180,7 +180,7 @@ const selectedGenderIcon = computed<string>(() => {
 // ========================================
 
 const formRef = ref<Form<any> | null>(null)
-const { updateProfile, uploadAvatar } = useAuth()
+const { updateProfile, uploadAvatar } = useProfileActions()
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,

@@ -19,9 +19,10 @@ export function registerVipEvents(socket: Socket): void {
 
     // Detect VIP level increase for congratulations modal
     const authStore = useAuthStore()
+    const userStore = useUserStore()
     const previousLevel = authStore.user?.vip_level ?? 0
 
-    authStore.patchVip({
+    userStore.patchVip({
       vip_level: payload.vip_level,
       vip_level_id: payload.vip_level_id,
       vip_expires_at: payload.vip_expires_at,

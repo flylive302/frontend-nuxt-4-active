@@ -39,8 +39,9 @@ const _isLuckyComboActive = ref(false);
 export function refundPendingCoins(): void {
   if (_pendingRefund.value > 0) {
     const authStore = useAuthStore();
+    const userStore = useUserStore();
     const currentCoins = Number(authStore.user?.coins ?? 0);
-    authStore.patchBalance({ coins: String(currentCoins + _pendingRefund.value) });
+    userStore.patchBalance({ coins: String(currentCoins + _pendingRefund.value) });
     _pendingRefund.value = 0;
   }
 }
@@ -331,8 +332,9 @@ export function useGiftSending() {
    * Deduct coins from user balance (optimistic update)
    */
   function deductCoins(amount: number): void {
+    const userStore = useUserStore();
     const currentCoins = Number(authStore.user?.coins ?? 0);
-    authStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
+    userStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
   }
 
   // ========================================

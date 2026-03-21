@@ -297,7 +297,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
     try {
       const response = await _apiInstance!.api<BootstrapResponse>('/bootstrap');
       if (response?.user) {
-        authStore.updateBalance({
+        const userStore = useUserStore();
+        userStore.updateBalance({
           coins: response.user.coins,
           diamonds: response.user.diamonds,
           wealth_xp: response.user.wealth_xp,

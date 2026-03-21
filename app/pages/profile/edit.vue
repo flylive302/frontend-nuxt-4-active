@@ -96,7 +96,8 @@ const formState = reactive<Partial<FormSchema>>({
 const formRef = ref<Form<FormSchema> | null>(null)
 
 const authStore = useAuthStore()
-const { updateProfile, uploadAvatar, uploadCoverImage } = useAuth()
+const { updateProfile, uploadAvatar, uploadCoverImage } = useProfileActions()
+const { logout } = useAuthActions()
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,
@@ -450,7 +451,7 @@ watch(
             icon="i-lucide-power-off" 
             size="xl" 
             variant="subtle"
-            @click="authStore.logout"
+            @click="logout"
           >
             Logout
           </UButton>

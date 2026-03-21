@@ -26,9 +26,9 @@ export const lastCoinRequestUpdate = ref<CoinRequestStatusChangedPayload | null>
 export function registerEconomyEvents(socket: Socket): void {
   socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
 
-    // Update auth store (coins, diamonds, XP values on user object)
-    const authStore = useAuthStore()
-    authStore.updateBalance({
+    // Update user store (coins, diamonds, XP values on user object)
+    const userStore = useUserStore()
+    userStore.updateBalance({
       coins: payload.coins,
       diamonds: payload.diamonds,
       wealth_xp: payload.wealth_xp,

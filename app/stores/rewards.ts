@@ -245,8 +245,8 @@ export const useRewardsStore = defineStore('rewards', () => {
 
       // Update user balance if provided (via authStore API — no direct mutation)
       if (response.data.new_balance) {
-        const authStore = useAuthStore()
-        authStore.patchBalance({
+        const userStore = useUserStore()
+        userStore.patchBalance({
           ...(response.data.new_balance.coins && { coins: response.data.new_balance.coins }),
           ...(response.data.new_balance.diamonds && { diamonds: response.data.new_balance.diamonds }),
         })

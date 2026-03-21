@@ -182,7 +182,8 @@ export function setupRoomEventHandlers({
 
     // Also patch local user if the update is for the authenticated user
     if (event.user_id === authStore.user?.id) {
-      authStore.patchProfile(safeProfile);
+      const userStore = useUserStore();
+      userStore.patchProfile(safeProfile);
     }
 
     // log.debug('Profile updated for user:', event.user_id);

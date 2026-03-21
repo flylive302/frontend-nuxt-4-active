@@ -36,12 +36,17 @@ function getClient(baseURL: string | undefined) {
     timeout: 10_000,
     onRequest({ options }: FetchContext) {
       const headers = new Headers(options.headers || {})
-      const token = useCookie('sanctum_token')
+      const cookieToken = useCookie('sanctum_token')
       const xsrfToken = useCookie('XSRF-TOKEN')
 
+      // Fall back to Pinia persisted state if cookie is missing
+      // (e.g., PWA reopened after browser cleared session cookies)
+      const authStore = useAuthStore()
+      const token = cookieToken.value || authStore.token
+
       // Auth headers
-      if (token.value) {
-        headers.set('Authorization', `Bearer ${token.value}`)
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`)
       }
       if (xsrfToken.value) {
         headers.set('X-XSRF-TOKEN', xsrfToken.value)

@@ -13,7 +13,11 @@ const bootstrapStore = useBootstrapStore()
 // Watchers survive across all route changes — audio stays connected
 useRoomLifecycle()
 
-
+// ========================================
+// Screen Wake Lock (prevents screen timeout while app is active)
+// ========================================
+const { init: initWakeLock } = useWakeLock()
+initWakeLock()
 
 // ========================================
 // Auto-Fetch Bootstrap & Start Asset Downloads
