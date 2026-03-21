@@ -25,12 +25,12 @@ export function useAuthActions() {
   /**
    * Authenticates a user with the provided credentials.
    *
-   * GATE:    Fetch CSRF token
+   * SETUP:   Fetch CSRF token
    * EXECUTE: POST /auth/login → update store
-   * REACT:   Show success toast
+   * REACT:   Show success toast, navigate if redirectTo provided
    */
-  async function login(credentials: LoginPayload): Promise<AuthResponse> {
-    // GATE
+  async function login(credentials: LoginPayload, redirectTo?: string): Promise<AuthResponse> {
+    // SETUP — infrastructure prerequisite, not a validation gate
     await fetchCsrfToken()
 
     // EXECUTE
@@ -49,18 +49,21 @@ export function useAuthActions() {
 
     // REACT
     toast.add({ title: 'Welcome back!', color: 'success' })
+    if (redirectTo) {
+      await navigateTo(redirectTo)
+    }
     return data
   }
 
   /**
    * Registers a new user with the provided payload.
    *
-   * GATE:    Fetch CSRF token
+   * SETUP:   Fetch CSRF token
    * EXECUTE: POST /auth/register → update store
-   * REACT:   Show success toast
+   * REACT:   Show success toast, navigate if redirectTo provided
    */
-  async function register(payload: RegisterPayload): Promise<AuthResponse> {
-    // GATE
+  async function register(payload: RegisterPayload, redirectTo?: string): Promise<AuthResponse> {
+    // SETUP — infrastructure prerequisite, not a validation gate
     await fetchCsrfToken()
 
     // EXECUTE
@@ -79,6 +82,9 @@ export function useAuthActions() {
 
     // REACT
     toast.add({ title: 'Account created!', color: 'success' })
+    if (redirectTo) {
+      await navigateTo(redirectTo)
+    }
     return data
   }
 
@@ -125,14 +131,19 @@ export function useAuthActions() {
   }
 
   /**
-   * Gets the OAuth redirect URL for a social provider.
-   * The frontend should redirect the user to this URL to start the OAuth flow.
+   * Starts the social login flow by fetching the OAuth redirect URL
+   * and redirecting the user to the provider.
    *
-   * EXECUTE: GET /auth/social/{provider}/redirect
+   * EXECUTE: GET /auth/social/{provider}/redirect → window redirect
+   * REACT:   Show error toast if redirect fails
    */
-  async function getSocialRedirectUrl(provider: string): Promise<string> {
-    const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
-    return data.redirect_url
+  async function startSocialLogin(provider: string): Promise<void> {
+    try {
+      const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
+      window.location.href = data.redirect_url
+    } catch {
+      toast.add({ title: `Failed to connect with ${provider}`, color: 'error' })
+    }
   }
 
   // ========================================
@@ -144,7 +155,7 @@ export function useAuthActions() {
     register,
     logout,
     refreshMsabToken,
-    getSocialRedirectUrl,
+    startSocialLogin,
   }
 }
 

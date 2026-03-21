@@ -2,7 +2,6 @@
 
 import { z } from 'zod'
 import { computed, reactive, ref } from 'vue'
-import { navigateTo } from 'nuxt/app'
 import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchema'
 import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
@@ -71,10 +70,7 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
       phone: normalizePhone(dialCode, phone),
       country: countryCode,
       password,
-    })
-
-    // Navigate to profile completion page on successful registration
-    await navigateTo(ROUTES.COMPLETE_PROFILE)
+    }, ROUTES.COMPLETE_PROFILE)
   })
 }
 </script>

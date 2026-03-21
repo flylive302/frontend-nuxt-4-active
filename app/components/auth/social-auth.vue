@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SocialProvider } from '~/types/user/auth'
 
-const { getSocialRedirectUrl } = useAuth()
+const { startSocialLogin } = useAuth()
 
 const isLoading = ref<SocialProvider | null>(null)
 
@@ -15,22 +15,12 @@ async function loginWith(provider: SocialProvider) {
   if (isLoading.value) return
 
   isLoading.value = provider
-  try {
-    const redirectUrl = await getSocialRedirectUrl(provider)
-    window.location.href = redirectUrl
-  } catch {
-    const toast = useToast()
-    toast.add({
-      title: `Failed to connect with ${provider}`,
-      color: 'error',
-    })
-  } finally {
-    // Keep loading state — page will redirect away
-    // Only clear if it failed (caught above)
-    setTimeout(() => {
-      isLoading.value = null
-    }, 5000)
-  }
+  await startSocialLogin(provider)
+  // Keep loading — page will redirect away on success.
+  // Clear after timeout in case of silent failure.
+  setTimeout(() => {
+    isLoading.value = null
+  }, 5000)
 }
 </script>
 

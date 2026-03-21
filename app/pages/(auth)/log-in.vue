@@ -73,8 +73,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
       password
     }
 
-    await login(loginPayload)
-    await navigateTo(ROUTES.HOME)
+    await login(loginPayload, ROUTES.HOME)
   })
 }
 </script>
