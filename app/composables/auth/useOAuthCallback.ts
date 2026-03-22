@@ -4,11 +4,6 @@
 // Handles the redirect back from social auth providers.
 // The backend redirects here with token and msab_token
 // as query parameters after successful OAuth flow.
-//
-// NOTE: We can't use bootstrapStore.fetchBootstrap() here because the API
-// client reads the token from useCookie('sanctum_token'), which isn't
-// available in the same tick after setToken(). Instead, we make a direct
-// fetch with the Bearer token in the Authorization header.
 
 import { createLogger } from '~/utils/logger'
 
@@ -32,10 +27,10 @@ export function useOAuthCallback() {
   // Dependencies
   // ========================================
 
-  const config = useRuntimeConfig()
   const authStore = useAuthStore()
   const levelsStore = useLevelsStore()
   const toast = useToast()
+  const { api } = useApi()
 
   // ========================================
   // Actions
@@ -45,7 +40,7 @@ export function useOAuthCallback() {
    * Process the OAuth callback parameters.
    *
    * GATE:    Validate callback params (error, token presence)
-   * EXECUTE: Store tokens + fetch user data via direct $fetch
+   * EXECUTE: Store tokens + fetch user data via api()
    * REACT:   Show success toast
    *
    * Returns a result object — the caller (page) decides navigation.
@@ -60,20 +55,15 @@ export function useOAuthCallback() {
       return { success: false, error: 'Authentication failed. No token received.', redirectTo: '/log-in' }
     }
 
-    // EXECUTE — store tokens and fetch user data
+    // EXECUTE — store tokens first so the api() interceptor picks them up
     authStore.setToken(params.token)
     if (params.msabToken) {
       authStore.setMsabToken(params.msabToken)
     }
 
-    const apiBase = config.public.apiBase as string
-    const response = await $fetch<{ data: { user: import('~/types/user/bootstrap').BootstrapUser; user_data: { levels?: { wealth: import('~/types/user/bootstrap').LevelStatus; charm: import('~/types/user/bootstrap').LevelStatus } } } }>(`${apiBase}/bootstrap`, {
-      headers: {
-        Authorization: `Bearer ${params.token}`,
-        Accept: 'application/json',
-      },
-      credentials: 'include',
-    })
+    // The api() interceptor reads authStore.token as a fallback when
+    // the cookie isn't available yet, so this works in the same tick.
+    const response = await api<{ data: { user: import('~/types/user/bootstrap').BootstrapUser; user_data: { levels?: { wealth: import('~/types/user/bootstrap').LevelStatus; charm: import('~/types/user/bootstrap').LevelStatus } } } }>('/bootstrap')
 
     if (response?.data?.user) {
       authStore.setUser(response.data.user)

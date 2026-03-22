@@ -28,7 +28,8 @@ const authStore = useAuthStore()
 const bootstrapStore = useBootstrapStore()
 const levelsStore = useLevelsStore()
 const { fetchBootstrap } = useBootstrapInit()
-const { startAssetDownload, assetPhase, assetProgress } = useBootstrapAssets()
+const { startAssetDownload } = useBootstrapAssets()
+const assetStore = useAssetStore()
 
 // Track if we're currently fetching to avoid duplicate calls
 const isFetchingBootstrap = ref(false)
@@ -39,7 +40,7 @@ watch(
     () => bootstrapStore.isReady,
     () => bootstrapStore.phase,
     () => bootstrapStore.giftCatalog.length,
-    () => assetPhase.value,
+    () => assetStore.phase,
   ],
   async ([isAuth, isReady, phase, giftCount, currentAssetPhase]) => {
     // Scenario 1: User is authenticated but bootstrap data not loaded
@@ -91,8 +92,8 @@ watch(
 
     <!-- Download Progress Bar (top of screen during asset download) -->
     <SystemDownloadProgressBar 
-      :progress="assetProgress"
-      :visible="assetPhase === 'downloading'"
+      :progress="assetStore.progress"
+      :visible="assetStore.phase === 'downloading'"
     />
 
 

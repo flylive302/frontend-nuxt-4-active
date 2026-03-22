@@ -79,14 +79,6 @@ export function useAuthForm(options: UseAuthFormOptions) {
 
     try {
       const result = await action()
-      
-      if (options.successMessage) {
-        toast.add({
-          title: 'Success',
-          description: options.successMessage,
-          color: 'success'
-        })
-      }
 
       if (options.onSuccess) {
         await options.onSuccess(result)

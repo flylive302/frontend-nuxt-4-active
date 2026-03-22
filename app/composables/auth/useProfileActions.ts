@@ -28,12 +28,12 @@ export function useProfileActions() {
   /**
    * Updates the user's profile information.
    *
-   * GATE:    Fetch CSRF token
+   * SETUP:   Fetch CSRF token
    * EXECUTE: PUT /profile → update store
    * REACT:   Push socket sync, show toast
    */
   async function updateProfile(payload: UpdateProfilePayload): Promise<User> {
-    // GATE
+    // SETUP
     await fetchCsrfToken()
 
     // EXECUTE
@@ -61,7 +61,7 @@ export function useProfileActions() {
    * Uploads and updates the user's profile avatar.
    * Uses ImageKit CDN for direct client-side upload with progress tracking.
    *
-   * GATE:    Fetch CSRF token
+   * SETUP:   Fetch CSRF token
    * EXECUTE: Upload to ImageKit CDN → PUT /profile/avatar → update store
    * REACT:   Push socket sync, show toast
    */
@@ -69,12 +69,12 @@ export function useProfileActions() {
     file: File,
     onProgress?: (percent: number) => void
   ): Promise<User> {
+    // SETUP
+    await fetchCsrfToken()
+
     // EXECUTE — Step 1: Upload to ImageKit CDN
     const { uploadImage } = useImageUpload()
     const result = await uploadImage(file, 'avatars', { onProgress })
-
-    // GATE
-    await fetchCsrfToken()
 
     // EXECUTE — Step 2: Submit URL to API
     const { data } = await api<{ data: User }>('/profile/avatar', {
@@ -97,7 +97,7 @@ export function useProfileActions() {
    * Uploads and updates the user's profile cover image.
    * Uses ImageKit CDN for direct client-side upload with progress tracking.
    *
-   * GATE:    Fetch CSRF token
+   * SETUP:   Fetch CSRF token
    * EXECUTE: Upload to ImageKit CDN → PUT /profile/cover-image → update store
    * REACT:   Show toast
    */
@@ -105,12 +105,12 @@ export function useProfileActions() {
     file: File,
     onProgress?: (percent: number) => void
   ): Promise<User> {
+    // SETUP
+    await fetchCsrfToken()
+
     // EXECUTE — Step 1: Upload to ImageKit CDN
     const { uploadImage } = useImageUpload()
     const result = await uploadImage(file, 'covers', { onProgress })
-
-    // GATE
-    await fetchCsrfToken()
 
     // EXECUTE — Step 2: Submit URL to API
     const { data } = await api<{ data: User }>('/profile/cover-image', {
