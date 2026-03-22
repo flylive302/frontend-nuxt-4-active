@@ -50,6 +50,9 @@ let _connectedUrl: string | null = null;
 /** Callback to invoke after Socket.IO auto-reconnection */
 let _reconnectCallback: ReconnectCallback | null = null;
 
+/** Flag to prevent infinite token refresh loops */
+let _isRefreshingToken = false;
+
 // ============================================
 // Cached Dependencies (Module-level)
 // ============================================
@@ -128,19 +131,54 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = err.message;
     log.error('Connection error:', err.message);
 
-    // Handle specific auth errors
+    // Handle specific auth errors — attempt one token refresh before giving up
     if (err.message === 'Invalid credentials' || err.message === 'Authentication failed') {
-      toast.add({
-        title: 'Audio connection failed',
-        description: 'Please try logging in again.',
-        color: 'error',
-      });
+      attemptTokenRefresh();
     } else if (err.message === 'Authentication required') {
       toast.add({
         title: 'Authentication required',
         description: 'Please log in to join the room.',
         color: 'warning',
       });
+    }
+  }
+
+  /**
+   * Attempt to refresh the MSAB token and retry connection (one attempt only).
+   * Prevents stale-token lock-out where the persisted JWT has expired server-side.
+   * REACT-safe: failure is logged but never surfaced as a blocking error.
+   */
+  async function attemptTokenRefresh(): Promise<void> {
+    if (_isRefreshingToken) return;
+    _isRefreshingToken = true;
+
+    log.debug('Auth rejected — attempting MSAB token refresh');
+
+    try {
+      const { refreshMsabToken } = useAuth();
+      await refreshMsabToken();
+
+      // Retry connection with fresh token
+      if (authStore.msabToken) {
+        log.debug('Token refreshed, retrying connection');
+        connect();
+      } else {
+        log.warn('Token refresh returned empty token');
+        toast.add({
+          title: 'Audio connection failed',
+          description: 'Please try logging in again.',
+          color: 'error',
+        });
+      }
+    } catch {
+      log.warn('Token refresh failed, manual re-login required');
+      toast.add({
+        title: 'Audio connection failed',
+        description: 'Please try logging in again.',
+        color: 'error',
+      });
+    } finally {
+      _isRefreshingToken = false;
     }
   }
 

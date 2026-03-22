@@ -142,15 +142,15 @@ const coverImageUrl = computed<string | null>(() => {
 // Asset Management
 // ========================================
 
-const { isDownloading, isDownloadComplete, assetPhase, downloadPercent, cachedAssetCount, totalAssetCount } = useBootstrapAssets()
+const assetStore = useAssetStore()
 const showAssetModal = ref(false)
 
 /**
  * Icon based on current asset download status.
  */
 const assetStatusIcon = computed(() => {
-  if (isDownloading.value) return 'i-lucide-loader-2'
-  if (isDownloadComplete.value) return 'i-lucide-check-circle'
+  if (assetStore.isDownloading) return 'i-lucide-loader-2'
+  if (assetStore.isComplete) return 'i-lucide-check-circle'
   return 'i-lucide-download'
 })
 
@@ -158,8 +158,8 @@ const assetStatusIcon = computed(() => {
  * Icon color based on asset status.
  */
 const assetStatusIconColor = computed(() => {
-  if (isDownloading.value) return 'text-primary'
-  if (isDownloadComplete.value) return 'text-success'
+  if (assetStore.isDownloading) return 'text-primary'
+  if (assetStore.isComplete) return 'text-success'
   return 'text-neutral-400'
 })
 
@@ -167,9 +167,9 @@ const assetStatusIconColor = computed(() => {
  * Title text for asset status.
  */
 const assetStatusTitle = computed(() => {
-  if (isDownloading.value) return 'Downloading...'
-  if (isDownloadComplete.value) return 'All Downloaded'
-  if (assetPhase.value === 'error') return 'Download Error'
+  if (assetStore.isDownloading) return 'Downloading...'
+  if (assetStore.isComplete) return 'All Downloaded'
+  if (assetStore.phase === 'error') return 'Download Error'
   return 'Ready to Download'
 })
 
@@ -411,13 +411,13 @@ watch(
               <div class="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800">
                 <UIcon 
                   :name="assetStatusIcon" 
-                  :class="['h-5 w-5', assetStatusIconColor, isDownloading ? 'animate-spin' : '']" 
+                  :class="['h-5 w-5', assetStatusIconColor, assetStore.isDownloading ? 'animate-spin' : '']" 
                 />
               </div>
               <div>
                 <p class="font-medium text-white">{{ assetStatusTitle }}</p>
                 <p class="text-sm text-neutral-400">
-                  {{ cachedAssetCount }} / {{ totalAssetCount }} assets
+                  {{ assetStore.completedCount }} / {{ assetStore.totalCount }} assets
                 </p>
               </div>
             </div>
@@ -433,15 +433,15 @@ watch(
           </div>
           
           <!-- Progress bar when downloading -->
-          <div v-if="isDownloading" class="mt-3">
+          <div v-if="assetStore.isDownloading" class="mt-3">
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
               <div
                 class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out"
-                :style="{ width: `${downloadPercent}%` }"
+                :style="{ width: `${assetStore.downloadPercent}%` }"
               />
             </div>
             <p class="mt-1 text-xs text-neutral-500">
-              {{ downloadPercent }}% complete
+              {{ assetStore.downloadPercent }}% complete
             </p>
           </div>
 
