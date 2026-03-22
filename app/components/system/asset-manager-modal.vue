@@ -7,6 +7,8 @@
 // Composables / Stores
 // ========================================
 
+const { startAssetDownload } = useBootstrapAssets()
+const assetStore = useAssetStore()
 const bootstrapStore = useBootstrapStore()
 
 // ========================================
@@ -40,8 +42,8 @@ const isOpen = computed({
  * Icon based on current download status.
  */
 const statusIcon = computed(() => {
-  if (bootstrapStore.isDownloading) return 'i-lucide-loader-2'
-  if (bootstrapStore.isDownloadComplete) return 'i-lucide-check-circle'
+  if (assetStore.isDownloading) return 'i-lucide-loader-2'
+  if (assetStore.isComplete) return 'i-lucide-check-circle'
   return 'i-lucide-download'
 })
 
@@ -49,8 +51,8 @@ const statusIcon = computed(() => {
  * Icon color based on status.
  */
 const statusIconColor = computed(() => {
-  if (bootstrapStore.isDownloading) return 'text-primary'
-  if (bootstrapStore.isDownloadComplete) return 'text-success'
+  if (assetStore.isDownloading) return 'text-primary'
+  if (assetStore.isComplete) return 'text-success'
   return 'text-neutral-400'
 })
 
@@ -58,9 +60,9 @@ const statusIconColor = computed(() => {
  * Status title text.
  */
 const statusTitle = computed(() => {
-  if (bootstrapStore.isDownloading) return 'Downloading Assets...'
-  if (bootstrapStore.isDownloadComplete) return 'All Assets Downloaded'
-  if (bootstrapStore.assetPhase === 'error') return 'Download Error'
+  if (assetStore.isDownloading) return 'Downloading Assets...'
+  if (assetStore.isComplete) return 'All Assets Downloaded'
+  if (assetStore.phase === 'error') return 'Download Error'
   return 'Asset Status'
 })
 
@@ -68,16 +70,16 @@ const statusTitle = computed(() => {
  * Status description text.
  */
 const statusDescription = computed(() => {
-  if (bootstrapStore.isDownloading) {
-    return `Downloading ${bootstrapStore.cachedAssetCount} of ${bootstrapStore.totalAssetCount} assets (${bootstrapStore.downloadPercent}%)`
+  if (assetStore.isDownloading) {
+    return `Downloading ${assetStore.completedCount} of ${assetStore.totalCount} assets (${assetStore.downloadPercent}%)`
   }
-  if (bootstrapStore.isDownloadComplete) {
+  if (assetStore.isComplete) {
     return 'All animation assets are cached and ready. No need for re-downloading.'
   }
-  if (bootstrapStore.assetPhase === 'error') {
-    return bootstrapStore.assetError ?? 'An error occurred during download.'
+  if (assetStore.phase === 'error') {
+    return assetStore.error ?? 'An error occurred during download.'
   }
-  if (bootstrapStore.assetPhase === 'idle' && bootstrapStore.totalAssetCount === 0) {
+  if (assetStore.phase === 'idle' && assetStore.totalCount === 0) {
     return 'No assets to download.'
   }
   return 'Tap below to start downloading assets.'
@@ -86,13 +88,13 @@ const statusDescription = computed(() => {
 /**
  * Whether to show the progress bar.
  */
-const showProgress = computed(() => bootstrapStore.isDownloading)
+const showProgress = computed(() => assetStore.isDownloading)
 
 /**
  * Whether to show the start download button.
  */
 const showStartButton = computed(() => {
-  return bootstrapStore.assetPhase === 'idle' && bootstrapStore.giftCatalog.length > 0
+  return assetStore.phase === 'idle' && bootstrapStore.giftCatalog.length > 0
 })
 
 // ========================================
@@ -104,7 +106,7 @@ function handleClose(): void {
 }
 
 function handleStartDownload(): void {
-  bootstrapStore.startAssetDownload()
+  startAssetDownload()
 }
 </script>
 
@@ -120,7 +122,7 @@ function handleStartDownload(): void {
             >
               <UIcon 
                 :name="statusIcon" 
-                :class="['h-6 w-6', statusIconColor, bootstrapStore.isDownloading ? 'animate-spin' : '']" 
+                :class="['h-6 w-6', statusIconColor, assetStore.isDownloading ? 'animate-spin' : '']" 
               />
             </div>
             <div>
@@ -128,7 +130,7 @@ function handleStartDownload(): void {
                 {{ statusTitle }}
               </h3>
               <p class="text-sm text-neutral-400">
-                {{ bootstrapStore.cachedAssetCount }} / {{ bootstrapStore.totalAssetCount }} assets
+                {{ assetStore.completedCount }} / {{ assetStore.totalCount }} assets
               </p>
             </div>
           </div>
@@ -146,11 +148,11 @@ function handleStartDownload(): void {
           <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-800">
             <div
               class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out"
-              :style="{ width: `${bootstrapStore.downloadPercent}%` }"
+              :style="{ width: `${assetStore.downloadPercent}%` }"
             />
           </div>
           <p class="mt-2 text-xs text-center text-neutral-500">
-            {{ bootstrapStore.downloadPercent }}% complete
+            {{ assetStore.downloadPercent }}% complete
           </p>
         </div>
 
@@ -177,7 +179,7 @@ function handleStartDownload(): void {
             color="neutral"
             @click="handleClose"
           >
-            {{ bootstrapStore.isDownloadComplete ? 'Done' : 'Close' }}
+            {{ assetStore.isComplete ? 'Done' : 'Close' }}
           </UButton>
         </div>
 

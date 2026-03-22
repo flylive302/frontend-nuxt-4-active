@@ -27,9 +27,6 @@ export const ASSET_CONFIG = {
   /** Delay between retries (ms) */
   RETRY_DELAY_MS: 1000,
 
-  /** Cellular threshold for consent modal (5MB) */
-  CELLULAR_THRESHOLD_BYTES: 5 * 1024 * 1024,
-
   /** Number of top gifts considered critical */
   CRITICAL_COUNT: 30,
 

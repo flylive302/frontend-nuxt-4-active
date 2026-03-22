@@ -63,18 +63,6 @@ export function useTelemetry() {
   }
 
   // ========================================
-  // Cellular Consent Events (for Phase 3)
-  // ========================================
-
-  function trackCellularConsentGiven(): void {
-    track({ name: 'cellular_consent_given' })
-  }
-
-  function trackCellularConsentDenied(): void {
-    track({ name: 'cellular_consent_denied' })
-  }
-
-  // ========================================
   // Return
   // ========================================
 
@@ -83,7 +71,5 @@ export function useTelemetry() {
     trackBootstrapStarted,
     trackBootstrapCompleted,
     trackBootstrapFailed,
-    trackCellularConsentGiven,
-    trackCellularConsentDenied,
   }
 }

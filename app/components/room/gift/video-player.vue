@@ -8,7 +8,7 @@
  * Uses programmatic play() with AbortError handling to prevent
  * console errors when the component is destroyed mid-play.
  */
-import { useGiftAssetCache } from '~/composables/gift/useGiftAssetCache';
+import * as giftAssetCache from '~/services/giftAssetCache';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[VideoPlayer]');
@@ -23,7 +23,6 @@ const emit = defineEmits<{
 }>();
 
 const videoRef = ref<HTMLVideoElement | null>(null);
-const { getCachedVideoUrlSync, preloadVideo } = useGiftAssetCache();
 
 /** Guard flag — prevents play/error callbacks after component unmount */
 let isDestroyed = false;
@@ -67,14 +66,14 @@ function safePlay(): void {
 // On mount, try to get from cache or preload, then play
 onMounted(async () => {
   // First try sync L1 cache
-  const syncUrl = getCachedVideoUrlSync(props.src);
+  const syncUrl = giftAssetCache.getCachedVideoUrlSync(props.src);
   if (syncUrl !== props.src) {
     resolvedSrc.value = syncUrl;
     log.debug('Video from L1 cache:', props.src);
   } else {
     // If not in L1, preload async (L2 cache / network)
     try {
-      const url = await preloadVideo(props.src);
+      const url = await giftAssetCache.preloadVideo(props.src);
       if (isDestroyed) return;
       resolvedSrc.value = url;
       log.debug('Video preloaded:', props.src);

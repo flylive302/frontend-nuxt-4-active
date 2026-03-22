@@ -5,7 +5,7 @@
  * Pure presentation page. Room lifecycle (join/leave/reconnect) is managed
  * by useRoomLifecycle composable in app.vue. State comes from Pinia store.
  */
-import { ASSET_PRELOAD_DELAY_MS } from '~/constants/room';
+
 import auth from '~/middleware/auth';
 
 definePageMeta({
@@ -34,8 +34,7 @@ async function onLuckyCombo() {
 // ========================================
 // Route Guard — redirect home if no room in store
 // ========================================
-const route = useRoute();
-const roomId = computed(() => route.params.id as string);
+
 
 watch(
   () => roomStore.currentRoom,
@@ -65,14 +64,7 @@ onUnmounted(() => {
   }, 100);
 });
 
-// ========================================
-// Asset Preloading (Opportunistic)
-// ========================================
-const { startIdlePreload } = useAssetPreloader();
-onMounted(() => {
-  // Delay to allow initial render to complete
-  setTimeout(startIdlePreload, ASSET_PRELOAD_DELAY_MS);
-});
+
 
 // ========================================
 // Settings Drawer State

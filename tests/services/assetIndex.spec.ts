@@ -32,46 +32,62 @@ vi.mock('~/utils/logger', () => ({
   }),
 }))
 
-// Mock IndexedDB
+// ========================================
+// IndexedDB Mock
+// ========================================
+
+// In-memory store backing the mock IndexedDB
 const mockStore: Map<string, AssetMetadata> = new Map()
+
+/**
+ * Wrap mock result to behave like IDBRequest — assigns onsuccess async.
+ */
+function createMockRequest<T>(result: T): IDBRequest<T> {
+  const request = {
+    result,
+    error: null,
+    onsuccess: null as ((e: unknown) => void) | null,
+    onerror: null as ((e: unknown) => void) | null,
+  } as unknown as IDBRequest<T>
+
+  // Simulate async callback
+  queueMicrotask(() => {
+    if (request.onsuccess) {
+      request.onsuccess(new Event('success'))
+    }
+  })
+
+  return request
+}
 
 const mockObjectStore = {
   put: vi.fn((data: AssetMetadata) => {
     mockStore.set(data.url, data)
-    return { onsuccess: null, onerror: null }
+    return createMockRequest(undefined)
   }),
   get: vi.fn((key: string) => {
-    const result = mockStore.get(key)
-    return {
-      result,
-      onsuccess: null,
-      onerror: null,
-    }
+    return createMockRequest(mockStore.get(key) ?? undefined)
   }),
   delete: vi.fn((key: string) => {
     mockStore.delete(key)
-    return { onsuccess: null, onerror: null }
+    return createMockRequest(undefined)
   }),
-  getAll: vi.fn(() => ({
-    result: Array.from(mockStore.values()),
-    onsuccess: null,
-    onerror: null,
-  })),
+  getAll: vi.fn(() => {
+    return createMockRequest(Array.from(mockStore.values()))
+  }),
   clear: vi.fn(() => {
     mockStore.clear()
-    return { onsuccess: null, onerror: null }
+    return createMockRequest(undefined)
   }),
-  count: vi.fn(() => ({
-    result: mockStore.size,
-    onsuccess: null,
-    onerror: null,
-  })),
-  index: vi.fn(() => ({
-    getAll: vi.fn((giftId: number) => ({
-      result: Array.from(mockStore.values()).filter((m) => m.giftId === giftId),
-      onsuccess: null,
-      onerror: null,
-    })),
+  count: vi.fn(() => {
+    return createMockRequest(mockStore.size)
+  }),
+  index: vi.fn((_indexName: string) => ({
+    getAll: vi.fn((giftId: number) => {
+      return createMockRequest(
+        Array.from(mockStore.values()).filter((m) => m.giftId === giftId)
+      )
+    }),
   })),
 }
 
@@ -99,14 +115,14 @@ const mockIndexedDB = {
       result: mockDb,
     }
     // Simulate async success
-    setTimeout(() => {
+    queueMicrotask(() => {
       if (request.onupgradeneeded) {
         request.onupgradeneeded({ target: request })
       }
       if (request.onsuccess) {
         request.onsuccess({})
       }
-    }, 0)
+    })
     return request
   }),
 }
@@ -116,8 +132,12 @@ Object.defineProperty(global, 'indexedDB', {
   writable: true,
 })
 
-describe('assetIndex', () => {
-  const _sampleMetadata: AssetMetadata = {
+// ========================================
+// Test Data
+// ========================================
+
+function createMetadata(overrides: Partial<AssetMetadata> = {}): AssetMetadata {
+  return {
     url: 'https://example.com/asset.webm',
     assetType: 'video',
     priority: 'normal',
@@ -126,79 +146,200 @@ describe('assetIndex', () => {
     downloadedAt: Date.now(),
     lastAccessedAt: Date.now(),
     retryCount: 0,
+    ...overrides,
   }
+}
 
-  beforeEach(() => {
+// ========================================
+// Tests
+// ========================================
+
+describe('assetIndex', () => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     mockStore.clear()
+    // Re-init for each test to get a fresh DB handle
+    await initAssetIndex()
   })
 
   describe('initAssetIndex', () => {
-    it('should open IndexedDB', async () => {
-      await initAssetIndex()
+    it('should open IndexedDB with correct name and version', async () => {
       expect(mockIndexedDB.open).toHaveBeenCalledWith('flylive-assets', 1)
     })
   })
 
   describe('upsert', () => {
-    it('should store metadata', async () => {
-      // This test verifies the function can be called
-      // Full integration would require actual IndexedDB
-      expect(typeof upsert).toBe('function')
+    it('should store metadata via put()', async () => {
+      const metadata = createMetadata()
+      await upsert(metadata)
+
+      expect(mockObjectStore.put).toHaveBeenCalledWith(metadata)
+    })
+
+    it('should overwrite existing metadata with same URL', async () => {
+      const first = createMetadata({ sizeBytes: 100 })
+      const second = createMetadata({ sizeBytes: 200 })
+
+      await upsert(first)
+      await upsert(second)
+
+      expect(mockStore.get('https://example.com/asset.webm')?.sizeBytes).toBe(200)
     })
   })
 
   describe('get', () => {
-    it('should be a function', () => {
-      expect(typeof get).toBe('function')
+    it('should return null for missing URL', async () => {
+      const result = await get('https://example.com/missing.webm')
+      expect(result).toBeNull()
+    })
+
+    it('should return metadata for existing URL', async () => {
+      const metadata = createMetadata()
+      mockStore.set(metadata.url, metadata)
+
+      const result = await get(metadata.url)
+      expect(result).toEqual(metadata)
     })
   })
 
   describe('remove', () => {
-    it('should be a function', () => {
-      expect(typeof remove).toBe('function')
+    it('should call delete on the object store', async () => {
+      const url = 'https://example.com/to-delete.webm'
+      mockStore.set(url, createMetadata({ url }))
+
+      await remove(url)
+
+      expect(mockObjectStore.delete).toHaveBeenCalledWith(url)
+      expect(mockStore.has(url)).toBe(false)
+    })
+
+    it('should not throw for non-existent URL', async () => {
+      await expect(remove('https://example.com/never-existed.webm')).resolves.toBeUndefined()
     })
   })
 
   describe('getByGiftId', () => {
-    it('should be a function', () => {
-      expect(typeof getByGiftId).toBe('function')
+    it('should return entries matching the giftId', async () => {
+      const m1 = createMetadata({ url: 'a.webm', giftId: 10 })
+      const m2 = createMetadata({ url: 'b.webm', giftId: 10 })
+      const m3 = createMetadata({ url: 'c.webm', giftId: 99 })
+      mockStore.set(m1.url, m1)
+      mockStore.set(m2.url, m2)
+      mockStore.set(m3.url, m3)
+
+      const result = await getByGiftId(10)
+      expect(result).toHaveLength(2)
+      expect(result.every((m) => m.giftId === 10)).toBe(true)
+    })
+
+    it('should return empty array for unmatched giftId', async () => {
+      const result = await getByGiftId(999)
+      expect(result).toEqual([])
     })
   })
 
   describe('getAllByPriority', () => {
-    it('should be a function', () => {
-      expect(typeof getAllByPriority).toBe('function')
+    it('should sort results by priority order (critical > high > normal > low)', async () => {
+      mockStore.set('a', createMetadata({ url: 'a', priority: 'low' }))
+      mockStore.set('b', createMetadata({ url: 'b', priority: 'critical' }))
+      mockStore.set('c', createMetadata({ url: 'c', priority: 'normal' }))
+      mockStore.set('d', createMetadata({ url: 'd', priority: 'high' }))
+
+      const result = await getAllByPriority()
+
+      expect(result[0]!.priority).toBe('critical')
+      expect(result[1]!.priority).toBe('high')
+      expect(result[2]!.priority).toBe('normal')
+      expect(result[3]!.priority).toBe('low')
+    })
+
+    it('should return empty array for empty store', async () => {
+      const result = await getAllByPriority()
+      expect(result).toEqual([])
     })
   })
 
   describe('getStale', () => {
-    it('should be a function', () => {
-      expect(typeof getStale).toBe('function')
+    it('should return entries older than the threshold', async () => {
+      const thirtyOneDaysAgo = Date.now() - 31 * 24 * 60 * 60 * 1000
+      const recent = createMetadata({ url: 'recent.webm', downloadedAt: Date.now() })
+      const stale = createMetadata({ url: 'stale.webm', downloadedAt: thirtyOneDaysAgo })
+      mockStore.set(recent.url, recent)
+      mockStore.set(stale.url, stale)
+
+      const result = await getStale(30)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]!.url).toBe('stale.webm')
+    })
+
+    it('should return empty array when nothing is stale', async () => {
+      mockStore.set('fresh.webm', createMetadata({ url: 'fresh.webm', downloadedAt: Date.now() }))
+
+      const result = await getStale(30)
+      expect(result).toEqual([])
     })
   })
 
   describe('getAll', () => {
-    it('should be a function', () => {
-      expect(typeof getAll).toBe('function')
+    it('should return all entries from the store', async () => {
+      mockStore.set('a', createMetadata({ url: 'a' }))
+      mockStore.set('b', createMetadata({ url: 'b' }))
+      mockStore.set('c', createMetadata({ url: 'c' }))
+
+      const result = await getAll()
+      expect(result).toHaveLength(3)
+    })
+
+    it('should return empty array for empty store', async () => {
+      const result = await getAll()
+      expect(result).toEqual([])
     })
   })
 
   describe('clearAll', () => {
-    it('should be a function', () => {
-      expect(typeof clearAll).toBe('function')
+    it('should clear the entire object store', async () => {
+      mockStore.set('a', createMetadata({ url: 'a' }))
+      mockStore.set('b', createMetadata({ url: 'b' }))
+
+      await clearAll()
+
+      expect(mockObjectStore.clear).toHaveBeenCalled()
+      expect(mockStore.size).toBe(0)
     })
   })
 
   describe('updateLastAccessed', () => {
-    it('should be a function', () => {
-      expect(typeof updateLastAccessed).toBe('function')
+    it('should update the lastAccessedAt timestamp', async () => {
+      const oldTimestamp = Date.now() - 10000
+      const metadata = createMetadata({ lastAccessedAt: oldTimestamp })
+      mockStore.set(metadata.url, metadata)
+
+      await updateLastAccessed(metadata.url)
+
+      // Should have called put with updated timestamp
+      expect(mockObjectStore.put).toHaveBeenCalled()
+      const putArg = mockObjectStore.put.mock.calls[0]![0] as AssetMetadata
+      expect(putArg.lastAccessedAt).toBeGreaterThan(oldTimestamp)
+    })
+
+    it('should not throw for non-existent URL', async () => {
+      await expect(updateLastAccessed('https://example.com/nope.webm')).resolves.toBeUndefined()
     })
   })
 
   describe('count', () => {
-    it('should be a function', () => {
-      expect(typeof count).toBe('function')
+    it('should return the number of entries', async () => {
+      mockStore.set('a', createMetadata({ url: 'a' }))
+      mockStore.set('b', createMetadata({ url: 'b' }))
+
+      const result = await count()
+      expect(result).toBe(2)
+    })
+
+    it('should return 0 for empty store', async () => {
+      const result = await count()
+      expect(result).toBe(0)
     })
   })
 })

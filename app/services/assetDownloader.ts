@@ -120,6 +120,26 @@ export function clear(): void {
 
 }
 
+/**
+ * Reset all internal state (for testing and HMR).
+ */
+export function resetAll(): void {
+  queue.length = 0
+  activeDownloads.clear()
+  progress = {
+    total: 0,
+    completed: 0,
+    failed: 0,
+    currentUrl: null,
+    bytesDownloaded: 0,
+    bytesTotal: 0,
+  }
+  progressCallbacks.clear()
+  completeCallbacks.clear()
+  isPaused = false
+  isProcessing = false
+}
+
 // ========================================
 // Download Processing
 // ========================================

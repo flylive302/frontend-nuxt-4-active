@@ -151,7 +151,8 @@ watchEffect(() => {
 // (covers case where socket isn't connected and bootstrap served cached levels)
 onMounted(() => {
   if (authStore.user?.charm_xp) {
-    levelsStore.updateCharmXp(parseFloat(authStore.user.charm_xp))
+    const { updateCharmXp } = useLevelActions()
+    updateCharmXp(parseFloat(authStore.user.charm_xp))
   }
 })
 </script>

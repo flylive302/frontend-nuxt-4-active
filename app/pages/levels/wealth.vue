@@ -150,7 +150,8 @@ watchEffect(() => {
 // (covers case where socket isn't connected and bootstrap served cached levels)
 onMounted(() => {
   if (authStore.user?.wealth_xp) {
-    levelsStore.updateWealthXp(parseFloat(authStore.user.wealth_xp))
+    const { updateWealthXp } = useLevelActions()
+    updateWealthXp(parseFloat(authStore.user.wealth_xp))
   }
 })
 </script>

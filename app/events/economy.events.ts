@@ -36,9 +36,9 @@ export function registerEconomyEvents(socket: Socket): void {
     })
 
     // Update levelsStore XP and recalculate progress bars
-    const levelsStore = useLevelsStore()
-    levelsStore.updateWealthXp(parseFloat(payload.wealth_xp))
-    levelsStore.updateCharmXp(parseFloat(payload.charm_xp))
+    const { updateWealthXp, updateCharmXp } = useLevelActions()
+    updateWealthXp(parseFloat(payload.wealth_xp))
+    updateCharmXp(parseFloat(payload.charm_xp))
   })
 
   socket.on('reward.earned', (payload: RewardEarnedPayload) => {

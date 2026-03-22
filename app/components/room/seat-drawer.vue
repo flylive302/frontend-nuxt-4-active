@@ -5,7 +5,7 @@ import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[SeatDrawer]')
 
-const bootstrapStore = useBootstrapStore()
+const { getLevelFromXp } = useLevelLookup()
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
 const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
@@ -186,14 +186,14 @@ const canManageMembers = computed(() => {
  * Get wealth level info from user's XP.
  */
 const wealthLevel = computed(() =>
-    bootstrapStore.getLevelFromXp(currentSeat.value?.user?.wealth_xp ?? '0', 'wealth')
+    getLevelFromXp(currentSeat.value?.user?.wealth_xp ?? '0', 'wealth')
 )
 
 /**
  * Get charm level info from user's XP.
  */
 const charmLevel = computed(() =>
-    bootstrapStore.getLevelFromXp(currentSeat.value?.user?.charm_xp ?? '0', 'charm')
+    getLevelFromXp(currentSeat.value?.user?.charm_xp ?? '0', 'charm')
 )
 </script>
 

@@ -14,7 +14,7 @@ const props = defineProps<{
 // Composables
 // ========================================
 
-const bootstrapStore = useBootstrapStore()
+const { getLevelFromXp } = useLevelLookup()
 
 const roomStore = useRoomStore();
 
@@ -35,14 +35,21 @@ const isOverflowing = useTextOverflow(nameRef)
  * Get wealth level info from user's XP.
  */
 const wealthLevel = computed(() =>
-    bootstrapStore.getLevelFromXp(props.user.wealth_xp, 'wealth')
+    getLevelFromXp(props.user.wealth_xp, 'wealth')
 )
 
 /**
  * Get charm level info from user's XP.
  */
 const charmLevel = computed(() =>
-    bootstrapStore.getLevelFromXp(props.user.charm_xp, 'charm')
+    getLevelFromXp(props.user.charm_xp, 'charm')
+)
+
+/**
+ * Gender badge color, typed for UBadge.
+ */
+const genderColor = computed(() =>
+  getGenderInfo(props.user.gender).color as 'primary' | 'secondary' | 'tertiary' | 'neutral'
 )
 
 </script>
@@ -68,7 +75,7 @@ const charmLevel = computed(() =>
             <span :class="{ 'marquee-text': isOverflowing }">{{ user.name }}</span>
           </h3>
           <UBadge
-              :color="getGenderInfo(user.gender).color as 'primary' | 'secondary' | 'tertiary' | 'neutral'"
+              :color="genderColor"
               :icon="getGenderInfo(user.gender).icon"
               size="xs"
               square

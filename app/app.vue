@@ -5,7 +5,6 @@ import { defineAsyncComponent } from 'vue'
 const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
 
 const roomStore = useRoomStore()
-const bootstrapStore = useBootstrapStore()
 
 // ========================================
 // Persistent Room Lifecycle (join/leave/reconnect)
@@ -26,7 +25,10 @@ initWakeLock()
 // This handles the post-login flow where the cookie is now available.
 
 const authStore = useAuthStore()
+const bootstrapStore = useBootstrapStore()
 const levelsStore = useLevelsStore()
+const { fetchBootstrap } = useBootstrapInit()
+const { startAssetDownload, assetPhase, assetProgress } = useBootstrapAssets()
 
 // Track if we're currently fetching to avoid duplicate calls
 const isFetchingBootstrap = ref(false)
@@ -37,15 +39,15 @@ watch(
     () => bootstrapStore.isReady,
     () => bootstrapStore.phase,
     () => bootstrapStore.giftCatalog.length,
-    () => bootstrapStore.assetPhase,
+    () => assetPhase.value,
   ],
-  async ([isAuth, isReady, phase, giftCount, assetPhase]) => {
+  async ([isAuth, isReady, phase, giftCount, currentAssetPhase]) => {
     // Scenario 1: User is authenticated but bootstrap data not loaded
     // This happens after login when navigation completes
     if (isAuth && !isReady && phase === 'idle' && !isFetchingBootstrap.value) {
       isFetchingBootstrap.value = true
       try {
-        const data = await bootstrapStore.fetchBootstrap()
+        const data = await fetchBootstrap()
 
         // Seed dependent stores — mirrors bootstrap.client.ts plugin logic
         if (data) {
@@ -63,8 +65,8 @@ watch(
     }
 
     // Scenario 2: Bootstrap ready, gifts available, start downloading
-    if (isAuth && isReady && giftCount > 0 && assetPhase === 'idle') {
-      bootstrapStore.startAssetDownload()
+    if (isAuth && isReady && giftCount > 0 && currentAssetPhase === 'idle') {
+      startAssetDownload()
     }
   },
   { immediate: true }
@@ -89,8 +91,8 @@ watch(
 
     <!-- Download Progress Bar (top of screen during asset download) -->
     <SystemDownloadProgressBar 
-      :progress="bootstrapStore.assetProgress"
-      :visible="bootstrapStore.assetPhase === 'downloading'"
+      :progress="assetProgress"
+      :visible="assetPhase === 'downloading'"
     />
 
 

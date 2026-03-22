@@ -10,12 +10,12 @@
 import { watch, type Ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import type { Gift } from '~/types/gift/gift'
+import * as giftAssetCache from '~/services/giftAssetCache'
 
 // ========================================
 // Module-level Cached Composables
 // ========================================
 
-let _giftAssetCache: ReturnType<typeof useGiftAssetCache> | null = null
 let _roomAudio: { prepareGift: (giftId: number, recipientIds: number[]) => void } | null = null
 
 /**
@@ -31,12 +31,11 @@ export function useGiftPreload(
 ): void {
   const debouncedPreload = useDebounceFn(
     async (gift: Gift, recipients: number[]) => {
-      // Initialize cached composables on first call
-      if (!_giftAssetCache) _giftAssetCache = useGiftAssetCache()
+      // Initialize cached composable on first call
       if (!_roomAudio) _roomAudio = useRoomAudio()
 
       // 1. Preload locally for sender (instant playback)
-      await _giftAssetCache.preloadGift(gift)
+      await giftAssetCache.preloadGift(gift)
 
       // 2. Send prepare signal to recipients
       _roomAudio.prepareGift(gift.id, recipients)

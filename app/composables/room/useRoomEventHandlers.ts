@@ -26,6 +26,7 @@ import { refundPendingCoins } from '../gift/useGiftSending';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import { createLogger } from '~/utils/logger';
+import * as giftAssetCache from '~/services/giftAssetCache';
 
 // ============================================
 // Types
@@ -128,7 +129,6 @@ export function setupRoomEventHandlers({
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
   const { triggerFly } = useLuckyFly();
-  const { preloadGift } = useGiftAssetCache();
 
   // Room events
   socket.on('room:userJoined', (event: UserJoinedEvent) => {
@@ -355,7 +355,7 @@ export function setupRoomEventHandlers({
     if (event.recipientId !== authStore.user?.id) return;
     const gift = getGiftById(event.giftId);
     if (gift) {
-      await preloadGift(gift);
+      await giftAssetCache.preloadGift(gift);
     }
   });
 

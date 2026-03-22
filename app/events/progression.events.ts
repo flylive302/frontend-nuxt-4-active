@@ -26,11 +26,11 @@ export function registerProgressionEvents(socket: Socket): void {
   socket.on('level.up', (payload: UserLevelUpPayload) => {
     log.debug('level.up', payload)
     // Update levels store with new level
-    const levelsStore = useLevelsStore()
+    const { updateWealthLevel, updateCharmLevel } = useLevelActions()
     if (payload.type === 'wealth') {
-      levelsStore.updateWealthLevel(payload.new_level, payload.current_xp)
+      updateWealthLevel(payload.new_level, payload.current_xp)
     } else {
-      levelsStore.updateCharmLevel(payload.new_level, payload.current_xp)
+      updateCharmLevel(payload.new_level, payload.current_xp)
     }
     // Show celebratory modal with animation
     const { showLevelUp } = useAchievementModals()

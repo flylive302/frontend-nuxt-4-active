@@ -7,9 +7,8 @@ import type {
   ProfileGiftReceived,
   UserProfileResponse,
 } from '~/types/user/user-profile'
-import { formatCurrency } from '~/utils/currency'
-import type { LevelInfo } from '~/stores/bootstrap'
-import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/stores/bootstrap'
+import type { LevelInfo } from '~/composables/shared/useLevelLookup'
+import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
 
 // ========================================
 // Types
@@ -43,7 +42,7 @@ export function useUserProfile(
   options: UseUserProfileOptions = {}
 ) {
   const { api, normalizeError } = useApi()
-  const bootstrapStore = useBootstrapStore()
+  const { getLevelFromXp } = useLevelLookup()
 
   // ========================================
   // Configuration
@@ -133,8 +132,8 @@ export function useUserProfile(
 
     levelInfoLoading.value = true
     try {
-      wealthLevelInfo.value = bootstrapStore.getLevelFromXp(profile.value.wealth_xp, 'wealth')
-      charmLevelInfo.value = bootstrapStore.getLevelFromXp(profile.value.charm_xp, 'charm')
+      wealthLevelInfo.value = getLevelFromXp(profile.value.wealth_xp, 'wealth')
+      charmLevelInfo.value = getLevelFromXp(profile.value.charm_xp, 'charm')
     } catch (err) {
       console.error('[useUserProfile] computeLevelInfo failed:', err)
       // Non-blocking: keep default values
