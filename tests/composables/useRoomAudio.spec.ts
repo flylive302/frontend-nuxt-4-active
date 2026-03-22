@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, reactive, readonly } from 'vue'
 
 // ============================================
 // Mock Nuxt Auto-imports
@@ -15,6 +15,8 @@ import { ref, computed, shallowRef } from 'vue'
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('shallowRef', shallowRef)
+vi.stubGlobal('reactive', reactive)
+vi.stubGlobal('readonly', readonly)
 vi.stubGlobal('onUnmounted', vi.fn())
 
 // Mock useToast
@@ -221,6 +223,8 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('ref', ref)
       vi.stubGlobal('computed', computed)
       vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('reactive', reactive)
+      vi.stubGlobal('readonly', readonly)
       vi.stubGlobal('onUnmounted', vi.fn())
 
       const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
@@ -409,6 +413,8 @@ describe('useRoomAudio', () => {
         vi.stubGlobal('ref', ref)
         vi.stubGlobal('computed', computed)
         vi.stubGlobal('shallowRef', shallowRef)
+        vi.stubGlobal('reactive', reactive)
+        vi.stubGlobal('readonly', readonly)
         vi.stubGlobal('onUnmounted', vi.fn())
 
         const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
@@ -428,6 +434,9 @@ describe('useRoomAudio', () => {
     describe('sendGift()', () => {
       it('should emit gift:send event', async () => {
         mockRoomStore.currentRoom = { id: 'room-123' }
+        mockRoomStore.seats = [
+          { index: 0, user: { id: 42, name: 'Recipient' }, isMuted: false, isActive: false, isLocked: false },
+        ]
         mockAudioSocket.status.value = 'connected'
         
         // Reset modules and re-stub globals (required after previous test's resetModules)
@@ -444,6 +453,8 @@ describe('useRoomAudio', () => {
         vi.stubGlobal('ref', ref)
         vi.stubGlobal('computed', computed)
         vi.stubGlobal('shallowRef', shallowRef)
+        vi.stubGlobal('reactive', reactive)
+        vi.stubGlobal('readonly', readonly)
         vi.stubGlobal('onUnmounted', vi.fn())
 
         const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
@@ -506,6 +517,8 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('ref', ref)
       vi.stubGlobal('computed', computed)
       vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('reactive', reactive)
+      vi.stubGlobal('readonly', readonly)
       vi.stubGlobal('onUnmounted', vi.fn())
 
       const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
@@ -550,6 +563,8 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('ref', ref)
       vi.stubGlobal('computed', computed)
       vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('reactive', reactive)
+      vi.stubGlobal('readonly', readonly)
       vi.stubGlobal('onUnmounted', vi.fn())
 
       const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
@@ -584,6 +599,8 @@ describe('useRoomAudio', () => {
       vi.stubGlobal('ref', ref)
       vi.stubGlobal('computed', computed)
       vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('reactive', reactive)
+      vi.stubGlobal('readonly', readonly)
       vi.stubGlobal('onUnmounted', vi.fn())
 
       const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')

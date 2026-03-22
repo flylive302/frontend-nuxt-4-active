@@ -39,6 +39,12 @@ type PendingModal =
 // ========================================
 // State (module-level singleton)
 // ========================================
+// ARCHITECTURE EXCEPTION: Module-level refs used intentionally.
+// This state is ephemeral (modal open/close queue), not persisted,
+// and requires singleton semantics across all callers within a session.
+// A store would add unnecessary overhead for transient UI state and
+// would violate the "never create a store with fewer than ~3 refs
+// and ~2 functions" splitting rule (ARCHITECTURE.md).
 
 const badgeModalOpen = ref(false)
 const badgeModalData = ref<BadgeModalData | null>(null)

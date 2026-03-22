@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, reactive, readonly, watch } from 'vue'
 
 // ============================================
 // Mock External Dependencies
@@ -61,10 +61,21 @@ vi.stubGlobal('onUnmounted', vi.fn())
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('shallowRef', shallowRef)
+vi.stubGlobal('reactive', reactive)
+vi.stubGlobal('readonly', readonly)
+vi.stubGlobal('watch', watch)
+
+// Mock useApi (auto-imported by Nuxt)
+const mockApi = { api: vi.fn().mockResolvedValue(null) }
+vi.stubGlobal('useApi', () => mockApi)
 
 // Mock useAuthStore - needs to be a function that returns the store
 let mockAuthStore = { token: null as string | null, msabToken: null as string | null }
 vi.stubGlobal('useAuthStore', () => mockAuthStore)
+
+// Mock useUserStore
+const mockUserStore = { updateBalance: vi.fn() }
+vi.stubGlobal('useUserStore', () => mockUserStore)
 
 // ============================================
 // Tests
@@ -87,7 +98,12 @@ describe('useAudioSocket', () => {
     vi.stubGlobal('ref', ref)
     vi.stubGlobal('computed', computed)
     vi.stubGlobal('shallowRef', shallowRef)
+    vi.stubGlobal('reactive', reactive)
+    vi.stubGlobal('readonly', readonly)
+    vi.stubGlobal('watch', watch)
     vi.stubGlobal('useAuthStore', () => mockAuthStore)
+    vi.stubGlobal('useApi', () => mockApi)
+    vi.stubGlobal('useUserStore', () => mockUserStore)
   })
 
   afterEach(() => {

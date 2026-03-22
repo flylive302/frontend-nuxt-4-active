@@ -3,9 +3,10 @@
 // ========================================
 // Role: Action/Orchestrator — cross-store XP recalculation.
 // Reads bootstrap config + writes to levels store.
-// Pipeline: GATE → EXECUTE (no REACT — callers handle UI feedback)
+// Pipeline: GATE → EXECUTE (callers handle UI feedback as REACT)
 
 import type { LevelStatus } from '~/types/progression/levels'
+import type { UserLevelUpPayload } from '~/types/room/socket-events'
 
 // ========================================
 // Composable
@@ -16,9 +17,9 @@ import type { LevelStatus } from '~/types/progression/levels'
  * Reads level config from bootstrap store, computes new level/badge/progress,
  * and writes results to levels store.
  *
- * This is the correct place for cross-store coordination
- * (ARCHITECTURE.md: "Stores never import or call methods on other stores —
- *  cross-store coordination belongs in composables").
+ * Cross-store coordination belongs here per ARCHITECTURE.md:
+ * "Stores never import or call methods on other stores —
+ *  cross-store coordination belongs in composables."
  */
 export function useLevelActions() {
   const bootstrapStore = useBootstrapStore()
@@ -48,7 +49,6 @@ export function useLevelActions() {
     // EXECUTE — compute new level status
     const sortedConfig = [...config].sort((a, b) => a.level - b.level)
 
-    // Find highest matching level via reverse scan
     let newLevel = 0
     let newLevelName = sortedConfig[0]?.name ?? 'Level 0'
     let newBadgeId: number | null = null
@@ -63,30 +63,25 @@ export function useLevelActions() {
       }
     }
 
-    // Get badge from bootstrap store
     const badge = newBadgeId ? bootstrapStore.getBadgeById(newBadgeId) : null
 
-    // Find thresholds for progress calculation
     const currentLevelConfig = sortedConfig.find(l => l.level === newLevel)
     const nextLevelConfig = sortedConfig.find(l => l.level === newLevel + 1)
 
     const currentThreshold = currentLevelConfig?.required_xp ?? 0
     const nextThreshold = nextLevelConfig?.required_xp ?? currentThreshold
 
-    // Calculate progress within current level
     const xpInLevel = currentXp - currentThreshold
     const xpNeeded = nextThreshold - currentThreshold
     const progress = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100
     const remaining = Math.max(0, nextThreshold - currentXp)
 
-    // Build next_level info
     const nextLevel = nextLevelConfig ? {
       level: nextLevelConfig.level,
       name: nextLevelConfig.name,
       required_xp: nextLevelConfig.required_xp,
     } : null
 
-    // Build full LevelStatus and write to store
     const newStatus: LevelStatus = {
       ...targetRef,
       current_level: newLevel,
@@ -127,29 +122,17 @@ export function useLevelActions() {
   }
 
   /**
-   * Update wealth level from realtime level.up event.
+   * Handle a realtime level.up socket event.
+   * Routes the update by type (wealth/charm) and recalculates from XP.
+   * Called exclusively from progression.events.ts (events layer).
    */
-  function updateWealthLevel(_newLevel: number, currentXp: string): void {
-    if (levelsStore.wealthLevel) {
-      // First set the raw level, then recalculate with config
-      updateWealthXp(parseFloat(currentXp))
-    }
-  }
-
-  /**
-   * Update charm level from realtime level.up event.
-   */
-  function updateCharmLevel(_newLevel: number, currentXp: string): void {
-    if (levelsStore.charmLevel) {
-      // First set the raw level, then recalculate with config
-      updateCharmXp(parseFloat(currentXp))
-    }
+  function handleLevelUp(payload: UserLevelUpPayload): void {
+    recalculateXp(payload.type, parseFloat(payload.current_xp))
   }
 
   return {
     updateWealthXp,
     updateCharmXp,
-    updateWealthLevel,
-    updateCharmLevel,
+    handleLevelUp,
   }
 }

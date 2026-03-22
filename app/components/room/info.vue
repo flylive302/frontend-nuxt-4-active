@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
-import type { LeaderboardPeriod } from '~/types/progression/leaderboard'
-import type { LeaderboardEntry } from '~/types/progression/leaderboard'
+import type { LeaderboardPeriod, LeaderboardEntry } from '~/types/progression/leaderboard'
 
 
 // ========================================
@@ -150,11 +148,7 @@ function getRankColor(rank: number): 'primary' | 'secondary' | 'tertiary' | 'neu
  * Get rank badge variant based on position.
  */
 function getRankVariant(rank: number): 'solid' | 'soft' {
-  const variant = 'solid' as const
-  if (rank >= 1 && rank <= 3) {
-    return variant!
-  }
-  return 'soft'
+  return rank >= 1 && rank <= 3 ? 'solid' : 'soft'
 }
 </script>
 

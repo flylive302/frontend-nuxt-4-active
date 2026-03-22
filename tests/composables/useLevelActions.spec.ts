@@ -139,36 +139,35 @@ describe('useLevelActions', () => {
     })
   })
 
-  describe('updateWealthLevel', () => {
-    it('should recalculate from XP string', () => {
-      const { updateWealthLevel } = useLevelActions()
+  describe('handleLevelUp', () => {
+    it('should route wealth level.up payload and recalculate from XP', () => {
+      const { handleLevelUp } = useLevelActions()
 
-      updateWealthLevel(3, '600')
+      handleLevelUp({ type: 'wealth', previous_level: 1, new_level: 2, current_xp: '600' })
 
       expect(levelsStore.setWealthLevel).toHaveBeenCalledTimes(1)
       const calledWith = (levelsStore.setWealthLevel as ReturnType<typeof vi.fn>).mock.calls[0]![0]
       expect(calledWith.current_xp).toBe(600)
+      expect(calledWith.current_level).toBe(3) // level 3 starts at 500
     })
 
-    it('should not update when wealthLevel is null', () => {
-      ;(levelsStore as Record<string, unknown>).wealthLevel = null
-      const { updateWealthLevel } = useLevelActions()
+    it('should route charm level.up payload and recalculate from XP', () => {
+      const { handleLevelUp } = useLevelActions()
 
-      updateWealthLevel(3, '600')
-
-      expect(levelsStore.setWealthLevel).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('updateCharmLevel', () => {
-    it('should recalculate from XP string', () => {
-      const { updateCharmLevel } = useLevelActions()
-
-      updateCharmLevel(2, '300')
+      handleLevelUp({ type: 'charm', previous_level: 0, new_level: 1, current_xp: '300' })
 
       expect(levelsStore.setCharmLevel).toHaveBeenCalledTimes(1)
       const calledWith = (levelsStore.setCharmLevel as ReturnType<typeof vi.fn>).mock.calls[0]![0]
       expect(calledWith.current_xp).toBe(300)
+    })
+
+    it('should not update when store level is null', () => {
+      ;(levelsStore as Record<string, unknown>).wealthLevel = null
+      const { handleLevelUp } = useLevelActions()
+
+      handleLevelUp({ type: 'wealth', previous_level: 0, new_level: 1, current_xp: '100' })
+
+      expect(levelsStore.setWealthLevel).not.toHaveBeenCalled()
     })
   })
 })
