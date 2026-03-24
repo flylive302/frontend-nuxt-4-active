@@ -24,6 +24,23 @@ const log = createLogger('[ProgressionEvents]')
 export function registerProgressionEvents(socket: Socket): void {
   socket.on('badge.earned', (payload: BadgeEarnedPayload) => {
     log.debug('badge.earned', payload)
+
+    // REACT — update store + show toast via composable
+    const { onBadgeEarned } = useBadgeActions()
+    onBadgeEarned({
+      id: 0, // Temporary ID; real data will be fetched on next store refresh
+      badge_id: payload.badge_id,
+      is_displayed: false,
+      earned_at: new Date().toISOString(),
+      badge: {
+        id: payload.badge_id,
+        name: payload.badge_name,
+        image_url: payload.badge_image,
+        category: payload.category,
+      },
+    } as import('~/types/progression/badge').UserBadge)
+
+    // REACT — show celebratory modal
     const { showBadgeEarned } = useAchievementModals()
     showBadgeEarned(payload)
   })

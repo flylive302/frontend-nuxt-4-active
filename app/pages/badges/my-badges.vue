@@ -15,10 +15,12 @@ definePageMeta({
 })
 
 // ========================================
-// Store
+// Store + Composables
 // ========================================
 
 const badgesStore = useBadgesStore()
+const { fetchUserBadges, fetchStats } = useBadgeData()
+const { toggleDisplay } = useBadgeActions()
 
 // ========================================
 // State
@@ -49,7 +51,7 @@ const currentBadges = computed(() =>
 // ========================================
 
 async function handleToggle(userBadgeId: number): Promise<void> {
-  await badgesStore.toggleDisplay(userBadgeId)
+  await toggleDisplay(userBadgeId)
 }
 
 function handleTabChange(index: number): void {
@@ -61,10 +63,9 @@ function handleTabChange(index: number): void {
 // ========================================
 
 onMounted(async () => {
-  // Fetch user badges and stats
   await Promise.all([
-    badgesStore.fetchUserBadges({}, true),
-    badgesStore.fetchStats(),
+    fetchUserBadges(true),
+    fetchStats(),
   ])
 })
 </script>
@@ -81,11 +82,11 @@ onMounted(async () => {
       <div v-if="stats" class="grid grid-cols-2 gap-2 mb-4">
         <div class="bg-elevated rounded-lg p-3 text-center">
           <p class="text-xs text-muted">Total Earned</p>
-          <p class="text-2xl font-bold text-primary">{{ stats.total_earned }}</p>
+          <p class="text-2xl font-bold text-primary">{{ stats.total }}</p>
         </div>
         <div class="bg-elevated rounded-lg p-3 text-center">
           <p class="text-xs text-muted">Displayed</p>
-          <p class="text-2xl font-bold text-green-500">{{ stats.total_displayed }}</p>
+          <p class="text-2xl font-bold text-green-500">{{ displayedBadges.length }}</p>
         </div>
       </div>
 

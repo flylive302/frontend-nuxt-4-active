@@ -1,16 +1,16 @@
 // ========================================
 // Badges Store
 // ========================================
+// State-only store: refs + computed + setters.
+// API calls, toasts, and business logic live in composables.
 
 import { defineStore } from 'pinia'
-import { createLogger } from '~/utils/logger'
 import type {
   Badge,
   UserBadge,
   BadgeStats,
   BadgeCategory,
   BadgeCategoryInfo,
-  GetBadgesParams,
 } from '~/types/progression/badge'
 
 // ========================================
@@ -22,7 +22,6 @@ interface BadgeListState {
   loading: boolean
   error: string | null
   hasMore: boolean
-  cursor: string | null
 }
 
 interface UserBadgeListState {
@@ -30,7 +29,6 @@ interface UserBadgeListState {
   loading: boolean
   error: string | null
   hasMore: boolean
-  cursor: string | null
 }
 
 // ========================================
@@ -38,10 +36,6 @@ interface UserBadgeListState {
 // ========================================
 
 export const useBadgesStore = defineStore('badges', () => {
-  const log = createLogger('[BadgesStore]')
-  const { api, normalizeError } = useApi()
-  const toast = useToast()
-
   // ========================================
   // State
   // ========================================
@@ -51,7 +45,6 @@ export const useBadgesStore = defineStore('badges', () => {
     loading: false,
     error: null,
     hasMore: true,
-    cursor: null,
   })
 
   const userBadges = ref<UserBadgeListState>({
@@ -59,7 +52,6 @@ export const useBadgesStore = defineStore('badges', () => {
     loading: false,
     error: null,
     hasMore: true,
-    cursor: null,
   })
 
   const categories = ref<BadgeCategoryInfo[]>([])
@@ -81,243 +73,134 @@ export const useBadgesStore = defineStore('badges', () => {
   // Computed
   // ========================================
 
-  /**
-   * Displayed badges (is_displayed = true).
-   */
   const displayedBadges = computed(() =>
     userBadges.value.items.filter(b => b.is_displayed)
   )
 
-  /**
-   * Whether cached data needs refreshing.
-   */
+  const hiddenBadges = computed(() =>
+    userBadges.value.items.filter(b => !b.is_displayed)
+  )
+
   const needsRefresh = computed<boolean>(() => {
     if (!lastFetchedAt.value) return true
     return Date.now() - lastFetchedAt.value > STALE_TIME
   })
 
-  /**
-   * Hidden badges (is_displayed = false).
-   */
-  const hiddenBadges = computed(() =>
-    userBadges.value.items.filter(b => !b.is_displayed)
-  )
+  // ========================================
+  // Pure Lookups
+  // ========================================
 
-  /**
-   * Check if user has a specific badge.
-   */
   function hasUserBadge(badgeId: number): boolean {
     return userBadges.value.items.some(b => b.badge_id === badgeId)
   }
 
-  /**
-   * Get badges by category from catalog.
-   */
   function badgesByCategory(category: BadgeCategory): Badge[] {
     return catalog.value.items.filter(b => b.category === category)
   }
 
   // ========================================
-  // Actions
+  // Catalog Setters
   // ========================================
 
-  /**
-   * Fetch badge catalog.
-   */
-  async function fetchCatalog(params: GetBadgesParams = {}, reset = false): Promise<void> {
-    if (reset) {
-      catalog.value.items = []
-      catalog.value.cursor = null
-      catalog.value.hasMore = true
-    }
+  function setCatalog(items: Badge[]): void {
+    catalog.value.items = items
+    catalog.value.hasMore = false
+  }
 
-    if (!catalog.value.hasMore || catalog.value.loading) return
+  function setCatalogLoading(loading: boolean): void {
+    catalog.value.loading = loading
+  }
 
-    catalog.value.loading = true
+  function setCatalogError(error: string | null): void {
+    catalog.value.error = error
+  }
+
+  function resetCatalog(): void {
+    catalog.value.items = []
+    catalog.value.hasMore = true
     catalog.value.error = null
-
-    try {
-      const queryParams: Record<string, unknown> = {}
-
-      if (params.category) {
-        queryParams.category = params.category
-      }
-
-      // Backend returns simple array format: { data: Badge[] }
-      // No pagination - badge collections are small (10-50 items)
-      const response = await api<{
-        data: Badge[]
-      }>('/badges', { params: queryParams })
-
-      catalog.value.items = response.data
-      catalog.value.hasMore = false
-      lastFetchedAt.value = Date.now()
-    } catch (err) {
-      const normalized = normalizeError(err)
-      catalog.value.error = normalized.message
-      log.error('fetchCatalog failed:', err)
-    } finally {
-      catalog.value.loading = false
-    }
   }
 
-  /**
-   * Fetch badge categories.
-   */
-  async function fetchCategories(): Promise<void> {
-    try {
-      const response = await api<{
-        success: true
-        data: BadgeCategoryInfo[]
-      }>('/badges/categories')
+  // ========================================
+  // User Badges Setters
+  // ========================================
 
-      categories.value = response.data
-    } catch (err) {
-      log.error('fetchCategories failed:', err)
-    }
+  function setUserBadges(items: UserBadge[]): void {
+    userBadges.value.items = items
+    userBadges.value.hasMore = false
   }
 
-  /**
-   * Fetch user's earned badges.
-   */
-  async function fetchUserBadges(_params: GetBadgesParams = {}, reset = false): Promise<void> {
-    if (reset) {
-      userBadges.value.items = []
-      userBadges.value.cursor = null
-      userBadges.value.hasMore = true
-    }
+  function setUserBadgesLoading(loading: boolean): void {
+    userBadges.value.loading = loading
+  }
 
-    if (!userBadges.value.hasMore || userBadges.value.loading) return
+  function setUserBadgesError(error: string | null): void {
+    userBadges.value.error = error
+  }
 
-    userBadges.value.loading = true
+  function resetUserBadges(): void {
+    userBadges.value.items = []
+    userBadges.value.hasMore = true
     userBadges.value.error = null
-
-    try {
-      // Backend returns simple array format: { data: UserBadge[] }
-      // No pagination - user badge collections are small
-      const response = await api<{
-        data: UserBadge[]
-      }>('/user/badges')
-
-      userBadges.value.items = response.data
-      userBadges.value.hasMore = false
-    } catch (err) {
-      const normalized = normalizeError(err)
-      userBadges.value.error = normalized.message
-      log.error('fetchUserBadges failed:', err)
-    } finally {
-      userBadges.value.loading = false
-    }
   }
 
-  /**
-   * Fetch badge stats.
-   */
-  async function fetchStats(): Promise<void> {
-    try {
-      const response = await api<{
-        success: true
-        data: BadgeStats
-      }>('/user/badges/stats')
-
-      stats.value = response.data
-    } catch (err) {
-      log.error('fetchStats failed:', err)
-    }
-  }
-
-  /**
-   * Toggle badge display status.
-   */
-  async function toggleDisplay(userBadgeId: number): Promise<boolean> {
-    if (isTogglingDisplay.value !== null) return false
-
-    isTogglingDisplay.value = userBadgeId
-    const badge = userBadges.value.items.find(b => b.id === userBadgeId)
-    if (!badge) {
-      isTogglingDisplay.value = null
-      return false
-    }
-
-    // Optimistic update
-    badge.is_displayed = !badge.is_displayed
-
-    try {
-      await api<{
-        success: true
-        data: { badge: UserBadge; displayed_count: number; max_display: number }
-        message: string
-      }>(`/user/badges/${userBadgeId}/toggle-display`, { method: 'POST' })
-
-      toast.add({
-        title: badge.is_displayed ? 'Badge Displayed' : 'Badge Hidden',
-        color: 'success',
-      })
-
-      return true
-    } catch (err) {
-      // Rollback on error
-      badge.is_displayed = !badge.is_displayed
-      const normalized = normalizeError(err)
-      toast.add({
-        title: 'Update Failed',
-        description: normalized.message,
-        color: 'error',
-      })
-      log.error('toggleDisplay failed:', err)
-      return false
-    } finally {
-      isTogglingDisplay.value = null
-    }
-  }
-
-  /**
-   * Handle badge earned event (real-time).
-   */
-  function onBadgeEarned(userBadge: UserBadge): void {
-    // Add to user badges
+  function addUserBadge(userBadge: UserBadge): void {
     userBadges.value.items.unshift(userBadge)
+  }
 
-    // Update stats
-    if (stats.value) {
-      stats.value.total_earned += 1
-      stats.value.latest_earned = userBadge
+  function updateUserBadgeDisplay(userBadgeId: number, isDisplayed: boolean): void {
+    const badge = userBadges.value.items.find(b => b.id === userBadgeId)
+    if (badge) {
+      badge.is_displayed = isDisplayed
     }
-
-    // Show notification
-    toast.add({
-      title: 'New Badge Earned!',
-      description: userBadge.badge.name,
-      color: 'success',
-      icon: 'i-lucide-award',
-    })
   }
 
-  /**
-   * Set category filter and refetch catalog.
-   */
-  async function setCategory(category: BadgeCategory | null): Promise<void> {
+  // ========================================
+  // Other Setters
+  // ========================================
+
+  function setCategories(items: BadgeCategoryInfo[]): void {
+    categories.value = items
+  }
+
+  function setStats(data: BadgeStats): void {
+    stats.value = data
+  }
+
+  function incrementStatsTotal(): void {
+    if (stats.value) {
+      stats.value.total += 1
+    }
+  }
+
+  function setCurrentCategory(category: BadgeCategory | null): void {
     currentCategory.value = category
-    await fetchCatalog({ category: category ?? undefined }, true)
   }
 
-  /**
-   * Reset all state.
-   */
+  function setIsTogglingDisplay(id: number | null): void {
+    isTogglingDisplay.value = id
+  }
+
+  function setLastFetchedAt(timestamp: number): void {
+    lastFetchedAt.value = timestamp
+  }
+
+  // ========================================
+  // Reset
+  // ========================================
+
   function reset(): void {
     catalog.value = {
       items: [],
       loading: false,
       error: null,
       hasMore: true,
-      cursor: null,
     }
     userBadges.value = {
       items: [],
       loading: false,
       error: null,
       hasMore: true,
-      cursor: null,
     }
     categories.value = []
     stats.value = null
@@ -331,7 +214,7 @@ export const useBadgesStore = defineStore('badges', () => {
   // ========================================
 
   return {
-    // State
+    // State (read-only for components)
     catalog,
     userBadges,
     categories,
@@ -345,18 +228,33 @@ export const useBadgesStore = defineStore('badges', () => {
     hiddenBadges,
     needsRefresh,
 
-    // Methods
+    // Pure lookups
     hasUserBadge,
     badgesByCategory,
 
-    // Actions
-    fetchCatalog,
-    fetchCategories,
-    fetchUserBadges,
-    fetchStats,
-    toggleDisplay,
-    onBadgeEarned,
-    setCategory,
+    // Catalog setters
+    setCatalog,
+    setCatalogLoading,
+    setCatalogError,
+    resetCatalog,
+
+    // User badges setters
+    setUserBadges,
+    setUserBadgesLoading,
+    setUserBadgesError,
+    resetUserBadges,
+    addUserBadge,
+    updateUserBadgeDisplay,
+
+    // Other setters
+    setCategories,
+    setStats,
+    incrementStatsTotal,
+    setCurrentCategory,
+    setIsTogglingDisplay,
+    setLastFetchedAt,
+
+    // Reset
     reset,
   }
 }, {

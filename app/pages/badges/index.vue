@@ -5,7 +5,7 @@
 
 import BadgeCard from '~/components/badges/BadgeCard.vue'
 import type { BadgeCategory } from '~/types/progression/badge'
-import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ICONS } from '~/types/progression/badge'
+import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ICONS } from '~/constants/badges'
 
 // ========================================
 // Page Configuration
@@ -17,10 +17,11 @@ definePageMeta({
 })
 
 // ========================================
-// Store
+// Store + Composables
 // ========================================
 
 const badgesStore = useBadgesStore()
+const { fetchCatalog, fetchUserBadges, setCategory } = useBadgeData()
 
 // ========================================
 // Constants
@@ -72,7 +73,7 @@ const filteredBadges = computed(() => {
 async function handleTabChange(index: number): Promise<void> {
   activeTabIndex.value = index
   const category = categoryTabs[index]?.value ?? null
-  await badgesStore.setCategory(category)
+  await setCategory(category)
 }
 
 // ========================================
@@ -82,8 +83,8 @@ async function handleTabChange(index: number): Promise<void> {
 onMounted(async () => {
   // Fetch catalog and user badges in parallel
   await Promise.all([
-    badgesStore.fetchCatalog({}, true),
-    badgesStore.fetchUserBadges({}, true),
+    fetchCatalog({}, true),
+    fetchUserBadges(true),
   ])
 })
 </script>

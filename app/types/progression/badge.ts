@@ -29,11 +29,12 @@ export type BadgeSourceType =
 
 /**
  * Category metadata.
+ * Matches Backend: BadgeService::getCategoriesWithMeta()
  */
 export interface BadgeCategoryInfo {
-  id: string
-  name: string
-  description: string
+  value: string
+  label: string
+  color: string
   icon: string
 }
 
@@ -67,12 +68,11 @@ export interface UserBadge {
 
 /**
  * Badge statistics for user.
+ * Matches Backend: BadgeService::getUserBadgeStats()
  */
 export interface BadgeStats {
-  total_earned: number
-  total_displayed: number
+  total: number
   by_category: Partial<Record<BadgeCategory, number>>
-  latest_earned?: UserBadge
 }
 
 // ========================================
@@ -85,26 +85,6 @@ export interface BadgeStats {
 export interface GetBadgesParams {
   category?: BadgeCategory
   per_page?: number
-  cursor?: string
-}
-
-/**
- * Pagination metadata.
- */
-export interface BadgePagination {
-  has_more: boolean
-  next_cursor?: string
-}
-
-/**
- * API response for badge catalog.
- */
-export interface BadgeCatalogResponse {
-  success: true
-  data: {
-    badges: Badge[]
-    pagination: BadgePagination
-  }
 }
 
 /**
@@ -113,17 +93,6 @@ export interface BadgeCatalogResponse {
 export interface BadgeCategoriesResponse {
   success: true
   data: BadgeCategoryInfo[]
-}
-
-/**
- * API response for user badges.
- */
-export interface UserBadgesResponse {
-  success: true
-  data: {
-    badges: UserBadge[]
-    pagination: BadgePagination
-  }
 }
 
 /**
@@ -147,49 +116,4 @@ export interface ToggleBadgeDisplayResponse {
   message: string
 }
 
-// ========================================
-// Display Helpers
-// ========================================
 
-/**
- * Icons for badge categories.
- */
-export const BADGE_CATEGORY_ICONS: Record<BadgeCategory, string> = {
-  wealth: 'i-lucide-wallet',
-  charm: 'i-lucide-sparkles',
-  room: 'i-lucide-mic',
-  agency: 'i-lucide-building',
-  special: 'i-lucide-star',
-}
-
-/**
- * Colors for badge categories.
- */
-export const BADGE_CATEGORY_COLORS: Record<BadgeCategory, string> = {
-  wealth: 'text-yellow-500',
-  charm: 'text-pink-500',
-  room: 'text-blue-500',
-  agency: 'text-purple-500',
-  special: 'text-amber-500',
-}
-
-/**
- * Labels for badge categories.
- */
-export const BADGE_CATEGORY_LABELS: Record<BadgeCategory, string> = {
-  wealth: 'Wealth',
-  charm: 'Charm',
-  room: 'Room',
-  agency: 'Agency',
-  special: 'Special',
-}
-
-/**
- * Rarity colors.
- */
-export const BADGE_RARITY_COLORS: Record<string, string> = {
-  common: 'text-gray-400',
-  rare: 'text-blue-500',
-  epic: 'text-purple-500',
-  legendary: 'text-amber-500',
-}
