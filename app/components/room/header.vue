@@ -248,7 +248,7 @@ const openLeaveDrawer = (event: Event) => {
               <UButton
                 icon="i-lucide-minimize" color="secondary" size="xl" variant="subtle"
                 class="w-full justify-center"
-                @click="roomStore.minimizeRoom();open = false"
+                @click="() => { const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/'; roomStore.minimizeRoom(); open = false; navigateTo(target); }"
               >
                 Minimize
               </UButton>
@@ -259,9 +259,11 @@ const openLeaveDrawer = (event: Event) => {
                   size="xl" variant="subtle"
                   @click="async () => {
                     try {
+                      const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
                       leaveRoom();
                       roomStore.leaveRoom();
                       open = false;
+                      navigateTo(target, { replace: true });
                     } catch (error) {
                       log.error('Failed to leave room:', error);
                     }

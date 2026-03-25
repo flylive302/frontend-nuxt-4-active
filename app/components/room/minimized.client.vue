@@ -39,8 +39,10 @@ onMounted(async () => {
         class="-ml-2" size="sm" icon="i-lucide-x"
         @click="() => {
           try {
+            const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
             leaveRoom();
             roomStore.leaveRoom();
+            navigateTo(target, { replace: true });
           } catch (error) {
             log.error('Failed to leave room:', error);
           }
