@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const props = defineProps<{
+defineProps<{
   /** Selected country code, or empty string for "All" */
   modelValue: string
   /** Country codes that have at least one room */

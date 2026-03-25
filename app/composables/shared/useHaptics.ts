@@ -37,7 +37,7 @@ export function useHaptics() {
 
   // Lazy-loaded trigger/cancel from web-haptics (client-only)
   let _trigger: ((input?: string | number | number[]) => Promise<void> | undefined) | null = null
-  let _cancel: (() => void | undefined) | null = null
+  let _cancel: (() => void) | null = null
 
   // ========================================
   // Initialization (Client Only)

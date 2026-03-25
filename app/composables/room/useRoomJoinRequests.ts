@@ -3,6 +3,9 @@
 // ========================================
 
 import type { RoomJoinRequest, JoinRoomRequest } from '~/types/room/room'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useRoomJoinRequests]')
 
 /**
  * Composable for managing room join requests.
@@ -41,7 +44,7 @@ export function useRoomJoinRequests() {
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
-      console.error('[useRoomJoinRequests] requestToJoin failed:', err)
+      log.error('requestToJoin failed:', err)
       return null
     }
   }
@@ -72,7 +75,7 @@ export function useRoomJoinRequests() {
       store.myJoinRequests.items = response.data
       store.myJoinRequests.hasMore = false
     } catch (err) {
-      console.error('[useRoomJoinRequests] fetchMyJoinRequests failed:', err)
+      log.error('fetchMyJoinRequests failed:', err)
     }
   }
 
@@ -110,7 +113,7 @@ export function useRoomJoinRequests() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.joinRequests.error = normalized.message
-      console.error('[useRoomJoinRequests] fetchJoinRequests failed:', err)
+      log.error('fetchJoinRequests failed:', err)
     } finally {
       store.joinRequests.loading = false
     }

@@ -7,13 +7,13 @@ const props = defineProps<{
   seatId: number;
 }>();
 
-const roomStore = useRoomStore();
+const seatsStore = useRoomSeatsStore();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
 const seatIndex = computed(() => props.seatId - 1);
 
 // Get seat data from store
-const seat = computed(() => roomStore.seats[seatIndex.value]);
+const seat = computed(() => seatsStore.seats[seatIndex.value]);
 
 // Whether this seat has a user
 const isEmpty = computed(() => !seat.value?.user);
@@ -23,8 +23,7 @@ const isLocked = computed(() => seat.value?.isLocked ?? false);
 
 // Check if this seat is the target of an invite
 const isInviteTarget = computed(() => {
-  // Assuming roomStore.inviteModeSeat is 0-indexed, matching seatIndex
-  return roomStore.inviteModeSeat === seatIndex.value;
+  return seatsStore.inviteModeSeat === seatIndex.value;
 });
 
 // Whether this seat's user is the active speaker
@@ -35,7 +34,7 @@ const isMuted = computed(() => seat.value?.isMuted ?? false);
 
 // Open the seat drawer
 function openDrawer() {
-  roomStore.openSeat(props.seatId);
+  seatsStore.openSeat(props.seatId);
 }
 
 // Avatar source - only set when seat is occupied
@@ -65,7 +64,7 @@ const displayName = computed(() => {
 // Cumulative coin value of gifts received during this session
 const seatGiftTotal = computed(() => {
   if (!seat.value?.user) return 0;
-  return roomStore.seatGiftTotals.get(seat.value.user.id) ?? 0;
+  return seatsStore.seatGiftTotals.get(seat.value.user.id) ?? 0;
 });
 </script>
 

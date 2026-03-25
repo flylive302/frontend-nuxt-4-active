@@ -3,6 +3,9 @@
 // ========================================
 
 import type { Agency, AgencyMember, AgencyListFilters, CreateAgencyRequest } from '~/types/agency/agency'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useAgencyBrowsing]')
 
 // ========================================
 // Composable
@@ -69,7 +72,7 @@ export function useAgencyBrowsing() {
       store.agencies.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       store.agencies.error = 'Failed to load agencies'
-      console.error('[useAgencyBrowsing] fetchAgencies failed:', error)
+      log.error(' fetchAgencies failed:', error)
     } finally {
       store.agencies.loading = false
     }
@@ -95,7 +98,7 @@ export function useAgencyBrowsing() {
       store.currentAgency.agency = response.data
     } catch (error) {
       store.currentAgency.error = 'Failed to load agency'
-      console.error('[useAgencyBrowsing] fetchAgencyById failed:', error)
+      log.error(' fetchAgencyById failed:', error)
     } finally {
       store.currentAgency.loading = false
     }
@@ -135,7 +138,7 @@ export function useAgencyBrowsing() {
       store.currentAgency.membersCursor = response.meta.next_cursor
       store.currentAgency.membersHasMore = response.meta.next_cursor !== null
     } catch (error) {
-      console.error('[useAgencyBrowsing] fetchAgencyMembers failed:', error)
+      log.error(' fetchAgencyMembers failed:', error)
     } finally {
       store.currentAgency.membersLoading = false
     }
@@ -185,7 +188,7 @@ export function useAgencyBrowsing() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyBrowsing] createAgency failed:', error)
+      log.error(' createAgency failed:', error)
       return null
     }
   }

@@ -3,6 +3,9 @@
 // ========================================
 
 import type { RoomBlock, BlockUserRequest } from '~/types/room/room'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useRoomBlocking]')
 
 /**
  * Composable for managing room blocking.
@@ -41,7 +44,7 @@ export function useRoomBlocking() {
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
-      console.error('[useRoomBlocking] fetchBlockedUsers failed:', err)
+      log.error('fetchBlockedUsers failed:', err)
     } finally {
       loading.value = false
     }

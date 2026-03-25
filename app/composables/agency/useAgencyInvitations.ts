@@ -3,6 +3,9 @@
 // ========================================
 
 import type { AgencyInvitation, SendInvitationRequest, UserAgencyResponse } from '~/types/agency/agency'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useAgencyInvitations]')
 
 // ========================================
 // Composable
@@ -49,7 +52,7 @@ export function useAgencyInvitations() {
       store.receivedInvitations.hasMore = false // Uses offset pagination
     } catch (error) {
       store.receivedInvitations.error = 'Failed to load invitations'
-      console.error('[useAgencyInvitations] fetchReceivedInvitations failed:', error)
+      log.error(' fetchReceivedInvitations failed:', error)
     } finally {
       store.receivedInvitations.loading = false
     }
@@ -88,7 +91,7 @@ export function useAgencyInvitations() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyInvitations] acceptInvitation failed:', error)
+      log.error(' acceptInvitation failed:', error)
       return false
     }
   }
@@ -110,7 +113,7 @@ export function useAgencyInvitations() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyInvitations] declineInvitation failed:', error)
+      log.error(' declineInvitation failed:', error)
       return false
     }
   }
@@ -147,7 +150,7 @@ export function useAgencyInvitations() {
       store.sentInvitations.hasMore = false
     } catch (error) {
       store.sentInvitations.error = 'Failed to load sent invitations'
-      console.error('[useAgencyInvitations] fetchSentInvitations failed:', error)
+      log.error(' fetchSentInvitations failed:', error)
     } finally {
       store.sentInvitations.loading = false
     }
@@ -171,7 +174,7 @@ export function useAgencyInvitations() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyInvitations] sendInvitation failed:', error)
+      log.error(' sendInvitation failed:', error)
       return null
     }
   }
@@ -193,7 +196,7 @@ export function useAgencyInvitations() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyInvitations] cancelInvitation failed:', error)
+      log.error(' cancelInvitation failed:', error)
       return false
     }
   }

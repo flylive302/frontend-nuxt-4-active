@@ -14,7 +14,7 @@ export const useGiftStore = defineStore('giftStore', () => {
   // Dependencies
   // ========================================
   const authStore = useAuthStore();
-  const roomStore = useRoomStore();
+  const seatsStore = useRoomSeatsStore();
 
   // ========================================
   // Selection State
@@ -40,7 +40,7 @@ export const useGiftStore = defineStore('giftStore', () => {
    */
   const eligibleRecipients = computed(() => {
     const currentUserId = authStore.user?.id;
-    return roomStore.seats
+    return seatsStore.seats
       .filter((seat) => seat.user !== null && seat.user.id !== currentUserId)
       .map((seat) => seat.user!);
   });

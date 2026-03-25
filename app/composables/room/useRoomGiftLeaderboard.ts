@@ -2,7 +2,7 @@
 // Room Gift Leaderboard Composable
 // ========================================
 
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import type {
   LeaderboardEntry,
   LeaderboardPeriod,

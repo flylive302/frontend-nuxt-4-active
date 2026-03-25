@@ -3,6 +3,9 @@
 // ========================================
 
 import type { KickMemberRequest } from '~/types/agency/agency'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useAgencyAdmin]')
 
 // ========================================
 // Composable
@@ -42,7 +45,7 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyAdmin] kickMember failed:', error)
+      log.error(' kickMember failed:', error)
       return false
     }
   }
@@ -60,7 +63,7 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyAdmin] blockUser failed:', error)
+      log.error(' blockUser failed:', error)
       return false
     }
   }
@@ -77,7 +80,7 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyAdmin] unblockUser failed:', error)
+      log.error(' unblockUser failed:', error)
       return false
     }
   }
@@ -98,7 +101,7 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyAdmin] blockAgency failed:', error)
+      log.error(' blockAgency failed:', error)
       return false
     }
   }
@@ -115,7 +118,7 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyAdmin] unblockAgency failed:', error)
+      log.error(' unblockAgency failed:', error)
       return false
     }
   }

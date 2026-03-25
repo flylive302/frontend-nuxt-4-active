@@ -9,6 +9,9 @@ import type {
 } from '~/types/user/user-profile'
 import type { LevelInfo } from '~/composables/shared/useLevelLookup'
 import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useUserProfile]')
 
 // ========================================
 // Types
@@ -135,7 +138,7 @@ export function useUserProfile(
       wealthLevelInfo.value = getLevelFromXp(profile.value.wealth_xp, 'wealth')
       charmLevelInfo.value = getLevelFromXp(profile.value.charm_xp, 'charm')
     } catch (err) {
-      console.error('[useUserProfile] computeLevelInfo failed:', err)
+      log.error('computeLevelInfo failed:', err)
       // Non-blocking: keep default values
     } finally {
       levelInfoLoading.value = false
@@ -180,7 +183,7 @@ export function useUserProfile(
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
-      console.error('[useUserProfile] fetchProfile failed:', err)
+      log.error('fetchProfile failed:', err)
     } finally {
       loading.value = false
     }
@@ -211,7 +214,7 @@ export function useUserProfile(
       giftsCursor.value = response.meta.next_cursor
       giftsHasMore.value = response.meta.has_more
     } catch (err) {
-      console.error('[useUserProfile] fetchMoreGifts failed:', err)
+      log.error('fetchMoreGifts failed:', err)
       // Don't set error - gifts pagination failure shouldn't block profile view
     } finally {
       giftsLoading.value = false

@@ -52,7 +52,7 @@ export function useGiftSending() {
   // ========================================
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
-  const roomStore = useRoomStore();
+  const seatsStore = useRoomSeatsStore();
   const { sendGift: emitGift } = useRoomAudio();
   const { triggerFly } = useLuckyFly();
   const toast = useToast();
@@ -102,13 +102,13 @@ export function useGiftSending() {
 
   /**
    * GF-017: Get the set of user IDs currently seated in the room.
-   * Reads roomStore.seats directly (not through Pinia computed indirection)
+   * Reads seatsStore.seats directly (not through Pinia computed indirection)
    * for guaranteed fresh reactivity.
    */
   function getSeatedUserIds(): Set<number> {
     const currentUserId = authStore.user?.id;
     const ids = new Set<number>();
-    for (const seat of roomStore.seats) {
+    for (const seat of seatsStore.seats) {
       if (seat.user !== null && seat.user.id !== currentUserId) {
         ids.add(seat.user.id);
       }
@@ -166,7 +166,7 @@ export function useGiftSending() {
 
       // Sender-side gift value accumulation (sender is excluded from gift:received broadcast)
       for (const recipientId of selectedRecipients) {
-        roomStore.addSeatGiftValue(recipientId, selectedGift.price * selectedQuantity);
+        seatsStore.addSeatGiftValue(recipientId, selectedGift.price * selectedQuantity);
       }
 
       // Start playback immediately (optimistic)
@@ -261,7 +261,7 @@ export function useGiftSending() {
 
     // Sender-side gift value accumulation
     for (const recipientId of validRecipients) {
-      roomStore.addSeatGiftValue(recipientId, currentPlayback.gift.price * currentPlayback.quantity);
+      seatsStore.addSeatGiftValue(recipientId, currentPlayback.gift.price * currentPlayback.quantity);
     }
 
     // Increment combo counter
@@ -311,7 +311,7 @@ export function useGiftSending() {
 
     // Sender-side gift value accumulation
     for (const recipientId of validRecipients) {
-      roomStore.addSeatGiftValue(recipientId, ctx.gift.price * ctx.quantity);
+      seatsStore.addSeatGiftValue(recipientId, ctx.gift.price * ctx.quantity);
     }
 
     // Increment combo counter
@@ -341,7 +341,7 @@ export function useGiftSending() {
   // GF-017: Auto-end combo when all recipients leave seats
   // ========================================
   watch(
-    () => roomStore.seats.map(s => s.user?.id ?? null),
+    () => seatsStore.seats.map(s => s.user?.id ?? null),
     () => {
       const seatedIds = getSeatedUserIds();
 

@@ -3,6 +3,9 @@
 // ========================================
 
 import type { RoomMember, RoomMemberRole, GetRoomMembersParams } from '~/types/room/room'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useRoomMembers]')
 
 /**
  * Composable for managing room members.
@@ -88,7 +91,7 @@ export function useRoomMembers() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.members.error = normalized.message
-      console.error('[useRoomMembers] fetchMembers failed:', err)
+      log.error('fetchMembers failed:', err)
     } finally {
       store.members.loading = false
     }
@@ -122,7 +125,7 @@ export function useRoomMembers() {
       // Handle single object response (backward compat)
       store.myMembership = data
       return data
-    } catch (err) {
+    } catch {
       // 404 or error means user is not a member
       store.myMembership = null
       return null

@@ -138,9 +138,6 @@ export async function deleteAsset(url: string): Promise<boolean> {
 
   try {
     const deleted = await cache.delete(url)
-    if (deleted) {
-
-    }
     return deleted
   } catch (e) {
     log.error('Failed to delete from cache:', url, e)

@@ -4,6 +4,9 @@
 
 import { ref } from 'vue'
 import type { MinimalUser } from '~/types/user/bootstrap'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useUserSearch]')
 
 // ========================================
 // Types
@@ -111,7 +114,7 @@ export function useUserSearch() {
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
-      console.error('[useUserSearch] searchUsers failed:', err)
+      log.error('searchUsers failed:', err)
     } finally {
       loading.value = false
     }

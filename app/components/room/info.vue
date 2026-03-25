@@ -9,6 +9,8 @@ import type { LeaderboardPeriod, LeaderboardEntry } from '~/types/progression/le
 // ========================================
 
 const roomStore = useRoomStore()
+const audioStore = useRoomAudioStore()
+const seatsStore = useRoomSeatsStore()
 const { inviteToSeat } = useRoomAudio()
 
 // ========================================
@@ -62,12 +64,12 @@ function onTabChange(value: string | number): void {
 // Participants (Right Drawer)
 // ========================================
 
-const participants = computed(() => roomStore.participantList)
-const participantCount = computed(() => roomStore.participantList.length)
+const participants = computed(() => audioStore.participantList)
+const participantCount = computed(() => audioStore.participantList.length)
 
 // Owner check and active seat for invite functionality
 const isRoomOwner = computed(() => roomStore.isRoomOwner)
-const activeSeat = computed(() => roomStore.activeSeat) // 1-indexed, null if none
+const activeSeat = computed(() => seatsStore.activeSeat) // 1-indexed, null if none
 const activeSeatIndex = computed(() => activeSeat.value ? activeSeat.value - 1 : null) // 0-indexed
 
 // ========================================
@@ -75,7 +77,7 @@ const activeSeatIndex = computed(() => activeSeat.value ? activeSeat.value - 1 :
 // ========================================
 
 const isInviting = ref(false)
-const inviteModeSeat = computed(() => roomStore.inviteModeSeat)
+const inviteModeSeat = computed(() => seatsStore.inviteModeSeat)
 
 // ========================================
 // Drawer State
@@ -105,7 +107,7 @@ watch(inviteModeSeat, (newVal) => {
 // Cancel invite mode when drawer is closed
 watch(isOpenRight, (isOpen) => {
   if (!isOpen && inviteModeSeat.value !== null) {
-    roomStore.cancelInviteMode()
+    seatsStore.cancelInviteMode()
   }
 })
 
@@ -124,7 +126,7 @@ async function handleInvite(userId: number) {
   isInviting.value = true
   try {
     await inviteToSeat(userId, targetSeat)
-    roomStore.cancelInviteMode()
+    seatsStore.cancelInviteMode()
     isOpenRight.value = false
   } finally {
     isInviting.value = false

@@ -7,7 +7,6 @@
 // - Members: List of room members
 // - Requests: Pending join requests (with badge)
 // - Blocked: Blocked users list
-// ========================================
 
 import type { RoomMember, RoomJoinRequest } from "~/types/room/room";
 
@@ -26,8 +25,7 @@ const props = defineProps<{
 
 const open = defineModel<boolean>("open", { default: false });
 const activeTab = ref("members");
-const selectedMember = ref<RoomMember | null>(null);
-const showMemberProfile = ref(false);
+
 const showInviteModal = ref(false);
 
 // ========================================
@@ -119,7 +117,7 @@ async function handleUnblock(userId: number) {
 // Admin actions with optimistic updates
 async function handleRemoveMember(member: RoomMember) {
   const userId = member.user_id ?? member.user?.id;
-  console.log("[members-panel] handleRemoveMember called:", userId);
+
   if (!userId) return;
 
   // Optimistic: remove from list immediately
@@ -138,7 +136,7 @@ async function handleRemoveMember(member: RoomMember) {
 
 async function handleBlockMember(member: RoomMember) {
   const userId = member.user_id ?? member.user?.id;
-  console.log("[members-panel] handleBlockMember called:", userId);
+
   if (!userId) return;
 
   // Optimistic: remove from list immediately
@@ -157,7 +155,7 @@ async function handleBlockMember(member: RoomMember) {
 
 async function handlePromoteMember(member: RoomMember) {
   const userId = member.user_id ?? member.user?.id;
-  console.log("[members-panel] handlePromoteMember called:", userId);
+
   if (!userId) return;
 
   // Optimistic: update role immediately
@@ -177,7 +175,7 @@ async function handlePromoteMember(member: RoomMember) {
 
 async function handleDemoteMember(member: RoomMember) {
   const userId = member.user_id ?? member.user?.id;
-  console.log("[members-panel] handleDemoteMember called:", userId);
+
   if (!userId) return;
 
   // Optimistic: update role immediately
@@ -200,7 +198,7 @@ async function handleTempBan(
   duration: "2h" | "24h" | "7d",
 ) {
   const userId = member.user_id ?? member.user?.id;
-  console.log("[members-panel] handleTempBan called:", userId, duration);
+
   if (!userId) return;
   const success = await blockUser(props.roomId, { user_id: userId, duration });
   if (success) {

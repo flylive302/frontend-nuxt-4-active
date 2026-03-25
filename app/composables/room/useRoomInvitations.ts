@@ -3,6 +3,9 @@
 // ========================================
 
 import type { RoomInvitation, InviteToRoomRequest, RoomMemberPagination } from '~/types/room/room'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useRoomInvitations]')
 
 /**
  * Composable for managing room invitations.
@@ -51,7 +54,7 @@ export function useRoomInvitations() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.receivedInvitations.error = normalized.message
-      console.error('[useRoomInvitations] fetchReceivedInvitations failed:', err)
+      log.error('fetchReceivedInvitations failed:', err)
     } finally {
       store.receivedInvitations.loading = false
     }
@@ -90,7 +93,7 @@ export function useRoomInvitations() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.sentInvitations.error = normalized.message
-      console.error('[useRoomInvitations] fetchSentInvitations failed:', err)
+      log.error('fetchSentInvitations failed:', err)
     } finally {
       store.sentInvitations.loading = false
     }
@@ -116,7 +119,7 @@ export function useRoomInvitations() {
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
-      console.error('[useRoomInvitations] sendInvitation failed:', err)
+      log.error('sendInvitation failed:', err)
       return null
     }
   }

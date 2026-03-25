@@ -25,7 +25,6 @@ import type { AudioSocket } from './useAudioSocket';
 import { refundPendingCoins } from '../gift/useGiftSending';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
-import { createLogger } from '~/utils/logger';
 import * as giftAssetCache from '~/services/giftAssetCache';
 
 // ============================================
@@ -35,8 +34,12 @@ import * as giftAssetCache from '~/services/giftAssetCache';
 export interface UseRoomEventHandlersParams {
   /** Socket instance */
   socket: AudioSocket;
-  /** Room store instance */
+  /** Core room store */
   roomStore: ReturnType<typeof useRoomStore>;
+  /** Audio store (participants, audio state, chat) */
+  audioStore: ReturnType<typeof useRoomAudioStore>;
+  /** Seats store (seats, gift totals) */
+  seatsStore: ReturnType<typeof useRoomSeatsStore>;
   /** Auth store instance */
   authStore: ReturnType<typeof useAuthStore>;
   /** Gift store instance */
@@ -93,8 +96,6 @@ const ROOM_EVENT_NAMES = [
  * Call this before re-registering listeners to prevent duplicates.
  */
 export function cleanupRoomEventHandlers(socket: AudioSocket): void {
-  const log = createLogger('[RoomEvents]');
-  // log.debug('Cleaning up room event handlers');
   
   for (const eventName of ROOM_EVENT_NAMES) {
     socket.off(eventName);
@@ -114,6 +115,8 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
 export function setupRoomEventHandlers({
   socket,
   roomStore,
+  audioStore,
+  seatsStore,
   authStore,
   giftStore,
   toast,
@@ -124,7 +127,6 @@ export function setupRoomEventHandlers({
   declineInvite,
   startAudio,
 }: UseRoomEventHandlersParams): void {
-  const log = createLogger('[RoomEvents]');
 
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
@@ -132,14 +134,12 @@ export function setupRoomEventHandlers({
 
   // Room events
   socket.on('room:userJoined', (event: UserJoinedEvent) => {
-    roomStore.addParticipant(event.user);
-    // log.debug('User joined:', event.user.name);
+    audioStore.addParticipant(event.user);
   });
 
   socket.on('room:userLeft', (event: UserLeftEvent) => {
-    roomStore.removeParticipant(event.userId);
+    audioStore.removeParticipant(event.userId);
     giftStore.removeRecipient(event.userId);
-    // log.debug('User left:', event.userId);
   });
 
   socket.on('room:closed', (event: RoomClosedEvent) => {
@@ -169,16 +169,12 @@ export function setupRoomEventHandlers({
   // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change.
   // Financial fields (coins, diamonds, wealth_xp, charm_xp) are stripped as a safety
   // net — they are handled exclusively by `balance.updated` to avoid data races.
-  const FINANCIAL_FIELDS = ['coins', 'diamonds', 'wealth_xp', 'charm_xp'] as const;
 
   socket.on('user:profile_updated', (event: { user_id: number; profile: Partial<RoomParticipant> }) => {
     // Strip financial fields to prevent overwriting data from balance.updated
-    const safeProfile = { ...event.profile };
-    for (const field of FINANCIAL_FIELDS) {
-      delete (safeProfile as Record<string, unknown>)[field];
-    }
+    const { coins: _c, diamonds: _d, wealth_xp: _w, charm_xp: _ch, ...safeProfile } = event.profile as Record<string, unknown>;
 
-    roomStore.updateParticipantProfile(event.user_id, safeProfile);
+    audioStore.updateParticipantProfile(event.user_id, safeProfile);
 
     // Also patch local user if the update is for the authenticated user
     if (event.user_id === authStore.user?.id) {
@@ -198,30 +194,24 @@ export function setupRoomEventHandlers({
   });
 
   socket.on('speaker:active', (event: ActiveSpeakerEvent) => {
-    // Use enriched activeSpeakers array (top 3) if available, fallback to single userId
     const ids = event.activeSpeakers
       ? event.activeSpeakers.map((id) => parseInt(id))
       : [parseInt(event.userId)];
 
-    roomStore.setActiveSpeakers(ids);
+    audioStore.setActiveSpeakers(ids);
   });
 
-  // Seat events
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
-    // log.debug('seat:updated received:', { seatIndex: event.seatIndex, userId: event.userId });
-    roomStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
+    seatsStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
   });
 
   socket.on('seat:cleared', (event: SeatClearedEvent) => {
-    // Check if current user was on this seat before clearing
-    const seat = roomStore.seats[event.seatIndex];
+    const seat = seatsStore.seats[event.seatIndex];
     const wasCurrentUserSeated = seat?.user?.id === authStore.user?.id;
 
-    roomStore.clearSeat(event.seatIndex);
+    seatsStore.clearSeat(event.seatIndex);
 
-    // If current user was kicked, stop their audio
     if (wasCurrentUserSeated) {
-      // log.debug('User was kicked from seat, stopping audio');
       stopAudio();
       toast.add({
         title: 'Removed from seat',
@@ -232,21 +222,18 @@ export function setupRoomEventHandlers({
   });
 
   socket.on('seat:userMuted', (event: SeatUserMutedEvent) => {
-    roomStore.setParticipantMuted(event.userId, event.isMuted);
-    if (event.selfMuted !== undefined) {
-      // log.debug('User', event.userId, event.isMuted ? 'self-muted' : 'self-unmuted');
-    }
+    audioStore.setParticipantMuted(event.userId, event.isMuted);
   });
 
   socket.on('seat:locked', (event: SeatLockedEvent) => {
-    roomStore.setSeatLocked(event.seatIndex, event.isLocked);
+    seatsStore.setSeatLocked(event.seatIndex, event.isLocked);
   });
 
   // Invite events
   socket.on('seat:invite:received', (event: SeatInviteReceivedEvent) => {
     // Only show toast if this invite is for the current user
     if (event.targetUserId === authStore.user?.id) {
-      const inviter = roomStore.participants.get(event.invitedById);
+      const inviter = audioStore.participants.get(event.invitedById);
       const inviterName = inviter?.name ?? 'Someone';
 
       toast.add({
@@ -276,42 +263,38 @@ export function setupRoomEventHandlers({
 
   // Chat events
   socket.on('chat:message', (event: ChatMessageEvent) => {
-    roomStore.addMessage(event);
+    audioStore.addMessage(event);
   });
 
   // Gift events
   socket.on('gift:received', (event: GiftReceivedEvent) => {
-    // Accumulate gift coin value for seat display (all clients, including sender)
+    // Accumulate gift coin value for seat display
     const giftForValue = getGiftById(event.giftId);
     if (giftForValue) {
-      roomStore.addSeatGiftValue(event.recipientId, giftForValue.price * event.quantity);
+      seatsStore.addSeatGiftValue(event.recipientId, giftForValue.price * event.quantity);
     }
 
-    // Skip if current user is the sender (they already see optimistic playback)
+    // Skip if current user is the sender
     if (event.senderId === authStore.user?.id) return;
 
-    // Skip if room is minimized — gifts are room-specific and should not accumulate
+    // Skip if room is minimized
     if (roomStore.isMinimized) return;
 
-    // Look up sender from participants store
-    const sender = roomStore.participants.get(event.senderId);
+    // Look up sender from audio store participants
+    const sender = audioStore.participants.get(event.senderId);
 
-    // Get gift data to enqueue playback
     const gift = getGiftById(event.giftId);
 
     if (gift) {
-      // Lucky gifts use fly animation (thumbnail: sender → center → receiver)
       if (gift.category === 'lucky') {
         triggerFly(gift.thumbnail_url, event.senderId, event.recipientId);
         return;
       }
 
-      // Non-lucky gifts use fullscreen playback modal
       const current = giftStore.currentPlayback;
       const isCombo = current && current.gift.id === gift.id && current.senderId === event.senderId;
 
       if (isCombo) {
-        // Restart current playback instead of enqueuing
         giftStore.restartCurrentPlayback();
       } else {
         giftStore.enqueuePlayback({

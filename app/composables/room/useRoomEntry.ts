@@ -66,8 +66,10 @@ export function useRoomEntry() {
       await api(`/rooms/${room.id}/join`, { method: 'POST', body: {} })
       // Access granted (room is public or has no password)
       doEnterRoom(room)
-    } catch (error: any) {
-      const status = error?.statusCode ?? error?.status ?? error?.data?.statusCode
+    } catch (error: unknown) {
+      const err = error as Record<string, unknown>
+      const errData = err?.data as Record<string, unknown> | undefined
+      const status = err?.statusCode ?? err?.status ?? errData?.statusCode
       if (status === 403) {
         // Password required → show prompt
         pendingRoom.value = room

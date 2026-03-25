@@ -13,17 +13,12 @@ import type { MinimalUser } from '~/types/user/bootstrap';
 // ============================================
 
 export interface UseSeatActionsParams {
-  /** Emit socket event with promise-based response */
   emitAsync: <TPayload, TResponse>(event: string, payload: TPayload) => Promise<TResponse>;
-  /** Get current room ID */
   getCurrentRoomId: () => string | null;
-  /** Room store instance */
-  roomStore: ReturnType<typeof useRoomStore>;
-  /** Auth store instance */
+  audioStore: ReturnType<typeof useRoomAudioStore>;
+  seatsStore: ReturnType<typeof useRoomSeatsStore>;
   authStore: ReturnType<typeof useAuthStore>;
-  /** Toast instance */
   toast: ReturnType<typeof useToast>;
-  /** Stop audio callback */
   stopAudio: () => void;
 }
 
@@ -65,7 +60,8 @@ export interface UseSeatActionsReturn {
 export function useSeatActions({
   emitAsync,
   getCurrentRoomId,
-  roomStore,
+  audioStore,
+  seatsStore,
   authStore,
   toast,
   stopAudio,
@@ -95,8 +91,8 @@ export function useSeatActions({
         ...authStore.user,
         email: null,
       } as MinimalUser, { isSpeaker: true, seatIndex });
-      roomStore.addParticipant(currentUser);
-      roomStore.updateSeat(seatIndex, authStore.user.id, false);
+      audioStore.addParticipant(currentUser);
+      seatsStore.updateSeat(seatIndex, authStore.user.id, false);
     }
 
     return response.success ?? false;
@@ -111,7 +107,7 @@ export function useSeatActions({
 
     // Find current user's seat before leaving
     const currentUserSeatIndex = authStore.user
-      ? roomStore.seats.findIndex((s) => s.user?.id === authStore.user!.id)
+      ? seatsStore.seats.findIndex((s) => s.user?.id === authStore.user!.id)
       : -1;
 
     const response = await emitAsync<{ roomId: string }, SeatResponse>('seat:leave', {
@@ -126,7 +122,7 @@ export function useSeatActions({
     // Clear local seat state
     // (Socket.IO's socket.to() excludes sender, so we update locally)
     if (response.success && currentUserSeatIndex >= 0) {
-      roomStore.clearSeat(currentUserSeatIndex);
+      seatsStore.clearSeat(currentUserSeatIndex);
     }
 
     stopAudio();

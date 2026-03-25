@@ -7,6 +7,7 @@ const log = createLogger('[SeatDrawer]')
 
 const { getLevelFromXp } = useLevelLookup()
 const roomStore = useRoomStore()
+const seatsStore = useRoomSeatsStore()
 const authStore = useAuthStore()
 const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
 const { myMembership } = useRoomMembers()
@@ -17,18 +18,17 @@ const isLoading = ref(false)
 const isOpen = ref(false)
 
 // Watch activeSeat to open drawer when seat is clicked
-watch(() => roomStore.activeSeat, (newSeat) => {
+watch(() => seatsStore.activeSeat, (newSeat) => {
   isOpen.value = newSeat !== null
 })
 
-// seatId is 1-indexed from the UI
-const seatId = computed(() => roomStore.activeSeat)
+const seatId = computed(() => seatsStore.activeSeat)
 
 // seatIndex is 0-indexed for the store/API
 const seatIndex = computed(() => (seatId.value ?? 1) - 1)
 
 // Get current seat data
-const currentSeat = computed(() => roomStore.seats[seatIndex.value])
+const currentSeat = computed(() => seatsStore.seats[seatIndex.value])
 
 // Check if the current user occupies this seat
 const isCurrentUserSeat = computed(() => {
@@ -51,7 +51,7 @@ const isVip = computed(() => (currentSeat.value?.user?.vip_level ?? 0) > 0)
 
 // Check if current user is already seated somewhere else
 const currentUserSeatIndex = computed(() => {
-  return roomStore.seats.findIndex(seat => seat.user?.id === authStore.user?.id)
+  return seatsStore.seats.findIndex(seat => seat.user?.id === authStore.user?.id)
 })
 
 const isUserSeatedElsewhere = computed(() => {
@@ -62,7 +62,7 @@ const isUserSeatedElsewhere = computed(() => {
 
 // Handle starting invite mode
 function handleStartInvite() {
-  roomStore.startInviteMode(seatIndex.value)
+  seatsStore.startInviteMode(seatIndex.value)
   isOpen.value = false // Explicitly close drawer
 }
 
@@ -86,7 +86,7 @@ async function handleTakeSeat() {
       // Start audio so everyone can hear the user
       await startAudio()
       // Close the drawer
-      roomStore.closeSeat()
+      seatsStore.closeSeat()
     }
   } catch (error) {
     log.error('Failed to take seat:', error)
@@ -104,7 +104,7 @@ async function handleLeaveSeat() {
     const success = await leaveSeat()
     if (success) {
       stopAudio()
-      roomStore.closeSeat()
+      seatsStore.closeSeat()
     }
   } catch (error) {
     log.error('Failed to leave seat:', error)
@@ -145,7 +145,7 @@ async function handleToggleLock() {
     } else {
       await lockSeat(seatIndex.value)
     }
-    roomStore.closeSeat()
+    seatsStore.closeSeat()
   } catch (error) {
     log.error('Failed to toggle lock:', error)
   } finally {
@@ -164,7 +164,7 @@ async function handleKickUser() {
   try {
     const success = await kickUser(userId)
     if (success) {
-      roomStore.closeSeat()
+      seatsStore.closeSeat()
     }
   } catch (error) {
     log.error('Failed to kick user:', error)

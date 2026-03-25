@@ -1,5 +1,6 @@
 import type { types as mediasoupTypes } from 'mediasoup-client';
 import type { MinimalUser } from '../user/bootstrap';
+import type { MusicPlayerJoinState } from './audio-player';
 
 // Re-export mediasoup types for convenience
 export type RtpCapabilities = mediasoupTypes.RtpCapabilities;
@@ -30,7 +31,7 @@ export interface JoinRoomPayload {
   seatCount?: number;
 }
 
-import type { MusicPlayerJoinState } from './audio-player';
+
 
 export interface JoinRoomResponse {
   rtpCapabilities?: RtpCapabilities;

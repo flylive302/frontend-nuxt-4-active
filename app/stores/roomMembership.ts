@@ -29,7 +29,6 @@ import { createPaginatedList } from '~/types/shared'
 
 export const useRoomMembershipStore = defineStore('roomMembership', () => {
   const log = createLogger('[RoomMembershipStore]')
-  const roomStore = useRoomStore()
 
   // ========================================
   // State
@@ -59,9 +58,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   // Computed
   // ========================================
 
-  /**
-   * Pending join request count.
-   */
   const pendingRequestCount = computed(() => 
     joinRequests.value.items.filter(r => r.status === 'pending').length
   )
@@ -70,9 +66,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   // Actions
   // ========================================
 
-  /**
-   * Set current room context.
-   */
   function setRoom(roomId: number): void {
     if (currentRoomId.value !== roomId) {
       currentRoomId.value = roomId
@@ -80,9 +73,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     }
   }
 
-  /**
-   * Reset all lists.
-   */
   function resetLists(): void {
     members.value = createPaginatedList()
     joinRequests.value = createPaginatedList()
@@ -91,9 +81,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     sentInvitations.value = createPaginatedList()
   }
 
-  /**
-   * Reset all state.
-   */
   function reset(): void {
     currentRoomId.value = null
     levelProgress.value = null
@@ -103,15 +90,32 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   }
 
   // ========================================
+  // Setter Methods (for composable use)
+  // ========================================
+
+  function resetMembers(): void {
+    members.value.items = []
+    members.value.cursor = null
+    members.value.hasMore = true
+  }
+
+  function setMembersLoading(loading: boolean): void {
+    members.value.loading = loading
+  }
+
+  function setMembersError(error: string | null): void {
+    members.value.error = error
+  }
+
+  // ========================================
   // Socket Event Handlers
   // ========================================
 
   /**
    * Check if a room_id matches the current room context.
-   * Falls back to roomStore.currentRoom.id when currentRoomId is not yet set.
    */
   function isCurrentRoom(roomId: number): boolean {
-    return roomId === currentRoomId.value || roomId === roomStore.currentRoom?.id
+    return roomId === currentRoomId.value
   }
 
   /**
@@ -243,6 +247,9 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     setRoom,
     resetLists,
     reset,
+    resetMembers,
+    setMembersLoading,
+    setMembersError,
 
     // Socket Event Handlers
     onMemberJoined,

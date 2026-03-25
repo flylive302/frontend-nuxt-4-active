@@ -7,7 +7,7 @@ import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import { useRoomAudio } from '~/composables/room/useRoomAudio';
 
-const roomStore = useRoomStore();
+const audioStore = useRoomAudioStore();
 const { sendChatMessage } = useRoomAudio();
 
 // Input state
@@ -18,7 +18,7 @@ const inputRef = ref<{ $el: HTMLElement } | null>(null);
 const scrollerRef = ref<InstanceType<typeof DynamicScroller> | null>(null);
 
 watch(
-  () => roomStore.messages.length,
+  () => audioStore.messages.length,
   () => {
     nextTick(() => {
       // Use type assertion for DynamicScroller which has scrollToBottom
@@ -54,7 +54,7 @@ function handleKeydown(event: KeyboardEvent) {
     <!-- Messages Container -->
     <DynamicScroller
       ref="scrollerRef"
-      :items="roomStore.messages"
+      :items="audioStore.messages"
       :min-item-size="48"
       key-field="id"
       class="flex-1 overflow-y-auto"
@@ -71,7 +71,7 @@ function handleKeydown(event: KeyboardEvent) {
     </DynamicScroller>
 
     <!-- Empty State -->
-    <p v-if="roomStore.messages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
+    <p v-if="audioStore.messages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
       No messages yet.
       <br> Be the first to say hello! 👋
     </p>

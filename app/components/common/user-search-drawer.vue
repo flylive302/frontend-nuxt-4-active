@@ -7,7 +7,7 @@
 // Renders results using MinimalUserList and exposes scoped slots for custom actions.
 // ========================================
 
-import type { MinimalUser } from '~/types/user/bootstrap'
+
 
 // ========================================
 // Props

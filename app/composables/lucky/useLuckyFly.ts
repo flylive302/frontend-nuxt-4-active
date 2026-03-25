@@ -7,7 +7,7 @@
  * Uses Web Animations API for GPU-composited performance (transform + opacity only).
  * Module-level state enables concurrent fly animations without conflicts.
  */
-import { LUCKY_FLY_DURATION_MS, LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
+import { LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
 
 // ========================================
 // Types

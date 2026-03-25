@@ -193,7 +193,6 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     setTimeout(() => navigateTo('/agency/my-agency'), 1500)
 
   } catch (error: unknown) {
-    console.error('[AgencyCreate] Submit failed:', error)
     
     const { normalizeError } = useApi()
     const normalizedError = normalizeError(error)

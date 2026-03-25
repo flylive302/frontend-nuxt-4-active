@@ -104,8 +104,7 @@ async function handleMusicFileSelected(file: File): Promise<void> {
     await loadMusicFile(file)
     showMusicUploader.value = false
     await handleMusicPlay()
-  } catch (err) {
-    console.error('[SettingsDrawer] Failed to load audio file:', err)
+  } catch {
     toast.add({ title: 'Music Error', description: 'Failed to load audio file.', color: 'error' })
   } finally {
     isMusicLoading.value = false
@@ -347,8 +346,9 @@ async function handleDeclineInvitation() {
 }
 
 async function handleLeaveRoom() {
+  if (!thisRoom.value?.id) return
   actionLoading.value = true
-  const success = await leaveRoomMembership(thisRoom.value?.id)
+  const success = await leaveRoomMembership(thisRoom.value.id)
   actionLoading.value = false
   if (success) {
     open.value = false

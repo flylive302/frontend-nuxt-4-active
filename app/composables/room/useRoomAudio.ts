@@ -62,6 +62,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
 // composable is accessed from socket callbacks outside Vue's setup context.
 
 let _roomStore: ReturnType<typeof useRoomStore> | null = null;
+let _audioStore: ReturnType<typeof useRoomAudioStore> | null = null;
+let _seatsStore: ReturnType<typeof useRoomSeatsStore> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
 let _giftStore: ReturnType<typeof useGiftStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
@@ -80,12 +82,16 @@ export function useRoomAudio(): UseRoomAudioReturn {
   // ========================================
   // Initialize on first call only (during Vue setup context)
   if (!_roomStore) _roomStore = useRoomStore();
+  if (!_audioStore) _audioStore = useRoomAudioStore();
+  if (!_seatsStore) _seatsStore = useRoomSeatsStore();
   if (!_authStore) _authStore = useAuthStore();
   if (!_giftStore) _giftStore = useGiftStore();
   if (!_toast) _toast = useToast();
 
   // Use cached references
   const roomStore = _roomStore;
+  const audioStore = _audioStore;
+  const seatsStore = _seatsStore;
   const authStore = _authStore;
   const giftStore = _giftStore;
   const toast = _toast;
@@ -139,7 +145,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
    */
   function stopAudio(): void {
     stopMediasoupAudio();
-    roomStore.setProducing(false);
+    audioStore.setProducing(false);
   }
 
   /**
@@ -147,7 +153,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
    */
   async function startAudio(): Promise<void> {
     await startMediasoupAudio();
-    roomStore.setProducing(true);
+    audioStore.setProducing(true);
   }
 
   /**
@@ -184,7 +190,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const seatActions = useSeatActions({
     emitAsync,
     getCurrentRoomId,
-    roomStore,
+    audioStore,
+    seatsStore,
     authStore,
     toast,
     stopAudio,
@@ -256,6 +263,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
       setupRoomEventHandlers({
         socket: socket.value,
         roomStore,
+        audioStore,
+        seatsStore,
         authStore,
         giftStore,
         toast,
@@ -290,8 +299,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Create transports
     await createTransports(roomId);
 
-    // Update store
-    roomStore.setAudioConnected(true);
+    // Update audio store
+    audioStore.setAudioConnected(true);
 
     // Add self to participants
     if (authStore.user) {
@@ -313,7 +322,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           vip_level: authStore.user.vip_level ?? 0,
         }, { isSpeaker: false }
       );
-      roomStore.addParticipant(participant);
+      audioStore.addParticipant(participant);
     }
 
     // Handle initial room state from server
@@ -340,21 +349,21 @@ export function useRoomAudio(): UseRoomAudioReturn {
             }, { isSpeaker: false }
         );
 
-        roomStore.addParticipant(participant);
+        audioStore.addParticipant(participant);
       }
     }
 
     // 2. Initialize seats from server state
     if (response.seats) {
       response.seats.forEach((seat) => {
-        roomStore.updateSeat(seat.seatIndex, seat.userId, seat.isMuted);
+        seatsStore.updateSeat(seat.seatIndex, seat.userId, seat.isMuted);
       });
     }
 
     // Initialize locked seats (if provided by server)
     if (response.lockedSeats) {
       response.lockedSeats.forEach((seatIndex: number) => {
-        roomStore.setSeatLocked(seatIndex, true);
+        seatsStore.setSeatLocked(seatIndex, true);
       });
     }
 
@@ -408,7 +417,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Socket is managed by socket.client.ts plugin, disconnects only on logout
 
     // Clear room state
-    roomStore.clearAudioState();
+    audioStore.clearAudioState();
 
     // log.debug('Left room (socket stays connected)');
   }

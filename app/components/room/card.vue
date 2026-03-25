@@ -25,7 +25,7 @@ const props = defineProps<{
 // Dependencies
 // ========================================
 
-const { enterRoom, showPasswordPrompt, pendingRoom, entering, onPasswordSuccess } = useRoomEntry()
+const { enterRoom, showPasswordPrompt, pendingRoom, entering: _entering, onPasswordSuccess } = useRoomEntry()
 
 // ========================================
 // Computed

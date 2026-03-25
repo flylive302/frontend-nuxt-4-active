@@ -187,7 +187,7 @@ async function trackUser() {
     // 4. Enter room via centralized entry (handles password gating)
     await doRoomEntry(roomData.data)
     
-  } catch (err) {
+  } catch {
     toast.add({
       title: 'Tracking failed',
       description: 'Could not locate user',
@@ -238,7 +238,7 @@ async function goToRoom() {
     
     // Enter room via centralized entry (handles password gating)
     await doRoomEntry(roomData.data)
-  } catch (err) {
+  } catch {
     toast.add({
       title: 'Failed to join room',
       description: 'Could not access the room',

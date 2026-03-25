@@ -14,6 +14,9 @@ import {
   MAX_IMAGE_SIZE,
   ALLOWED_IMAGE_TYPES,
 } from '~/types/asset/upload'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[ImageUpload]')
 
 // ========================================
 // Types
@@ -76,14 +79,7 @@ export function useImageUpload() {
       body: { folder, expire_seconds: 300 }, // 5 minutes, well under 1 hour limit
     })
 
-    // Debug: log auth params to verify expire value
-    if (import.meta.dev) {
-      console.log('[ImageUpload] Auth params received:', {
-        folder: response.data.folder,
-        expire: response.data.expire,
-        expireDate: new Date(response.data.expire * 1000).toISOString(),
-      })
-    }
+
 
     return response.data
   }
@@ -160,7 +156,7 @@ export function useImageUpload() {
           } catch {
             // Use default error message
           }
-          console.error('[ImageUpload] ImageKit error:', xhr.responseText)
+          log.error('ImageKit error:', xhr.responseText)
           reject(new Error(errorMessage))
         }
       })

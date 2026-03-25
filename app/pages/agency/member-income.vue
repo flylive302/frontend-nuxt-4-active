@@ -96,7 +96,6 @@ async function fetchMembersIncome(reset = false): Promise<void> {
   } catch (err) {
     const normalized = normalizeError(err)
     error.value = normalized.message
-    console.error('[MemberIncome] fetchMembersIncome failed:', err)
   } finally {
     loading.value = false
     loadingMore.value = false

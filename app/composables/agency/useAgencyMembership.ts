@@ -8,6 +8,9 @@ import type {
   LeaveAgencyRequest,
   ChangeCoinResellerRequest 
 } from '~/types/agency/agency'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useAgencyMembership]')
 
 // ========================================
 // Composable
@@ -48,7 +51,7 @@ export function useAgencyMembership() {
       }
     } catch (error) {
       store.userAgency.error = 'Failed to load agency information'
-      console.error('[useAgencyMembership] fetchUserAgency failed:', error)
+      log.error(' fetchUserAgency failed:', error)
     } finally {
       store.userAgency.loading = false
     }
@@ -84,7 +87,7 @@ export function useAgencyMembership() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyMembership] leaveAgency failed:', error)
+      log.error(' leaveAgency failed:', error)
       return false
     }
   }
@@ -115,7 +118,7 @@ export function useAgencyMembership() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyMembership] dissolveAgency failed:', error)
+      log.error(' dissolveAgency failed:', error)
       return false
     }
   }
@@ -145,7 +148,7 @@ export function useAgencyMembership() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyMembership] changeCoinReseller failed:', error)
+      log.error(' changeCoinReseller failed:', error)
       return false
     }
   }

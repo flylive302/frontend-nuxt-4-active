@@ -3,6 +3,9 @@
 // ========================================
 
 import type { AgencyJoinRequest, JoinAgencyRequest } from '~/types/agency/agency'
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[useAgencyJoinRequests]')
 
 // ========================================
 // Composable
@@ -41,7 +44,7 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyJoinRequests] requestToJoin failed:', error)
+      log.error(' requestToJoin failed:', error)
       return null
     }
   }
@@ -64,7 +67,7 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyJoinRequests] cancelJoinRequest failed:', error)
+      log.error(' cancelJoinRequest failed:', error)
       return false
     }
   }
@@ -101,7 +104,7 @@ export function useAgencyJoinRequests() {
       store.myJoinRequests.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       store.myJoinRequests.error = 'Failed to load join requests'
-      console.error('[useAgencyJoinRequests] fetchMyJoinRequests failed:', error)
+      log.error(' fetchMyJoinRequests failed:', error)
     } finally {
       store.myJoinRequests.loading = false
     }
@@ -143,7 +146,7 @@ export function useAgencyJoinRequests() {
       store.joinRequests.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       store.joinRequests.error = 'Failed to load join requests'
-      console.error('[useAgencyJoinRequests] fetchJoinRequests failed:', error)
+      log.error(' fetchJoinRequests failed:', error)
     } finally {
       store.joinRequests.loading = false
     }
@@ -165,7 +168,7 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyJoinRequests] approveJoinRequest failed:', error)
+      log.error(' approveJoinRequest failed:', error)
       return false
     }
   }
@@ -186,7 +189,7 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      console.error('[useAgencyJoinRequests] rejectJoinRequest failed:', error)
+      log.error(' rejectJoinRequest failed:', error)
       return false
     }
   }

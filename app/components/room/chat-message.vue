@@ -13,10 +13,10 @@ const props = defineProps<{
   message: ChatMessageEvent;
 }>();
 
-const roomStore = useRoomStore();
+const audioStore = useRoomAudioStore();
 
 // Resolve live participant data; fall back to message snapshot for departed users
-const participant = computed(() => roomStore.participants.get(props.message.userId));
+const participant = computed(() => audioStore.participants.get(props.message.userId));
 const displayName = computed(() => participant.value?.name ?? props.message.userName);
 const displayAvatar = computed(() => participant.value?.avatar ?? props.message.avatar);
 const displayFrame = computed(() => participant.value?.frame ?? props.message.frame);

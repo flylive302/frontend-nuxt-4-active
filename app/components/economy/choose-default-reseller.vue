@@ -99,8 +99,8 @@ async function initReseller() {
              return
           }
         }
-      } catch (e) {
-        console.error('Failed to fetch full reseller details', e)
+      } catch {
+        // Silent fail - use initial data fallback
       }
     }
 

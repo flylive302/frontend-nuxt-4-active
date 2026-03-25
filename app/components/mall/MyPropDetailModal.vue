@@ -20,8 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'equip', userPropId: number): void
-  (e: 'unequip', userPropId: number): void
+  (e: 'equip' | 'unequip', userPropId: number): void
 }>()
 
 // ========================================

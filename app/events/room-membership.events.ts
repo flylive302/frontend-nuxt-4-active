@@ -19,7 +19,7 @@ export function registerRoomMembershipEvents(socket: Socket): void {
 
   socket.on('room.member_joined', (payload: { room_id: number; user_id: number; user: { id: number; name: string; avatar: string | null }; role: string }) => {
     log.debug('room.member_joined', payload)
-    membershipStore.onMemberJoined({ room_id: payload.room_id, member: { user_id: payload.user_id, user: payload.user, role: payload.role } as any })
+    membershipStore.onMemberJoined({ room_id: payload.room_id, member: { user_id: payload.user_id, user: payload.user, role: payload.role } as unknown as import('~/types/room/room').RoomMember })
     useToast().add({
       title: 'New Member',
       description: `${payload.user.name} joined the room`,
@@ -93,7 +93,7 @@ export function registerRoomMembershipEvents(socket: Socket): void {
     // Add to owner's pending requests list if viewing this room
     
     if (roomStore.currentRoom?.id === payload.room_id) {
-      const newRequest: any = {
+      const newRequest = {
         id: payload.request_id,
         room_id: payload.room_id,
         user_id: payload.user.id,
@@ -103,8 +103,10 @@ export function registerRoomMembershipEvents(socket: Socket): void {
         created_at: new Date().toISOString(),
       }
       // Add to front of list if not already present
-      if (!membershipStore.joinRequests.items.some(r => r.id === payload.request_id)) {
-        membershipStore.joinRequests.items.unshift(newRequest)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!membershipStore.joinRequests.items.some((r: any) => r.id === payload.request_id)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        membershipStore.joinRequests.items.unshift(newRequest as any)
       }
     }
   })
@@ -117,7 +119,7 @@ export function registerRoomMembershipEvents(socket: Socket): void {
       color: 'info',
     })
     // Add to received invitations for immediate UI update
-    const newInvitation: any = {
+    const newInvitation = {
       id: payload.invitation_id,
       room_id: payload.room_id,
       room: { id: payload.room_id, name: payload.room_name },
@@ -125,8 +127,10 @@ export function registerRoomMembershipEvents(socket: Socket): void {
       message: payload.message,
       created_at: new Date().toISOString(),
     }
-    if (!membershipStore.receivedInvitations.items.some(inv => inv.id === payload.invitation_id)) {
-      membershipStore.receivedInvitations.items.unshift(newInvitation)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!membershipStore.receivedInvitations.items.some((inv: any) => inv.id === payload.invitation_id)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      membershipStore.receivedInvitations.items.unshift(newInvitation as any)
     }
   })
 
