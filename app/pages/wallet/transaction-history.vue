@@ -3,7 +3,7 @@
 // Imports
 // ========================================
 
-import type { TransactionTypeFilter } from '~/types/economy/wallet'
+import { FILTER_TABS } from '~/constants/economy/transactionConstants'
 
 // ========================================
 // Page Configuration
@@ -19,29 +19,7 @@ definePageMeta({
 // ========================================
 
 const transactionStore = useTransactionStore()
-const { useInfiniteScroll } = await import('@vueuse/core')
-
-// ========================================
-// Types
-// ========================================
-
-interface FilterTab {
-  label: string
-  value: TransactionTypeFilter
-}
-
-// ========================================
-// Constants
-// ========================================
-
-const FILTER_TABS: FilterTab[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Coin Transfer', value: 'coin_transfer' },
-  { label: 'Gifts', value: 'gift' },
-  { label: 'Room Commission', value: 'room_commission' },
-  { label: 'Agency Income', value: 'agency_income' },
-  { label: 'Diamonds', value: 'diamonds' },
-]
+const { fetchTransactions, loadMore, changeFilter } = useTransactionData()
 
 // ========================================
 // State
@@ -61,6 +39,17 @@ const isEmpty = computed(() => transactionStore.isEmpty)
 const currentFilter = computed(() => transactionStore.currentFilter)
 
 // ========================================
+// SSR Data Loading
+// ========================================
+
+await useAsyncData('transaction-history', async () => {
+  if (transactionStore.transactions.transactionsByDate.length === 0) {
+    await fetchTransactions({ type: 'all' }, true)
+  }
+  return true
+})
+
+// ========================================
 // Event Handlers
 // ========================================
 
@@ -70,14 +59,14 @@ const currentFilter = computed(() => transactionStore.currentFilter)
 async function handleTabChange(index: number): Promise<void> {
   activeTab.value = index
   const filter = FILTER_TABS[index]?.value ?? 'all'
-  await transactionStore.changeFilter(filter)
+  await changeFilter(filter)
 }
 
 /**
  * Retry fetching after error.
  */
 async function handleRetry(): Promise<void> {
-  await transactionStore.fetch({ type: currentFilter.value }, true)
+  await fetchTransactions({ type: currentFilter.value }, true)
 }
 
 // ========================================
@@ -85,26 +74,16 @@ async function handleRetry(): Promise<void> {
 // ========================================
 
 if (import.meta.client) {
+  const { useInfiniteScroll } = await import('@vueuse/core')
   useInfiniteScroll(
     () => window,
     async () => {
       if (!hasMore.value || isLoading.value) return
-      await transactionStore.loadMore()
+      await loadMore()
     },
     { distance: 400, interval: 200 }
   )
 }
-
-// ========================================
-// Lifecycle
-// ========================================
-
-onMounted(async () => {
-  // Only fetch if we don't have data
-  if (transactionStore.transactions.transactionsByDate.length === 0) {
-    await transactionStore.fetch({ type: 'all' }, true)
-  }
-})
 </script>
 
 <template>

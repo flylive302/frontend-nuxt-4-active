@@ -81,6 +81,10 @@ export type TransactionType =
   | 'reward_claim'
   | 'target_refund'
   | 'owner_bonus'
+  | 'prop_purchase'
+  | 'prop_gift'
+  | 'vip_purchase'
+  | 'vip_gift'
 
 /**
  * Filter options for transaction history.
@@ -138,13 +142,22 @@ export interface TransactionsByDate {
 }
 
 /**
- * Transaction summary statistics.
+ * Transaction summary statistics (matches backend response shape).
  */
 export interface TransactionSummary {
-  total_sent: string
-  total_received: string
-  total_transactions: number
-  by_type: Partial<Record<TransactionType, number>>
+  coins: {
+    total_earned: number
+    total_spent: number
+    transaction_count: number
+  }
+  diamonds: {
+    total_earned: number
+    transaction_count: number
+  }
+  gifts: {
+    total_sent: number
+    total_received: number
+  }
 }
 
 // ========================================
@@ -193,59 +206,4 @@ export interface TransactionsResponse {
 export interface TransactionSummaryResponse {
   success: true
   data: TransactionSummary
-}
-
-// ========================================
-// Display Helpers
-// ========================================
-
-/**
- * Human-readable labels for transaction types.
- */
-export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-  gift: 'Gift',
-  room_commission: 'Room Commission',
-  coin_transfer: 'Coin Transfer',
-  diamond_exchange: 'Diamond Exchange',
-  system_reward: 'System Reward',
-  system_generation: 'Coin Generation',
-  agency_income: 'Agency Income',
-  reward_claim: 'Reward Claimed',
-  target_refund: 'Target Refund',
-  owner_bonus: 'Owner Bonus',
-}
-
-/**
- * Colors for transaction types (Tailwind classes).
- */
-export const TRANSACTION_TYPE_COLORS: Record<TransactionType, string> = {
-  gift: 'text-pink-500',
-  room_commission: 'text-blue-500',
-  coin_transfer: 'text-green-500',
-  diamond_exchange: 'text-secondary-100',
-  system_reward: 'text-yellow-500',
-  system_generation: 'text-green-500',
-  agency_income: 'text-purple-500',
-  reward_claim: 'text-yellow-500',
-  target_refund: 'text-orange-500',
-  owner_bonus: 'text-amber-500',
-}
-
-// ========================================
-// Helper Functions
-// ========================================
-
-/**
- * Check if transaction is positive (user gained) or negative (user spent).
- */
-export function isPositiveTransaction(transaction: Transaction): boolean {
-  return transaction.amount.value >= 0
-}
-
-/**
- * Get the display name for the other party, or fallback.
- */
-export function getOtherPartyDisplay(transaction: Transaction): string {
-  if (!transaction.other_party) return 'System'
-  return transaction.other_party.signature || transaction.other_party.name
 }

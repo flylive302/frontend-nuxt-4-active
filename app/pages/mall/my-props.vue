@@ -114,7 +114,7 @@ async function handleLoadMore(): Promise<void> {
       <UserAvatar
           :animated="true"
           :frame-asset-url="authStore?.user?.frame ?? undefined"
-          :img="authStore?.user?.avatar ?? undefined" class="max-w-[40vw] mx-auto"
+          :img="authStore?.user?.avatar ?? undefined" class="w-28 mx-auto"
       />
     </AltHero>
 

@@ -1,9 +1,9 @@
 <!-- ~/components/transaction-item.vue -->
 <!-- Displays a single transaction with minimal view + expandable details -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import type { Transaction, BalanceSnapshot } from '~/types/economy/wallet'
-import { TRANSACTION_TYPE_LABELS, isPositiveTransaction, getOtherPartyDisplay } from '~/types/economy/wallet'
+import { TRANSACTION_TYPE_LABELS } from '~/constants/economy/transactionConstants'
+import { isPositiveTransaction, getOtherPartyDisplay } from '~/utils/economy/transactionHelpers'
 import { formatCurrency } from '~/utils/currency'
 
 // ========================================
