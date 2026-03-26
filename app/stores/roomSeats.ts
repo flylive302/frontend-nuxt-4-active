@@ -50,11 +50,37 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   /**
    * Update a seat with user and mute state.
    * Looks up the user from the audio store's participants.
+   * BUG-3 FIX: If user not yet in participants (race condition),
+   * creates a minimal placeholder so the seat renders as occupied.
    */
   function updateSeat(seatIndex: number, userId: number | null, isMuted: boolean) {
     if (seatIndex >= 0 && seatIndex < seats.value.length) {
       const audioStore = useRoomAudioStore();
-      const user = userId !== null ? audioStore.participants.get(userId) ?? null : null;
+      let user = userId !== null ? audioStore.participants.get(userId) ?? null : null;
+
+      // BUG-3 FIX: If user not in participants map (cross-instance race),
+      // create a minimal placeholder so the seat doesn't appear empty.
+      if (userId !== null && !user) {
+        storeLog.debug('updateSeat: user not in participants, creating placeholder for userId:', userId);
+        user = {
+          id: userId,
+          name: `User ${userId}`,
+          signature: '',
+          avatar: '',
+          frame: '',
+          gender: 0,
+          country: '',
+          phone: '',
+          email: null,
+          date_of_birth: '',
+          wealth_xp: '0',
+          charm_xp: '0',
+          vip_level: 0,
+          isSpeaker: true,
+        };
+        // Also add to participants so subsequent lookups find them
+        audioStore.addParticipant(user);
+      }
 
       storeLog.debug('updateSeat:', { seatIndex, userId, userName: user?.name });
 
