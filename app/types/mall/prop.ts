@@ -227,49 +227,27 @@ export interface PropUnequipResponse {
 }
 
 // ========================================
-// Display Helpers
+// Store State Types
 // ========================================
 
 /**
- * Icons for prop types.
+ * Catalog pagination state.
  */
-export const PROP_TYPE_ICONS: Record<PropType, string> = {
-  frame: 'i-lucide-square',
-  signature: 'i-lucide-fingerprint',
-  room_theme: 'i-lucide-palette',
-  chat_bubble: 'i-lucide-message-circle',
-  entry_animation: 'i-lucide-sparkles',
+export interface CatalogState {
+  items: Prop[]
+  loading: boolean
+  error: string | null
+  hasMore: boolean
+  cursor: string | null
 }
 
 /**
- * Colors for prop types.
+ * User props pagination state.
  */
-export const PROP_TYPE_COLORS: Record<PropType, string> = {
-  frame: 'text-amber-500',
-  signature: 'text-purple-500',
-  room_theme: 'text-blue-500',
-  chat_bubble: 'text-pink-500',
-  entry_animation: 'text-cyan-500',
+export interface UserPropsState {
+  items: UserProp[]
+  loading: boolean
+  error: string | null
+  hasMore: boolean
+  cursor: string | null
 }
-
-/**
- * Labels for prop types.
- */
-export const PROP_TYPE_LABELS: Record<PropType, string> = {
-  frame: 'Frames',
-  signature: 'Unique ID',
-  room_theme: 'Room Themes',
-  chat_bubble: 'Chat Bubbles',
-  entry_animation: 'Entries',
-}
-
-/**
- * Tab order for prop types in UI.
- */
-export const PROP_TYPE_ORDER: PropType[] = [
-  'frame',
-  'entry_animation',
-  'chat_bubble',
-  'signature',
-  'room_theme',
-]

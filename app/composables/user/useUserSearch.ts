@@ -99,6 +99,7 @@ export function useUserSearch() {
         phone: u.phone,
         country: u.country,
         avatar: u.avatar,
+        cover_image: u.cover_image,
         frame: u.frame,
         vip_level: u.vip_level,
       }))

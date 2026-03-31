@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
-import { PROP_TYPE_LABELS } from '~/types/mall/prop'
-import type { PropType as PropTypeEnum, UserProp } from '~/types/mall/prop'
-import {useAuthStore} from "~/stores/auth";
+import { onMounted } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 // ========================================
 // Page Meta
@@ -14,92 +12,45 @@ definePageMeta({
 })
 
 // ========================================
-// Store
+// Dependencies
 // ========================================
 
-const mallStore = useMallStore();
-const authStore = useAuthStore();
+const mallStore = useMallStore()
+const authStore = useAuthStore()
+const { equipProp, unequipProp, isEquipping } = useMallActions()
+const {
+  tabItems,
+  selectedTab,
+  initializeUserProps,
+  handleUserPropsTabChange,
+  selectUserProp,
+  loadMoreUserProps,
+  fetchUserProps,
+} = useMallPage()
 
 // ========================================
 // Computed
 // ========================================
 
-/**
- * Tab items from prop types.
- */
-const tabItems = computed(() => {
-  return mallStore.orderedTypes.map(typeInfo => ({
-    label: PROP_TYPE_LABELS[typeInfo.type],
-    value: typeInfo.type,
-  }))
-})
-
-/**
- * Selected tab value synced with store.
- */
-const selectedTab = computed({
-  get: () => mallStore.currentType ?? tabItems.value[0]?.value ?? undefined,
-  set: (val) => { mallStore.currentType = val as typeof mallStore.currentType },
-})
-
-/**
- * User props from store (already filtered by API).
- */
+/** User props from store (already filtered by API). */
 const currentUserProps = computed(() => mallStore.userProps.items)
 
 // ========================================
 // Lifecycle
 // ========================================
 
-onMounted(async () => {
-  // Reset currentType to ensure fresh state on navigation
-  mallStore.currentType = undefined
-  
-  // Fetch types first, then set initial type before fetching user props
-  await mallStore.fetchTypes()
-  
-  // Set initial type to first available type after types are loaded
-  const firstType = mallStore.orderedTypes[0]?.type ?? undefined
-  mallStore.currentType = firstType
-  
-  // Now fetch user props and equipped with correct type filter
-  await Promise.all([
-    mallStore.fetchUserProps({}, true),
-    mallStore.fetchEquipped(),
-  ])
-})
+onMounted(() => initializeUserProps())
 
 // ========================================
-// Handlers
+// Handlers (INTENT — delegate to composables)
 // ========================================
-
-async function handleTabChange(index: number): Promise<void> {
-  const type = mallStore.orderedTypes[index]?.type ?? undefined
-  mallStore.currentType = type as PropTypeEnum | undefined
-  // Refetch with new type filter for server-side filtering
-  await mallStore.fetchUserProps({}, true)
-}
 
 async function handleEquip(userPropId: number): Promise<void> {
-  await mallStore.equipProp(userPropId)
+  await equipProp(userPropId)
 }
 
 async function handleUnequip(userPropId: number): Promise<void> {
-  await mallStore.unequipProp(userPropId)
-}
-
-function handleSelectUserProp(userProp: UserProp): void {
-  mallStore.selectUserProp(userProp)
-}
-
-function handleCloseModal(): void {
-  mallStore.selectUserProp(null)
-}
-
-async function handleLoadMore(): Promise<void> {
-  if (mallStore.userProps.hasMore && !mallStore.userProps.loading) {
-    await mallStore.fetchUserProps()
-  }
+  await unequipProp(userPropId)
 }
 </script>
 
@@ -138,7 +89,7 @@ async function handleLoadMore(): Promise<void> {
           list: 'overflow-x-scroll min-h-fit overflow-y-hidden',
         }"
         :content="false"
-        @update:model-value="(val: any) => handleTabChange(tabItems.findIndex(t => t.value === val))"
+        @update:model-value="(val: string | number) => handleUserPropsTabChange(val)"
       />
 
       <!-- Loading Skeleton for Props -->
@@ -155,7 +106,7 @@ async function handleLoadMore(): Promise<void> {
           variant="soft" 
           size="sm" 
           class="mt-4"
-          @click="mallStore.fetchUserProps({}, true)"
+          @click="fetchUserProps({}, true)"
         >
           Try Again
         </UButton>
@@ -180,10 +131,10 @@ async function handleLoadMore(): Promise<void> {
           v-for="userProp in currentUserProps"
           :key="userProp.id"
           :user-prop="userProp"
-          :is-equipping="mallStore.isEquipping === userProp.id"
+          :is-equipping="isEquipping === userProp.id"
           @equip="handleEquip"
           @unequip="handleUnequip"
-          @select="handleSelectUserProp"
+          @select="selectUserProp"
         />
       </div>
 
@@ -193,7 +144,7 @@ async function handleLoadMore(): Promise<void> {
           color="neutral"
           variant="soft"
           :loading="mallStore.userProps.loading"
-          @click="handleLoadMore"
+          @click="loadMoreUserProps"
         >
           Load More
         </UButton>
@@ -204,8 +155,8 @@ async function handleLoadMore(): Promise<void> {
     <MallMyPropDetailModal
       :user-prop="mallStore.selectedUserProp"
       :open="!!mallStore.selectedUserProp"
-      :is-equipping="mallStore.isEquipping === mallStore.selectedUserProp?.id"
-      @close="handleCloseModal"
+      :is-equipping="isEquipping === mallStore.selectedUserProp?.id"
+      @close="selectUserProp(null)"
       @equip="handleEquip"
       @unequip="handleUnequip"
     />

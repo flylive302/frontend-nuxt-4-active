@@ -334,6 +334,7 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     signature: user.signature,
     avatar: user.avatar,
     frame: user.frame,
+    cover_image: user.cover_image,
     gender: user.gender,
     phone: user.phone,
     email: user.email ?? null,

@@ -114,6 +114,7 @@ export default defineNuxtConfig({
             'composables/income',
             'composables/mediasoup',
             'composables/vip',
+            'composables/mall',
         ],
     },
     app: {

@@ -67,7 +67,7 @@ watch(
 
     // Scenario 2: Bootstrap ready, gifts available, start downloading
     if (isAuth && isReady && giftCount > 0 && currentAssetPhase === 'idle') {
-      startAssetDownload()
+      await startAssetDownload()
     }
   },
   { immediate: true }

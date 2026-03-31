@@ -3,7 +3,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { UserProp } from '~/types/mall/prop'
-import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/types/mall/prop'
+import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/constants/mall'
 import { useAuthStore } from '~/stores/auth'
 
 // ========================================
