@@ -20,6 +20,16 @@ import { useAuthStore } from '~/stores/auth'
 
 const log = createLogger('[MallActions]')
 
+// ========================================
+// Module-level state — shared across all useMallActions() callers
+// ========================================
+// These are concurrency guards. They MUST be module-level so that
+// two components calling useMallActions() share the same guard,
+// preventing duplicate requests globally.
+
+const isPurchasing = ref(false)
+const isEquipping = ref<number | null>(null)
+
 export function useMallActions() {
   // ========================================
   // Dependencies
@@ -33,13 +43,6 @@ export function useMallActions() {
   const { emitProfileSync } = useProfileActions()
 
   // ========================================
-  // State (ephemeral action state — not in store)
-  // ========================================
-
-  const isPurchasing = ref(false)
-  const isEquipping = ref<number | null>(null)
-
-  // ========================================
   // Purchase
   // ========================================
 
@@ -48,7 +51,7 @@ export function useMallActions() {
    *
    * GATE:    check isPurchasing guard
    * EXECUTE: POST API → refresh user props
-   * REACT:   toast success/error
+   * REACT:   clear selection, toast success/error
    */
   async function purchaseProp(propId: number): Promise<boolean> {
     // GATE
@@ -66,7 +69,8 @@ export function useMallActions() {
       const { fetchUserProps } = useMallUserProps()
       await fetchUserProps({}, true)
 
-      // REACT
+      // REACT — success
+      mallStore.selectProp(null)
       toast.add({
         title: 'Purchase Successful',
         description: `New balance: ${response.data.balance.coins_after.toLocaleString()} coins`,
@@ -75,9 +79,9 @@ export function useMallActions() {
 
       return true
     } catch (err) {
+      // REACT — error feedback
       const normalized = normalizeError(err)
 
-      // REACT — error feedback
       if (normalized.status === 402) {
         toast.add({
           title: 'Insufficient Balance',
@@ -164,7 +168,7 @@ export function useMallActions() {
 
       return true
     } catch (err) {
-      // EXECUTE — rollback
+      // EXECUTE — rollback first (must complete before REACT feedback)
       mallStore.setUserPropEquipped(userPropId, false)
       mallStore.setEquippedForType(prop.type, previousEquipped)
 
@@ -176,7 +180,7 @@ export function useMallActions() {
         userStore.patchProfile({ frame: previousFrame })
       }
 
-      // REACT — error feedback
+      // REACT — error feedback (after rollback is complete)
       const normalized = normalizeError(err)
       toast.add({
         title: 'Equip Failed',
@@ -238,7 +242,7 @@ export function useMallActions() {
 
       return true
     } catch (err) {
-      // EXECUTE — rollback
+      // EXECUTE — rollback first (must complete before REACT feedback)
       mallStore.setUserPropEquipped(userPropId, previousState)
       if (previousState) {
         mallStore.setEquippedForType(prop.type, {
@@ -253,7 +257,7 @@ export function useMallActions() {
         userStore.patchProfile({ frame: previousFrame })
       }
 
-      // REACT — error feedback
+      // REACT — error feedback (after rollback is complete)
       const normalized = normalizeError(err)
       toast.add({
         title: 'Unequip Failed',
@@ -299,3 +303,4 @@ export function useMallActions() {
     unequipProp,
   }
 }
+

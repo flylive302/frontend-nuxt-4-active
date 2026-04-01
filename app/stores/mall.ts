@@ -18,7 +18,7 @@ import type {
   CatalogState,
   UserPropsState,
 } from '~/types/mall/prop'
-import { PROP_TYPE_ORDER } from '~/constants/mall'
+import { PROP_TYPE_ORDER, MALL_STALE_TIME } from '~/constants/mall'
 
 // ========================================
 // Store Definition
@@ -65,12 +65,7 @@ export const useMallStore = defineStore('mall', () => {
   /** Timestamp of last successful data fetch */
   const lastFetchedAt = ref<number | null>(null)
 
-  // ========================================
-  // Constants
-  // ========================================
 
-  /** Data is considered stale after 5 minutes */
-  const STALE_TIME = 5 * 60 * 1000
 
   // ========================================
   // Computed
@@ -98,7 +93,7 @@ export const useMallStore = defineStore('mall', () => {
   /** Whether cached data needs refreshing. */
   const needsRefresh = computed<boolean>(() => {
     if (!lastFetchedAt.value) return true
-    return Date.now() - lastFetchedAt.value > STALE_TIME
+    return Date.now() - lastFetchedAt.value > MALL_STALE_TIME
   })
 
   // ========================================

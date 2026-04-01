@@ -50,3 +50,9 @@ export const PROP_TYPE_ORDER: PropType[] = [
   'signature',
   'room_theme',
 ]
+
+/**
+ * Data is considered stale after this duration (ms).
+ * Used by the mall store to determine when to refetch.
+ */
+export const MALL_STALE_TIME = 5 * 60 * 1000

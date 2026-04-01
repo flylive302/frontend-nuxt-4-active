@@ -32,14 +32,12 @@ export function useMallUserProps() {
    * Fetch user's owned props.
    */
   async function fetchUserProps(params: GetUserPropsParams = {}, reset = false): Promise<void> {
-    // GATE
-    if (reset) {
-      mallStore.resetUserProps()
-    }
+    // GATE — guards must run before any mutations
+    if (mallStore.userProps.loading) return
+    if (!reset && !mallStore.userProps.hasMore) return
 
-    if (!mallStore.userProps.hasMore || mallStore.userProps.loading) return
-
-    // EXECUTE
+    // EXECUTE — safe to mutate now
+    if (reset) mallStore.resetUserProps()
     mallStore.setUserPropsLoading(true)
     mallStore.setUserPropsError(null)
 

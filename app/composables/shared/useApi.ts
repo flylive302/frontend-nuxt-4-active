@@ -61,6 +61,17 @@ function getClient(baseURL: string | undefined) {
 
       options.headers = headers
       options.credentials = 'include'
+    },
+    onResponseError({ response }: FetchContext) {
+      // Global 401 interceptor — token expired or invalid
+      if (response?.status === 401) {
+        const authStore = useAuthStore()
+        // Only act if user was previously authenticated (avoid loops on login page)
+        if (authStore.token) {
+          authStore.logout()
+          navigateTo('/log-in')
+        }
+      }
     }
   })
   

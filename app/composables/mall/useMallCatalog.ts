@@ -55,14 +55,12 @@ export function useMallCatalog() {
    * Fetch catalog props with pagination.
    */
   async function fetchCatalog(params: GetPropsParams = {}, reset = false): Promise<void> {
-    // GATE
-    if (reset) {
-      mallStore.resetCatalog()
-    }
+    // GATE — guards must run before any mutations
+    if (mallStore.catalog.loading) return
+    if (!reset && !mallStore.catalog.hasMore) return
 
-    if (!mallStore.catalog.hasMore || mallStore.catalog.loading) return
-
-    // EXECUTE
+    // EXECUTE — safe to mutate now
+    if (reset) mallStore.resetCatalog()
     mallStore.setCatalogLoading(true)
     mallStore.setCatalogError(null)
 

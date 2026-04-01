@@ -46,10 +46,7 @@ onMounted(() => initializeCatalog())
 // ========================================
 
 async function handlePurchase(propId: number): Promise<void> {
-  const success = await purchaseProp(propId)
-  if (success) {
-    selectProp(null)
-  }
+  await purchaseProp(propId)
 }
 </script>
 
