@@ -26,6 +26,7 @@ import { refundPendingCoins } from '../gift/useGiftSending';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
+import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
 
 // ============================================
 // Types
@@ -139,6 +140,7 @@ export function setupRoomEventHandlers({
 
   socket.on('room:userLeft', (event: UserLeftEvent) => {
     audioStore.removeParticipant(event.userId);
+    seatsStore.clearParticipantFromSeat(event.userId);
     giftStore.removeRecipient(event.userId);
   });
 
@@ -174,7 +176,17 @@ export function setupRoomEventHandlers({
     // Strip financial fields to prevent overwriting data from balance.updated
     const { coins: _c, diamonds: _d, wealth_xp: _w, charm_xp: _ch, ...safeProfile } = event.profile as Record<string, unknown>;
 
-    audioStore.updateParticipantProfile(event.user_id, safeProfile);
+    audioStore.updateParticipantProfile(event.user_id, safeProfile as Partial<RoomParticipant>);
+    const updated = audioStore.participants.get(event.user_id);
+    if (updated) {
+      seatsStore.refreshSeatUser(event.user_id, updated);
+    }
+    if (roomStore.currentRoom?.owner?.id === event.user_id) {
+      roomStore.refreshCurrentRoom({
+        ...roomStore.currentRoom,
+        owner: { ...roomStore.currentRoom.owner, ...safeProfile },
+      });
+    }
 
     // Also patch local user if the update is for the authenticated user
     if (event.user_id === authStore.user?.id) {
@@ -199,17 +211,42 @@ export function setupRoomEventHandlers({
       : [parseInt(event.userId)];
 
     audioStore.setActiveSpeakers(ids);
+    seatsStore.syncActiveSpeakers(ids);
   });
 
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
-    seatsStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
+    let user = audioStore.participants.get(event.userId) ?? null;
+    if (!user) {
+      user = createParticipantPlaceholder(event.userId);
+      audioStore.addParticipant(user);
+    }
+    seatsStore.updateSeat(
+      event.seatIndex,
+      user,
+      event.isMuted,
+      audioStore.audioState.activeSpeakerIds,
+    );
+    const p = audioStore.participants.get(user.id);
+    if (p) {
+      p.isSpeaker = true;
+      p.seatIndex = event.seatIndex;
+    }
   });
 
   socket.on('seat:cleared', (event: SeatClearedEvent) => {
     const seat = seatsStore.seats[event.seatIndex];
     const wasCurrentUserSeated = seat?.user?.id === authStore.user?.id;
+    const leftUserId = seat?.user?.id;
 
     seatsStore.clearSeat(event.seatIndex);
+
+    if (leftUserId != null) {
+      const p = audioStore.participants.get(leftUserId);
+      if (p) {
+        p.isSpeaker = false;
+        p.seatIndex = undefined;
+      }
+    }
 
     if (wasCurrentUserSeated) {
       stopAudio();
@@ -223,6 +260,7 @@ export function setupRoomEventHandlers({
 
   socket.on('seat:userMuted', (event: SeatUserMutedEvent) => {
     audioStore.setParticipantMuted(event.userId, event.isMuted);
+    seatsStore.setSeatUserMuted(event.userId, event.isMuted);
   });
 
   socket.on('seat:locked', (event: SeatLockedEvent) => {

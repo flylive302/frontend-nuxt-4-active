@@ -10,6 +10,7 @@ const log = createLogger('[RoomHeader]');
 
 const roomStore = useRoomStore();
 const bootstrapStore = useBootstrapStore();
+const { isRoomOwner } = useRoomPermissions();
 const { leaveRoom } = useRoomAudio();
 
 // ========================================
@@ -115,7 +116,7 @@ onMounted(() => fetchMyMembership());
 
 /** Whether current user can manage members (owner or admin) */
 const canManageMembers = computed(() => {
-  if (roomStore.isRoomOwner) return true;
+  if (isRoomOwner.value) return true;
   const membership = myMembership.value;
   if (membership?.room_id === thisRoom.value?.id && membership?.role === 'admin') return true;
   return false;

@@ -7,6 +7,7 @@
  */
 import type { Gift } from "~/types/gift/gift";
 import { useGiftData } from "~/composables/gift/useGiftData";
+import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";
 import { GIFT_QUANTITY_OPTIONS } from "~/constants/gift";
 
@@ -15,10 +16,12 @@ const quantityOptions = [...GIFT_QUANTITY_OPTIONS];
 
 const giftStore = useGiftStore();
 const authStore = useAuthStore();
+const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending } = useGiftSending();
 
 const { haptic } = useHaptics();
+useGiftRecipientSync();
 
 // Track drawer open state
 const isOpen = ref(false);
@@ -30,8 +33,8 @@ onMounted(() => {
 
 // Auto-select all recipients when drawer opens (per spec: default is "all")
 watch(isOpen, (open) => {
-  if (open && giftStore.eligibleRecipients.length > 0) {
-    giftStore.selectAllRecipients();
+  if (open && eligibleRecipients.value.length > 0) {
+    selectAllRecipients();
   }
 });
 

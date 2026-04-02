@@ -23,7 +23,7 @@ const authStore = useAuthStore()
 const { requestToJoin, cancelJoinRequest, fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
 const { acceptInvitation, declineInvitation, receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
 const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers()
-const { api, normalizeError } = useApi()
+const { patchRoom, normalizeError } = useRoomSettingsApi()
 const { createUploadState } = useImageUpload()
 const { socket } = useAudioSocket()
 const toast = useToast()
@@ -42,7 +42,7 @@ const { produceTrack, stopMusicProducer: _stopMusicProducer } = useMediasoupStre
 // ========================================
 
 const thisRoom = computed(() => roomStore.currentRoom)
-const isRoomOwner = computed(() => roomStore.isRoomOwner)
+const { isRoomOwner } = useRoomPermissions()
 
 /** Membership state for current user */
 const membershipState = computed(() => {
@@ -271,7 +271,7 @@ async function handleSaveSettings(): Promise<void> {
     }
 
     // Send PATCH — response includes updated room data
-    const response = await api<{ data: Record<string, unknown> }>(`/rooms/${thisRoom.value.id}`, { method: 'PATCH', body })
+    const response = await patchRoom(thisRoom.value.id, body)
 
     // Merge response into current room, preserving owner (not eager-loaded in resource)
     if (response.data && thisRoom.value) {
@@ -295,7 +295,7 @@ async function handleRemovePassword(): Promise<void> {
   if (!thisRoom.value || !canEdit.value) return
   saving.value = true
   try {
-    const response = await api<{ data: Record<string, unknown> }>(`/rooms/${thisRoom.value.id}`, { method: 'PATCH', body: { password: '' } })
+    const response = await patchRoom(thisRoom.value.id, { password: '' })
 
     // Merge response, preserving owner
     if (response.data && thisRoom.value) {

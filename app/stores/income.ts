@@ -1,19 +1,14 @@
 // ========================================
 // Income Store
 // ========================================
+// State + computed + setters ONLY — useIncomeActions for API.
 
 import { defineStore } from 'pinia'
-import { createLogger } from '~/utils/logger'
 import type {
-  IncomeTarget,
   IncomeSummary,
+  IncomeTarget,
   IncomeTargetHistory,
-  GetIncomeHistoryParams,
 } from '~/types/income/income'
-
-// ========================================
-// Types
-// ========================================
 
 interface HistoryState {
   items: IncomeTargetHistory[]
@@ -23,32 +18,14 @@ interface HistoryState {
   cursor: string | null
 }
 
-// ========================================
-// Store Definition
-// ========================================
-
 export const useIncomeStore = defineStore('income', () => {
-  const log = createLogger('[IncomeStore]')
-  const { api, normalizeError } = useApi()
-
-  // ========================================
-  // State
-  // ========================================
-
   const summary = ref<IncomeSummary | null>(null)
   const activeTarget = ref<IncomeTarget | null>(null)
   const isLoading = ref(false)
   const isTargetLoading = ref(false)
   const error = ref<string | null>(null)
-
-  /** Timestamp of last successful data fetch */
   const lastFetchedAt = ref<number | null>(null)
 
-  // ========================================
-  // Constants
-  // ========================================
-
-  /** Data is considered stale after 5 minutes */
   const STALE_TIME = 5 * 60 * 1000
 
   const history = ref<HistoryState>({
@@ -59,177 +36,81 @@ export const useIncomeStore = defineStore('income', () => {
     cursor: null,
   })
 
-  // ========================================
-  // Computed
-  // ========================================
-
-  /**
-   * Whether user has an active income target.
-   */
   const hasActiveTarget = computed(() => activeTarget.value !== null)
-
-  /**
-   * Progress percentage of active target (0-100).
-   */
   const targetProgress = computed(() => activeTarget.value?.progress_percentage ?? 0)
-
-  /**
-   * Days remaining for active target.
-   */
   const daysRemaining = computed(() => activeTarget.value?.days_remaining ?? 0)
 
-  /**
-   * Coins needed to complete active target.
-   * Falls back to calculating from earned/required if API doesn't provide it.
-   */
   const coinsToComplete = computed(() => {
     if (!activeTarget.value) return '0'
-    
-    // If API provides valid coins_to_complete, use it
     const apiValue = activeTarget.value.coins_to_complete
     if (apiValue && parseFloat(apiValue) > 0) {
       return apiValue
     }
-    
-    // Calculate from earned/required as fallback
     const required = parseFloat(activeTarget.value.required_coins ?? '0')
     const earned = parseFloat(activeTarget.value.earned_coins ?? '0')
     const remaining = Math.max(0, required - earned)
     return remaining.toFixed(4)
   })
 
-  /**
-   * Recent earnings from summary.
-   */
   const recentEarnings = computed(() => summary.value?.recent_earnings ?? [])
 
-  /**
-   * Whether cached data needs refreshing.
-   */
   const needsRefresh = computed<boolean>(() => {
     if (!lastFetchedAt.value) return true
     return Date.now() - lastFetchedAt.value > STALE_TIME
   })
 
-  // ========================================
-  // Actions
-  // ========================================
-
-  /**
-   * Fetch income summary statistics.
-   */
-  async function fetchStats(): Promise<void> {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const response = await api<{
-        success: true
-        data: IncomeSummary
-      }>('/user/income')
-
-      summary.value = response.data
-    } catch (err) {
-      const normalized = normalizeError(err)
-      error.value = normalized.message
-      log.error('fetchStats failed:', err)
-    } finally {
-      isLoading.value = false
-    }
+  function setStatsLoading(v: boolean): void {
+    isLoading.value = v
   }
 
-  /**
-   * Fetch active income target.
-   */
-  async function fetchActiveTarget(): Promise<void> {
-    isTargetLoading.value = true
-
-    try {
-      const response = await api<{
-        success: true
-        data: IncomeTarget | null
-      }>('/user/income/targets/active')
-
-      activeTarget.value = response.data
-    } catch (err) {
-      log.error('fetchActiveTarget failed:', err)
-      activeTarget.value = null
-    } finally {
-      isTargetLoading.value = false
-    }
+  function setTargetLoading(v: boolean): void {
+    isTargetLoading.value = v
   }
 
-  /**
-   * Fetch income target history.
-   */
-  async function fetchHistory(params: GetIncomeHistoryParams = {}, reset = false): Promise<void> {
-    if (reset) {
-      history.value.items = []
-      history.value.cursor = null
-      history.value.hasMore = true
-    }
-
-    if (!history.value.hasMore || history.value.loading) return
-
-    history.value.loading = true
-    history.value.error = null
-
-    try {
-      const queryParams: Record<string, unknown> = {
-        per_page: params.per_page ?? 20,
-      }
-
-      if (history.value.cursor) {
-        queryParams.cursor = history.value.cursor
-      }
-
-      const response = await api<{
-        success: true
-        data: {
-          targets: IncomeTargetHistory[]
-          pagination: { has_more: boolean; next_cursor?: string }
-        }
-      }>('/user/income/targets/history', { params: queryParams })
-
-      history.value.items.push(...response.data.targets)
-      history.value.hasMore = response.data.pagination.has_more
-      history.value.cursor = response.data.pagination.next_cursor ?? null
-    } catch (err) {
-      const normalized = normalizeError(err)
-      history.value.error = normalized.message
-      log.error('fetchHistory failed:', err)
-    } finally {
-      history.value.loading = false
-    }
+  function setError(msg: string | null): void {
+    error.value = msg
   }
 
-  /**
-   * Fetch all income data (stats + active target).
-   * Call this on mount for income dashboard.
-   */
-  async function fetchAll(): Promise<void> {
-    await Promise.all([fetchStats(), fetchActiveTarget()])
-    lastFetchedAt.value = Date.now()
+  function setSummary(s: IncomeSummary | null): void {
+    summary.value = s
   }
 
-  /**
-   * Handle income target completed event (real-time).
-   */
+  function setActiveTarget(t: IncomeTarget | null): void {
+    activeTarget.value = t
+  }
+
+  function setLastFetchedAt(t: number | null): void {
+    lastFetchedAt.value = t
+  }
+
+  function resetHistoryPagination(): void {
+    history.value.items = []
+    history.value.cursor = null
+    history.value.hasMore = true
+  }
+
+  function setHistoryLoading(v: boolean): void {
+    history.value.loading = v
+  }
+
+  function setHistoryError(msg: string | null): void {
+    history.value.error = msg
+  }
+
+  function appendHistoryPage(
+    targets: IncomeTargetHistory[],
+    pagination: { has_more: boolean; next_cursor?: string }
+  ): void {
+    history.value.items.push(...targets)
+    history.value.hasMore = pagination.has_more
+    history.value.cursor = pagination.next_cursor ?? null
+  }
+
   function onTargetCompleted(completedTarget: IncomeTargetHistory): void {
-    // Clear active target
     activeTarget.value = null
-
-    // Add to history
     history.value.items.unshift(completedTarget)
-
-    // Refresh stats
-    void fetchStats()
   }
 
-  /**
-   * Handle income earned event (real-time).
-   * Updates summary totals optimistically.
-   */
   function onIncomeEarned(amount: string): void {
     if (summary.value) {
       const current = parseFloat(summary.value.total_today)
@@ -237,7 +118,6 @@ export const useIncomeStore = defineStore('income', () => {
       summary.value.total_today = (current + added).toFixed(4)
     }
 
-    // Update active target progress
     if (activeTarget.value) {
       const earned = parseFloat(activeTarget.value.earned_coins)
       const added = parseFloat(amount)
@@ -251,9 +131,6 @@ export const useIncomeStore = defineStore('income', () => {
     }
   }
 
-  /**
-   * Reset all state.
-   */
   function reset(): void {
     summary.value = null
     activeTarget.value = null
@@ -270,12 +147,7 @@ export const useIncomeStore = defineStore('income', () => {
     lastFetchedAt.value = null
   }
 
-  // ========================================
-  // Return
-  // ========================================
-
   return {
-    // State
     summary,
     activeTarget,
     isLoading,
@@ -283,20 +155,22 @@ export const useIncomeStore = defineStore('income', () => {
     error,
     history,
     lastFetchedAt,
-
-    // Computed
     hasActiveTarget,
     targetProgress,
     daysRemaining,
     coinsToComplete,
     recentEarnings,
     needsRefresh,
-
-    // Actions
-    fetchStats,
-    fetchActiveTarget,
-    fetchHistory,
-    fetchAll,
+    setStatsLoading,
+    setTargetLoading,
+    setError,
+    setSummary,
+    setActiveTarget,
+    setLastFetchedAt,
+    resetHistoryPagination,
+    setHistoryLoading,
+    setHistoryError,
+    appendHistoryPage,
     onTargetCompleted,
     onIncomeEarned,
     reset,

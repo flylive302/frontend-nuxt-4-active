@@ -68,7 +68,7 @@ const participants = computed(() => audioStore.participantList)
 const participantCount = computed(() => audioStore.participantList.length)
 
 // Owner check and active seat for invite functionality
-const isRoomOwner = computed(() => roomStore.isRoomOwner)
+const { isRoomOwner } = useRoomPermissions()
 const activeSeat = computed(() => seatsStore.activeSeat) // 1-indexed, null if none
 const activeSeatIndex = computed(() => activeSeat.value ? activeSeat.value - 1 : null) // 0-indexed
 

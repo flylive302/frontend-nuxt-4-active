@@ -81,6 +81,7 @@ const savedVolume = typeof localStorage !== 'undefined'
 const volume = ref(savedVolume);
 const isMuted = ref(false);
 const volumePopoverOpen = ref(false);
+const lastNonZeroVolume = ref(savedVolume > 0 ? savedVolume : 0.8);
 
 /**
  * Handle volume slider change.
@@ -89,6 +90,9 @@ function onVolumeChange(value: number | undefined): void {
   const vol = value ?? 0.8;
   volume.value = vol;
   isMuted.value = vol === 0;
+  if (vol > 0) {
+    lastNonZeroVolume.value = vol;
+  }
   setVolume(vol);
 
   // Persist to localStorage
@@ -102,15 +106,25 @@ function onVolumeChange(value: number | undefined): void {
  */
 function toggleMute(): void {
   if (isMuted.value) {
-    // Unmute — restore previous volume
-    const restored = savedVolume > 0 ? savedVolume : 0.5;
+    // Unmute — restore last known non-zero volume.
+    const restored = lastNonZeroVolume.value > 0 ? lastNonZeroVolume.value : 0.5;
     volume.value = restored;
     isMuted.value = false;
     setVolume(restored);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(VOLUME_STORAGE_KEY, String(restored));
+    }
   } else {
     // Mute
     isMuted.value = true;
+    if (volume.value > 0) {
+      lastNonZeroVolume.value = volume.value;
+    }
+    volume.value = 0;
     setVolume(0);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(VOLUME_STORAGE_KEY, '0');
+    }
   }
 }
 

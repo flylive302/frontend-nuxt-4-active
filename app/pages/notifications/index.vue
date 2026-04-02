@@ -16,6 +16,7 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 // ========================================
 
 const notificationStore = useNotificationStore()
+const { markAllAsRead, markAsRead, fetchNotifications } = useNotificationActions()
 
 // ========================================
 // Component State
@@ -29,14 +30,14 @@ const markingAllRead = ref(false)
 
 async function handleMarkAllRead(): Promise<void> {
   markingAllRead.value = true
-  await notificationStore.markAllAsRead()
+  await markAllAsRead()
   markingAllRead.value = false
 }
 
 async function handleNotificationClick(notification: { id: string; read_at: string | null; action_url?: string }): Promise<void> {
   // Mark as read if unread
   if (!notification.read_at) {
-    await notificationStore.markAsRead(notification.id)
+    await markAsRead(notification.id)
   }
   
   // Navigate to action URL if present
@@ -46,7 +47,7 @@ async function handleNotificationClick(notification: { id: string; read_at: stri
 }
 
 function handleLoadMore(): void {
-  notificationStore.fetchNotifications(false)
+  void fetchNotifications(false)
 }
 
 // ========================================
@@ -56,7 +57,7 @@ function handleLoadMore(): void {
 onMounted(() => {
   // Fetch notifications on mount if not already loaded
   if (notificationStore.items.length === 0) {
-    notificationStore.fetchNotifications(true)
+    void fetchNotifications(true)
   }
 })
 </script>

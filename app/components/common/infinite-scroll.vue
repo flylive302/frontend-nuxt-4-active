@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { useInfiniteScroll } from '@vueuse/core'
 import { createLogger } from '~/utils/logger';
+import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';
 
 defineOptions({ name: 'InfiniteScroll' })
 
-type Identifier = string | number
-
-export interface InfiniteScrollItem {
-  id: Identifier
-  [key: string]: unknown
-}
+export type { InfiniteScrollItem } from '~/types/ui/infinite-scroll'
 
 interface PaginationMeta {
   page: number
@@ -109,11 +105,10 @@ const rows = computed(() => buildRows(items.value, columnCount.value))
 let abortController: AbortController | null = null
 let infiniteScrollController: { reset: () => void } | null = null
 
+const { fetchPage: transportFetchPage } = useInfiniteScrollTransport()
+
 async function defaultFetcher(context: FetchContext): Promise<FetchPayload<InfiniteScrollItem>> {
-  return await $fetch<FetchPayload<InfiniteScrollItem>>(context.endpoint, {
-    query: { page: context.page, perPage: context.perPage, ...context.query },
-    signal: context.signal
-  })
+  return transportFetchPage(context)
 }
 
 function evaluateHasMore(

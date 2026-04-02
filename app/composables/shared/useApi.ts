@@ -7,12 +7,9 @@ import { getClientType } from './useClientInfo'
 // ========================================
 // Types
 // ========================================
-export interface NormalizedError {
-  status?: number
-  message: string
-  fieldErrors?: Record<string, string[]>
-  raw?: unknown
-}
+import { normalizeFetchError, type NormalizedError } from '~/utils/api/normalizeFetchError'
+
+export type { NormalizedError }
 
 type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -143,28 +140,7 @@ export function useApi() {
     * @returns A NormalizedError object.
     */
     function normalizeError(error: unknown): NormalizedError {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const e = error as any
-    const status: number | undefined = e?.response?.status
-    const data = e?.response?._data ?? e?.data
-
-    if (e?.name === 'AbortError') {
-      return { status, message: 'Request was cancelled.', raw: error }
-    }
-
-    if (status === 422 && data) {
-      const fieldErrors: Record<string, string[]> | undefined = data.errors
-      const message: string = data.message || 'Validation failed'
-      return { status, message, fieldErrors, raw: error }
-    }
-
-    if (status) {
-      const message: string =
-        data?.message || data?.error || e?.message || 'Request failed.'
-      return { status, message, raw: error }
-    }
-
-    return { message: 'Network error. Check your connection.', raw: error }
+      return normalizeFetchError(error)
     }
 
 

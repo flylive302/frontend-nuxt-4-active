@@ -7,9 +7,9 @@
  */
 
 const giftStore = useGiftStore();
+const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 
-// Get eligible recipients from store (speakers only, excluding self)
-const recipients = computed(() => giftStore.eligibleRecipients);
+const recipients = eligibleRecipients;
 const selectedRecipients = computed(() => giftStore.selectedRecipients);
 
 /**
@@ -23,7 +23,7 @@ function toggleRecipient(userId: number) {
  * Select all eligible recipients
  */
 function selectAll() {
-  giftStore.selectAllRecipients();
+  selectAllRecipients();
 }
 
 /**

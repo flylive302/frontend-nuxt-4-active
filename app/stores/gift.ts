@@ -11,12 +11,6 @@ import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 
 export const useGiftStore = defineStore('giftStore', () => {
   // ========================================
-  // Dependencies
-  // ========================================
-  const authStore = useAuthStore();
-  const seatsStore = useRoomSeatsStore();
-
-  // ========================================
   // Selection State
   // ========================================
   const selectedGift = ref<Gift | null>(null);
@@ -32,28 +26,6 @@ export const useGiftStore = defineStore('giftStore', () => {
   const comboCount = ref(0);
 
   // ========================================
-  // Computed: Recipients
-  // ========================================
-
-  /**
-   * Eligible recipients = speakers (seated users) excluding self
-   */
-  const eligibleRecipients = computed(() => {
-    const currentUserId = authStore.user?.id;
-    return seatsStore.seats
-      .filter((seat) => seat.user !== null && seat.user.id !== currentUserId)
-      .map((seat) => seat.user!);
-  });
-
-  // Prune stale recipients when eligible users change (e.g. speaker leaves seat)
-  watch(eligibleRecipients, (eligible) => {
-    const eligibleIds = new Set(eligible.map((r) => r.id));
-    selectedRecipients.value = selectedRecipients.value.filter(
-      (id) => eligibleIds.has(id),
-    );
-  });
-
-  // ========================================
   // Computed: Cost Calculation
   // ========================================
 
@@ -63,26 +35,6 @@ export const useGiftStore = defineStore('giftStore', () => {
   const totalCost = computed(() => {
     if (!selectedGift.value) return 0;
     return selectedGift.value.price * selectedRecipients.value.length * selectedQuantity.value;
-  });
-
-  /**
-   * Check if user can afford the current selection
-   */
-  const canAfford = computed(() => {
-    const coins = Number(authStore.user?.coins ?? 0);
-    return coins >= totalCost.value;
-  });
-
-  /**
-   * Check if send is allowed
-   */
-  const canSend = computed(() => {
-    return (
-      selectedGift.value !== null &&
-      selectedRecipients.value.length > 0 &&
-      selectedQuantity.value > 0 &&
-      canAfford.value
-    );
   });
 
   // ========================================
@@ -116,8 +68,8 @@ export const useGiftStore = defineStore('giftStore', () => {
     }
   }
 
-  function selectAllRecipients() {
-    selectedRecipients.value = eligibleRecipients.value.map((r) => r.id);
+  function setSelectedRecipientIds(ids: number[]) {
+    selectedRecipients.value = [...ids];
   }
 
   function clearRecipients() {
@@ -280,16 +232,13 @@ export const useGiftStore = defineStore('giftStore', () => {
     comboCount,
 
     // Computed
-    eligibleRecipients,
     totalCost,
-    canAfford,
-    canSend,
 
     // Selection actions
     selectGift,
     clearSelection,
     toggleRecipient,
-    selectAllRecipients,
+    setSelectedRecipientIds,
     clearRecipients,
     removeRecipient,
     setQuantity,

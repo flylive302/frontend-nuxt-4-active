@@ -24,7 +24,7 @@ definePageMeta({
 
 const authStore = useAuthStore()
 const agencyStore = useAgencyStore()
-const { api, normalizeError } = useApi()
+const { fetchExchangeInfo: loadExchangeInfo, submitExchange: postExchange, normalizeError } = useDiamondExchangeApi()
 const toast = useToast()
 const { fetchUserAgency } = useAgencyMembership()
 
@@ -151,12 +151,7 @@ async function fetchExchangeInfo(): Promise<void> {
   isLoading.value = true
   
   try {
-    const response = await api<{
-      success: true
-      data: ExchangeInfo
-    }>('/user/exchange')
-    
-    exchangeInfo.value = response.data
+    exchangeInfo.value = await loadExchangeInfo()
   } catch (err) {
     const normalized = normalizeError(err)
     toast.add({
@@ -178,19 +173,12 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
   isSubmitting.value = true
   
   try {
-    const response = await api<{
-      success: true
-      data: ExchangeResult
-      message: string
-    }>('/user/exchange', {
-      method: 'POST',
-      body: { diamond_amount: state.diamonds },
-    })
+    const { data, message } = await postExchange(state.diamonds!)
     
     // Update local exchange info with new balances
     if (exchangeInfo.value) {
-      exchangeInfo.value.user_coins_balance = response.data.new_coin_balance
-      exchangeInfo.value.user_diamonds_balance = response.data.new_diamond_balance
+      exchangeInfo.value.user_coins_balance = data.new_coin_balance
+      exchangeInfo.value.user_diamonds_balance = data.new_diamond_balance
     }
     
     // Clear form
@@ -198,7 +186,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
     
     toast.add({
       title: 'Exchange Successful',
-      description: `Received ${response.data.coins_received.toLocaleString()} coins`,
+      description: `Received ${data.coins_received.toLocaleString()} coins`,
       color: 'success',
       icon: 'i-lucide-coins',
     })

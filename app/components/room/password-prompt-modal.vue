@@ -32,7 +32,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
 
-const { api, normalizeError } = useApi()
+const { verifyRoomJoinPassword } = useRoomJoinPasswordVerify()
 
 // ========================================
 // Handlers
@@ -48,21 +48,14 @@ async function handleSubmit(): Promise<void> {
   loading.value = true
   errorMessage.value = ''
 
-  try {
-    await api(`/rooms/${props.room.id}/join`, {
-      method: 'POST',
-      body: { password: password.value },
-    })
-
-    // Success — password verified
+  const result = await verifyRoomJoinPassword(props.room.id, password.value)
+  if (result.ok) {
     open.value = false
     emit('success')
-  } catch (err) {
-    const normalized = normalizeError(err)
-    errorMessage.value = normalized.message || 'Incorrect password'
-  } finally {
-    loading.value = false
+  } else {
+    errorMessage.value = result.message
   }
+  loading.value = false
 }
 
 /** Reset on close */

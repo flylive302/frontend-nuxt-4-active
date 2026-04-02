@@ -20,15 +20,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   const status = ref<StatusType>('idle');
 
   // ========================================
-  // Computed
-  // ========================================
-  const isRoomOwner = computed(() => {
-    if (!currentRoom.value) return false;
-    const authStore = useAuthStore();
-    return currentRoom.value.owner?.id === authStore.user?.id;
-  });
-
-  // ========================================
   // Actions
   // ========================================
 
@@ -72,13 +63,13 @@ export const useRoomStore = defineStore('roomStore', () => {
     userRoom.value = room;
   }
 
+  /**
+   * Clear local room session state. Audio/mediasoup teardown is handled by
+   * useRoomLifecycle watching currentRoom or by useRoomAudio.leaveRoom().
+   */
   function leaveRoom() {
     currentRoom.value = null;
     isMinimized.value = false;
-
-    // Clear audio & seats stores
-    const audioStore = useRoomAudioStore();
-    audioStore.clearAudioState();
   }
 
   function updateRoomLevel(level: number, xp: string) {
@@ -104,9 +95,6 @@ export const useRoomStore = defineStore('roomStore', () => {
     isMinimized,
     previousRoute,
     status,
-
-    // Computed
-    isRoomOwner,
 
     // Actions
     updateStatus,

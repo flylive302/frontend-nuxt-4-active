@@ -92,7 +92,14 @@ export function useSeatActions({
         email: null,
       } as MinimalUser, { isSpeaker: true, seatIndex });
       audioStore.addParticipant(currentUser);
-      seatsStore.updateSeat(seatIndex, authStore.user.id, false);
+      seatsStore.updateSeat(
+        seatIndex,
+        currentUser,
+        false,
+        audioStore.audioState.activeSpeakerIds,
+      );
+      currentUser.isSpeaker = true;
+      currentUser.seatIndex = seatIndex;
     }
 
     return response.success ?? false;
@@ -122,7 +129,15 @@ export function useSeatActions({
     // Clear local seat state
     // (Socket.IO's socket.to() excludes sender, so we update locally)
     if (response.success && currentUserSeatIndex >= 0) {
+      const uid = authStore.user?.id;
       seatsStore.clearSeat(currentUserSeatIndex);
+      if (uid != null) {
+        const p = audioStore.participants.get(uid);
+        if (p) {
+          p.isSpeaker = false;
+          p.seatIndex = undefined;
+        }
+      }
     }
 
     stopAudio();

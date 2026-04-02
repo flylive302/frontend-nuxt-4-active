@@ -54,7 +54,7 @@ const { blockUser } = useRoomBlocking()
 // ========================================
 
 /** Current user is room owner */
-const isRoomOwner = computed(() => roomStore.isRoomOwner)
+const { isRoomOwner } = useRoomPermissions()
 
 /** Current user can manage members (owner or admin) */
 const { myMembership } = useRoomMembers()

@@ -10,6 +10,7 @@ import { navigateTo } from 'nuxt/app'
 import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
 import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
 import type { NationalIdImage } from '~/types/asset/upload'
+import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 
 // ========================================
 // Page Configuration
@@ -67,7 +68,7 @@ const coinResellerId = ref<number | null>(null)
 // ========================================
 
 const toast = useToast()
-const { api } = useApi()
+const { submitAgency } = useAgencyCreateApi()
 const { uploadImage: _uploadImage, createUploadState } = useImageUpload()
 const { fetchUserAgency } = useAgencyMembership()
 
@@ -178,11 +179,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
       ...(coinResellerId.value && { coin_reseller_id: coinResellerId.value }),
     }
 
-    await api('/agencies', {
-      method: 'POST',
-      body: payload,
-      timeout: 30_000, // 30 seconds for agency creation
-    })
+    await submitAgency(payload)
 
     // Refresh user agency state
     await fetchUserAgency()
@@ -193,9 +190,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     setTimeout(() => navigateTo('/agency/my-agency'), 1500)
 
   } catch (error: unknown) {
-    
-    const { normalizeError } = useApi()
-    const normalizedError = normalizeError(error)
+    const normalizedError = normalizeFetchError(error)
     
     const errorDescription = normalizedError.fieldErrors 
       ? Object.values(normalizedError.fieldErrors).flat()[0] 

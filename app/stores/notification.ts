@@ -1,31 +1,17 @@
 // ========================================
 // Notification Store
 // ========================================
+// State + computed + setters ONLY — useNotificationActions for API/toast.
 
 import { defineStore } from 'pinia'
-import { createLogger } from '~/utils/logger'
-import type {
-  Notification,
-  NotificationListResponse,
-  UnreadCountResponse,
-} from '~/types/notification/notification'
+import type { Notification } from '~/types/notification/notification'
 
-// Note: Polling has been removed in favor of realtime socket events.
-// See useRealtimeEvents.ts for notification.new and notification.read handlers.
-
-// ========================================
-// Store Definition
-// ========================================
+interface ListMeta {
+  next_cursor: string | null
+  unread_count: number
+}
 
 export const useNotificationStore = defineStore('notification', () => {
-  const log = createLogger('[NotificationStore]')
-  const { api } = useApi()
-  const toast = useToast()
-
-  // ========================================
-  // State
-  // ========================================
-
   const items = ref<Notification[]>([])
   const unreadCount = ref<number>(0)
   const loading = ref<boolean>(false)
@@ -34,21 +20,14 @@ export const useNotificationStore = defineStore('notification', () => {
   const lastFetched = ref<number | null>(null)
   const error = ref<string | null>(null)
 
-  // ========================================
-  // Computed
-  // ========================================
-
   const hasUnread = computed(() => unreadCount.value > 0)
-  
+
   const unreadBadge = computed(() => {
     if (unreadCount.value === 0) return null
     if (unreadCount.value > 99) return '99+'
     return String(unreadCount.value)
   })
 
-  /**
-   * Group notifications by date for display.
-   */
   const groupedNotifications = computed(() => {
     const groups: Map<string, Notification[]> = new Map()
     const today = new Date()
@@ -79,10 +58,6 @@ export const useNotificationStore = defineStore('notification', () => {
     }))
   })
 
-  // ========================================
-  // Helpers
-  // ========================================
-
   function isSameDay(a: Date, b: Date): boolean {
     return (
       a.getFullYear() === b.getFullYear() &&
@@ -99,150 +74,37 @@ export const useNotificationStore = defineStore('notification', () => {
     })
   }
 
-  // ========================================
-  // Actions
-  // ========================================
-
-  /**
-   * Fetch notifications list.
-   * Supports pagination via cursor.
-   */
-  async function fetchNotifications(reset = false): Promise<void> {
-    if (reset) {
-      items.value = []
-      cursor.value = null
-      hasMore.value = true
-    }
-
-    if (!hasMore.value || loading.value) return
-
-    loading.value = true
-    error.value = null
-
-    try {
-      const params: Record<string, unknown> = {
-        per_page: 20, // Default page size
-      }
-      
-      if (cursor.value) {
-        params.cursor = cursor.value
-      }
-
-      const response = await api<NotificationListResponse>('/notifications', { params })
-
-      items.value.push(...response.data)
-      cursor.value = response.meta.next_cursor
-      hasMore.value = response.meta.next_cursor !== null
-      unreadCount.value = response.meta.unread_count
-      lastFetched.value = Date.now()
-    } catch (err) {
-      error.value = 'Failed to load notifications'
-      log.error('fetchNotifications failed:', err)
-    } finally {
-      loading.value = false
-    }
+  function setLoading(v: boolean): void {
+    loading.value = v
   }
 
-  /**
-   * Fetch only the unread count.
-   * Lightweight endpoint for badge updates.
-   */
-  async function fetchUnreadCount(): Promise<void> {
-    try {
-      const response = await api<UnreadCountResponse>('/notifications/unread-count')
-      unreadCount.value = response.data.count
-    } catch (err) {
-      log.error('fetchUnreadCount failed:', err)
-    }
+  function setError(msg: string | null): void {
+    error.value = msg
   }
 
-  /**
-   * Mark a single notification as read.
-   */
-  async function markAsRead(notificationId: string): Promise<boolean> {
-    try {
-      await api(`/notifications/${notificationId}/read`, { method: 'PATCH' })
-
-      // Update local state
-      const notification = items.value.find(n => n.id === notificationId)
-      if (notification && !notification.read_at) {
-        notification.read_at = new Date().toISOString()
-        unreadCount.value = Math.max(0, unreadCount.value - 1)
-      }
-
-      return true
-    } catch (err) {
-      log.error('markAsRead failed:', err)
-      return false
-    }
+  function setUnreadCount(n: number): void {
+    unreadCount.value = n
   }
 
-  /**
-   * Mark all notifications as read.
-   */
-  async function markAllAsRead(): Promise<boolean> {
-    try {
-      await api('/notifications/mark-all-read', { method: 'POST' })
-
-      // Update local state
-      for (const notification of items.value) {
-        if (!notification.read_at) {
-          notification.read_at = new Date().toISOString()
-        }
-      }
-      unreadCount.value = 0
-
-      toast.add({ title: 'All Read', description: 'All notifications marked as read.', color: 'success' })
-      return true
-    } catch (err) {
-      toast.add({ title: 'Error', description: 'Failed to mark all as read.', color: 'error' })
-      log.error('markAllAsRead failed:', err)
-      return false
-    }
+  function incrementUnread(): void {
+    unreadCount.value += 1
   }
 
-  // ========================================
-  // Lifecycle
-  // ========================================
-
-  /**
-   * Initialize notifications on auth.
-   * Call this when user authenticates.
-   * Polling has been removed - realtime updates come via socket events.
-   */
-  async function initialize(): Promise<void> {
-    await fetchNotifications(true)
-    await fetchUnreadCount()
-    log.info('Initialized (socket-based, no polling)')
+  function resetListPagination(): void {
+    items.value = []
+    cursor.value = null
+    hasMore.value = true
   }
 
-  /**
-   * Handle incoming real-time notification from socket event.
-   * Inserts the notification at the top of the list and updates unread count.
-   */
-  function handleRealtimeNotification(notification: Notification): void {
-    // Check if already exists
-    const exists = items.value.some(n => n.id === notification.id)
-    if (exists) return
-
-    // Prepend to list
-    items.value.unshift(notification)
-    unreadCount.value++
-
-    // Show toast
-    toast.add({
-      title: notification.title,
-      description: notification.body,
-      icon: 'i-lucide-bell',
-      color: 'info',
-    })
+  function appendNotificationsPage(data: Notification[], meta: ListMeta): void {
+    items.value.push(...data)
+    cursor.value = meta.next_cursor
+    hasMore.value = meta.next_cursor !== null
+    unreadCount.value = meta.unread_count
+    lastFetched.value = Date.now()
   }
 
-  /**
-   * Mark notification as read via WebSocket event.
-   * Placeholder for future real-time implementation.
-   */
-  function handleRealtimeRead(notificationId: string): void {
+  function applyReadLocally(notificationId: string): void {
     const notification = items.value.find(n => n.id === notificationId)
     if (notification && !notification.read_at) {
       notification.read_at = new Date().toISOString()
@@ -250,9 +112,30 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  // ========================================
-  // Reset State
-  // ========================================
+  function applyAllReadLocally(): void {
+    for (const notification of items.value) {
+      if (!notification.read_at) {
+        notification.read_at = new Date().toISOString()
+      }
+    }
+    unreadCount.value = 0
+  }
+
+  function prependNotification(notification: Notification): void {
+    items.value.unshift(notification)
+  }
+
+  function hasNotificationId(id: string): boolean {
+    return items.value.some(n => n.id === id)
+  }
+
+  function handleRealtimeRead(notificationId: string): void {
+    const notification = items.value.find(n => n.id === notificationId)
+    if (notification && !notification.read_at) {
+      notification.read_at = new Date().toISOString()
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    }
+  }
 
   function $reset(): void {
     items.value = []
@@ -264,12 +147,7 @@ export const useNotificationStore = defineStore('notification', () => {
     error.value = null
   }
 
-  // ========================================
-  // Return
-  // ========================================
-
   return {
-    // State
     items,
     unreadCount,
     loading,
@@ -277,26 +155,20 @@ export const useNotificationStore = defineStore('notification', () => {
     cursor,
     lastFetched,
     error,
-
-    // Computed
     hasUnread,
     unreadBadge,
     groupedNotifications,
-
-    // Actions
-    fetchNotifications,
-    fetchUnreadCount,
-    markAsRead,
-    markAllAsRead,
-
-    // Lifecycle (replaces polling)
-    initialize,
-
-    // Socket Event Handlers
-    handleRealtimeNotification,
+    setLoading,
+    setError,
+    setUnreadCount,
+    incrementUnread,
+    resetListPagination,
+    appendNotificationsPage,
+    applyReadLocally,
+    applyAllReadLocally,
+    prependNotification,
+    hasNotificationId,
     handleRealtimeRead,
-
-    // Reset
     $reset,
   }
 })

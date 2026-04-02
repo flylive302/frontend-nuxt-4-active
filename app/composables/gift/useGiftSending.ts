@@ -53,6 +53,7 @@ export function useGiftSending() {
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
   const seatsStore = useRoomSeatsStore();
+  const { canAfford, canSend } = useGiftEligibility();
   const { sendGift: emitGift } = useRoomAudio();
   const { triggerFly } = useLuckyFly();
   const toast = useToast();
@@ -85,16 +86,6 @@ export function useGiftSending() {
    * Total cost for current selection
    */
   const totalCost = computed(() => giftStore.totalCost);
-
-  /**
-   * Whether user can afford current selection
-   */
-  const canAfford = computed(() => giftStore.canAfford);
-
-  /**
-   * Whether send is allowed
-   */
-  const canSend = computed(() => giftStore.canSend);
 
   // ========================================
   // Helpers

@@ -15,10 +15,17 @@ definePageMeta({
 })
 
 // ========================================
-// Store
+// Store + orchestration
 // ========================================
 
 const rewardsStore = useRewardsStore()
+const {
+  fetchPending,
+  fetchHistory,
+  fetchAll,
+  claim,
+  claimAll,
+} = useRewardsActions()
 const { useInfiniteScroll } = await import('@vueuse/core')
 
 // ========================================
@@ -49,17 +56,17 @@ const tabs = [
 // ========================================
 
 async function handleClaim(rewardId: number): Promise<void> {
-  await rewardsStore.claim(rewardId)
+  await claim(rewardId)
 }
 
 async function handleClaimAll(): Promise<void> {
-  await rewardsStore.claimAll()
+  await claimAll()
 }
 
 async function handleTabChange(index: number): Promise<void> {
   activeTab.value = index
   if (index === 1 && rewardsStore.history.items.length === 0) {
-    await rewardsStore.fetchHistory({}, true)
+    await fetchHistory({}, true)
   }
 }
 
@@ -73,10 +80,10 @@ if (import.meta.client) {
     async () => {
       if (activeTab.value === 0) {
         if (!rewardsStore.pending.hasMore || rewardsStore.pending.loading) return
-        await rewardsStore.fetchPending()
+        await fetchPending()
       } else {
         if (!rewardsStore.history.hasMore || rewardsStore.history.loading) return
-        await rewardsStore.fetchHistory()
+        await fetchHistory()
       }
     },
     { distance: 400, interval: 200 }
@@ -88,7 +95,7 @@ if (import.meta.client) {
 // ========================================
 
 onMounted(async () => {
-  await rewardsStore.fetchAll()
+  await fetchAll()
 })
 </script>
 

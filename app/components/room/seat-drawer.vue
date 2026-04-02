@@ -45,7 +45,7 @@ const isSeatMuted = computed(() => currentSeat.value?.isMuted ?? false)
 const isSeatLocked = computed(() => currentSeat.value?.isLocked ?? false)
 
 // Check if current user is room owner
-const isRoomOwner = computed(() => roomStore.isRoomOwner)
+const { isRoomOwner } = useRoomPermissions()
 
 const isVip = computed(() => (currentSeat.value?.user?.vip_level ?? 0) > 0)
 

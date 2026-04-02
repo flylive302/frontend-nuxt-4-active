@@ -1,10 +1,6 @@
 import { defineStore } from 'pinia';
 import type { RoomParticipant, Seat } from '~/types/room/audio';
 import { SEAT_COUNT } from '~/constants/room';
-import { createLogger } from '~/utils/logger';
-
-const storeLog = createLogger('[RoomSeatsStore]');
-
 // ============================================
 // Helpers
 // ============================================
@@ -48,63 +44,26 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   // ========================================
 
   /**
-   * Update a seat with user and mute state.
-   * Looks up the user from the audio store's participants.
-   * BUG-3 FIX: If user not yet in participants (race condition),
-   * creates a minimal placeholder so the seat renders as occupied.
+   * Update a seat snapshot. Caller resolves `user` from participants / placeholder.
    */
-  function updateSeat(seatIndex: number, userId: number | null, isMuted: boolean) {
-    if (seatIndex >= 0 && seatIndex < seats.value.length) {
-      const audioStore = useRoomAudioStore();
-      let user = userId !== null ? audioStore.participants.get(userId) ?? null : null;
+  function updateSeat(
+    seatIndex: number,
+    user: RoomParticipant | null,
+    isMuted: boolean,
+    activeSpeakerIds: readonly number[],
+  ) {
+    if (seatIndex < 0 || seatIndex >= seats.value.length) return;
 
-      // BUG-3 FIX: If user not in participants map (cross-instance race),
-      // create a minimal placeholder so the seat doesn't appear empty.
-      if (userId !== null && !user) {
-        storeLog.debug('updateSeat: user not in participants, creating placeholder for userId:', userId);
-        user = {
-          id: userId,
-          name: `User ${userId}`,
-          signature: '',
-          avatar: '',
-          frame: '',
-          cover_image: null,
-          gender: null,
-          country: '',
-          phone: '',
-          email: null,
-          date_of_birth: '',
-          wealth_xp: '0',
-          charm_xp: '0',
-          vip_level: 0,
-          isSpeaker: true,
-        };
-        // Also add to participants so subsequent lookups find them
-        audioStore.addParticipant(user);
-      }
+    const currentSeat = seats.value[seatIndex];
+    const newSeat: Seat = {
+      index: seatIndex,
+      user: user ? { ...user } : null,
+      isMuted,
+      isActive: user != null && activeSpeakerIds.includes(user.id),
+      isLocked: currentSeat?.isLocked ?? false,
+    };
 
-      storeLog.debug('updateSeat:', { seatIndex, userId, userName: user?.name });
-
-      const currentSeat = seats.value[seatIndex];
-      const newSeat: Seat = {
-        index: seatIndex,
-        user: user ? { ...user } : null,
-        isMuted,
-        isActive: user != null && audioStore.audioState.activeSpeakerIds.includes(user.id),
-        isLocked: currentSeat?.isLocked ?? false,
-      };
-
-      seats.value[seatIndex] = newSeat;
-
-      // Update participant's speaker status
-      if (user) {
-        const participant = audioStore.participants.get(user.id);
-        if (participant) {
-          participant.isSpeaker = true;
-          participant.seatIndex = seatIndex;
-        }
-      }
-    }
+    seats.value[seatIndex] = newSeat;
   }
 
   /**
@@ -125,13 +84,6 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
 
       if (user) {
         seatGiftTotals.value.delete(user.id);
-
-        const audioStore = useRoomAudioStore();
-        const participant = audioStore.participants.get(user.id);
-        if (participant) {
-          participant.isSpeaker = false;
-          participant.seatIndex = undefined;
-        }
       }
     }
   }

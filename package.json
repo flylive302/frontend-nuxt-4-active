@@ -9,7 +9,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "architecture:check": "./scripts/architecture-check.sh"
   },
   "dependencies": {
     "@internationalized/date": "^3.9.0",

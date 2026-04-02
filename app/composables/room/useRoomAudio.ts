@@ -21,6 +21,7 @@ import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 import { REGION_ENDPOINTS } from '~/constants/audio';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
+import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
 
 // ============================================
 // Types
@@ -355,8 +356,21 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // 2. Initialize seats from server state
     if (response.seats) {
+      const activeIds = audioStore.audioState.activeSpeakerIds;
       response.seats.forEach((seat) => {
-        seatsStore.updateSeat(seat.seatIndex, seat.userId, seat.isMuted);
+        let user = seat.userId != null ? audioStore.participants.get(seat.userId) ?? null : null;
+        if (seat.userId != null && !user) {
+          user = createParticipantPlaceholder(seat.userId);
+          audioStore.addParticipant(user);
+        }
+        seatsStore.updateSeat(seat.seatIndex, user, seat.isMuted, activeIds);
+        if (user) {
+          const p = audioStore.participants.get(user.id);
+          if (p) {
+            p.isSpeaker = true;
+            p.seatIndex = seat.seatIndex;
+          }
+        }
       });
     }
 
@@ -418,6 +432,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Clear room state
     audioStore.clearAudioState();
+    seatsStore.resetSeats();
 
     // log.debug('Left room (socket stays connected)');
   }

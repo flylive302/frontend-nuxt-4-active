@@ -19,6 +19,7 @@ definePageMeta({
 // ========================================
 
 const incomeStore = useIncomeStore()
+const { fetchAll: fetchIncomeAll } = useIncomeActions()
 const agencyStore = useAgencyStore()
 const { fetchUserAgency } = useAgencyMembership()
 
@@ -49,7 +50,7 @@ onMounted(async () => {
   }
   
   // Fetch income data
-  await incomeStore.fetchAll()
+  await fetchIncomeAll()
 })
 </script>
 

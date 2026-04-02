@@ -49,6 +49,7 @@ const {
 } = useRoomBlocking();
 const { updateMemberRole } = useRoomMemberActions();
 const roomStore = useRoomStore();
+const { isRoomOwner } = useRoomPermissions();
 
 // ========================================
 // Computed
@@ -77,7 +78,7 @@ const tabs = computed(() => [
 /** Can current user manage members (owner or admin) */
 const { myMembership } = useRoomMembers()
 const canManageMembers = computed(() => {
-  if (roomStore.isRoomOwner) return true
+  if (isRoomOwner.value) return true
   return myMembership.value?.role === 'admin'
 });
 

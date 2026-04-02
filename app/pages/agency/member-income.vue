@@ -4,7 +4,7 @@
 // ========================================
 
 import { onMounted, ref, computed } from 'vue'
-import type { MemberIncome, MemberIncomePagination } from '~/types/income/memberIncome'
+import type { MemberIncome } from '~/types/income/memberIncome'
 
 // ========================================
 // Page Configuration
@@ -20,7 +20,7 @@ definePageMeta({
 // ========================================
 
 const agencyStore = useAgencyStore()
-const { api, normalizeError } = useApi()
+const { fetchPage, normalizeError } = useAgencyMemberIncomeApi()
 const { fetchUserAgency } = useAgencyMembership()
 
 // ========================================
@@ -72,27 +72,11 @@ async function fetchMembersIncome(reset = false): Promise<void> {
   error.value = null
 
   try {
-    const params: Record<string, unknown> = { per_page: 20 }
-    if (cursor.value) {
-      params.cursor = cursor.value
-    }
-
-    const response = await api<{
-      status: string
-      data: {
-        agency_id: number
-        agency_name: string
-        members: MemberIncome[]
-      }
-      meta: {
-        pagination: MemberIncomePagination
-      }
-    }>('/user/agency/members/income', { params })
-
-    agencyName.value = response.data.agency_name
-    members.value.push(...response.data.members)
-    cursor.value = response.meta.pagination.next_cursor
-    hasMore.value = response.meta.pagination.has_more
+    const page = await fetchPage(cursor.value)
+    agencyName.value = page.agencyName
+    members.value.push(...page.members)
+    cursor.value = page.nextCursor
+    hasMore.value = page.hasMore
   } catch (err) {
     const normalized = normalizeError(err)
     error.value = normalized.message

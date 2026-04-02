@@ -1,19 +1,14 @@
 // ========================================
 // Rewards Store
 // ========================================
+// State + computed + setters ONLY — orchestration in useRewardsActions.
 
 import { defineStore } from 'pinia'
-import { createLogger } from '~/utils/logger'
 import type {
   UserReward,
   RewardStats,
-  GetRewardsParams,
   RewardPagination,
 } from '~/types/progression/reward'
-
-// ========================================
-// Types
-// ========================================
 
 interface RewardListState {
   items: UserReward[]
@@ -23,19 +18,7 @@ interface RewardListState {
   cursor: string | null
 }
 
-// ========================================
-// Store Definition
-// ========================================
-
 export const useRewardsStore = defineStore('rewards', () => {
-  const log = createLogger('[RewardsStore]')
-  const { api, normalizeError } = useApi()
-  const toast = useToast()
-
-  // ========================================
-  // State
-  // ========================================
-
   const pending = ref<RewardListState>({
     items: [],
     loading: false,
@@ -55,243 +38,87 @@ export const useRewardsStore = defineStore('rewards', () => {
   const stats = ref<RewardStats | null>(null)
   const statsLoading = ref(false)
   const claimingId = ref<number | null>(null)
-
-  /** Timestamp of last successful data fetch */
   const lastFetchedAt = ref<number | null>(null)
 
-  // ========================================
-  // Constants
-  // ========================================
-
-  /** Data is considered stale after 5 minutes */
   const STALE_TIME = 5 * 60 * 1000
 
-  // ========================================
-  // Computed
-  // ========================================
-
-  /**
-   * Count of pending rewards.
-   */
   const pendingCount = computed(() => stats.value?.total_pending ?? 0)
-
-  /**
-   * Total pending diamonds.
-   */
   const totalPendingDiamonds = computed(() => stats.value?.pending_diamonds ?? 0)
-
-  /**
-   * Total pending coins.
-   */
   const totalPendingCoins = computed(() => stats.value?.pending_coins ?? 0)
-
-  /**
-   * Check if any reward is being claimed.
-   */
   const isClaiming = computed(() => claimingId.value !== null)
-
-  /**
-   * Check if there are any claimable rewards.
-   */
   const hasClaimableRewards = computed(() => pending.value.items.length > 0)
-
-  /**
-   * Whether cached data needs refreshing.
-   */
   const needsRefresh = computed<boolean>(() => {
     if (!lastFetchedAt.value) return true
     return Date.now() - lastFetchedAt.value > STALE_TIME
   })
 
-  // ========================================
-  // Actions
-  // ========================================
+  function setPendingLoading(v: boolean): void {
+    pending.value.loading = v
+  }
 
-  /**
-   * Fetch pending rewards.
-   */
-  async function fetchPending(params: GetRewardsParams = {}, reset = false): Promise<void> {
-    if (reset) {
-      pending.value.items = []
-      pending.value.cursor = null
-      pending.value.hasMore = true
-    }
+  function setPendingError(msg: string | null): void {
+    pending.value.error = msg
+  }
 
-    if (!pending.value.hasMore || pending.value.loading) return
+  function resetPendingPagination(): void {
+    pending.value.items = []
+    pending.value.cursor = null
+    pending.value.hasMore = true
+  }
 
-    pending.value.loading = true
-    pending.value.error = null
+  function appendPendingPage(items: UserReward[], pagination: RewardPagination): void {
+    pending.value.items.push(...items)
+    pending.value.hasMore = pagination.has_more
+    pending.value.cursor = pagination.next_cursor ?? null
+  }
 
-    try {
-      const queryParams: Record<string, unknown> = {
-        per_page: params.per_page ?? 20,
-      }
+  function setHistoryLoading(v: boolean): void {
+    history.value.loading = v
+  }
 
-      if (pending.value.cursor) {
-        queryParams.cursor = pending.value.cursor
-      }
+  function setHistoryError(msg: string | null): void {
+    history.value.error = msg
+  }
 
-      const response = await api<{
-        success: true
-        data: {
-          rewards: UserReward[]
-          pagination: RewardPagination
-        }
-      }>('/user/rewards', { params: queryParams })
+  function resetHistoryPagination(): void {
+    history.value.items = []
+    history.value.cursor = null
+    history.value.hasMore = true
+  }
 
-      pending.value.items.push(...response.data.rewards)
-      pending.value.hasMore = response.data.pagination.has_more
-      pending.value.cursor = response.data.pagination.next_cursor ?? null
-    } catch (err) {
-      const normalized = normalizeError(err)
-      pending.value.error = normalized.message
-      log.error('fetchPending failed:', err)
-    } finally {
-      pending.value.loading = false
+  function appendHistoryPage(items: UserReward[], pagination: RewardPagination): void {
+    history.value.items.push(...items)
+    history.value.hasMore = pagination.has_more
+    history.value.cursor = pagination.next_cursor ?? null
+  }
+
+  function setStatsLoading(v: boolean): void {
+    statsLoading.value = v
+  }
+
+  function setStats(s: RewardStats | null): void {
+    stats.value = s
+  }
+
+  function setClaimingId(id: number | null): void {
+    claimingId.value = id
+  }
+
+  function setLastFetchedAt(t: number | null): void {
+    lastFetchedAt.value = t
+  }
+
+  function applyClaimSuccess(rewardId: number): void {
+    pending.value.items = pending.value.items.filter(r => r.id !== rewardId)
+    if (stats.value) {
+      stats.value.total_pending = Math.max(0, stats.value.total_pending - 1)
+      stats.value.total_claimed += 1
+      stats.value.last_claimed_at = new Date().toISOString()
     }
   }
 
-  /**
-   * Fetch reward history.
-   */
-  async function fetchHistory(params: GetRewardsParams = {}, reset = false): Promise<void> {
-    if (reset) {
-      history.value.items = []
-      history.value.cursor = null
-      history.value.hasMore = true
-    }
-
-    if (!history.value.hasMore || history.value.loading) return
-
-    history.value.loading = true
-    history.value.error = null
-
-    try {
-      const queryParams: Record<string, unknown> = {
-        per_page: params.per_page ?? 20,
-      }
-
-      if (history.value.cursor) {
-        queryParams.cursor = history.value.cursor
-      }
-
-      const response = await api<{
-        success: true
-        data: {
-          rewards: UserReward[]
-          pagination: RewardPagination
-        }
-      }>('/user/rewards/history', { params: queryParams })
-
-      history.value.items.push(...response.data.rewards)
-      history.value.hasMore = response.data.pagination.has_more
-      history.value.cursor = response.data.pagination.next_cursor ?? null
-    } catch (err) {
-      const normalized = normalizeError(err)
-      history.value.error = normalized.message
-      log.error('fetchHistory failed:', err)
-    } finally {
-      history.value.loading = false
-    }
-  }
-
-  /**
-   * Fetch reward statistics.
-   */
-  async function fetchStats(): Promise<void> {
-    statsLoading.value = true
-
-    try {
-      const response = await api<{
-        success: true
-        data: RewardStats
-      }>('/user/rewards/stats')
-
-      stats.value = response.data
-    } catch (err) {
-      log.error('fetchStats failed:', err)
-    } finally {
-      statsLoading.value = false
-    }
-  }
-
-  /**
-   * Claim a single reward.
-   */
-  async function claim(rewardId: number): Promise<boolean> {
-    if (claimingId.value !== null) return false
-
-    claimingId.value = rewardId
-
-    try {
-      const response = await api<{
-        success: true
-        data: {
-          reward: UserReward
-          new_balance?: { coins?: string; diamonds?: string }
-        }
-        message: string
-      }>(`/user/rewards/${rewardId}/claim`, { method: 'POST' })
-
-      // Update pending list (remove claimed reward)
-      pending.value.items = pending.value.items.filter(r => r.id !== rewardId)
-
-      // Update stats
-      if (stats.value) {
-        stats.value.total_pending = Math.max(0, stats.value.total_pending - 1)
-        stats.value.total_claimed += 1
-        stats.value.last_claimed_at = new Date().toISOString()
-      }
-
-      // Update user balance if provided (via authStore API — no direct mutation)
-      if (response.data.new_balance) {
-        const userStore = useUserStore()
-        userStore.patchBalance({
-          ...(response.data.new_balance.coins && { coins: response.data.new_balance.coins }),
-          ...(response.data.new_balance.diamonds && { diamonds: response.data.new_balance.diamonds }),
-        })
-      }
-
-      toast.add({
-        title: 'Reward Claimed!',
-        description: response.message,
-        color: 'success',
-      })
-
-      return true
-    } catch (err) {
-      const normalized = normalizeError(err)
-      toast.add({
-        title: 'Claim Failed',
-        description: normalized.message,
-        color: 'error',
-      })
-      log.error('claim failed:', err)
-      return false
-    } finally {
-      claimingId.value = null
-    }
-  }
-
-  /**
-   * Claim all pending rewards.
-   */
-  async function claimAll(): Promise<number> {
-    const rewardsToClaim = [...pending.value.items]
-    const results = await Promise.allSettled(
-      rewardsToClaim.map(reward => claim(reward.id))
-    )
-    return results.filter(r => r.status === 'fulfilled' && r.value).length
-  }
-
-  /**
-   * Handle reward earned event (real-time).
-   */
-  function onRewardEarned(reward: UserReward): void {
-    // Add to pending list
+  function prependPendingReward(reward: UserReward): void {
     pending.value.items.unshift(reward)
-
-    // Update stats
     if (stats.value) {
       stats.value.total_pending += 1
       if (reward.reward_type === 'diamonds' && reward.reward_value) {
@@ -301,27 +128,8 @@ export const useRewardsStore = defineStore('rewards', () => {
         stats.value.pending_coins += reward.reward_value
       }
     }
-
-    // Show notification
-    toast.add({
-      title: 'New Reward!',
-      description: reward.source_name,
-      color: 'success',
-      icon: 'i-lucide-gift',
-    })
   }
 
-  /**
-   * Fetch all rewards data (pending + stats).
-   */
-  async function fetchAll(): Promise<void> {
-    await Promise.all([fetchPending({}, true), fetchStats()])
-    lastFetchedAt.value = Date.now()
-  }
-
-  /**
-   * Reset all state.
-   */
   function reset(): void {
     pending.value = {
       items: [],
@@ -343,35 +151,33 @@ export const useRewardsStore = defineStore('rewards', () => {
     lastFetchedAt.value = null
   }
 
-  // ========================================
-  // Return
-  // ========================================
-
   return {
-    // State
     pending,
     history,
     stats,
     statsLoading,
     claimingId,
     lastFetchedAt,
-
-    // Computed
     pendingCount,
     totalPendingDiamonds,
     totalPendingCoins,
     isClaiming,
     hasClaimableRewards,
     needsRefresh,
-
-    // Actions
-    fetchPending,
-    fetchHistory,
-    fetchStats,
-    claim,
-    claimAll,
-    onRewardEarned,
-    fetchAll,
+    setPendingLoading,
+    setPendingError,
+    resetPendingPagination,
+    appendPendingPage,
+    setHistoryLoading,
+    setHistoryError,
+    resetHistoryPagination,
+    appendHistoryPage,
+    setStatsLoading,
+    setStats,
+    setClaimingId,
+    setLastFetchedAt,
+    applyClaimSuccess,
+    prependPendingReward,
     reset,
   }
 })

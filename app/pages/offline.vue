@@ -12,6 +12,7 @@ definePageMeta({
 // ========================================
 
 const isRetrying = ref(false)
+const { probeHealth } = useConnectivityProbe()
 
 // ========================================
 // Actions
@@ -20,13 +21,10 @@ const isRetrying = ref(false)
 async function handleRetry(): Promise<void> {
   isRetrying.value = true
 
-  try {
-    // Try to reach the server
-    await $fetch('/api/v1/health', { timeout: 5000 })
-    // If successful, navigate to home
+  const ok = await probeHealth()
+  if (ok) {
     navigateTo('/')
-  } catch {
-    // Still offline
+  } else {
     isRetrying.value = false
   }
 }

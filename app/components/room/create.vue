@@ -5,6 +5,7 @@
 
 import { z } from 'zod'
 import { useRoom } from '~/composables/room/useRoom'
+import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 import type { FormError, Form } from '@nuxt/ui'
 
 
@@ -22,7 +23,6 @@ const emit = defineEmits<{
 
 const { createRoom } = useRoom()
 const { createUploadState } = useImageUpload()
-const { normalizeError } = useApi()
 const toast = useToast()
 const authStore = useAuthStore()
 
@@ -122,7 +122,7 @@ async function onSubmit() {
     emit('success')
     
   } catch (error: unknown) {
-    const err = normalizeError(error)
+    const err = normalizeFetchError(error)
     
     if (err.status === 422 && err.fieldErrors) {
       // Map API validation errors to form fields
