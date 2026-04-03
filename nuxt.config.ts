@@ -101,6 +101,7 @@ export default defineNuxtConfig({
         dirs: [
             'composables',
             'composables/shared',
+            'composables/profile',
             'composables/auth',
             'composables/room',
             'composables/room/audio',

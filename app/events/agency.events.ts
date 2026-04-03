@@ -80,7 +80,6 @@ export function registerAgencyEvents(socket: Socket): void {
       description: 'A new member has joined your agency!',
       color: 'success',
     })
-    // TODO: Optionally refresh agency member list
   })
 
   socket.on('agency.member_left', (payload: AgencyMemberLeftPayload) => {
@@ -90,6 +89,5 @@ export function registerAgencyEvents(socket: Socket): void {
       description: `A member has left your agency (${payload.reason})`,
       color: 'info',
     })
-    // TODO: Optionally refresh agency member list
   })
 }

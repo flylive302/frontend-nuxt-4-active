@@ -5,7 +5,7 @@ import type { Ref } from 'vue'
  * Profile page: track user / join their room (socket + API orchestration).
  */
 export function useProfileRoomActions(
-  profile: Ref<{ id: number; name: string; room_id?: number } | null>,
+  profile: Readonly<Ref<{ id: number; name: string | null; room_id?: number | null } | null>>,
   enterRoomFn: (room: BootstrapRoom) => Promise<void>,
 ) {
   const roomStore = useRoomStore()
@@ -62,7 +62,7 @@ export function useProfileRoomActions(
       if (!response.roomId) {
         toast.add({
           title: 'User not in a room',
-          description: `${profile.value.name} is not currently in any room`,
+          description: `${profile.value.name ?? 'This user'} is not currently in any room`,
           color: 'warning',
           icon: 'i-lucide-user-x',
         })

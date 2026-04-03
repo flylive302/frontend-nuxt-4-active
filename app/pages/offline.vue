@@ -68,10 +68,5 @@ async function handleRetry(): Promise<void> {
       <UIcon name="i-heroicons-arrow-path" class="mr-2 h-4 w-4" />
       Retry Connection
     </UButton>
-
-    <!-- Future: Mini-game placeholder -->
-    <p class="mt-12 text-xs text-neutral-600">
-      <!-- TODO: Add space-shooter mini-game here -->
-    </p>
   </div>
 </template>

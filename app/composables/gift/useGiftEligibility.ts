@@ -1,14 +1,14 @@
 /**
  * Gift selection eligibility — reads auth + seats; stays out of the gift store (ARCHITECTURE.md).
  */
-import type { BootstrapUser } from '~/types/user/bootstrap'
+import type { RoomParticipant } from '~/types/room/audio'
 
 export function useGiftEligibility() {
   const giftStore = useGiftStore()
   const authStore = useAuthStore()
   const seatsStore = useRoomSeatsStore()
 
-  const eligibleRecipients = computed((): BootstrapUser[] => {
+  const eligibleRecipients = computed((): RoomParticipant[] => {
     const currentUserId = authStore.user?.id
     return seatsStore.seats
       .filter(seat => seat.user !== null && seat.user.id !== currentUserId)
