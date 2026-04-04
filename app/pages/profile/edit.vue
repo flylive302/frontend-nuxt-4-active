@@ -98,6 +98,7 @@ const formRef = ref<Form<FormSchema> | null>(null)
 const authStore = useAuthStore()
 const { updateProfile, uploadAvatar, uploadCoverImage } = useProfileActions()
 const { logout } = useAuthActions()
+const showDeleteModal = ref(false)
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,
@@ -447,7 +448,7 @@ watch(
 
         </div>
         <UButton 
-            class="w-full justify-center mt-4 mb-12" 
+            class="w-full justify-center mt-4" 
             icon="i-lucide-power-off" 
             size="xl" 
             variant="subtle"
@@ -455,10 +456,34 @@ watch(
           >
             Logout
           </UButton>
+
+          <!-- Danger Zone: Delete Account -->
+          <div class="mt-4 mb-12 rounded-lg bg-red-950/20 border border-red-900/30 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <UIcon name="i-lucide-alert-triangle" class="h-4 w-4 text-red-400" />
+              <h3 class="text-sm font-semibold text-red-400">Danger Zone</h3>
+            </div>
+            <p class="text-xs text-neutral-500 mb-3">
+              Permanently delete your account and all personal data. You'll have 30 days to change your mind.
+            </p>
+            <UButton
+              class="w-full justify-center"
+              icon="i-lucide-trash-2"
+              size="lg"
+              variant="subtle"
+              color="error"
+              @click="showDeleteModal = true"
+            >
+              Delete Account
+            </UButton>
+          </div>
       </div>
 
       <!-- Asset Manager Modal -->
       <SystemAssetManagerModal v-model="showAssetModal" />
+
+      <!-- Delete Account Modal -->
+      <ProfileDeleteAccountModal v-model="showDeleteModal" />
     </div>
   </main>
 </template>
