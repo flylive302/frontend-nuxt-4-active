@@ -100,9 +100,6 @@ export const useGiftStore = defineStore('giftStore', () => {
   const isProcessingQueue = ref(false);
 
   /**
-   * Add a gift to the playback queue
-   */
-  /**
    * Add a gift to the playback queue.
    * @param item - Gift playback item (without id and timestamp)
    */
@@ -184,9 +181,6 @@ export const useGiftStore = defineStore('giftStore', () => {
   // Combo Actions
   // ========================================
 
-  /**
-   * Increment combo count (called on combo button click)
-   */
   /**
    * Increment combo count (called on combo button click).
    */
