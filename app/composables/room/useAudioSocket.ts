@@ -144,8 +144,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
   }
 
   /**
-   * Attempt to refresh the MSAB token and retry connection (one attempt only).
-   * Prevents stale-token lock-out where the persisted JWT has expired server-side.
+   * Attempt to refresh the MSAB token and retry connection.
+   * Updates the existing socket's auth token instead of creating a new socket
+   * to avoid conflicts with Socket.IO's built-in auto-reconnection.
    * REACT-safe: failure is logged but never surfaced as a blocking error.
    */
   async function attemptTokenRefresh(): Promise<void> {
@@ -160,8 +161,17 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
       // Retry connection with fresh token
       if (authStore.msabToken) {
-        log.debug('Token refreshed, retrying connection');
-        connect();
+        if (socket.value) {
+          // Update auth on EXISTING socket — don't create a new one
+          // This avoids a race condition with Socket.IO's auto-reconnect
+          (socket.value.auth as Record<string, string>).token = authStore.msabToken;
+          socket.value.connect();
+          log.debug('Token refreshed, retrying with updated auth on existing socket');
+        } else {
+          // No socket exists at all — create a fresh one
+          log.debug('Token refreshed, creating new connection');
+          connect();
+        }
       } else {
         log.warn('Token refresh returned empty token');
         toast.add({
@@ -182,10 +192,34 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
   }
 
-  /** Handle reconnection attempts */
-  function handleReconnectAttempt(attemptNumber: number) {
+  /**
+   * Handle reconnection attempts.
+   * CRITICAL: Updates the socket's auth token before each retry so Socket.IO's
+   * auto-reconnect uses the latest JWT from the store, not the stale one captured
+   * at socket construction time. Also proactively refreshes the JWT on the first
+   * attempt and every 5th attempt to keep the token fresh.
+   */
+  async function handleReconnectAttempt(attemptNumber: number) {
     status.value = 'connecting';
     log.debug('Reconnecting... attempt:', attemptNumber);
+
+    // Proactively refresh the MSAB JWT on first attempt and every 5th attempt
+    // to avoid hammering the API while still keeping the token fresh
+    if (attemptNumber === 1 || attemptNumber % 5 === 0) {
+      try {
+        const { refreshMsabToken } = useAuth();
+        await refreshMsabToken();
+        log.debug('Token refreshed before reconnect attempt', attemptNumber);
+      } catch {
+        log.warn('Token refresh failed before reconnect (will use existing token)');
+      }
+    }
+
+    // Always update the socket's auth with the latest token from the store
+    // This ensures Socket.IO's auto-reconnect sends the freshest token available
+    if (socket.value && authStore.msabToken) {
+      (socket.value.auth as Record<string, string>).token = authStore.msabToken;
+    }
   }
 
   /** Handle successful reconnection */
@@ -297,7 +331,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
       timeout: 10000,
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'], // Audio server is WebSocket-only — no polling fallback
     });
 
     // Register event handlers

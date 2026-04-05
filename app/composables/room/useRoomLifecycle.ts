@@ -120,8 +120,13 @@ export function useRoomLifecycle(): void {
             disconnectSocket();
             connectSocket();
             await joinRoom(String(roomStore.currentRoom.id));
-          } catch {
-            // Silent fail
+          } catch (err) {
+            log.warn('Reconnect after un-minimize failed:', err);
+            toast.add({
+              title: 'Reconnecting...',
+              description: 'Audio may take a moment to restore.',
+              color: 'warning',
+            });
           }
         }
       }
@@ -140,8 +145,13 @@ export function useRoomLifecycle(): void {
         disconnectSocket();
         connectSocket();
         await joinRoom(String(roomStore.currentRoom.id));
-      } catch {
-        // Silent fail - user is back, will see error if needed
+      } catch (err) {
+        log.warn('Reconnect after tab focus failed:', err);
+        toast.add({
+          title: 'Reconnecting...',
+          description: 'Audio may take a moment to restore.',
+          color: 'warning',
+        });
       }
     }
   });
@@ -174,4 +184,32 @@ export function useRoomLifecycle(): void {
       isJoining.value = false;
     }
   });
+
+  // ========================================
+  // Watcher 5: Proactive JWT Refresh Timer
+  // ========================================
+  // Refresh the MSAB JWT every 4 hours while connected to prevent
+  // stale-token lockout. On a 24h token, this gives 6 refresh
+  // opportunities before expiry. Non-blocking — failure is logged
+  // but does not interrupt any active session.
+  const PROACTIVE_REFRESH_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+  const proactiveRefreshTimer = setInterval(async () => {
+    if (!authStore.msabToken || !isConnected.value) return;
+
+    try {
+      await refreshMsabToken();
+      // Update the live socket's auth so the next auto-reconnect uses the fresh token
+      const { socket } = useAudioSocket();
+      if (socket.value && authStore.msabToken) {
+        (socket.value.auth as Record<string, string>).token = authStore.msabToken;
+      }
+      log.debug('Proactive MSAB token refresh complete');
+    } catch {
+      log.warn('Proactive token refresh failed (non-blocking)');
+    }
+  }, PROACTIVE_REFRESH_INTERVAL_MS);
+
+  // Clean up timer if the composable host component is unmounted
+  onUnmounted(() => clearInterval(proactiveRefreshTimer));
 }
