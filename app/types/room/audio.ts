@@ -1,4 +1,5 @@
 import type { types as mediasoupTypes } from 'mediasoup-client';
+import type { Socket } from 'socket.io-client';
 import type { MinimalUser } from '../user/bootstrap';
 import type { MusicPlayerJoinState } from './audio-player';
 
@@ -21,6 +22,9 @@ export interface SocketErrorEvent {
   message: string;
   errors?: Record<string, string[]>;
 }
+
+/** Typed Socket interface for audio server communication */
+export type AudioSocket = Socket;
 
 // ============================================
 // ROOM EVENTS
@@ -336,10 +340,12 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     frame: user.frame,
     cover_image: user.cover_image,
     gender: user.gender,
-    phone: user.phone,
-    email: user.email ?? null,
+    // PII fields stripped — participants should contain only visual/identity data
+    // (consistent with MSAB join handler B-1 FIX)
+    phone: '',
+    email: null,
     country: user.country,
-    date_of_birth: user.date_of_birth,
+    date_of_birth: null,
     wealth_xp: user.wealth_xp,
     charm_xp: user.charm_xp,
     vip_level: user.vip_level,

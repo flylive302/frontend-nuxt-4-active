@@ -115,6 +115,8 @@ export function useRoomLifecycle(): void {
 
         // If socket disconnected while minimized, rejoin the room
         if (connectionStatus.value === 'disconnected') {
+          if (isJoining.value) return; // Prevent double-join
+          isJoining.value = true;
           try {
             await refreshMsabToken();
             disconnectSocket();
@@ -127,6 +129,8 @@ export function useRoomLifecycle(): void {
               description: 'Audio may take a moment to restore.',
               color: 'warning',
             });
+          } finally {
+            isJoining.value = false;
           }
         }
       }
@@ -139,6 +143,8 @@ export function useRoomLifecycle(): void {
   const isFocused = useWindowFocus();
   watch(isFocused, async (focused) => {
     if (focused && roomStore.currentRoom && connectionStatus.value === 'disconnected') {
+      if (isJoining.value) return; // Prevent double-join
+      isJoining.value = true;
       // Tab regained focus — refresh JWT + reconnect socket for fresh user data
       try {
         await refreshMsabToken();
@@ -152,6 +158,8 @@ export function useRoomLifecycle(): void {
           description: 'Audio may take a moment to restore.',
           color: 'warning',
         });
+      } finally {
+        isJoining.value = false;
       }
     }
   });

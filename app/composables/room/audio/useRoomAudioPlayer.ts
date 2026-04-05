@@ -61,6 +61,11 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   const log = createLogger('[AudioPlayer]');
   const emitAsync = createEmitAsync(socket);
 
+  // Cache store refs at init (Vue setup context) — play()/seek() may be called
+  // from socket callbacks or timers outside setup, where useXStore() would throw.
+  const authStore = useAuthStore();
+  const roomStore = useRoomStore();
+
   // ========================================
   // Computed
   // ========================================
@@ -211,7 +216,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     playbackStartTime = ctx.currentTime;
 
     // Update state
-    const authStore = useAuthStore();
     playerState.status = 'playing';
     playerState.userId = authStore.user?.id ?? null;
     playerState.title = title;
@@ -284,7 +288,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     sourceNode.onended = () => {
       if (playerState.status === 'playing') {
-        const roomStore = useRoomStore();
         const roomId = roomStore.currentRoom?.id?.toString();
         if (roomId) stop(roomId);
       }

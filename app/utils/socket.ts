@@ -5,7 +5,7 @@
  * Extracted to avoid duplication across composables.
  */
 import type { Ref } from 'vue';
-import type { AudioSocket } from '~/composables/room/useAudioSocket';
+import type { AudioSocket } from '~/types/room/audio';
 import { SOCKET_TIMEOUT_MS } from '~/constants/room';
 
 /**

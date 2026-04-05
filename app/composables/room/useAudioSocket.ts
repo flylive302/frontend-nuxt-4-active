@@ -1,6 +1,5 @@
-import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
-import type { SocketErrorEvent } from '~/types/room/audio';
+import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
 import type { BootstrapResponse } from '~/types/user/bootstrap';
 import { createLogger } from '~/utils/logger';
 import { registerRealtimeEventHandlers, resetRealtimeHandlers } from './useRealtimeEvents';
@@ -11,8 +10,8 @@ import { registerRealtimeEventHandlers, resetRealtimeHandlers } from './useRealt
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-/** Typed Socket interface for audio server communication */
-export type AudioSocket = Socket;
+// Re-export for consumers already importing from this file
+export type { AudioSocket } from '~/types/room/audio';
 
 /** Callback invoked after Socket.IO auto-reconnects */
 type ReconnectCallback = () => void;
