@@ -162,7 +162,7 @@ onUnmounted(() => {
 
 <template>
   <div 
-    class="absolute inset-0 z-50 p-1 pb-6 max-h-screen bg-elevated"
+    class="absolute inset-0 z-50 p-1 pb-6 safe-area-top max-h-screen bg-elevated"
     :style="roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}"
   >
     <template v-if="roomStore.currentRoom">

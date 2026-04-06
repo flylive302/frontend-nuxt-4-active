@@ -9,13 +9,13 @@ export default defineNuxtConfig({
     pwa: {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        includeAssets: ['favicon.ico', 'pwa-assets/apple-touch-icon-180x180.png', 'pwa-assets/icon-192x192.png', 'pwa-assets/icon.png'],
+        includeAssets: ['favicon.ico', 'pwa-assets/apple-touch-icon-180x180.png', 'pwa-assets/icon-192x192.png', 'pwa-assets/icon.png', 'pwa-assets/maskable-192x192.png', 'pwa-assets/maskable-512x512.png'],
         manifest: {
             name: 'FlyLive',
             short_name: 'FlyLive',
             description: 'Live audio streaming and social platform',
             theme_color: '#ff2465',
-            background_color: '#000000',
+            background_color: '#171717',
             display: 'standalone',
             orientation: 'portrait',
             // PWA identity and scope
@@ -25,11 +25,14 @@ export default defineNuxtConfig({
             // Preferred link handling (keeps external links in app)
             handle_links: 'preferred',
             // Display override for better fallback control
-            display_override: ['standalone', 'minimal-ui'],
+            display_override: ['fullscreen', 'standalone', 'minimal-ui'],
             icons: [
-                { src: '/pwa-assets/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-                { src: '/pwa-assets/icon.png', sizes: '512x512', type: 'image/png' },
-                { src: '/pwa-assets/icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+                // Regular icons (transparent background, full logo)
+                { src: '/pwa-assets/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+                { src: '/pwa-assets/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                // Maskable icons (solid #171717 background, logo in 80% safe zone)
+                { src: '/pwa-assets/maskable-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+                { src: '/pwa-assets/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ],
             screenshots: [
                 { src: '/screenshots/desktop.jpeg', sizes: '1024x1024', type: 'image/jpeg', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },

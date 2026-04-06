@@ -93,8 +93,28 @@
     }
 }
 
+/* ── PWA safe area utilities ── */
+/* Use these on elements at the top/bottom edges of the screen
+   to prevent content from hiding behind notches and status bars
+   when the PWA is running in fullscreen/standalone mode. */
+
+.safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
 .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+/* Fullscreen PWA: ensure the app stretches edge-to-edge */
+@supports (padding: env(safe-area-inset-top)) {
+    html, body {
+        /* Allow content to draw behind status bar / notch */
+        padding: 0;
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
 }
 
 

@@ -2,7 +2,7 @@
 const open = defineModel < boolean > ('open', { default: false })
 </script>
 <template>
-  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 flex items-center justify-between backdrop-blur-lg border-b border-white/10">
+  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 safe-area-top flex items-center justify-between backdrop-blur-lg border-b border-white/10">
     <!-- Brand -->
     <LogoMain class="w-14 mt-2" />
 
