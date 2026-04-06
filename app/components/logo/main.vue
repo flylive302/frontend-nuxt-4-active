@@ -1,6 +1,6 @@
 <template>
-  <div class="flex items-center">
-    <NuxtImg src="/logos/flylive-logo-sm.webp" preload fetchpriority="high"/>
-    <span class="text-2xl font-semibold">Flylive</span>
+  <div class="flex">
+    <NuxtImg src="/logos/flylive-logo.png" preload fetchpriority="high" class="h-10 mt-1"/>
+    <NuxtImg src="/logos/flylive-text.png" preload fetchpriority="high" class="h-10 mt-2"/>
   </div>
 </template>

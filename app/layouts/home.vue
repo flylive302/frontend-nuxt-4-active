@@ -6,7 +6,7 @@
     <BackgroundDecorationsVariant1 />
     <NavHome />
 
-    <div class="h-14"/>
+    <div class="h-16"/>
 
     <slot />
 

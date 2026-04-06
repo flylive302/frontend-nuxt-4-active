@@ -15,7 +15,7 @@ export default defineNuxtConfig({
             short_name: 'FlyLive',
             description: 'Live audio streaming and social platform',
             theme_color: '#ff2465',
-            background_color: '#171717',
+            background_color: '#000002',
             display: 'standalone',
             orientation: 'portrait',
             // PWA identity and scope
@@ -28,11 +28,11 @@ export default defineNuxtConfig({
             display_override: ['fullscreen', 'standalone', 'minimal-ui'],
             icons: [
                 // Regular icons (transparent background, full logo)
-                { src: '/pwa-assets/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-                { src: '/pwa-assets/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                { src: '/logos/app-icon.jpeg', sizes: '192x192', type: 'image/jpeg', purpose: 'any' },
+                { src: '/logos/app-icon.jpeg', sizes: '512x512', type: 'image/jpeg', purpose: 'any' },
                 // Maskable icons (solid #171717 background, logo in 80% safe zone)
-                { src: '/pwa-assets/maskable-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-                { src: '/pwa-assets/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+                { src: '/logos/app-icon.jpeg', sizes: '192x192', type: 'image/jpeg', purpose: 'maskable' },
+                { src: '/logos/app-icon.jpeg', sizes: '512x512', type: 'image/jpeg', purpose: 'maskable' }
             ],
             screenshots: [
                 { src: '/screenshots/desktop.jpeg', sizes: '1024x1024', type: 'image/jpeg', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },

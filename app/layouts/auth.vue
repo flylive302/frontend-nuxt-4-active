@@ -1,6 +1,6 @@
 <template>
   <main>
-    <BackgroundDecorationsVariant1 />
+    <!-- <BackgroundDecorationsVariant1 /> -->
 
     <div class="px-3 mb-28 pt-15 safe-area-top">
       <LogoLarge class="mx-auto max-w-64"/>
