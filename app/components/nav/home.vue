@@ -4,7 +4,7 @@ const open = defineModel < boolean > ('open', { default: false })
 <template>
   <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 flex items-center justify-between backdrop-blur-lg border-b border-white/10">
     <!-- Brand -->
-    <LogoMain class="w-18" />
+    <LogoMain class="w-14 mt-2" />
 
     <!-- Actions -->
     <div class="flex items-center gap-1.5">

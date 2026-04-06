@@ -51,15 +51,38 @@ export function useProfileRoomActions(
         return
       }
 
-      const response = await new Promise<{ roomId: string | null }>((resolve, reject) => {
+      // createHandler() wraps responses as { success, data?, error? }
+      const response = await new Promise<{
+        success: boolean
+        data?: { roomId: string | null }
+        error?: string
+      }>((resolve, reject) => {
         const timeoutId = setTimeout(() => reject(new Error('Timeout')), 5000)
-        socket.value!.emit('user:getRoom', { userId: profile.value!.id }, (res: { roomId: string | null }) => {
+        socket.value!.emit('user:getRoom', { userId: profile.value!.id }, (res: {
+          success: boolean
+          data?: { roomId: string | null }
+          error?: string
+        }) => {
           clearTimeout(timeoutId)
           resolve(res)
         })
       })
 
-      if (!response.roomId) {
+      // GATE: Handle server-side errors (validation failure, internal error)
+      if (!response.success) {
+        toast.add({
+          title: 'Tracking failed',
+          description: response.error === 'INVALID_PAYLOAD'
+            ? 'Invalid request data'
+            : 'Server error while locating user',
+          color: 'error',
+        })
+        return
+      }
+
+      const trackedRoomId = response.data?.roomId
+
+      if (!trackedRoomId) {
         toast.add({
           title: 'User not in a room',
           description: `${profile.value.name ?? 'This user'} is not currently in any room`,
@@ -69,12 +92,12 @@ export function useProfileRoomActions(
         return
       }
 
-      if (roomStore.currentRoom && String(roomStore.currentRoom.id) === String(response.roomId)) {
-        navigateTo(`/room/${response.roomId}`)
+      if (roomStore.currentRoom && String(roomStore.currentRoom.id) === String(trackedRoomId)) {
+        navigateTo(`/room/${trackedRoomId}`)
         return
       }
 
-      const roomData = await api<{ status: string; data: BootstrapRoom }>(`/rooms/${response.roomId}`)
+      const roomData = await api<{ status: string; data: BootstrapRoom }>(`/rooms/${trackedRoomId}`)
 
       if (roomData.status !== 'success' || !roomData.data) {
         toast.add({
