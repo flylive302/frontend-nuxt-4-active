@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     pwa: {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        includeAssets: ['favicon.ico', 'pwa-assets/apple-touch-icon-180x180.png', 'pwa-assets/icon-192x192.png', 'pwa-assets/icon.png', 'pwa-assets/maskable-192x192.png', 'pwa-assets/maskable-512x512.png'],
+        includeAssets: ['favicon.ico', 'logos/apple-touch-icon-180x180.png', 'logos/pwa-64x64.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png', 'logos/maskable-icon-512x512.png'],
         manifest: {
             name: 'FlyLive',
             short_name: 'FlyLive',
@@ -27,12 +27,10 @@ export default defineNuxtConfig({
             // Display override for better fallback control
             display_override: ['fullscreen', 'standalone', 'minimal-ui'],
             icons: [
-                // Regular icons (transparent background, full logo)
-                { src: '/logos/app-icon.jpeg', sizes: '192x192', type: 'image/jpeg', purpose: 'any' },
-                { src: '/logos/app-icon.jpeg', sizes: '512x512', type: 'image/jpeg', purpose: 'any' },
-                // Maskable icons (solid #171717 background, logo in 80% safe zone)
-                { src: '/logos/app-icon.jpeg', sizes: '192x192', type: 'image/jpeg', purpose: 'maskable' },
-                { src: '/logos/app-icon.jpeg', sizes: '512x512', type: 'image/jpeg', purpose: 'maskable' }
+                { src: '/logos/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
+                { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+                { src: '/logos/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                { src: '/logos/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ],
             screenshots: [
                 { src: '/screenshots/desktop.jpeg', sizes: '1024x1024', type: 'image/jpeg', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },
@@ -137,7 +135,7 @@ export default defineNuxtConfig({
             ],
             link: [
                 { rel: 'manifest', href: '/manifest.webmanifest' },
-                { rel: 'apple-touch-icon', href: '/pwa-assets/apple-touch-icon-180x180.png', sizes: '180x180' },
+                { rel: 'apple-touch-icon', href: '/logos/apple-touch-icon-180x180.png', sizes: '180x180' },
                 { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
                 // Apple splash screens – portrait (iPhone)
                 { rel: 'apple-touch-startup-image', href: '/pwa-assets/splash-1320x2868.png', media: '(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },

@@ -37,7 +37,7 @@ const uiColor = computed(() => props.color)
 <template>
   <header
     aria-label="fly-live-alt-pages-header"
-    class="fixed w-full z-50 top-0 safe-area-top"
+    class="fixed w-full z-50 top-0"
   >
     <BgGlass
       frost-blur-radius="blur(4px)"
