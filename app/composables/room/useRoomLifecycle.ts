@@ -8,7 +8,7 @@
  *
  * Extracted from shell.vue to enable page-route-based room architecture.
  */
-import { useWindowFocus } from '@vueuse/core';
+import { useWindowFocus, useDocumentVisibility } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[RoomLifecycle]');
@@ -33,7 +33,7 @@ export function useRoomLifecycle(): void {
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
-  const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect } = useAudioSocket();
+  const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect, recoverFromSuspension } = useAudioSocket();
   const { refreshMsabToken } = useAuth();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
@@ -188,6 +188,51 @@ export function useRoomLifecycle(): void {
       log.debug('Successfully re-joined room after reconnect');
     } catch (error) {
       log.error('Failed to re-join room after reconnect:', error);
+    } finally {
+      isJoining.value = false;
+    }
+  });
+
+  // ========================================
+  // Watcher 6: PWA / Mobile App Resume Recovery
+  // ========================================
+  // `useWindowFocus` (Watcher 3) relies on window focus events, which do NOT
+  // fire reliably when a PWA standalone window resumes after OS-level process
+  // suspension (e.g. Android backgrounding the WebAPK for 1+ hours).
+  // The `visibilitychange` API is the W3C-recommended lifecycle event and fires
+  // consistently across all platforms, including mobile PWAs.
+  const visibility = useDocumentVisibility();
+
+  watch(visibility, async (state, oldState) => {
+    if (state !== 'visible' || oldState !== 'hidden') return;
+
+    // Socket-level: refresh token + force reconnect if stale connection detected
+    await recoverFromSuspension();
+
+    // If no room is open or socket already reconnected, nothing more to do.
+    // Watcher 4 (onReconnect) handles room rejoin when auto-reconnect succeeds.
+    if (!roomStore.currentRoom || isConnected.value) return;
+
+    // Give Socket.IO auto-reconnect a moment to complete
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Re-check after wait — conditions may have changed
+    if (!roomStore.currentRoom || isConnected.value || isJoining.value) return;
+
+    // Fallback: auto-reconnect hasn't succeeded — trigger manual reconnect + rejoin
+    isJoining.value = true;
+    try {
+      await refreshMsabToken();
+      disconnectSocket();
+      connectSocket();
+      await joinRoom(String(roomStore.currentRoom.id));
+    } catch (err) {
+      log.warn('Reconnect after PWA resume failed:', err);
+      toast.add({
+        title: 'Reconnecting...',
+        description: 'Audio may take a moment to restore.',
+        color: 'warning',
+      });
     } finally {
       isJoining.value = false;
     }

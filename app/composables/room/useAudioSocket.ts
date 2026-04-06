@@ -31,6 +31,8 @@ export interface UseAudioSocketReturn {
   isConnected: ComputedRef<boolean>;
   /** Register a callback to fire after Socket.IO auto-reconnects */
   onReconnect: (cb: ReconnectCallback) => void;
+  /** Recover socket connection after PWA resumes from OS-level suspension */
+  recoverFromSuspension: () => Promise<void>;
 }
 
 // ============================================
@@ -51,6 +53,12 @@ let _reconnectCallback: ReconnectCallback | null = null;
 
 /** Flag to prevent infinite token refresh loops */
 let _isRefreshingToken = false;
+
+/** Timestamp when the page was last hidden (for PWA suspension detection) */
+let _hiddenSince: number | null = null;
+
+/** Flag to ensure visibility listener is registered only once */
+let _visibilitySetup = false;
 
 // ============================================
 // Cached Dependencies (Module-level)
@@ -93,6 +101,21 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // Computed Properties
   // ========================================
   const isConnected = computed(() => status.value === 'connected');
+
+  // ========================================
+  // Visibility Tracking (PWA Suspension Detection)
+  // ========================================
+  // Register once at module level to track when the page is hidden.
+  // Needed because PWA standalone windows don't fire window focus/blur events
+  // reliably after OS-level process suspension.
+  if (!_visibilitySetup && import.meta.client) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        _hiddenSince = Date.now();
+      }
+    });
+    _visibilitySetup = true;
+  }
 
   // ========================================
   // Internal Handlers
@@ -387,6 +410,55 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // The disconnect() method should be called explicitly when leaving a room.
 
   // ========================================
+  // PWA Suspension Recovery
+  // ========================================
+
+  /**
+   * Recover the socket connection after the PWA resumes from OS-level suspension.
+   *
+   * GATE:    Skip if hidden < 30s (let Socket.IO handle naturally) or no socket exists.
+   * EXECUTE: Refresh MSAB token, update socket auth, force engine transport close
+   *          to trigger Socket.IO's built-in reconnect cycle.
+   * REACT:   Logging only — room rejoin is handled by Watcher 4 via _reconnectCallback.
+   */
+  async function recoverFromSuspension(): Promise<void> {
+    const hiddenMs = _hiddenSince ? Date.now() - _hiddenSince : 0;
+    _hiddenSince = null;
+
+    // Short hide — let Socket.IO handle naturally
+    if (hiddenMs < 30_000) {
+      log.debug('Short suspension (', Math.round(hiddenMs / 1000), 's) — skipping recovery');
+      return;
+    }
+
+    log.debug('Recovering from', Math.round(hiddenMs / 1000), 's suspension');
+
+    // EXECUTE: Refresh MSAB token proactively before reconnection
+    try {
+      const { refreshMsabToken } = useAuth();
+      await refreshMsabToken();
+      log.debug('Token refreshed during suspension recovery');
+    } catch {
+      log.warn('Token refresh during recovery failed — will retry on next reconnect attempt');
+    }
+
+    // Update socket auth with the latest token from the store
+    if (socket.value && authStore.msabToken) {
+      (socket.value.auth as Record<string, string>).token = authStore.msabToken;
+    }
+
+    // Force Socket.IO to detect dead connection and auto-reconnect.
+    // Closing the engine transport triggers the full reconnect cycle:
+    //   disconnect → reconnect_attempt (handleReconnectAttempt) → reconnect (handleReconnect)
+    // This reuses all existing infrastructure: token refresh, room rejoin via _reconnectCallback.
+    if (socket.value?.connected) {
+      log.debug('Forcing engine close to trigger reconnect cycle');
+      socket.value.io.engine.close();
+    }
+    // If already disconnected: auto-reconnect is running and will use the fresh token we just set
+  }
+
+  // ========================================
   // Return
   // ========================================
   /**
@@ -405,5 +477,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     disconnect,
     isConnected,
     onReconnect,
+    recoverFromSuspension,
   };
 }
