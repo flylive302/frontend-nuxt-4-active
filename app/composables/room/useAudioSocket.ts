@@ -416,9 +416,10 @@ export function useAudioSocket(): UseAudioSocketReturn {
   /**
    * Recover the socket connection after the PWA resumes from OS-level suspension.
    *
-   * GATE:    Skip if hidden < 30s (let Socket.IO handle naturally) or no socket exists.
-   * EXECUTE: Refresh MSAB token, update socket auth, force engine transport close
-   *          to trigger Socket.IO's built-in reconnect cycle.
+   * GATE:    Skip if hidden < 5s (let Socket.IO handle naturally) or no socket exists.
+   * EXECUTE: For long suspensions (>1h), refresh MSAB token proactively.
+   *          For shorter ones, just update socket auth with stored token.
+   *          Force engine transport close to trigger Socket.IO's reconnect cycle.
    * REACT:   Logging only — room rejoin is handled by Watcher 4 via _reconnectCallback.
    */
   async function recoverFromSuspension(): Promise<void> {
@@ -426,20 +427,23 @@ export function useAudioSocket(): UseAudioSocketReturn {
     _hiddenSince = null;
 
     // Short hide — let Socket.IO handle naturally
-    if (hiddenMs < 30_000) {
+    if (hiddenMs < 5_000) {
       log.debug('Short suspension (', Math.round(hiddenMs / 1000), 's) — skipping recovery');
       return;
     }
 
     log.debug('Recovering from', Math.round(hiddenMs / 1000), 's suspension');
 
-    // EXECUTE: Refresh MSAB token proactively before reconnection
-    try {
+    // Only proactively refresh token for long suspensions (>1h)
+    // where the 30-day JWT might be stale with outdated user data.
+    // For shorter suspensions, the stored token is fine.
+    if (hiddenMs > 3_600_000) {
       const { refreshMsabToken } = useAuth();
-      await refreshMsabToken();
-      log.debug('Token refreshed during suspension recovery');
-    } catch {
-      log.warn('Token refresh during recovery failed — will retry on next reconnect attempt');
+      const ok = await refreshMsabToken();
+      if (ok) {
+        log.debug('Token refreshed during long suspension recovery');
+      }
+      // Even if refresh fails, continue — stored 30-day token likely still valid
     }
 
     // Update socket auth with the latest token from the store

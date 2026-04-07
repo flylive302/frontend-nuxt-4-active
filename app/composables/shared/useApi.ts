@@ -62,6 +62,13 @@ function getClient(baseURL: string | undefined) {
     onResponseError({ response }: FetchContext) {
       // Global 401 interceptor — token expired or invalid
       if (response?.status === 401) {
+        // Skip aggressive logout for background MSAB token refreshes.
+        // These are opportunistic — failure is handled by the caller (useAuth).
+        // Firing logout here would clear ALL tokens and redirect to /log-in
+        // before the caller's catch block runs, causing cascading errors.
+        const url = response?.url || ''
+        if (url.includes('/msab-token/refresh')) return
+
         const authStore = useAuthStore()
         // Only act if user was previously authenticated (avoid loops on login page)
         if (authStore.token) {

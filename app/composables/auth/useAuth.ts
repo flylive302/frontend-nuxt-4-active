@@ -9,6 +9,11 @@ import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Auth]')
 
+/** Module-level promise for MSAB token refresh deduplication.
+ *  Multiple watchers may call refreshMsabToken() simultaneously (visibility + reconnect);
+ *  this ensures only one HTTP request is in-flight at a time. */
+let _refreshPromise: Promise<boolean> | null = null
+
 export function useAuthActions() {
   // ========================================
   // Dependencies
@@ -113,21 +118,35 @@ export function useAuthActions() {
   /**
    * Refresh the MSAB JWT to ensure the audio server gets fresh user data.
    * Called before socket pre-connect so the JWT payload matches current DB state.
+   *
+   * Returns true on success, false on failure.
+   * Deduplicated: concurrent calls share the same in-flight promise.
    * Silent failure — falls back to existing (potentially stale) token.
    *
    * EXECUTE: POST /auth/msab-token/refresh → update store
    */
-  async function refreshMsabToken(): Promise<void> {
-    try {
-      const { data } = await api<{ data: { msab_token: string } }>('/auth/msab-token/refresh', {
-        method: 'POST',
-      })
-      authStore.setMsabToken(data.msab_token)
-      log.debug('MSAB token refreshed')
-    } catch (err) {
-      // Non-blocking — stale JWT is better than no JWT
-      log.warn('Failed to refresh MSAB token:', err)
-    }
+  async function refreshMsabToken(): Promise<boolean> {
+    // Dedup: if a refresh is already in-flight, piggyback on it
+    if (_refreshPromise) return _refreshPromise
+
+    _refreshPromise = (async () => {
+      try {
+        const { data } = await api<{ data: { msab_token: string } }>('/auth/msab-token/refresh', {
+          method: 'POST',
+        })
+        authStore.setMsabToken(data.msab_token)
+        log.debug('MSAB token refreshed')
+        return true
+      } catch (err) {
+        // Non-blocking — stale JWT (now 30-day lifetime) is better than no JWT
+        log.warn('Failed to refresh MSAB token:', err)
+        return false
+      } finally {
+        _refreshPromise = null
+      }
+    })()
+
+    return _refreshPromise
   }
 
   /**
