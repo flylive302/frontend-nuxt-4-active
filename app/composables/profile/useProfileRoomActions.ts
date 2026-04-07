@@ -93,6 +93,7 @@ export function useProfileRoomActions(
       }
 
       if (roomStore.currentRoom && String(roomStore.currentRoom.id) === String(trackedRoomId)) {
+        roomStore.maximizeRoom()
         navigateTo(`/room/${trackedRoomId}`)
         return
       }
@@ -124,6 +125,7 @@ export function useProfileRoomActions(
     if (!profile.value?.room_id || isJoiningRoom.value) return
 
     if (roomStore.currentRoom && roomStore.currentRoom.id === profile.value.room_id) {
+      roomStore.maximizeRoom()
       navigateTo(`/room/${profile.value.room_id}`)
       return
     }

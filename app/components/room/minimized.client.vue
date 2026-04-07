@@ -25,7 +25,7 @@ onMounted(async () => {
   >
     <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50" @click="() => { roomStore.maximizeRoom(); navigateTo(`/room/${roomStore.currentRoom?.id}`) }">
       <NuxtImg
-          src="https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp"
+          :src="roomStore.currentRoom?.logo ?? 'https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp'"
           alt="Minimized Room Preview"
           :width="64"
           :height="64"
@@ -39,10 +39,8 @@ onMounted(async () => {
         class="-ml-2" size="sm" icon="i-lucide-x"
         @click="() => {
           try {
-            const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
             leaveRoom();
             roomStore.leaveRoom();
-            navigateTo(target, { replace: true });
           } catch (error) {
             log.error('Failed to leave room:', error);
           }

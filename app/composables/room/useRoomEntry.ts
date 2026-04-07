@@ -22,6 +22,7 @@ export function useRoomEntry() {
   const roomStore = useRoomStore()
   const authStore = useAuthStore()
   const { api } = useApi()
+  const route = useRoute()
 
   const showPasswordPrompt = ref(false)
   const pendingRoom = ref<Room | null>(null)
@@ -50,6 +51,7 @@ export function useRoomEntry() {
     // Same-room shortcut — if already in this room, just navigate back
     // without any leave/rejoin cycle. Preserves seat, owner status, and audio.
     if (roomStore.currentRoom?.id === room.id) {
+      roomStore.maximizeRoom()
       navigateTo(`/room/${room.id}`)
       return
     }
@@ -88,12 +90,15 @@ export function useRoomEntry() {
    * Handles room switching (leaves current room first).
    */
   function doEnterRoom(room: Room): void {
+    // Capture the current route before navigating — used for back-navigation on leave/minimize
+    const fromRoute = route.fullPath
+
     // Leave current room if switching (lifecycle watcher handles audio cleanup)
     if (roomStore.currentRoom) {
       roomStore.leaveRoom()
     }
 
-    roomStore.setCurrentRoom(room)
+    roomStore.setCurrentRoom(room, fromRoute)
     navigateTo(`/room/${room.id}`)
   }
 

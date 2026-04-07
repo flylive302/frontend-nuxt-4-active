@@ -139,10 +139,10 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
     <template v-else-if="hasProfile">
       <AltHero class="bg-linear-to-br to-primary/30" :image-src="profile?.cover_image ?? undefined">
         <UserAvatar
-            :animated="true"
-            :img="profile?.avatar ?? undefined"
-            :frame-asset-url="profile?.frame ?? undefined"
-            class="w-24"
+          :animated="true"
+          :img="profile?.avatar ?? undefined"
+          :frame-asset-url="profile?.frame ?? undefined"
+          class="w-24"
         />
         <div class="px-3">
           <h1 class="text-lg font-bold">{{ profile?.name || 'Anonymous' }}</h1>
