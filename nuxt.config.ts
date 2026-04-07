@@ -16,16 +16,14 @@ export default defineNuxtConfig({
             description: 'Live audio streaming and social platform',
             theme_color: '#ff2465',
             background_color: '#000002',
-            display: 'standalone',
+            display: 'fullscreen',
             orientation: 'portrait',
             // PWA identity and scope
             id: '/',
-            start_url: '/',
+            start_url: '/?fullscreen=true',
             scope: '/',
             // Preferred link handling (keeps external links in app)
             handle_links: 'preferred',
-            // Display override for better fallback control
-            display_override: ['fullscreen', 'standalone', 'minimal-ui'],
             icons: [
                 { src: '/logos/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
                 { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
