@@ -41,6 +41,7 @@ const TAB_ITEMS = [
 // ========================================
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 // ========================================
 // State
@@ -48,13 +49,14 @@ const route = useRoute()
 
 const signature = computed(() => route.params.UserSignature as string)
 const giftsContainerRef = ref<HTMLElement | null>(null)
+const followAnimating = ref(false)
 
 // ========================================
 // User Profile Composable
 // ========================================
 
 const {
-  profile,
+  profile: readonlyProfile,
   loading,
   error,
   hasProfile,
@@ -69,6 +71,47 @@ const {
   giftsHasMore,
   fetchMoreGifts,
 } = useUserProfile(signature)
+
+// Writable copy for optimistic count updates by useFollow
+const profileWritable = ref(readonlyProfile.value)
+watch(readonlyProfile, (v) => { profileWritable.value = v ? { ...v } : null })
+
+// ========================================
+// Follow Composable
+// ========================================
+
+const profileId = computed(() => profileWritable.value?.id ?? null)
+const {
+  isFollowing,
+  isFollowedBy: _isFollowedBy,
+  isToggling,
+  isSelf,
+  buttonLabel,
+  buttonIcon,
+  toggleFollow,
+  statusLoaded,
+} = useFollow(profileId, profileWritable)
+
+/**
+ * Whether the current profile is the auth user's own profile.
+ */
+const isOwnProfile = computed(() => {
+  return authStore.user?.id === profileWritable.value?.id
+})
+
+/**
+ * Handle follow button click with animation trigger.
+ */
+async function handleFollowClick(): Promise<void> {
+  const wasFollowing = isFollowing.value
+  await toggleFollow()
+
+  // Trigger particle burst on successful follow (not unfollow)
+  if (!wasFollowing && isFollowing.value) {
+    followAnimating.value = true
+    setTimeout(() => { followAnimating.value = false }, 600)
+  }
+}
 
 // ========================================
 // Infinite Scroll for Gifts
@@ -89,7 +132,7 @@ useInfiniteScroll(
 // ========================================
 
 const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
-const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions(profile, enterRoom)
+const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions(readonlyProfile, enterRoom)
 </script>
 
 <template>
@@ -137,16 +180,16 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
 
     <!-- Profile Content -->
     <template v-else-if="hasProfile">
-      <AltHero class="bg-linear-to-br to-primary/30" :image-src="profile?.cover_image ?? undefined">
+      <AltHero class="bg-linear-to-br to-primary/30" :image-src="profileWritable?.cover_image ?? undefined">
         <UserAvatar
           :animated="true"
-          :img="profile?.avatar ?? undefined"
-          :frame-asset-url="profile?.frame ?? undefined"
+          :img="profileWritable?.avatar ?? undefined"
+          :frame-asset-url="profileWritable?.frame ?? undefined"
           class="w-24"
         />
         <div class="px-3">
-          <h1 class="text-lg font-bold">{{ profile?.name || 'Anonymous' }}</h1>
-          <ProfileBadge :txt="profile?.signature" />
+          <h1 class="text-lg font-bold">{{ profileWritable?.name || 'Anonymous' }}</h1>
+          <ProfileBadge :txt="profileWritable?.signature" />
           <div class="flex gap-2 mt-1">
             <!-- Dynamic level badges computed from user's XP -->
             <ProfileBadge
@@ -166,9 +209,14 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
       <!-- User Stats -->
       <UserStats
         class="mt-1"
-        :wealth-xp="profile?.wealth_xp"
-        :charm-xp="profile?.charm_xp"
-        :visits="String(profile?.profile_visits)"
+        :wealth-xp="profileWritable?.wealth_xp"
+        :charm-xp="profileWritable?.charm_xp"
+        :visits="String(profileWritable?.profile_visits)"
+        :followers="String(profileWritable?.followers_count ?? 0)"
+        :following="String(profileWritable?.following_count ?? 0)"
+        :user-id="profileWritable?.id"
+        :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
+        :is-own-profile="isOwnProfile"
       />
 
       <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
@@ -176,23 +224,23 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
       <EventsProfileCard />
 
       <!-- Agency Section (conditional) -->
-      <template v-if="hasAgency && profile?.agency">
+      <template v-if="hasAgency && profileWritable?.agency">
         <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
         <NuxtLink
-          :to="`/agency/${profile.agency.id}`"
+          :to="`/agency/${profileWritable.agency.id}`"
           class="mx-3 grid grid-cols-12 bg-linear-to-br to-primary-950 rounded-md overflow-hidden border border-primary gap-2"
         >
           <div class="col-span-2 p-1">
-            <NuxtImg :src="profile.agency.logo" class="w-full aspect-square object-cover" />
+            <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
           </div>
 
           <div class="col-span-6">
-            <p class="text-md font-bold truncate">{{ profile.agency.name }}</p>
+            <p class="text-md font-bold truncate">{{ profileWritable.agency.name }}</p>
 
             <div class="flex">
-              <UIcon :name="`i-flag-${profile.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
+              <UIcon :name="`i-flag-${profileWritable.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
               <p class="text-sm text-muted! font-semibold truncate">
-                {{ profile.agency.country }}
+                {{ profileWritable.agency.country }}
               </p>
             </div>
           </div>
@@ -201,7 +249,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
             <div class="flex gap-1 items-center">
               <UBadge icon="i-lucide-users" square class="rounded-full text-white" />
               <p class="text-xs font-bold leading-none">
-                {{ profile.agency.total_member_count }} <br> Members
+                {{ profileWritable.agency.total_member_count }} <br> Members
               </p>
             </div>
           </div>
@@ -294,9 +342,26 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
             >
               Track
             </UButton>
-            <UButton to="/" icon="i-lucide-star" size="sm" class="pl-1 pr-2 gap-1">
-              Follow
+
+            <!-- Follow Button (hidden for own profile) -->
+            <UButton
+              v-if="!isSelf && statusLoaded"
+              :loading="isToggling"
+              :disabled="isToggling"
+              :icon="buttonIcon"
+              :variant="isFollowing ? 'solid' : 'outline'"
+              :color="isFollowing ? 'primary' : 'neutral'"
+              size="sm"
+              class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150"
+              :class="{
+                'follow-btn--animating': followAnimating,
+                'follow-btn--active': isFollowing,
+              }"
+              @click="handleFollowClick"
+            >
+              {{ buttonLabel }}
             </UButton>
+
             <UButton
               v-if="hasRoom"
               :loading="isJoiningRoom"
@@ -327,3 +392,58 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
     </template>
   </main>
 </template>
+
+<style scoped>
+/* ── Follow Button Micro-Animations ── */
+
+.follow-btn {
+  position: relative;
+  overflow: visible;
+  transform: scale(1);
+}
+
+/* Scale bounce on animating */
+.follow-btn--animating {
+  animation: follow-bounce 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes follow-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.92); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* Active state glow */
+.follow-btn--active {
+  box-shadow: 0 0 12px -2px var(--color-primary-400);
+}
+
+/* ── Particle Burst ── */
+.follow-btn--animating::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: follow-burst 500ms ease-out forwards;
+  background:
+    radial-gradient(circle at 20% 30%, var(--color-primary-400) 2px, transparent 2px),
+    radial-gradient(circle at 80% 25%, var(--color-primary-300) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 50% 10%, var(--color-primary-500) 2px, transparent 2px),
+    radial-gradient(circle at 15% 70%, var(--color-primary-300) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 85% 75%, var(--color-primary-400) 2px, transparent 2px),
+    radial-gradient(circle at 50% 90%, var(--color-primary-500) 1.5px, transparent 1.5px);
+}
+
+@keyframes follow-burst {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+</style>

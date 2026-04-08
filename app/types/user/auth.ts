@@ -56,4 +56,5 @@ export interface UpdateProfilePayload {
   email?: string
   date_of_birth?: string
   country?: string
+  is_follow_list_public?: boolean
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 -z-10 overflow-hidden">
+  <div class="fixed inset-0 -z-10 overflow-hidden bg-neutral-900">
     <!-- LCP element - first visible image with high priority -->
     <NuxtImg
         src="/background-decorations/var-1/1-top-left-image.webp"

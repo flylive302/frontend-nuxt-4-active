@@ -74,6 +74,9 @@ export interface UserProfile {
   profile_visits: number
   agency: ProfileAgency | null
   room_id: number | null
+  followers_count: number
+  following_count: number
+  is_follow_list_public: boolean
   gifts_received: ProfileGiftReceived[]
 }
 

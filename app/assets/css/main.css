@@ -112,9 +112,17 @@
         /* Allow content to draw behind status bar / notch */
         padding: 0;
         margin: 0;
+        width: 100%;
         min-height: 100vh;
         min-height: 100dvh;
-        background-color: var(--color-neutral-900);
+        background-color: transparent;
+    }
+
+    /* Nuxt root: let each page/layout paint the background */
+    #__nuxt {
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: transparent;
     }
 }
 

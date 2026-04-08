@@ -126,7 +126,7 @@ export default defineNuxtConfig({
                     name: 'viewport',
                     content: 'initial-scale=1, viewport-fit=cover, width=device-width'
                 },
-                { name: 'theme-color', content: '#ff2465' },
+                { name: 'theme-color', content: '#00000000' },
                 { name: 'mobile-web-app-capable', content: 'yes' },
                 { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
                 { name: 'apple-mobile-web-app-title', content: 'FlyLive' }

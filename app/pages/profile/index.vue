@@ -70,6 +70,11 @@ onMounted(() => {
       class="mt-1" 
       :wealth-xp="authStore.user?.wealth_xp ?? '0'"
       :charm-xp="authStore.user?.charm_xp ?? '0'"
+      :followers="String(authStore.user?.followers_count ?? 0)"
+      :following="String(authStore.user?.following_count ?? 0)"
+      :user-id="authStore.user?.id ?? null"
+      :is-follow-list-public="true"
+      :is-own-profile="true"
     />
 
     <!-- 
@@ -78,6 +83,7 @@ onMounted(() => {
     -->
 
     <div class="px-4 mt-3 mb-12">
+      <NavProfileItem to="/profile/follows" icon="i-lucide-users" txt="Followers & Following" />
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />

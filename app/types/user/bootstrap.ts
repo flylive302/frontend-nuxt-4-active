@@ -64,6 +64,9 @@ export interface BootstrapUser {
 
   // Profile
   is_profile_complete: boolean
+  is_follow_list_public: boolean
+  followers_count: number
+  following_count: number
 
   // Block status (auth-time checks)
   is_blocked: boolean

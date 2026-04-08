@@ -99,6 +99,8 @@ const authStore = useAuthStore()
 const { updateProfile, uploadAvatar, uploadCoverImage } = useProfileActions()
 const { logout } = useAuthActions()
 const showDeleteModal = ref(false)
+const isFollowListPublic = ref(authStore.user?.is_follow_list_public ?? true)
+const isSavingPrivacy = ref(false)
 
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,
@@ -295,6 +297,40 @@ watch(
     { immediate: true }
 )
 
+// Sync privacy toggle from auth store
+watch(
+    () => authStore.user?.is_follow_list_public,
+    (val) => {
+      if (val !== undefined) isFollowListPublic.value = val
+    },
+    { immediate: true }
+)
+
+/**
+ * Save privacy setting immediately on toggle.
+ * GATE:    Prevent duplicate saves
+ * EXECUTE: API call to update profile
+ * REACT:   Toast confirmation
+ */
+async function handlePrivacyToggle(newValue: boolean): Promise<void> {
+  if (isSavingPrivacy.value) return
+  isSavingPrivacy.value = true
+  try {
+    await updateProfile({ is_follow_list_public: newValue })
+  }
+  catch {
+    // Revert on failure
+    isFollowListPublic.value = !newValue
+    toast.add({
+      title: 'Failed to update privacy setting',
+      color: 'error',
+    })
+  }
+  finally {
+    isSavingPrivacy.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -404,6 +440,25 @@ watch(
 
       <!-- Asset Management Section -->
       <div class="mt-8">
+        <h3 class="text-lg font-semibold text-white mb-3">Privacy</h3>
+
+        <div class="rounded-lg bg-neutral-900 p-4 flex items-center justify-between gap-3">
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-white">Follow List Visibility</p>
+            <p class="text-sm text-neutral-400">
+              Allow other users to see who you follow and who follows you
+            </p>
+          </div>
+          <USwitch
+            v-model="isFollowListPublic"
+            :loading="isSavingPrivacy"
+            @update:model-value="handlePrivacyToggle"
+          />
+        </div>
+      </div>
+
+      <!-- Asset Management Section -->
+      <div class="mt-6">
         <h3 class="text-lg font-semibold text-white mb-3">Asset Management</h3>
         
         <div class="rounded-lg bg-neutral-900 p-4">
