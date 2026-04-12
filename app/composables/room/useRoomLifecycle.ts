@@ -236,15 +236,8 @@ export function useRoomLifecycle(): void {
     if (!authStore.msabToken || !isConnected.value) return;
 
     try {
-      const ok = await refreshMsabToken();
-      // Update the live socket's auth so the next auto-reconnect uses the fresh token
-      if (ok) {
-        const { socket } = useAudioSocket();
-        if (socket.value && authStore.msabToken) {
-          (socket.value.auth as Record<string, string>).token = authStore.msabToken;
-        }
-        log.debug('Proactive MSAB token refresh complete');
-      }
+      await refreshMsabToken();
+      log.debug('Proactive MSAB token refresh complete');
     } catch {
       log.warn('Proactive token refresh failed (non-blocking)');
     }

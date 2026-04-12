@@ -3,38 +3,46 @@
 // ========================================
 
 import type { Socket } from 'socket.io-client'
-import { registerEconomyEvents } from './economy.events'
-import { registerProgressionEvents } from './progression.events'
-import { registerRoomEvents } from './room.events'
-import { registerRoomMembershipEvents } from './room-membership.events'
-import { registerIncomeEvents } from './income.events'
-import { registerAgencyEvents } from './agency.events'
-import { registerSystemEvents } from './system.events'
-import { registerVipEvents } from './vip.events'
-import { registerFollowEvents } from './follow.events'
+import { useEconomyEvents } from './economy.events'
+import { useProgressionEvents } from './progression.events'
+import { useRoomEvents } from './room.events'
+import { useRoomMembershipEvents } from './room-membership.events'
+import { useIncomeEvents } from './income.events'
+import { useAgencyEvents } from './agency.events'
+import { useSystemEvents } from './system.events'
+import { useVipEvents } from './vip.events'
+import { useFollowEvents } from './follow.events'
 
 /**
- * Register all domain-specific socket event handlers.
+ * Registry of all domain-specific socket event handlers.
  *
- * Each domain file exports a registration function that binds
- * socket events to store mutations. This replaces the monolithic
- * useRealtimeEvents composable with domain-scoped handlers.
+ * This is a composable that captures dependencies once (during setup)
+ * and returns a function to bind those captured dependencies to a socket.
  *
- * To add events for a new domain:
- * 1. Create `events/<domain>.events.ts`
- * 2. Export a `register<Domain>Events(socket)` function
- * 3. Call it here
- *
- * This keeps the registry open for extension, closed for modification (OCP).
+ * This pattern ensures that inject()-based composables (like useToast, useRoomStore)
+ * are called in the correct context while allowing the event handlers to be
+ * registered safely inside Socket.IO callbacks.
  */
-export function registerAllEventHandlers(socket: Socket): void {
-  registerEconomyEvents(socket)
-  registerProgressionEvents(socket)
-  registerRoomEvents(socket)
-  registerRoomMembershipEvents(socket)
-  registerIncomeEvents(socket)
-  registerAgencyEvents(socket)
-  registerSystemEvents(socket)
-  registerVipEvents(socket)
-  registerFollowEvents(socket)
+export function useAllEventHandlers() {
+  const registerEconomy = useEconomyEvents()
+  const registerProgression = useProgressionEvents()
+  const registerRoom = useRoomEvents()
+  const registerRoomMembership = useRoomMembershipEvents()
+  const registerIncome = useIncomeEvents()
+  const registerAgency = useAgencyEvents()
+  const registerSystem = useSystemEvents()
+  const registerVip = useVipEvents()
+  const registerFollow = useFollowEvents()
+
+  return function registerAllEventHandlers(socket: Socket): void {
+    registerEconomy(socket)
+    registerProgression(socket)
+    registerRoom(socket)
+    registerRoomMembership(socket)
+    registerIncome(socket)
+    registerAgency(socket)
+    registerSystem(socket)
+    registerVip(socket)
+    registerFollow(socket)
+  }
 }

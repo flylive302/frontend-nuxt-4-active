@@ -31,24 +31,27 @@ interface UserUnfollowedPayload {
 // ========================================
 
 /**
- * Register follow-related socket event handlers.
- * These events are emitted by the backend MSAB layer when
- * another user follows/unfollows the authenticated user.
+ * Composable to register follow-related socket event handlers.
+ * Captures toast dependencies during setup() phase.
  */
-export function registerFollowEvents(socket: Socket): void {
-  socket.on('user.followed', (payload: UserFollowedPayload) => {
-    log.debug('user.followed', payload)
+export function useFollowEvents() {
+  const toast = useToast()
 
-    useToast().add({
-      title: 'New Follower!',
-      description: `${payload.follower.name} started following you`,
-      color: 'success',
-      icon: 'i-lucide-user-plus',
+  return function registerFollowEvents(socket: Socket): void {
+    socket.on('user.followed', (payload: UserFollowedPayload) => {
+      log.debug('user.followed', payload)
+
+      toast.add({
+        title: 'New Follower!',
+        description: `${payload.follower.name} started following you`,
+        color: 'success',
+        icon: 'i-lucide-user-plus',
+      })
     })
-  })
 
-  socket.on('user.unfollowed', (payload: UserUnfollowedPayload) => {
-    log.debug('user.unfollowed', payload)
-    // Silent — no toast for unfollows to avoid negativity
-  })
+    socket.on('user.unfollowed', (payload: UserUnfollowedPayload) => {
+      log.debug('user.unfollowed', payload)
+      // Silent — no toast for unfollows to avoid negativity
+    })
+  }
 }

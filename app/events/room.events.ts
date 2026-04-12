@@ -13,45 +13,41 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[RoomEvents]')
 
 /**
- * Register room-level socket event handlers.
- * Handles room level ups, participant count updates, and settings changes.
- *
- * Events layer responsibilities (ARCHITECTURE.md):
- * - socket.on() registration
- * - Store mutations (simple field updates)
- * - Toast notifications
- * No business logic — complex handling delegates to composables.
+ * Composable to register room-level socket event handlers.
+ * Captures store and toast dependencies during setup() phase.
  */
-export function registerRoomEvents(socket: Socket): void {
+export function useRoomEvents() {
   const roomStore = useRoomStore()
   const toast = useToast()
+  const { handleRoomUpdated } = useRoomSettingsHandler()
 
-  socket.on('room.level_up', (payload: RoomLevelUpPayload) => {
-    log.debug('room.level_up', payload)
-    // Update room if it's the current room
-    if (roomStore.currentRoom?.id === payload.room_id) {
-      roomStore.updateRoomLevel(payload.new_level, payload.current_xp)
-    }
-    toast.add({
-      title: 'Room Level Up!',
-      description: `${payload.room_name} is now Level ${payload.new_level}!`,
-      color: 'success',
+  return function registerRoomEvents(socket: Socket): void {
+    socket.on('room.level_up', (payload: RoomLevelUpPayload) => {
+      log.debug('room.level_up', payload)
+      // Update room if it's the current room
+      if (roomStore.currentRoom?.id === payload.room_id) {
+        roomStore.updateRoomLevel(payload.new_level, payload.current_xp)
+      }
+      toast.add({
+        title: 'Room Level Up!',
+        description: `${payload.room_name} is now Level ${payload.new_level}!`,
+        color: 'success',
+      })
     })
-  })
 
-  socket.on('room.participant_count', (payload: RoomParticipantCountPayload) => {
-    log.debug('room.participant_count', payload)
-    // Update room store participant count if in a room
-    if (roomStore.currentRoom) {
-      roomStore.updateParticipantCount(payload.count)
-    }
-  })
+    socket.on('room.participant_count', (payload: RoomParticipantCountPayload) => {
+      log.debug('room.participant_count', payload)
+      // Update room store participant count if in a room
+      if (roomStore.currentRoom) {
+        roomStore.updateParticipantCount(payload.count)
+      }
+    })
 
-  socket.on('room.updated', (payload: RoomUpdatedPayload) => {
-    log.debug('room.updated', payload)
-    // Security logic + merge logic lives in composable (ARCHITECTURE.md)
-    const { handleRoomUpdated } = useRoomSettingsHandler()
-    handleRoomUpdated(payload)
-  })
+    socket.on('room.updated', (payload: RoomUpdatedPayload) => {
+      log.debug('room.updated', payload)
+      // Security logic + merge logic lives in composable (ARCHITECTURE.md)
+      handleRoomUpdated(payload)
+    })
+  }
 }
 

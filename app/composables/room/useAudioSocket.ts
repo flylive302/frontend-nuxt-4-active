@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
 import type { BootstrapResponse } from '~/types/user/bootstrap';
 import { createLogger } from '~/utils/logger';
-import { registerRealtimeEventHandlers, resetRealtimeHandlers } from './useRealtimeEvents';
+import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
 
 // ============================================
 // Types
@@ -68,8 +68,10 @@ let _visibilitySetup = false;
 
 let _config: ReturnType<typeof useRuntimeConfig> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
+let _userStore: ReturnType<typeof useUserStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 let _apiInstance: ReturnType<typeof useApi> | null = null;
+let _authActions: ReturnType<typeof useAuthActions> | null = null;
 
 // ============================================
 // Composable
@@ -89,8 +91,13 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // Initialize on first call only (during Vue setup context)
   if (!_config) _config = useRuntimeConfig();
   if (!_authStore) _authStore = useAuthStore();
+  if (!_userStore) _userStore = useUserStore();
   if (!_toast) _toast = useToast();
   if (!_apiInstance) _apiInstance = useApi();
+  if (!_authActions) _authActions = useAuthActions();
+
+  // Initialize realtime events composable
+  const { registerRealtimeEventHandlers } = useRealtimeEvents();
 
   // Use cached references
   const config = _config;
@@ -167,8 +174,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
   /**
    * Attempt to refresh the MSAB token and retry connection.
-   * Updates the existing socket's auth token instead of creating a new socket
-   * to avoid conflicts with Socket.IO's built-in auto-reconnection.
    * REACT-safe: failure is logged but never surfaced as a blocking error.
    */
   async function attemptTokenRefresh(): Promise<void> {
@@ -178,15 +183,12 @@ export function useAudioSocket(): UseAudioSocketReturn {
     log.debug('Auth rejected — attempting MSAB token refresh');
 
     try {
-      const { refreshMsabToken } = useAuth();
-      await refreshMsabToken();
+      await _authActions!.refreshMsabToken();
 
       // Retry connection with fresh token
       if (authStore.msabToken) {
         if (socket.value) {
-          // Update auth on EXISTING socket — don't create a new one
-          // This avoids a race condition with Socket.IO's auto-reconnect
-          (socket.value.auth as Record<string, string>).token = authStore.msabToken;
+          // Socket.IO will call the dynamic auth function on connect()
           socket.value.connect();
           log.debug('Token refreshed, retrying with updated auth on existing socket');
         } else {
@@ -216,10 +218,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
   /**
    * Handle reconnection attempts.
-   * CRITICAL: Updates the socket's auth token before each retry so Socket.IO's
-   * auto-reconnect uses the latest JWT from the store, not the stale one captured
-   * at socket construction time. Also proactively refreshes the JWT on the first
-   * attempt and every 5th attempt to keep the token fresh.
+   * Proactively refreshes the JWT on the first attempt and every 5th attempt 
+   * to keep the token fresh. The dynamic auth function ensures the socket 
+   * always uses the latest token from the store.
    */
   async function handleReconnectAttempt(attemptNumber: number) {
     status.value = 'connecting';
@@ -229,18 +230,11 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // to avoid hammering the API while still keeping the token fresh
     if (attemptNumber === 1 || attemptNumber % 5 === 0) {
       try {
-        const { refreshMsabToken } = useAuth();
-        await refreshMsabToken();
+        await _authActions!.refreshMsabToken();
         log.debug('Token refreshed before reconnect attempt', attemptNumber);
       } catch {
         log.warn('Token refresh failed before reconnect (will use existing token)');
       }
-    }
-
-    // Always update the socket's auth with the latest token from the store
-    // This ensures Socket.IO's auto-reconnect sends the freshest token available
-    if (socket.value && authStore.msabToken) {
-      (socket.value.auth as Record<string, string>).token = authStore.msabToken;
     }
   }
 
@@ -345,15 +339,15 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // Create new socket connection
     _connectedUrl = serverUrl;
     socket.value = io(serverUrl, {
-      auth: {
-        token: authStore.msabToken,
+      auth: (cb) => {
+        cb({ token: authStore.msabToken });
       },
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
       timeout: 10000,
-      transports: ['websocket'], // Audio server is WebSocket-only — no polling fallback
+      transports: ['polling', 'websocket'], // Allow polling fallback for initial handshake
     });
 
     // Register event handlers
@@ -390,9 +384,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
   async function refreshBalance(): Promise<void> {
     try {
       const response = await _apiInstance!.api<BootstrapResponse>('/bootstrap');
-      if (response?.user) {
-        const userStore = useUserStore();
-        userStore.updateBalance({
+      if (response?.user && _userStore) {
+        _userStore.updateBalance({
           coins: response.user.coins,
           diamonds: response.user.diamonds,
           wealth_xp: response.user.wealth_xp,
@@ -418,7 +411,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
    *
    * GATE:    Skip if hidden < 5s (let Socket.IO handle naturally) or no socket exists.
    * EXECUTE: For long suspensions (>1h), refresh MSAB token proactively.
-   *          For shorter ones, just update socket auth with stored token.
+   *          For shorter ones, the dynamic auth function handles token retrieval.
    *          Force engine transport close to trigger Socket.IO's reconnect cycle.
    * REACT:   Logging only — room rejoin is handled by Watcher 4 via _reconnectCallback.
    */
@@ -438,17 +431,11 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // where the 30-day JWT might be stale with outdated user data.
     // For shorter suspensions, the stored token is fine.
     if (hiddenMs > 3_600_000) {
-      const { refreshMsabToken } = useAuth();
-      const ok = await refreshMsabToken();
+      const ok = await _authActions!.refreshMsabToken();
       if (ok) {
         log.debug('Token refreshed during long suspension recovery');
       }
       // Even if refresh fails, continue — stored 30-day token likely still valid
-    }
-
-    // Update socket auth with the latest token from the store
-    if (socket.value && authStore.msabToken) {
-      (socket.value.auth as Record<string, string>).token = authStore.msabToken;
     }
 
     // Force Socket.IO to detect dead connection and auto-reconnect.
@@ -458,8 +445,10 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (socket.value?.connected) {
       log.debug('Forcing engine close to trigger reconnect cycle');
       socket.value.io.engine.close();
+    } else if (socket.value) {
+      log.debug('Forcing immediate reconnection attempt');
+      socket.value.connect();
     }
-    // If already disconnected: auto-reconnect is running and will use the fresh token we just set
   }
 
   // ========================================

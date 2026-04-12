@@ -3,7 +3,7 @@
 // ========================================
 
 import type { Socket } from 'socket.io-client'
-import { registerAllEventHandlers } from '~/events'
+import { useAllEventHandlers } from '~/events'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[RealtimeEvents]')
@@ -13,21 +13,28 @@ let handlersRegistered = false
 
 /**
  * Register all realtime event handlers on a socket.
- * Called once when socket connects.
- *
- * Delegates to the domain event registry which distributes
- * handlers across domain-scoped files for maintainability.
+ * This is a composable that captures domain-specific registration functions
+ * during the setup phase and returns a safe registration function.
  */
-export function registerRealtimeEventHandlers(socket: Socket): void {
-  if (handlersRegistered) {
-    log.debug('Event handlers already registered, skipping')
-    return
+export function useRealtimeEvents() {
+  const registerAll = useAllEventHandlers()
+
+  function registerRealtimeEventHandlers(socket: Socket): void {
+    if (handlersRegistered) {
+      log.debug('Event handlers already registered, skipping')
+      return
+    }
+
+    registerAll(socket)
+
+    handlersRegistered = true
+    log.debug('All realtime event handlers registered')
   }
 
-  registerAllEventHandlers(socket)
-
-  handlersRegistered = true
-  log.debug('All realtime event handlers registered')
+  return {
+    registerRealtimeEventHandlers,
+    resetRealtimeHandlers,
+  }
 }
 
 /**

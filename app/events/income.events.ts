@@ -9,21 +9,23 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[IncomeEvents]')
 
 /**
- * Register income-related socket event handlers.
- * Handles income target completions for both targets and members.
+ * Composable to register income-related socket event handlers.
+ * Captures modal dependencies during setup() phase.
  */
-export function registerIncomeEvents(socket: Socket): void {
-  socket.on('income_target.completed', (payload: IncomeTargetCompletedPayload) => {
-    log.debug('income_target.completed', payload)
-    // Show celebratory modal with animation (same style as level up)
-    const { showIncomeTargetCompleted } = useAchievementModals()
-    showIncomeTargetCompleted(payload, false)
-  })
+export function useIncomeEvents() {
+  const { showIncomeTargetCompleted } = useAchievementModals()
 
-  socket.on('income_target.member_completed', (payload: IncomeTargetCompletedPayload) => {
-    log.debug('income_target.member_completed', payload)
-    // Show celebratory modal for owner
-    const { showIncomeTargetCompleted } = useAchievementModals()
-    showIncomeTargetCompleted(payload, true)
-  })
+  return function registerIncomeEvents(socket: Socket): void {
+    socket.on('income_target.completed', (payload: IncomeTargetCompletedPayload) => {
+      log.debug('income_target.completed', payload)
+      // Show celebratory modal with animation (same style as level up)
+      showIncomeTargetCompleted(payload, false)
+    })
+
+    socket.on('income_target.member_completed', (payload: IncomeTargetCompletedPayload) => {
+      log.debug('income_target.member_completed', payload)
+      // Show celebratory modal for owner
+      showIncomeTargetCompleted(payload, true)
+    })
+  }
 }

@@ -14,14 +14,28 @@ const log = createLogger('[Auth]')
  *  this ensures only one HTTP request is in-flight at a time. */
 let _refreshPromise: Promise<boolean> | null = null
 
+// ============================================
+// Cached Dependencies (Module-level)
+// ============================================
+let _authStore: ReturnType<typeof useAuthStore> | null = null
+let _api: ReturnType<typeof useApi> | null = null
+let _toast: ReturnType<typeof useToast> | null = null
+
 export function useAuthActions() {
   // ========================================
   // Dependencies
   // ========================================
+  if (!_authStore) _authStore = useAuthStore()
+  if (!_api) _api = useApi()
+  try {
+    if (!_toast) _toast = useToast()
+  } catch {
+    // Silent catch for useToast outside setup
+  }
 
-  const authStore = useAuthStore()
-  const { api, fetchCsrfToken } = useApi()
-  const toast = useToast()
+  const authStore = _authStore
+  const { api, fetchCsrfToken } = _api
+  const toast = _toast
 
   // ========================================
   // Actions
@@ -53,7 +67,7 @@ export function useAuthActions() {
     // The bootstrap.client.ts plugin will fetch data after navigation.
 
     // REACT
-    toast.add({ title: 'Welcome back!', color: 'success' })
+    if (toast) toast.add({ title: 'Welcome back!', color: 'success' })
     if (redirectTo) {
       await navigateTo(redirectTo)
     }
@@ -86,7 +100,7 @@ export function useAuthActions() {
     // The bootstrap.client.ts plugin will fetch data after navigation.
 
     // REACT
-    toast.add({ title: 'Account created!', color: 'success' })
+    if (toast) toast.add({ title: 'Account created!', color: 'success' })
     if (redirectTo) {
       await navigateTo(redirectTo)
     }
@@ -161,7 +175,7 @@ export function useAuthActions() {
       const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
       window.location.href = data.redirect_url
     } catch {
-      toast.add({ title: `Failed to connect with ${provider}`, color: 'error' })
+      if (toast) toast.add({ title: `Failed to connect with ${provider}`, color: 'error' })
     }
   }
 

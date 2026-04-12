@@ -10,23 +10,22 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[SystemEvents]')
 
 /**
- * Register system-level socket event handlers.
- * Handles config invalidation and asset cache management.
- *
- * Events are REACT handlers — they map socket events to
- * store mutations and composable calls. No direct service calls.
+ * Composable to register system-level socket event handlers.
+ * Captures store and asset management dependencies during setup() phase.
  */
-export function registerSystemEvents(socket: Socket): void {
+export function useSystemEvents() {
   const bootstrapStore = useBootstrapStore()
   const { invalidateAsset } = useBootstrapAssets()
 
-  socket.on('config:invalidate', (payload: ConfigInvalidatePayload) => {
-    log.debug('config:invalidate', payload)
-    bootstrapStore.invalidateConfig(payload.type)
-  })
+  return function registerSystemEvents(socket: Socket): void {
+    socket.on('config:invalidate', (payload: ConfigInvalidatePayload) => {
+      log.debug('config:invalidate', payload)
+      bootstrapStore.invalidateConfig(payload.type)
+    })
 
-  socket.on('asset:invalidate', (payload: AssetInvalidatePayload) => {
-    log.debug('asset:invalidate', payload)
-    invalidateAsset(payload)
-  })
+    socket.on('asset:invalidate', (payload: AssetInvalidatePayload) => {
+      log.debug('asset:invalidate', payload)
+      invalidateAsset(payload)
+    })
+  }
 }
