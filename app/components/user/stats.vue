@@ -20,14 +20,23 @@ const props = withDefaults(defineProps<{
 })
 
 /**
- * Whether follow counts should link to the follows page.
- * Clickable if: own profile OR target user has public follow list.
+ * Compute the specific links for followers and following tabs.
+ * Includes the target user ID and the specific tab to activate.
  */
 const isClickable = computed(() => props.isOwnProfile || props.isFollowListPublic)
 
-const followsLink = computed(() => {
+/**
+ * Compute the specific links for followers and following tabs.
+ * Includes the target user ID and the specific tab to activate.
+ */
+const followersLink = computed(() => {
   if (!isClickable.value || !props.userId) return undefined
-  return `/profile/follows?user=${props.userId}`
+  return `/profile/follows?user=${props.userId}&tab=followers`
+})
+
+const followingLink = computed(() => {
+  if (!isClickable.value || !props.userId) return undefined
+  return `/profile/follows?user=${props.userId}&tab=following`
 })
 </script>
 
@@ -35,23 +44,31 @@ const followsLink = computed(() => {
   <div class="relative z-30 grid grid-cols-5 text-sm text-center font-bold leading-none">
     <p> {{ formatCurrency(charmXp) }} <br> Gifts In </p>
 
-    <component
-      :is="followsLink ? 'NuxtLink' : 'p'"
-      :to="followsLink ? `${followsLink}&tab=following` : undefined"
-      :class="{ 'text-primary underline underline-offset-2': followsLink }"
+    <!-- Following Stat -->
+    <NuxtLink
+      v-if="followingLink"
+      :to="followingLink"
+      class="hover:text-primary transition-colors"
     >
       {{ formatCurrency(following) }} <br> Following
-    </component>
+    </NuxtLink>
+    <p v-else class="text-muted/60 cursor-not-allowed">
+      {{ formatCurrency(following) }} <br> Following
+    </p>
 
     <p> {{ formatCurrency(visits) }} <br> Visits </p>
 
-    <component
-      :is="followsLink ? 'NuxtLink' : 'p'"
-      :to="followsLink ? `${followsLink}&tab=followers` : undefined"
-      :class="{ 'text-primary underline underline-offset-2': followsLink }"
+    <!-- Followers Stat -->
+    <NuxtLink
+      v-if="followersLink"
+      :to="followersLink"
+      class="hover:text-primary transition-colors"
     >
       {{ formatCurrency(followers) }} <br> Followers
-    </component>
+    </NuxtLink>
+    <p v-else class="text-muted/60 cursor-not-allowed">
+      {{ formatCurrency(followers) }} <br> Followers
+    </p>
 
     <p> {{ formatCurrency(wealthXp) }} <br> Gift Out</p>
   </div>
