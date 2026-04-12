@@ -15,8 +15,9 @@ export default defineNuxtConfig({
             short_name: 'FlyLive',
             description: 'Live audio streaming and social platform',
             theme_color: '#ff2465',
-            background_color: '#000002',
-            display: 'fullscreen',
+            background_color: '#000000',
+            display: 'standalone',
+            display_override: ['window-controls-overlay', 'standalone'],
             orientation: 'portrait',
             // PWA identity and scope
             id: '/',

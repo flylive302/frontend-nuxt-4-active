@@ -5,15 +5,7 @@
 
 import { useInfiniteScroll } from '@vueuse/core'
 import { createLogger } from '~/utils/logger'
-
-/** Minimal user shape returned by /users/{id}/followers and /following endpoints */
-interface MinimalUser {
-  id: number
-  name: string
-  signature: string
-  avatar: string | null
-  gender: string | null
-}
+import type { MinimalUser } from '~/types/user/bootstrap'
 
 const log = createLogger('[FollowsPage]')
 
@@ -247,20 +239,12 @@ watch(targetUserId, () => {
           </div>
 
           <!-- Followers List -->
-          <div v-else ref="followersContainerRef" class="space-y-2">
-            <NuxtLink
+          <div v-else ref="followersContainerRef" class="space-y-1">
+            <UserFollowListItem
               v-for="user in followers"
               :key="user.id"
-              :to="`/profile/${user.signature}`"
-              class="flex items-center gap-3 p-3 rounded-lg bg-elevated hover:bg-muted/30 transition-colors"
-            >
-              <UserAvatar :img="user.avatar" class="w-12" />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold truncate">{{ user.name }}</p>
-                <p class="text-xs text-muted truncate">@{{ user.signature }}</p>
-              </div>
-              <UIcon name="i-lucide-chevron-right" class="size-5 text-muted shrink-0" />
-            </NuxtLink>
+              :user="user"
+            />
 
             <!-- Load More Spinner -->
             <div v-if="followersLoading" class="py-4 text-center">
@@ -316,20 +300,12 @@ watch(targetUserId, () => {
           </div>
 
           <!-- Following List -->
-          <div v-else ref="followingContainerRef" class="space-y-2">
-            <NuxtLink
+          <div v-else ref="followingContainerRef" class="space-y-1">
+            <UserFollowListItem
               v-for="user in following"
               :key="user.id"
-              :to="`/profile/${user.signature}`"
-              class="flex items-center gap-3 p-3 rounded-lg bg-elevated hover:bg-muted/30 transition-colors"
-            >
-              <UserAvatar :img="user.avatar" class="w-12" />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold truncate">{{ user.name }}</p>
-                <p class="text-xs text-muted truncate">@{{ user.signature }}</p>
-              </div>
-              <UIcon name="i-lucide-chevron-right" class="size-5 text-muted shrink-0" />
-            </NuxtLink>
+              :user="user"
+            />
 
             <!-- Load More Spinner -->
             <div v-if="followingLoading" class="py-4 text-center">

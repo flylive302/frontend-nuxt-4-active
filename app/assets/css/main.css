@@ -39,6 +39,23 @@
     --ui-error: var(--ui-color-error-500);
 }
 
+/* Fullscreen PWA: ensure the app stretches edge-to-edge */
+@supports (padding: env(safe-area-inset-top)) {
+    html, body {
+        /* Allow content to draw behind status bar / notch */
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        background-color: #000002;
+        min-height: 100dvh;
+    }
+
+    /* Nuxt root: let each page/layout paint the background */
+    #__nuxt {
+        background: transparent;
+    }
+}
+
 .page-enter-active,
 .page-leave-active {
     transition: transform 0.1s ease, opacity 0.1s ease;
@@ -104,26 +121,6 @@
 
 .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 20px);
-}
-
-/* Fullscreen PWA: ensure the app stretches edge-to-edge */
-@supports (padding: env(safe-area-inset-top)) {
-    html, body {
-        /* Allow content to draw behind status bar / notch */
-        padding: 0;
-        margin: 0;
-        width: 100%;
-        min-height: 100vh;
-        min-height: 100dvh;
-        background-color: transparent;
-    }
-
-    /* Nuxt root: let each page/layout paint the background */
-    #__nuxt {
-        min-height: 100vh;
-        min-height: 100dvh;
-        background: transparent;
-    }
 }
 
 
