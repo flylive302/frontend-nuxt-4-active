@@ -42,6 +42,7 @@ export function useFollow(
 
   const { api, normalizeError } = useApi()
   const authStore = useAuthStore()
+  const userStore = useUserStore()
   const toast = useToast()
 
   // ========================================
@@ -122,12 +123,18 @@ export function useFollow(
     // ── EXECUTE (optimistic) ──
     isFollowing.value = !wasFollowing
 
-    // Optimistically adjust profile count
+    // Optimistically adjust profile count and authenticated user following count
     if (profileRef?.value) {
       profileRef.value = {
         ...profileRef.value,
         followers_count: profileRef.value.followers_count + (wasFollowing ? -1 : 1),
       }
+    }
+    if (wasFollowing) {
+      userStore.decrementFollowing()
+    }
+    else {
+      userStore.incrementFollowing()
     }
 
     try {
@@ -149,6 +156,13 @@ export function useFollow(
           ...profileRef.value,
           followers_count: profileRef.value.followers_count + (wasFollowing ? 1 : -1),
         }
+      }
+
+      if (wasFollowing) {
+        userStore.incrementFollowing()
+      }
+      else {
+        userStore.decrementFollowing()
       }
 
       // ── REACT (error) ──

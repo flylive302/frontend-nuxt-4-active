@@ -96,6 +96,46 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * Increment authenticated user's followers count.
+   */
+  function incrementFollowers() {
+    const user = getUser()
+    if (user) {
+      authStore.setUser({ ...user, followers_count: user.followers_count + 1 })
+    }
+  }
+
+  /**
+   * Decrement authenticated user's followers count.
+   */
+  function decrementFollowers() {
+    const user = getUser()
+    if (user && user.followers_count > 0) {
+      authStore.setUser({ ...user, followers_count: user.followers_count - 1 })
+    }
+  }
+
+  /**
+   * Increment authenticated user's following count.
+   */
+  function incrementFollowing() {
+    const user = getUser()
+    if (user) {
+      authStore.setUser({ ...user, following_count: user.following_count + 1 })
+    }
+  }
+
+  /**
+   * Decrement authenticated user's following count.
+   */
+  function decrementFollowing() {
+    const user = getUser()
+    if (user && user.following_count > 0) {
+      authStore.setUser({ ...user, following_count: user.following_count - 1 })
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -105,5 +145,9 @@ export const useUserStore = defineStore('user', () => {
     patchBalance,
     patchVip,
     patchProfile,
+    incrementFollowers,
+    decrementFollowers,
+    incrementFollowing,
+    decrementFollowing,
   }
 })

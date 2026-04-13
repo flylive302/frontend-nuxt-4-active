@@ -100,6 +100,17 @@ const isOwnProfile = computed(() => {
 })
 
 /**
+ * Computed followers/following counts that react to global store for own profile (real-time fix).
+ */
+const followersCount = computed(() => {
+  return isOwnProfile.value ? (authStore.user?.followers_count ?? 0) : (profileWritable.value?.followers_count ?? 0)
+})
+
+const followingCount = computed(() => {
+  return isOwnProfile.value ? (authStore.user?.following_count ?? 0) : (profileWritable.value?.following_count ?? 0)
+})
+
+/**
  * Handle follow button click with animation trigger.
  */
 async function handleFollowClick(): Promise<void> {
@@ -212,8 +223,8 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
         :wealth-xp="profileWritable?.wealth_xp"
         :charm-xp="profileWritable?.charm_xp"
         :visits="String(profileWritable?.profile_visits)"
-        :followers="String(profileWritable?.followers_count ?? 0)"
-        :following="String(profileWritable?.following_count ?? 0)"
+        :followers="String(followersCount)"
+        :following="String(followingCount)"
         :user-id="profileWritable?.id"
         :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
         :is-own-profile="isOwnProfile"
