@@ -77,3 +77,5 @@ Check out the [deployment documentation](https://nuxt.com/docs/getting-started/d
 ## Contributor Guide
 
 Review the [Repository Guidelines](AGENTS.md) before opening pull requests.
+
+New Changes test
