@@ -42,5 +42,8 @@
     "@types/node": "^24.10.2",
     "@vite-pwa/nuxt": "^1.1.0",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
   }
 }
