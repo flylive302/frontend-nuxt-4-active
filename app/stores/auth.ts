@@ -14,6 +14,8 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
   const msabToken = ref<string | null>(null)
   const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle')
+  /** Populated by force-disconnect event; consumed by /blocked page */
+  const suspensionInfo = ref<{ reason: string; until: string | null } | null>(null)
 
   // ========================================
   // Getters
@@ -63,6 +65,15 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(null)
     setMsabToken(null)
     status.value = 'unauthenticated'
+    suspensionInfo.value = null
+  }
+
+  /**
+   * Store suspension details from a force-disconnect event.
+   * The /blocked page reads this to display reason and countdown.
+   */
+  function setSuspensionInfo(info: { reason: string; until: string | null }) {
+    suspensionInfo.value = info
   }
 
   // ========================================
@@ -74,11 +85,13 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     msabToken,
     status,
+    suspensionInfo,
     isAuthenticated,
     setUser,
     setToken,
     setMsabToken,
     logout,
+    setSuspensionInfo,
   }
 }, {
   persist: {

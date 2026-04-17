@@ -357,6 +357,41 @@ export function useAudioSocket(): UseAudioSocketReturn {
     socket.value.io.on('reconnect_attempt', handleReconnectAttempt);
     socket.value.io.on('reconnect', handleReconnect);
     socket.value.on('error', handleError);
+
+    // ── Auth: Force-Disconnect Listener ──────────────────────────────
+    // Fired by MSAB when the user is blocked/suspended by an admin.
+    // Must be on every socket — cannot rely on reconnect since
+    // the server disconnects immediately after emitting.
+    socket.value.on('auth:force_disconnect', (payload: {
+      reason: string;
+      blocked_until?: string | null;
+      blocked_reason?: string | null;
+    }) => {
+      log.warn('Force-disconnected by server:', payload.reason);
+
+      // Store suspension info for the /blocked page
+      authStore.setSuspensionInfo({
+        reason: payload.blocked_reason ?? 'Your account has been suspended.',
+        until: payload.blocked_until ?? null,
+      });
+
+      // Disconnect socket (prevent auto-reconnect attempts)
+      disconnect();
+
+      // Clear auth state and redirect to blocked page
+      authStore.logout();
+      navigateTo('/blocked');
+    });
+
+    // ── Profile Update → Non-blocking MSAB token refresh ─────────────
+    // When the user's profile changes server-side, the MSAB JWT may carry
+    // stale user data. Proactively refresh it so room participants see
+    // updated profile info without waiting for the next reconnect cycle.
+    socket.value.on('user.profile.updated', () => {
+      _authActions!.refreshMsabToken().catch(() => {
+        log.debug('Post-profile-update MSAB refresh failed (non-blocking)');
+      });
+    });
   }
 
   /**

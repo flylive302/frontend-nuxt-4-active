@@ -3,6 +3,7 @@
 // ========================================
 import { ofetch, type FetchContext, type FetchOptions } from 'ofetch'
 import { getClientType } from './useClientInfo'
+import { useDeviceId } from './useDeviceId'
 
 // ========================================
 // Types
@@ -55,6 +56,7 @@ function getClient(baseURL: string | undefined) {
       // Device tracking headers
       headers.set('X-Correlation-ID', crypto.randomUUID())
       headers.set('X-Client-Type', getClientType())
+      headers.set('X-Device-ID', useDeviceId())
 
       options.headers = headers
       options.credentials = 'include'
