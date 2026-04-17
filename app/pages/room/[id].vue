@@ -65,6 +65,10 @@ onUnmounted(() => {
 });
 
 
+// Reactive — updates live as the value changes
+const roomColor = computed(() => roomStore.currentRoom?.primary_color ?? '#000000')
+useThemeColor(roomColor)
+
 
 // ========================================
 // Settings Drawer State

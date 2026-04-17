@@ -9,12 +9,12 @@ export default defineNuxtConfig({
     pwa: {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        includeAssets: ['favicon.ico', 'logos/apple-touch-icon-180x180.png', 'logos/pwa-64x64.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png', 'logos/maskable-icon-512x512.png'],
+        includeAssets: ['favicon.ico', 'logos/apple-touch-icon-180x180.png', 'logos/pwa-64x64.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png', 'logos/maskable-icon-192x192.png', 'logos/maskable-icon-512x512.png'],
         manifest: {
             name: 'FlyLive',
             short_name: 'FlyLive',
             description: 'Live audio streaming and social platform',
-            theme_color: '#ff2465',
+            theme_color: '#000000',
             background_color: '#000000',
             display: 'standalone',
             display_override: ['window-controls-overlay', 'standalone'],
@@ -29,6 +29,7 @@ export default defineNuxtConfig({
                 { src: '/logos/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
                 { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
                 { src: '/logos/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                { src: '/logos/maskable-icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
                 { src: '/logos/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ],
             screenshots: [
@@ -127,7 +128,7 @@ export default defineNuxtConfig({
                     name: 'viewport',
                     content: 'initial-scale=1, viewport-fit=cover, width=device-width'
                 },
-                { name: 'theme-color', content: '#00000000' },
+                { name: 'theme-color', content: '#000000' },
                 { name: 'mobile-web-app-capable', content: 'yes' },
                 { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
                 { name: 'apple-mobile-web-app-title', content: 'FlyLive' }

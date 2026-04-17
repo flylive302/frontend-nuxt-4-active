@@ -1,8 +1,9 @@
 # FlyLive Architecture Standard
 
 > This document is the single source of truth for code architecture across all FlyLive repositories.
-> It applies to **Frontend (Nuxt 4)**, **MSAB (Node.js + Socket.io)**, and **Backend (Laravel 12)**.
-> Both human developers and AI assistants must follow these rules.
+It applies to **Frontend (Nuxt 4)**, **MSAB (Node.js + [Socket.io](http://socket.io/))**, and **Backend (Laravel 12)**.
+Both human developers and AI assistants must follow these rules.
+> 
 
 ---
 
@@ -11,7 +12,7 @@
 Every user action, socket event, and API request follows exactly four stages:
 
 | Stage | Purpose | Can Fail? | Blocks Response? |
-|-------|---------|-----------|-----------------|
+| --- | --- | --- | --- |
 | **INTENT** | Receives the trigger (click, socket event, HTTP request) | No | — |
 | **GATE** | Validates preconditions (permissions, input, business rules) | Yes — early return | Yes |
 | **EXECUTE** | Performs the core mutation (state, DB, socket emit) | Yes — critical error | Yes |
@@ -20,6 +21,7 @@ Every user action, socket event, and API request follows exactly four stages:
 ### The Rule
 
 > **A function belongs to exactly ONE stage. If it does work from two stages, split it.**
+> 
 
 ### Stage Function Pattern
 
@@ -67,7 +69,7 @@ app/
 ### Pages
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | `definePageMeta()` | Business logic |
 | `useFetch()` / `useAsyncData()` for SSR data | Direct store mutations |
 | Composing layout with components | Validation logic |
@@ -76,7 +78,7 @@ app/
 ### Components
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | Template markup + styling | API calls (`$fetch`, `useFetch`) |
 | `defineProps()`, `defineEmits()` | Business logic / validation rules |
 | Call composable methods (e.g., `send()`, `leave()`) | Direct `socket.emit()` |
@@ -85,11 +87,12 @@ app/
 | `watch()` for UI-only effects (scroll, focus, animation) | `watch()` triggering API calls or mutations |
 
 > Components are the **INTENT** layer. User interacts → component calls composable → composable runs the pipeline.
+> 
 
 ### Stores
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | `ref()` for reactive state | API calls / `$fetch` / `useFetch` |
 | Simple setter functions (`setX()`, `updateX()`, `patchX()`) | `watch()` side effects |
 | `computed()` for derived state | `navigateTo()` or routing |
@@ -98,6 +101,7 @@ app/
 | Reading other stores inside `computed()` | Calling actions on other stores |
 
 **Store Design Rules:**
+
 - One store per domain concept (auth, room, gift, agency)
 - If a store exceeds ~300 lines or contains refs from **3+ unrelated concerns**, split it
 - Split by **lifecycle** (persistent data vs ephemeral session data), not by entity type
@@ -108,13 +112,14 @@ app/
 Composables are the **brain** of the frontend. Each composable has one of these roles:
 
 | Role | Naming | Contains |
-|------|--------|----------|
+| --- | --- | --- |
 | **Action / Orchestrator** | `use*Sending.ts`, `use*Actions.ts`, `use*Membership.ts` | Pipeline functions: GATE → EXECUTE → REACT |
 | **Data / Query** | `use*Data.ts`, `use*Catalog.ts` | `computed()`, data fetching, derived state |
 | **Event Handler / Reactor** | `use*EventHandlers.ts` | Socket event → store mutation + toast mapping |
 | **Infrastructure** | `use*Audio.ts`, `use*Lifecycle.ts`, `use*Socket.ts` | Low-level transport, connection management |
 
 **Composable Rules:**
+
 - Composables CAN call API endpoints and emit socket events (this is their job)
 - Composables CAN write to multiple stores in the EXECUTE stage
 - Composables CAN show toasts and trigger navigation in the REACT stage
@@ -124,18 +129,19 @@ Composables are the **brain** of the frontend. Each composable has one of these 
 ### Events
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | `socket.on()` registration | Business logic / validation |
 | Store mutations (simple field updates) | API calls |
 | Toast notifications | Complex computed logic |
 | Navigation on disconnect/kick | State initialization |
 
 > Events are **REACT** handlers for server-pushed data. They map incoming socket events to store mutations. No business logic.
+> 
 
 ### Services, Types, Constants, Utils
 
 | Directory | Contains | Golden Rule |
-|-----------|----------|-------------|
+| --- | --- | --- |
 | `services/` | Low-level infra (cache, asset downloading, network) | No store imports, no UI concerns |
 | `types/` | TypeScript interfaces, type aliases | No runtime code |
 | `constants/` | Static values, enums, configuration maps | No imports from stores or composables |
@@ -143,7 +149,7 @@ Composables are the **brain** of the frontend. Each composable has one of these 
 
 ---
 
-## MSAB (Node.js + Socket.io)
+## MSAB (Node.js + [Socket.io](http://socket.io/))
 
 ### Directory Responsibilities
 
@@ -168,7 +174,7 @@ src/
 
 Each handler function should follow the pipeline:
 
-```typescript
+```tsx
 socket.on("domain:action", createHandler("domain:action", schema, async (payload, sock) => {
   // GATE — all validation, returns early on failure
   const gateResult = validate(payload, sock, ctx);
@@ -185,6 +191,7 @@ socket.on("domain:action", createHandler("domain:action", schema, async (payload
 ```
 
 **Handler Rules:**
+
 - `createHandler()` + Zod schema for every event — never skip validation
 - GATE functions should be **pure** (no side effects, easily testable)
 - EXECUTE does core logic + emits to room participants
@@ -195,7 +202,7 @@ socket.on("domain:action", createHandler("domain:action", schema, async (payload
 ### Other Directories
 
 | Directory | Contains | Never |
-|-----------|----------|-------|
+| --- | --- | --- |
 | `socket/` | App context assembly, connection lifecycle, schemas | Business logic |
 | `auth/` | JWT verification middleware | Domain logic |
 | `integrations/` | HTTP clients, pub/sub wiring, user socket tracking | Business rules |
@@ -235,7 +242,7 @@ app/
 ### Controllers (INTENT)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | Accept request, type-hint dependencies | DB queries or Eloquent calls |
 | Authorize via Policy (`$this->authorize()`) | Complex business logic |
 | Delegate to Service or Action | Direct model mutations |
@@ -256,7 +263,7 @@ public function store(StoreRequest $request, SomeService $service): JsonResponse
 ### Form Requests (GATE)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | Input validation rules | Business logic |
 | Type casting / normalization | DB queries (keep validation fast) |
 | `authorize()` for simple auth checks | Side effects |
@@ -264,7 +271,7 @@ public function store(StoreRequest $request, SomeService $service): JsonResponse
 ### Policies (GATE)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | Authorization checks | Business calculations |
 | Role / permission verification | DB mutations |
 | Ownership validation | Side effects |
@@ -272,7 +279,7 @@ public function store(StoreRequest $request, SomeService $service): JsonResponse
 ### Services (EXECUTE)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | `DB::transaction()` for atomic operations | HTTP responses |
 | Model mutations (create, update, delete) | Request/Response objects |
 | Business calculations and domain logic | `event()` dispatching |
@@ -299,19 +306,19 @@ event(new SomeEvent($dto, $result));  // REACT — controller's job
 ### Events + Listeners (REACT)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | One listener per side effect | Core business logic |
 | Notifications (push, email, SMS) | DB transactions |
 | Statistics recording | Authorization |
 | Cache invalidation | Further event dispatching (avoid cascades) |
-| External API calls | |
+| External API calls |  |
 
 **Adding a new side effect to any action = creating a new Listener and attaching it to the existing Event. Zero changes to existing code.**
 
 ### Jobs (Async REACT)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | Long-running async side effects | Core business logic |
 | External API integrations | Synchronous DB transactions |
 | Batch processing | Validation |
@@ -319,11 +326,11 @@ event(new SomeEvent($dto, $result));  // REACT — controller's job
 ### Observers (Model Lifecycle REACT)
 
 | ✅ Allowed | ❌ Never |
-|-----------|---------|
+| --- | --- |
 | `created()`, `updated()`, `deleted()` hooks | Complex business logic |
 | Audit logging | Cross-model mutations |
 | Cache invalidation | Event dispatching (use Events instead) |
-| Setting default values on `creating()` | |
+| Setting default values on `creating()` |  |
 
 ---
 
@@ -332,7 +339,7 @@ event(new SomeEvent($dto, $result));  // REACT — controller's job
 ### Cross-Domain Writes (All Repos)
 
 | Stage | Read From | Write To |
-|-------|-----------|----------|
+| --- | --- | --- |
 | **GATE** | Any domain (for validation) | None |
 | **EXECUTE** | Any domain | Any domain needed for the action's core purpose |
 | **REACT** | Own domain result | Own domain's secondary state only (queues, counters, UI state) |
@@ -340,7 +347,7 @@ event(new SomeEvent($dto, $result));  // REACT — controller's job
 ### Error Handling
 
 | Stage | On Failure |
-|-------|-----------|
+| --- | --- |
 | **GATE** | Return error immediately. Show user feedback (toast/response). Do NOT proceed to EXECUTE. |
 | **EXECUTE** | Throw/rollback. If DB transaction, the framework handles rollback. Surface error to caller. |
 | **REACT** | Log and continue. REACT failures are NEVER surfaced to the user. They are non-critical. |
@@ -355,7 +362,7 @@ event(new SomeEvent($dto, $result));  // REACT — controller's job
 ### File Size Guidelines
 
 | Threshold | Action |
-|-----------|--------|
+| --- | --- |
 | **< 150 lines** | GATE/EXECUTE/REACT can be inline sections in one function |
 | **150–300 lines** | Extract stage helpers as private functions at the bottom of the file |
 | **> 300 lines** | Consider splitting into separate files per stage or per sub-domain |
