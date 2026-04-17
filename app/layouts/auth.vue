@@ -10,4 +10,5 @@
   </main>
 </template>
 <script setup lang="ts">
+useThemeColor('#000000')
 </script>
