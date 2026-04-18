@@ -29,7 +29,7 @@ const showForm = ref(false)
         class="hero-area flex flex-col justify-end bg-neutral-200 rounded-b-4xl overflow-hidden relative"
         :class="{ 'hero-area--collapsed': showForm }"
       >
-        <NuxtImg src="/AppImages/dummy-card/bg-fl.png" alt="Background" class="absolute inset-0 w-full h-full object-cover blur-sm" />
+        <NuxtImg src="/AppImages/dummy-card/bg-fl.png" alt="Background" class="absolute inset-0 object-cover blur-sm" />
         <LogoLarge class="mx-auto relative z-10 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
         <AuthScrollingCards />
       </div>
@@ -89,10 +89,11 @@ const showForm = ref(false)
 .hero-logo {
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: top center;
+  transform: translateY(5%);
 }
 
 .hero-logo--small {
-  transform: translateY(30%) scale(0.70);
+  transform: translateY(33%) scale(0.70);
 }
 
 /* ── Form reveal (grid-row 0fr → 1fr) ───────── */
