@@ -22,8 +22,8 @@ const DEFAULT_CALENDAR_YEAR = 2000 as const
 const DEFAULT_CALENDAR_MONTH = 1 as const
 const DEFAULT_CALENDAR_DAY = 1 as const
 
-const GENDER_MALE = 1 as const
-const GENDER_FEMALE = 2 as const
+export const GENDER_MALE = 1 as const
+export const GENDER_FEMALE = 2 as const
 const GENDER_NON_BINARY = 3 as const
 const GENDER_PREFER_NOT_TO_SAY = 4 as const
 
@@ -55,6 +55,7 @@ export function useProfileCompletion() {
   const authStore = useAuthStore()
   const { updateProfile, uploadAvatar } = useProfileActions()
   const { countries, loading: countriesLoading, ensureLoaded, detectIfAllowed } = useCountries()
+  const { normalizeError } = useApi()
   const toast = useToast()
 
   // ========================================
@@ -274,6 +275,30 @@ export function useProfileCompletion() {
     })
   }
 
+  /**
+   * Wizard submission — bypasses UForm validation (wizard validates per-step).
+   * GATE:    skipped (each step validates inline)
+   * EXECUTE: build payload → updateProfile
+   * REACT:   navigate home / show error toast
+   */
+  async function submitWizardData(): Promise<void> {
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+    generalError.value = ''
+
+    try {
+      const payload = buildProfileUpdatePayload()
+      await updateProfile(payload)
+      await navigateTo('/', { replace: true })
+    } catch (error: unknown) {
+      const normalized = normalizeError(error)
+      generalError.value = normalized.message
+      toast.add({ title: 'Update Failed', description: normalized.message, color: 'error' })
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -330,5 +355,6 @@ export function useProfileCompletion() {
     // Submission
     isSubmitting,
     submitProfileCompletion,
+    submitWizardData,
   }
 }
