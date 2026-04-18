@@ -4,25 +4,18 @@ import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchem
 import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
-import type {LoginPayload} from "~/types/user/auth";
+import type { LoginPayload } from '~/types/user/auth'
 
 definePageMeta({
   layout: 'auth',
-  middleware: 'guest'
+  middleware: 'guest',
+  authHeading: 'Login With',
 })
-
-// Min/Max password length handled by backend and component visual feedback
 
 const ROUTES = {
   HOME: '/',
   SIGNUP: '/sign-up',
   FORGOT_PASSWORD: '/forgot-password'
-} as const
-
-const ICONS = {
-  LOCK: 'i-lucide-lock',
-  SEND: 'i-lucide-send',
-  ARROW_RIGHT: 'i-lucide-arrow-right'
 } as const
 
 const { login } = useAuth()
@@ -79,15 +72,9 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
 </script>
 
 <template>
-  <main aria-labelledby="login-heading">
+  <div>
+    <h2 id="login-heading" class="sr-only">Log In to Your Account</h2>
 
-    <AuthSocialAuth />
-
-    <USeparator color="primary" class="my-4" label="OR" />
-
-    <h1 id="login-heading" class="sr-only">Log In to Your Account</h1>
-
-    <!-- General error alert - displayed at top of form when login fails -->
     <UAlert
       v-if="generalError"
       :description="generalError"
@@ -99,69 +86,69 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
     />
 
     <UForm
-        ref="form"
-        :schema="loginSchema"
-        :state="state"
-        :validate-on="['blur', 'change']"
-        :disabled="isSubmitting"
-        class="space-y-3"
-        @submit="onSubmit"
+      ref="form"
+      :schema="loginSchema"
+      :state="state"
+      :validate-on="['blur', 'change']"
+      :disabled="isSubmitting"
+      class="space-y-3"
+      @submit="onSubmit"
     >
       <FormsCountryPhoneInput
-          v-model:country-code="state.countryCode"
-          v-model:dial-code="state.dialCode"
-          v-model:phone="state.phone"
-          :disabled="isSubmitting"
-          :error="phoneError"
+        v-model:country-code="state.countryCode"
+        v-model:dial-code="state.dialCode"
+        v-model:phone="state.phone"
+        :disabled="isSubmitting"
+        :error="phoneError"
       />
 
       <UFormField label="Password" name="password" required>
         <FormsPasswordInput
-            v-model="state.password"
-            autocomplete="current-password"
-            placeholder="Enter your password"
-            :disabled="isSubmitting"
-            aria-label="Password"
+          v-model="state.password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+          :disabled="isSubmitting"
+          :show-strength="false"
+          aria-label="Password"
         />
       </UFormField>
 
       <div class="flex items-center justify-between">
         <UCheckbox
-            v-model="state.rememberMe"
-            label="Remember me"
-            :disabled="isSubmitting"
+          v-model="state.rememberMe"
+          label="Remember me"
+          :disabled="isSubmitting"
         />
-
         <NuxtLink
-            :to="ROUTES.FORGOT_PASSWORD"
-            :tabindex="isSubmitting ? -1 : 0"
-            class="text-sm font-medium text-primary hover:underline"
+          :to="ROUTES.FORGOT_PASSWORD"
+          :tabindex="isSubmitting ? -1 : 0"
+          class="text-sm font-medium text-primary hover:underline"
         >
           Forgot password?
         </NuxtLink>
       </div>
 
       <UButton
-          type="submit" size="xl"
-          class="w-full justify-center"
-          :icon="ICONS.SEND"
-          :loading="isSubmitting"
-          :disabled="isSubmitting"
-          aria-label="Log in"
+        type="submit" size="xl"
+        class="w-full justify-center"
+        icon="i-lucide-send"
+        :loading="isSubmitting"
+        :disabled="isSubmitting"
+        aria-label="Log in"
       >
         Log In
       </UButton>
     </UForm>
 
     <UButton
-        :to="ROUTES.SIGNUP"
-        class="mt-3 underline font-bold px-0"
-        variant="link"
-        :trailing-icon="ICONS.ARROW_RIGHT"
-        size="xl"
-        :disabled="isSubmitting"
+      :to="ROUTES.SIGNUP"
+      class="mt-3 underline font-bold px-0"
+      variant="link"
+      trailing-icon="i-lucide-arrow-right"
+      size="xl"
+      :disabled="isSubmitting"
     >
       Create an Account
     </UButton>
-  </main>
+  </div>
 </template>

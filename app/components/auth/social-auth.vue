@@ -8,7 +8,7 @@ const isLoading = ref<SocialProvider | null>(null)
 const providers: { name: SocialProvider; icon: string; label: string }[] = [
   { name: 'google', icon: 'i-logos-google-icon', label: 'Google' },
   { name: 'facebook', icon: 'i-logos-facebook', label: 'Facebook' },
-  { name: 'apple', icon: 'i-simple-icons-apple', label: 'Apple' },
+  { name: 'apple', icon: 'i-simple-icons-apple', label: 'Apple' }
 ]
 
 async function loginWith(provider: SocialProvider) {
@@ -25,14 +25,12 @@ async function loginWith(provider: SocialProvider) {
 </script>
 
 <template>
-  <div>
-    <SectionTitle>Login With:</SectionTitle>
-
-    <div class="flex justify-between mt-2">
+  <div class="flex justify-between">
       <UButton
         v-for="provider in providers"
         :key="provider.name"
-        variant="subtle"
+        variant="solid"
+        color="neutral"
         size="xl"
         :square="true"
         :loading="isLoading === provider.name"
@@ -42,5 +40,4 @@ async function loginWith(provider: SocialProvider) {
         <UIcon :name="provider.icon" class="size-8" />
       </UButton>
     </div>
-  </div>
 </template>

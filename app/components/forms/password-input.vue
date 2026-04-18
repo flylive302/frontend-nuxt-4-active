@@ -3,11 +3,14 @@ defineOptions({
   inheritAttrs: false
 })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue?: string
   placeholder?: string
   disabled?: boolean
-}>()
+  showStrength?: boolean
+}>(), {
+  showStrength: true
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
@@ -57,11 +60,11 @@ const text = computed(() => {
       v-bind="$attrs"
       v-model="password"
       :placeholder="placeholder || 'Password'"
-      :color="color"
+      :color="showStrength ? color : undefined"
       :type="show ? 'text' : 'password'"
       :disabled="disabled"
-      :aria-invalid="score < 5"
-      aria-describedby="password-strength"
+      :aria-invalid="showStrength ? score < 5 : undefined"
+      :aria-describedby="showStrength ? 'password-strength' : undefined"
       :ui="{ trailing: 'pe-1' }"
       class="w-full"
       size="lg"
@@ -83,7 +86,7 @@ const text = computed(() => {
       </template>
     </UInput>
 
-    <div v-if="isFocused || password.length > 0" class="space-y-2 mt-2">
+    <div v-if="showStrength && (isFocused || password.length > 0)" class="space-y-2 mt-2">
       <UProgress
         :color="color"
         :indicator="text"

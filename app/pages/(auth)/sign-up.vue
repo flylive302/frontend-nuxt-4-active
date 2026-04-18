@@ -1,7 +1,5 @@
 <script setup lang="ts">
-
 import { z } from 'zod'
-import { computed, reactive, ref } from 'vue'
 import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchema'
 import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
@@ -9,10 +7,10 @@ import type { FormSubmitEvent, Form } from '@nuxt/ui'
 
 definePageMeta({
   layout: 'auth',
-  middleware: 'guest'
+  middleware: 'guest',
+  authHeading: 'Sign Up With',
 })
 
-// Keeping minimal Zod validation for form submission safety
 const MIN_PASSWORD_LENGTH = 8
 
 const ROUTES = {
@@ -25,9 +23,7 @@ const { countries } = useCountries()
 
 const formRef = ref<Form<RegistrationFormData> | null>(null)
 
-const { isSubmitting: isProcessing, generalError: generalErrorMessage, getFieldError, handleSubmit } = useAuthForm({
-  formRef,
-})
+const { isSubmitting, generalError, getFieldError, handleSubmit } = useAuthForm({ formRef })
 
 const phoneError = computed(() => getFieldError('phone'))
 
@@ -64,7 +60,6 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
   await handleSubmit(async () => {
     const { name, password, dialCode, phone, countryCode } = event.data
 
-    // Register user with validated and formatted data
     await register({
       name,
       phone: normalizePhone(dialCode, phone),
@@ -76,53 +71,69 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 </script>
 
 <template>
-  <main>
+  <div>
+    <h2 id="signup-heading" class="sr-only">Create Your Account</h2>
 
-    <AuthSocialAuth />
-
-    <USeparator color="primary" class="my-4" label="OR" />
-    <!-- General error alert - displayed at top of form when registration fails -->
     <UAlert
-      v-if="generalErrorMessage" :description="generalErrorMessage" color="error" variant="soft"
-      title="Registration Failed" class="mb-4" icon="i-lucide-alert-circle"
+      v-if="generalError"
+      :description="generalError"
+      color="error"
+      variant="soft"
+      title="Registration Failed"
+      class="mb-4"
+      icon="i-lucide-alert-circle"
     />
 
-    <!-- Registration form with Zod validation -->
-    <UForm ref="formRef" :schema="registrationSchema" :state="state" class="space-y-3" @submit="handleFormSubmit">
-      <!-- Full name input field -->
+    <UForm
+      ref="formRef"
+      :schema="registrationSchema"
+      :state="state"
+      :validate-on="['blur', 'change']"
+      :disabled="isSubmitting"
+      class="space-y-3"
+      @submit="handleFormSubmit"
+    >
       <UFormField label="Full Name" name="name" required>
-        <UInput v-model="state.name" class="w-full" size="lg" icon="i-lucide-user" placeholder="John Doe" />
+        <UInput v-model="state.name" class="w-full" size="lg" icon="i-lucide-user" placeholder="John Doe" :disabled="isSubmitting" />
       </UFormField>
 
-      <!-- Country phone input component - handles country code, dial code, and phone number -->
       <FormsCountryPhoneInput
-        v-model:country-code="state.countryCode" v-model:dial-code="state.dialCode"
-        v-model:phone="state.phone" :error="phoneError"
+        v-model:country-code="state.countryCode"
+        v-model:dial-code="state.dialCode"
+        v-model:phone="state.phone"
+        :disabled="isSubmitting"
+        :error="phoneError"
       />
 
-      <!-- Password input field with strength requirements -->
       <UFormField label="Password" name="password" required>
         <FormsPasswordInput
           v-model="state.password"
           placeholder="********"
+          :disabled="isSubmitting"
         />
       </UFormField>
 
-      <!-- Submit button - disabled until form is valid -->
       <UButton
-        :loading="isProcessing" type="submit" size="xl" icon="i-lucide-send"
-        class="w-full justify-center disabled:bg-primary-400"
+        :loading="isSubmitting"
+        type="submit"
+        size="xl"
+        icon="i-lucide-send"
+        class="w-full justify-center"
+        :disabled="isSubmitting"
       >
         Sign Up
       </UButton>
     </UForm>
 
-    <!-- Link to login page for existing users -->
     <UButton
-      :to="ROUTES.LOGIN" class="mt-3 underline font-bold px-0" variant="link"
-      trailing-icon="i-lucide-arrow-right" size="xl"
+      :to="ROUTES.LOGIN"
+      class="mt-3 underline font-bold px-0"
+      variant="link"
+      trailing-icon="i-lucide-arrow-right"
+      size="xl"
+      :disabled="isSubmitting"
     >
       Have an Account? Log In
     </UButton>
-  </main>
+  </div>
 </template>

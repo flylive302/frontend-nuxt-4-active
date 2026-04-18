@@ -17,7 +17,7 @@
 import type { MaybeRefOrGetter } from 'vue'
 
 /** Default mirrors `nuxt.config.ts > app.head.meta > theme-color` */
-const DEFAULT_THEME_COLOR = '#000000' as const
+const DEFAULT_THEME_COLOR = '#ff2465' as const
 
 /**
  * Override the document `theme-color` meta tag for the lifetime of the

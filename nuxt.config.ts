@@ -9,12 +9,12 @@ export default defineNuxtConfig({
     pwa: {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        includeAssets: ['favicon.ico', 'logos/apple-touch-icon-180x180.png', 'logos/pwa-64x64.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png', 'logos/maskable-icon-192x192.png', 'logos/maskable-icon-512x512.png'],
+        includeAssets: ['favicon.ico', 'logos/apple-touch-icon-180x180.png', 'logos/pwa-64x64.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png'],
         manifest: {
             name: 'FlyLive',
             short_name: 'FlyLive',
             description: 'Live audio streaming and social platform',
-            theme_color: '#000000',
+            theme_color: '#ff2465',
             background_color: '#000000',
             display: 'standalone',
             display_override: ['window-controls-overlay', 'standalone'],
@@ -29,8 +29,8 @@ export default defineNuxtConfig({
                 { src: '/logos/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
                 { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
                 { src: '/logos/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-                { src: '/logos/maskable-icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-                { src: '/logos/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+                { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+                { src: '/logos/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ],
             screenshots: [
                 { src: '/screenshots/desktop.jpeg', sizes: '1024x1024', type: 'image/jpeg', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },
@@ -227,18 +227,18 @@ export default defineNuxtConfig({
                         if (!id.includes('node_modules')) return
 
                         // ── Core: loaded at app init / login ──
-                        if (id.includes('socket.io'))              return 'core-realtime'
-                        if (id.includes('zod'))                    return 'core-validation'
+                        if (id.includes('socket.io')) return 'core-realtime'
+                        if (id.includes('zod')) return 'core-validation'
 
                         // ── Room: loaded when user joins a room ──
-                        if (id.includes('mediasoup'))              return 'room-audio'
-                        if (id.includes('svga'))                   return 'room-animations'
+                        if (id.includes('mediasoup')) return 'room-audio'
+                        if (id.includes('svga')) return 'room-animations'
 
                         // ── Feature: loaded on specific pages ──
-                        if (id.includes('vue-advanced-cropper'))   return 'feature-cropper'
-                        if (id.includes('libphonenumber'))         return 'feature-phone'
+                        if (id.includes('vue-advanced-cropper')) return 'feature-cropper'
+                        if (id.includes('libphonenumber')) return 'feature-phone'
                         if (id.includes('internationalized/date')) return 'feature-dates'
-                        if (id.includes('vue-virtual-scroller'))   return 'feature-scroller'
+                        if (id.includes('vue-virtual-scroller')) return 'feature-scroller'
 
                         // Let Vite handle remaining deps organically via its
                         // module graph analysis (vue, pinia, nuxt, vueuse, etc.)
@@ -246,7 +246,7 @@ export default defineNuxtConfig({
                 }
             }
         }
-    },  
+    },
     nitro: {
         rollupConfig: {
             moduleContext: {

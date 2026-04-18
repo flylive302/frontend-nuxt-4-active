@@ -9,7 +9,7 @@ export type { BootstrapUser as User } from './bootstrap'
 // Social Auth
 // ========================================
 
-export type SocialProvider = 'google' | 'facebook' | 'apple'
+export type SocialProvider = 'google' | 'facebook' | 'apple' | 'email'
 
 // ========================================
 // Gender Options (for forms)
