@@ -22,7 +22,7 @@
     "types/**/*.d.ts",
     ".nuxt/types/**/*.d.ts"
   ],
-    "exclude": [
+  "exclude": [
     "node_modules",
     "dist"
   ]

@@ -26,23 +26,25 @@ const showForm = ref(false)
 
       <!-- Hero – height animates via interpolate-size -->
       <div
-        class="hero-area p-4 bg-neutral-200 rounded-b-4xl overflow-hidden relative inset-shadow-sm shadow-primary/30"
+        class="hero-area flex flex-col justify-end bg-neutral-200 rounded-b-4xl overflow-hidden relative"
         :class="{ 'hero-area--collapsed': showForm }"
       >
-        <LogoLarge class="mx-auto max-w-64 relative z-10 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
+        <NuxtImg src="/AppImages/dummy-card/bg-fl.png" alt="Background" class="absolute inset-0 w-full h-full object-cover blur-sm" />
+        <LogoLarge class="mx-auto relative z-10 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
         <AuthScrollingCards />
       </div>
 
-      <h1 class="text-center font-bold text-lg mt-2">{{ authHeading }}</h1>
+      <h1 class="text-center font-bold text-lg mt-4">{{ authHeading }}</h1>
 
       <div class="flex mx-8 gap-13 mt-2">
         <AuthSocialAuth class="w-full" />
 
         <!-- Mail button – morphs into form -->
-        <div class="mail-btn-anchor" :class="{ 'mail-btn-anchor--open': showForm }">
+        <div class="mail-btn-anchor rounded-lg aspect-square glowing-border" :class="{ 'mail-btn-anchor--open': showForm }">
           <UButton
             variant="solid"
             color="neutral"
+            class="inset-shadow-sm inset-shadow-neutral-950/50"
             size="xl"
             :square="true"
             @click="showForm = !showForm"
@@ -90,7 +92,7 @@ const showForm = ref(false)
 }
 
 .hero-logo--small {
-  transform: scale(0.55);
+  transform: translateY(30%) scale(0.70);
 }
 
 /* ── Form reveal (grid-row 0fr → 1fr) ───────── */

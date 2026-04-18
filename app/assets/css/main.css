@@ -6,13 +6,23 @@
     --animate-scroll-down: scroll-down 25s linear infinite;
 
     @keyframes scroll-up {
-        from { transform: translateY(0); }
-        to { transform: translateY(-50%); }
+        from {
+            transform: translateY(0);
+        }
+
+        to {
+            transform: translateY(-50%);
+        }
     }
 
     @keyframes scroll-down {
-        from { transform: translateY(-50%); }
-        to { transform: translateY(0); }
+        from {
+            transform: translateY(-50%);
+        }
+
+        to {
+            transform: translateY(0);
+        }
     }
 }
 
@@ -150,4 +160,79 @@
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* ── Animated Glow Border ──────────────────────────────────
+   Wrap any element to add a holographic ripple border.
+   Customize via CSS vars:
+     --glow-w       border thickness   (default 2px)
+     --glow-r       corner radius      (default 14px)
+     --glow-speed   flow duration      (default 6s)
+
+   Usage: <div class="glow-gold"><UButton … /></div>
+   ────────────────────────────────────────────────────────── */
+
+@property --glow-deg {
+    syntax: "<angle>";
+    inherits: true;
+    initial-value: -90deg;
+}
+
+.glowing-border {
+    --gradient-glow:
+        var(--ui-color-primary-50),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-500),
+        var(--ui-color-secondary-500),
+        var(--ui-color-tertiary-500),
+        var(--ui-color-info-500),
+        var(--ui-color-primary-50);
+
+    border: var(--border-width, 2px) solid transparent;
+    background: linear-gradient(var(--surface, canvas) 0 0) padding-box,
+        conic-gradient(from var(--glow-deg), var(--gradient-glow)) border-box;
+
+    position: relative;
+    isolation: isolate;
+
+    animation: glow 10s infinite linear;
+}
+
+@keyframes glow {
+    100% {
+        --glow-deg: 270deg;
+    }
+}
+
+.glowing-border::before,
+.glowing-border::after {
+    content: "";
+    position: absolute;
+    border-radius: inherit;
+}
+
+.glowing-border::before {
+    z-index: -1;
+    background: var(--surface, canvas);
+    inset: 0.2rem;
+    transform-origin: right;
+    filter: blur(var(--glow-size, 0.2rem));
+}
+
+.glowing-border::after {
+    z-index: -2;
+    inset: -0.2rem;
+    background: conic-gradient(from var(--glow-deg), var(--gradient-glow));
+    filter: blur(var(--glow-size, 0.8rem));
+    opacity: var(--glow-intensity, 0.5);
+}
+
+.glowing-border.right {
+    margin-inline-start: auto;
+    border: var(--border-width, 3px) solid transparent;
+    border-right: 0;
+
+    &::before {
+        transform-origin: left;
+    }
 }

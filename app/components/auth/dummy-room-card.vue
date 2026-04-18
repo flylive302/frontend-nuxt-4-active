@@ -18,17 +18,15 @@ const props = defineProps(["room"]);
 </script>
 
 <template>
-    <article class="relative rounded-3xl squircle overflow-hidden min-h-64">
+    <article class="relative rounded-3xl squircle overflow-hidden min-h-54">
         <figure class="h-full w-full">
             <NuxtImg
                 :src="props.room.background"
                 :alt="props.room.name"
                 width="250"
-                class="h-auto w-full object-cover"
+                class="size-full object-cover"
                 format="webp"
                 densities="x1 x2"
-                sizes="50vw"
-                loading="lazy"
             />
             <figcaption class="sr-only">{{ props.room.name }}</figcaption>
         </figure>

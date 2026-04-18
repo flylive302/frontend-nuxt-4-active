@@ -26,12 +26,15 @@ async function loginWith(provider: SocialProvider) {
 
 <template>
   <div class="flex justify-between">
+    <div 
+      v-for="provider in providers"
+      :key="provider.name"
+      class="rounded-lg aspect-square glowing-border">
       <UButton
-        v-for="provider in providers"
-        :key="provider.name"
         variant="solid"
         color="neutral"
         size="xl"
+        class="inset-shadow-sm inset-shadow-neutral-950/50"
         :square="true"
         :loading="isLoading === provider.name"
         :disabled="isLoading !== null && isLoading !== provider.name"
@@ -40,4 +43,5 @@ async function loginWith(provider: SocialProvider) {
         <UIcon :name="provider.icon" class="size-8" />
       </UButton>
     </div>
+  </div>
 </template>
