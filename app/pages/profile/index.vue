@@ -99,7 +99,7 @@ onMounted(() => {
       <EventsProfileCard /> 
     -->
 
-    <div class="px-4 mt-3 mb-12">
+    <div class="px-4 mt-10 mb-12">
       <NavProfileItem to="/profile/follows" icon="i-lucide-users" txt="Followers & Following" />
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />

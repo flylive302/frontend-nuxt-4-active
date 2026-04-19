@@ -219,39 +219,39 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
         <ProfileBadge :badge-src="charmBadgeSrc" color="secondary" :txt="String(charmLevel)" />
       </template>
 
-        <template #name>
-          {{ profileWritable?.name }}
-        </template>
+      <template #name>
+        {{ profileWritable?.name }}
+      </template>
 
-        <template #stats>
-          <UserStats
-            class="mt-1"
-            :wealth-xp="profileWritable?.wealth_xp"
-            :charm-xp="profileWritable?.charm_xp"
-            :visits="String(profileWritable?.profile_visits)"
-            :followers="String(followersCount)"
-            :following="String(followingCount)"
-            :user-id="profileWritable?.id"
-            :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
-            :is-own-profile="isOwnProfile"
-          />
-        </template>
-      </ProfileHeader>
+      <template #stats>
+        <UserStats
+          class="mt-1"
+          :wealth-xp="profileWritable?.wealth_xp"
+          :charm-xp="profileWritable?.charm_xp"
+          :visits="String(profileWritable?.profile_visits)"
+          :followers="String(followersCount)"
+          :following="String(followingCount)"
+          :user-id="profileWritable?.id"
+          :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
+          :is-own-profile="isOwnProfile"
+        />
+      </template>
+    </ProfileHeader>
 
-      <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
+    <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
 
-      <EventsProfileCard />
+    <EventsProfileCard />
 
-      <!-- Agency Section (conditional) -->
-      <template v-if="hasAgency && profileWritable?.agency">
-        <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
-        <NuxtLink
-          :to="`/agency/${profileWritable.agency.id}`"
-          class="mx-3 grid grid-cols-12 bg-linear-to-br to-primary-950 rounded-md overflow-hidden border border-primary gap-2"
-        >
-          <div class="col-span-2 p-1">
-            <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
-          </div>
+    <!-- Agency Section (conditional) -->
+    <template v-if="hasAgency && profileWritable?.agency">
+      <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
+      <NuxtLink
+        :to="`/agency/${profileWritable.agency.id}`"
+        class="mx-3 grid grid-cols-12 bg-linear-to-br to-primary-950 rounded-md overflow-hidden border border-primary gap-2"
+      >
+        <div class="col-span-2 p-1">
+          <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
+        </div>
 
           <div class="col-span-6">
             <p class="text-md font-bold truncate">{{ profileWritable.agency.name }}</p>

@@ -41,7 +41,7 @@ const followingLink = computed(() => {
 </script>
 
 <template>
-  <div class="relative z-30 grid grid-cols-5 text-sm text-center font-bold leading-none">
+  <div class="grid grid-cols-5 text-sm text-center font-bold leading-none pb-2">
     <p> {{ formatCurrency(charmXp) }} <br> Gifts In </p>
 
     <!-- Following Stat -->
@@ -66,6 +66,7 @@ const followingLink = computed(() => {
     >
       {{ formatCurrency(followers) }} <br> Followers
     </NuxtLink>
+
     <p v-else class="text-muted/60 cursor-not-allowed">
       {{ formatCurrency(followers) }} <br> Followers
     </p>

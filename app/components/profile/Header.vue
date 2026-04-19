@@ -6,7 +6,7 @@
   <div class="relative w-full">
     <slot name="cover" />
 
-    <div class="bg-neutral-900 relative z-10 -mt-4 h-25 rounded-t-4xl">
+    <div class="bg-neutral-900 relative z-10 -mt-6 rounded-t-4xl">
       <div class="flex justify-center w-full gap-3">
         <slot name="signature-badges" />
 
@@ -21,7 +21,9 @@
         <slot name="name" />
       </h1>
 
-      <slot name="stats" />
+      <div class="m-3 rounded-xl glowing-border overflow-hidden">
+        <slot name="stats" />
+      </div>
     </div>
   </div>
 </template>
