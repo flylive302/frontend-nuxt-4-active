@@ -14,6 +14,14 @@ const roomAutoplay = ref<{ delay: number } | undefined>({ delay: ROOM_AUTOPLAY_D
 const bannerRef = ref(null)
 const roomRef = ref(null)
 
+// ---- Following Carousel (ranked, Redis-cached)
+const { fetchRankedFollowing } = useFollowingData()
+const { data: rankedFollowing } = await useAsyncData(
+  'home-following-ranked',
+  () => fetchRankedFollowing(),
+  { lazy: true }
+)
+
 // ---- Room Logic
 const { fetchRooms } = useRoom()
 
@@ -150,17 +158,18 @@ const banners: Banner[] = [
 
 <template>
   <main>
+    <!-- Following Carousel (ranked by XP + follower count) -->
+    <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3"/>
 
-    <div ref="bannerRef">
+    <div v-else ref="bannerRef">
       <UCarousel
-          :autoplay="bannerAutoplay"
-          :items="banners"
-          class-names
-          :ui="{
-            container: 'mt-4',
-            item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
-          }"
-          class=""
+        :autoplay="bannerAutoplay"
+        :items="banners"
+        class-names
+        :ui="{
+          container: 'mt-4',
+          item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
+        }"
       >
         <template #default="{ item }">
           <EventsBanners
@@ -174,10 +183,8 @@ const banners: Banner[] = [
       </UCarousel>
     </div>
 
-
     <!-- Country Filter -->
     <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />
-
 
     <div ref="roomRef">
       <UCarousel

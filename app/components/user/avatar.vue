@@ -84,7 +84,8 @@ const frameConfig = computed(() => {
       <!-- Avatar Image -->
       <NuxtImg
         class="aspect-square rounded-full object-contain w-full"
-        :src="props.img ?? 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp'" alt="avatar"
+        :src="props.img ?? 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp'" 
+        alt="avatar"
         :width="96"
         :height="96"
         format="webp"

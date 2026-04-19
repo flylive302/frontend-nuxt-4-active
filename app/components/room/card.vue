@@ -76,7 +76,7 @@ function handleRoomClick(): void {
             x="0.04"
             y="0.03"
             width="0.92"
-            height="0.85"
+            height="0.8"
             rx="0.06"
             ry="0.06"
             fill="black"
@@ -86,18 +86,26 @@ function handleRoomClick(): void {
     </svg>
 
     <!-- Overlay content -->
-    <aside class="absolute inset-0 px-4 pb-1 flex items-end backdrop-blur-xl" style="mask: url(#squircle-mask);">
+    <aside class="absolute inset-0 px-4 pb-1 flex items-end backdrop-blur-sm" style="mask: url(#squircle-mask);">
 
       <div class="flex items-center gap-1">
         <!-- Live dot -->
-        <span v-if="badgeDisplay" class="relative inline-flex">
+        <span v-if="badgeDisplay" class="relative inline-flex mr-1">
           <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
           <span class="relative inline-block size-2 rounded-full bg-success"/>
         </span>
 
+        <NuxtImg
+          :src="props.room.logo ?? '/AppImages/dummy-card/avatar.png'"
+          alt="Live"
+          width="16"
+          height="16"
+          class="size-8 object-cover rounded-full"
+        />
+
         <!-- Text -->
         <p class="text-md truncate font-bold">
-          {{ props.room.name }} - {{ badgeDisplay }}
+          {{ props.room.name }}
         </p>
       </div>
     </aside>

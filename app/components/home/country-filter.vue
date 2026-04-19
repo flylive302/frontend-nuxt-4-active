@@ -32,7 +32,7 @@ const getFlagIcon = (code: string): string => {
         : 'bg-white/10 text-white/70'"
       @click="emit('update:modelValue', '')"
     >
-      <UIcon name="i-lucide-globe" class="size-4" />
+      <UIcon name="i-lucide-globe" class="size-5" />
       All
     </button>
 
@@ -44,7 +44,7 @@ const getFlagIcon = (code: string): string => {
         :class="modelValue === country
           ? 'bg-primary text-white'
           : 'bg-white/10 text-white/70 hover:bg-white/12 hover:text-white'" @click="emit('update:modelValue', country)">
-        <UIcon :name="getFlagIcon(country)" class="size-4" />
+        <UIcon :name="getFlagIcon(country)" class="size-5" />
         {{ country.toUpperCase() }}
       </button>
     </div>
