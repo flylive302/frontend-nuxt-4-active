@@ -10,7 +10,7 @@
  * Pages without it (complete-profile, callback) get a plain slot.
  */
 
-useThemeColor('#E5E5E5')
+useThemeColor('#000002')
 
 const route = useRoute()
 

@@ -11,6 +11,7 @@ definePageMeta({
   authHeading: 'Sign Up With',
 })
 
+useThemeColor('#000002')
 const MIN_PASSWORD_LENGTH = 8
 
 const ROUTES = {

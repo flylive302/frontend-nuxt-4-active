@@ -106,7 +106,7 @@ GET /api/v1/users/profile/{signature}
     "name": "John Doe",
     "signature": "3592010",
     "avatar": "https://cdn.example.com/avatars/123.jpg",
-    "frame": "frames/5",
+    "frame": "frames/8",
     "gender": 1,
     "wealth_xp": "12500.000",
     "charm_xp": "8750.000",

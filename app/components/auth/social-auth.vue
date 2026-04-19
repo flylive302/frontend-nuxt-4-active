@@ -34,13 +34,13 @@ async function loginWith(provider: SocialProvider) {
         variant="solid"
         color="neutral"
         size="xl"
-        class="inset-shadow-sm inset-shadow-neutral-950/50"
+        class="inset-shadow-sm inset-shadow-neutral-950/50 size-full"
         :square="true"
         :loading="isLoading === provider.name"
         :disabled="isLoading !== null && isLoading !== provider.name"
         @click="loginWith(provider.name)"
       >
-        <UIcon :name="provider.icon" class="size-8" />
+        <UIcon v-show="isLoading !== provider.name" :name="provider.icon" class="size-8" />
       </UButton>
     </div>
   </div>

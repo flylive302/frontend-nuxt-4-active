@@ -10,7 +10,7 @@ import { onMounted } from 'vue'
 // ========================================
 
 definePageMeta({
-  layout: 'alt',
+  layout: 'profile',
   middleware: 'auth',
 })
 
@@ -43,39 +43,56 @@ onMounted(() => {
 </script>
 
 <template>
-  <main>
-    <NavAlt sub-menu-to="/profile/edit">My Profile</NavAlt>
-
-    <AltHero class="bg-linear-to-br to-primary/10" :image-src="authStore.user?.cover_image ?? undefined">
-      <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }">
-        <UserAvatar
-            :animated="true"
-            :frame-asset-url="authStore?.user?.frame ?? undefined"
-            :img="authStore.user?.avatar ?? undefined"
-            class="w-24"
+  <div>
+    <ProfileHeader>
+      <template #cover>
+        <NuxtImg
+          :src="authStore.user?.cover_image ?? '/AppImages/dummy-card/bg-fl.png'"
+          format="webp"
+          densities="x1 x2"
+          sizes="320px"
+          width="100%"
+          class="min-w-full aspect-rectangle object-cover h-48"
         />
-      </NuxtLink>
+      </template>
 
-      <div class="px-3">
-        <h1 class="text-lg font-bold underline">{{ authStore.user?.name }}</h1>
+      <template #signature-badges>
         <ProfileBadge :txt="authStore?.user?.signature || undefined" />
-        <div class="flex gap-2">
-          <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
-          <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
-        </div>
-      </div>
-    </AltHero>
+      </template>
 
-    <UserStats 
-      class="mt-1" 
-      :wealth-xp="authStore.user?.wealth_xp ?? '0'"
-      :charm-xp="authStore.user?.charm_xp ?? '0'"
-      :followers="String(authStore.user?.followers_count ?? 0)"
-      :following="String(authStore.user?.following_count ?? 0)"
-      :user-id="authStore.user?.id ?? null"
-      :is-follow-list-public="true"
-      :is-own-profile="true"
-    />
+      <template #avatar>
+        <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }" class="-mt-15">
+          <UserAvatar
+              :animated="true"
+              :frame-asset-url="authStore?.user?.frame ?? undefined"
+              :img="authStore.user?.avatar ?? undefined"
+              class="w-24"
+          />
+        </NuxtLink>
+      </template>
+
+      <template #badges>
+        <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
+        <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
+      </template>
+
+      <template #name>
+        {{ authStore.user?.name }}
+      </template>
+
+      <template #stats>
+        <UserStats 
+          class="mt-2" 
+          :wealth-xp="authStore.user?.wealth_xp ?? '0'"
+          :charm-xp="authStore.user?.charm_xp ?? '0'"
+          :followers="String(authStore.user?.followers_count ?? 0)"
+          :following="String(authStore.user?.following_count ?? 0)"
+          :user-id="authStore.user?.id ?? null"
+          :is-follow-list-public="true"
+          :is-own-profile="true"
+        />
+      </template>
+    </ProfileHeader>
 
     <!-- 
       <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
@@ -94,54 +111,23 @@ onMounted(() => {
       <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>
       
       <!-- Browse Agencies (always visible) -->
-      <NavProfileItem 
-        to="/agency/list" 
-        icon="i-lucide-building-2" 
-        txt="Browse Agencies" 
-      />
+      <NavProfileItem to="/agency/list" icon="i-lucide-building-2" txt="Browse Agencies" />
       
       <!-- My Agency (visible if member/owner) -->
-      <NavProfileItem 
-        v-if="agencyStore.isAgencyMember"
-        to="/agency/my-agency" 
-        icon="i-lucide-home" 
-        txt="My Agency" 
-      />
+      <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-agency" icon="i-lucide-home" txt="My Agency" />
       
       <!-- My Income (visible if agency member) -->
-      <NavProfileItem 
-        v-if="agencyStore.isAgencyMember"
-        to="/agency/my-income" 
-        icon="i-lucide-dollar-sign" 
-        txt="My Income" 
-      />
+      <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-income" icon="i-lucide-dollar-sign" txt="My Income" />
       
       <!-- Agency Invitations (visible if not agency member) -->
-      <NavProfileItem 
-        v-if="!agencyStore.isAgencyMember"
-        to="/agency/invitations" 
-        icon="i-lucide-mail" 
-        txt="Agency Invitations"
-        :badge="agencyStore.receivedInvitations.items.length || undefined"
-      />
+      <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/invitations" icon="i-lucide-mail" txt="Agency Invitations" :badge="agencyStore.receivedInvitations.items.length || undefined" />
       
       <!-- My Join Requests (visible if not agency member) -->
-      <NavProfileItem 
-        v-if="!agencyStore.isAgencyMember"
-        to="/agency/my-requests" 
-        icon="i-lucide-user-plus" 
-        txt="My Join Requests"
-        :badge="agencyStore.myJoinRequests.items.filter(r => r.status === 'pending').length || undefined"
-      />
+      <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/my-requests" icon="i-lucide-user-plus" txt="My Join Requests" :badge="agencyStore.myJoinRequests.items.filter(r => r.status === 'pending').length || undefined" />
       
       <!-- Create Agency (visible if not in agency) -->
-      <NavProfileItem 
-        v-if="!agencyStore.isAgencyMember"
-        to="/agency/create" 
-        icon="i-lucide-plus-circle" 
-        txt="Create Agency" 
-      />
+      <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/create" icon="i-lucide-plus-circle" txt="Create Agency" />
       
     </div>
-  </main>
+  </div>
 </template>

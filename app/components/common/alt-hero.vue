@@ -3,7 +3,7 @@ withDefaults(defineProps<{
   imageSrc?: string
   blur?: number
 }>(), {
-  imageSrc: 'https://ik.imagekit.io/flylive/siteAssets/alt-hero/primary.webp',
+  imageSrc: '/AppImages/dummy-card/bg-fl.png',
   blur: 2
 })
 

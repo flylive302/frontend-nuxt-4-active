@@ -4,13 +4,14 @@
 // ========================================
 
 import { useInfiniteScroll } from '@vueuse/core'
+import type { UserProfile } from '~/types/user/user-profile'
 
 // ========================================
 // Page Configuration
 // ========================================
 
 definePageMeta({
-  layout: 'alt',
+  layout: 'profile',
   middleware: 'auth',
 })
 
@@ -73,8 +74,8 @@ const {
 } = useUserProfile(signature)
 
 // Writable copy for optimistic count updates by useFollow
-const profileWritable = ref(readonlyProfile.value)
-watch(readonlyProfile, (v) => { profileWritable.value = v ? { ...v } : null })
+const profileWritable = ref<UserProfile | null>(readonlyProfile.value as UserProfile | null)
+watch(readonlyProfile, (v) => { profileWritable.value = v ? { ...v, gifts_received: [...v.gifts_received] } as UserProfile : null })
 
 // ========================================
 // Follow Composable
@@ -147,9 +148,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
 </script>
 
 <template>
-  <main>
-    <NavAlt sub-menu-to="/">Public Profile</NavAlt>
-
+  <div>
     <!-- Loading State -->
     <div v-if="loading" class="pt-14 px-3 space-y-4">
       <div class="flex flex-col justify-center min-h-[55vw] bg-linear-to-br to-primary/30 rounded-lg p-3">
@@ -190,45 +189,54 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
     </div>
 
     <!-- Profile Content -->
-    <template v-else-if="hasProfile">
-      <AltHero class="bg-linear-to-br to-primary/30" :image-src="profileWritable?.cover_image ?? undefined">
+    <ProfileHeader v-else-if="hasProfile">
+      <template #cover>
+        <NuxtImg
+          :src="profileWritable?.cover_image ?? '/AppImages/dummy-card/bg-fl.png'"
+          format="webp"
+          densities="x1 x2"
+          sizes="320px"
+          width="100%"
+          class="min-w-full aspect-rectangle object-cover h-48"
+        />
+      </template>
+
+      <template #signature-badges>
+        <ProfileBadge :txt="profileWritable?.signature || undefined" />
+      </template>
+
+      <template #avatar>
         <UserAvatar
           :animated="true"
-          :img="profileWritable?.avatar ?? undefined"
           :frame-asset-url="profileWritable?.frame ?? undefined"
-          class="w-24"
+          :img="profileWritable?.avatar ?? undefined"
+          class="w-24 -mt-15"
         />
-        <div class="px-3">
-          <h1 class="text-lg font-bold">{{ profileWritable?.name || 'Anonymous' }}</h1>
-          <ProfileBadge :txt="profileWritable?.signature" />
-          <div class="flex gap-2 mt-1">
-            <!-- Dynamic level badges computed from user's XP -->
-            <ProfileBadge
-                :badge-src="wealthBadgeSrc"
-                color="tertiary"
-                :txt="String(wealthLevel)"
-            />
-            <ProfileBadge
-                :badge-src="charmBadgeSrc"
-                color="secondary"
-                :txt="String(charmLevel)"
-            />
-          </div>
-        </div>
-      </AltHero>
+      </template>
 
-      <!-- User Stats -->
-      <UserStats
-        class="mt-1"
-        :wealth-xp="profileWritable?.wealth_xp"
-        :charm-xp="profileWritable?.charm_xp"
-        :visits="String(profileWritable?.profile_visits)"
-        :followers="String(followersCount)"
-        :following="String(followingCount)"
-        :user-id="profileWritable?.id"
-        :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
-        :is-own-profile="isOwnProfile"
-      />
+      <template #badges>
+        <ProfileBadge :badge-src="wealthBadgeSrc" color="tertiary" :txt="String(wealthLevel)" />
+        <ProfileBadge :badge-src="charmBadgeSrc" color="secondary" :txt="String(charmLevel)" />
+      </template>
+
+        <template #name>
+          {{ profileWritable?.name }}
+        </template>
+
+        <template #stats>
+          <UserStats
+            class="mt-1"
+            :wealth-xp="profileWritable?.wealth_xp"
+            :charm-xp="profileWritable?.charm_xp"
+            :visits="String(profileWritable?.profile_visits)"
+            :followers="String(followersCount)"
+            :following="String(followingCount)"
+            :user-id="profileWritable?.id"
+            :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
+            :is-own-profile="isOwnProfile"
+          />
+        </template>
+      </ProfileHeader>
 
       <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
 
@@ -393,15 +401,14 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
           </div>
         </BgGlass>
       </footer>
-    <!-- Password Prompt Modal (for password-protected rooms) -->
-    <RoomPasswordPromptModal
-      v-if="showPasswordPrompt && pendingRoom"
-      v-model:open="showPasswordPrompt"
-      :room="pendingRoom"
-      @success="onPasswordSuccess"
-    />
-    </template>
-  </main>
+      <!-- Password Prompt Modal (for password-protected rooms) -->
+      <RoomPasswordPromptModal
+        v-if="showPasswordPrompt && pendingRoom"
+        v-model:open="showPasswordPrompt"
+        :room="pendingRoom"
+        @success="onPasswordSuccess"
+      />
+  </div>
 </template>
 
 <style scoped>

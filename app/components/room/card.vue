@@ -54,13 +54,12 @@ function handleRoomClick(): void {
   <article v-bind="$attrs" class="relative rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-        :src="props.room.background ?? 'https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp'"
+        :src="props.room.background ?? '/AppImages/dummy-card/bg-fl.png'"
         :alt="props.room.name ?? undefined"
         :width="384"
         class="h-auto w-full object-cover"
         format="webp"
         densities="x1 x2"
-        sizes="50vw"
         loading="lazy"
       />
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>

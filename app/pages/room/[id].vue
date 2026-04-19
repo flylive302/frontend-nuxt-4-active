@@ -173,16 +173,15 @@ onUnmounted(() => {
       <!-- Background Image (prefer background field, fallback to logo) -->
       <div class="absolute inset-0 z-0 tint-500">
         <NuxtImg
-          :src="roomStore.currentRoom?.background ?? 'https://ik.imagekit.io/flylive/room/5.gif'"
+          :src="roomStore.currentRoom?.background ?? '/AppImages/dummy-card/room-bg.png'"
           class="bg-fixed object-cover size-full"
           format="webp"
-          sizes="100vw"
           loading="eager"
         />
       </div>
 
       <!-- Content -->
-      <div class="relative z-10 h-full flex flex-col">
+      <div class="relative z-10 h-full flex flex-col mt-2">
 
         <!-- Lucky Gift Animations -->
         <LuckyMultiplierFloat :floaters="floatingMultipliers" />

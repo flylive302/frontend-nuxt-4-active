@@ -140,12 +140,12 @@ async function onAvatarFileSelected(file: File) {
 </script>
 
 <template>
-  <div class="wizard">
+  <div class="flex flex-col min-h-[80dvh] py-6 px-4 [contain:layout_style]">
     <!-- Progress dots -->
-    <div class="wizard-dots">
+    <div class="flex justify-center gap-2 mb-8">
       <button
         v-for="(step, i) in steps" :key="step.id"
-        class="dot"
+        class="dot size-2 rounded-full bg-neutral-700 p-0 cursor-pointer"
         :class="{ 'dot--active': i === stepIndex, 'dot--done': i < stepIndex }"
         :aria-label="`Step ${i + 1}: ${step.label}`"
         @click="i < stepIndex && transitionStep(i - stepIndex)"
@@ -155,7 +155,7 @@ async function onAvatarFileSelected(file: File) {
     <!-- Back button -->
     <button
       v-if="stepIndex > 0"
-      class="wizard-back"
+      class="absolute top-6 left-4 size-10 flex items-center justify-center rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 transition-transform active:scale-90"
       aria-label="Go back"
       @click="transitionStep(-1)"
     >
@@ -173,44 +173,44 @@ async function onAvatarFileSelected(file: File) {
     />
 
     <!-- Step content (view-transition target) -->
-    <div v-if="currentStep" class="wizard-content" style="view-transition-name: wizard-step">
+    <div v-if="currentStep" class="wizard-content flex-1 flex flex-col items-center" style="view-transition-name: wizard-step">
 
       <!-- ═══ Gender Step ═══ -->
       <template v-if="currentStep.id === 'gender'">
-        <h1 class="wizard-title">{{ stepTitles.gender }}</h1>
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.gender }}</h1>
 
-        <div class="gender-grid">
+        <div class="grid grid-cols-2 gap-4 w-full max-w-[22rem] mx-auto my-6">
           <button
-            class="gender-card gender-card--female"
-            :class="{ 'gender-card--selected': formState.gender === GENDER_FEMALE }"
+            class="gender-card"
+            :class="{ 'gender-card--female-selected': formState.gender === GENDER_FEMALE }"
             @click="selectGender(GENDER_FEMALE)"
           >
-            <NuxtImg src="/AppImages/gender/female.webp" alt="Female" class="gender-card__img" preload />
-            <span class="gender-card__label">Female</span>
+            <NuxtImg src="/AppImages/gender/female.webp" alt="Female" class="gender-card__img w-full aspect-square object-contain rounded-xl" preload />
+            <span class="mt-3 text-base font-semibold text-neutral-200">Female</span>
           </button>
 
           <button
-            class="gender-card gender-card--male"
-            :class="{ 'gender-card--selected': formState.gender === GENDER_MALE }"
+            class="gender-card"
+            :class="{ 'gender-card--male-selected': formState.gender === GENDER_MALE }"
             @click="selectGender(GENDER_MALE)"
           >
-            <NuxtImg src="/AppImages/gender/male.webp" alt="Male" class="gender-card__img" preload />
-            <span class="gender-card__label">Male</span>
+            <NuxtImg src="/AppImages/gender/male.webp" alt="Male" class="gender-card__img w-full aspect-square object-contain rounded-xl" preload />
+            <span class="mt-3 text-base font-semibold text-neutral-200">Male</span>
           </button>
         </div>
 
         <!-- Other options -->
-        <button class="other-toggle" @click="showOtherGenders = !showOtherGenders">
+        <button class="flex items-center gap-1 mt-4 text-xs text-neutral-400 cursor-pointer" @click="showOtherGenders = !showOtherGenders">
           <span>More options</span>
           <UIcon
             name="i-lucide-chevron-down" class="size-4 transition-transform"
             :class="{ 'rotate-180': showOtherGenders }"
           />
         </button>
-        <div v-if="showOtherGenders" class="other-genders">
+        <div v-if="showOtherGenders" class="other-genders flex flex-wrap gap-2 mt-3">
           <button
             v-for="g in otherGenders" :key="g.value"
-            class="other-gender-btn"
+            class="other-gender-btn flex items-center gap-2 py-2 px-4 rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300 text-sm cursor-pointer active:scale-95"
             :class="{ 'other-gender-btn--selected': formState.gender === g.value }"
             @click="selectGender(g.value)"
           >
@@ -222,14 +222,14 @@ async function onAvatarFileSelected(file: File) {
 
       <!-- ═══ Date of Birth Step ═══ -->
       <template v-else-if="currentStep.id === 'dob'">
-        <h1 class="wizard-title">{{ stepTitles.dob }}</h1>
-        <p class="wizard-subtitle">You must be at least 18 years old</p>
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.dob }}</h1>
+        <p class="text-sm text-neutral-400 text-center mb-8">You must be at least 18 years old</p>
 
-        <div class="dob-wrapper">
+        <div class="dob-wrapper flex items-center gap-3 w-full max-w-[22rem] py-4 px-5 rounded-2xl border-2 border-neutral-700 bg-neutral-900">
           <UIcon name="i-lucide-calendar" class="size-6 text-primary-400" />
           <input
             type="date"
-            class="dob-input"
+            class="dob-input flex-1 bg-transparent border-none outline-none text-white text-lg font-medium"
             :value="dobString"
             :max="maxDobDate"
             required
@@ -240,8 +240,8 @@ async function onAvatarFileSelected(file: File) {
 
       <!-- ═══ Email Step ═══ -->
       <template v-else-if="currentStep.id === 'email'">
-        <h1 class="wizard-title">{{ stepTitles.email }}</h1>
-        <p class="wizard-subtitle">We'll use this to keep your account secure</p>
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.email }}</h1>
+        <p class="text-sm text-neutral-400 text-center mb-8">We'll use this to keep your account secure</p>
 
         <UInput
           v-model="formState.email"
@@ -257,10 +257,10 @@ async function onAvatarFileSelected(file: File) {
 
       <!-- ═══ Avatar Step ═══ -->
       <template v-else-if="currentStep.id === 'avatar'">
-        <h1 class="wizard-title">{{ stepTitles.avatar }}</h1>
-        <p class="wizard-subtitle">Show the world who you are</p>
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.avatar }}</h1>
+        <p class="text-sm text-neutral-400 text-center mb-8">Show the world who you are</p>
 
-        <div class="avatar-area">
+        <div class="flex flex-col items-center mt-4">
           <FileUpload
             :current-image="avatarUrl"
             :loading="isUploadingAvatar"
@@ -273,17 +273,17 @@ async function onAvatarFileSelected(file: File) {
       </template>
 
       <!-- Step error -->
-      <p v-if="stepError" class="step-error">{{ stepError }}</p>
+      <p v-if="stepError" class="mt-3 text-sm text-error-400 text-center">{{ stepError }}</p>
     </div>
 
     <!-- Continue button (hidden for gender since it auto-advances) -->
-    <div v-if="currentStep && currentStep.id !== 'gender'" class="wizard-footer">
+    <div v-if="currentStep && currentStep.id !== 'gender'" class="mt-auto pt-6 flex flex-col gap-3 items-center">
       <UButton
         :loading="isSubmitting"
         size="xl"
         block
         :disabled="!canProceed && currentStep.id !== 'avatar'"
-        class="wizard-btn"
+        class="justify-center"
         @click="handleContinue"
       >
         {{ isLastStep ? 'Finish' : 'Continue' }}
@@ -294,7 +294,7 @@ async function onAvatarFileSelected(file: File) {
 
       <button
         v-if="currentStep.id === 'avatar'"
-        class="skip-btn"
+        class="text-sm text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer p-2"
         @click="submitWizardData()"
       >
         Skip for now
@@ -304,31 +304,18 @@ async function onAvatarFileSelected(file: File) {
 </template>
 
 <style scoped>
-/* ── Wizard layout ───────────────────────────── */
-.wizard {
-  display: flex;
-  flex-direction: column;
-  min-height: 80dvh;
-  padding: 1.5rem 1rem;
-  contain: layout style;
+/*
+ * Only CSS that Tailwind can't express:
+ * animations, color-mix(), complex transitions, vendor pseudo-elements
+ */
+
+/* ── Entry animation ───────────────────────────── */
+.wizard-content {
+  animation: fadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Progress dots ───────────────────────────── */
-.wizard-dots {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-}
-
+/* ── Progress dots — width animation + glow ────── */
 .dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 9999px;
-  background: var(--ui-color-neutral-700);
-  border: none;
-  padding: 0;
-  cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -342,67 +329,13 @@ async function onAvatarFileSelected(file: File) {
   background: var(--ui-color-primary-400);
 }
 
-/* ── Back button ──────────────────────────────── */
-.wizard-back {
-  position: absolute;
-  top: 1.5rem;
-  left: 1rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: var(--ui-color-neutral-800);
-  border: 1px solid var(--ui-color-neutral-700);
-  color: var(--ui-color-neutral-300);
-  transition: transform 0.2s ease, background 0.2s ease;
-
-  &:active {
-    transform: scale(0.9);
-  }
-}
-
-/* ── Step content ─────────────────────────────── */
-.wizard-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: fadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.wizard-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ui-color-neutral-50);
-  text-align: center;
-  margin-bottom: 0.5rem;
-}
-
-.wizard-subtitle {
-  font-size: 0.875rem;
-  color: var(--ui-color-neutral-400);
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-/* ── Gender cards ─────────────────────────────── */
-.gender-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  width: 100%;
-  max-width: 22rem;
-  margin: 1.5rem auto;
-}
-
+/* ── Gender cards — multi-property transition + color-mix ── */
 .gender-card {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem 0.5rem 1rem;
+  padding: 1rem 0.5rem;
   border-radius: 1.25rem;
   border: 2px solid var(--ui-color-neutral-700);
   background: var(--ui-color-neutral-900);
@@ -418,7 +351,7 @@ async function onAvatarFileSelected(file: File) {
   }
 }
 
-.gender-card--female.gender-card--selected {
+.gender-card--female-selected {
   border-color: var(--ui-color-primary-500);
   background: linear-gradient(
     to bottom,
@@ -430,7 +363,7 @@ async function onAvatarFileSelected(file: File) {
     inset 0 1px 0 color-mix(in srgb, var(--ui-color-primary-300) 20%, transparent);
 }
 
-.gender-card--male.gender-card--selected {
+.gender-card--male-selected {
   border-color: var(--ui-color-info-500);
   background: linear-gradient(
     to bottom,
@@ -443,61 +376,21 @@ async function onAvatarFileSelected(file: File) {
 }
 
 .gender-card__img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  border-radius: 0.75rem;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.gender-card--selected .gender-card__img {
+.gender-card--female-selected .gender-card__img,
+.gender-card--male-selected .gender-card__img {
   transform: scale(1.05);
 }
 
-.gender-card__label {
-  margin-top: 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--ui-color-neutral-200);
-}
-
-/* ── Other gender options ─────────────────────── */
-.other-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-top: 1rem;
-  font-size: 0.8rem;
-  color: var(--ui-color-neutral-400);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
+/* ── Other genders — entry animation + color-mix ── */
 .other-genders {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
   animation: fadeUp 0.25s ease;
 }
 
 .other-gender-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--ui-color-neutral-700);
-  background: var(--ui-color-neutral-900);
-  color: var(--ui-color-neutral-300);
-  font-size: 0.875rem;
-  cursor: pointer;
   transition: all 0.2s ease;
-
-  &:active {
-    transform: scale(0.95);
-  }
 }
 
 .other-gender-btn--selected {
@@ -506,17 +399,8 @@ async function onAvatarFileSelected(file: File) {
   color: var(--ui-color-primary-200);
 }
 
-/* ── Date of birth ────────────────────────────── */
+/* ── DOB native input — vendor pseudo + focus state ── */
 .dob-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 22rem;
-  padding: 1rem 1.25rem;
-  border-radius: 1rem;
-  border: 2px solid var(--ui-color-neutral-700);
-  background: var(--ui-color-neutral-900);
   transition: border-color 0.2s ease;
 
   &:focus-within {
@@ -525,83 +409,25 @@ async function onAvatarFileSelected(file: File) {
 }
 
 .dob-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--ui-color-neutral-100);
-  font-size: 1.125rem;
-  font-weight: 500;
-  color-scheme: dark;
+  color-scheme: white;
 
   &::-webkit-calendar-picker-indicator {
     filter: invert(1);
     cursor: pointer;
-    opacity: 0.7;
+    opacity: 0.8;
   }
 }
 
-/* ── Avatar area ──────────────────────────────── */
-.avatar-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 1rem;
-}
-
-/* ── Footer ───────────────────────────────────── */
-.wizard-footer {
-  margin-top: auto;
-  padding-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.wizard-btn {
-  justify-content: center;
-}
-
-.skip-btn {
-  font-size: 0.875rem;
-  color: var(--ui-color-neutral-400);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: var(--ui-color-neutral-200);
-  }
-}
-
-/* ── Step error ───────────────────────────────── */
-.step-error {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--ui-color-error-400);
-  text-align: center;
-}
-
-/* ── Animations ───────────────────────────────── */
+/* ── Keyframes ─────────────────────────────────── */
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(0.75rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-
-/* Respect reduced motion */
+/* ── Reduced motion ────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .wizard-content { animation: none; }
-  .gender-card, .dot { transition-duration: 0.01s; }
+  .gender-card, .dot, .other-gender-btn { transition-duration: 0.01s; }
 }
 </style>
 
