@@ -18,20 +18,22 @@ export function useProfileRoomActions(
 
   async function ensureSocketConnected(): Promise<boolean> {
     if (isConnected.value && socket.value) return true
-    connect()
+    await connect()
+    // Check again after async connect (token refresh may have completed fast)
+    if (isConnected.value && socket.value) return true
+    // Wait for connection with reactive watch instead of polling
     return new Promise((resolve) => {
-      const maxAttempts = 50
-      let attempts = 0
-      const checkInterval = setInterval(() => {
-        attempts++
-        if (isConnected.value && socket.value) {
-          clearInterval(checkInterval)
+      const timeout = setTimeout(() => {
+        unwatch()
+        resolve(false)
+      }, 5000)
+      const unwatch = watch(isConnected, (connected) => {
+        if (connected && socket.value) {
+          clearTimeout(timeout)
+          unwatch()
           resolve(true)
-        } else if (attempts >= maxAttempts) {
-          clearInterval(checkInterval)
-          resolve(false)
         }
-      }, 100)
+      })
     })
   }
 

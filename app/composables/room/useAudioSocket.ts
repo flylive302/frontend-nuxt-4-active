@@ -24,7 +24,7 @@ export interface UseAudioSocketReturn {
   /** Connection error message if any */
   error: Ref<string | null>;
   /** Connect to the audio server. Pass targetUrl for regional routing. */
-  connect: (targetUrl?: string) => void;
+  connect: (targetUrl?: string) => Promise<void>;
   /** Disconnect from the audio server */
   disconnect: () => void;
   /** Whether currently connected */
@@ -194,7 +194,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
         } else {
           // No socket exists at all — create a fresh one
           log.debug('Token refreshed, creating new connection');
-          connect();
+          await connect();
         }
       } else {
         log.warn('Token refresh returned empty token');
@@ -290,12 +290,18 @@ export function useAudioSocket(): UseAudioSocketReturn {
    *   exact URL. When omitted, uses the default config URL and skips
    *   if any connection is active.
    */
-  function connect(targetUrl?: string) {
+  async function connect(targetUrl?: string) {
+    // Auto-refresh MSAB token if not available
+    if (!authStore.msabToken) {
+      log.debug('No MSAB token — attempting refresh before connect');
+      await _authActions!.refreshMsabToken();
+    }
+
     // Validate prerequisites
     if (!authStore.msabToken) {
       error.value = 'Authentication required';
       status.value = 'error';
-      log.error('Cannot connect: No MSAB token');
+      log.error('Cannot connect: No MSAB token (refresh failed)');
       return;
     }
 

@@ -104,7 +104,7 @@ function handleRoomClick(): void {
         />
 
         <!-- Text -->
-        <p class="text-md truncate font-bold">
+        <p class="text-md font-bold max-w-24 leading-none">
           {{ props.room.name }}
         </p>
       </div>

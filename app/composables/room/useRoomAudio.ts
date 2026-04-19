@@ -231,12 +231,18 @@ export function useRoomAudio(): UseRoomAudioReturn {
     const isDev = import.meta.dev;
     const hostingRegion = roomStore.currentRoom?.hosting_region;
     const regionalUrl = !isDev && hostingRegion ? REGION_ENDPOINTS[hostingRegion] : undefined;
-    connect(regionalUrl);
+    await connect(regionalUrl);
 
     // Wait for connection
     await new Promise<void>((resolve, reject) => {
       if (isConnected.value) {
         resolve();
+        return;
+      }
+
+      // Catch synchronous failures (e.g., "No MSAB token" sets status='error' immediately)
+      if (connectionStatus.value === 'error') {
+        reject(new Error('Failed to connect to audio server'));
         return;
       }
 

@@ -31,12 +31,33 @@ export function createEmitAsync(socket: Ref<AudioSocket | null>) {
         return;
       }
 
+      let settled = false;
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        socket.value?.off('disconnect', disconnectHandler);
+      };
+
       const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
         reject(new Error(`Socket event '${event}' timed out`));
       }, timeoutMs);
 
+      // Fail fast on disconnect instead of waiting full timeout
+      const disconnectHandler = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error(`Socket disconnected during '${event}'`));
+      };
+      socket.value.once('disconnect', disconnectHandler);
+
       socket.value.emit(event, payload, (response: TResponse) => {
-        clearTimeout(timeout);
+        if (settled) return;
+        settled = true;
+        cleanup();
         resolve(response);
       });
     });

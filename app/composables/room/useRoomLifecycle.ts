@@ -42,26 +42,6 @@ export function useRoomLifecycle(): void {
   const toast = useToast();
 
   // ========================================
-  // Eager Socket Pre-Connection
-  // ========================================
-  // Pre-connect the WebSocket so the handshake completes before the user
-  // opens a room. Refresh the MSAB JWT first so the socket connects with
-  // the latest user profile data from the database (avatar, name, etc.).
-  if (authStore.msabToken) {
-    refreshMsabToken().then(() => connectSocket());
-  }
-
-  // Watch for token to become available and connect when ready
-  const stopTokenWatch = watch(
-    () => authStore.msabToken,
-    (newToken) => {
-      if (newToken && !isConnected.value) {
-        connectSocket();
-        stopTokenWatch();
-      }
-    },
-  );
-  // ========================================
   // Watcher 1: Room Join / Leave / Switch
   // ========================================
   watch(
@@ -121,9 +101,8 @@ export function useRoomLifecycle(): void {
           if (isJoining.value) return; // Prevent double-join
           isJoining.value = true;
           try {
-            await refreshMsabToken();
             disconnectSocket();
-            connectSocket();
+            await connectSocket();
             await joinRoom(String(roomStore.currentRoom.id));
           } catch (err) {
             log.warn('Reconnect after un-minimize failed:', err);
@@ -203,9 +182,8 @@ export function useRoomLifecycle(): void {
       // Fallback: auto-reconnect hasn't succeeded — trigger manual reconnect + rejoin
       isJoining.value = true;
       try {
-        await refreshMsabToken();
         disconnectSocket();
-        connectSocket();
+        await connectSocket();
         await joinRoom(String(roomStore.currentRoom.id));
       } catch (err) {
         log.warn('Reconnect after PWA resume failed:', err);
