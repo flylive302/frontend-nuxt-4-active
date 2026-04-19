@@ -5,8 +5,7 @@ const open = defineModel < boolean > ('open', { default: false })
   <header
     class="
       fixed inset-x-0 top-0 z-50 px-2 pb-1
-      flex items-center justify-between
-      bg-black/80 backdrop-blur-lg border-b border-white/10
+      flex items-center justify-between backdrop-blur-lg border-b border-white/10
       safe-area-top
   ">
     <!-- Brand -->
@@ -14,14 +13,6 @@ const open = defineModel < boolean > ('open', { default: false })
 
     <!-- Actions -->
     <div class="flex items-center gap-1.5">
-      <UButton
-          to="/discover-all-events"
-          aria-label="discover-events"
-          icon="i-lucide-earth"
-          size="xl"
-          color="primary"
-          variant="ghost"
-      />
       <UButton
           aria-label="Leaderboard"
           size="md"
