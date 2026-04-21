@@ -17,6 +17,22 @@ const error = ref<string | null>(null)
 const isProcessing = ref(true)
 
 onMounted(async () => {
+  // ── Popup mode: send result to opener and close ──
+  if (window.opener) {
+    window.opener.postMessage({
+      type: 'oauth-callback',
+      token: route.query.token ?? undefined,
+      msab_token: route.query.msab_token ?? undefined,
+      error: route.query.error ?? undefined,
+      is_new: route.query.is_new ?? undefined,
+    }, window.location.origin)
+
+    // Close after a small delay so postMessage is delivered
+    setTimeout(() => window.close(), 300)
+    return
+  }
+
+  // ── Redirect-flow fallback (mobile / popup blocked) ──
   try {
     const result = await handleCallback({
       token: route.query.token as string | undefined,

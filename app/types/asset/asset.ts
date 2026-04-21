@@ -5,7 +5,7 @@
 /**
  * Type of asset being cached.
  */
-export type AssetType = 'svga' | 'video' | 'image' | 'json'
+export type AssetType = 'svga' | 'video' | 'image' | 'json' | string
 
 /**
  * Priority level for asset downloads.
@@ -15,6 +15,12 @@ export type AssetType = 'svga' | 'video' | 'image' | 'json'
  * - low: Background download when idle
  */
 export type AssetPriority = 'critical' | 'high' | 'normal' | 'low'
+
+/**
+ * Logical asset scope/category.
+ * Used to group manual/page assets without creating separate pipelines.
+ */
+export type AssetScope = 'gift' | 'badge' | 'mall' | 'wallet' | 'global' | 'manual'
 
 /**
  * Download status for queue items.
@@ -34,12 +40,18 @@ export interface AssetMetadata {
   url: string
   /** Type of asset */
   assetType: AssetType
-  /** Download priority */
+  /** Priority level */
   priority: AssetPriority
+  /** Logical scope/category */
+  scope: AssetScope
+  /** Optional grouping key for page or feature */
+  groupKey?: string
   /** Size in bytes (from Content-Length or backend) */
   sizeBytes: number | null
   /** Associated gift ID (if gift asset) */
   giftId?: number
+  /** Associated badge ID (if badge asset) */
+  badgeId?: number
   /** Timestamp when downloaded */
   downloadedAt: number
   /** Timestamp when last accessed */
@@ -62,8 +74,14 @@ export interface EnqueueItem {
   assetType: AssetType
   /** Priority (lower sort_order = higher priority) */
   priority: AssetPriority
+  /** Logical scope/category */
+  scope: AssetScope
+  /** Optional grouping key for a page or feature */
+  groupKey?: string
   /** Associated gift ID */
   giftId?: number
+  /** Associated badge ID */
+  badgeId?: number
   /** Sort order for priority queue */
   sortOrder?: number
 }
@@ -84,7 +102,7 @@ export interface DownloadQueueItem extends EnqueueItem {
  * Download progress for UI display.
  */
 export interface DownloadProgress {
-  /** Total items in queue */
+  /** Total items in the queue */
   total: number
   /** Completed downloads */
   completed: number
@@ -106,13 +124,13 @@ export interface DownloadProgress {
  * Network connection information.
  */
 export interface NetworkInfo {
-  /** Whether device is online */
+  /** Whether the device is online */
   isOnline: boolean
   /** Connection type */
   connectionType: 'wifi' | 'cellular' | 'ethernet' | 'none' | 'unknown'
   /** Effective connection type */
   effectiveType: '4g' | '3g' | '2g' | 'slow-2g' | 'unknown'
-  /** Whether user has data saver enabled */
+  /** Whether a user has data saver enabled */
   saveData: boolean
 }
 
@@ -128,6 +146,8 @@ export interface AssetInvalidatePayload {
   url: string
   /** Associated gift ID (optional) */
   giftId?: number
+  /** Associated badge ID (optional) */
+  badgeId?: number
   /** Priority for re-download */
   priority?: 'critical' | 'normal'
   /** Reason for invalidation */
@@ -146,6 +166,12 @@ export interface EnqueueOptions {
   priority: AssetPriority
   /** Asset type */
   assetType: AssetType
+  /** Logical scope/category */
+  scope: AssetScope
+  /** Optional grouping key */
+  groupKey?: string
   /** Associated gift ID */
   giftId?: number
+  /** Associated badge ID */
+  badgeId?: number
 }

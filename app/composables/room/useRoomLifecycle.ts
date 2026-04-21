@@ -33,11 +33,9 @@ const isRecovering = ref(false);
  */
 export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
-  const authStore = useAuthStore();
   const giftStore = useGiftStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect, recoverFromSuspension } = useAudioSocket();
-  const { refreshMsabToken } = useAuth();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
 
@@ -200,27 +198,4 @@ export function useRoomLifecycle(): void {
     }
   });
 
-  // ========================================
-  // Watcher 5: Proactive JWT Refresh Timer
-  // ========================================
-  // Refresh the MSAB JWT every 2 hours while connected to keep
-  // embedded user data (name, avatar, balance) fresh.
-  // With a 30-day token lifetime, this gives ~360 refresh
-  // opportunities before expiry. Non-blocking — failure is logged
-  // but does not interrupt any active session.
-  const PROACTIVE_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
-
-  const proactiveRefreshTimer = setInterval(async () => {
-    if (!authStore.msabToken || !isConnected.value) return;
-
-    try {
-      await refreshMsabToken();
-      log.debug('Proactive MSAB token refresh complete');
-    } catch {
-      log.warn('Proactive token refresh failed (non-blocking)');
-    }
-  }, PROACTIVE_REFRESH_INTERVAL_MS);
-
-  // Clean up timer if the composable host component is unmounted
-  onUnmounted(() => clearInterval(proactiveRefreshTimer));
 }

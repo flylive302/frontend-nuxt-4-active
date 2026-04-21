@@ -11,8 +11,8 @@ export const useAuthStore = defineStore('auth', () => {
   // ========================================
 
   const user = ref<BootstrapUser | null>(null)
-  const token = ref<string | null>(null)
-  const msabToken = ref<string | null>(null)
+  const token = ref<string | null>(null) // Sanctum Laravel token
+  const msabToken = ref<string | null>(null) // MSAB token
   const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle')
   /** Populated by force-disconnect event; consumed by /blocked page */
   const suspensionInfo = ref<{ reason: string; until: string | null } | null>(null)
@@ -36,7 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Set authentication token and sync with cookie.
+   * Set an authentication token and sync with the cookie.
    */
   function setToken(newToken: string | null) {
     token.value = newToken
@@ -95,6 +95,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 }, {
   persist: {
-    pick: ['token', 'msabToken'],
+    pick: ['token', 'msabToken', 'user'],
   },
 })

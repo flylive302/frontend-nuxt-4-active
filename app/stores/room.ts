@@ -44,7 +44,7 @@ export const useRoomStore = defineStore('roomStore', () => {
   }
 
   /**
-   * Set current room. Caller passes current route for back-navigation.
+   * Set the current room. Caller passes the current route for back-navigation.
    */
   function setCurrentRoom(room: Room | null, fromRoute?: string) {
     if (fromRoute) previousRoute.value = fromRoute;

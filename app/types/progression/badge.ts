@@ -47,9 +47,7 @@ export interface Badge {
   description: string
   image_url: string
   category: BadgeCategory
-  source_type: BadgeSourceType
-  requirements?: string
-  rarity?: 'common' | 'rare' | 'epic' | 'legendary'
+  level: BadgeSourceType
   sort_order: number
 }
 

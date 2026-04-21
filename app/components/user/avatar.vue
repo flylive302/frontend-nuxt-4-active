@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
   animated?: boolean
 }>(), {
   frameName: '',
-  frameAssetUrl: 'https://assets.flyliveapp.com/frames/8.svga',
+  frameAssetUrl: 'https://assets.flyliveapp.com/frames/10.svga',
   img: undefined,
   animated: false,
 });

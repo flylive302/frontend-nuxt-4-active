@@ -63,10 +63,10 @@ onMounted(() => {
       <template #avatar>
         <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }" class="-mt-15">
           <UserAvatar
-              :animated="true"
-              :frame-asset-url="authStore?.user?.frame ?? undefined"
-              :img="authStore.user?.avatar ?? undefined"
-              class="w-24"
+            :animated="true"
+            :frame-asset-url="authStore?.user?.frame ?? undefined"
+            :img="authStore.user?.avatar ?? 'AppImages/dummy-card/avatar.png'"
+            class="w-24"
           />
         </NuxtLink>
       </template>
@@ -100,12 +100,12 @@ onMounted(() => {
     -->
 
     <div class="px-4 mt-10 mb-12">
-      <NavProfileItem to="/profile/follows" icon="i-lucide-users" txt="Followers & Following" />
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
       <NavProfileItem to="/vip" icon="i-lucide-crown" txt="VIP" />
+      <NavProfileItem to="/profile/follows" icon="i-lucide-users" txt="Followers & Following" />
 
       <!-- Agency Section -->
       <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>
@@ -127,7 +127,7 @@ onMounted(() => {
       
       <!-- Create Agency (visible if not in agency) -->
       <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/create" icon="i-lucide-plus-circle" txt="Create Agency" />
-      
+
     </div>
   </div>
 </template>

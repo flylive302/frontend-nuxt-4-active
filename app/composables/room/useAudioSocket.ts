@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
-import type { BootstrapResponse } from '~/types/user/bootstrap';
+import type {BootstrapResponse, BootstrapUser} from '~/types/user/bootstrap';
 import { createLogger } from '~/utils/logger';
 import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
 
@@ -50,9 +50,6 @@ let _connectedUrl: string | null = null;
 
 /** Callback to invoke after Socket.IO auto-reconnection */
 let _reconnectCallback: ReconnectCallback | null = null;
-
-/** Flag to prevent infinite token refresh loops */
-let _isRefreshingToken = false;
 
 /** Timestamp when the page was last hidden (for PWA suspension detection) */
 let _hiddenSince: number | null = null;
@@ -131,7 +128,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
   /** Logger for this module */
   const log = createLogger('[AudioSocket]');
 
-  /** Handle successful connection */
+  /** Handle a successful connection */
   function handleConnect() {
     status.value = 'connected';
     error.value = null;
@@ -160,9 +157,15 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = err.message;
     log.error('Connection error:', err.message);
 
-    // Handle specific auth errors — attempt one token refresh before giving up
+    // With a 30-day stateless JWT, auth rejection means the user is
+    // blocked/revoked — not that the token expired. Show a clear message
+    // instead of attempting a refresh that races with reconnection logic.
     if (err.message === 'Invalid credentials' || err.message === 'Authentication failed') {
-      attemptTokenRefresh();
+      toast.add({
+        title: 'Audio connection failed',
+        description: 'Please try logging in again.',
+        color: 'error',
+      });
     } else if (err.message === 'Authentication required') {
       toast.add({
         title: 'Authentication required',
@@ -173,69 +176,13 @@ export function useAudioSocket(): UseAudioSocketReturn {
   }
 
   /**
-   * Attempt to refresh the MSAB token and retry connection.
-   * REACT-safe: failure is logged but never surfaced as a blocking error.
-   */
-  async function attemptTokenRefresh(): Promise<void> {
-    if (_isRefreshingToken) return;
-    _isRefreshingToken = true;
-
-    log.debug('Auth rejected — attempting MSAB token refresh');
-
-    try {
-      await _authActions!.refreshMsabToken();
-
-      // Retry connection with fresh token
-      if (authStore.msabToken) {
-        if (socket.value) {
-          // Socket.IO will call the dynamic auth function on connect()
-          socket.value.connect();
-          log.debug('Token refreshed, retrying with updated auth on existing socket');
-        } else {
-          // No socket exists at all — create a fresh one
-          log.debug('Token refreshed, creating new connection');
-          await connect();
-        }
-      } else {
-        log.warn('Token refresh returned empty token');
-        toast.add({
-          title: 'Audio connection failed',
-          description: 'Please try logging in again.',
-          color: 'error',
-        });
-      }
-    } catch {
-      log.warn('Token refresh failed, manual re-login required');
-      toast.add({
-        title: 'Audio connection failed',
-        description: 'Please try logging in again.',
-        color: 'error',
-      });
-    } finally {
-      _isRefreshingToken = false;
-    }
-  }
-
-  /**
    * Handle reconnection attempts.
-   * Proactively refreshes the JWT on the first attempt and every 5th attempt 
-   * to keep the token fresh. The dynamic auth function ensures the socket 
-   * always uses the latest token from the store.
+   * The dynamic auth callback already ensures the socket uses the latest
+   * token from the store — no proactive refresh is needed here.
    */
-  async function handleReconnectAttempt(attemptNumber: number) {
+  function handleReconnectAttempt(attemptNumber: number) {
     status.value = 'connecting';
     log.debug('Reconnecting... attempt:', attemptNumber);
-
-    // Proactively refresh the MSAB JWT on first attempt and every 5th attempt
-    // to avoid hammering the API while still keeping the token fresh
-    if (attemptNumber === 1 || attemptNumber % 5 === 0) {
-      try {
-        await _authActions!.refreshMsabToken();
-        log.debug('Token refreshed before reconnect attempt', attemptNumber);
-      } catch {
-        log.warn('Token refresh failed before reconnect (will use existing token)');
-      }
-    }
   }
 
   /** Handle successful reconnection */
@@ -248,9 +195,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (socket.value) {
       registerRealtimeEventHandlers(socket.value);
     }
-
-    // Refresh balance from API to catch events missed during disconnect
-    refreshBalance();
 
     // Notify lifecycle layer so it can re-join the room
     if (_reconnectCallback) {
@@ -294,15 +238,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // Auto-refresh MSAB token if not available
     if (!authStore.msabToken) {
       log.debug('No MSAB token — attempting refresh before connect');
-      await _authActions!.refreshMsabToken();
-    }
-
-    // Validate prerequisites
-    if (!authStore.msabToken) {
-      error.value = 'Authentication required';
       status.value = 'error';
-      log.error('Cannot connect: No MSAB token (refresh failed)');
-      return;
+      await _authActions!.refreshMsabToken();
     }
 
     const serverUrl = targetUrl || (config.public.audioServerUrl as string);
@@ -313,7 +250,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
       return;
     }
 
-    // URL-aware skip: if targetUrl provided, skip only if connected to SAME URL.
+    // URL-aware skip: if targetUrl provided, skip only if connected to the SAME URL.
     // If no targetUrl, skip if connected to any URL (existing behavior).
     if (socket.value?.connected) {
       if (targetUrl && _connectedUrl !== targetUrl) {
@@ -413,29 +350,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = null;
     _connectedUrl = null;
     _reconnectCallback = null;
-    // Reset handlers so they can be re-registered on next connect
+    // Reset handlers so they can be re-registered on next connection
     resetRealtimeHandlers();
     log.debug('Disconnected by client');
-  }
-
-  /**
-   * Refresh balance from API after reconnection.
-   * Non-blocking — failure is logged but does not affect socket state.
-   */
-  async function refreshBalance(): Promise<void> {
-    try {
-      const response = await _apiInstance!.api<BootstrapResponse>('/bootstrap');
-      if (response?.user && _userStore) {
-        _userStore.updateBalance({
-          coins: response.user.coins,
-          diamonds: response.user.diamonds,
-          wealth_xp: response.user.wealth_xp,
-          charm_xp: response.user.charm_xp,
-        });
-      }
-    } catch (err) {
-      log.debug('Balance refresh after reconnect failed (non-blocking)', err);
-    }
   }
 
 
@@ -451,9 +368,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
    * Recover the socket connection after the PWA resumes from OS-level suspension.
    *
    * GATE:    Skip if hidden < 5s (let Socket.IO handle naturally) or no socket exists.
-   * EXECUTE: For long suspensions (>1h), refresh MSAB token proactively.
-   *          For shorter ones, the dynamic auth function handles token retrieval.
-   *          Force engine transport close to trigger Socket.IO's reconnect cycle.
+   * EXECUTE: Force engine transport close to trigger Socket.IO's reconnect cycle.
+   *          The dynamic auth callback ensures the latest token from the store is used.
    * REACT:   Logging only — room rejoin is handled by Watcher 4 via _reconnectCallback.
    */
   async function recoverFromSuspension(): Promise<void> {
@@ -467,17 +383,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
 
     log.debug('Recovering from', Math.round(hiddenMs / 1000), 's suspension');
-
-    // Only proactively refresh token for long suspensions (>1h)
-    // where the 30-day JWT might be stale with outdated user data.
-    // For shorter suspensions, the stored token is fine.
-    if (hiddenMs > 3_600_000) {
-      const ok = await _authActions!.refreshMsabToken();
-      if (ok) {
-        log.debug('Token refreshed during long suspension recovery');
-      }
-      // Even if refresh fails, continue — stored 30-day token likely still valid
-    }
 
     // Force Socket.IO to detect dead connection and auto-reconnect.
     // Closing the engine transport triggers the full reconnect cycle:

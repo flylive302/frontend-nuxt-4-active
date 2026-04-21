@@ -65,7 +65,7 @@ export interface FilterTab {
 }
 
 /**
- * Available filter tabs for transaction history page.
+ * Available filter tabs for the transaction history page.
  */
 export const FILTER_TABS: FilterTab[] = [
   { label: 'All', value: 'all' },

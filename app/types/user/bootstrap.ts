@@ -3,6 +3,7 @@
 // ========================================
 
 import type { Gift } from '../gift/gift'
+import type {Badge} from "~/types/progression/badge";
 
 // ========================================
 // User Types
@@ -40,7 +41,7 @@ export interface BootstrapUser {
   signature: string
   avatar: string | null
   cover_image: string | null
-  frame: string | null
+  frame: string | null // ID-based not full name - TO DO
 
   // Contact & Location
   phone: string | null          // E.164 format
@@ -58,9 +59,9 @@ export interface BootstrapUser {
   charm_xp: string              // Integer as string
 
   // VIP
-  vip_level: number             // 0 = no VIP, 1-8 = VIP level
   vip_level_id: number | null   // FK to vip_levels table
-  vip_expires_at: string | null // ISO 8601
+  vip_level: number             // 0 = no VIP, 1-8 = VIP level // No need
+  vip_expires_at: string | null // ISO 8601 // NO need
 
   // Profile
   is_profile_complete: boolean
@@ -134,7 +135,7 @@ export interface BootstrapIncomeTarget {
   name: string
   required_coins: string
   earned_coins: string
-  coins_to_complete: string
+  coins_to_complete: string // not required
   start_date: string // ISO 8601
   end_date: string // ISO 8601
   member_diamond_reward: string
@@ -211,23 +212,17 @@ export interface BootstrapAgency {
 // ========================================
 
 /**
- * Economy configuration.
- */
-export interface EconomyConfig {
-  room_owner_percentage: number
-  receiver_percentage: number
-}
-
-/**
  * Full config from bootstrap.
  */
 export interface BootstrapConfig {
   api_version: string
-  economy: EconomyConfig
+  room_owner_percentage: number
+  receiver_percentage: number
   wealth_levels: LevelConfig[]
   charm_levels: LevelConfig[]
   room_levels: LevelConfig[]
-  level_badges: LevelBadge[]
+  badges: Badge[]
+  gifts: Gift[]
   vapid_public_key: string | null
 }
 
@@ -242,7 +237,7 @@ export interface BootstrapUserData {
   levels: {
     wealth: LevelStatus
     charm: LevelStatus
-  }
+  } // Not Required
   active_income_target: BootstrapIncomeTarget | null
   room: BootstrapRoom | null
   badges: UserBadge[]
@@ -262,7 +257,6 @@ export interface BootstrapGifts {
  * GET /api/v1/bootstrap
  */
 export interface BootstrapResponse {
-  user: BootstrapUser
   user_data: BootstrapUserData
   gifts: BootstrapGifts
   config: BootstrapConfig

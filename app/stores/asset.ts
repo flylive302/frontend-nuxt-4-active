@@ -96,5 +96,4 @@ export const useAssetStore = defineStore('asset', () => {
     setError,
     reset,
   }
-  // No persist — ephemeral session state
 })

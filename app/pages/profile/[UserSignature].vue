@@ -208,8 +208,8 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
       <template #avatar>
         <UserAvatar
           :animated="true"
-          :frame-asset-url="profileWritable?.frame ?? undefined"
-          :img="profileWritable?.avatar ?? undefined"
+          :frame-asset-url="profileWritable?.frame ?? 'https://assets.flyliveapp.com/frames/10.svga'"
+          :img="profileWritable?.avatar ?? 'AppImages/dummy-card/avatar.png'"
           class="w-24 -mt-15"
         />
       </template>

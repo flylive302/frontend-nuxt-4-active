@@ -63,9 +63,9 @@ function handleLoginRedirect() {
     <!-- Logo -->
     <div class="mb-8">
       <NuxtImg
-        src="/logos/flylive-logo-icon.webp"
+        src="/logos/flylive-logo-xl.webp"
         alt="FlyLive"
-        class="h-24 w-24 opacity-50"
+        class="size-48"
         width="96"
         height="96"
       />

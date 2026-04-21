@@ -4,7 +4,9 @@
 // Role: Infrastructure composable — owns asset download orchestration.
 // Pipeline: GATE → EXECUTE → REACT
 
-import type { EnqueueItem, EnqueueOptions, AssetInvalidatePayload } from '~/types/asset/asset'
+import type { AssetManifestItem } from '~/constants/assetManifest'
+import { MANUAL_ASSET_MANIFEST, PAGE_ASSET_MANIFESTS } from '~/constants/assetManifest'
+import type { AssetScope, EnqueueItem, EnqueueOptions, AssetInvalidatePayload } from '~/types/asset/asset'
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as assetDownloader from '~/services/assetDownloader'
 import * as cacheStorage from '~/services/cacheStorage'
@@ -14,68 +16,139 @@ import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[BootstrapAssets]')
 
-// ========================================
-// Composable
-// ========================================
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+    parsed.hash = ''
+    parsed.searchParams.sort()
+    return parsed.toString()
+  } catch {
+    return url.trim()
+  }
+}
+
+function toEnqueueItem(item: AssetManifestItem): EnqueueItem {
+  return {
+    url: normalizeUrl(item.url),
+    assetType: item.assetType,
+    priority: item.priority,
+    scope: item.scope,
+    groupKey: item.groupKey,
+    giftId: item.giftId,
+    badgeId: item.badgeId,
+    sortOrder: item.sortOrder,
+  }
+}
 
 /**
  * Orchestrates asset downloading after bootstrap.
- * Downloads gift animation assets (video/svga) into Cache Storage
+ * Downloads gift, badge, page, and manual assets into Cache Storage
  * with priority-based queuing and progress tracking.
- *
- * State lives in useAssetStore (ARCHITECTURE.md: "long-lived reactive
- * state belongs in stores, not composables").
  */
 export function useBootstrapAssets() {
   const bootstrapStore = useBootstrapStore()
   const assetStore = useAssetStore()
+  const route = useRoute()
 
-  // ========================================
-  // Actions
-  // ========================================
+  function getRouteScope(): AssetScope | null {
+    const path = route.path
+    if (path.startsWith('/mall')) return 'mall'
+    if (path.startsWith('/wallet')) return 'wallet'
+    if (path.startsWith('/badges')) return 'badge'
+    return null
+  }
+
+  function getPageAssets(): AssetManifestItem[] {
+    const scope = getRouteScope()
+    if (!scope) return []
+
+    if (scope === 'mall') return PAGE_ASSET_MANIFESTS.mall ?? []
+    if (scope === 'wallet') return PAGE_ASSET_MANIFESTS.wallet ?? []
+    if (scope === 'badge') return PAGE_ASSET_MANIFESTS.badges ?? []
+    return []
+  }
+
+  function getBootstrapAssets(): AssetManifestItem[] {
+    const items: AssetManifestItem[] = []
+
+    const badges = bootstrapStore.badges ?? []
+    for (const badge of badges) {
+      if (!badge.image_url) continue
+      items.push({
+        url: badge.image_url,
+        assetType: 'image',
+        scope: 'badge',
+        priority: 'normal',
+        badgeId: badge.id,
+        groupKey: 'bootstrap-badges',
+        sortOrder: 50,
+      })
+    }
+
+    const gifts = bootstrapStore.gifts ?? []
+    for (const gift of gifts) {
+      if (!gift.animation_url || gift.asset_type === 'image') continue
+      items.push({
+        url: resolveVideoUrl(gift.animation_url),
+        assetType: gift.asset_type === 'svga' ? 'svga' : 'video',
+        scope: 'gift',
+        priority: 'normal',
+        giftId: gift.id,
+        groupKey: 'bootstrap-gifts',
+        sortOrder: gift.sort_order,
+      })
+    }
+
+    return items
+  }
+
+  function buildAssetQueue(): EnqueueItem[] {
+    const allItems = [
+      ...MANUAL_ASSET_MANIFEST,
+      ...getBootstrapAssets(),
+      ...getPageAssets(),
+    ]
+
+    const seen = new Set<string>()
+    const queue: EnqueueItem[] = []
+
+    for (const item of allItems) {
+      const url = normalizeUrl(item.url)
+      if (seen.has(url)) continue
+      seen.add(url)
+      queue.push(toEnqueueItem({ ...item, url }))
+    }
+
+    queue.sort((a, b) => {
+      const priorityWeight = { critical: 0, high: 1, normal: 2, low: 3 } as const
+      const aPriority = priorityWeight[a.priority]
+      const bPriority = priorityWeight[b.priority]
+
+      if (aPriority !== bPriority) return aPriority - bPriority
+      return (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity)
+    })
+
+    return queue
+  }
 
   /**
-   * Start downloading gift assets after bootstrap.
-   *
-   * GATE: Skip if already downloading or no gifts
-   * EXECUTE: Init services, build queue, enqueue
-   * REACT: Subscribe to progress, update store
+   * Start downloading all relevant assets after bootstrap.
    */
   async function startAssetDownload(): Promise<void> {
-    // GATE — skip if already downloading
     if (assetStore.phase === 'downloading') {
       log.warn('Asset download already in progress')
       return
     }
 
-    // GATE — skip if no gifts to download
-    const gifts = bootstrapStore.giftCatalog
-    if (gifts.length === 0) {
-      assetStore.setPhase('complete')
-      return
-    }
-
-    // EXECUTE — initialize services
     await cacheStorage.initCacheStorage()
     await assetIndex.initAssetIndex()
 
-    // EXECUTE — build queue from gift catalog
-    const items: EnqueueItem[] = gifts
-      .filter((gift) => gift.animation_url && gift.asset_type !== 'image')
-      .map((gift, index) => ({
-        url: resolveVideoUrl(gift.animation_url!),
-        assetType: gift.asset_type === 'svga' ? 'svga' : 'video',
-        priority: index < ASSET_CONFIG.CRITICAL_COUNT ? 'critical' : 'normal',
-        giftId: gift.id,
-        sortOrder: gift.sort_order,
-      }))
-
+    const items = buildAssetQueue()
     if (items.length === 0) {
       assetStore.setPhase('complete')
       return
     }
 
-    // REACT — subscribe to progress updates for UI state
     assetDownloader.onProgress((progress) => {
       assetStore.setProgress(progress)
     })
@@ -84,9 +157,9 @@ export function useBootstrapAssets() {
       assetStore.setPhase('complete')
     })
 
-    // EXECUTE — enqueue items and start download processing
     assetStore.setPhase('downloading')
-    assetDownloader.enqueue(items)
+    await assetDownloader.enqueue(items)
+
     assetDownloader.start()
   }
 
@@ -99,45 +172,35 @@ export function useBootstrapAssets() {
 
   /**
    * Invalidate a cached asset and optionally re-download.
-   * Called from system.events.ts on 'asset:invalidate'.
-   *
-   * EXECUTE: Remove from cache + index
-   * REACT: Re-enqueue if critical
    */
   async function invalidateAsset(payload: AssetInvalidatePayload): Promise<void> {
     log.debug('Invalidating asset:', payload.url)
 
-    // EXECUTE — remove from cache storage and IndexedDB
     await cacheStorage.deleteAsset(payload.url)
     await assetIndex.remove(payload.url)
 
-    // REACT — re-download if critical (fire-and-forget)
     if (payload.priority === 'critical') {
       assetDownloader.enqueueManual(payload.url, {
         priority: 'critical',
-        assetType: 'video',
+        assetType: payload.badgeId ? 'image' : 'video',
+        scope: payload.badgeId ? 'badge' : 'gift',
+        giftId: payload.giftId,
+        badgeId: payload.badgeId,
       })
     }
 
     log.debug('Asset invalidated:', payload.url)
   }
 
-  /**
-   * Pause download processing.
-   */
   function pause(): void {
     assetDownloader.pause()
   }
 
-  /**
-   * Resume download processing.
-   */
   function resume(): void {
     assetDownloader.resume()
   }
 
   return {
-    // Actions
     startAssetDownload,
     enqueueAsset,
     invalidateAsset,

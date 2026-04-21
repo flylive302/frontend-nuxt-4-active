@@ -25,7 +25,6 @@ export interface Gift {
   thumbnail_url: string;
   animation_url: string | null;
   asset_type: GiftAssetType;
-  is_animated: boolean;
   category: GiftCategory;
   rarity: GiftRarity;
   sort_order: number;

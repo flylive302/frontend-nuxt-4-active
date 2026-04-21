@@ -62,10 +62,6 @@ export function useAuthActions() {
     authStore.setUser(data.user)
     authStore.setMsabToken(data.msab_token)
 
-    // Note: fetchBootstrap is NOT called here because the cookie isn't
-    // immediately available to the API client in the same request cycle.
-    // The bootstrap.client.ts plugin will fetch data after navigation.
-
     // REACT
     if (toast) toast.add({ title: 'Welcome back!', color: 'success' })
     if (redirectTo) {
@@ -165,15 +161,50 @@ export function useAuthActions() {
 
   /**
    * Starts the social login flow by fetching the OAuth redirect URL
-   * and redirecting the user to the provider.
+   * and opening the auth provider in a popup window.
    *
-   * EXECUTE: GET /auth/social/{provider}/redirect → window redirect
-   * REACT:   Show error toast if redirect fails
+   * Desktop: Popup keeps the main app alive (bootstrap + assets continue).
+   * Mobile/blocked: Falls back to window.location.href redirect.
+   *
+   * EXECUTE: GET /auth/social/{provider}/redirect → open popup or redirect
+   * REACT:   On popup result → store tokens, fetch user, navigate
    */
   async function startSocialLogin(provider: string): Promise<void> {
     try {
       const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
-      window.location.href = data.redirect_url
+
+      // Try popup first (keeps main app alive)
+      const { openPopup, listenForResult } = useOAuthPopup()
+      const popup = openPopup(data.redirect_url)
+
+      if (!popup) {
+        // Fallback: popup blocked → redirect (mobile, strict browsers)
+        window.location.href = data.redirect_url
+        return
+      }
+
+      // Listen for OAuth result from popup
+      const { handlePopupResult } = useOAuthCallback()
+
+      listenForResult(
+        popup,
+        // onResult — popup sent credentials
+        async (popupResult) => {
+          const callbackResult = await handlePopupResult(popupResult)
+
+          if (!callbackResult.success) {
+            if (toast) toast.add({ title: callbackResult.error ?? 'Authentication failed', color: 'error' })
+            return
+          }
+
+          // Navigate to home or profile completion
+          await navigateTo(callbackResult.redirectTo, { replace: true })
+        },
+        // onCancel — user closed the popup
+        () => {
+          // Silent — user intentionally closed the popup
+        },
+      )
     } catch {
       if (toast) toast.add({ title: `Failed to connect with ${provider}`, color: 'error' })
     }

@@ -41,7 +41,7 @@ defineProps<{
               {{ item.name }}
             </span>
           </div>
-          <ProfileBadge :txt="item.signature" :show-badge="false" />
+<!--          <ProfileBadge :txt="item.signature" :show-badge="false" />-->
         </NuxtLink>
       </template>
     </UCarousel>

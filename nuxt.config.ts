@@ -43,6 +43,7 @@ export default defineNuxtConfig({
             suppressWarnings: true
         },
         workbox: {
+            maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB - needed for large images in AppImages/dummy-card/
             // Disable navigateFallback - Cloudflare Pages handles SPA routing.
             // Without this, @vite-pwa auto-adds navigateFallback:'/' causing non-precached-url error.
             navigateFallback: undefined,

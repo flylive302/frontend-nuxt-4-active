@@ -47,28 +47,42 @@ const completeCallbacks = new Set<CompleteCallback>()
 let isPaused = false
 let isProcessing = false
 
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+    parsed.hash = ''
+    parsed.searchParams.sort()
+    return parsed.toString()
+  } catch {
+    return url.trim()
+  }
+}
+
 // ========================================
 // Queue Management
 // ========================================
 
 /**
  * Enqueue items for download.
- * Performs a batch cache pre-check to skip already-cached assets (1 cache.keys()
- * call instead of N serial cache.match() calls).
- * Items are sorted by priority (lower sortOrder = higher priority).
+ * Performs a batch cache pre-check to skip already-cached assets.
  */
 export async function enqueue(items: EnqueueItem[]): Promise<void> {
-  // Batch pre-check: get all cached URLs in one call
-  const cachedUrls = new Set(await cacheStorage.getCachedUrls())
+  const cachedUrls = new Set((await cacheStorage.getCachedUrls()).map(normalizeUrl))
 
   for (const item of items) {
-    // Skip if already cached, in queue, or active
-    if (cachedUrls.has(item.url) || queue.some((q) => q.url === item.url) || activeDownloads.has(item.url)) {
+    const normalizedUrl = normalizeUrl(item.url)
+
+    if (
+        cachedUrls.has(normalizedUrl) ||
+        queue.some((q) => normalizeUrl(q.url) === normalizedUrl) ||
+        activeDownloads.has(normalizedUrl)
+    ) {
       continue
     }
 
     const queueItem: DownloadQueueItem = {
       ...item,
+      url: normalizedUrl,
       status: 'pending',
       retryCount: 0,
     }
@@ -76,8 +90,12 @@ export async function enqueue(items: EnqueueItem[]): Promise<void> {
     queue.push(queueItem)
   }
 
-  // Sort queue by sortOrder (lower = higher priority)
-  queue.sort((a, b) => (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity))
+  queue.sort((a, b) => {
+    const priorityWeight = { critical: 0, high: 1, normal: 2, low: 3 } as const
+    const priorityDiff = priorityWeight[a.priority] - priorityWeight[b.priority]
+    if (priorityDiff !== 0) return priorityDiff
+    return (a.sortOrder ?? Infinity) - (b.sortOrder ?? Infinity)
+  })
 
   progress.total = queue.length + activeDownloads.size
   notifyProgress()
@@ -87,17 +105,19 @@ export async function enqueue(items: EnqueueItem[]): Promise<void> {
  * Manually enqueue a single asset.
  */
 export function enqueueManual(url: string, options: EnqueueOptions): void {
-  enqueue([
+  void enqueue([
     {
       url,
       assetType: options.assetType,
       priority: options.priority,
+      scope: options.scope,
+      groupKey: options.groupKey,
       giftId: options.giftId,
+      badgeId: options.badgeId,
       sortOrder: options.priority === 'critical' ? 0 : 100,
     },
   ])
 
-  // Start processing if not already
   if (!isProcessing) {
     start()
   }
@@ -117,7 +137,6 @@ export function clear(): void {
     bytesTotal: 0,
   }
   notifyProgress()
-
 }
 
 /**
@@ -144,71 +163,46 @@ export function resetAll(): void {
 // Download Processing
 // ========================================
 
-/**
- * Start processing the download queue.
- */
 export function start(): void {
   if (isProcessing) return
   isProcessing = true
   isPaused = false
-
-  processQueue()
+  void processQueue()
 }
 
-/**
- * Pause download processing.
- */
 export function pause(): void {
   isPaused = true
-
 }
 
-/**
- * Resume download processing.
- */
 export function resume(): void {
   isPaused = false
-
-  processQueue()
+  void processQueue()
 }
 
-
-
-/**
- * Process the next items in the queue.
- */
 async function processQueue(): Promise<void> {
   if (isPaused) return
 
-  // Check for completion
   if (queue.length === 0 && activeDownloads.size === 0) {
     isProcessing = false
     notifyComplete()
-
     return
   }
 
-  // Fill up to MAX_CONCURRENT active downloads
   while (
-    activeDownloads.size < ASSET_CONFIG.MAX_CONCURRENT &&
-    queue.length > 0 &&
-    !isPaused
-  ) {
+      activeDownloads.size < ASSET_CONFIG.MAX_CONCURRENT &&
+      queue.length > 0 &&
+      !isPaused
+      ) {
     const item = queue.shift()
     if (!item) break
 
-    // Start download
     activeDownloads.add(item.url)
-    downloadItem(item)
+    void downloadItem(item)
   }
 }
 
-
 /**
  * Download a single item.
- *
- * LT-1: Delegates to the Service Worker via postMessage when available.
- * Falls back to main-thread fetch when SW is unavailable (SSR, dev, or unsupported).
  */
 async function downloadItem(item: DownloadQueueItem): Promise<void> {
   item.status = 'downloading'
@@ -216,19 +210,20 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
   notifyProgress()
 
   try {
-    // LT-1: Try Service Worker delegation first
     const sw = navigator?.serviceWorker?.controller
     if (sw) {
       const result = await downloadViaSW(sw, item.url)
 
       if (result.success) {
-        // Store metadata in IndexedDB (still on main thread — lightweight)
         const metadata: AssetMetadata = {
           url: item.url,
           assetType: item.assetType,
           priority: item.priority,
+          scope: item.scope,
+          groupKey: item.groupKey,
           sizeBytes: result.sizeBytes ?? 0,
           giftId: item.giftId,
+          badgeId: item.badgeId,
           downloadedAt: Date.now(),
           lastAccessedAt: Date.now(),
           retryCount: item.retryCount,
@@ -236,12 +231,11 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
         await assetIndex.upsert(metadata)
         handleSuccess(item, result.sizeBytes)
         return
-      } else {
-        throw new Error(result.error ?? 'SW download failed')
       }
+
+      throw new Error(result.error ?? 'SW download failed')
     }
 
-    // Fallback: main-thread fetch (no SW available)
     const response = await fetch(item.url)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
@@ -249,22 +243,22 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
 
     const blob = await response.blob()
 
-    // Validate size if Content-Length was provided
     const contentLength = response.headers.get('Content-Length')
     if (contentLength && blob.size !== parseInt(contentLength, 10)) {
       throw new Error('Size mismatch - download may be corrupted')
     }
 
-    // Store in cache
     await cacheStorage.putAsset(item.url, blob)
 
-    // Store metadata
     const metadata: AssetMetadata = {
       url: item.url,
       assetType: item.assetType,
       priority: item.priority,
+      scope: item.scope,
+      groupKey: item.groupKey,
       sizeBytes: blob.size,
       giftId: item.giftId,
+      badgeId: item.badgeId,
       downloadedAt: Date.now(),
       lastAccessedAt: Date.now(),
       retryCount: item.retryCount,
@@ -277,19 +271,15 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
   }
 }
 
-/**
- * Delegate download to the Service Worker and wait for result.
- * Returns a promise that resolves with the SW's response message.
- */
 function downloadViaSW(
-  sw: ServiceWorker,
-  url: string,
+    sw: ServiceWorker,
+    url: string,
 ): Promise<{ success: boolean; sizeBytes?: number; error?: string }> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       navigator.serviceWorker.removeEventListener('message', handler)
       resolve({ success: false, error: 'SW download timeout' })
-    }, 30_000) // 30s timeout
+    }, 30_000)
 
     function handler(event: MessageEvent) {
       if (event.data?.type === 'ASSET_DOWNLOAD_RESULT' && event.data.url === url) {
@@ -308,9 +298,6 @@ function downloadViaSW(
   })
 }
 
-/**
- * Handle successful download.
- */
 function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {
   item.status = 'complete'
   activeDownloads.delete(item.url)
@@ -319,51 +306,38 @@ function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {
     progress.bytesDownloaded += sizeBytes
   }
   notifyProgress()
-
-  processQueue()
+  void processQueue()
 }
 
-/**
- * Handle download error with retry logic.
- */
 function handleError(item: DownloadQueueItem, error: Error): void {
   item.retryCount++
   activeDownloads.delete(item.url)
 
   if (item.retryCount < ASSET_CONFIG.MAX_RETRIES) {
-    // Re-queue for retry
     item.status = 'pending'
     queue.push(item)
     log.warn('Retrying download:', item.url, `(attempt ${item.retryCount + 1})`)
-
-    // Delay before retry
-    setTimeout(() => processQueue(), ASSET_CONFIG.RETRY_DELAY_MS * item.retryCount)
-  } else {
-    // Max retries exceeded
-    item.status = 'failed'
-    item.error = error.message
-    progress.failed++
-    notifyProgress()
-    log.error('Download failed:', item.url, error.message)
-    processQueue()
+    setTimeout(() => void processQueue(), ASSET_CONFIG.RETRY_DELAY_MS * item.retryCount)
+    return
   }
+
+  item.status = 'failed'
+  item.error = error.message
+  progress.failed++
+  notifyProgress()
+  log.error('Download failed:', item.url, error.message)
+  void processQueue()
 }
 
 // ========================================
 // Subscriptions
 // ========================================
 
-/**
- * Subscribe to progress updates.
- */
 export function onProgress(callback: ProgressCallback): () => void {
   progressCallbacks.add(callback)
   return () => progressCallbacks.delete(callback)
 }
 
-/**
- * Subscribe to completion event.
- */
 export function onComplete(callback: CompleteCallback): () => void {
   completeCallbacks.add(callback)
   return () => completeCallbacks.delete(callback)
@@ -381,23 +355,14 @@ function notifyComplete(): void {
 // Getters
 // ========================================
 
-/**
- * Get current progress.
- */
 export function getProgress(): DownloadProgress {
   return { ...progress }
 }
 
-/**
- * Check if download is in progress.
- */
 export function isDownloading(): boolean {
   return isProcessing && !isPaused
 }
 
-/**
- * Get queue length.
- */
 export function getQueueLength(): number {
   return queue.length
 }

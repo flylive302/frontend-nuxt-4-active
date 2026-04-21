@@ -52,7 +52,7 @@ const followingLink = computed(() => {
     >
       {{ formatCurrency(following) }} <br> Following
     </NuxtLink>
-    <p v-else class="text-muted/60 cursor-not-allowed">
+    <p v-else class="cursor-not-allowed">
       {{ formatCurrency(following) }} <br> Following
     </p>
 
@@ -67,7 +67,7 @@ const followingLink = computed(() => {
       {{ formatCurrency(followers) }} <br> Followers
     </NuxtLink>
 
-    <p v-else class="text-muted/60 cursor-not-allowed">
+    <p v-else class="cursor-not-allowed">
       {{ formatCurrency(followers) }} <br> Followers
     </p>
 

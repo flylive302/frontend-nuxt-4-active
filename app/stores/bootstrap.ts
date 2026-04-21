@@ -6,9 +6,10 @@
 import { defineStore } from 'pinia'
 import type {
   BootstrapConfig,
-  LevelBadge,
+  LevelBadge, LevelConfig,
 } from '~/types/user/bootstrap'
 import type { Gift } from '~/types/gift/gift'
+import type { Badge } from "~/types/progression/badge";
 
 // ========================================
 // Store Definition
@@ -25,17 +26,21 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   /** Error message if bootstrap failed */
   const error = ref<string | null>(null)
 
-  /** Level and economy configuration */
-  const config = ref<BootstrapConfig | null>(null)
+  const apiVersion = ref<string | null>('v1');
+  const roomOwnerPercentage = ref<number | null>(3);
+  const receiverPercentage = ref<number | null>(30);
+  const wealthLevels = ref<LevelConfig[] | null>([]);
+  const charmLevels = ref<LevelConfig[] | null>([]);
+  const roomLevels = ref<LevelConfig[] | null>([]);
+  const badges = ref<Badge[] | null>([]);
+  const gifts = ref<Gift[] | null>([]);
+  const vapid_public_key = ref<string | null>();
 
   /** Gift catalog (accumulates as user scrolls) */
   const giftCatalog = ref<Gift[]>([])
 
-  /** Total gift count from server */
+  /** Total gift count from the server */
   const giftTotal = ref<number>(0)
-
-  /** Level badges for XP-to-badge lookup */
-  const levelBadges = ref<LevelBadge[]>([])
 
   /** Last bootstrap timestamp */
   const lastBootstrapAt = ref<number | null>(null)
@@ -44,16 +49,12 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   // Getters
   // ========================================
 
-  const isReady = computed(() => phase.value === 'complete')
-  const isLoading = computed(() => phase.value === 'loading')
-  const hasError = computed(() => phase.value === 'error')
-
   /**
    * Check if config needs refresh based on TTL.
    */
   const needsRefresh = computed(() => {
     if (!lastBootstrapAt.value) return true
-    const STALE_TIME = 5 * 60 * 1000 // 5 minutes
+    const STALE_TIME = 50 * 60 * 1000 // 5 minutes
     return Date.now() - lastBootstrapAt.value > STALE_TIME
   })
 
@@ -61,26 +62,14 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    * Badge map for O(1) lookup by ID.
    */
   const badgeMap = computed(() => {
-    const map = new Map<number, LevelBadge>()
-    for (const badge of levelBadges.value) {
-      map.set(badge.id, badge)
+    const map = new Map<number, Badge>()
+    if (badges.value) {
+      for (const badge of badges.value) {
+        map.set(badge.id, badge)
+      }
     }
     return map
   })
-
-  /**
-   * Pre-sorted wealth level configs (ascending by required_xp).
-   */
-  const sortedWealthLevels = computed(() =>
-    config.value ? [...config.value.wealth_levels].sort((a, b) => a.required_xp - b.required_xp) : []
-  )
-
-  /**
-   * Pre-sorted charm level configs (ascending by required_xp).
-   */
-  const sortedCharmLevels = computed(() =>
-    config.value ? [...config.value.charm_levels].sort((a, b) => a.required_xp - b.required_xp) : []
-  )
 
   /**
    * Persistent set of gift IDs for O(1) deduplication.
@@ -92,7 +81,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   // ========================================
 
   /**
-   * Set bootstrap phase.
+   * Set the bootstrap phase.
    */
   function setPhase(newPhase: typeof phase.value): void {
     phase.value = newPhase
@@ -102,7 +91,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   }
 
   /**
-   * Set error message.
+   * Set the error message.
    */
   function setError(message: string | null): void {
     error.value = message
@@ -112,8 +101,15 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    * Set config and level badges from bootstrap response.
    */
   function setConfig(newConfig: BootstrapConfig): void {
-    config.value = newConfig
-    levelBadges.value = newConfig.level_badges
+    apiVersion.value = newConfig.api_version
+    roomOwnerPercentage.value = newConfig.room_owner_percentage
+    receiverPercentage.value = newConfig.receiver_percentage
+    wealthLevels.value = newConfig.wealth_levels
+    charmLevels.value = newConfig.charm_levels
+    roomLevels.value = newConfig.room_levels
+    badges.value = newConfig.badges
+    gifts.value = newConfig.gifts
+    vapid_public_key.value = newConfig.vapid_public_key
   }
 
   /**
@@ -136,16 +132,33 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   /**
    * Get badge by ID.
    */
-  function getBadgeById(id: number): LevelBadge | null {
-    return badgeMap.value.get(id) ?? null
+  function getBadgeById(id: number): Badge | null {
+    return badgeMap.value?.get(id) ?? null
+  }
+
+  /**
+   * Clear all bootstrap configuration fields.
+   */
+  function clearBootstrapConfig(): void {
+    apiVersion.value = null
+    roomOwnerPercentage.value = null
+    receiverPercentage.value = null
+    wealthLevels.value = null
+    charmLevels.value = null
+    roomLevels.value = null
+    badges.value = null
+    gifts.value = null
+    vapid_public_key.value = null
   }
 
   /**
    * Invalidate config (force refresh on next boot).
    */
+
   function invalidateConfig(type: 'levels' | 'badges' | 'gifts' | 'all'): void {
-    if (type === 'all' || type === 'levels') {
+    if (type === 'all') {
       lastBootstrapAt.value = null
+      clearBootstrapConfig()
     }
     if (type === 'all' || type === 'gifts') {
       giftCatalog.value = []
@@ -158,10 +171,10 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   function reset(): void {
     phase.value = 'idle'
     error.value = null
-    config.value = null
+    clearBootstrapConfig()
     giftCatalog.value = []
     giftTotal.value = 0
-    levelBadges.value = []
+    badges.value = []
     lastBootstrapAt.value = null
   }
 
@@ -171,22 +184,24 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
 
   return {
     // State
-    phase,
     error,
-    config,
+    apiVersion,
+    gifts,
     giftCatalog,
     giftTotal,
-    levelBadges,
+    roomOwnerPercentage,
+    receiverPercentage,
+    wealthLevels,
+    charmLevels,
+    roomLevels,
+    badges,
+    vapid_public_key,
     lastBootstrapAt,
 
     // Getters
-    isReady,
-    isLoading,
-    hasError,
+    phase,
     needsRefresh,
     badgeMap,
-    sortedWealthLevels,
-    sortedCharmLevels,
 
     // Setters
     setPhase,
@@ -200,6 +215,18 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   }
 }, {
   persist: {
-    pick: ['config', 'levelBadges', 'lastBootstrapAt'],
+    pick: [
+      'gifts',
+      'giftCatalog',
+      'giftTotal',
+      'roomOwnerPercentage',
+      'receiverPercentage',
+      'wealthLevels',
+      'charmLevels',
+      'roomLevels',
+      'badges',
+      'vapid_public_key',
+      'lastBootstrapAt'
+    ],
   },
 })
