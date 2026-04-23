@@ -15,11 +15,13 @@ const props = defineProps<{
 
 const audioStore = useRoomAudioStore();
 
-// Resolve live participant data; fall back to message snapshot for departed users
+// Resolve live participant data. The chat payload is ID-only; if the user
+// has left the room their participant entry is gone and we render a generic
+// fallback (acceptable for ephemeral chat).
 const participant = computed(() => audioStore.participants.get(props.message.userId));
-const displayName = computed(() => participant.value?.name ?? props.message.userName);
-const displayAvatar = computed(() => participant.value?.avatar ?? props.message.avatar);
-const displayFrame = computed(() => participant.value?.frame ?? props.message.frame);
+const displayName = computed(() => participant.value?.name ?? 'Unknown');
+const displayAvatar = computed(() => participant.value?.avatar ?? undefined);
+const displayFrame = computed(() => participant.value?.frame ?? undefined);
 
 // Format timestamp to relative time
 const formattedTime = computed(() => {

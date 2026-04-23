@@ -18,7 +18,7 @@ const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password'
 } as const
 
-const { login } = useAuth()
+const { login } = useAuthActions()
 const { countries } = useCountries()
 
 const form = ref<Form<LoginFormState> | null>(null)

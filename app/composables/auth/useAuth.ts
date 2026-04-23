@@ -227,8 +227,3 @@ export function useAuthActions() {
     startSocialLogin,
   }
 }
-
-/**
- * @deprecated Use `useAuthActions()` instead. This alias exists for backward compatibility.
- */
-export const useAuth = useAuthActions

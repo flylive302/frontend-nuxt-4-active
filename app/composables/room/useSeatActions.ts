@@ -83,23 +83,42 @@ export function useSeatActions({
       return false;
     }
 
-    // Update local seat state for the current user
-    // (Socket.IO's socket.to() excludes sender, so we update locally)
+    // Update local seat state for the current user.
+    // (Socket.IO's socket.to() excludes sender, so we never receive a
+    //  seat:updated event for our own action — we must update locally.)
     if (response.success && authStore.user) {
-      // Ensure current user is in participants map for updateSeat lookup
-      const currentUser = userToParticipant({
-        ...authStore.user,
-        email: null,
-      } as MinimalUser, { isSpeaker: true, seatIndex });
-      audioStore.addParticipant(currentUser);
+      // Prefer the canonical participant already in the map (kept fresh by
+      // profile updates). If absent for any reason — e.g. a rejoin race
+      // where the local user hasn't been re-added yet — fall back to
+      // building one from authStore so the seat ALWAYS renders. This
+      // backstop also re-seeds the participants map.
+      let participant = audioStore.participants.get(authStore.user.id);
+      if (!participant) {
+        participant = userToParticipant(
+          { ...authStore.user, email: null } as MinimalUser,
+          { isSpeaker: true, seatIndex },
+        );
+        audioStore.addParticipant(participant);
+      }
+
+      // If the user was already on another seat, clear that slot first
+      // so the local UI doesn't show the user occupying both seats.
+      // Other clients receive seat:cleared from the server.
+      const previousSeatIndex = seatsStore.seats.findIndex(
+        (s) => s.user?.id === authStore.user!.id,
+      );
+      if (previousSeatIndex >= 0 && previousSeatIndex !== seatIndex) {
+        seatsStore.clearSeat(previousSeatIndex);
+      }
+
+      participant.isSpeaker = true;
+      participant.seatIndex = seatIndex;
       seatsStore.updateSeat(
         seatIndex,
-        currentUser,
+        participant,
         false,
         audioStore.audioState.activeSpeakerIds,
       );
-      currentUser.isSpeaker = true;
-      currentUser.seatIndex = seatIndex;
     }
 
     return response.success ?? false;

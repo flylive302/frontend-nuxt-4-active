@@ -19,7 +19,7 @@ const ROUTES = {
   LOGIN: '/log-in',
 } as const
 
-const { register } = useAuth()
+const { register } = useAuthActions()
 const { countries } = useCountries()
 
 const formRef = ref<Form<RegistrationFormData> | null>(null)

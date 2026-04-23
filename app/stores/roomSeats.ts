@@ -113,10 +113,10 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     inviteModeSeat.value = null;
   }
 
-  function openSeat(seatId: number) {
+  function openSeat(seatIndex: number) {
     activeSeat.value = null;
     nextTick(() => {
-      activeSeat.value = seatId;
+      activeSeat.value = seatIndex;
     });
   }
 

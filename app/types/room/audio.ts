@@ -250,9 +250,6 @@ export interface ChatMessagePayload {
 export interface ChatMessageEvent {
   id: string;
   userId: number;
-  userName: string;
-  avatar?: string;
-  frame?: string;
   content: string;
   type: string;
   timestamp: number;

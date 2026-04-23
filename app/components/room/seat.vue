@@ -32,9 +32,9 @@ const isActiveSpeaker = computed(() => seat.value?.isActive ?? false);
 // Whether this seat's user is muted
 const isMuted = computed(() => seat.value?.isMuted ?? false);
 
-// Open the seat drawer
+// Open the seat drawer (store holds 0-indexed seat index)
 function openDrawer() {
-  seatsStore.openSeat(props.seatId);
+  seatsStore.openSeat(seatIndex.value);
 }
 
 // Avatar source - only set when seat is occupied

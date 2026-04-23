@@ -1,6 +1,5 @@
 import { io } from 'socket.io-client';
 import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
-import type {BootstrapResponse, BootstrapUser} from '~/types/user/bootstrap';
 import { createLogger } from '~/utils/logger';
 import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
 
@@ -303,27 +302,16 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
     // ── Auth: Force-Disconnect Listener ──────────────────────────────
     // Fired by MSAB when the user is blocked/suspended by an admin.
-    // Must be on every socket — cannot rely on reconnect since
-    // the server disconnects immediately after emitting.
+    // The infrastructure layer just forwards the payload — REACT logic
+    // (suspension state, socket teardown, navigation) lives in
+    // useAuthLifecycle so this file stays infrastructure-only.
+    const { handleForceDisconnect } = useAuthLifecycle();
     socket.value.on('auth:force_disconnect', (payload: {
       reason: string;
       blocked_until?: string | null;
       blocked_reason?: string | null;
     }) => {
-      log.warn('Force-disconnected by server:', payload.reason);
-
-      // Store suspension info for the /blocked page
-      authStore.setSuspensionInfo({
-        reason: payload.blocked_reason ?? 'Your account has been suspended.',
-        until: payload.blocked_until ?? null,
-      });
-
-      // Disconnect socket (prevent auto-reconnect attempts)
-      disconnect();
-
-      // Clear auth state and redirect to blocked page
-      authStore.logout();
-      navigateTo('/blocked');
+      void handleForceDisconnect(payload);
     });
 
     // ── Profile Update → Non-blocking MSAB token refresh ─────────────
@@ -339,6 +327,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
   /**
    * Disconnect from the audio server and clean up resources.
+   * Clears all module-level singleton state so the next login starts fresh.
    */
   function disconnect() {
     if (socket.value) {
@@ -350,6 +339,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = null;
     _connectedUrl = null;
     _reconnectCallback = null;
+    _hiddenSince = null;
     // Reset handlers so they can be re-registered on next connection
     resetRealtimeHandlers();
     log.debug('Disconnected by client');

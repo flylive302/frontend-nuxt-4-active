@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SocialProvider } from '~/types/user/auth'
 
-const { startSocialLogin } = useAuth()
+const { startSocialLogin } = useAuthActions()
 
 const isLoading = ref<SocialProvider | null>(null)
 

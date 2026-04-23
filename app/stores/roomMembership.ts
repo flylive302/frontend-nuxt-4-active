@@ -1,13 +1,12 @@
 // ========================================
-// Room Membership Store (Slimmed Down)
+// Room Membership Store
 // ========================================
 //
-// This store contains STATE and COMPUTED ONLY.
-// All actions are in composables: app/composables/room/
+// State + primitive setters only. Conditional and event-routing logic lives
+// in app/events/room-membership.events.ts (REACT layer).
 // ========================================
 
 import { defineStore } from 'pinia'
-import { createLogger } from '~/utils/logger'
 import type {
   RoomMember,
   RoomJoinRequest,
@@ -28,8 +27,6 @@ import { createPaginatedList } from '~/types/shared'
 // ========================================
 
 export const useRoomMembershipStore = defineStore('roomMembership', () => {
-  const log = createLogger('[RoomMembershipStore]')
-
   // ========================================
   // State
   // ========================================
@@ -108,119 +105,70 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   }
 
   // ========================================
-  // Socket Event Handlers
+  // Primitive Setters (called by REACT layer in events/)
   // ========================================
 
-  /**
-   * Check if a room_id matches the current room context.
-   */
+  /** True when the given roomId matches the room currently being viewed. */
   function isCurrentRoom(roomId: number): boolean {
     return roomId === currentRoomId.value
   }
 
-  /**
-   * Handle member.joined event - add new member to list.
-   */
-  function onMemberJoined(data: { room_id: number; member: RoomMember }): void {
-    if (!isCurrentRoom(data.room_id)) return
-    
-    // Add member if not already in list
-    const exists = members.value.items.some(m => m.user_id === data.member.user_id)
+  /** Add a member to the list if not already present. */
+  function addMember(member: RoomMember): void {
+    const exists = members.value.items.some(m => m.user_id === member.user_id)
     if (!exists) {
-      members.value.items.push(data.member)
+      members.value.items.push(member)
     }
   }
 
-  /**
-   * Handle member.left event - remove member from list.
-   */
-  function onMemberLeft(data: { room_id: number; user_id: number }): void {
-    if (!isCurrentRoom(data.room_id)) return
-    
-    members.value.items = members.value.items.filter(m => m.user_id !== data.user_id)
+  /** Remove a member by user id. */
+  function removeMember(userId: number): void {
+    members.value.items = members.value.items.filter(m => m.user_id !== userId)
   }
 
-  /**
-   * Handle member.removed event — remove member from list.
-   * Unified handler for both instant removal and timed/permanent bans.
-   */
-  function onMemberRemoved(data: { room_id: number; user_id: number }): void {
-    if (!isCurrentRoom(data.room_id)) return
-    
-    members.value.items = members.value.items.filter(m => m.user_id !== data.user_id)
-  }
-
-  /**
-   * Handle member.role_changed event - update member's role.
-   */
-  function onMemberRoleChanged(data: { room_id: number; user_id: number; new_role: string }): void {
-    if (!isCurrentRoom(data.room_id)) return
-    
-    const member = members.value.items.find(m => m.user_id === data.user_id)
+  /** Update a member's role. Also updates myMembership when it's the current user. */
+  function updateMemberRole(userId: number, newRole: RoomMember['role']): void {
+    const member = members.value.items.find(m => m.user_id === userId)
     if (member) {
-      member.role = data.new_role as RoomMember['role']
+      member.role = newRole
     }
-    
-    // Also update myMembership if this is the current user
-    if (myMembership.value && myMembership.value.user_id === data.user_id) {
-      myMembership.value = {
-        ...myMembership.value,
-        role: data.new_role as RoomMember['role'],
-      }
+    if (myMembership.value && myMembership.value.user_id === userId) {
+      myMembership.value = { ...myMembership.value, role: newRole }
     }
   }
 
-  /**
-   * Handle join_request_approved event - set current user as member.
-   * @param currentViewedRoomId - The room ID the user is currently viewing (from roomStore)
-   */
-  function onJoinRequestApproved(data: { room_id: number; user_id: number }, currentViewedRoomId?: number | null): void {
-    log.debug('onJoinRequestApproved called with:', data, 'currentViewedRoomId:', currentViewedRoomId)
-    
-    // Clear pending request (with null check)
-    myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== data.room_id)
-    
-    // Set myMembership if it's for the current room
-    const roomMatch = isCurrentRoom(data.room_id)
-    if (roomMatch) {
-      log.debug('Setting myMembership for current room')
-      myMembership.value = {
-        id: 0,
-        room_id: data.room_id,
-        user_id: data.user_id,
-        role: 'member',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        joined_at: new Date().toISOString(),
-        user: null as unknown as RoomMember['user'], // Placeholder — refetched from API
-      } as RoomMember
-      log.debug('myMembership set to:', myMembership.value)
-    } else {
-      log.debug('Room ID mismatch, not setting myMembership. data.room_id:', data.room_id, 'currentRoomId:', currentRoomId.value)
+  /** Replace myMembership directly. */
+  function setMyMembership(member: RoomMember | null): void {
+    myMembership.value = member
+  }
+
+  /** Drop a pending join request from "my requests" list by room id. */
+  function clearMyJoinRequest(roomId: number): void {
+    myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== roomId)
+  }
+
+  /** Drop a pending join request from the owner's request list by request id. */
+  function removeOwnerJoinRequest(requestId: number): void {
+    joinRequests.value.items = joinRequests.value.items.filter(r => r.id !== requestId)
+  }
+
+  /** Insert a join request at the front of the owner's list (no duplicates). */
+  function addOwnerJoinRequest(request: RoomJoinRequest): void {
+    if (!joinRequests.value.items.some(r => r.id === request.id)) {
+      joinRequests.value.items.unshift(request)
     }
   }
 
-  /**
-   * Handle join_request_rejected event - clear pending request.
-   */
-  function onJoinRequestRejected(data: { room_id: number }): void {
-    log.debug('onJoinRequestRejected called with:', data)
-    myJoinRequests.value.items = myJoinRequests.value.items.filter(r => r && r.room_id !== data.room_id)
+  /** Drop a received invitation by invitation id. */
+  function removeReceivedInvitation(invitationId: number): void {
+    receivedInvitations.value.items = receivedInvitations.value.items.filter(i => i.id !== invitationId)
   }
 
-  /**
-   * Handle join_request_cancelled event - remove from owner's pending requests.
-   */
-  function onJoinRequestCancelled(data: { room_id: number; request_id: number; user_id: number }): void {
-    if (!isCurrentRoom(data.room_id)) return
-    joinRequests.value.items = joinRequests.value.items.filter(r => r.id !== data.request_id)
-  }
-
-  /**
-   * Handle invitation_cancelled event - remove from user's received invitations.
-   */
-  function onInvitationCancelled(data: { room_id: number; invitation_id: number }): void {
-    receivedInvitations.value.items = receivedInvitations.value.items.filter(i => i.id !== data.invitation_id)
+  /** Insert a received invitation at the front of the list (no duplicates). */
+  function addReceivedInvitation(invitation: RoomInvitation): void {
+    if (!receivedInvitations.value.items.some(i => i.id === invitation.id)) {
+      receivedInvitations.value.items.unshift(invitation)
+    }
   }
 
   // ========================================
@@ -243,22 +191,22 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     // Computed
     pendingRequestCount,
 
-    // Actions
+    // Setters
     setRoom,
     resetLists,
     reset,
     resetMembers,
     setMembersLoading,
     setMembersError,
-
-    // Socket Event Handlers
-    onMemberJoined,
-    onMemberLeft,
-    onMemberRemoved,
-    onMemberRoleChanged,
-    onJoinRequestApproved,
-    onJoinRequestRejected,
-    onJoinRequestCancelled,
-    onInvitationCancelled,
+    isCurrentRoom,
+    addMember,
+    removeMember,
+    updateMemberRole,
+    setMyMembership,
+    clearMyJoinRequest,
+    removeOwnerJoinRequest,
+    addOwnerJoinRequest,
+    removeReceivedInvitation,
+    addReceivedInvitation,
   }
 })

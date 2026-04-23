@@ -9,7 +9,7 @@ const { getLevelFromXp } = useLevelLookup()
 const roomStore = useRoomStore()
 const seatsStore = useRoomSeatsStore()
 const authStore = useAuthStore()
-const { takeSeat, leaveSeat, startAudio, stopAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
+const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
 const { myMembership } = useRoomMembers()
 
 const isLoading = ref(false)
@@ -22,13 +22,13 @@ watch(() => seatsStore.activeSeat, (newSeat) => {
   isOpen.value = newSeat !== null
 })
 
-const seatId = computed(() => seatsStore.activeSeat)
+// activeSeat is the 0-indexed seat index, or null when no seat is selected
+const seatIndex = computed(() => seatsStore.activeSeat)
 
-// seatIndex is 0-indexed for the store/API
-const seatIndex = computed(() => (seatId.value ?? 1) - 1)
-
-// Get current seat data
-const currentSeat = computed(() => seatsStore.seats[seatIndex.value])
+// Get current seat data (null when no seat is selected)
+const currentSeat = computed(() =>
+  seatIndex.value !== null ? seatsStore.seats[seatIndex.value] : null
+)
 
 // Check if the current user occupies this seat
 const isCurrentUserSeat = computed(() => {
@@ -49,43 +49,27 @@ const { isRoomOwner } = useRoomPermissions()
 
 const isVip = computed(() => (currentSeat.value?.user?.vip_level ?? 0) > 0)
 
-// Check if current user is already seated somewhere else
-const currentUserSeatIndex = computed(() => {
-  return seatsStore.seats.findIndex(seat => seat.user?.id === authStore.user?.id)
-})
-
-const isUserSeatedElsewhere = computed(() => {
-  const idx = currentUserSeatIndex.value
-  return idx !== -1 && idx !== seatIndex.value
-})
-
-
 // Handle starting invite mode
 function handleStartInvite() {
+  if (seatIndex.value === null) return
   seatsStore.startInviteMode(seatIndex.value)
   isOpen.value = false // Explicitly close drawer
 }
 
 /**
- * Handle taking a seat and starting to speak
+ * Take a seat. If the user already occupies another seat, the server's
+ * Lua TAKE_SEAT_SCRIPT atomically moves them — we never call leaveSeat
+ * first, which would leave the user briefly seatless and risk total
+ * loss if the take then races and fails.
  */
 async function handleTakeSeat() {
-  if (!seatId.value) return
+  if (seatIndex.value === null) return
 
   isLoading.value = true
   try {
-    // If user is seated elsewhere, leave that seat first
-    if (isUserSeatedElsewhere.value) {
-      await leaveSeat()
-    }
-
-    // Take the new seat
     const success = await takeSeat(seatIndex.value)
-
     if (success) {
-      // Start audio so everyone can hear the user
       await startAudio()
-      // Close the drawer
       seatsStore.closeSeat()
     }
   } catch (error) {
@@ -95,15 +79,12 @@ async function handleTakeSeat() {
   }
 }
 
-/**
- * Handle leaving the current seat
- */
 async function handleLeaveSeat() {
   isLoading.value = true
   try {
+    // leaveSeat() in useSeatActions already calls stopAudio()
     const success = await leaveSeat()
     if (success) {
-      stopAudio()
       seatsStore.closeSeat()
     }
   } catch (error) {
@@ -138,6 +119,7 @@ async function handleToggleMute() {
  * Handle lock/unlock toggle (owner only)
  */
 async function handleToggleLock() {
+  if (seatIndex.value === null) return
   isLoading.value = true
   try {
     if (isSeatLocked.value) {
@@ -276,16 +258,15 @@ const charmLevel = computed(() =>
 
         <div class="flex justify-center gap-2 mt-12">
           <div class="flex gap-2">
-            <!-- Take Seat / Move to Seat button - only show if seat is empty (not locked) or user wants to move -->
+            <!-- Take Seat button — only when seat is empty and unlocked -->
             <UButton
               v-if="(isSeatEmpty && !isSeatLocked)"
-              class="rounded-xl text-white" 
-              size="xl" variant="solid" square color="success" 
+              class="rounded-xl text-white"
+              size="xl" variant="solid" square color="success"
               :loading="isLoading"
               :disabled="!isAudioReady"
               @click="handleTakeSeat"
             >
-              <!-- {{ isUserSeatedElsewhere ? 'Move to Seat' : 'Take Seat' }} {{ seatId }} -->
               <template v-if="!isAudioReady">(Loading...)</template>
               <UIcon v-else name="i-lucide-plane-takeoff" size="xl" class="size-6" />
             </UButton>
@@ -343,14 +324,6 @@ const charmLevel = computed(() =>
             />
           </div>
         </div>
-<!-- 
-        <UButton
-          color="neutral" variant="soft" icon="i-lucide-x"
-          class="justify-center mt-2 w-full shadow-md shadow-neutral-800" 
-          @click="isOpen = false"
-        >
-          Cancel
-        </UButton> -->
 
       </div>
     </template>
