@@ -77,23 +77,28 @@ const seatGiftTotal = computed(() => {
   >
     <!-- Avatar with audio indicators -->
     <div class="relative w-full">
-      <!-- Occupied seat: show user avatar with animation -->
-      <UserAvatar v-if="!isEmpty" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc" class="relative z-20" />
-      <!-- Locked empty seat: show lock image -->
-      <UserAvatar
-        v-else-if="isLocked"
-        img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
-        class="relative z-20"
-      />
-      <!-- Empty seat: show default placeholder -->
-      <UserAvatar v-else class="relative z-20" />
+      <Transition name="seat-pop" mode="out-in">
+        <!-- Occupied seat: show user avatar with animation -->
+        <UserAvatar v-if="!isEmpty" key="occupied" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc" class="relative z-20" />
+        <!-- Locked empty seat: show lock image -->
+        <UserAvatar
+          v-else-if="isLocked"
+          key="locked"
+          img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
+          class="relative z-20"
+        />
+        <!-- Empty seat: show default placeholder -->
+        <UserAvatar v-else key="empty" class="relative z-20" />
+      </Transition>
 
       <!-- Mute indicator -->
-      <UIcon
+      <Transition name="seat-fade">
+        <UIcon
           v-if="!isEmpty && isMuted"
           name="i-lucide-mic-off"
           class="size-4 text-white absolute bottom-0 -right-1 z-20"
-      />
+        />
+      </Transition>
 
       <!-- Speaking indicator -->
       <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="https://assets.flyliveapp.com/vip/1/mice-wave.svga" />
@@ -110,3 +115,29 @@ const seatGiftTotal = computed(() => {
 
   </div>
 </template>
+
+<style scoped>
+/* Avatar pop: scale + fade when a user joins or leaves a seat */
+.seat-pop-enter-active,
+.seat-pop-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.seat-pop-enter-from {
+  opacity: 0;
+  transform: scale(0.6);
+}
+.seat-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* Mute icon fade */
+.seat-fade-enter-active,
+.seat-fade-leave-active {
+  transition: opacity 0.12s ease;
+}
+.seat-fade-enter-from,
+.seat-fade-leave-to {
+  opacity: 0;
+}
+</style>
