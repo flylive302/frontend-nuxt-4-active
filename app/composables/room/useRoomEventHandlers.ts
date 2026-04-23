@@ -183,7 +183,6 @@ export function setupRoomEventHandlers({
     }
     if (roomStore.currentRoom?.owner?.id === event.user_id) {
       roomStore.refreshCurrentRoom({
-        ...roomStore.currentRoom,
         owner: { ...roomStore.currentRoom.owner, ...safeProfile },
       });
     }

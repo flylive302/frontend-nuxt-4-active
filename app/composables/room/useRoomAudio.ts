@@ -285,8 +285,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
 
     // Join room via socket (send owner ID and seat count so server can configure room)
-    // Fall back to authStore.user.id — createRoom response may not populate owner object
-    const ownerId = roomStore.currentRoom?.owner?.id ?? authStore.user?.id;
+    const ownerId = roomStore.currentRoom?.owner_id;
     const seatCount = roomStore.currentRoom?.max_seats ?? 15;
 
     // log.debug('room:join payload:', { roomId, ownerId, seatCount, hasOwner: !!roomStore.currentRoom?.owner });

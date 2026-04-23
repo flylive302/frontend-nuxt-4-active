@@ -65,55 +65,43 @@ function handleRoomClick(): void {
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
 
-    <!-- SVG mask definition — responsive via objectBoundingBox (0–1 coords) -->
-    <svg width="0" height="0" class="absolute">
-      <defs>
-        <mask id="squircle-mask" maskContentUnits="objectBoundingBox">
-          <!-- Full area visible -->
-          <rect width="1" height="1" fill="white"/>
-          <!-- Cutout: inset ~3% each side, top 72% punched out -->
-          <rect
-            x="0.04"
-            y="0.03"
-            width="0.92"
-            height="0.8"
-            rx="0.06"
-            ry="0.06"
-            fill="black"
-          />
-        </mask>
-      </defs>
-    </svg>
-
     <!-- Overlay content -->
-    <aside class="absolute inset-0 px-4 pb-1 flex items-end backdrop-blur-sm" style="mask: url(#squircle-mask);">
+    <aside class="absolute inset-0 p-2 flex items-end">
 
-      <div class="flex items-center gap-1">
-        <!-- Live dot -->
-        <span v-if="badgeDisplay" class="relative inline-flex mr-1">
-          <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
-          <span class="relative inline-block size-2 rounded-full bg-success"/>
-        </span>
+      <div class="backdrop-blur-sm shadow-md rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
+        <div class="flex items-center gap-1">
+          <NuxtImg
+              :src="props.room.logo ?? '/AppImages/dummy-card/avatar.png'"
+              alt="Live"
+              width="12"
+              height="12"
+              class="size-6 object-cover rounded-full ring-2 ring-primary"
+          />
 
-        <NuxtImg
-          :src="props.room.logo ?? '/AppImages/dummy-card/avatar.png'"
-          alt="Live"
-          width="16"
-          height="16"
-          class="size-8 object-cover rounded-full"
-        />
+          <!-- Text -->
+          <p class="text-sm font-bold max-w-24 leading-none">
+            {{ props.room.name }}
+          </p>
+        </div>
 
-        <!-- Text -->
-        <p class="text-md font-bold max-w-24 leading-none">
-          {{ props.room.name }}
-        </p>
+        <div class="flex items-center gap-1">
+          <!-- Live dot -->
+          <span v-if="badgeDisplay" class="relative inline-flex mr-1">
+            <span class="absolute inline-block size-2 rounded-full bg-success animate-ping"/>
+            <span class="relative inline-block size-2 rounded-full bg-success"/>
+          </span>
+          <UIcon name="i-fluent-people-team-20-filled" />
+          <p class="font-bold text-lg text-white">{{props.room.participant_count}}</p>
+        </div>
       </div>
+
     </aside>
 
     <!-- Password lock indicator (top-right) -->
-    <div v-if="props.room.is_password_protected" class="absolute top-2 right-2">
-      <UIcon name="i-lucide-lock" class="size-4 text-warning drop-shadow-lg" />
+    <div v-if="props.room.is_password_protected" class="absolute top-0 right-0 bg-primary size-8 flex-middle rounded-bl-lg shadow-lg">
+      <UIcon name="i-lucide-lock" class="size-4 text-white drop-shadow-lg" />
     </div>
+
   </article>
 
   <!-- Password Prompt Modal -->

@@ -54,9 +54,12 @@ export const useRoomStore = defineStore('roomStore', () => {
 
   /**
    * Refresh currentRoom data without resetting isMinimized or previousRoute.
+   * Merges into existing state so incomplete payloads (e.g. a response that
+   * omits an optional nested relation) can't strip fields already in the store.
    */
-  function refreshCurrentRoom(room: Room) {
-    currentRoom.value = room;
+  function refreshCurrentRoom(room: Partial<Room>) {
+    if (!currentRoom.value) return;
+    currentRoom.value = { ...currentRoom.value, ...room };
   }
 
   function setUserRoom(room: Room | null) {

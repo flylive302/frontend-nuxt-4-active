@@ -273,10 +273,8 @@ async function handleSaveSettings(): Promise<void> {
     // Send PATCH — response includes updated room data
     const response = await patchRoom(thisRoom.value.id, body)
 
-    // Merge response into current room, preserving owner (not eager-loaded in resource)
     if (response.data && thisRoom.value) {
-      const preserved = { owner: thisRoom.value.owner, owner_id: thisRoom.value.owner_id }
-      Object.assign(thisRoom.value, response.data, preserved)
+      Object.assign(thisRoom.value, response.data)
     }
 
     toast.add({ title: 'Settings Saved', description: 'Room settings updated.', color: 'success' })
@@ -297,10 +295,8 @@ async function handleRemovePassword(): Promise<void> {
   try {
     const response = await patchRoom(thisRoom.value.id, { password: '' })
 
-    // Merge response, preserving owner
     if (response.data && thisRoom.value) {
-      const preserved = { owner: thisRoom.value.owner, owner_id: thisRoom.value.owner_id }
-      Object.assign(thisRoom.value, response.data, preserved)
+      Object.assign(thisRoom.value, response.data)
     }
 
     toast.add({ title: 'Password Removed', description: 'Room is no longer password protected.', color: 'success' })

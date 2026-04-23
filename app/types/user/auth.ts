@@ -27,6 +27,7 @@ export interface GenderOption {
 
 export interface AuthResponse {
   user: import('./bootstrap').BootstrapUser
+  room: import('./bootstrap').BootstrapRoom
   token: string
   token_type: string
   expires_at: string
