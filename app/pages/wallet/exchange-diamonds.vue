@@ -215,56 +215,34 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
       <template #first-link-text>Coins</template>
       <template #second-link-text>Diamonds</template>
     </NavAlt>
-    
-    <AltHero class="bg-linear-to-br to-secondary/40 p-2" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
-      <div class="flex flex-col justify-end h-full">
-        <NuxtImg
-            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg"
-            format="webp"
-            class="w-14"
-        />
-      </div>
-      <div class="flex flex-col items-center justify-end size-full">
-        <NuxtImg
-            src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp"
-            density="3x"
-            class="mb-4 w-36"
-        />
-        <UButton
-            to="/wallet/transaction-history"
-            color="secondary"
-            icon="i-lucide-gem"
-            trailing-icon="i-lucide-history"
-        >
-          {{ formatCurrency(userDiamonds) }}
-        </UButton>
-      </div>
-      <div class="flex flex-col justify-end h-full">
-        <NuxtImg
-            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-diamond.svg"
-            format="webp"
-            class="transform -scale-x-100 w-14"
-        />
-      </div>
-    </AltHero>
-    
-    <div class="h-10" />
 
-    <!-- Access Denied State -->
-    <section v-if="!isAgencyMember && !isLoading" class="px-3 py-14 text-center">
-      <UIcon name="i-lucide-lock" class="size-16 text-muted mb-4" />
-      <h2 class="text-lg font-semibold mb-2">Agency Members Only</h2>
-      <p class="text-sm text-muted mb-4">
-        You need to be a member of an agency to exchange diamonds for coins.
-      </p>
-      <UButton to="/agency/list" color="primary">
-        Browse Agencies
-      </UButton>
-    </section>
+    <NuxtImg
+      src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp"
+      format="webp"
+      densities="x1 x2"
+      sizes="320px"
+      width="100%"
+      class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-secondary/50"
+    />
 
     <!-- Exchange Section (Agency Members Only) -->
-    <section v-else class="px-3">
-      <h2 class="text-lg font-bold leading-tight">
+    <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-t-4xl -mt-34 relative">
+      <div class="flex justify-between items-baseline glowing-border rounded-lg px-2">
+        <h1 class="text-xl font-bold">
+          Available Diamonds:
+        </h1>
+        <p class="text-4xl font-bold flex justify-center items-center gap-1">
+          <UIcon name="i-ri-diamond-fill" class="size-8" />
+          {{ formatCurrency(userDiamonds) }}
+        </p>
+      </div>
+
+      <NuxtLink to="/wallet/transaction-history" class="flex justify-between items-center mt-2">
+        <h2 class="text-md font-semibold">Transaction History:</h2>
+        <UButton icon="i-lucide-history" color="secondary" variant="soft" class="shadow-xl">Visit</UButton>
+      </NuxtLink>
+
+      <h2 class="text-lg font-bold leading-tight mt-8">
         Exchange Your Diamonds with <span class="text-tertiary">FlyLive Coins</span>
       </h2>
       <p class="text-sm text-success">

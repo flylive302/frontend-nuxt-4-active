@@ -61,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
    * State-only — navigation belongs in the composable REACT stage.
    */
   function logout() {
-    setUser(null)
+    user.value = null;
     setToken(null)
     setMsabToken(null)
     status.value = 'unauthenticated'

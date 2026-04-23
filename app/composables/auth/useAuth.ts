@@ -58,6 +58,8 @@ export function useAuthActions() {
       body: credentials,
     })
 
+    log.debug('Login successful:', data)
+
     authStore.setToken(data.token)
     authStore.setUser(data.user)
     authStore.setMsabToken(data.msab_token)
@@ -86,6 +88,8 @@ export function useAuthActions() {
       method: 'POST',
       body: payload,
     })
+
+    log.debug('Registration successful:', data)
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
@@ -190,6 +194,7 @@ export function useAuthActions() {
         popup,
         // onResult — popup sent credentials
         async (popupResult) => {
+
           const callbackResult = await handlePopupResult(popupResult)
 
           if (!callbackResult.success) {

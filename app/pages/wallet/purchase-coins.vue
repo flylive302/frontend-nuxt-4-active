@@ -53,63 +53,35 @@ watch(lastCoinRequestUpdate, () => {
       <template #first-link-text>Coins</template>
       <template #second-link-text>Diamonds</template>
     </NavAlt>
-    <AltHero class="bg-linear-to-br to-tertiary/30 p-2" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp">
-      <div class="flex flex-col justify-end h-full">
-        <NuxtImg
-            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
-            class="transform -scale-x-100 w-20"
-        />
-      </div>
-      <div class="flex flex-col items-center">
-        <NuxtImg
-            src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp"
-            density="3x"
-            class="mt-2 w-36"
-        />
-        <UButton to="/wallet/transaction-history" color="tertiary" icon="i-lucide-coins" trailing-icon="i-lucide-history">
-          {{ formatCurrency(authStore.user?.coins) }}
-        </UButton>
-      </div>
-      <div class="flex flex-col justify-end h-full">
-        <NuxtImg
-            src="https://ik.imagekit.io/flylive/siteAssets/props/prop-recharge.webp"
-            class="w-20"
-        />
-      </div>
-    </AltHero>
 
-    <section class="px-3 mt-8">
-      <h2 class="text-lg font-bold"><span class="text-success">Buy</span> Coins From the Resellers</h2>
+    <NuxtImg
+        src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp"
+        format="webp"
+        densities="x1 x2"
+        sizes="320px"
+        width="100%"
+        class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-tertiary/70"
+    />
+
+    <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-4xl -mt-34 relative">
+      <div class="flex justify-between items-baseline glowing-border rounded-lg px-2">
+        <h1 class="text-lg font-bold">
+          Available Coins:
+        </h1>
+        <p class="text-2xl font-bold flex justify-center items-center gap-1">
+          <UIcon name="i-streamline-ultimate-color-accounting-coins" class="size-6" />
+          {{ formatCurrency(authStore.user?.coins) }}
+        </p>
+      </div>
+
+      <NuxtLink to="/wallet/transaction-history" class="flex justify-between items-center mt-2">
+        <h2 class="text-md font-semibold">Transaction History:</h2>
+        <UButton icon="i-lucide-history" color="tertiary" variant="soft" class="shadow-xl">Visit</UButton>
+      </NuxtLink>
+
+      <h2 class="text-lg font-bold mt-8"><span class="text-success">Buy</span> Coins From the Resellers</h2>
       <p class="text-sm text-muted mb-4">Keep your default reseller or select a Different One</p>
       <EconomyChooseDefaultReseller color="tertiary" />
-
-      <!-- Form - Hidden when pending request exists -->
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-      >
-        <EconomyFromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
-      </Transition>
-
-      <!-- Pending Notice -->
-      <UAlert
-        v-if="hasPendingRequest && !isLoadingRequests"
-        icon="i-lucide-clock"
-        color="warning"
-        variant="subtle"
-        title="Pending Request"
-        description="You already have a pending request. Wait for it to be processed before creating a new one."
-        class="mt-4"
-      />
-
-      <USeparator color="tertiary" class="my-6" />
-
-      <!-- Coin Requests List Component -->
-      <EconomyCoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
 
       <!-- <USeparator color="tertiary" class="my-6" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
@@ -118,6 +90,38 @@ watch(lastCoinRequestUpdate, () => {
         <EconomyListItemPurchaseCoins :coins="3200" :price="1.55" />
         <EconomyListItemPurchaseCoins :coins="6400" :price="3.25" />
       </div> -->
+    </section>
+
+    <section class="mx-3">
+
+      <!-- Form - Hidden when pending request exists -->
+      <Transition
+          enter-active-class="transition duration-300 ease-out"
+          enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition duration-200 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-95"
+      >
+        <EconomyFromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
+      </Transition>
+
+      <!-- Pending Notice -->
+      <UAlert
+          v-if="hasPendingRequest && !isLoadingRequests"
+          icon="i-lucide-clock"
+          color="warning"
+          variant="subtle"
+          title="Pending Request"
+          description="You already have a pending request. Wait for it to be processed before creating a new one."
+          class="mt-4"
+      />
+
+      <USeparator color="tertiary" class="my-6" />
+
+      <!-- Coin Requests List Component -->
+      <EconomyCoinRequestsList ref="coinRequestsListRef" color="tertiary" @has-pending="handleHasPending" />
+
     </section>
     <div class="h-14" />
   </main>

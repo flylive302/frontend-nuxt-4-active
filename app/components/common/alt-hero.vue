@@ -24,7 +24,7 @@ defineOptions({
         class="min-w-full aspect-rectangle object-cover"
     />
     <div class="px-3 pt-[15vw] absolute inset-0">
-      <div class="flex items-center justify-center h-full border-3 border-white/5 rounded-2xl backdrop-blur-xs mt-6" v-bind="$attrs">
+      <div class="flex items-center justify-center h-full" v-bind="$attrs">
         <slot />
       </div>
     </div>

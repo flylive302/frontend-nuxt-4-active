@@ -68,11 +68,11 @@ const backgroundClass = computed(() =>
  * Get thumbnail URL with fallback.
  */
 const thumbnailUrl = computed(() => 
-  props.transaction.thumbnail_url ?? 'https://ik.imagekit.io/flylive/siteAssets/badges/badge-charm-level-1.webp'
+  props.transaction.thumbnail_url ?? 'https://assets.flyliveapp.com/badges/charm/level_0.webp'
 )
 
 /**
- * Get direction label based on role.
+ * Get direction label based on a role.
  */
 const directionLabel = computed(() => 
   props.transaction.my_role === 'initiator' ? 'To' : 'From'

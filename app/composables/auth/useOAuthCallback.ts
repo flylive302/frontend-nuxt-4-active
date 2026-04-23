@@ -6,6 +6,7 @@
 // as query parameters after successful OAuth flow.
 
 import type { OAuthPopupResult } from '~/composables/auth/useOAuthPopup'
+import type { BootstrapUser, LevelStatus } from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[OAuthCallback]')
@@ -54,13 +55,13 @@ export function useOAuthCallback() {
 
     // The api() interceptor reads authStore.token as a fallback when
     // the cookie isn't available yet, so this works in the same tick.
-    const response = await api<{ data: { user: import('~/types/user/bootstrap').BootstrapUser; user_data: { levels?: { wealth: import('~/types/user/bootstrap').LevelStatus; charm: import('~/types/user/bootstrap').LevelStatus } } } }>('/bootstrap')
+    const response = await api<{
+      data: BootstrapUser
+    }>('/auth/user')
 
-    if (response?.data?.user) {
-      authStore.setUser(response.data.user)
-      if (response.data.user_data?.levels) {
-        levelsStore.setLevels(response.data.user_data.levels.wealth, response.data.user_data.levels.charm)
-      }
+    log.debug('User data fetched successfully', { response })
+    if (response?.data) {
+      authStore.setUser(response.data)
     }
 
     // REACT — success toast
@@ -82,9 +83,9 @@ export function useOAuthCallback() {
   /**
    * Process the OAuth callback parameters (redirect-flow).
    *
-   * GATE:    Validate callback params (error, token presence)
-   * EXECUTE: Store tokens + fetch user data via api()
-   * REACT:   Show success toast
+   * GATE: Validate callback params (error, token presence)
+   * EXECUTE: Store tokens and fetch user data via api()
+   * REACT: Show success toast
    *
    * Returns a result object — the caller (page) decides navigation.
    */
