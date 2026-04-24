@@ -289,7 +289,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
       timeout: 10000,
-      transports: ['polling', 'websocket'], // Allow polling fallback for initial handshake
+      transports: ['websocket'], // WS-only: polling requires sticky sessions, but NLB with GA can't preserve client IPs so stickiness breaks across the 2 MSAB instances
     });
 
     // Register event handlers
