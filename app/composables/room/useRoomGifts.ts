@@ -120,6 +120,20 @@ export function useRoomGifts({
     );
     if (!isRecipientSeated) return;
 
+    // --- ADD THIS SECTION ---
+    const roomStore = useRoomStore();
+    const { getGiftById } = useGiftData();
+    const gift = getGiftById(giftId);
+    if (gift && roomStore.currentRoom) {
+      // 1. Update the total Room XP
+      const addedXp = gift.price * quantity;
+      const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
+      roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
+      // 2. Update the seat-specific XP (so your UI shows the gift on the seat)
+      seatsStore.addSeatGiftValue(recipientId, addedXp);
+    }
+    // -------------------------
+
     // Push to queue for background processing
     giftQueue.push({
       roomId,

@@ -97,7 +97,7 @@ const ROOM_EVENT_NAMES = [
  * Call this before re-registering listeners to prevent duplicates.
  */
 export function cleanupRoomEventHandlers(socket: AudioSocket): void {
-  
+
   for (const eventName of ROOM_EVENT_NAMES) {
     socket.off(eventName);
   }
@@ -305,10 +305,19 @@ export function setupRoomEventHandlers({
 
   // Gift events
   socket.on('gift:received', (event: GiftReceivedEvent) => {
+
     // Accumulate gift coin value for seat display
     const giftForValue = getGiftById(event.giftId);
     if (giftForValue) {
       seatsStore.addSeatGiftValue(event.recipientId, giftForValue.price * event.quantity);
+
+      // Update room XP
+      if (roomStore.currentRoom) {
+        const addedXp = giftForValue.price * event.quantity;
+        const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
+
+        roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
+      }
     }
 
     // Skip if current user is the sender
