@@ -208,7 +208,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
       <template #avatar>
         <UserAvatar
           :animated="true"
-          :frame-asset-url="profileWritable?.frame ?? 'https://assets.flyliveapp.com/frames/10.svga'"
+          :frame-asset-url="profileWritable?.frame ?? undefined"
           :img="profileWritable?.avatar ?? 'AppImages/dummy-card/avatar.png'"
           class="w-24 -mt-15"
         />
@@ -247,41 +247,34 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
       <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
       <NuxtLink
         :to="`/agency/${profileWritable.agency.id}`"
-        class="mx-3 grid grid-cols-12 bg-linear-to-br to-primary-950 rounded-md overflow-hidden border border-primary gap-2"
+        class="mx-auto flex rounded-md overflow-hidden gap-2 glowing-border w-2/4"
       >
-        <div class="col-span-2 p-1">
+        <div class="p-1 w-4/6">
           <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
         </div>
 
-          <div class="col-span-6">
+          <div class="w-full flex flex-col gap-2 py-1">
             <p class="text-md font-bold truncate">{{ profileWritable.agency.name }}</p>
 
-            <div class="flex">
-              <UIcon :name="`i-flag-${profileWritable.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
-              <p class="text-sm text-muted! font-semibold truncate">
-                {{ profileWritable.agency.country }}
-              </p>
+            <div class="flex gap-2 items-center">
+              <div class="flex pt-1 gap-1 items-center">
+                <UIcon :name="`i-flag-${profileWritable.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
+                <p class="text-sm text-muted! font-semibold truncate">
+                  {{ profileWritable.agency.country }}
+                </p>
+              </div>
+
+              <div class="flex items-center mt-1 gap-1">
+                <UBadge icon="i-lucide-users" square class="rounded-full text-white" variant="soft" />
+                <p class="text-xs font-bold leading-none">
+                  {{ profileWritable.agency.total_member_count }}
+                </p>
+              </div>
             </div>
+
           </div>
 
-          <div class="col-span-3 flex flex-col justify-center py-2">
-            <div class="flex gap-1 items-center">
-              <UBadge icon="i-lucide-users" square class="rounded-full text-white" />
-              <p class="text-xs font-bold leading-none">
-                {{ profileWritable.agency.total_member_count }} <br> Members
-              </p>
-            </div>
-          </div>
         </NuxtLink>
-      </template>
-
-      <!-- No Agency Message -->
-      <template v-else>
-        <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
-        <div class="mx-3 p-4 bg-muted/20 rounded-lg text-center text-muted">
-          <Icon name="i-lucide-building-2" class="size-8 mx-auto mb-2 opacity-50" />
-          <p class="text-sm">Not a member of any agency</p>
-        </div>
       </template>
 
       <!-- History Section -->
@@ -343,63 +336,60 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
         aria-label="Primary"
         class="fixed inset-x-2 z-50 bottom-4"
       >
-        <BgGlass
-          class="border border-white/40"
-          frost-blur-radius="blur(4px)"
-          :noise-frequency="0.009"
-          :noise-strength="200"
-          rounded="rounded-lg"
-        >
-          <div class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
-            <UButton
+        <div class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
+          <UButton
               :loading="isTracking"
               :disabled="isTracking"
-              icon="i-lucide-locate-fixed"
-              size="sm"
-              class="pl-1 pr-2 gap-1"
+              icon="i-mdi-airplane-search"
+              size="md"
+              variant="outline"
+              class="pl-1 pr-2 gap-1 backdrop-blur-xs"
               @click="trackUser"
-            >
-              Track
-            </UButton>
+          >
+            Track
+          </UButton>
 
-            <!-- Follow Button (hidden for own profile) -->
-            <UButton
+          <!-- Follow Button (hidden for own profile) -->
+          <UButton
               v-if="!isSelf && statusLoaded"
               :loading="isToggling"
               :disabled="isToggling"
               :icon="buttonIcon"
-              :variant="isFollowing ? 'solid' : 'outline'"
-              :color="isFollowing ? 'primary' : 'neutral'"
-              size="sm"
-              class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150"
+              :variant="isFollowing ? 'outline' : 'subtle'"
+              size="md"
+              class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150 backdrop-blur-xs"
               :class="{
                 'follow-btn--animating': followAnimating,
                 'follow-btn--active': isFollowing,
               }"
               @click="handleFollowClick"
-            >
-              {{ buttonLabel }}
-            </UButton>
+          >
+            {{ buttonLabel }}
+          </UButton>
 
-            <UButton
+          <UButton
               v-if="hasRoom"
               :loading="isJoiningRoom"
               :disabled="isJoiningRoom"
-              icon="i-lucide-video"
-              size="sm"
-              class="pl-1 pr-2 gap-1"
+              size="md"
+              variant="outline"
+              class="pl-1 pr-2 gap-1 backdrop-blur-xs"
               @click="goToRoom"
-            >
-              Room
-            </UButton>
-            <UButton v-else disabled icon="i-lucide-video-off" size="sm" class="pl-1 pr-2 gap-1">
-              No Room
-            </UButton>
-            <UButton to="/" icon="i-lucide-message-circle-more" size="sm" class="pl-1 pr-2 gap-1">
-              Chat
-            </UButton>
-          </div>
-        </BgGlass>
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="size-6 drop-shadow-md" width="14" height="14" viewBox="0 0 14 14">
+              <g fill="none">
+                <path fill="#000000" fill-rule="evenodd" d="M2.708 3.507a5.662 5.662 0 1 0 8.218 2.74l-.222-.073a1.65 1.65 0 0 1-.541.911a1.65 1.65 0 0 1-1.577.314h-.002l-1.258-.405a1.64 1.64 0 0 1-1.08-1.117l-.339-1.163l-2.413-.777a2 2 0 0 1-.786-.43" clip-rule="evenodd"/>
+                <path fill="#ffffff" fill-rule="evenodd" d="M2.708 3.507A5.66 5.66 0 0 0 .173 9.73h3.195a1.36 1.36 0 0 0 1.359-1.36V7.25a1.36 1.36 0 0 1 1.359-1.404q.075 0 .149-.008l-.328-1.123l-2.413-.777a2 2 0 0 1-.786-.43Zm8.33 6.614l-.947-.694a2.8 2.8 0 0 0-1.239-.31H7.215a1.35 1.35 0 0 0 0 2.688a.953.953 0 0 1 .962.95v.657a5.68 5.68 0 0 0 2.86-3.29Z" clip-rule="evenodd"/>
+                <path fill="#ff2465" d="M13.772 1.527L12.7 1.163a.364.364 0 0 0-.418.139l-.782 1.21L7.213.37a2.668 2.668 0 0 0-3.868 1.403a.73.73 0 0 0 .503.965l2.797.9l.279.097l.525 1.8a.39.39 0 0 0 .257.268l1.265.407a.397.397 0 0 0 .514-.44l-.278-1.339h.182l2.732.89a.72.72 0 0 0 .911-.44l.965-2.968a.364.364 0 0 0-.225-.386"/>
+              </g>
+            </svg>
+            Room
+          </UButton>
+
+          <UButton to="/" icon="i-lucide-message-circle-more" variant="outline" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
+            Chat
+          </UButton>
+        </div>
       </footer>
       <!-- Password Prompt Modal (for password-protected rooms) -->
       <RoomPasswordPromptModal

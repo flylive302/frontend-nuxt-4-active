@@ -66,8 +66,6 @@ function isSelected(userId: number): boolean {
       <template v-else>
         <span class="text-xs text-gray-400">No speakers available</span>
       </template>
-      <!-- Info Button -->
-      <UButton size="sm" variant="subtle" icon="i-lucide-info" />
     </div>
   </div>
 </template>

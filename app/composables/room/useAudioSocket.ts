@@ -156,22 +156,35 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = err.message;
     log.error('Connection error:', err.message);
 
-    // With a 30-day stateless JWT, auth rejection means the user is
-    // blocked/revoked — not that the token expired. Show a clear message
-    // instead of attempting a refresh that races with reconnection logic.
-    if (err.message === 'Invalid credentials' || err.message === 'Authentication failed') {
+    // Auth rejection on a stateless 30-day JWT means the token is invalid/revoked.
+    // Stop retrying, clear session, redirect to login — retrying with the same bad
+    // token just burns battery and never surfaces the real problem to the user.
+    const authFailed =
+      err.message === 'Invalid credentials' ||
+      err.message === 'Authentication failed' ||
+      err.message === 'Authentication required';
+
+    if (authFailed) {
       toast.add({
-        title: 'Audio connection failed',
-        description: 'Please try logging in again.',
+        title: 'Session expired',
+        description: 'Please log in again to continue.',
         color: 'error',
       });
-    } else if (err.message === 'Authentication required') {
-      toast.add({
-        title: 'Authentication required',
-        description: 'Please log in to join the room.',
-        color: 'warning',
-      });
+      socket.value?.disconnect();
+      void _authActions!.logout();
     }
+  }
+
+  /** All reconnection attempts exhausted — surface a clear error instead of failing silently. */
+  function handleReconnectFailed() {
+    status.value = 'error';
+    error.value = 'Unable to reconnect to audio server';
+    log.error('Reconnection failed after all attempts');
+    toast.add({
+      title: 'Connection lost',
+      description: 'Could not reach the audio server. Please refresh the page.',
+      color: 'error',
+    });
   }
 
   /**
@@ -188,14 +201,20 @@ export function useAudioSocket(): UseAudioSocketReturn {
   function handleReconnect(attemptNumber: number) {
     status.value = 'connected';
     error.value = null;
-    log.debug('Reconnected after', attemptNumber, 'attempts');
+    const recovered = socket.value?.recovered === true;
+    log.debug('Reconnected after', attemptNumber, 'attempts; recovered:', recovered);
 
     // Re-register app-wide realtime event handlers on new socket session
     if (socket.value) {
       registerRealtimeEventHandlers(socket.value);
     }
 
-    // Notify lifecycle layer so it can re-join the room
+    // If the server resumed the previous session (connectionStateRecovery),
+    // we're still in the room from its perspective — skip the rejoin cycle
+    // to avoid unnecessary state churn. Lifecycle callback is only for full
+    // session resets where presence on the server has been cleaned up.
+    if (recovered) return;
+
     if (_reconnectCallback) {
       _reconnectCallback();
     }
@@ -285,7 +304,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
         cb({ token: authStore.msabToken });
       },
       reconnection: true,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
       timeout: 10000,
@@ -298,13 +317,14 @@ export function useAudioSocket(): UseAudioSocketReturn {
     socket.value.on('connect_error', handleConnectError);
     socket.value.io.on('reconnect_attempt', handleReconnectAttempt);
     socket.value.io.on('reconnect', handleReconnect);
+    socket.value.io.on('reconnect_failed', handleReconnectFailed);
     socket.value.on('error', handleError);
 
     // ── Auth: Force-Disconnect Listener ──────────────────────────────
     // Fired by MSAB when the user is blocked/suspended by an admin.
     // The infrastructure layer just forwards the payload — REACT logic
     // (suspension state, socket teardown, navigation) lives in
-    // useAuthLifecycle so this file stays infrastructure-only.
+    // useAuthLifecycle, so this file stays infrastructure-only.
     const { handleForceDisconnect } = useAuthLifecycle();
     socket.value.on('auth:force_disconnect', (payload: {
       reason: string;

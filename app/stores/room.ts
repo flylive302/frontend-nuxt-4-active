@@ -112,6 +112,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   };
 }, {
   persist: {
-    pick: ['userRoom', 'currentRoom', 'isMinimized', 'previousRoute'],
+    pick: ['userRoom', 'previousRoute'],
   },
 });

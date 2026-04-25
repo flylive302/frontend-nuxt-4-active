@@ -34,6 +34,7 @@ const isRecovering = ref(false);
 export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
   const giftStore = useGiftStore();
+  const seatsStore = useRoomSeatsStore();
   const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect, recoverFromSuspension } = useAudioSocket();
   const { fetchRoomById } = useRoom();
@@ -99,6 +100,7 @@ export function useRoomLifecycle(): void {
           if (isJoining.value) return; // Prevent double-join
           isJoining.value = true;
           try {
+            seatsStore.resetSeats();
             disconnectSocket();
             await connectSocket();
             await joinRoom(String(roomStore.currentRoom.id));
@@ -133,6 +135,10 @@ export function useRoomLifecycle(): void {
     isJoining.value = true;
 
     try {
+      // Drop stale seat snapshot before rejoin so the user can never see
+      // pre-disconnect state. Server's room:state response repopulates atomically.
+      seatsStore.resetSeats();
+
       // Refresh room metadata from API (may have changed while disconnected)
       fetchRoomById(roomStore.currentRoom.id);
 
@@ -180,6 +186,7 @@ export function useRoomLifecycle(): void {
       // Fallback: auto-reconnect hasn't succeeded — trigger manual reconnect + rejoin
       isJoining.value = true;
       try {
+        seatsStore.resetSeats();
         disconnectSocket();
         await connectSocket();
         await joinRoom(String(roomStore.currentRoom.id));

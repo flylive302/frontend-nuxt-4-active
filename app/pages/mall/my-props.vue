@@ -61,15 +61,18 @@ async function handleUnequip(userPropId: number): Promise<void> {
       <template #second-link-text>My Props</template>
     </NavAlt>
 
-    <AltHero class="bg-linear-to-br to-secondary/30" image-src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp">
-      <UserAvatar
-          :animated="true"
-          :frame-asset-url="authStore?.user?.frame ?? undefined"
-          :img="authStore?.user?.avatar ?? undefined" class="w-28 mx-auto"
-      />
-    </AltHero>
+    <video class="w-full mt-12" autoplay muted loop playsinline>
+      <source src="/background-decorations/mall-bg.mp4" type="video/mp4" />
+    </video>
 
-    <div class="px-3 mb-32 mt-8 overflow-hidden">
+    <UserAvatar
+        animated
+        :frame-asset-url="authStore?.user?.frame ?? undefined"
+        :img="authStore?.user?.avatar ?? undefined"
+        class="w-28 -mt-32 mx-auto"
+    />
+
+    <div class="px-3 mb-32 overflow-hidden">
       <!-- Loading Skeleton for Tabs -->
       <div v-if="mallStore.typesLoading" class="mt-6 flex gap-2">
         <USkeleton v-for="i in 4" :key="i" class="h-8 w-20 rounded-full" />

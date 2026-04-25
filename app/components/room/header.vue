@@ -139,6 +139,11 @@ const openLeaveDrawer = (event: Event) => {
   // Prefetch the route we'll navigate to on minimize
   preloadRouteComponents(roomStore.previousRoute ?? '/');
 };
+
+// ========================================
+// Settings Drawer State
+// ========================================
+const settingsOpen = ref(false);
 </script>
 
 <template>
@@ -160,7 +165,22 @@ const openLeaveDrawer = (event: Event) => {
 
         <template #content>
           <div class="px-3">
-            <SectionTitle class="mb-3">Room Details</SectionTitle>
+            <div class="flex justify-between items-baseline w-full py-2">
+              <SectionTitle>Room Details</SectionTitle>
+
+              <!-- Room Settings (cog icon, above volume) -->
+              <UButton
+                  icon="i-lucide-settings"
+                  size="md"
+                  variant="subtle"
+                  @click="settingsOpen = true"
+              >
+                Room Settings
+              </UButton>
+            </div>
+
+
+
             <div class="px-2 pt-3 pb-12 bg-neutral-800 rounded-t-lg inset-shadow-sm inset-shadow-neutral-800 gap-4">
               <RoomDetails />
 
@@ -278,7 +298,8 @@ const openLeaveDrawer = (event: Event) => {
       </UDrawer>
     </div>
   </header>
-
+  <!-- Settings Drawer (inside root to avoid aria-hidden issues) -->
+  <LazyRoomSettingsDrawer v-model:open="settingsOpen" />
   <!-- Members Panel (Owner/Admin only) -->
   <RoomMembersPanel v-if="canManageMembers" v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));" />
 

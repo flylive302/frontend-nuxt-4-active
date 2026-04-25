@@ -79,7 +79,7 @@ const seatGiftTotal = computed(() => {
     <div class="relative w-full">
       <Transition name="seat-pop" mode="out-in">
         <!-- Occupied seat: show user avatar with animation -->
-        <UserAvatar v-if="!isEmpty" key="occupied" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc" class="relative z-20" />
+        <UserAvatar v-if="!isEmpty" key="occupied" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc ?? 'AppImages/dummy-card/avatar.png'" class="relative z-20" />
         <!-- Locked empty seat: show lock image -->
         <UserAvatar
           v-else-if="isLocked"

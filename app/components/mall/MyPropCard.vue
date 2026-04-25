@@ -79,7 +79,7 @@ function handleSelect(): void {
     class="bg-elevated rounded-xl overflow-hidden transition-all duration-200"
     :class="{ 
       'opacity-50': isExpired,
-      'ring-2 ring-primary': isEquipped
+      'glowing-border': isEquipped
     }"
   >
     <!-- Thumbnail -->

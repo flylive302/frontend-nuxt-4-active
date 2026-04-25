@@ -99,7 +99,7 @@ onMounted(() => {
       <EventsProfileCard /> 
     -->
 
-    <div class="px-4 mt-10 mb-12">
+    <div class="px-4 mb-12">
       <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
@@ -108,7 +108,7 @@ onMounted(() => {
       <NavProfileItem to="/profile/follows" icon="i-lucide-users" txt="Followers & Following" />
 
       <!-- Agency Section -->
-      <SectionTitle class="mt-4 mb-2">Agency</SectionTitle>
+      <SectionTitle class="mt-4 mb-2 border-b-2 border-primary pb-2">Agency</SectionTitle>
       
       <!-- Browse Agencies (always visible) -->
       <NavProfileItem to="/agency/list" icon="i-lucide-building-2" txt="Browse Agencies" />

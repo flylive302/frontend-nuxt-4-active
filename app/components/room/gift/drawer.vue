@@ -56,12 +56,18 @@ async function handleSend() {
     haptic("success");
   }
 }
+
+const roomStore = useRoomStore();
 </script>
 
 <template>
   <UDrawer
     v-model:open="isOpen"
     title="Send Gift"
+    :overlay="false"
+    :ui="{
+      content: 'bg-transparent backdrop-blur-xl',
+    }"
     description="Send gifts to speakers in the room"
   >
     <!-- Trigger Button -->
@@ -72,7 +78,7 @@ async function handleSend() {
       class="cursor-pointer"
     />
     <template #content>
-      <div class="p-2 space-y-3">
+      <div class="p-2">
         <!-- Recipient Selector -->
         <RoomGiftRecipientSelector />
 
@@ -88,26 +94,22 @@ async function handleSend() {
         </RoomGiftCategoryTabs>
 
         <!-- Send Controls -->
-        <div
-          class="flex items-center justify-between pt-1 border-t border-muted"
-        >
+        <div class="flex items-center justify-between pt-1 border-t border-muted">
           <!-- Coin Balance -->
           <div class="flex items-center">
             <UButton
+              trailingIcon="i-lucide-chevron-right"
               icon="i-lucide-coins"
               variant="subtle"
               color="warning"
               size="sm"
+              @click="async () => {
+                isOpen = false;
+                roomStore.isMinimized = true;
+                await navigateTo(`/wallet/purchase-coins`);
+              }"
             >
               {{ (authStore.user?.coins ?? 0).toLocaleString() }}
-            </UButton>
-            <UButton
-              to="/wallet/purchase-coins"
-              variant="soft"
-              color="primary"
-              size="xs"
-            >
-              Recharge
             </UButton>
           </div>
 

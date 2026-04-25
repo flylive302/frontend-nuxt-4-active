@@ -69,12 +69,6 @@ onUnmounted(() => {
 const roomColor = computed(() => roomStore.currentRoom?.primary_color ?? '#000000')
 useThemeColor(roomColor)
 
-
-// ========================================
-// Settings Drawer State
-// ========================================
-const settingsOpen = ref(false);
-
 // ========================================
 // Volume Control State
 // ========================================
@@ -166,7 +160,7 @@ onUnmounted(() => {
 
 <template>
   <div 
-    class="absolute inset-0 z-50 p-1 pb-6 safe-area-top max-h-screen bg-elevated"
+    class="absolute inset-0 z-50 p-1 pb-6 safe-area-top max-h-screen max-w-screen overflow-hidden bg-elevated"
     :style="roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}"
   >
     <template v-if="roomStore.currentRoom">
@@ -223,14 +217,6 @@ onUnmounted(() => {
 
           <!-- Side Controls & Gifting -->
           <div class="flex flex-col items-center gap-3 justify-end">
-
-            <!-- Room Settings (cog icon, above volume) -->
-            <UButton
-              icon="i-lucide-settings"
-              size="md"
-              variant="subtle"
-              @click="settingsOpen = true"
-            />
 
             <!-- Volume Control with Popover -->
             <UPopover v-model:open="volumePopoverOpen" :ui="{ content: 'p-2' }" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));">
@@ -292,9 +278,6 @@ onUnmounted(() => {
         @click="onLuckyCombo"
         @timeout="endLuckyCombo"
       />
-
-      <!-- Settings Drawer (inside root to avoid aria-hidden issues) -->
-      <LazyRoomSettingsDrawer v-model:open="settingsOpen" />
     </template>
   </div>
 </template>
