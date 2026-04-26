@@ -6,7 +6,7 @@
 // as query parameters after successful OAuth flow.
 
 import type { OAuthPopupResult } from '~/composables/auth/useOAuthPopup'
-import type { BootstrapUser, LevelStatus } from '~/types/user/bootstrap'
+import type { BootstrapUser } from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[OAuthCallback]')
@@ -30,7 +30,6 @@ export function useOAuthCallback() {
   // ========================================
 
   const authStore = useAuthStore()
-  const levelsStore = useLevelsStore()
   const toast = useToast()
   const { api } = useApi()
 

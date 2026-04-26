@@ -50,6 +50,11 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   // ========================================
 
   /**
+   * Whether bootstrap has completed and config is available.
+   */
+  const isReady = computed(() => phase.value === 'complete')
+
+  /**
    * Check if config needs refresh based on TTL.
    */
   const needsRefresh = computed(() => {
@@ -70,6 +75,27 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     }
     return map
   })
+
+  /**
+   * Wealth levels sorted by level (ascending). Cached by Vue reactivity.
+   */
+  const sortedWealthLevels = computed(() =>
+    [...(wealthLevels.value ?? [])].sort((a, b) => a.level - b.level)
+  )
+
+  /**
+   * Charm levels sorted by level (ascending). Cached by Vue reactivity.
+   */
+  const sortedCharmLevels = computed(() =>
+    [...(charmLevels.value ?? [])].sort((a, b) => a.level - b.level)
+  )
+
+  /**
+   * Room levels sorted by level (ascending). Cached by Vue reactivity.
+   */
+  const sortedRoomLevels = computed(() =>
+    [...(roomLevels.value ?? [])].sort((a, b) => a.level - b.level)
+  )
 
   /**
    * Persistent set of gift IDs for O(1) deduplication.
@@ -200,8 +226,12 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
 
     // Getters
     phase,
+    isReady,
     needsRefresh,
     badgeMap,
+    sortedWealthLevels,
+    sortedCharmLevels,
+    sortedRoomLevels,
 
     // Setters
     setPhase,

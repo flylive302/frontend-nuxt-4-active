@@ -54,7 +54,10 @@ let _reconnectCallback: ReconnectCallback | null = null;
 let _hiddenSince: number | null = null;
 
 /** Flag to ensure visibility listener is registered only once */
-let _visibilitySetup = false;
+let _visibilitySetup = false
+
+/** Prevents a stale/null token from causing immediate logout — one refresh attempt before giving up */
+let _authRetryInFlight = false;
 
 // ============================================
 // Cached Dependencies (Module-level)
@@ -131,6 +134,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
   function handleConnect() {
     status.value = 'connected';
     error.value = null;
+    _authRetryInFlight = false;
     log.debug('Connected:', socket.value?.id);
 
     // Register app-wide realtime event handlers (balance updates, badges, etc.)
@@ -156,15 +160,16 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = err.message;
     log.error('Connection error:', err.message);
 
-    // Auth rejection on a stateless 30-day JWT means the token is invalid/revoked.
-    // Stop retrying, clear session, redirect to login — retrying with the same bad
-    // token just burns battery and never surfaces the real problem to the user.
     const authFailed =
       err.message === 'Invalid credentials' ||
       err.message === 'Authentication failed' ||
       err.message === 'Authentication required';
 
-    if (authFailed) {
+    if (!authFailed) return;
+
+    if (_authRetryInFlight) {
+      // Second auth failure — token is genuinely invalid/revoked
+      _authRetryInFlight = false;
       toast.add({
         title: 'Session expired',
         description: 'Please log in again to continue.',
@@ -172,7 +177,40 @@ export function useAudioSocket(): UseAudioSocketReturn {
       });
       socket.value?.disconnect();
       void _authActions!.logout();
+      return;
     }
+
+    // First auth failure — the MSAB token may be stale or null at the time the
+    // socket was created. Stop auto-reconnection (which would reuse the same bad
+    // token), refresh once, then manually reconnect with the fresh token.
+    _authRetryInFlight = true;
+    socket.value?.disconnect();
+    log.debug('Auth failure — refreshing MSAB token before retry');
+
+    _authActions!.refreshMsabToken().then((success) => {
+      if (success && _authStore!.msabToken) {
+        log.debug('Token refreshed — retrying connection');
+        socket.value?.connect();
+      } else {
+        _authRetryInFlight = false;
+        toast.add({
+          title: 'Session expired',
+          description: 'Please log in again to continue.',
+          color: 'error',
+        });
+        socket.value?.disconnect();
+        void _authActions!.logout();
+      }
+    }).catch(() => {
+      _authRetryInFlight = false;
+      toast.add({
+        title: 'Session expired',
+        description: 'Please log in again to continue.',
+        color: 'error',
+      });
+      socket.value?.disconnect();
+      void _authActions!.logout();
+    });
   }
 
   /** All reconnection attempts exhausted — surface a clear error instead of failing silently. */
@@ -360,6 +398,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     _connectedUrl = null;
     _reconnectCallback = null;
     _hiddenSince = null;
+    _authRetryInFlight = false;
     // Reset handlers so they can be re-registered on next connection
     resetRealtimeHandlers();
     log.debug('Disconnected by client');

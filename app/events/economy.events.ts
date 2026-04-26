@@ -38,7 +38,7 @@ export function useEconomyEvents() {
         charm_xp: payload.charm_xp,
       })
 
-      // Update levelsStore XP and recalculate progress bars
+      // Update auth user XP — reactive consumers recompute automatically
       updateWealthXp(parseFloat(payload.wealth_xp))
       updateCharmXp(parseFloat(payload.charm_xp))
     })

@@ -19,16 +19,16 @@ definePageMeta({
 // ========================================
 
 const authStore = useAuthStore()
-const levelsStore = useLevelsStore()
 const agencyStore = useAgencyStore()
+const { getBadgeFromXp, getLevelFromXp } = useLevelLookup()
 const { fetchUserAgency } = useAgencyMembership()
 const { fetchReceivedInvitations } = useAgencyInvitations()
 const { fetchMyJoinRequests } = useAgencyJoinRequests()
 
-const CURRENT_WEALTH_BADGE = levelsStore.wealthBadge == null ? 'https://ik.imagekit.io/flylive/badges/wealth/level_0.webp' : levelsStore.wealthBadge.image_url;
-const CURRENT_CHARM_BADGE = levelsStore.charmBadge == null ? 'https://ik.imagekit.io/flylive/badges/charm/level_0.webp' : levelsStore.charmBadge.image_url;
-const CURRENT_WEALTH_LEVEL = levelsStore.wealthLevel?.current_level || '0';
-const CURRENT_CHARM_LEVEL = levelsStore.charmLevel?.current_level || '0';
+const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(authStore.user?.wealth_xp, 'wealth'))
+const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_xp, 'charm'))
+const CURRENT_WEALTH_LEVEL = computed(() => String(getLevelFromXp(authStore.user?.wealth_xp, 'wealth').level))
+const CURRENT_CHARM_LEVEL = computed(() => String(getLevelFromXp(authStore.user?.charm_xp, 'charm').level))
 
 // ========================================
 // Lifecycle
