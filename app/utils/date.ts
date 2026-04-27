@@ -65,3 +65,35 @@ export function getAgeFormatted(
   if (age === null) return ''
   return short ? `${age}y` : `${age} years`
 }
+
+/**
+ * WhatsApp-style relative time for chat threads and messages.
+ * - Same day  → "14:23"
+ * - Yesterday → "Yesterday"
+ * - 2-6 days  → "Monday", "Tue", …
+ * - Older     → "Dec 25" or "Dec 25, 2024"
+ */
+export function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / 86_400_000)
+
+  if (diffDays === 0 && date.getDate() === now.getDate()) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
+
+  if (diffDays === 1 || (diffDays === 0 && date.getDate() !== now.getDate())) {
+    return 'Yesterday'
+  }
+
+  if (diffDays < 7) {
+    return date.toLocaleDateString('en-US', { weekday: 'short' })
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  })
+}

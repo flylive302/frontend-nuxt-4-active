@@ -17,7 +17,7 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
     <LevelsLevelPage
       color="secondary"
       category="charm"
-      hero-image="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp"
+      hero-image="https://ik.imagekit.io/flylive/siteAssets/alt-hero/charm.jpeg"
       default-badge-url="https://ik.imagekit.io/flylive/badges/charm/level_1.webp"
       description="Charm XP is earned when you receive gifts. As your level increases, you'll unlock new badges."
     />

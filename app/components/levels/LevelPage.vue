@@ -16,7 +16,7 @@ import type { LevelComputedStatus } from '~/utils/levels'
 // ========================================
 
 const props = defineProps<{
-  color: 'secondary' | 'tertiary'
+  color: 'secondary' | 'info'
   category: 'wealth' | 'charm'
   heroImage: string
   defaultBadgeUrl: string
@@ -49,14 +49,6 @@ const profileBadge = resolveComponent('ProfileBadge')
 
 const columns: ColumnDef<LevelRow>[] = [
   {
-    accessorKey: 'level',
-    header: 'Level',
-  },
-  {
-    accessorKey: 'requiredXP',
-    header: 'Required XP',
-  },
-  {
     accessorKey: 'badge',
     header: 'Badge',
     cell: ({ getValue }) => {
@@ -71,6 +63,15 @@ const columns: ColumnDef<LevelRow>[] = [
       })
     },
   },
+  {
+    accessorKey: 'level',
+    header: 'Level',
+  },
+  {
+    accessorKey: 'requiredXP',
+    header: 'Required XP',
+  },
+
 ]
 
 // ========================================
@@ -145,60 +146,66 @@ const tableData = computed<LevelRow[]>(() =>
 
 <template>
   <div>
-    <AltHero :class="`bg-linear-to-br to-${color}/10`" :image-src="heroImage">
-      <div class="p-2">
-        <!-- User Info Grid -->
-        <div class="grid grid-cols-9 gap-1">
-          <UserAvatar
+    <NuxtImg
+        :src="heroImage"
+        format="webp"
+        densities="x1 x2"
+        sizes="320px"
+        width="100%"
+        class="min-w-full aspect-rectangle object-cover"
+    />
+
+    <div class="p-2 mx-3 backdrop-blur-xs -mt-26 rounded-xl border" :class="`border-${color}`">
+      <!-- User Info Grid -->
+      <div class="grid grid-cols-9 gap-1">
+        <UserAvatar
             :animated="true"
             :frame-asset-url="authStore.user?.frame ?? undefined"
             :img="authStore.user?.avatar ?? undefined"
             class="col-span-2"
-          />
-          <div class="col-span-5 flex flex-col justify-center">
-            <p v-if="loading" class="text-base font-semibold animate-pulse">Loading...</p>
-            <template v-else-if="user">
-              <div class="flex items-center gap-2">
-                <ProfileBadge :txt="user.signature" />
-                <UBadge color="secondary" icon="i-lucide-mars-stroke" size="sm" class="w-fit text-white p-1">
-                  {{ getAge(user.date_of_birth) }}
-                </UBadge>
-              </div>
-              <p class="text-lg font-bold">{{ user.name }}</p>
-            </template>
-          </div>
-          <div class="col-span-2 flex flex-col justify-center">
-            <ProfileBadge
+        />
+        <div class="col-span-5 flex flex-col justify-center">
+          <p v-if="loading" class="text-base font-semibold animate-pulse">Loading...</p>
+          <template v-else-if="user">
+            <div class="flex items-center gap-2">
+              <ProfileBadge :txt="user.signature" />
+              <UBadge color="secondary" icon="i-lucide-mars-stroke" size="sm" class="w-fit text-white p-1">
+                {{ getAge(user.date_of_birth) }}
+              </UBadge>
+            </div>
+            <p class="text-lg font-bold">{{ user.name }}</p>
+          </template>
+        </div>
+        <div class="col-span-2 flex flex-col justify-center">
+          <ProfileBadge
               v-if="currentBadge"
               :badge-src="currentBadge.image_url"
               class="ml-auto"
               :color="color"
               :txt="String(currentLevel)"
-            />
-            <div v-else-if="loading" class="w-10 h-10 bg-muted rounded-full ml-auto animate-pulse" />
-          </div>
+          />
+          <div v-else-if="loading" class="w-10 h-10 bg-muted rounded-full ml-auto animate-pulse" />
         </div>
-
-        <!-- Progress Bar -->
-        <UProgress :model-value="progressValue" :color="color" class="mt-2" />
-        <div class="flex justify-between items-center">
-          <p class="text-md font-bold">LvL: {{ currentLevel }}</p>
-          <p class="text-md font-bold">LvL: {{ nextLevel }}</p>
-        </div>
-
-        <!-- XP Info Box -->
-        <p
-          v-if="!loading && userXp != null"
-          class="text-base font-bold bg-elevated rounded-md border-2 px-2 py-1 leading-tight text-shadow-md"
-          :class="`border-${color}`"
-        >
-          You have <span :class="`text-${color}`">{{ currentXP }} (XP)</span>
-          You Need <span :class="`text-${color}`">{{ xpRemaining }} (XP)</span>
-          Experience Points more to reach Level {{ nextLevel }}
-        </p>
-        <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
       </div>
-    </AltHero>
+
+      <!-- Progress Bar -->
+      <UProgress :model-value="progressValue" :color="color" class="mt-2" />
+      <div class="flex justify-between items-center">
+        <p class="text-md font-bold">LvL: {{ currentLevel }}</p>
+        <p class="text-md font-bold">LvL: {{ nextLevel }}</p>
+      </div>
+
+      <!-- XP Info Box -->
+      <p
+          v-if="!loading && userXp != null"
+          class="text-base font-bold bg-elevated rounded-md px-2 py-1 leading-tight glow-primary"
+      >
+        You have <span :class="`text-${color}`">{{ currentXP }} (XP)</span>
+        You Need <span :class="`text-${color}`">{{ xpRemaining }} (XP)</span>
+        Experience Points more to reach Level {{ nextLevel }}
+      </p>
+      <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
+    </div>
 
     <div class="px-3 my-8">
       <!-- Level Description -->
@@ -230,8 +237,7 @@ const tableData = computed<LevelRow[]>(() =>
         :columns="columns"
         :data="tableData"
         sticky
-        class="rounded-lg shadow-lg mt-2 w-full"
-        :class="`border border-${color} shadow-${color}/30`"
+        class="rounded-lg glowing-border mt-2 w-full"
       />
     </div>
   </div>

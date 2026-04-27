@@ -2,7 +2,7 @@
 import type { Colors } from '~/types/colors'
 
 // ProfileBadge only supports a subset of colors
-type BadgeColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary' | 'success'>
+type BadgeColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'>
 
 withDefaults(defineProps<{
   color?: BadgeColor
@@ -24,6 +24,9 @@ const variantMap: Record<BadgeColor, string> = {
   secondary: "bg-secondary/30 border-secondary/70",
   tertiary:  "bg-tertiary/30  border-tertiary/70",
   success:   "bg-success/30   border-success/70",
+  info:      "bg-info/30      border-info/70",
+  warning:   "bg-warning/30   border-warning/70",
+  error:     "bg-error/30     border-error/70",
 }
 
 </script>
@@ -45,7 +48,7 @@ const variantMap: Record<BadgeColor, string> = {
     <p
         class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1  truncate"
         :class="[
-          variantMap?.[color],
+          variantMap[color],
           showBadge ? 'pl-4 -ml-4' : 'pl-1 m-0'
         ]"
     >
