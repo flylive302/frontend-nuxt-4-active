@@ -64,16 +64,31 @@ function getClient(baseURL: string | undefined) {
     onResponseError({ response }: FetchContext) {
       // Global 401 interceptor — token expired or invalid
       if (response?.status === 401) {
-        // Skip aggressive logout for background MSAB token refreshes.
-        // These are opportunistic — failure is handled by the caller (useAuth).
+        const url = response?.url || ''
+
+        // Skip aggressive logout for background/auth-related requests.
+        // These are opportunistic — failure is handled by the caller.
         // Firing logout here would clear ALL tokens and redirect to /log-in
         // before the caller's catch block runs, causing cascading errors.
-        const url = response?.url || ''
-        if (url.includes('/msab-token/refresh')) return
+        if (
+          url.includes('/msab-token/refresh') ||
+          url.includes('/bootstrap') ||
+          url.includes('/auth/user')
+        ) return
 
         const authStore = useAuthStore()
         // Only act if user was previously authenticated (avoid loops on login page)
         if (authStore.token) {
+          try {
+            const toast = useToast()
+            toast.add({
+              title: 'Session ended',
+              description: 'You were signed out. This may happen when your account is used on another device or tab.',
+              color: 'warning',
+            })
+          } catch {
+            // useToast may not be available outside Vue setup context — silently skip
+          }
           authStore.logout()
           navigateTo('/log-in')
         }

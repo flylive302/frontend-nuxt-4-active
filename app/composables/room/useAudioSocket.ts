@@ -171,6 +171,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'error';
     error.value = err.message;
     log.error('Connection error:', err.message);
+    log.warn('Token state at error time:', authStore.msabToken ? `present (${authStore.msabToken.length} chars)` : 'NULL/EMPTY');
 
     const authFailed =
       err.message === 'Invalid credentials' ||
@@ -198,11 +199,11 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // token), refresh once, then manually reconnect with the fresh token.
     _authRetryInFlight = true;
     socket.value?.disconnect();
-    log.debug('Auth failure — refreshing MSAB token before retry');
+    log.warn('Auth failure — refreshing MSAB token before retry');
 
     _authActions!.refreshMsabToken().then((success) => {
       if (success && _authStore!.msabToken) {
-        log.debug('Token refreshed — retrying connection');
+        log.warn('Token refreshed — retrying connection. New token:', `${_authStore!.msabToken.length} chars`);
         socket.value?.connect();
       } else {
         // Refresh failed — leave socket disconnected, user keeps their session.
@@ -309,8 +310,15 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (!authStore.msabToken) {
       log.debug('No MSAB token — attempting refresh before connect');
       status.value = 'error';
-      await _authActions!.refreshMsabToken();
+      const refreshOk = await _authActions!.refreshMsabToken();
+      if (!refreshOk || !authStore.msabToken) {
+        log.warn('MSAB token refresh failed or returned empty — cannot connect');
+        error.value = 'No audio token available';
+        return;
+      }
     }
+
+    log.debug('Connecting with MSAB token:', authStore.msabToken ? `present (${authStore.msabToken.length} chars)` : 'MISSING');
 
     const serverUrl = targetUrl || (config.public.audioServerUrl as string);
     if (!serverUrl) {

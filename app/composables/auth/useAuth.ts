@@ -145,11 +145,12 @@ export function useAuthActions() {
 
     _refreshPromise = (async () => {
       try {
+        log.warn('Refreshing MSAB token. Sanctum token:', authStore.token ? `present (${authStore.token.length} chars)` : 'MISSING')
         const { data } = await api<{ data: { msab_token: string } }>('/auth/msab-token/refresh', {
           method: 'POST',
         })
         authStore.setMsabToken(data.msab_token)
-        log.debug('MSAB token refreshed')
+        log.warn('MSAB token refreshed:', `${data.msab_token.length} chars`)
         return true
       } catch (err) {
         // Non-blocking — stale JWT (now 30-day lifetime) is better than no JWT
