@@ -154,7 +154,19 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
   }
 
-  /** Handle connection errors (including auth failures) */
+  /**
+   * Handle connection errors (including auth failures).
+   *
+   * CRITICAL DESIGN RULE: This handler must NEVER call logout().
+   * Audio socket auth failures degrade to chat-only mode (handled by
+   * useRoomLifecycle's try/catch around joinRoom). Real session expiry
+   * is handled by the 401 API interceptor in useApi.ts, and admin blocks
+   * by the auth:force_disconnect event in useAuthLifecycle.ts.
+   *
+   * The retry logic here is ONLY for recovering stale/null MSAB tokens
+   * when the Sanctum session is still valid. If the retry fails, the
+   * socket stays in 'error' state — the user keeps their session.
+   */
   function handleConnectError(err: Error) {
     status.value = 'error';
     error.value = err.message;
@@ -168,15 +180,16 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (!authFailed) return;
 
     if (_authRetryInFlight) {
-      // Second auth failure — token is genuinely invalid/revoked
+      // Second auth failure — token refresh didn't help.
+      // Leave socket disconnected; user stays in chat-only mode.
       _authRetryInFlight = false;
-      toast.add({
-        title: 'Session expired',
-        description: 'Please log in again to continue.',
-        color: 'error',
-      });
       socket.value?.disconnect();
-      void _authActions!.logout();
+      log.warn('Auth retry exhausted — audio unavailable (chat-only mode)');
+      toast.add({
+        title: 'Audio connection failed',
+        description: 'Chat and gifting will still work.',
+        color: 'warning',
+      });
       return;
     }
 
@@ -192,24 +205,25 @@ export function useAudioSocket(): UseAudioSocketReturn {
         log.debug('Token refreshed — retrying connection');
         socket.value?.connect();
       } else {
+        // Refresh failed — leave socket disconnected, user keeps their session.
         _authRetryInFlight = false;
-        toast.add({
-          title: 'Session expired',
-          description: 'Please log in again to continue.',
-          color: 'error',
-        });
         socket.value?.disconnect();
-        void _authActions!.logout();
+        log.warn('MSAB token refresh failed — audio unavailable');
+        toast.add({
+          title: 'Audio connection failed',
+          description: 'Chat and gifting will still work.',
+          color: 'warning',
+        });
       }
     }).catch(() => {
       _authRetryInFlight = false;
-      toast.add({
-        title: 'Session expired',
-        description: 'Please log in again to continue.',
-        color: 'error',
-      });
       socket.value?.disconnect();
-      void _authActions!.logout();
+      log.warn('MSAB token refresh error — audio unavailable');
+      toast.add({
+        title: 'Audio connection failed',
+        description: 'Chat and gifting will still work.',
+        color: 'warning',
+      });
     });
   }
 
