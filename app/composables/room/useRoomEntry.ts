@@ -70,8 +70,8 @@ export function useRoomEntry() {
       doEnterRoom(room)
     } catch (error: unknown) {
       const err = error as Record<string, unknown>
-      const errData = err?.data as Record<string, unknown> | undefined
-      const status = err?.statusCode ?? err?.status ?? errData?.statusCode
+      const response = err?.response as Record<string, unknown> | undefined
+      const status = (response?.status as number | undefined) ?? err?.statusCode ?? err?.status
       if (status === 403) {
         // Password required → show prompt
         pendingRoom.value = room

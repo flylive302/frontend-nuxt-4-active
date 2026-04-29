@@ -17,6 +17,7 @@ const open = defineModel < boolean > ('open', { default: false })
           aria-label="Leaderboard"
           size="md"
           variant="ghost"
+          to="/rank"
       >
         <svg
             xmlns="http://www.w3.org/2000/svg"

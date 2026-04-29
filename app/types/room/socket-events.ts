@@ -66,6 +66,15 @@ export interface UserLevelUpPayload {
   current_xp: string
 }
 
+/**
+ * user.progression - Single event combining all level-ups and badges from one gift transaction.
+ * Replaces separate level.up + badge.earned events from the gift side-effects job.
+ */
+export interface UserProgressionPayload {
+  level_ups: UserLevelUpPayload[]
+  badges: BadgeEarnedPayload[]
+}
+
 // ========================================
 // Room Events
 // ========================================
@@ -235,6 +244,7 @@ export interface ServerToClientEvents {
   // Achievement
   'badge.earned': (payload: BadgeEarnedPayload) => void
   'level.up': (payload: UserLevelUpPayload) => void
+  'user.progression': (payload: UserProgressionPayload) => void
 
   // Room
   'room.level_up': (payload: RoomLevelUpPayload) => void
