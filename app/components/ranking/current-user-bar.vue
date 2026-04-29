@@ -31,12 +31,12 @@ const subline = computed<string | null>(() => {
 <template>
   <div
     class="
-      fixed z-40 left-0 bottom-0 right-0 px-4 py-2
+      fixed z-40 top-0 left-0 right-0 px-4 py-2
       backdrop-blur
       flex items-center justify-between w-full
     "
   >
     <p class="text-md font-medium text-white">{{ headline }}</p>
-    <p v-if="subline" class="text-md font-semibold text-primary-400">{{ subline }}</p>
+    <p v-if="subline" class="text-lg font-bold text-primary">{{ subline }}</p>
   </div>
 </template>

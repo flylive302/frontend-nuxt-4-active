@@ -152,7 +152,7 @@ const tableData = computed<LevelRow[]>(() =>
         densities="x1 x2"
         sizes="320px"
         width="100%"
-        class="min-w-full aspect-rectangle object-cover"
+        class="min-w-full aspect-rectangle object-cover animate-[zoom_50s_ease-in-out_infinite]"
     />
 
     <div class="p-2 mx-3 backdrop-blur-xs -mt-26 rounded-xl border" :class="`border-${color}`">

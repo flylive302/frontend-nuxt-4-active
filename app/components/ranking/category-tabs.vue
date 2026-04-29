@@ -21,6 +21,8 @@ const items = RANKING_CATEGORIES.map((value) => ({
 function handleUpdate(value: string | number): void {
   modelValue.value = value as RankingCategory
 }
+
+
 </script>
 
 <template>
@@ -30,11 +32,11 @@ function handleUpdate(value: string | number): void {
     color="primary"
     variant="link"
     size="md"
-    class="w-full"
+    class="pr-14"
     :ui="{
-      list: 'w-full overflow-x-auto overflow-y-hidden scrollbar-thin',
-      indicator: 'bottom-1',
-      trigger: 'min-w-fit whitespace-nowrap',
+      list: 'overflow-x-auto overflow-y-hidden scrollbar-thin',
+      trigger: 'min-w-fit whitespace-nowrap bg-linear-to-b from-transparent via-transparent data-[state=active]:to-primary rounded-none',
+      label: 'text-white',
     }"
     @update:model-value="handleUpdate"
   />

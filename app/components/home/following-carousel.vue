@@ -36,7 +36,7 @@ defineProps<{
             :img="item.avatar ?? '/AppImages/dummy-card/avatar.png'"
             class="w-14"
           />
-          <div class="marquee-container w-full -mt-2 pl-8">
+          <div class="marquee-container w-fit -mt-2">
             <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
               {{ item.name }}
             </span>

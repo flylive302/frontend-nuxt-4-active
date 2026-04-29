@@ -30,7 +30,8 @@ function handleUpdate(value: string | number): void {
     size="sm"
     class="w-full"
     :ui="{
-      list: 'mx-auto',
+      list: 'mx-auto bg-transparent border border-white/20 backdrop-blur-2xl shadow-md',
+      label: 'text-white',
       trigger: 'min-w-fit',
     }"
     @update:model-value="handleUpdate"

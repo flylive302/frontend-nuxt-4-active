@@ -79,50 +79,71 @@ useHead({
 </script>
 
 <template>
-  <main class="px-3 pt-2 pb-24">
-
-    <NavAlt back-to="/">Ranking</NavAlt>
-    <div class="h-12"></div>
-    <RankingCategoryTabs
-      :model-value="category"
-      @update:model-value="setCategory"
-    />
-
-    <div class="mt-3">
-      <RankingPeriodTabs
-        :model-value="period"
-        @update:model-value="setPeriod"
-      />
-    </div>
-
-    <RankingError
-      v-if="error"
-      :message="error"
-      class="mt-6"
-      @retry="refresh(category, period)"
-    />
-
-    <RankingPodium
-      :top3="podiumTop3"
-      :category="category"
-    />
-
-    <RankingList
-      v-if="!error"
-      :entries="restEntries"
-      :category="category"
-      :loading="isLoading"
-      class="mt-2"
-    />
-
-    <RankingEmpty
-      v-if="!error && !isLoading && entries.length === 0"
+  <main class="relative m-0 p-0 min-h-screen overflow-hidden">
+    <NuxtImg
+        :src="`https://assets.flyliveapp.com/ranking/${category}.webp`"
+        alt="Leaderboard Background"
+        class="w-full absolute top-0 z-0 mask-b-from-70% mask-b-to-90% animate-[zoom_50s_ease-in-out_infinite]"
     />
 
     <RankingCurrentUserBar
-      v-if="authStore.isAuthenticated"
-      :rank="currentUser"
-      :category="category"
+        v-if="authStore.isAuthenticated"
+        :rank="currentUser"
+        :category="category"
     />
+
+    <div class="h-24"></div>
+
+    <div class="relative z-10">
+      <RankingError
+          v-if="error"
+          :message="error"
+          class="mt-6"
+          @retry="refresh(category, period)"
+      />
+
+      <RankingPodium
+          :top3="podiumTop3"
+          :category="category"
+      />
+
+      <RankingList
+          v-if="!error"
+          :entries="restEntries"
+          :category="category"
+          :loading="isLoading"
+          class="mt-2"
+      />
+
+      <RankingEmpty
+          v-if="!error && !isLoading && entries.length === 0"
+      />
+    </div>
+
+    <footer aria-label="Primary" class="absolute inset-x-2 bottom-5 z-100">
+      <div class="m-3">
+        <RankingPeriodTabs
+            :model-value="period"
+            @update:model-value="setPeriod"
+        />
+      </div>
+
+      <div class="backdrop-blur-3xl flex squircle border border-white/20 rounded-xl">
+        <UButton
+            to="/" class="flex-middle"
+            variant="ghost"
+            square
+            size="xl"
+        >
+          <UIcon class="size-8 drop-shadow-md" name="i-iconamoon-home-fill" />
+        </UButton>
+        <RankingCategoryTabs
+            :model-value="category"
+            @update:model-value="setCategory"
+            class="w-full"
+        />
+      </div>
+    </footer>
+
   </main>
 </template>

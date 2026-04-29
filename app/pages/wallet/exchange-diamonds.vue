@@ -222,7 +222,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
       densities="x1 x2"
       sizes="320px"
       width="100%"
-      class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-secondary/50"
+      class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-secondary/50 animate-[zoom_60s_ease-in-out_infinite]"
     />
 
     <!-- Exchange Section (Agency Members Only) -->

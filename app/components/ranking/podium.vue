@@ -53,38 +53,39 @@ function linkFor(entry: RankingEntry): string | null {
 function rankAccent(rank: number): { ring: string; text: string; medal: string; height: string } {
   switch (rank) {
     case 1: return { ring: 'ring-yellow-400', text: 'text-yellow-300', medal: 'bg-yellow-500', height: 'h-32' }
-    case 2: return { ring: 'ring-zinc-300', text: 'text-zinc-100', medal: 'bg-zinc-300', height: 'h-24' }
-    case 3: return { ring: 'ring-amber-600', text: 'text-amber-200', medal: 'bg-amber-700', height: 'h-20' }
+    case 2: return { ring: 'ring-zinc-300', text: 'text-zinc-100', medal: 'bg-zinc-300', height: 'h-12' }
+    case 3: return { ring: 'ring-amber-600', text: 'text-amber-200', medal: 'bg-amber-700', height: 'h-12' }
     default: return { ring: 'ring-white/10', text: 'text-muted', medal: 'bg-white/10', height: 'h-16' }
   }
 }
 </script>
 
 <template>
-  <section class="grid grid-cols-3 items-end gap-2 px-2 py-6">
+  <section class="grid grid-cols-3 items-end gap-2 px-3 relative z-10">
     <template v-for="entry in visualOrder" :key="`${entry.subject_type}-${entry.rank}`">
       <component
         :is="linkFor(entry) ? 'NuxtLink' : 'div'"
         v-bind="linkFor(entry) ? { to: linkFor(entry) } : {}"
         class="flex flex-col items-center text-center"
       >
-        <UAvatar
-          :src="avatarFor(entry)"
-          :alt="nameFor(entry)"
-          :size="entry.rank === 1 ? 'xl' : 'lg'"
-          :class="['ring-2 ring-offset-2 ring-offset-transparent mb-2', rankAccent(entry.rank).ring]"
-        />
+        <NuxtLink :to="entry.user?.signature ? `/profile/${entry.user.signature}` : ''" class="relative">
+          <UserAvatar
+              :animated="true"
+              :frame-asset-url="`https://assets.flyliveapp.com/frames/events/top_${entry.rank}.svga`"
+              :img="avatarFor(entry) ?? 'AppImages/dummy-card/avatar.png'"
+              frameName="top-100-22-0-0"
+              class="w-28"
+          />
+        </NuxtLink>
 
         <p class="text-sm font-medium text-white truncate max-w-full px-1">{{ nameFor(entry) }}</p>
-        <p :class="['text-xs font-semibold mt-0.5', rankAccent(entry.rank).text]">
-          {{ formatCurrency(entry.score) }}
-        </p>
+        <UBadge icon="i-lucide-coins" variant="outline" class="backdrop-blur-lg font-bold text-md text-white">{{formatCurrency(entry.score)}}</UBadge>
+        <profile-badge :txt="entry.user?.signature" />
 
         <div
-          :class="[
+            :class="[
             'w-full mt-2 rounded-t-lg flex items-start justify-center pt-2 text-xs font-bold text-black/70',
             rankAccent(entry.rank).height,
-            rankAccent(entry.rank).medal,
           ]"
         >
           {{ entry.rank }}

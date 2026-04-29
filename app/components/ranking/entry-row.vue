@@ -64,39 +64,34 @@ const rankBadgeClass = computed<string>(() => {
 </script>
 
 <template>
-  <component
-    :is="linkTo ? 'NuxtLink' : 'div'"
-    v-bind="linkTo ? { to: linkTo } : {}"
+  <NuxtLink
+    :to="linkTo ?? ''"
     class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors"
-    :class="[
-      linkTo ? 'hover:bg-white/5' : '',
-      emphasized ? 'bg-white/[0.03]' : '',
-    ]"
   >
     <span
-      class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold"
+      class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold text-white shadow-md border border-white/20"
       :class="rankBadgeClass"
     >
       {{ entry.rank }}
     </span>
 
-    <UAvatar
-      :src="avatarSrc || undefined"
-      :alt="displayName"
-      size="md"
-      class="shrink-0"
+    <UserAvatar
+        :animated="true"
+        :frame-asset-url="entry.user?.frame ?? 'https://assets.flyliveapp.com/frames/10.svga'"
+        :img="avatarSrc ?? 'AppImages/dummy-card/avatar.png'"
+        frameName="top-120-16-0-0"
+        class="w-12"
     />
-
     <div class="min-w-0 flex-1">
       <p class="truncate text-sm font-medium text-white">{{ displayName }}</p>
-      <p v-if="subtitle" class="truncate text-xs text-muted">{{ subtitle }}</p>
+      <profile-badge v-if="entry.user?.signature" :txt="entry.user.signature" :show-badge="false" />
     </div>
 
     <div class="shrink-0 text-right">
-      <p class="text-sm font-semibold text-primary-400">{{ formattedScore }}</p>
-      <p class="text-[10px] uppercase tracking-wide text-muted">
+      <p class="text-sm font-semibold text-primary text-shadow-2xs">{{ formattedScore }}</p>
+      <p class="text-[10px] uppercase tracking-wide text-white">
         {{ entry.subject_type === 'user' ? (category === 'wealth' ? 'sent' : 'received') : 'income' }}
       </p>
     </div>
-  </component>
+  </NuxtLink>
 </template>

@@ -15,7 +15,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-col gap-1">
+  <div class="flex flex-col gap-1 mx-3 border border-white/20 rounded-xl squircle backdrop-blur shadow-md">
     <template v-if="loading && entries.length === 0">
       <div
         v-for="i in 8"

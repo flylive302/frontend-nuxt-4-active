@@ -197,7 +197,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
           densities="x1 x2"
           sizes="320px"
           width="100%"
-          class="min-w-full aspect-rectangle object-cover h-48"
+          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_80s_ease-in-out_infinite]"
         />
       </template>
 

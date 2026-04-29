@@ -117,8 +117,7 @@
 
 .marquee-text {
     display: inline-block;
-    animation: marquee-scroll 8s linear infinite;
-    animation-delay: 3s;
+    animation: marquee-scroll 5s linear infinite;
     animation-fill-mode: backwards;
 }
 
@@ -234,5 +233,14 @@
 
     &::before {
         transform-origin: left;
+    }
+}
+
+@keyframes zoom {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
     }
 }

@@ -60,7 +60,7 @@ watch(lastCoinRequestUpdate, () => {
         densities="x1 x2"
         sizes="320px"
         width="100%"
-        class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-tertiary/70"
+        class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-tertiary/70 animate-[zoom_60s_ease-in-out_infinite]"
     />
 
     <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-4xl -mt-34 relative">
