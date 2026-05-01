@@ -28,6 +28,12 @@ useRoomLifecycle();
 // ========================================
 const {init: initWakeLock} = useWakeLock()
 initWakeLock()
+
+// ========================================
+// Media Session (keeps audio alive in background on iOS PWA / Android TWA)
+// ========================================
+const {init: initMediaSession} = useMediaSession()
+initMediaSession()
 </script>
 
 <template>

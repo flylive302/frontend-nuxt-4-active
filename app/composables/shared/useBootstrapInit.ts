@@ -4,7 +4,7 @@
 // Role: Action/Orchestrator — owns the bootstrap fetch pipeline.
 // Pipeline: GATE → EXECUTE → REACT
 
-import type {BootstrapConfig, BootstrapResponse} from '~/types/user/bootstrap'
+import type {BootstrapConfig, BootstrapResponse, BootstrapUser} from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[BootstrapInit]')
@@ -24,6 +24,7 @@ const log = createLogger('[BootstrapInit]')
 export function useBootstrapInit() {
   const { api, normalizeError } = useApi()
   const bootstrapStore = useBootstrapStore()
+  const authStore = useAuthStore()
   const { trackBootstrapStarted, trackBootstrapCompleted, trackBootstrapFailed } = useTelemetry()
   const { startAssetDownload } = useBootstrapAssets()
 
@@ -47,6 +48,14 @@ export function useBootstrapInit() {
     if (route.path === '/callback') {
       log.debug('On callback route, deferring to callback handler')
       return null
+    }
+
+    // Always re-hydrate user on every boot. Pinia-persist restores user from
+    // localStorage, but a force-kill or cleared storage leaves user=null even
+    // when a valid Sanctum cookie exists. Fetching here repairs that state
+    // before anything checks authStore.isAuthenticated (e.g. socket plugin).
+    if (authStore.token) {
+      await refreshUser()
     }
 
     // GATE — check freshness
@@ -120,6 +129,21 @@ export function useBootstrapInit() {
     }
   }
 
+
+  /**
+   * Re-fetch the authenticated user and seed authStore.
+   * Runs on every boot so a force-kill + reopen never leaves user=null.
+   */
+  async function refreshUser(): Promise<void> {
+    try {
+      const response = await api<{ data: BootstrapUser }>('/auth/user')
+      if (response?.data) {
+        authStore.setUser(response.data)
+      }
+    } catch {
+      log.warn('Failed to refresh user on boot — proceeding with persisted state')
+    }
+  }
 
   /**
    * Check if bootstrap fetch is already in progress.

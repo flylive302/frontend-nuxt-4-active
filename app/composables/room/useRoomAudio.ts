@@ -98,6 +98,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const toast = _toast;
   const log = createLogger('[RoomAudio]');
 
+  // Media Session (background audio signal)
+  const { activate: activateMediaSession, deactivate: deactivateMediaSession } = useMediaSession();
+
   // Socket and mediasoup instances
   const { socket, connect, disconnect: _disconnect, status: connectionStatus, isConnected } = useAudioSocket();
   const {
@@ -404,6 +407,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
     audioPlayer.setupListeners();
 
+    // Signal to OS that active audio is playing (keeps PWA/TWA alive in background)
+    const room = roomStore.currentRoom;
+    if (room) activateMediaSession(room.name, room.logo ?? null);
+
     // log.debug('Joined room:', roomId);
   }
 
@@ -438,6 +445,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear room state
     audioStore.clearAudioState();
     seatsStore.resetSeats();
+
+    // Clear OS media session
+    deactivateMediaSession();
 
     // log.debug('Left room (socket stays connected)');
   }

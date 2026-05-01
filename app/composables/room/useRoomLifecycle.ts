@@ -35,10 +35,27 @@ export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
-  const { joinRoom, leaveRoom, connectionStatus } = useRoomAudio();
+  const authStore = useAuthStore();
+  const audioStore = useRoomAudioStore();
+  const { joinRoom, leaveRoom, startAudio, connectionStatus } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect, recoverFromSuspension } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
+
+  // Auto-resume audio after reconnect if the server retained the user's seat
+  // during the 15 s grace period (see MSAB seat-grace.ts).
+  async function resumeAudioIfSeated(): Promise<void> {
+    const userId = authStore.user?.id;
+    if (!userId) return;
+    if (audioStore.participants.get(userId)?.isSpeaker) {
+      try {
+        await startAudio();
+        log.debug('Auto-resumed audio after reconnect — seat retained during grace period');
+      } catch (err) {
+        log.warn('Failed to auto-resume audio after reconnect:', err);
+      }
+    }
+  }
 
   // ========================================
   // Watcher 1: Room Join / Leave / Switch
@@ -104,6 +121,7 @@ export function useRoomLifecycle(): void {
             disconnectSocket();
             await connectSocket();
             await joinRoom(String(roomStore.currentRoom.id));
+            await resumeAudioIfSeated();
           } catch (err) {
             log.warn('Reconnect after un-minimize failed:', err);
             toast.add({
@@ -144,6 +162,7 @@ export function useRoomLifecycle(): void {
 
       // Re-join the audio room on MSAB server
       await joinRoom(roomId);
+      await resumeAudioIfSeated();
       log.debug('Successfully re-joined room after reconnect');
     } catch (error) {
       log.error('Failed to re-join room after reconnect:', error);
@@ -190,6 +209,7 @@ export function useRoomLifecycle(): void {
         disconnectSocket();
         await connectSocket();
         await joinRoom(String(roomStore.currentRoom.id));
+        await resumeAudioIfSeated();
       } catch (err) {
         log.warn('Reconnect after PWA resume failed:', err);
         toast.add({
