@@ -4,7 +4,7 @@
 // Role: Action/Orchestrator — owns the bootstrap fetch pipeline.
 // Pipeline: GATE → EXECUTE → REACT
 
-import type {BootstrapConfig, BootstrapResponse, BootstrapUser} from '~/types/user/bootstrap'
+import type { BootstrapConfig, BootstrapResponse, BootstrapUser } from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[BootstrapInit]')
@@ -41,8 +41,6 @@ export function useBootstrapInit() {
    */
   async function init(): Promise<BootstrapConfig | null> {
 
-    log.debug('Bootstrap Initialized')
-
     // GATE — skip on OAuth callback route (callback page handles its own auth flow)
     const route = useRoute()
     if (route.path === '/callback') {
@@ -50,17 +48,18 @@ export function useBootstrapInit() {
       return null
     }
 
-    // Always re-hydrate user on every boot. Pinia-persist restores user from
-    // localStorage, but a force-kill or cleared storage leaves user=null even
-    // when a valid Sanctum cookie exists. Fetching here repairs that state
-    // before anything checks authStore.isAuthenticated (e.g. socket plugin).
+    // Background user re-hydration — persisted user is good enough for initial render.
+    // Pinia-persist restores user from localStorage; this API call patches stale data.
+    // PERF: fire-and-forget — never blocks rendering.
     if (authStore.token) {
-      await refreshUser()
+      refreshUser()
     }
 
     // GATE — check freshness
     if (!bootstrapStore.needsRefresh) {
       log.debug('Bootstrap data fresh, skipping fetch')
+      // Still schedule asset downloads — may have new items since last boot
+      scheduleAssetDownload()
       return null
     }
 
@@ -84,8 +83,8 @@ export function useBootstrapInit() {
       trackBootstrapFailed(bootstrapStore.error ?? 'Unknown error')
     }
 
-    // REACT — start asset downloads in background if gifts are available
-    await startAssetDownload()
+    // REACT — defer asset downloads to idle time, never block rendering
+    scheduleAssetDownload()
 
     return data
   }
@@ -150,6 +149,21 @@ export function useBootstrapInit() {
    */
   function isFetchInProgress(): boolean {
     return bootstrapStore.phase === 'loading'
+  }
+
+  /**
+   * Schedule asset download during idle time.
+   * Uses requestIdleCallback where available, falls back to setTimeout.
+   * PERF: never blocks the main thread during boot.
+   */
+  function scheduleAssetDownload(): void {
+    const schedule = typeof requestIdleCallback !== 'undefined'
+      ? requestIdleCallback
+      : (cb: () => void) => setTimeout(cb, 100)
+
+    schedule(() => {
+      startAssetDownload()
+    })
   }
 
   return { init }

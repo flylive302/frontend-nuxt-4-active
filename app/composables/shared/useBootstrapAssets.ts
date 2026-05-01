@@ -140,6 +140,14 @@ export function useBootstrapAssets() {
       return
     }
 
+    // PERF: Skip preloading on save-data connections to preserve bandwidth
+    // const { getNetworkInfo } = await import('~/services/networkDetector')
+    // const networkInfo = getNetworkInfo()
+    // if (networkInfo.saveData) {
+    //   log.debug('Save-data mode active, skipping asset preload')
+    //   return
+    // }
+
     await cacheStorage.initCacheStorage()
     await assetIndex.initAssetIndex()
 
@@ -158,6 +166,7 @@ export function useBootstrapAssets() {
     })
 
     assetStore.setPhase('downloading')
+
     await assetDownloader.enqueue(items)
 
     assetDownloader.start()

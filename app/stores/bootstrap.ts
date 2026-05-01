@@ -59,7 +59,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    */
   const needsRefresh = computed(() => {
     if (!lastBootstrapAt.value) return true
-    const STALE_TIME = 50 * 60 * 1000 // 5 minutes
+    const STALE_TIME = 50 * 60 * 1000 // 50 minutes
     return Date.now() - lastBootstrapAt.value > STALE_TIME
   })
 

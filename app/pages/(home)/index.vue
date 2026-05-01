@@ -16,7 +16,7 @@ const roomRef = ref(null)
 
 // ---- Following Carousel (ranked, Redis-cached)
 const { fetchRankedFollowing } = useFollowingData()
-const { data: rankedFollowing } = await useAsyncData(
+const { data: rankedFollowing } = useAsyncData(
   'home-following-ranked',
   () => fetchRankedFollowing(),
   { lazy: true }
@@ -28,7 +28,7 @@ const { fetchRooms } = useRoom()
 // Default to "All" — shows rooms from every country
 const selectedCountry = ref<string>('')
 
-const { data: roomsResponse } = await useAsyncData(
+const { data: roomsResponse, status: roomsStatus } = useAsyncData(
   'home-rooms',
   async () => {
     const params: { page: number; country?: string } = { page: 1 }
@@ -37,6 +37,7 @@ const { data: roomsResponse } = await useAsyncData(
   },
   {
     watch: [selectedCountry],
+    lazy: true,
     // Always fetch fresh data — active_countries must be current
     getCachedData: () => undefined,
   }
@@ -186,37 +187,49 @@ const banners: Banner[] = [
     <!-- Country Filter -->
     <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />
 
-    <div ref="roomRef">
-      <UCarousel
-          v-if="carouselRooms.length > 0"
-          :items="carouselRooms"
-          :autoplay="roomAutoplay"
-          class-names
-          :ui="{
-            item: 'basis-2/3 transition duration-300 ease-in-out scale-90 [&.is-snapped]:scale-100'
-          }"
-          class="mb-6"
-      >
-        <template #default="{ item }">
-          <RoomCard v-if="item" :room="item" class="h-72 max-w-60"/>
-        </template>
-      </UCarousel>
-    </div>
+    <!-- Room Section: Skeleton while loading, content when ready -->
+    <template v-if="roomsStatus === 'pending'">
+      <div class="flex gap-3 overflow-hidden mb-6 px-3">
+        <div v-for="i in 3" :key="i" class="shrink-0 w-2/3 h-72 rounded-2xl bg-white/5 animate-pulse" />
+      </div>
+      <div class="grid grid-cols-2 gap-3 mx-3">
+        <div v-for="i in 4" :key="i" class="h-56 rounded-2xl bg-white/5 animate-pulse" />
+      </div>
+    </template>
 
-    <div class="mx-3">
-      <InfiniteScroll
-        :key="selectedCountry || '__all__'"
-        :fetcher="infiniteScrollFetcher"
-        :initial-page="1"
-        :per-page="15"
-      >
-        <template #cell="{ cell }">
-          <RoomCard
-            :room="cell"
-            class="h-56 max-w-40 mb-4"
-          />
-        </template>
-      </InfiniteScroll>
-    </div>
+    <template v-else>
+      <div ref="roomRef">
+        <UCarousel
+            v-if="carouselRooms.length > 0"
+            :items="carouselRooms"
+            :autoplay="roomAutoplay"
+            class-names
+            :ui="{
+              item: 'basis-2/3 transition duration-300 ease-in-out scale-90 [&.is-snapped]:scale-100'
+            }"
+            class="mb-6"
+        >
+          <template #default="{ item }">
+            <RoomCard v-if="item" :room="item" class="h-72 max-w-60"/>
+          </template>
+        </UCarousel>
+      </div>
+
+      <div class="mx-3">
+        <InfiniteScroll
+          :key="selectedCountry || '__all__'"
+          :fetcher="infiniteScrollFetcher"
+          :initial-page="1"
+          :per-page="15"
+        >
+          <template #cell="{ cell }">
+            <RoomCard
+              :room="cell"
+              class="h-56 max-w-40 mb-4"
+            />
+          </template>
+        </InfiniteScroll>
+      </div>
+    </template>
   </main>
 </template>

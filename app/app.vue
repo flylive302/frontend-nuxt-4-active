@@ -3,16 +3,10 @@ import {defineAsyncComponent} from 'vue'
 
 const roomStore = useRoomStore()
 // ========================================
-// Auto-Fetch Bootstrap & Start Asset Downloads
+// Asset Download Progress (bound to download bar in template)
 // ========================================
-// Watch for conditions where we need to fetch bootstrap data or start downloads.
-// This handles the post-login flow where the cookie is now available.
-
-const {init: initBootstrap} = useBootstrapInit()
 const assetStore = useAssetStore()
 const { progress, phase } = storeToRefs(assetStore);
-
-await initBootstrap();
 
 // Lazy-load minimized room button — only loaded when user joins a room
 const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
