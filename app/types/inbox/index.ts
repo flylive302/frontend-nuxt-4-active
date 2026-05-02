@@ -2,13 +2,15 @@
 // Inbox / Messaging Type Definitions
 // ========================================
 
-export type ThreadKind = 'system' | 'dm' | 'request'
+export type ThreadKind = 'dm' | 'request'
 
 export interface ThreadParticipant {
   id: string
   name: string
   avatar: string | null
   frame: string | null
+  signature: string | null
+  gender: number | null
 }
 
 export interface Thread {

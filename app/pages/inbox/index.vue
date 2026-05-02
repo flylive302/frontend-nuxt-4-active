@@ -42,15 +42,7 @@ onMounted(async () => {
       </div>
 
       <template v-else>
-        <!-- ── Official thread (always pinned) ────────── -->
-        <NuxtLink to="/inbox/official">
-          <InboxSystemThreadItem
-            :unread-count="store.officialUnreadCount"
-            :last-notification="null"
-          />
-        </NuxtLink>
-
-        <!-- ── Known DMs ──────────────────────────────── -->
+        <!-- ── DM Threads ────────────────────────────── -->
         <div v-if="store.dmThreads.length > 0" class="divide-y divide-muted/10">
           <NuxtLink
             v-for="thread in store.dmThreads"

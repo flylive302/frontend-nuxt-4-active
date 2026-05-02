@@ -46,7 +46,7 @@ export function useInboxThread() {
     try {
       await api(`/inbox/messages/${messageId}`, { method: 'DELETE' })
       store.messages.splice(
-        store.messages.findIndex(m => m.id === messageId),
+        store.messages.findIndex(m => String(m.id) === String(messageId)),
         1,
       )
       return true
@@ -71,6 +71,37 @@ export function useInboxThread() {
       return false
     }
   }
+  // ── Delete entire thread for current user ──────────────
+  async function deleteThread(threadId: string): Promise<boolean> {
+    try {
+      await api(`/inbox/threads/${threadId}`, { method: 'DELETE' })
+      store.removeThread(threadId)
+      return true
+    }
+    catch (err) {
+      log.error('deleteThread failed:', err)
+      toast.add({ title: 'Could not delete chat', color: 'error' })
+      return false
+    }
+  }
 
-  return { acceptRequest, denyRequest, deleteMessage, unsendMessage }
+  // ── Block a user ──────────────────────────────────────
+  async function blockUser(userId: string | number): Promise<boolean> {
+    try {
+      await api(`/profile/blocks/${userId}`, { method: 'POST' })
+      // Remove any threads with this user from the store
+      const allThreads = [...store.dmThreads, ...store.requestThreads]
+      const match = allThreads.find(t => String(t.participant.id) === String(userId))
+      if (match) store.removeThread(match.id)
+      toast.add({ title: 'User blocked', color: 'success' })
+      return true
+    }
+    catch (err) {
+      log.error('blockUser failed:', err)
+      toast.add({ title: 'Could not block user', color: 'error' })
+      return false
+    }
+  }
+
+  return { acceptRequest, denyRequest, deleteMessage, unsendMessage, deleteThread, blockUser }
 }

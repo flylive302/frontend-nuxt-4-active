@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const emit = defineEmits<{
   send: [content: string]
+  typing: []
 }>()
 
 const text = ref('')
@@ -35,6 +36,7 @@ function handleKeydown(e: KeyboardEvent): void {
       placeholder="Message…"
       :ui="{ base: 'rounded-full' }"
       @keydown="handleKeydown"
+      @input="emit('typing')"
     />
     <UButton
       icon="i-lucide-send"

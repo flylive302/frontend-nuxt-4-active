@@ -6,7 +6,7 @@ const log = createLogger('[HomeFooter]');
 
 const authStore = useAuthStore();
 const roomStore = useRoomStore();
-const notificationStore = useNotificationStore();
+const inboxStore = useInboxStore();
 const route = useRoute();
 const room = useRoom();
 const { enterRoom: doRoomEntry } = useRoomEntry();
@@ -17,12 +17,16 @@ const navItems = [
   { to: '/', index: 0 },
   { to: '/discover-all-events', index: 1 },
   { to: null, index: 2 },
-  { to: '/notifications', index: 3 },
+  { to: '/inbox', index: 3 },
   { to: '/profile', index: 4 },
 ];
 
 const activeIndex = computed(() => {
-  const match = navItems.find(item => item.to && route.path === item.to);
+  const p = route.path;
+  // Chat icon: any inbox page
+  if (p.startsWith('/inbox')) return 3;
+  // Exact match for remaining items
+  const match = navItems.find(item => item.to && p === item.to);
   return match?.index ?? 2;
 });
 
@@ -38,6 +42,11 @@ async function handleMyRoomClick() {
     log.error('Failed to fetch user room:', error);
   }
 }
+const inboxBadge = computed(() => {
+  const count = inboxStore.dmUnread
+  if (count === 0) return null
+  return count > 99 ? '99+' : String(count)
+})
 </script>
 
 <template>
@@ -75,17 +84,17 @@ async function handleMyRoomClick() {
         </svg>
       </UButton>
       <UButton 
-        to="/notifications" class="flex-middle relative" 
+        to="/inbox" class="flex-middle relative" 
         :variant="activeIndex === 3 ? 'solid' : 'ghost'"
         square
         size="xl"
       >
-        <UIcon class="size-8 drop-shadow-md" :name="activeIndex === 3 ? 'i-lucide-bell-plus' : 'i-lucide-bell-plus'" />
+        <UIcon class="size-8 drop-shadow-md" :name="activeIndex === 3 ? 'i-lucide-message-circle' : 'i-lucide-message-circle'" />
         <span
-            v-if="notificationStore.unreadBadge"
+            v-if="inboxBadge"
             class="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center"
         >
-          {{ notificationStore.unreadBadge }}
+          {{ inboxBadge }}
         </span>
       </UButton>
       <NuxtLink to="/profile" aria-label="Profile" class="justify-self-end">

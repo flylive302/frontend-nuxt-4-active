@@ -24,13 +24,21 @@ export const useInboxStore = defineStore('inbox', () => {
 
   // ── Computed ─────────────────────────────────────────
   const totalUnread = computed(
-    () => officialUnreadCount.value + dmThreads.value.reduce((s, t) => s + t.unreadCount, 0),
+    () => officialUnreadCount.value
+      + dmThreads.value.reduce((s, t) => s + t.unreadCount, 0)
+      + requestThreads.value.reduce((s, t) => s + t.unreadCount, 0),
   )
 
-  const dmUnread = computed(() => dmThreads.value.reduce((s, t) => s + t.unreadCount, 0))
+  /** DM + request unread only (for chat icon badge, excludes official) */
+  const dmUnread = computed(
+    () => dmThreads.value.reduce((s, t) => s + t.unreadCount, 0)
+      + requestThreads.value.reduce((s, t) => s + t.unreadCount, 0),
+  )
 
-  function threadById(id: string): Thread | undefined {
-    return dmThreads.value.find(t => t.id === id) ?? requestThreads.value.find(t => t.id === id)
+
+  function threadById(id: string | number): Thread | undefined {
+    const sid = String(id)
+    return dmThreads.value.find(t => String(t.id) === sid) ?? requestThreads.value.find(t => String(t.id) === sid)
   }
 
   // ── Setters ───────────────────────────────────────────
@@ -51,7 +59,7 @@ export const useInboxStore = defineStore('inbox', () => {
 
   function upsertThread(thread: Thread): void {
     if (thread.kind === 'dm') {
-      const idx = dmThreads.value.findIndex(t => t.id === thread.id)
+      const idx = dmThreads.value.findIndex(t => String(t.id) === String(thread.id))
       if (idx >= 0) {
         dmThreads.value[idx] = thread
       }
@@ -59,10 +67,10 @@ export const useInboxStore = defineStore('inbox', () => {
         dmThreads.value.unshift(thread)
       }
       // Remove from requests if it was just accepted
-      requestThreads.value = requestThreads.value.filter(t => t.id !== thread.id)
+      requestThreads.value = requestThreads.value.filter(t => String(t.id) !== String(thread.id))
     }
     else if (thread.kind === 'request') {
-      const idx = requestThreads.value.findIndex(t => t.id === thread.id)
+      const idx = requestThreads.value.findIndex(t => String(t.id) === String(thread.id))
       if (idx >= 0) {
         requestThreads.value[idx] = thread
       }
@@ -72,46 +80,48 @@ export const useInboxStore = defineStore('inbox', () => {
     }
   }
 
-  function removeThread(threadId: string): void {
-    dmThreads.value = dmThreads.value.filter(t => t.id !== threadId)
-    requestThreads.value = requestThreads.value.filter(t => t.id !== threadId)
+  function removeThread(threadId: string | number): void {
+    const sid = String(threadId)
+    dmThreads.value = dmThreads.value.filter(t => String(t.id) !== sid)
+    requestThreads.value = requestThreads.value.filter(t => String(t.id) !== sid)
   }
 
   function setMessages(threadId: string, msgs: ThreadMessage[], cursor: string | null, hasMore: boolean): void {
     activeThreadId.value = threadId
-    messages.value = msgs
+    messages.value = [...msgs].reverse() // API returns newest-first; reverse for chronological display
     messagesCursor.value = cursor
     messagesHasMore.value = hasMore
   }
 
   function prependMessages(msgs: ThreadMessage[], cursor: string | null, hasMore: boolean): void {
-    messages.value = [...msgs, ...messages.value]
+    messages.value = [...msgs].reverse().concat(messages.value) // Reverse older batch before prepending
     messagesCursor.value = cursor
     messagesHasMore.value = hasMore
   }
 
   function appendMessage(msg: ThreadMessage): void {
     // Avoid duplicates from optimistic + confirmed echo
-    if (messages.value.some(m => m.id === msg.id)) return
+    if (messages.value.some(m => String(m.id) === String(msg.id))) return
     messages.value.push(msg)
     bumpThread(msg.threadId, msg)
   }
 
   function replaceOptimisticMessage(tempId: string, confirmed: ThreadMessage): void {
-    const idx = messages.value.findIndex(m => m.id === tempId)
+    const idx = messages.value.findIndex(m => String(m.id) === String(tempId))
     if (idx >= 0) messages.value[idx] = confirmed
     bumpThread(confirmed.threadId, confirmed)
   }
 
-  function markMessageUnsent(messageId: string): void {
-    const msg = messages.value.find(m => m.id === messageId)
+  function markMessageUnsent(messageId: string | number): void {
+    const sid = String(messageId)
+    const msg = messages.value.find(m => String(m.id) === sid)
     if (msg) {
       msg.unsent = true
       msg.content = ''
     }
   }
 
-  function markThreadRead(threadId: string): void {
+  function markThreadRead(threadId: string | number): void {
     const thread = threadById(threadId)
     if (thread) thread.unreadCount = 0
   }
@@ -124,15 +134,32 @@ export const useInboxStore = defineStore('inbox', () => {
     officialUnreadCount.value = 0
   }
 
+  function bumpThreadUnread(threadId: string | number, content: string, sentAt: string): void {
+    const sid = String(threadId)
+    const thread = threadById(sid)
+    if (!thread) return
+    thread.unreadCount++
+    thread.lastMessage = content
+    thread.lastMessageAt = sentAt
+    // Bubble to top of its section
+    if (thread.kind === 'dm') {
+      dmThreads.value = [thread, ...dmThreads.value.filter(t => String(t.id) !== sid)]
+    }
+    else if (thread.kind === 'request') {
+      requestThreads.value = [thread, ...requestThreads.value.filter(t => String(t.id) !== sid)]
+    }
+  }
+
   // ── Private helpers ───────────────────────────────────
-  function bumpThread(threadId: string, msg: ThreadMessage): void {
-    const thread = threadById(threadId)
+  function bumpThread(threadId: string | number, msg: ThreadMessage): void {
+    const sid = String(threadId)
+    const thread = threadById(sid)
     if (!thread) return
     thread.lastMessage = msg.isOwn ? `You: ${msg.content}` : msg.content
     thread.lastMessageAt = msg.sentAt
     // Bubble to top of its section
     if (thread.kind === 'dm') {
-      dmThreads.value = [thread, ...dmThreads.value.filter(t => t.id !== threadId)]
+      dmThreads.value = [thread, ...dmThreads.value.filter(t => String(t.id) !== sid)]
     }
   }
 
@@ -174,6 +201,7 @@ export const useInboxStore = defineStore('inbox', () => {
     replaceOptimisticMessage,
     markMessageUnsent,
     markThreadRead,
+    bumpThreadUnread,
     bumpOfficialUnread,
     clearOfficialUnread,
     $reset,

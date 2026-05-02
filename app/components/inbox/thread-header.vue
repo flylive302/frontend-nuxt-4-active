@@ -3,10 +3,21 @@ defineProps<{
   name: string
   avatar?: string | null
   frame?: string | null
+  signature?: string | null
+  gender?: number | null
   isSystem?: boolean
 }>()
 
+defineEmits<{
+  (e: 'block'): void
+  (e: 'deleteChat'): void
+}>()
+
 const router = useRouter()
+
+const genderLabel = computed(() => {
+  // convention: 1 = male, 2 = female
+})
 </script>
 
 <template>
@@ -25,12 +36,40 @@ const router = useRouter()
         v-if="isSystem"
         class="size-9 rounded-full bg-primary/15 flex items-center justify-center"
       >
-        <icon name="i-lucide-shield-check" class="size-5 text-primary" />
+        <UIcon name="i-lucide-shield-check" class="size-5 text-primary" />
       </div>
       <UserAvatar v-else :img="avatar" :frame-asset-url="frame ?? undefined" class="size-9" />
     </div>
 
-    <!-- Name -->
-    <span class="text-sm font-semibold truncate flex-1">{{ name }}</span>
+    <!-- Name + Signature + Gender -->
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-1.5">
+        <span class="text-sm font-semibold truncate">{{ name }}</span>
+        <UIcon
+          v-if="gender === 1"
+          name="i-lucide-mars"
+          class="size-3.5 text-blue-400 shrink-0"
+        />
+        <UIcon
+          v-else-if="gender === 2"
+          name="i-lucide-venus"
+          class="size-3.5 text-pink-400 shrink-0"
+        />
+      </div>
+      <span v-if="signature" class="text-xs text-muted truncate block">ID: {{ signature }}</span>
+    </div>
+
+    <!-- Actions menu -->
+    <UDropdownMenu
+      v-if="!isSystem"
+      :items="[
+        [
+          { label: 'Block User', icon: 'i-lucide-ban', color: 'error' as const, onSelect: () => $emit('block') },
+          { label: 'Delete Chat', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => $emit('deleteChat') },
+        ],
+      ]"
+    >
+      <UButton variant="ghost" icon="i-lucide-ellipsis-vertical" size="sm" color="neutral" />
+    </UDropdownMenu>
   </header>
 </template>

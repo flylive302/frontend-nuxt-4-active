@@ -116,7 +116,8 @@ export function useInboxActions() {
       return true
     }
     catch (err) {
-      store.markMessageUnsent(tempId)
+      // Remove the failed optimistic message (don't mark as "unsent" — that's for intentional unsends)
+      store.messages = store.messages.filter(m => m.id !== tempId)
       log.error('sendMessage failed:', err)
       const { message } = normalizeError(err)
       toast.add({ title: message, color: 'error' })

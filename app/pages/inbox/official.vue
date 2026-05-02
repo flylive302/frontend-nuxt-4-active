@@ -1,52 +1,8 @@
 <script setup lang="ts">
-import type { OfficialMessage } from '~/types/inbox'
-import { createLogger } from '~/utils/logger'
-
 definePageMeta({ layout: 'alt', middleware: 'auth' })
 
-const log = createLogger('[InboxOfficial]')
-const { api } = useApi()
-const store = useInboxStore()
-
-// ── State ─────────────────────────────────────────────
-const messages = ref<OfficialMessage[]>([])
-const loading = ref(false)
-const nextCursor = ref<string | null>(null)
+const { messages, loading, nextCursor, fetchMessages, loadOlder, markRead } = useOfficialMessages()
 const scrollEl = ref<HTMLElement | null>(null)
-
-// ── Fetch ─────────────────────────────────────────────
-async function fetchMessages(cursor?: string): Promise<void> {
-  loading.value = true
-  try {
-    const params = cursor ? `?cursor=${cursor}` : ''
-    const res = await api<{ data: OfficialMessage[], meta: { next_cursor: string | null } }>(
-      `/inbox/official${params}`,
-    )
-    if (cursor) {
-      messages.value = [...messages.value, ...res.data]
-    }
-    else {
-      messages.value = res.data
-    }
-    nextCursor.value = res.meta.next_cursor
-  }
-  catch (err) {
-    log.error('fetchMessages failed:', err)
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-async function markRead(): Promise<void> {
-  try {
-    await api('/inbox/official/read', { method: 'POST' })
-    store.clearOfficialUnread()
-  }
-  catch (err) {
-    log.error('markRead failed:', err)
-  }
-}
 
 function scrollToBottom(): void {
   nextTick(() => {
@@ -111,7 +67,7 @@ onMounted(async () => {
           color="neutral"
           variant="ghost"
           :loading="loading"
-          @click="fetchMessages(nextCursor ?? undefined)"
+          @click="loadOlder()"
         >
           Load older
         </UButton>

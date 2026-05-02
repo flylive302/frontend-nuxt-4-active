@@ -118,7 +118,6 @@ const blockListLoaded = ref(false)
 const blockListLoading = ref(false)
 
 async function loadBlockList(): Promise<void> {
-  if (blockListLoaded.value) return
   blockListLoading.value = true
   try {
     const res = await api<{ data: { items: BlockEntry[] } }>('/profile/blocks')
@@ -601,9 +600,24 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
     </div>
 
     <!-- Block List Slideover -->
-    <USlideover v-model:open="showBlockList" title="Blocked Users" description="Users you have blocked cannot send you DMs." side="right">
+    <USlideover v-model:open="showBlockList" side="right">
       <template #content>
         <div class="flex flex-col h-full">
+          <!-- Header with close button -->
+          <div class="flex items-center gap-3 px-4 py-3 border-b border-muted/20 shrink-0">
+            <UButton
+              icon="i-lucide-arrow-left"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              @click="showBlockList = false"
+            />
+            <div>
+              <h3 class="text-sm font-semibold">Blocked Users</h3>
+              <p class="text-xs text-muted">Users you have blocked cannot send you DMs.</p>
+            </div>
+          </div>
+
           <div class="flex-1 overflow-y-auto p-4">
             <!-- Loading -->
             <div v-if="blockListLoading" class="space-y-3">

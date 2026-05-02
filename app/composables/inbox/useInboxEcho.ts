@@ -22,21 +22,22 @@ export function useInboxEcho() {
 
     // New message received from the other participant
     channel.listen('.dm.message.received', (payload: {
-      threadId: string
+      threadId: number | string
       message: ThreadMessage
-      senderPreview: { id: string, name: string, avatar: string | null, frame: string | null }
     }) => {
       log.debug('dm.message.received', payload)
-      if (store.activeThreadId === payload.threadId) {
-        store.appendMessage(payload.message)
+      const tid = String(payload.threadId)
+      // Normalize IDs to strings (PHP sends integers, Vue routes use strings)
+      const msg: ThreadMessage = { ...payload.message, threadId: tid }
+      if (store.activeThreadId === tid) {
+        store.appendMessage(msg)
       }
       else {
-        // Bump unread on the thread in whichever section it belongs
-        const thread = store.threadById(payload.threadId)
-        if (thread) {
-          thread.unreadCount++
-          thread.lastMessage = payload.message.content
-          thread.lastMessageAt = payload.message.sentAt
+        store.bumpThreadUnread(tid, msg.content, msg.sentAt)
+        // If thread not in store (e.g. was deleted), refetch thread list
+        if (!store.threadById(tid)) {
+          const { fetchThreads } = useInboxActions()
+          fetchThreads()
         }
       }
     })
@@ -44,23 +45,26 @@ export function useInboxEcho() {
     // A message was unsent by the other participant
     channel.listen('.dm.message.unsent', (payload: { threadId: string, messageId: string }) => {
       log.debug('dm.message.unsent', payload)
-      store.markMessageUnsent(payload.messageId)
+      store.markMessageUnsent(String(payload.messageId))
     })
 
     // A stranger request you sent was accepted
-    channel.listen('.dm.thread.accepted', (payload: { threadId: string }) => {
+    channel.listen('.dm.thread.accepted', (payload: { threadId: string | number }) => {
       log.debug('dm.thread.accepted', payload)
-      const thread = store.threadById(payload.threadId)
+      const tid = String(payload.threadId)
+      const thread = store.threadById(tid)
       if (thread) store.upsertThread({ ...thread, kind: 'dm' })
     })
 
     // Someone sent you a new stranger request
     channel.listen('.dm.thread.request', (payload: {
-      threadId: string
+      threadId: string | number
       thread: Thread
     }) => {
       log.debug('dm.thread.request', payload)
-      store.upsertThread(payload.thread)
+      // Normalize thread ID to string
+      const thread: Thread = { ...payload.thread, id: String(payload.thread.id) }
+      store.upsertThread(thread)
     })
 
     // New official message (badge bump only)

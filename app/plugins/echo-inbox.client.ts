@@ -21,6 +21,9 @@ export default defineNuxtPlugin({
         if (isAuth && !wasAuth) {
           log.debug('Subscribing to DM channel...')
           subscribe()
+          // Fetch thread list in background so footer badge shows unread counts
+          const { fetchThreads } = useInboxActions()
+          fetchThreads()
         }
         else if (!isAuth && wasAuth) {
           log.debug('Unsubscribing from DM channel...')
