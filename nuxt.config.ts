@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     pwa: {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        includeAssets: ['favicon.ico', 'logos/apple-touch-icon-180x180.png', 'logos/pwa-64x64.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png', 'logos/pwa-192x192.png', 'logos/pwa-512x512.png'],
+        includeAssets: ['favicon.ico', 'logos/pwa-64x64.png', 'logos/pwa-192x192.webp', 'logos/pwa-512x512.webp'],
         manifest: {
             name: 'FlyLive',
             short_name: 'FlyLive',
@@ -27,10 +27,8 @@ export default defineNuxtConfig({
             handle_links: 'preferred',
             icons: [
                 { src: '/logos/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
-                { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-                { src: '/logos/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-                { src: '/logos/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-                { src: '/logos/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+                { src: '/logos/pwa-192x192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any' },
+                { src: '/logos/pwa-512x512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any' }
             ],
             screenshots: [
                 { src: '/screenshots/desktop.jpeg', sizes: '1024x1024', type: 'image/jpeg', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },
