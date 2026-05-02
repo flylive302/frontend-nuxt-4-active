@@ -27,7 +27,7 @@ onMounted(async () => {
         color="neutral"
         variant="ghost"
         size="sm"
-        to="/inbox"
+        to="/"
       />
       <div class="flex items-center gap-2">
         <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center">

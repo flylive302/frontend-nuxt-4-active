@@ -67,10 +67,23 @@ export function useInboxEcho() {
       store.upsertThread(thread)
     })
 
-    // New official message (badge bump only)
-    channel.listen('.dm.official.received', () => {
-      log.debug('dm.official.received')
+    // New official message received (broadcast, targeted, or filtered)
+    channel.listen('.official.message.received', (payload: {
+      id: number
+      content: string
+      sentAt: string
+    }) => {
+      log.debug('official.message.received', payload)
       store.bumpOfficialUnread()
+
+      // Show a toast notification
+      const toast = useToast()
+      toast.add({
+        title: 'FlyLive',
+        description: payload.content?.substring(0, 80) || 'New official message',
+        icon: 'i-lucide-megaphone',
+        color: 'primary',
+      })
     })
   }
 
