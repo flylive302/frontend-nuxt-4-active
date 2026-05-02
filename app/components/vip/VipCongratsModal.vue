@@ -6,6 +6,7 @@
 // Shows VIP badge animation and unlocked props.
 
 import type { VipProp } from '~/types/vip/vip-level'
+import { vipAssetBase } from '~/constants/assets'
 
 // ========================================
 // Props & Emits
@@ -33,7 +34,7 @@ const emit = defineEmits<{
  * Asset base path for VIP level animations.
  */
 const assetBasePath = computed(() =>
-  `https://assets.flyliveapp.com/vip/${props.vipLevel}`,
+  vipAssetBase(props.vipLevel),
 )
 
 // ========================================

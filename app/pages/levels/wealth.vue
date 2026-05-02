@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Wealth Level Page
 // ========================================
@@ -17,8 +18,8 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
     <LevelsLevelPage
       color="info"
       category="wealth"
-      hero-image="https://ik.imagekit.io/flylive/siteAssets/alt-hero/wealth.jpeg"
-      default-badge-url="https://ik.imagekit.io/flylive/badges/wealth/level_1.webp"
+      :hero-image="ASSETS.HERO_WEALTH"
+      :default-badge-url="ASSETS.DEFAULT_WEALTH_LEVEL_BADGE"
       description="1 Coin spent is equal to 1 Experience Point. As your level increases, you'll unlock new badges."
     />
   </main>

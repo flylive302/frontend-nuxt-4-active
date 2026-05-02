@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Imports & Types
 // ========================================
@@ -47,7 +48,7 @@ onMounted(() => {
     <ProfileHeader>
       <template #cover>
         <NuxtImg
-          :src="authStore.user?.cover_image ?? '/AppImages/dummy-card/bg-fl.png'"
+          :src="authStore.user?.cover_image ?? ASSETS.COVER_PLACEHOLDER"
           format="webp"
           densities="x1 x2"
           sizes="320px"
@@ -65,7 +66,7 @@ onMounted(() => {
           <UserAvatar
             :animated="true"
             :frame-asset-url="authStore?.user?.frame ?? undefined"
-            :img="authStore.user?.avatar ?? 'AppImages/dummy-card/avatar.png'"
+            :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-24"
           />
         </NuxtLink>

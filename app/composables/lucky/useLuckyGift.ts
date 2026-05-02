@@ -11,6 +11,7 @@
  *
  * State is consumed by dedicated components mounted in the room page.
  */
+import { ASSETS } from '~/constants/assets'
 import type { AudioSocket } from '~/composables/room/useAudioSocket';
 import type {
   LuckyDrawResult,
@@ -217,12 +218,12 @@ if (import.meta.dev) {
       handleRoomAnnouncement({
         user_id: 0,
         user_name: 'TestUser',
-        user_avatar: 'https://assets.flyliveapp.com/vip/5/frame.webp',
+        user_avatar: ASSETS.DEFAULT_FRAME,
         multiplier,
         coins_won: Math.round(multiplier * 100),
         tier_name: 'Epic',
         room_name: 'Test Room',
-        svga_url: 'https://assets.flyliveapp.com/vip/5/frame.svga',
+        svga_url: ASSETS.DEFAULT_FRAME,
       });
     },
 
@@ -232,13 +233,13 @@ if (import.meta.dev) {
       handleAppAnnouncement({
         user_id: 0,
         user_name: 'TestUser',
-        user_avatar: 'https://assets.flyliveapp.com/vip/5/frame.png',
+        user_avatar: ASSETS.DEFAULT_FRAME,
         multiplier,
         coins_won: Math.round(multiplier * 100),
         tier_name: 'Mega',
         room_id: 0,
         room_name: 'Test Room',
-        svga_url: 'https://assets.flyliveapp.com/vip/5/frame.svga',
+        svga_url: ASSETS.DEFAULT_FRAME,
       });
     },
 

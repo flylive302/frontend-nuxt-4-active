@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue';
+import { ASSETS } from '~/constants/assets';
 import { createLogger } from '~/utils/logger';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
@@ -25,7 +26,7 @@ onMounted(async () => {
   >
     <div class="bg-primary size-16 aspect-square p-1 rounded-full z-50" @click="() => { roomStore.maximizeRoom(); navigateTo(`/room/${roomStore.currentRoom?.id}`) }">
       <NuxtImg
-          :src="roomStore.currentRoom?.logo ?? 'https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp'"
+          :src="roomStore.currentRoom?.logo ?? ASSETS.ROOM_CARD_TOP"
           alt="Minimized Room Preview"
           :width="64"
           :height="64"

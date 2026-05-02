@@ -1,78 +1,139 @@
 // ========================================
 // Inbox Actions Composable
 // ========================================
-// Orchestrates thread fetching and message sending.
-// Dummy-data implementation — swap $fetch calls in for real API later.
+// Orchestrates thread fetching, message sending, and thread management.
+// All side-effects (store mutations) happen here; store stays mutation-only.
 
-import { DUMMY_THREADS } from '~/constants/inbox/threads'
-import { DUMMY_MESSAGES } from '~/constants/inbox/messages'
-import type { ThreadMessage } from '~/types/inbox'
+import { createLogger } from '~/utils/logger'
+import type { Thread, ThreadsResponse, MessagesResponse, SendMessageResponse } from '~/types/inbox'
 
-const PAGE_SIZE = 10
+const log = createLogger('[useInboxActions]')
 
 export function useInboxActions() {
-  const inboxStore = useInboxStore()
+  const store = useInboxStore()
+  const { api, normalizeError } = useApi()
+  const toast = useToast()
 
-  // ── Fetch thread list (paginated) ─────────────────────
-  async function fetchThreads(reset = false): Promise<void> {
-    if (reset) inboxStore.resetThreads()
-    if (!inboxStore.threadsHasMore && !reset) return
+  // ── Fetch all thread sections ─────────────────────────
+  async function fetchThreads(): Promise<void> {
+    if (store.threadsLoading) return
 
-    // GATE
-    if (inboxStore.threadsLoading) return
-
-    // EXECUTE
-    inboxStore.setThreadsLoading(true)
+    store.setThreadsLoading(true)
     try {
-      // Simulated async delay so the loading state is visible
-      await new Promise(r => setTimeout(r, 400))
-
-      const offset = inboxStore.threadsCursor
-      const page = DUMMY_THREADS.slice(offset, offset + PAGE_SIZE)
-      const hasMore = offset + PAGE_SIZE < DUMMY_THREADS.length
-
-      inboxStore.appendThreadsPage(page, hasMore)
-    } finally {
-      inboxStore.setThreadsLoading(false)
+      const res = await api<ThreadsResponse>('/inbox/threads')
+      store.setThreads(res.data.official_unread, res.data.dm, res.data.requests)
+    }
+    catch (err) {
+      log.error('fetchThreads failed:', err)
+    }
+    finally {
+      store.setThreadsLoading(false)
     }
   }
 
-  // ── Load messages for a given thread ─────────────────
-  async function loadMessages(threadId: string): Promise<void> {
-    // GATE
-    if (inboxStore.activeThreadId === threadId) return
-
-    // EXECUTE
-    inboxStore.setMessagesLoading(true)
+  // ── Get-or-create thread with a user ─────────────────
+  async function startThread(userId: string | number): Promise<Thread | null> {
     try {
-      await new Promise(r => setTimeout(r, 250))
-      const msgs = DUMMY_MESSAGES[threadId] ?? []
-      inboxStore.setMessages(threadId, msgs)
-      inboxStore.markThreadRead(threadId)
-    } finally {
-      inboxStore.setMessagesLoading(false)
+      const res = await api<{ data: Thread }>(`/inbox/start/${userId}`, { method: 'POST' })
+      store.upsertThread(res.data)
+      return res.data
+    }
+    catch (err) {
+      log.error('startThread failed:', err)
+      return null
+    }
+  }
+
+  // ── Load messages for a thread (initial load) ─────────
+  async function loadMessages(threadId: string): Promise<void> {
+    store.setMessagesLoading(true)
+    try {
+      const res = await api<MessagesResponse>(`/inbox/threads/${threadId}/messages`)
+      store.setMessages(
+        threadId,
+        res.data.messages,
+        res.data.nextCursor,
+        res.data.nextCursor !== null,
+      )
+    }
+    catch (err) {
+      log.error('loadMessages failed:', err)
+    }
+    finally {
+      store.setMessagesLoading(false)
+    }
+  }
+
+  // ── Load older messages (cursor pagination) ───────────
+  async function loadOlderMessages(threadId: string): Promise<void> {
+    if (!store.messagesHasMore || store.messagesLoading || !store.messagesCursor) return
+
+    store.setMessagesLoading(true)
+    try {
+      const res = await api<MessagesResponse>(`/inbox/threads/${threadId}/messages`, {
+        params: { cursor: store.messagesCursor },
+      })
+      store.prependMessages(
+        res.data.messages,
+        res.data.nextCursor,
+        res.data.nextCursor !== null,
+      )
+    }
+    catch (err) {
+      log.error('loadOlderMessages failed:', err)
+    }
+    finally {
+      store.setMessagesLoading(false)
     }
   }
 
   // ── Send a message ────────────────────────────────────
   async function sendMessage(threadId: string, content: string): Promise<boolean> {
-    // GATE
     if (!content.trim()) return false
 
-    // EXECUTE — optimistic append
-    const msg: ThreadMessage = {
-      id: `tmp-${Date.now()}`,
-      threadId,
-      senderId: 'me',
-      content: content.trim(),
-      sentAt: new Date().toISOString(),
-      isOwn: true,
-    }
-    inboxStore.appendMessage(msg)
+    const tempId = `tmp-${Date.now()}`
+    const authStore = useAuthStore()
 
-    // REACT — simulate delivered echo (no-op for real API, replaces tmp id)
-    return true
+    // Optimistic append
+    store.appendMessage({
+      id: tempId,
+      threadId,
+      senderId: String(authStore.user?.id ?? 'me'),
+      content: content.trim(),
+      type: 'text',
+      sentAt: new Date().toISOString(),
+      readAt: null,
+      unsent: false,
+      isOwn: true,
+    })
+
+    try {
+      const res = await api<SendMessageResponse>(`/inbox/threads/${threadId}/messages`, {
+        method: 'POST',
+        body: { content: content.trim(), type: 'text' },
+      })
+      store.replaceOptimisticMessage(tempId, res.data)
+      return true
+    }
+    catch (err) {
+      store.markMessageUnsent(tempId)
+      log.error('sendMessage failed:', err)
+      const { message } = normalizeError(err)
+      toast.add({ title: message, color: 'error' })
+      return false
+    }
   }
 
-  return { fetchThreads, loadMessages, sendMessage }
+  // ── Mark thread as read ───────────────────────────────
+  async function markRead(threadId: string): Promise<void> {
+    store.markThreadRead(threadId)
+    try {
+      await api(`/inbox/threads/${threadId}/read`, { method: 'POST' })
+    }
+    catch (err) {
+      log.error('markRead failed:', err)
+    }
+  }
+
+  return { fetchThreads, startThread, loadMessages, loadOlderMessages, sendMessage, markRead }
 }

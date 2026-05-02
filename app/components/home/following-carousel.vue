@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Home Following Carousel
 // ========================================
@@ -33,7 +34,7 @@ defineProps<{
           <UserAvatar
             :animated="true"
             :frame-asset-url="item.frame ?? undefined"
-            :img="item.avatar ?? '/AppImages/dummy-card/avatar.png'"
+            :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-14"
           />
           <div class="marquee-container w-fit -mt-2">

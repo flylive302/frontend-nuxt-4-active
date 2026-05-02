@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { EVENT_BANNERS } from '~/constants/assets'
 
 defineOptions({ name: 'DuelEventCard' })
 
@@ -23,37 +24,27 @@ interface Props {
 // ---- Static config (frozen for perf)
 const TYPE_CONFIG = Object.freeze({
   cp: {
-    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/cp.webp',
-    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/cp-header.webp',
-    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-main-content.webp',
+    ...EVENT_BANNERS.cp,
     shadowClass: 'shadow-primary/30',
     textShadow: 'text-shadow-primary'
   },
   country: {
-    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/country.webp',
-    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
-    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
+    ...EVENT_BANNERS.country,
     shadowClass: 'shadow-success/30',
     textShadow: 'text-shadow-success'
   },
   pretty_id: {
-    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/pretty-id.webp',
-    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
-    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
+    ...EVENT_BANNERS.pretty_id,
     shadowClass: 'shadow-secondary/30',
     textShadow: 'text-shadow-secondary'
   },
   recharge_tycoon: {
-    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/recharge-tycoon.webp',
-    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
-    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
+    ...EVENT_BANNERS.recharge_tycoon,
     shadowClass: 'shadow-tertiary/30',
     textShadow: 'text-shadow-tertiary'
   },
   supreme_recharge: {
-    banner: 'https://ik.imagekit.io/flylive/siteAssets/banners/supreme-recharge.webp',
-    header: 'https://ik.imagekit.io/flylive/siteAssets/banners/country-header.svg',
-    decor: 'https://ik.imagekit.io/flylive/siteAssets/banners/decor-recharge-tycoon.webp',
+    ...EVENT_BANNERS.supreme_recharge,
     shadowClass: 'shadow-secondary/30',
     textShadow: 'text-shadow-secondary'
   }

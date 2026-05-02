@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // PWA Install Prompt
 // ========================================
@@ -97,7 +98,7 @@ function handleDismiss(): void {
       <div class="flex items-center gap-3">
         <!-- Icon -->
         <NuxtImg
-            src="/logos/flylive-logo-sm.webp"
+            :src="ASSETS.LOGO_SM"
             alt="FlyLive"
             class="h-12 w-auto"
             width="auto"

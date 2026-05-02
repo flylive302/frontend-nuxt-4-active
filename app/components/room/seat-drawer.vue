@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { vipCardSvga } from '~/constants/assets'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
 
@@ -196,7 +197,7 @@ const charmLevel = computed(() =>
       <div v-if="isVip" class="absolute z-0">
         <SvgaPlayer 
           :key="`vip-card-${currentSeat?.user?.vip_level}`" 
-          :name="`https://assets.flyliveapp.com/vip/${currentSeat?.user?.vip_level}/card.svga`" 
+          :name="vipCardSvga(currentSeat?.user?.vip_level ?? 1)" 
           class="pointer-events-none -mt-28" />
       </div>
       

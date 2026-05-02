@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 import type { Colors } from '~/types/colors'
 
 // ProfileBadge only supports a subset of colors
@@ -12,7 +13,7 @@ withDefaults(defineProps<{
   showBadge?: boolean
 }>(), {
   color: "primary",
-  badgeSrc: "https://ik.imagekit.io/flylive/badges/profile-1.webp",
+  badgeSrc: ASSETS.DEFAULT_PROFILE_BADGE,
   txt: "UserSignature",
   imgAlt: "User badge",
   showBadge: true,

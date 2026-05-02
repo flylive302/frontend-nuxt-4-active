@@ -1,4 +1,5 @@
 <script setup>
+import { ASSETS } from '~/constants/assets'
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[HomeFooter]');
@@ -92,7 +93,7 @@ async function handleMyRoomClick() {
             class="w-13"
             :animated="true"
             :frame-asset-url="authStore?.user?.frame ?? undefined"
-            :img="authStore.user?.avatar ?? 'AppImages/dummy-card/avatar.png'"
+            :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
         />
       </NuxtLink>
     </div>

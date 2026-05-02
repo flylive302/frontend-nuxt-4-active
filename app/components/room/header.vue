@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { LevelConfig } from '~/types/user/bootstrap';
+import { ASSETS } from '~/constants/assets';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[RoomHeader]');
@@ -187,7 +188,7 @@ const settingsOpen = ref(false);
               <div class="flex items-center justify-between">
                 <SectionTitle class="mt-1">Levels</SectionTitle>
                 <ProfileBadge 
-                  :badge-src="currentBadge?.image_url ?? 'https://ik.imagekit.io/flylive/badges/profile-1.webp'"
+                  :badge-src="currentBadge?.image_url ?? ASSETS.DEFAULT_PROFILE_BADGE"
                   :txt="thisRoom?.current_level ?? 0" 
                 />
               </div>

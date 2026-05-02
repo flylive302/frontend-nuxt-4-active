@@ -8,6 +8,7 @@
 // ========================================
 
 import type { Room } from '~/types/room/room'
+import { ASSETS } from '~/constants/assets'
 
 defineOptions({
   inheritAttrs: false
@@ -54,7 +55,7 @@ function handleRoomClick(): void {
   <article v-bind="$attrs" class="relative rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-        :src="props.room.background ?? '/AppImages/dummy-card/room-bg.png'"
+        :src="props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER"
         :alt="props.room.name ?? undefined"
         :width="384"
         class="h-auto w-full object-cover"
@@ -71,7 +72,7 @@ function handleRoomClick(): void {
       <div class="backdrop-blur-sm shadow-md rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1">
           <NuxtImg
-              :src="props.room.logo ?? '/AppImages/dummy-card/avatar.png'"
+              :src="props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER"
               alt="Live"
               width="12"
               height="12"

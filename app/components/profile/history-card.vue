@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 import type { GiftRarity } from '~/types/user/user-profile'
 import { GIFT_RARITY_CONFIG } from '~/types/user/user-profile'
 
@@ -16,7 +17,7 @@ const props = withDefaults(defineProps<{
   /** Rarity level for styling */
   rarity?: GiftRarity
 }>(), {
-  badgeSrc: 'https://ik.imagekit.io/flylive/siteAssets/badges/badge-profile-1.webp',
+  badgeSrc: ASSETS.DEFAULT_HISTORY_BADGE,
   itemName: 'Item Name',
   quantity: undefined,
   rarity: 'common',

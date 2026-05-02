@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 /**
  * Room Page — Full-screen room UI
  *
@@ -167,7 +168,7 @@ onUnmounted(() => {
       <!-- Background Image (prefer background field, fallback to logo) -->
       <div class="absolute inset-0 z-0 tint-500">
         <NuxtImg
-          :src="roomStore.currentRoom?.background ?? '/AppImages/dummy-card/room-bg.png'"
+          :src="roomStore.currentRoom?.background ?? ASSETS.ROOM_BG_PLACEHOLDER"
           class="bg-fixed object-cover size-full"
           format="webp"
           loading="eager"

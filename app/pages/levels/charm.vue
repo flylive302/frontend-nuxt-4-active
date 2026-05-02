@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Charm Level Page
 // ========================================
@@ -17,8 +18,8 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
     <LevelsLevelPage
       color="secondary"
       category="charm"
-      hero-image="https://ik.imagekit.io/flylive/siteAssets/alt-hero/charm.jpeg"
-      default-badge-url="https://ik.imagekit.io/flylive/badges/charm/level_1.webp"
+      :hero-image="ASSETS.HERO_CHARM"
+      :default-badge-url="ASSETS.DEFAULT_CHARM_LEVEL_BADGE"
       description="Charm XP is earned when you receive gifts. As your level increases, you'll unlock new badges."
     />
   </main>

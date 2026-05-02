@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 /**
  * RoomSeat - Individual speaker seat component
  * Shows user avatar, name, and audio status indicators
@@ -79,12 +80,12 @@ const seatGiftTotal = computed(() => {
     <div class="relative w-full">
       <Transition name="seat-pop" mode="out-in">
         <!-- Occupied seat: show user avatar with animation -->
-        <UserAvatar v-if="!isEmpty" key="occupied" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc ?? 'AppImages/dummy-card/avatar.png'" class="relative z-20" />
+        <UserAvatar v-if="!isEmpty" key="occupied" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER" class="relative z-20" />
         <!-- Locked empty seat: show lock image -->
         <UserAvatar
           v-else-if="isLocked"
           key="locked"
-          img="https://ik.imagekit.io/flylive/siteAssets/seats/lock-seat.webp"
+          :img="ASSETS.LOCK_SEAT_IMG"
           class="relative z-20"
         />
         <!-- Empty seat: show default placeholder -->
@@ -101,7 +102,7 @@ const seatGiftTotal = computed(() => {
       </Transition>
 
       <!-- Speaking indicator -->
-      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" name="https://assets.flyliveapp.com/vip/1/mice-wave.svga" />
+      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" :name="ASSETS.MICE_WAVE_SVGA" />
 
     </div>
 

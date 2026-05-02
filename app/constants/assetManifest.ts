@@ -1,7 +1,6 @@
 import type { AssetScope, AssetType, AssetPriority } from '~/types/asset/asset'
-import {returns} from "valibot";
+import { ASSETS, vipAssetBase } from '~/constants/assets'
 
-type VipAssetName = 'card' | 'badge' | 'emblem' | 'border';
 export interface AssetManifestItem {
     url: string
     assetType: AssetType
@@ -15,7 +14,7 @@ export interface AssetManifestItem {
 
 export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
     {
-        url: '/AppImages/dummy-card/room-bg.png',
+        url: ASSETS.ROOM_BG_PLACEHOLDER,
         assetType: 'image',
         scope: 'global',
         priority: 'critical',
@@ -23,7 +22,7 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
         sortOrder: 0,
     },
     {
-        url: '/AppImages/dummy-card/profile-cover.png',
+        url: ASSETS.PROFILE_COVER_PLACEHOLDER,
         assetType: 'image',
         scope: 'global',
         priority: 'critical',
@@ -31,7 +30,7 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
         sortOrder: 1,
     },
     {
-        url: 'https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp',
+        url: ASSETS.HERO_SECONDARY,
         assetType: 'image',
         scope: 'global',
         priority: 'low',
@@ -39,7 +38,7 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
         sortOrder: 2,
     },
     {
-        url: 'https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp',
+        url: ASSETS.DIAMOND_ICON,
         assetType: 'image',
         scope: 'global',
         priority: 'low',
@@ -47,7 +46,7 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
         sortOrder: 3,
     },
     {
-        url: 'https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp',
+        url: ASSETS.HERO_TERTIARY,
         assetType: 'image',
         scope: 'global',
         priority: 'low',
@@ -55,7 +54,7 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
         sortOrder: 4,
     },
     {
-        url: '/AppImages/dummy-card/avatar.png',
+        url: ASSETS.AVATAR_PLACEHOLDER,
         assetType: 'image',
         scope: 'global',
         priority: 'critical',
@@ -64,7 +63,7 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
     },
 ]
 
-const VipAssets = [
+const VipAssets: [string, string, string][] = [
     ['card', 'svga', 'svga'],
     ['badge', 'image', 'webp'],
     ['emblem', 'svga', 'svga'],
@@ -73,7 +72,7 @@ const VipAssets = [
 for (let i = 1; i < 9; i++) {
     for (const asset of VipAssets) {
         MANUAL_ASSET_MANIFEST.push({
-            url: `https://assets.flyliveapp.com/vip/${i}/${asset[0]}.${asset[2]}`,
+            url: `${vipAssetBase(i)}/${asset[0]}.${asset[2]}`,
             assetType: '' + asset[1],
             scope: 'global',
             priority: 'low',

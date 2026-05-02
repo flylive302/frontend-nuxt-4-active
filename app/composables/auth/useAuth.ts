@@ -66,6 +66,8 @@ export function useAuthActions() {
 
     // REACT
     if (toast) toast.add({ title: 'Welcome back!', color: 'success' })
+    // Fire-and-forget — non-fatal if push permission denied
+    usePushSubscription().register().catch(() => {})
     if (redirectTo) {
       await navigateTo(redirectTo)
     }
@@ -101,6 +103,8 @@ export function useAuthActions() {
 
     // REACT
     if (toast) toast.add({ title: 'Account created!', color: 'success' })
+    // Fire-and-forget — non-fatal if push permission denied
+    usePushSubscription().register().catch(() => {})
     if (redirectTo) {
       await navigateTo(redirectTo)
     }
@@ -116,6 +120,8 @@ export function useAuthActions() {
    * REACT:   Navigate to login page
    */
   async function logout(): Promise<void> {
+    // Fire-and-forget — unregister push before clearing auth
+    usePushSubscription().unregister().catch(() => {})
     try {
       // EXECUTE
       await api('/auth/logout', { method: 'POST' })

@@ -5,6 +5,7 @@
  * is taller; ranks 2 and 3 flank it.
  */
 import type { RankingEntry } from '~/types/ranking'
+import { ASSETS, rankingPodiumFrame } from '~/constants/assets'
 import type { RankingCategory } from '~/constants/ranking'
 import { formatCurrency } from '~/utils/currency'
 
@@ -71,8 +72,8 @@ function rankAccent(rank: number): { ring: string; text: string; medal: string; 
         <NuxtLink :to="entry.user?.signature ? `/profile/${entry.user.signature}` : ''" class="relative">
           <UserAvatar
               :animated="true"
-              :frame-asset-url="`https://assets.flyliveapp.com/frames/events/top_${entry.rank}.svga`"
-              :img="avatarFor(entry) ?? 'AppImages/dummy-card/avatar.png'"
+              :frame-asset-url="rankingPodiumFrame(entry.rank)"
+              :img="avatarFor(entry) ?? ASSETS.AVATAR_PLACEHOLDER"
               frameName="top-100-22-0-0"
               class="w-28"
           />

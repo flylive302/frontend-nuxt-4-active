@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import {useInboxActions} from "~/composables/inbox/useInboxActions";
-
 definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ── Stores & composables ──────────────────────────────
@@ -9,27 +7,15 @@ const inboxStore = useInboxStore()
 const { fetchNotifications } = useNotificationActions()
 const { fetchThreads } = useInboxActions()
 
-// ── Infinite scroll sentinel ──────────────────────────
-const sentinel = ref<HTMLElement | null>(null)
-const { stop } = useIntersectionObserver(
-  sentinel,
-  ([entry]) => {
-    if (entry?.isIntersecting && inboxStore.threadsHasMore && !inboxStore.threadsLoading) {
-      void fetchThreads()
-    }
-  },
-  { threshold: 0.1 },
-)
-onUnmounted(stop)
-
 // ── Init ──────────────────────────────────────────────
 onMounted(() => {
   if (notificationStore.items.length === 0) void fetchNotifications(true)
-  if (inboxStore.threads.length === 0) void fetchThreads(true)
+  if (!inboxStore.threadsLoaded) void fetchThreads()
 })
 
 // ── Derived ───────────────────────────────────────────
 const lastNotification = computed(() => notificationStore.items[0] ?? null)
+const allDmThreads = computed(() => [...inboxStore.dmThreads, ...inboxStore.requestThreads])
 </script>
 
 <template>
@@ -39,8 +25,8 @@ const lastNotification = computed(() => notificationStore.items[0] ?? null)
     </NavAlt>
 
     <div class="pt-14 pb-24">
-      <!-- Loading skeleton (first load only) -->
-      <div v-if="inboxStore.threadsLoading && inboxStore.threads.length === 0" class="divide-y divide-muted/10">
+      <!-- Loading skeleton -->
+      <div v-if="inboxStore.threadsLoading && !inboxStore.threadsLoaded" class="divide-y divide-muted/10">
         <div v-for="i in 6" :key="i" class="flex items-center gap-3 px-4 py-3 animate-pulse">
           <div class="size-12 rounded-full bg-muted/30 shrink-0" />
           <div class="flex-1 space-y-2">
@@ -50,8 +36,7 @@ const lastNotification = computed(() => notificationStore.items[0] ?? null)
         </div>
       </div>
 
-      <!-- Thread list -->
-      <div v-else class="divide-y divide-muted/10">
+      <template v-else>
         <!-- Pinned: System / Official thread -->
         <NuxtLink to="/notifications/system">
           <InboxSystemThreadItem
@@ -61,27 +46,28 @@ const lastNotification = computed(() => notificationStore.items[0] ?? null)
         </NuxtLink>
 
         <!-- DM threads -->
-        <NuxtLink
-          v-for="thread in inboxStore.threads"
-          :key="thread.id"
-          :to="`/notifications/${thread.id}`"
-        >
-          <InboxThreadItem :thread="thread" />
-        </NuxtLink>
-
-        <!-- Infinite scroll sentinel -->
-        <div ref="sentinel" class="h-px" />
-
-        <!-- Fetch-more loader -->
-        <div v-if="inboxStore.threadsLoading && inboxStore.threads.length > 0" class="flex justify-center py-4">
-          <UIcon name="i-lucide-loader-circle" class="size-5 text-muted animate-spin" />
+        <div v-if="allDmThreads.length > 0" class="divide-y divide-muted/10">
+          <NuxtLink
+            v-for="thread in allDmThreads"
+            :key="thread.id"
+            :to="`/inbox/${thread.id}`"
+          >
+            <InboxThreadItem :thread="thread" />
+          </NuxtLink>
         </div>
 
-        <!-- End of list -->
-        <p v-if="!inboxStore.threadsHasMore && inboxStore.threads.length > 0" class="text-center text-xs text-muted py-4">
-          No more messages
-        </p>
-      </div>
+        <!-- Empty state -->
+        <div
+          v-if="allDmThreads.length === 0"
+          class="flex flex-col items-center justify-center py-20 text-center px-6"
+        >
+          <div class="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <UIcon name="i-lucide-message-circle" class="size-8 text-primary" />
+          </div>
+          <p class="text-sm text-muted">No conversations yet.</p>
+          <p class="text-xs text-muted/60 mt-1">Visit someone's profile to start chatting.</p>
+        </div>
+      </template>
     </div>
   </main>
 </template>

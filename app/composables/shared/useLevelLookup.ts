@@ -4,13 +4,14 @@
 // Role: Data/Query — pure level/badge lookup from bootstrap config.
 
 import { computeLevelStatus } from '~/utils/levels'
+import { ASSETS } from '~/constants/assets'
 
 // ========================================
 // Constants
 // ========================================
 
-export const DEFAULT_WEALTH_BADGE = 'https://assets.flyliveapp.com/badges/wealth/level_0.webp'
-export const DEFAULT_CHARM_BADGE = 'https://assets.flyliveapp.com/badges/charm/level_0.webp'
+export const DEFAULT_WEALTH_BADGE = ASSETS.DEFAULT_WEALTH_BADGE
+export const DEFAULT_CHARM_BADGE = ASSETS.DEFAULT_CHARM_BADGE
 
 // ========================================
 // Types

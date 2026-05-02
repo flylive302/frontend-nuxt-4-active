@@ -6,6 +6,7 @@
  * gift browsing, and send controls.
  */
 import type { Gift } from "~/types/gift/gift";
+import { ASSETS } from '~/constants/assets';
 import { useGiftData } from "~/composables/gift/useGiftData";
 import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";
@@ -72,7 +73,7 @@ const roomStore = useRoomStore();
   >
     <!-- Trigger Button -->
     <NuxtImg
-      src="https://assets.flyliveapp.com/shared/room/gift.webp"
+      :src="ASSETS.GIFT_DRAWER_ICON"
       alt="gifts"
       width="70px"
       class="cursor-pointer"

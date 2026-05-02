@@ -4,6 +4,7 @@
  * Polymorphic: renders user / room / agency with the correct link target.
  */
 import type { RankingEntry } from '~/types/ranking'
+import { ASSETS } from '~/constants/assets'
 import type { RankingCategory } from '~/constants/ranking'
 import { formatCurrency } from '~/utils/currency'
 
@@ -77,8 +78,8 @@ const rankBadgeClass = computed<string>(() => {
 
     <UserAvatar
         :animated="true"
-        :frame-asset-url="entry.user?.frame ?? 'https://assets.flyliveapp.com/frames/10.svga'"
-        :img="avatarSrc ?? 'AppImages/dummy-card/avatar.png'"
+        :frame-asset-url="entry.user?.frame ?? ASSETS.DEFAULT_FRAME"
+        :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
         frameName="top-120-16-0-0"
         class="w-12"
     />

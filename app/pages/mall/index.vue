@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 import { onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 
@@ -58,7 +59,7 @@ async function handlePurchase(propId: number): Promise<void> {
     </NavAlt>
 
     <video class="w-full mt-12" autoplay muted loop playsinline>
-      <source src="/background-decorations/mall-bg.mp4" type="video/mp4" />
+      <source :src="ASSETS.MALL_BG_VIDEO" type="video/mp4" />
     </video>
 
     <UserAvatar

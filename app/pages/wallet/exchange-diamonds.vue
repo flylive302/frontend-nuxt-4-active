@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Imports & Types
 // ========================================
@@ -217,7 +218,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
     </NavAlt>
 
     <NuxtImg
-      src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/secondary.webp"
+      :src="ASSETS.HERO_SECONDARY"
       format="webp"
       densities="x1 x2"
       sizes="320px"
@@ -289,7 +290,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
           <p class="font-semibold text-base leading-none">Change in Balances after Exchange:</p>
           <div class="flex items-center gap-2 bg-linear-to-br from-neutral-950 to-primary-950 px-2 py-1 inset-shadow-sm ring ring-primary/50 rounded-md">
             <div class="flex items-center gap-1 w-full">
-              <NuxtImg src="https://ik.imagekit.io/flylive/siteAssets/props/flylive-diamond.webp" class="w-8" />
+              <NuxtImg :src="ASSETS.DIAMOND_ICON" class="w-8" />
               <p class="text-base font-semibold leading-none">
                 Diamonds: <br> 
                 <span class="text-secondary-400 font-bold text-base">
@@ -301,7 +302,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
             <USeparator color="primary" orientation="vertical" class="h-8" />
 
             <div class="flex items-center gap-1 w-full">
-              <NuxtImg src="https://ik.imagekit.io/flylive/siteAssets/props/flylive_coin.webp" class="w-8" />
+              <NuxtImg :src="ASSETS.COIN_ICON" class="w-8" />
               <p class="text-base font-semibold leading-none">
                 Coins: <br>
                 <span class="text-success font-semibold text-base ml-1">

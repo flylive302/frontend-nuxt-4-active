@@ -4,6 +4,7 @@
 // ========================================
 
 import { h, computed, resolveComponent } from 'vue';
+import { ASSETS } from '~/constants/assets';
 import type { ColumnDef } from '@tanstack/vue-table';
 import type { LevelConfig } from '~/types/user/bootstrap';
 
@@ -87,7 +88,7 @@ const tableData = computed<RoomLevelRow[]>(() =>
       level: item.name,
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
-        badgeSrc: badge?.image_url || 'https://ik.imagekit.io/flylive/badges/room/level_1.webp',
+        badgeSrc: badge?.image_url || ASSETS.DEFAULT_ROOM_BADGE,
         color: 'primary',
         txt: String(item.level),
         class: item.level === currentLevel.value 

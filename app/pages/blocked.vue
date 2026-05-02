@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Account Suspended Page
 // ========================================
@@ -63,7 +64,7 @@ function handleLoginRedirect() {
     <!-- Logo -->
     <div class="mb-8">
       <NuxtImg
-        src="/logos/flylive-logo-xl.webp"
+        :src="ASSETS.LOGO_XL"
         alt="FlyLive"
         class="size-48"
         width="96"

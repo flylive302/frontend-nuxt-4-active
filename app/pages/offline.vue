@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Offline Page
 // ========================================
@@ -35,7 +36,7 @@ async function handleRetry(): Promise<void> {
     <!-- Logo -->
     <div class="mb-8">
       <NuxtImg
-        src="/logos/flylive-logo-icon.webp"
+        :src="ASSETS.LOGO_ICON"
         alt="FlyLive"
         class="h-24 w-24 animate-pulse"
         width="96"

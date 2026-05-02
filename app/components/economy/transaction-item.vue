@@ -2,6 +2,7 @@
 <!-- Displays a single transaction with minimal view + expandable details -->
 <script setup lang="ts">
 import type { Transaction, BalanceSnapshot } from '~/types/economy/wallet'
+import { ASSETS } from '~/constants/assets'
 import { TRANSACTION_TYPE_LABELS } from '~/constants/economy/transactionConstants'
 import { isPositiveTransaction, getOtherPartyDisplay } from '~/utils/economy/transactionHelpers'
 import { formatCurrency } from '~/utils/currency'
@@ -68,7 +69,7 @@ const backgroundClass = computed(() =>
  * Get thumbnail URL with fallback.
  */
 const thumbnailUrl = computed(() => 
-  props.transaction.thumbnail_url ?? 'https://assets.flyliveapp.com/badges/charm/level_0.webp'
+  props.transaction.thumbnail_url ?? ASSETS.DEFAULT_TRANSACTION_THUMB
 )
 
 /**

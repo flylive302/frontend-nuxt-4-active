@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Imports
 // ========================================
@@ -21,7 +22,7 @@ const props = withDefaults(defineProps<{
   animated?: boolean
 }>(), {
   frameName: '',
-  frameAssetUrl: 'https://assets.flyliveapp.com/frames/10.svga',
+  frameAssetUrl: ASSETS.DEFAULT_FRAME,
   img: undefined,
   animated: false,
 });
@@ -84,7 +85,7 @@ const frameConfig = computed(() => {
       <!-- Avatar Image -->
       <NuxtImg
         class="aspect-square rounded-full object-contain w-full"
-        :src="props.img ?? 'https://ik.imagekit.io/flylive/siteAssets/seats/default-seat.webp'" 
+        :src="props.img ?? ASSETS.DEFAULT_SEAT_IMG" 
         alt="avatar"
         :width="96"
         :height="96"

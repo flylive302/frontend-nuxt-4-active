@@ -117,7 +117,9 @@ export default defineNuxtConfig({
             'composables/income',
             'composables/mediasoup',
             'composables/vip',
+            'composables/vap',
             'composables/mall',
+            'composables/inbox',
         ],
     },
     app: {
@@ -261,7 +263,12 @@ export default defineNuxtConfig({
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
-            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'wss://localhost:3030'
+            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'wss://localhost:3030',
+            reverbAppKey: process.env.NUXT_PUBLIC_REVERB_APP_KEY || '',
+            reverbHost: process.env.NUXT_PUBLIC_REVERB_HOST || 'localhost',
+            reverbPort: process.env.NUXT_PUBLIC_REVERB_PORT || '8080',
+            reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
+            vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '',
         }
     },
 })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 const items = [
   'siteAssets/room/room-card-top.webp',
   'siteAssets/room/room-card-top.webp',
@@ -29,7 +30,7 @@ const items = [
       </aside>
 
       <NuxtImg
-          src="https://ik.imagekit.io/flylive/siteAssets/room/room-card-top.webp"
+          :src="ASSETS.ROOM_CARD_TOP"
           preload
       />
     </div>

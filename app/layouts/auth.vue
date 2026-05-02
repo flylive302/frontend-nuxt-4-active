@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 /**
  * Auth Layout
  *
@@ -29,7 +30,7 @@ const showForm = ref(false)
         class="hero-area flex flex-col justify-end bg-neutral-200 rounded-b-4xl overflow-hidden relative"
         :class="{ 'hero-area--collapsed': showForm }"
       >
-        <NuxtImg src="/AppImages/dummy-card/bg-fl.png" alt="Background" class="absolute inset-0 object-cover blur-sm" />
+        <NuxtImg :src="ASSETS.COVER_PLACEHOLDER" alt="Background" class="absolute inset-0 object-cover blur-sm" />
         <LogoLarge class="mx-auto relative z-10 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
         <AuthScrollingCards />
       </div>

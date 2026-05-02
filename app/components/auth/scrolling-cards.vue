@@ -1,14 +1,15 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 const columns = [
   [
-    { id: 1, name: 'Come Fly With ME', background: '/AppImages/dummy-card/1.jpg', primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: true },
-    { id: 2, name: 'Faith', background: '/AppImages/dummy-card/2.jpg', primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
-    { id: 3, name: 'Friend Zone', background: '/AppImages/dummy-card/3.jpg', primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
+    { id: 1, name: 'Come Fly With ME', background: ASSETS.AUTH_CARD_1, primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: true },
+    { id: 2, name: 'Faith', background: ASSETS.AUTH_CARD_2, primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
+    { id: 3, name: 'Friend Zone', background: ASSETS.AUTH_CARD_3, primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
   ],
   [
-    { id: 4, name: 'Ruby on Rails', background: '/AppImages/dummy-card/4.jpg', primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: true },
-    { id: 5, name: 'Nightmare', background: '/AppImages/dummy-card/5.jpg', primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
-    { id: 6, name: 'Cultural Loves', background: '/AppImages/dummy-card/6.jpg', primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
+    { id: 4, name: 'Ruby on Rails', background: ASSETS.AUTH_CARD_4, primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: true },
+    { id: 5, name: 'Nightmare', background: ASSETS.AUTH_CARD_5, primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
+    { id: 6, name: 'Cultural Loves', background: ASSETS.AUTH_CARD_6, primary_color: 'orange', country: 'US', room_xp: 48970, current_level: 10, is_live: true, participant_count: 12, is_locked: false },
   ],
 ]
 </script>

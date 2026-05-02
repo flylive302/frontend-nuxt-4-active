@@ -102,6 +102,53 @@ const showDeleteModal = ref(false)
 const isFollowListPublic = ref(authStore.user?.is_follow_list_public ?? true)
 const isSavingPrivacy = ref(false)
 
+// ── Block list ────────────────────────────────────────
+const showBlockList = ref(false)
+const { api, normalizeError } = useApi()
+
+interface BlockEntry {
+  id: number
+  name: string
+  avatar: string | null
+  signature: string | null
+  blockedAt: string
+}
+const blockList = ref<BlockEntry[]>([])
+const blockListLoaded = ref(false)
+const blockListLoading = ref(false)
+
+async function loadBlockList(): Promise<void> {
+  if (blockListLoaded.value) return
+  blockListLoading.value = true
+  try {
+    const res = await api<{ data: { items: BlockEntry[] } }>('/profile/blocks')
+    blockList.value = res.data.items
+    blockListLoaded.value = true
+  }
+  catch (err) {
+    log.error('loadBlockList failed:', err)
+  }
+  finally {
+    blockListLoading.value = false
+  }
+}
+
+async function unblock(userId: number): Promise<void> {
+  try {
+    await api(`/profile/blocks/${userId}`, { method: 'DELETE' })
+    blockList.value = blockList.value.filter(b => b.id !== userId)
+  }
+  catch (err) {
+    const { message } = normalizeError(err)
+    toast.add({ title: message, color: 'error' })
+  }
+}
+
+function openBlockList(): void {
+  showBlockList.value = true
+  void loadBlockList()
+}
+
 const { isSubmitting: isProcessingSubmit, generalError, handleSubmit, getFieldError } = useAuthForm({
   formRef,
 })
@@ -502,10 +549,22 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
           </div>
 
         </div>
-        <UButton 
-            class="w-full justify-center mt-4" 
-            icon="i-lucide-power-off" 
-            size="xl" 
+        <!-- Blocked Users -->
+        <UButton
+          class="w-full justify-center mt-4"
+          icon="i-lucide-ban"
+          size="xl"
+          variant="subtle"
+          color="neutral"
+          @click="openBlockList"
+        >
+          Blocked Users
+        </UButton>
+
+        <UButton
+            class="w-full justify-center mt-2"
+            icon="i-lucide-power-off"
+            size="xl"
             variant="subtle"
             @click="logout"
           >
@@ -540,6 +599,56 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
       <!-- Delete Account Modal -->
       <ProfileDeleteAccountModal v-model="showDeleteModal" />
     </div>
+
+    <!-- Block List Slideover -->
+    <USlideover v-model:open="showBlockList" title="Blocked Users" description="Users you have blocked cannot send you DMs." side="right">
+      <template #content>
+        <div class="flex flex-col h-full">
+          <div class="flex-1 overflow-y-auto p-4">
+            <!-- Loading -->
+            <div v-if="blockListLoading" class="space-y-3">
+              <div v-for="i in 4" :key="i" class="animate-pulse flex items-center gap-3">
+                <div class="size-10 rounded-full bg-muted/30" />
+                <div class="flex-1 h-4 bg-muted/30 rounded" />
+              </div>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="blockList.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
+              <UIcon name="i-lucide-shield-check" class="size-10 text-muted mb-2" />
+              <p class="text-sm text-muted">No blocked users</p>
+            </div>
+
+            <!-- List -->
+            <div v-else class="space-y-1">
+              <div
+                v-for="entry in blockList"
+                :key="entry.id"
+                class="flex items-center gap-3 py-2 px-1"
+              >
+                <UAvatar
+                  :src="entry.avatar ?? undefined"
+                  :alt="entry.name"
+                  size="sm"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium truncate">{{ entry.name }}</p>
+                  <p v-if="entry.signature" class="text-xs text-muted truncate">{{ entry.signature }}</p>
+                </div>
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="outline"
+                  @click="unblock(entry.id)"
+                >
+                  Unblock
+                </UButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </USlideover>
   </main>
 </template>
 

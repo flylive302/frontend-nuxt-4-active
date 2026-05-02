@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 withDefaults(defineProps<{
   imageSrc?: string
   blur?: number
 }>(), {
-  imageSrc: '/AppImages/dummy-card/bg-fl.png',
+  imageSrc: ASSETS.COVER_PLACEHOLDER,
   blur: 2
 })
 

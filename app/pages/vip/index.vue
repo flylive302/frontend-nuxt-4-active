@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vipAssetBase } from '~/constants/assets'
 // ========================================
 // VIP Page
 // ========================================
@@ -82,7 +83,7 @@ const activeLevel = computed(() => levels.value[activeIndex.value] ?? null)
  */
 const assetBasePath = computed(() =>
   activeLevel.value
-    ? `https://assets.flyliveapp.com/vip/${activeLevel.value.level}`
+    ? vipAssetBase(activeLevel.value.level)
     : '',
 )
 

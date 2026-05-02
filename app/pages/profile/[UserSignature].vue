@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // Imports & Types
 // ========================================
@@ -192,7 +193,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
     <ProfileHeader v-else-if="hasProfile">
       <template #cover>
         <NuxtImg
-          :src="profileWritable?.cover_image ?? '/AppImages/dummy-card/bg-fl.png'"
+          :src="profileWritable?.cover_image ?? ASSETS.COVER_PLACEHOLDER"
           format="webp"
           densities="x1 x2"
           sizes="320px"
@@ -209,7 +210,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
         <UserAvatar
           :animated="true"
           :frame-asset-url="profileWritable?.frame ?? undefined"
-          :img="profileWritable?.avatar ?? 'AppImages/dummy-card/avatar.png'"
+          :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
           class="w-24 -mt-15"
         />
       </template>
@@ -386,7 +387,7 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
             Room
           </UButton>
 
-          <UButton to="/" icon="i-lucide-message-circle-more" variant="outline" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
+          <UButton v-if="profileId !== authStore.user?.id" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="outline" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
             Chat
           </UButton>
         </div>

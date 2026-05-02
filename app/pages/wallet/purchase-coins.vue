@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ASSETS } from '~/constants/assets'
 import { ref, watch } from 'vue'
 import type { CoinRequest } from '~/types/economy/coin-request'
 import { formatCurrency } from '~/utils/currency'
@@ -55,7 +56,7 @@ watch(lastCoinRequestUpdate, () => {
     </NavAlt>
 
     <NuxtImg
-        src="https://ik.imagekit.io/flylive/siteAssets/alt-hero/tertiary.webp"
+        :src="ASSETS.HERO_TERTIARY"
         format="webp"
         densities="x1 x2"
         sizes="320px"

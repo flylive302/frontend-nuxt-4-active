@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rankingBgUrl } from '~/constants/assets'
 /**
  * /rank — Global rankings page.
  *
@@ -81,7 +82,7 @@ useHead({
 <template>
   <main class="relative m-0 p-0 min-h-screen overflow-hidden">
     <NuxtImg
-        :src="`https://assets.flyliveapp.com/ranking/${category}.webp`"
+        :src="rankingBgUrl(category)"
         alt="Leaderboard Background"
         class="w-full absolute top-0 z-0 mask-b-from-70% mask-b-to-90% animate-[zoom_50s_ease-in-out_infinite]"
     />
