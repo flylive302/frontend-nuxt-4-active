@@ -10,14 +10,14 @@
  * Drop-in usage mirroring svga-player.client.vue.
  *
  * Usage:
- *   <VapPlayer name="/vip/car" />
+ *   <VapPlayer name="/vip/car.mp4" />
  *   <!-- Loads /vip/car.mp4 + /vip/car.json -->
  */
 import { ref, toRef } from 'vue'
 import { useVapPlayer } from '~/composables/vap/useVapPlayer'
 
 const props = withDefaults(defineProps<{
-  /** Base URL — resolves to {name}.mp4 + {name}.json */
+  /** Video URL — can include .mp4 extension, .json is derived automatically */
   name: string
   width?: string
   height?: string

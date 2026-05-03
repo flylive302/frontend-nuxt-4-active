@@ -19,33 +19,13 @@ const IK = 'https://ik.imagekit.io/flylive'
 // ========================================
 
 export const ASSETS = {
-  // ── Placeholders & Fallbacks (self-hosted, precached by SW) ──
-  AVATAR_PLACEHOLDER: '/AppImages/dummy-card/avatar.png',
-  ROOM_BG_PLACEHOLDER: '/AppImages/dummy-card/room-bg.png',
-  COVER_PLACEHOLDER: '/AppImages/dummy-card/bg-fl.png',
-  PROFILE_COVER_PLACEHOLDER: '/AppImages/dummy-card/profile-cover.png',
-
-  // ── Gender (self-hosted) ──
-  GENDER_FEMALE: '/AppImages/gender/female.webp',
-  GENDER_MALE: '/AppImages/gender/male.webp',
 
   // ── Logos (self-hosted, critical path) ──
-  LOGO_MAIN: '/logos/flylive-logo.png',
+  LOGO_MAIN: '/logos/flylive-logo.webp',
   LOGO_TEXT: '/logos/flylive-text.png',
   LOGO_ICON: '/logos/flylive-logo-icon.webp',
   LOGO_SM: '/logos/flylive-logo-sm.webp',
   LOGO_XL: '/logos/flylive-logo-xl.webp',
-
-  // ── Auth page cards (self-hosted) ──
-  AUTH_CARD_1: '/AppImages/dummy-card/1.jpg',
-  AUTH_CARD_2: '/AppImages/dummy-card/2.jpg',
-  AUTH_CARD_3: '/AppImages/dummy-card/3.jpg',
-  AUTH_CARD_4: '/AppImages/dummy-card/4.jpg',
-  AUTH_CARD_5: '/AppImages/dummy-card/5.jpg',
-  AUTH_CARD_6: '/AppImages/dummy-card/6.jpg',
-
-  // ── Videos (self-hosted for now, candidate for R2 migration) ──
-  MALL_BG_VIDEO: '/background-decorations/mall-bg.mp4',
 
   // ── R2 CDN — Binary / Animations ──
   DEFAULT_FRAME: `${R2}/frames/10.svga`,
@@ -70,6 +50,125 @@ export const ASSETS = {
   DEFAULT_HISTORY_BADGE: `${IK}/siteAssets/badges/badge-profile-1.webp`,
   DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/level_1.webp`,
   DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/level_1.webp`,
+
+  // ── Auth page cards ──
+  AUTH_CARD_1: `${IK}/placeholders/1.webp`,
+  AUTH_CARD_2: `${IK}/placeholders/2.webp`,
+  AUTH_CARD_3: `${IK}/placeholders/3.webp`,
+  AUTH_CARD_4: `${IK}/placeholders/4.webp`,
+  AUTH_CARD_5: `${IK}/placeholders/5.webp`,
+  AUTH_CARD_6: `${IK}/placeholders/6.webp`,
+
+  COVER_PLACEHOLDER: `${IK}/placeholders/bg-fl.png`,
+
+  // ── Gender (self-hosted) ──
+  GENDER_FEMALE: `${IK}/gender/female.webp`,
+  GENDER_MALE: `${IK}/gender/male.webp`,
+
+  // ── Placeholders & Fallbacks (precached by SW) ──
+  AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp`,
+  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-bg.webp`,
+  PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-cover.webp`,
+
+  // ── Videos (self-hosted for now, candidate for R2 migration) ──
+  MALL_BG_VIDEO: `${IK}/mall/mall-bg.mp4`,
+
+  // VIP UI ASSETS
+  VIP_BACKGROUND: `${IK}/vip/background.png`,
+
+  VIP: {
+    1: {
+      flag: `${IK}/vip/1/flag.png`,
+      badge: `${IK}/vip/1/badge.webp`,
+      card: `${IK}/vip/1/card.webp`,
+      cardAnimated: `${R2}/vip/1/card.svga`,
+      emblem: `${IK}/vip/1/emblem.webp`,
+      emblemAnimated: `${R2}/vip/1/emblem.svga`,
+      miceWave: `${IK}/vip/1/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/1/mice-wave.svga`,
+      chatBubble: `${IK}/vip/1/chat-bubble.webp`,
+      frame: `${IK}/vip/1/frame.webp`,
+      frameAnimated: `${R2}/vip/1/frame.svga`,
+    },
+    2: {
+      flag: `${IK}/vip/2/flag.png`,
+      badge: `${IK}/vip/2/badge.webp`,
+      card: `${IK}/vip/2/card.webp`,
+      cardAnimated: `${R2}/vip/2/card.svga`,
+      emblem: `${IK}/vip/2/emblem.webp`,
+      emblemAnimated: `${R2}/vip/2/emblem.svga`,
+      miceWave: `${IK}/vip/2/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/2/mice-wave.svga`,
+      chatBubble: `${IK}/vip/2/chat-bubble.webp`,
+      frame: `${IK}/vip/2/frame.webp`,
+      frameAnimated: `${R2}/vip/2/frame.svga`,
+    },
+    3: {
+      flag: `${IK}/vip/3/flag.png`,
+      badge: `${IK}/vip/3/badge.png`,
+      card: `${IK}/vip/3/card.webp`,
+      cardAnimated: `${R2}/vip/3/card.mp4`,
+      emblem: `${IK}/vip/3/emblem.webp`,
+      emblemAnimated: `${R2}/vip/3/emblem.svga`,
+      miceWave: `${IK}/vip/3/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/3/mice-wave.svga`,
+      chatBubble: `${IK}/vip/3/chat-bubble.webp`,
+      frame: `${IK}/vip/3/frame.webp`,
+      frameAnimated: `${R2}/vip/3/frame.svga`,
+    },
+    4: {
+      flag: `${IK}/vip/4/flag.png`,
+      badge: `${IK}/vip/4/badge.png`,
+      card: `${IK}/vip/4/card.webp`,
+      cardAnimated: `${R2}/vip/4/card.mp4`,
+      emblem: `${IK}/vip/4/emblem.webp`,
+      emblemAnimated: `${R2}/vip/4/emblem.svga`,
+      miceWave: `${IK}/vip/4/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/4/mice-wave.svga`,
+      chatBubble: `${IK}/vip/4/chat-bubble.webp`,
+      frame: `${IK}/vip/4/frame.webp`,
+      frameAnimated: `${R2}/vip/4/frame.svga`,
+    },
+    5: {
+      flag: `${IK}/vip/5/flag.png`,
+      badge: `${IK}/vip/5/badge.png`,
+      card: `${IK}/vip/5/card.webp`,
+      cardAnimated: `${R2}/vip/5/card.mp4`,
+      emblem: `${IK}/vip/5/emblem.webp`,
+      emblemAnimated: `${R2}/vip/5/emblem.svga`,
+      miceWave: `${IK}/vip/5/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/5/mice-wave.svga`,
+      chatBubble: `${IK}/vip/5/chat-bubble.webp`,
+      frame: `${IK}/vip/5/frame.webp`,
+      frameAnimated: `${R2}/vip/5/frame.svga`,
+    },
+    6: {
+      flag: `${IK}/vip/6/flag.png`,
+      badge: `${IK}/vip/6/badge.png`,
+      card: `${IK}/vip/6/card.webp`,
+      cardAnimated: `${R2}/vip/6/card.mp4`,
+      emblem: `${IK}/vip/6/emblem.webp`,
+      emblemAnimated: `${R2}/vip/6/emblem.svga`,
+      miceWave: `${IK}/vip/6/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/6/mice-wave.svga`,
+      chatBubble: `${IK}/vip/6/chat-bubble.webp`,
+      frame: `${IK}/vip/6/frame.webp`,
+      frameAnimated: `${R2}/vip/6/frame.svga`,
+    },
+    7: {
+      flag: `${IK}/vip/7/flag.png`,
+      badge: `${IK}/vip/7/badge.png`,
+      card: `${IK}/vip/7/card.webp`,
+      cardAnimated: `${R2}/vip/7/card.mp4`,
+      emblem: `${IK}/vip/7/emblem.webp`,
+      emblemAnimated: `${R2}/vip/7/emblem.svga`,
+      miceWave: `${IK}/vip/7/mice-wave.png`,
+      miceWaveAnimated: `${R2}/vip/7/mice-wave.svga`,
+      chatBubble: `${IK}/vip/7/chat-bubble.webp`,
+      frame: `${IK}/vip/7/frame.webp`,
+      frameAnimated: `${R2}/vip/7/frame.svga`,
+    }
+  },
 } as const
 
 // ========================================
@@ -107,6 +206,9 @@ export const vipBorderImg = (level: number) =>
 /** VIP asset base path (used by asset manifest loop) */
 export const vipAssetBase = (level: number) =>
   `${R2}/vip/${level}`
+
+export const vipUIAssetBase = (level: number) =>
+    `${IK}/vip/${level}`
 
 // ========================================
 // Event Banners (ImageKit)

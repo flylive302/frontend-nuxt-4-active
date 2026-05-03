@@ -34,9 +34,12 @@ const authStore = useAuthStore()
 /**
  * Whether the prop uses SVGA animation.
  */
-const isSvgaAsset = computed(() =>
-  props.prop?.asset_url?.endsWith('.svga') ?? false,
-)
+const isSvgaAsset = computed(() => props.prop?.asset_url?.endsWith('.svga') ?? false)
+
+/**
+ * Whether the prop uses VAP (mp4+json) animation.
+ */
+const isVapAsset = computed(() => props.prop?.asset_url?.endsWith('.mp4') ?? false)
 
 /**
  * Whether this is a frame type prop.
@@ -55,6 +58,9 @@ function handleClose(): void {
 <template>
   <UModal
     :open="open"
+    :ui="{
+      overlay: 'bg-black/70 backdrop-blur-xs',
+    }"
     @update:open="(val) => !val && handleClose()"
   >
     <template #content>
@@ -86,14 +92,21 @@ function handleClose(): void {
               />
             </template>
 
-            <!-- SVGA animation: entry_animation, chat_bubble, etc -->
+            <!-- SVGA animation -->
             <template v-else-if="isSvgaAsset">
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
+              <div class="bg-accented rounded-xl overflow-hidden flex items-center justify-center max-h-100">
                 <SvgaPlayer
                   class="relative min-w-full z-10"
                   :name="prop.asset_url!"
                   height="auto"
                 />
+              </div>
+            </template>
+
+            <!-- VAP animation (mp4 + json) -->
+            <template v-else-if="isVapAsset">
+              <div class="bg-accented rounded-xl overflow-hidden flex items-center justify-center max-h-100">
+                <VapPlayer :name="prop.asset_url!" :muted="false" />
               </div>
             </template>
 

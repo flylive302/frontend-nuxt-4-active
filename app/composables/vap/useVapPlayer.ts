@@ -13,7 +13,7 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[VapPlayer]')
 
 export interface UseVapPlayerOptions {
-  /** Base name/URL — resolves to {name}.mp4 + {name}.json */
+  /** Video URL — can include .mp4 extension, .json is derived automatically */
   name: Ref<string>
   /** Loop count (0 = infinite, 1 = play once). Default: 1 */
   loop?: Ref<number>

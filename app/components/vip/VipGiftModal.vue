@@ -64,8 +64,7 @@ function handleConfirm() {
   <UModal
     v-model:open="isOpen"
     :ui="{
-      content: 'bg-neutral-900 ring-1 ring-white/10',
-      overlay: 'bg-black/70 backdrop-blur-sm',
+      overlay: 'bg-black/10 backdrop-blur-xs',
     }"
   >
     <template #content>
@@ -94,8 +93,10 @@ function handleConfirm() {
           v-model="searchQuery"
           placeholder="Search followers..."
           icon="i-heroicons-magnifying-glass"
-          :ui="{ base: 'bg-neutral-800 text-white placeholder:text-neutral-500' }"
-          class="mb-3"
+          class="mb-3 w-full inset-shadow-sm inset-shadow-neutral-950"
+          size="xl"
+          color="tertiary"
+          variant="soft"
         />
 
         <!-- Recipient List -->

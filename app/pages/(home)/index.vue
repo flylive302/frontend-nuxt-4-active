@@ -160,7 +160,7 @@ const banners: Banner[] = [
 <template>
   <main>
 
-    <!-- <VapPlayer name="/vap_animations/3/vapc" :muted="false" /> -->
+<!--    <VapPlayer name="/temp/vip/10/entry" :muted="false" />-->
     <!-- Following Carousel (ranked by XP + follower count) -->
     <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3"/>
     

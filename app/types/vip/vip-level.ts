@@ -12,16 +12,17 @@
 export type VipPrivilege =
   | 'badge'
   | 'frame'
+  | 'mice_wave'
+  | 'entry_slide'
+  | 'mice_logo'
+  | 'data_card'
+  | 'colourful_name'
   | 'chat_bubble'
-  | 'entrance_effect'
-  | 'nameplate'
   | 'anti_mute'
   | 'anti_kick'
+  | 'forbid_tracking'
+  | 'vip_gifts'
   | 'mall_discount'
-  | 'priority_support'
-  | 'custom_room_theme'
-  | 'exclusive_gifts'
-  | 'profile_highlight'
 
 // ========================================
 // VIP Level Types
@@ -176,16 +177,17 @@ export interface RechargeProgress {
 export const VIP_PRIVILEGE_LABELS: Record<VipPrivilege, string> = {
   badge: 'VIP Badge',
   frame: 'Profile Frame',
+  mice_wave: 'Mic Wave Effect',
+  entry_slide: 'Entry Slide',
+  mice_logo: 'Mic Logo',
+  data_card: 'Data Card',
+  colourful_name: 'Colourful Name',
   chat_bubble: 'Chat Bubble',
-  entrance_effect: 'Entrance Effect',
-  nameplate: 'Nameplate',
   anti_mute: 'Anti-Mute Protection',
   anti_kick: 'Anti-Kick Protection',
+  forbid_tracking: 'Forbid Tracking',
+  vip_gifts: 'VIP Exclusive Gifts',
   mall_discount: 'Mall Discount',
-  priority_support: 'Priority Support',
-  custom_room_theme: 'Custom Room Theme',
-  exclusive_gifts: 'Exclusive Gifts',
-  profile_highlight: 'Profile Highlight',
 }
 
 /**
@@ -193,15 +195,16 @@ export const VIP_PRIVILEGE_LABELS: Record<VipPrivilege, string> = {
  */
 export const VIP_PRIVILEGE_ICONS: Record<VipPrivilege, string> = {
   badge: 'i-heroicons-shield-check',
-  frame: 'i-heroicons-photo',
+  frame: 'https://ik.imagekit.io/flylive/vip/icons/exclusive-headwear-active.png',
+  mice_wave: 'i-heroicons-signal',
+  entry_slide: 'i-heroicons-sparkles',
+  mice_logo: 'i-heroicons-microphone',
+  data_card: 'i-heroicons-identification',
+  colourful_name: 'i-heroicons-paint-brush',
   chat_bubble: 'i-heroicons-chat-bubble-left-ellipsis',
-  entrance_effect: 'i-heroicons-sparkles',
-  nameplate: 'i-heroicons-identification',
   anti_mute: 'i-heroicons-speaker-wave',
   anti_kick: 'i-heroicons-shield-exclamation',
+  forbid_tracking: 'i-heroicons-eye-slash',
+  vip_gifts: 'i-heroicons-gift',
   mall_discount: 'i-heroicons-tag',
-  priority_support: 'i-heroicons-lifebuoy',
-  custom_room_theme: 'i-heroicons-paint-brush',
-  exclusive_gifts: 'i-heroicons-gift',
-  profile_highlight: 'i-heroicons-star',
 }

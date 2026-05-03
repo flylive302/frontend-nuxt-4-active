@@ -85,7 +85,7 @@ const allClaimed = computed(() =>
 </script>
 
 <template>
-  <div class="rounded-xl bg-white/10 p-3 backdrop-blur-sm space-y-3">
+  <div class="rounded-xl backdrop-blur-2xl bg-white/10 p-3 ">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">

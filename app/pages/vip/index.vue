@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { vipAssetBase } from '~/constants/assets'
+import { vipAssetBase, vipUIAssetBase } from '~/constants/assets'
 // ========================================
 // VIP Page
 // ========================================
@@ -32,10 +32,11 @@ definePageMeta({
  * These are filtered out of the privilege icon grid.
  */
 const PROP_PRIVILEGE_KEYS = new Set([
-  'badge',
   'frame',
+  'data_card',
   'chat_bubble',
-  'entrance_effect',
+  'entry_slide',
+  'mice_wave',
 ])
 
 // ========================================
@@ -88,10 +89,22 @@ const assetBasePath = computed(() =>
 )
 
 /**
+ * Asset base path for current level's visual assets.
+ */
+const uiAssetBasePath = computed(() =>
+  activeLevel.value
+    ? vipUIAssetBase(activeLevel.value.level)
+    : '',
+)
+/**
  * Background color style derived from level color.
  */
-const bgStyle = computed(() => ({
+const bgColor = computed(() => ({
   backgroundColor: activeLevel.value?.color ?? '#1a1a2e',
+}))
+
+const txtColor = computed(() => ({
+  color: activeLevel.value?.color ?? '#1a1a2e',
 }))
 
 /**
@@ -101,7 +114,6 @@ const privilegeBoxStyle = computed(() => {
   const color = activeLevel.value?.color ?? '#1a1a2e'
   return {
     background: `linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), ${color})`,
-    boxShadow: `0 10px 15px -3px ${color}40, 0 4px 6px -4px ${color}40`,
     borderColor: color,
   }
 })
@@ -145,10 +157,17 @@ const formattedExpiry = computed(() => {
 })
 
 /**
- * VIP props for the active level.
+ * Entry animation prop for the active level (if any).
+ */
+const entryAnimationProp = computed(() =>
+  (activeLevel.value?.props ?? []).find(p => p.type === 'entry_animation') ?? null,
+)
+
+/**
+ * VIP props for the active level (excluding entry_animation, shown separately).
  */
 const activeLevelProps = computed(() =>
-  activeLevel.value?.props ?? [],
+  (activeLevel.value?.props ?? []).filter(p => p.type !== 'entry_animation'),
 )
 
 /**
@@ -307,10 +326,27 @@ onMounted(() => {
 onUnmounted(() => {
   cleanupCongrats?.()
 })
+
+
+import { ASSETS } from '~/constants/assets';
+
+const url = computed(() => {
+  const level = activeLevel.value?.level;
+  if (!level) return '';
+  return ASSETS.VIP[level as keyof typeof ASSETS.VIP]?.cardAnimated || '';
+})
+
+const isSvga = computed(() => {
+  return url.value.endsWith('.svga')
+})
+
+const isVap = computed(() => {
+  return url.value.endsWith('.mp4')
+})
 </script>
 
 <template>
-  <main class="h-screen relative overflow-hidden" :style="bgStyle">
+  <main>
     <!-- Navigation -->
     <NavAlt back-to="/profile">
       VIP
@@ -322,127 +358,105 @@ onUnmounted(() => {
     </div>
 
     <template v-else-if="activeLevel">
-      <!-- Background Animation -->
-      <SvgaPlayer :key="`vip-card-${activeLevel.level}`" :name="`${assetBasePath}/card.svga`"
-        class="absolute inset-0 z-0 -mt-20 pointer-events-none" />
-      <!-- User VIP Status Banner -->
-      <div v-if="isVip"
-        class="absolute w-7/8 ml-7 mt-18 z-10 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm">
-        <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-amber-400" />
-        <span class="text-sm font-medium text-white">
-          VIP {{ currentLevel }}
-        </span>
-        <span v-if="formattedExpiry" class="ml-auto text-xs font-bold text-white bg-tertiary px-2 rounded-full">
-          Expires {{ formattedExpiry }}
-        </span>
-      </div>
 
-      <!-- Main Content -->
-      <div class="relative z-10 overflow-y-auto mt-24">
-        <!-- VIP Header Section -->
-        <div class="flex px-3">
-          <!-- Badge Section (3/8 width) -->
-          <div class="flex w-[40%] flex-col items-center justify-center">
-            <NuxtImg :src="`${assetBasePath}/badge.webp`" :alt="`VIP ${activeLevel.level} Badge`" loading="lazy"
-              format="webp" class="w-full h-auto" />
-            <h2 class="text-lg font-bold mt-2">
-              {{ activeLevel.privileges.length }} Privileges
-            </h2>
-          </div>
+      <div class="fixed w-full top-0 min-h-screen">
 
-          <!-- Emblem Section (5/8 width) -->
-          <div class="flex w-[60%] flex-col items-center justify-center">
-            <SvgaPlayer :key="`vip-emblem-${activeLevel.level}`" :name="`${assetBasePath}/emblem.svga`"
-              class="w-full h-auto" />
-          </div>
+        <!-- User VIP Status Banner -->
+        <div v-if="isVip"
+          class="absolute w-7/8 ml-7 mt-12 z-50 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm">
+          <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-tertiary" />
+          <span class="text-sm font-medium text-white">
+            VIP {{ currentLevel }}
+          </span>
+          <span v-if="formattedExpiry" class="ml-auto text-xs font-bold text-white bg-tertiary px-2 rounded-full">
+            Expires {{ formattedExpiry }}
+          </span>
         </div>
 
-        <!-- Border Image -->
-        <NuxtImg :src="`${assetBasePath}/border.webp`" :alt="`VIP ${activeLevel.level} Border Decoration`"
-          class="w-full h-auto" loading="lazy" format="webp" />
+        <NuxtImg :src="ASSETS.VIP_BACKGROUND" :alt="`VIP Background`" class="absolute inset-0 z-0" />
+        <NuxtImg :src="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.flag" :alt="`VIP Flag`"
+          class="relative z-20 mx-auto mt-12 max-w-3/4" />
 
-        <div class="overflow-scroll h-[42vh] pb-32">
+        <div class="relative z-20 mx-auto -mt-52 max-w-36">
+          <SvgaPlayer
+              :key="`vip-emblem-${activeLevel?.level}`"
+              :name="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.emblemAnimated"
+          />
+        </div>
+
+      </div>
+
+      <div class="relative z-10 mt-58">
+        <div class="sticky top-20 z-0 mx-auto overflow-hidden">
+          <SvgaPlayer v-if="isSvga" :key="`vip-card-${activeLevel?.level}`" :name="url" class="-mt-26" />
+          <VapPlayer v-else-if="isVap" :name="url" :muted="false" class="-mt-26" />
+        </div>
+
+        <!-- Main Content -->
+        <div class="absolute top-30 z-10 max-h-10/12 pb-46 overflow-y-auto">
           <!-- Recharge Progress -->
-          <div v-if="rechargeProgress?.has_active_event" class="px-3 pt-3">
+          <div class="px-10 pt-3" v-if="rechargeProgress?.has_active_event">
             <VipRechargeProgress :progress="rechargeProgress" :level-color="activeLevel.color" />
           </div>
-          <!-- VIP Props Section -->
-          <div v-if="activeLevelProps.length > 0" class="px-3">
-            <h3 class="text-sm font-bold text-white/70 mb-2 uppercase tracking-wide">
-              VIP Props
-            </h3>
-            <div class="grid grid-cols-3 gap-2">
-              <div v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
-                class="flex flex-col items-center justify-center gap-2 cursor-pointer" @click="handlePropPreview(prop)">
-                <div
-                  class="flex aspect-square w-full items-center justify-center rounded-md px-2 ring-2 transition-all duration-300 overflow-hidden"
-                  :style="privilegeBoxStyle">
-                  <img v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
-                    class="w-full h-full object-contain">
-                  <UIcon v-else name="i-heroicons-gift" class="h-8 w-8 text-white/90" />
-                </div>
-                <p class="text-sm font-bold text-center leading-tight">
-                  {{ prop.name }}
+          <div class="pt-3 px-10">
+            <!-- VIP Props Section -->
+            <div v-if="activeLevelProps.length > 0" class="px-3">
+              <h3 class="text-xl font-bold text-white mb-2 uppercase tracking-wide text-center">VIP Props</h3>
+
+              <!-- Entry Animation (full-width above grid) -->
+              <div v-if="entryAnimationProp" @click="handlePropPreview(entryAnimationProp)">
+                <NuxtImg
+                    v-if="entryAnimationProp.thumbnail_url"
+                    :src="entryAnimationProp.thumbnail_url"
+                    :alt="entryAnimationProp.name"
+                    class="shadow-xl"
+                />
+                <p class="text-sm font-bold text-center py-2 text-white">
+                  {{ entryAnimationProp.name }}
                 </p>
               </div>
-            </div>
-          </div>
 
-          <!-- Privileges Grid (non-prop privileges) -->
-          <div v-if="nonPropPrivileges.length > 0" class="px-3 pt-4">
-            <h3 class="text-sm font-bold text-white/70 mb-2 uppercase tracking-wide">
-              Privileges
-            </h3>
-            <div class="grid grid-cols-3 gap-2">
-              <div v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`"
-                class="flex flex-col items-center justify-center gap-2">
-                <div
-                  class="flex aspect-square w-full items-center justify-center rounded-md px-2 ring-2 transition-all duration-300"
-                  :style="privilegeBoxStyle">
-                  <UIcon :name="VIP_PRIVILEGE_ICONS[privilege] ?? 'i-heroicons-star'" class="h-8 w-8 text-white/90" />
+              <div class="grid grid-cols-3 gap-2">
+                <div v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
+                  class="flex flex-col items-center justify-center gap-2 cursor-pointer"
+                  @click="handlePropPreview(prop)">
+                  <div class="flex items-center justify-center aspect-square w-full
+                      rounded-md transition-all duration-300 overflow-hidden
+                      backdrop-blur-xs shadow-md border
+                    " :style="privilegeBoxStyle">
+                    <img v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
+                      class="w-full h-full object-contain">
+                    <UIcon v-else name="i-heroicons-gift" class="h-12 text-white/90" />
+                  </div>
+                  <p class="text-sm font-bold text-center leading-tight truncate w-24">
+                    {{ prop.name }}
+                  </p>
                 </div>
-                <p class="text-sm font-bold text-center leading-tight">
-                  {{ VIP_PRIVILEGE_LABELS[privilege] ?? privilege }}
-                </p>
+              </div>
+            </div>
+
+            <!-- Privileges Grid (non-prop privileges) -->
+            <div v-if="nonPropPrivileges.length > 0" class="px-3 pt-4">
+              <h3 class="text-xl font-bold text-white mb-2 uppercase tracking-wide text-center">
+                Privileges
+              </h3>
+              <div class="grid grid-cols-3 gap-2">
+                <div v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`"
+                  class="flex flex-col items-center justify-center gap-2">
+                  <div class="flex aspect-square w-full items-center justify-center rounded-md transition-all duration-300"
+                    :style="privilegeBoxStyle">
+                    <UIcon :name="VIP_PRIVILEGE_ICONS[privilege] ?? 'i-heroicons-star'" class="size-12 text-white/90" />
+                  </div>
+                  <p class="text-sm font-bold text-center leading-tight truncate w-24">
+                    {{ VIP_PRIVILEGE_LABELS[privilege] ?? privilege }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Footer Controls -->
-      <footer aria-label="VIP Level Selection" class="fixed inset-x-2 bottom-4 z-50">
-        <BgGlass class="border border-white/40" frost-blur-radius="blur(8px)" :noise-frequency="0.009"
-          :noise-strength="200" rounded="rounded-lg">
-          <!-- VIP Level Tabs -->
-          <div class="flex w-full overflow-x-auto scrollbar-hide">
-            <UButton v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
-              class="min-w-fit shrink-0 rounded-none bg-linear-to-b transition-transform duration-200"
-              :class="activeIndex === index ? 'scale-110 to-tertiary' : 'to-muted'"
-              :aria-pressed="activeIndex === index" :aria-label="`Select VIP Level ${level.level}`"
-              @click="setActiveLevel(index)">
-              VIP {{ level.level }}
-            </UButton>
-          </div>
-
-          <div class="text-md font-bold text-white text-center">
-            PRICE {{ formattedPrice }}
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex gap-2 px-3 py-2">
-            <UButton size="md" variant="soft" color="tertiary" class="w-full justify-center"
-              aria-label="Gift VIP to a friend" @click="handleGiftOpen">
-              Gift
-            </UButton>
-            <UButton size="md" variant="solid" color="tertiary" class="w-full justify-center" :loading="isPurchasing"
-              :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
-              @click="handlePurchase">
-              {{ purchaseLabel }}
-            </UButton>
-          </div>
-        </BgGlass>
-      </footer>
     </template>
 
     <!-- VIP Gift Modal -->
@@ -455,6 +469,36 @@ onUnmounted(() => {
     <!-- VIP Congratulations Modal -->
     <VipCongratsModal :open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
       :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props" @close="handleCongratsClose" />
+
+    <!-- Footer Controls -->
+    <footer aria-label="VIP Level Selection" class="fixed inset-x-0 bottom-0 pb-2 z-50 backdrop-blur-lg">
+      <!-- VIP Level Tabs -->
+      <div class="flex w-full overflow-x-auto scrollbar-hide">
+        <UButton v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
+          class="min-w-fit shrink-0 rounded-none transition-transform duration-200" :style="bgColor"
+          :class="activeIndex === index ? 'scale-110 bg-tertiary!' : 'to-muted'" :aria-pressed="activeIndex === index"
+          :aria-label="`Select VIP Level ${level.level}`" @click="setActiveLevel(index)">
+          VIP {{ level.level }}
+        </UButton>
+      </div>
+
+      <div class="text-md font-bold text-white text-center">
+        PRICE {{ formattedPrice }}
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2 px-3 py-2">
+        <UButton size="md" variant="soft" color="tertiary" class="w-full justify-center"
+          aria-label="Gift VIP to a friend" @click="handleGiftOpen">
+          Gift
+        </UButton>
+        <UButton size="md" variant="solid" color="tertiary" class="w-full justify-center" :loading="isPurchasing"
+          :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
+          @click="handlePurchase">
+          {{ purchaseLabel }}
+        </UButton>
+      </div>
+    </footer>
   </main>
 </template>
 
