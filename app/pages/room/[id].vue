@@ -16,7 +16,7 @@ definePageMeta({
 
 const roomStore = useRoomStore();
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
-const { isLuckyComboActive, luckyCombo, endLuckyCombo } = useGiftSending();
+
 const {
   floatingMultipliers,
   roomAnnouncement,
@@ -27,10 +27,7 @@ const {
   dismissAppAnnouncement,
 } = useLuckyGift();
 
-/** Handle lucky combo button click */
-async function onLuckyCombo() {
-  await luckyCombo();
-}
+
 
 // ========================================
 // Route Guard — redirect home if no room in store
@@ -128,7 +125,7 @@ function toggleMute(): void {
 }
 
 /**
- * Volume icon based on current state.
+ * Volume icon based on the current state.
  */
 const volumeIcon = computed(() => {
   if (isMuted.value || volume.value === 0) return 'i-lucide-volume-x';
@@ -273,12 +270,7 @@ onUnmounted(() => {
       <!-- Lucky Gift Fly Animation (thumbnail: sender → center → receiver) -->
       <LuckyGiftFly />
 
-      <!-- Lucky Gift Combo Button (visible after sending a lucky gift) -->
-      <RoomGiftComboButton
-        v-if="isLuckyComboActive"
-        @click="onLuckyCombo"
-        @timeout="endLuckyCombo"
-      />
+
     </template>
   </div>
 </template>

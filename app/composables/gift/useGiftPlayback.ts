@@ -41,7 +41,7 @@ export function useGiftPlayback() {
   const isPlaying = computed(() => giftStore.isPlaying)
   const comboCount = computed(() => giftStore.comboCount)
   const isSender = computed(() => authStore.user?.id === currentPlayback.value?.senderId)
-  const isComboButtonVisible = ref(false)
+
   const isMinimized = ref(false)
 
   // ========================================
@@ -132,10 +132,7 @@ export function useGiftPlayback() {
     }
   }
 
-  /** Handle combo timeout (combo button expires) */
-  function handleComboTimeout(): void {
-    isComboButtonVisible.value = false
-  }
+
 
   // ========================================
   // Minimize Toggle
@@ -153,13 +150,9 @@ export function useGiftPlayback() {
   watch(isPlaying, (open) => {
     if (open) {
       startPlaybackTimeout()
-      if (isSender.value) {
-        isComboButtonVisible.value = true
-      }
     }
     else {
       clearPlaybackTimeout()
-      isComboButtonVisible.value = false
       isMinimized.value = false
     }
   })
@@ -170,9 +163,6 @@ export function useGiftPlayback() {
     (newTimestamp, oldTimestamp) => {
       if (newTimestamp && oldTimestamp && newTimestamp !== oldTimestamp) {
         restartCurrentPlayer()
-        if (isSender.value) {
-          isComboButtonVisible.value = true
-        }
         startPlaybackTimeout()
       }
     },
@@ -191,7 +181,6 @@ export function useGiftPlayback() {
     isPlaying,
     comboCount,
     isSender,
-    isComboButtonVisible,
     isMinimized,
 
     // Player refs (for template binding)
@@ -204,7 +193,6 @@ export function useGiftPlayback() {
     restartCurrentPlayer,
     registerPlayer,
     handleCombo,
-    handleComboTimeout,
     toggleMinimize,
     clearPlaybackTimeout,
   }

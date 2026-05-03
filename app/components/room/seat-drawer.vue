@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { vipCardSvga } from '~/constants/assets'
+import {ASSETS, vipCardSvga} from '~/constants/assets'
+
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
 
@@ -178,13 +179,19 @@ const wealthLevel = computed(() =>
 const charmLevel = computed(() =>
     getLevelFromXp(currentSeat.value?.user?.charm_xp ?? '0', 'charm')
 )
+
+const url = computed(() => ASSETS.VIP[currentSeat.value?.user?.vip_level as keyof typeof ASSETS.VIP]?.cardAnimated);
+
+const isVap = computed(() => {
+  return url.value?.endsWith('.mp4')
+})
 </script>
 
 <template>
   <UDrawer 
     v-model:open="isOpen" 
     title="Seat Options" 
-    :class="isVip ? 'min-h-9/12' : ''" 
+    :class="isVip ? 'min-h-9/12' : ''"
     description="Manage seat actions like joining, leaving, muting, or locking."
     :ui="{
       content: 'bg-transparent backdrop-blur-xs',
@@ -194,11 +201,19 @@ const charmLevel = computed(() =>
   >
     <template #content>
       <!-- Background Animation -->
-      <div v-if="isVip" class="absolute z-0">
-        <SvgaPlayer 
-          :key="`vip-card-${currentSeat?.user?.vip_level}`" 
-          :name="vipCardSvga(currentSeat?.user?.vip_level ?? 1)" 
-          class="pointer-events-none -mt-28" />
+      <div v-if="isVip" class="absolute z-0 overflow-hidden">
+        <SvgaPlayer
+            v-if="!isVap"
+            :key="`vip-card-${currentSeat?.user?.vip_level}`"
+            :name="url"
+            class="pointer-events-none -mt-28"
+        />
+        <VapPlayer
+            v-else
+            :key="`vip-card-${currentSeat?.user?.vip_level}`"
+            :name="url"
+            class="pointer-events-none -mt-28"
+        />
       </div>
       
       <div class="relative z-10 px-3" :class="isVip ? 'mt-32' : 'my-8'">

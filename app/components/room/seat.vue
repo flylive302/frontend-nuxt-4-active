@@ -35,6 +35,7 @@ const isMuted = computed(() => seat.value?.isMuted ?? false);
 
 // Open the seat drawer (store holds 0-indexed seat index)
 function openDrawer() {
+
   seatsStore.openSeat(seatIndex.value);
 }
 

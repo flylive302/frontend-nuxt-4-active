@@ -9,18 +9,18 @@
 import { resolveVideoUrl } from '~/utils/platform';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
-const { combo } = useGiftSending();
+
 const {
   currentPlayback,
   isPlaying,
-  isComboButtonVisible,
+
   isMinimized,
   videoPlayerRef,
   svgaPlayerRef,
   staticDisplayRef,
   handleComplete,
   handleCombo,
-  handleComboTimeout,
+
   toggleMinimize,
 } = useGiftPlayback();
 
@@ -66,12 +66,7 @@ onMounted(() => {
   });
 });
 
-/**
- * Handle combo button click — delegates to composable
- */
-async function onCombo() {
-  await handleCombo(combo);
-}
+
 </script>
 
 <template>
@@ -106,12 +101,7 @@ async function onCombo() {
     </template>
   </div>
 
-  <!-- Combo Button (only visible during playback and before timeout) -->
-  <RoomGiftComboButton
-    v-if="isPlaying && isComboButtonVisible"
-    @click="onCombo"
-    @timeout="handleComboTimeout"
-  />
+
 </template>
 
 <style scoped>
