@@ -59,8 +59,8 @@ const isPurchasing = ref(false)
 const isGiftModalOpen = ref(false)
 const rechargeProgress = ref<RechargeProgress | null>(null)
 
-// Preload all VIP SVGA assets progressively into plugin cache
-useVipSvgaPreloader(levels, activeIndex)
+// Preload all VIP animation assets (SVGA + VAP) into plugin caches
+useVipAssetPreloader(levels, activeIndex)
 
 // Prop preview modal
 const selectedProp = ref<VipProp | null>(null)
@@ -388,8 +388,8 @@ const isVap = computed(() => {
 
       <div class="relative z-10 mt-58">
         <div class="sticky top-20 z-0 mx-auto overflow-hidden">
-          <SvgaPlayer v-if="isSvga" :key="`vip-card-${activeLevel?.level}`" :name="url" class="-mt-26" />
-          <VapPlayer v-else-if="isVap" :name="url" :muted="false" class="-mt-26" />
+          <SvgaPlayer v-if="isSvga" :key="`vip-svga-${activeLevel?.level}`" :name="url" class="-mt-26" />
+          <VapPlayer v-else-if="isVap" :key="`vip-vap-${activeLevel?.level}`" :name="url" :muted="false" class="-mt-26" />
         </div>
 
         <!-- Main Content -->

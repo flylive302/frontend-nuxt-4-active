@@ -63,25 +63,6 @@ export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
     },
 ]
 
-const VipAssets: [string, string, string][] = [
-    ['card', 'svga', 'svga'],
-    ['badge', 'image', 'webp'],
-    ['emblem', 'svga', 'svga'],
-    ['border', 'image', 'webp']
-];
-for (let i = 1; i < 9; i++) {
-    for (const asset of VipAssets) {
-        MANUAL_ASSET_MANIFEST.push({
-            url: `${vipAssetBase(i)}/${asset[0]}.${asset[2]}`,
-            assetType: '' + asset[1],
-            scope: 'global',
-            priority: 'low',
-            groupKey: 'app-shell',
-            sortOrder: 6 + i,
-        });
-    }
-}
-
 
 export const PAGE_ASSET_MANIFESTS: Record<string, AssetManifestItem[]> = {
     mall: [],

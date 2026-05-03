@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import {ASSETS, vipCardSvga} from '~/constants/assets'
+import { ASSETS } from '~/constants/assets'
 
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
@@ -210,7 +210,7 @@ const isVap = computed(() => {
         />
         <VapPlayer
             v-else
-            :key="`vip-card-${currentSeat?.user?.vip_level}`"
+            :key="`vip-vap-${currentSeat?.user?.vip_level}`"
             :name="url"
             class="pointer-events-none -mt-28"
         />

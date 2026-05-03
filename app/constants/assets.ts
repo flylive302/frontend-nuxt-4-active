@@ -291,10 +291,6 @@ export const rankingBgUrl = (category: string) =>
 export const rankingPodiumFrame = (rank: number) =>
   `${R2}/frames/events/top_${rank}.svga`
 
-/** VIP card SVGA animation */
-export const vipCardSvga = (level: number) =>
-  `${R2}/vip/${level}/card.svga`
-
 /** VIP emblem SVGA animation */
 export const vipEmblemSvga = (level: number) =>
   `${R2}/vip/${level}/emblem.svga`

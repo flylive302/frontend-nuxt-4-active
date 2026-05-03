@@ -53,10 +53,10 @@ const FRAGMENT_SHADER = `
     vec2 aCoord = u_aRect.xy + v_texCoord * u_aRect.zw;
     vec4 rgbColor = texture2D(u_video, rgbCoord);
     float rawAlpha = texture2D(u_video, aCoord).r;
-    // H.264 compression produces near-zero alpha artifacts in transparent areas.
-    // Smooth-step threshold: values below 0.05 become fully transparent,
-    // values above 0.15 pass through, with a smooth transition in between.
-    float alpha = smoothstep(0.05, 0.15, rawAlpha);
+    // H.264 block compression produces artifacts in "transparent" areas.
+    // smoothstep(0.3, 0.7): below 30% → fully transparent, above 70% → opaque.
+    // VAP alpha masks use R≈255 for visible content, so this only affects noise.
+    float alpha = smoothstep(0.3, 0.7, rawAlpha);
     gl_FragColor = vec4(rgbColor.rgb, alpha);
   }
 `
@@ -133,43 +133,33 @@ function tryGetWebGLContext(canvas: HTMLCanvasElement): WebGLRenderingContext | 
     preserveDrawingBuffer: false,
   }
 
-  // First, test WebGL support on a tiny throwaway canvas.
-  // This isolates whether the issue is the browser/GPU vs the specific canvas.
-  const testCanvas = document.createElement('canvas')
-  testCanvas.width = 1
-  testCanvas.height = 1
-  const testCtx = testCanvas.getContext('webgl', glOptions)
-  if (!testCtx) {
-    log.warn('WebGL not available on this device/browser. Check chrome://gpu for details.')
-    testCanvas.remove()
-    return null
-  }
-  // Release test context
-  const glTestCtx = testCtx as WebGLRenderingContext
-  const testExt = glTestCtx.getExtension('WEBGL_lose_context')
-  testExt?.loseContext()
-  testCanvas.remove()
-  log.info('WebGL support confirmed via test canvas')
-
-  // Now try on the actual canvas
+  // Try each WebGL variant on the actual canvas
   for (const name of ['webgl', 'webgl2', 'experimental-webgl'] as const) {
     try {
       const ctx = canvas.getContext(name, glOptions) as WebGLRenderingContext | null
-      if (ctx) {
-        log.info(`WebGL context acquired via "${name}"`, {
-          renderer: ctx.getParameter(ctx.RENDERER),
-          vendor: ctx.getParameter(ctx.VENDOR),
-        })
-        return ctx
+      if (!ctx) continue
+
+      // Detect zombie/lost contexts: a lost context returns null for RENDERER.
+      // This happens when a previous loseContext() was called on this canvas,
+      // or the GPU process crashed. The context object is non-null but useless.
+      const renderer = ctx.getParameter(ctx.RENDERER)
+      if (!renderer) {
+        log.warn(`getContext("${name}") returned a lost/zombie context (renderer: null) — skipping WebGL`)
+        return null
       }
-      log.warn(`getContext("${name}") returned null`)
+
+      log.info(`WebGL context acquired via "${name}"`, {
+        renderer,
+        vendor: ctx.getParameter(ctx.VENDOR),
+      })
+      return ctx
     }
     catch (err: any) {
       log.warn(`getContext("${name}") threw:`, err?.message || err)
     }
   }
 
-  log.error('WebGL test passed but failed on actual canvas — canvas may be tainted or too large')
+  log.warn('WebGL not available — will use 2D canvas fallback')
   return null
 }
 
@@ -198,9 +188,12 @@ function createWebGLRenderer(
   gl.useProgram(program)
   setupGeometry(gl, program)
 
-  // Enable blending for transparency
-  gl.enable(gl.BLEND)
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+  // NOTE: Blending is intentionally DISABLED.
+  // We draw a single quad on a cleared transparent canvas — no compositing needed.
+  // The fragment shader outputs straight RGBA directly to the framebuffer.
+  // Previously, gl.blendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA) produced
+  // premultiplied RGB (rgb*alpha) but canvas was premultipliedAlpha:false,
+  // causing the browser to divide rgb/alpha → artifacts near zero-alpha = black backdrop.
 
   // Create video texture
   const texture = gl.createTexture()
@@ -247,8 +240,10 @@ function createWebGLRenderer(
     destroy() {
       gl.deleteTexture(texture)
       gl.deleteProgram(program)
-      const ext = gl.getExtension('WEBGL_lose_context')
-      ext?.loseContext()
+      // NOTE: Do NOT call loseContext() here.
+      // It permanently taints the canvas — any subsequent getContext('webgl')
+      // on the same canvas returns a zombie context (renderer: null).
+      // Resource cleanup via delete* is sufficient; the GC handles the rest.
     },
   }
 }
@@ -310,8 +305,9 @@ function createCanvas2DRenderer(
       for (let i = 0; i < px.length; i += 4) {
         // Red channel becomes alpha; threshold kills H.264 compression artifacts
         const rawAlpha = px[i]! // red channel = opacity
-        // H.264 produces artifact values 1-30 in "transparent" areas. Clamp to 0.
-        const alpha = rawAlpha < 30 ? 0 : rawAlpha
+        // H.264 artifacts can reach ~64/255 in transparent areas.
+        // Threshold at 76 (≈0.3) matches the WebGL shader's lower bound.
+        const alpha = rawAlpha < 76 ? 0 : Math.min(255, Math.round((rawAlpha - 76) / (179 - 76) * 255))
         px[i] = 255      // R
         px[i + 1] = 255  // G
         px[i + 2] = 255  // B
@@ -405,15 +401,21 @@ export default defineNuxtPlugin(() => {
     options.canvas.width = info.w
     options.canvas.height = info.h
 
-    // EXECUTE: Initialize renderer (WebGL with 2D fallback)
+    // EXECUTE: Initialize renderer (WebGL with 2D canvas fallback)
     let renderer: Renderer
 
     const gl = tryGetWebGLContext(options.canvas)
     if (gl) {
-      renderer = createWebGLRenderer(options.canvas, gl, info)
+      try {
+        renderer = createWebGLRenderer(options.canvas, gl, info)
+      }
+      catch (webglErr: any) {
+        log.warn('WebGL renderer creation failed, falling back to 2D:', webglErr?.message || webglErr)
+        renderer = createCanvas2DRenderer(options.canvas, info)
+      }
     }
     else {
-      log.warn('WebGL unavailable — using 2D canvas software renderer (slower but compatible)')
+      log.warn('WebGL unavailable — using 2D canvas software renderer')
       renderer = createCanvas2DRenderer(options.canvas, info)
     }
 
