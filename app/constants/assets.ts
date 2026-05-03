@@ -30,24 +30,24 @@ export const ASSETS = {
   // ── R2 CDN — Binary / Animations ──
   DEFAULT_FRAME: `${R2}/frames/10.svga`,
   MICE_WAVE_SVGA: `${R2}/vip/1/mice-wave.svga`,
-  GIFT_DRAWER_ICON: `${R2}/shared/room/gift.webp`,
   DEFAULT_WEALTH_BADGE: `${R2}/badges/wealth/level_0.webp`,
   DEFAULT_CHARM_BADGE: `${R2}/badges/charm/level_0.webp`,
   DEFAULT_TRANSACTION_THUMB: `${R2}/badges/charm/level_0.webp`,
 
   // ── ImageKit CDN — UI Images ──
-  DEFAULT_SEAT_IMG: `${IK}/siteAssets/seats/default-seat.webp`,
-  LOCK_SEAT_IMG: `${IK}/siteAssets/seats/lock-seat.webp`,
+  GIFT_DRAWER_ICON: `${IK}/placeholders/gift-icon.png`,
+  DEFAULT_SEAT_IMG: `${IK}/placeholders/seat.webp`,
+  LOCK_SEAT_IMG: `${IK}/placeholders/seat-locked.webp`,
   ROOM_CARD_TOP: `${IK}/siteAssets/room/room-card-top.webp`,
-  DIAMOND_ICON: `${IK}/siteAssets/props/flylive-diamond.webp`,
-  COIN_ICON: `${IK}/siteAssets/props/flylive_coin.webp`,
-  HERO_SECONDARY: `${IK}/siteAssets/alt-hero/secondary.webp`,
-  HERO_TERTIARY: `${IK}/siteAssets/alt-hero/tertiary.webp`,
-  HERO_CHARM: `${IK}/siteAssets/alt-hero/charm.jpeg`,
-  HERO_WEALTH: `${IK}/siteAssets/alt-hero/wealth.jpeg`,
+  DIAMOND_ICON: `${IK}/placeholders/diamond-icon.webp`,
+  COIN_ICON: `${IK}/placeholders/coin-icon.webp`,
+  HERO_SECONDARY: `${IK}/placeholders/secondary.webp`,
+  HERO_TERTIARY: `${IK}/placeholders/tertiary.webp`,
+  HERO_CHARM: `${IK}/placeholders/charm.webp`,
+  HERO_WEALTH: `${IK}/placeholders/wealth.webp`,
   DEFAULT_ROOM_BADGE: `${IK}/badges/room/level_1.webp`,
   DEFAULT_PROFILE_BADGE: `${IK}/badges/profile-1.webp`,
-  DEFAULT_HISTORY_BADGE: `${IK}/siteAssets/badges/badge-profile-1.webp`,
+  DEFAULT_HISTORY_BADGE: `${IK}/badges/profile-1.webp`,
   DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/level_1.webp`,
   DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/level_1.webp`,
 
@@ -59,7 +59,7 @@ export const ASSETS = {
   AUTH_CARD_5: `${IK}/placeholders/5.webp`,
   AUTH_CARD_6: `${IK}/placeholders/6.webp`,
 
-  COVER_PLACEHOLDER: `${IK}/placeholders/bg-fl.png`,
+  COVER_PLACEHOLDER: `${IK}/placeholders/profile-bg.jpeg`,
 
   // ── Gender (self-hosted) ──
   GENDER_FEMALE: `${IK}/gender/female.webp`,
@@ -67,7 +67,7 @@ export const ASSETS = {
 
   // ── Placeholders & Fallbacks (precached by SW) ──
   AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp`,
-  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-bg.webp`,
+  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp`,
   PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-cover.webp`,
 
   // ── Videos (self-hosted for now, candidate for R2 migration) ──
@@ -320,29 +320,29 @@ export const vipUIAssetBase = (level: number) =>
 
 export const EVENT_BANNERS = {
   cp: {
-    banner: `${IK}/siteAssets/banners/cp.webp`,
-    header: `${IK}/siteAssets/banners/cp-header.webp`,
-    decor: `${IK}/siteAssets/banners/decor-main-content.webp`,
+    banner: `${IK}/banners/cp.webp`,
+    header: `${IK}/banners/cp-header.webp`,
+    decor: `${IK}/banners/decor-main-content.webp`,
   },
   country: {
-    banner: `${IK}/siteAssets/banners/country.webp`,
-    header: `${IK}/siteAssets/banners/country-header.svg`,
-    decor: `${IK}/siteAssets/banners/decor-recharge-tycoon.webp`,
+    banner: `${IK}/banners/country.webp`,
+    header: `${IK}/banners/country-header.svg`,
+    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
   },
   pretty_id: {
-    banner: `${IK}/siteAssets/banners/pretty-id.webp`,
-    header: `${IK}/siteAssets/banners/country-header.svg`,
-    decor: `${IK}/siteAssets/banners/decor-recharge-tycoon.webp`,
+    banner: `${IK}/banners/pretty-id.webp`,
+    header: `${IK}/banners/country-header.svg`,
+    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
   },
   recharge_tycoon: {
-    banner: `${IK}/siteAssets/banners/recharge-tycoon.webp`,
-    header: `${IK}/siteAssets/banners/country-header.svg`,
-    decor: `${IK}/siteAssets/banners/decor-recharge-tycoon.webp`,
+    banner: `${IK}/banners/recharge-tycoon.webp`,
+    header: `${IK}/banners/country-header.svg`,
+    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
   },
   supreme_recharge: {
-    banner: `${IK}/siteAssets/banners/supreme-recharge.webp`,
-    header: `${IK}/siteAssets/banners/country-header.svg`,
-    decor: `${IK}/siteAssets/banners/decor-recharge-tycoon.webp`,
+    banner: `${IK}/banners/supreme-recharge.webp`,
+    header: `${IK}/banners/country-header.svg`,
+    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
   },
 } as const satisfies Record<
   string,

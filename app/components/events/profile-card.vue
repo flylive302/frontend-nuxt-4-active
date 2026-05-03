@@ -17,7 +17,7 @@ const items = [
       :ui="{item: 'basis-4/11'}"
       class="pl-3"
   >
-    <div class="relative aspect-[8/10] overflow-hidden rounded-md border border-white/50">
+    <div class="relative aspect-8/10 overflow-hidden rounded-md border border-white/50">
       <aside class="absolute inset-2">
         <BgGlass
             frost-blur-radius="blur(2px)"

@@ -80,7 +80,7 @@ watch(lastCoinRequestUpdate, () => {
         <UButton icon="i-lucide-history" color="tertiary" variant="soft" class="shadow-xl">Visit</UButton>
       </NuxtLink>
 
-      <h2 class="text-lg font-bold mt-8"><span class="text-success">Buy</span> Coins From the Resellers</h2>
+      <h2 class="text-lg font-bold mt-8"><span class="text-success">Get</span> Coins From the Resellers</h2>
       <p class="text-sm text-muted mb-4">Keep your default reseller or select a Different One</p>
       <EconomyChooseDefaultReseller color="tertiary" />
 

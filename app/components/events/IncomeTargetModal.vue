@@ -71,7 +71,7 @@ const formattedReward = computed(() => {
       >
         <div
           v-if="incomeTargetModalData"
-          class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-neutral-700 to-neutral-950 p-6 text-center shadow-2xl"
+          class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-linear-to-b from-neutral-700 to-neutral-950 p-6 text-center shadow-2xl"
           role="dialog"
           aria-labelledby="income-target-modal-title"
           aria-describedby="income-target-modal-description"
@@ -87,7 +87,7 @@ const formattedReward = computed(() => {
           <!-- Target Icon Display -->
           <div class="relative mb-4">
             <div
-              class="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br ring-4 ring-white/10"
+              class="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-linear-to-br ring-4 ring-white/10"
               :class="[style.gradientFrom, style.gradientTo]"
             >
               <UIcon :name="style.icon" class="h-14 w-14 text-white drop-shadow-lg" />
