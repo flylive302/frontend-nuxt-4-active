@@ -124,6 +124,14 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
       >
         Sign Up
       </UButton>
+
+      <p class="text-xs text-neutral-500 text-center mt-2 leading-relaxed">
+        By signing up, you agree to our
+        <NuxtLink to="/privacy-policy" class="text-primary hover:underline">Privacy Policy</NuxtLink>
+        and
+        <NuxtLink to="/terms-of-service" class="text-primary hover:underline">Terms of Service</NuxtLink>.
+        You must be at least 18 years old.
+      </p>
     </UForm>
 
     <UButton

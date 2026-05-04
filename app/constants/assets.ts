@@ -51,15 +51,15 @@ export const ASSETS = {
   DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/level_1.webp`,
   DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/level_1.webp`,
 
-  // ── Auth page cards ──
-  AUTH_CARD_1: `${IK}/placeholders/1.webp`,
-  AUTH_CARD_2: `${IK}/placeholders/2.webp`,
-  AUTH_CARD_3: `${IK}/placeholders/3.webp`,
-  AUTH_CARD_4: `${IK}/placeholders/4.webp`,
-  AUTH_CARD_5: `${IK}/placeholders/5.webp`,
-  AUTH_CARD_6: `${IK}/placeholders/6.webp`,
+  // ── Auth page cards (mobile-optimized: 250px wide, q70, WebP) ──
+  AUTH_CARD_1: `${IK}/placeholders/1.webp?tr=w-250,q-70,f-webp`,
+  AUTH_CARD_2: `${IK}/placeholders/2.webp?tr=w-250,q-70,f-webp`,
+  AUTH_CARD_3: `${IK}/placeholders/3.webp?tr=w-250,q-70,f-webp`,
+  AUTH_CARD_4: `${IK}/placeholders/4.webp?tr=w-250,q-70,f-webp`,
+  AUTH_CARD_5: `${IK}/placeholders/5.webp?tr=w-250,q-70,f-webp`,
+  AUTH_CARD_6: `${IK}/placeholders/6.webp?tr=w-250,q-70,f-webp`,
 
-  COVER_PLACEHOLDER: `${IK}/placeholders/profile-bg.jpeg`,
+  COVER_PLACEHOLDER: `${IK}/placeholders/bg-fl.png?tr=w-420,q-60,f-webp`,
 
   // ── Gender (self-hosted) ──
   GENDER_FEMALE: `${IK}/gender/female.webp`,
@@ -68,7 +68,7 @@ export const ASSETS = {
   // ── Placeholders & Fallbacks (precached by SW) ──
   AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp`,
   ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp`,
-  PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-cover.webp`,
+  PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-bg.jpeg`,
 
   // ── Videos (self-hosted for now, candidate for R2 migration) ──
   MALL_BG_VIDEO: `${IK}/mall/mall-bg.mp4`,

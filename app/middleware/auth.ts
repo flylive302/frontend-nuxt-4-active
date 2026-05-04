@@ -15,7 +15,7 @@ export default defineNuxtRouteMiddleware(async () => {
 
   // Check for token — user data is hydrated by bootstrap plugin
   if (!authStore.token) {
-    return navigateTo('/log-in')
+    return navigateTo('/welcome')
   }
 
   // Check profile completion only if user is already hydrated

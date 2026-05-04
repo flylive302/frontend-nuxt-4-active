@@ -1,5 +1,5 @@
 import type { AssetScope, AssetType, AssetPriority } from '~/types/asset/asset'
-import { ASSETS, vipAssetBase } from '~/constants/assets'
+import { ASSETS } from '~/constants/assets'
 
 export interface AssetManifestItem {
     url: string

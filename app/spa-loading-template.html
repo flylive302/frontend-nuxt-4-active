@@ -1,0 +1,52 @@
+<!--
+  SPA Loading Template
+  
+  Shown instantly while the Vue app JS bundle is downloading, parsing, and hydrating.
+  This is pure HTML/CSS — zero JavaScript — so it paints on first byte.
+  Nuxt automatically injects this into the HTML shell and removes it once the app mounts.
+  
+  Critical for Lighthouse FCP score in SPA (ssr: false) mode.
+-->
+<div id="spa-loader">
+  <img src="/logos/flylive-logo.webp" alt="FlyLive" width="80" height="auto" class="spa-loader__logo" />
+  <div class="spa-loader__spinner"></div>
+</div>
+
+<style>
+  #spa-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: #000002;
+  }
+
+  .spa-loader__logo {
+    width: 140px;
+    height: auto;
+    border-radius: 20px;
+    animation: spa-logo-pulse 1.8s ease-in-out infinite;
+  }
+
+  .spa-loader__spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 36, 101, 0.2);
+    border-top-color: #ff2465;
+    border-radius: 50%;
+    animation: spa-spin 0.8s linear infinite;
+  }
+
+  @keyframes spa-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes spa-logo-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.95); }
+  }
+</style>

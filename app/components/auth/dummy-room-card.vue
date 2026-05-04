@@ -26,7 +26,9 @@ const props = defineProps(["room"]);
                 width="250"
                 class="size-full object-cover"
                 format="webp"
-                densities="x1 x2"
+                densities="x1"
+                loading="lazy"
+                fetchpriority="low"
             />
             <figcaption class="sr-only">{{ props.room.name }}</figcaption>
         </figure>

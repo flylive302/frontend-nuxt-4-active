@@ -48,7 +48,7 @@ onMounted(() => {
     <ProfileHeader>
       <template #cover>
         <NuxtImg
-          :src="authStore.user?.cover_image ?? ASSETS.COVER_PLACEHOLDER"
+          :src="authStore.user?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER"
           format="webp"
           densities="x1 x2"
           sizes="320px"

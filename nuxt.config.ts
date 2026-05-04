@@ -6,6 +6,7 @@ import { headConfig } from './config/head.config'
 export default defineNuxtConfig({
     compatibilityDate: '2025-02-03',
     ssr: false,
+    spaLoadingTemplate: true,
     devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
     modules: ['@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
@@ -50,7 +51,19 @@ export default defineNuxtConfig({
             colors: ['primary', 'secondary', 'tertiary', 'info', 'success', 'warning', 'error']
         }
     },
-    image: {},
+    image: {
+        imagekit: {
+            baseURL: 'https://ik.imagekit.io/flylive'
+        },
+        quality: 75,
+        format: ['webp'],
+        densities: [1, 2],
+        screens: {
+            xs: 320,
+            sm: 375,
+            md: 428,
+        },
+    },
     vite: {
         optimizeDeps: {
             include: ['svga/dist/index.esm.min.js']
