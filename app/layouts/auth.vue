@@ -46,6 +46,7 @@ onMounted(() => {
             class="inset-shadow-sm inset-shadow-neutral-950/50"
             size="xl"
             :square="true"
+            :aria-label="showForm ? 'Close email sign-in form' : 'Sign in with Email'"
             @click="showForm = !showForm"
           >
             <span class="icon-morph">

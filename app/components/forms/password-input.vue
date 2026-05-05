@@ -80,7 +80,6 @@ const text = computed(() => {
           :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
           :aria-label="show ? 'Hide password' : 'Show password'"
           :aria-pressed="show"
-          aria-controls="password"
           @click="show = !show"
         />
       </template>

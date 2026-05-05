@@ -186,10 +186,8 @@
    Usage: <div class="glow-gold"><UButton … /></div>
    ────────────────────────────────────────────────────────── */
 
-@property --glow-deg {
-    syntax: "<angle>";
-    inherits: true;
-    initial-value: -90deg;
+@keyframes glow-spin {
+    to { transform: rotate(360deg); }
 }
 
 .glowing-border {
@@ -201,53 +199,37 @@
         var(--gradient-info),
         var(--gradient-primary);
 
-    border: var(--border-width, 2px) solid transparent;
-    background: linear-gradient(var(--surface, canvas) 0 0) padding-box,
-        conic-gradient(from var(--glow-deg), var(--gradient-glow)) border-box;
-
     position: relative;
     isolation: isolate;
-
-    animation: glow 10s infinite linear;
-}
-
-@keyframes glow {
-    100% {
-        --glow-deg: 270deg;
-    }
-}
-
-.glowing-border::before,
-.glowing-border::after {
-    content: "";
-    position: absolute;
-    border-radius: inherit;
+    overflow: hidden;
+    padding: 2px;
 }
 
 .glowing-border::before {
-    z-index: -1;
-    background: var(--surface, canvas);
-    inset: 0.2rem;
-    transform-origin: right;
-    filter: blur(var(--glow-size, 0.2rem));
+    content: "";
+    position: absolute;
+    inset: -16%;
+    background: conic-gradient(var(--gradient-glow));
+    animation: glow-spin 10s linear infinite;
+    z-index: -2;
 }
 
 .glowing-border::after {
-    z-index: -2;
-    inset: -0.2rem;
-    background: conic-gradient(from var(--glow-deg), var(--gradient-glow));
-    filter: blur(var(--glow-size, 0.8rem));
-    opacity: var(--glow-intensity, 0.5);
+    content: "";
+    position: absolute;
+    inset: var(--border-width, 2px);
+    border-radius: inherit;
+    background: var(--surface, canvas);
+    z-index: -1;
 }
 
 .glowing-border.right {
     margin-inline-start: auto;
-    border: var(--border-width, 3px) solid transparent;
-    border-right: 0;
+    --border-width: 3px;
+}
 
-    &::before {
-        transform-origin: left;
-    }
+.glowing-border.right::after {
+    inset-inline-end: 0;
 }
 
 @keyframes zoom {
