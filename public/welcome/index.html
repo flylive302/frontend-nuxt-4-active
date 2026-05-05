@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FlyLive — Live Audio Rooms & Social Platform</title>
+  <meta name="description" content="Join live audio rooms, connect with people worldwide, send gifts, and stream on FlyLive. Your social audio experience starts here.">
+  <meta name="theme-color" content="#000002">
+  <link rel="icon" href="/logos/pwa-64x64.png" type="image/png">
+  <link rel="apple-touch-icon" href="/pwa-assets/apple-touch-icon-180x180.png">
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Base ── */
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { text-decoration: none; color: inherit; }
+    img { display: block; max-width: 100%; height: auto; }
+
+    /* ── Layout ── */
+    .page { min-height: 100dvh; display: flex; flex-direction: column; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 4rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top, rgba(255,36,101,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .logo-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem; }
+    .logo { width: 96px; height: 96px; border-radius: 24px; margin-bottom: 0.75rem; }
+    .logo-text { width: 112px; }
+    .tagline { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.75rem; }
+    .tagline-accent {
+      background: linear-gradient(90deg, #ff2465, #ec4899, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: #a3a3a3;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      max-width: 20rem;
+      margin: 0 auto 2rem;
+    }
+
+    /* ── CTA Buttons ── */
+    .cta-group { display: flex; flex-direction: column; gap: 0.75rem; max-width: 20rem; margin: 0 auto; }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.5rem;
+      border-radius: 0.75rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #ff2465; color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-outline {
+      background: transparent;
+      color: #d4d4d4;
+      border: 1.5px solid rgba(255,255,255,0.15);
+    }
+    .btn-outline:hover { border-color: rgba(255,255,255,0.3); }
+
+    /* ── SVG icon inside button ── */
+    .btn-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── Features ── */
+    .features { padding: 2.5rem 1.5rem; }
+    .features-title { text-align: center; font-size: 1.125rem; font-weight: 600; margin-bottom: 1.5rem; }
+    .features-grid { display: flex; flex-direction: column; gap: 1rem; max-width: 28rem; margin: 0 auto; }
+    .feature-card {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 1rem;
+      border-radius: 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .feature-icon {
+      flex-shrink: 0;
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    .fi-pink { background: rgba(255,36,101,0.1); }
+    .fi-amber { background: rgba(251,191,36,0.1); }
+    .fi-purple { background: rgba(168,85,247,0.1); }
+    .fi-sky { background: rgba(56,189,248,0.1); }
+    .feature-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .feature-desc { font-size: 0.75rem; color: #a3a3a3; line-height: 1.5; }
+
+    /* ── Stats ── */
+    .stats {
+      padding: 2rem 1.5rem;
+      background: rgba(255,255,255,0.02);
+    }
+    .stats-inner {
+      display: flex;
+      justify-content: space-around;
+      max-width: 24rem;
+      margin: 0 auto;
+    }
+    .stat { text-align: center; }
+    .stat-value { font-size: 1.25rem; font-weight: 700; color: #ff2465; }
+    .stat-label { font-size: 0.75rem; color: #737373; margin-top: 0.25rem; }
+    .stat-divider { width: 1px; height: 2rem; background: rgba(255,255,255,0.1); align-self: center; }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 2rem 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      text-align: center;
+      margin-top: auto;
+    }
+    .legal-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; }
+    .legal-link { font-size: 0.75rem; color: #737373; transition: color 0.15s; }
+    .legal-link:hover { color: #d4d4d4; }
+    .footer-contact { font-size: 0.75rem; color: #525252; margin-bottom: 0.5rem; }
+    .footer-contact a { color: #a3a3a3; }
+    .footer-contact a:hover { color: #ff2465; }
+    .footer-copy { font-size: 0.75rem; color: #404040; }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ─── Hero ─── -->
+    <header class="hero">
+      <div class="hero-content">
+        <div class="logo-wrap">
+          <img
+            src="/logos/flylive-logo-sm.webp"
+            alt="FlyLive Logo"
+            class="logo"
+            width="96"
+            height="96"
+            fetchpriority="high"
+          >
+          <img
+            src="/logos/flylive-text.png"
+            alt="FlyLive"
+            class="logo-text"
+            width="112"
+            height="30"
+            fetchpriority="high"
+          >
+        </div>
+
+        <h1 class="tagline">
+          Your Social Audio <span class="tagline-accent">Experience</span>
+        </h1>
+        <p class="subtitle">
+          Join live audio rooms, connect with people worldwide, send gifts, and stream with FlyLive.
+        </p>
+
+        <div class="cta-group">
+          <a href="/log-in" class="btn btn-primary">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+            Open FlyLive
+          </a>
+          <a href="/sign-up" class="btn btn-outline">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+            Create Account
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ─── Features ─── -->
+    <section class="features">
+      <h2 class="features-title">Why FlyLive?</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon fi-pink">🎤</div>
+          <div>
+            <h3 class="feature-title">Live Audio Rooms</h3>
+            <p class="feature-desc">Join or create live audio rooms. Chat, sing, and connect with people from around the world in real time.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-amber">🎁</div>
+          <div>
+            <h3 class="feature-title">Virtual Gifts</h3>
+            <p class="feature-desc">Send stunning animated gifts to your favorite hosts. Show love and appreciation with unique collectibles.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-purple">👑</div>
+          <div>
+            <h3 class="feature-title">VIP Experience</h3>
+            <p class="feature-desc">Unlock exclusive badges, animated frames, chat bubbles, and premium features with VIP membership.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-sky">🌐</div>
+          <div>
+            <h3 class="feature-title">Global Community</h3>
+            <p class="feature-desc">Discover rooms by country, follow your favorite creators, and build meaningful connections across borders.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Stats ─── -->
+    <section class="stats">
+      <div class="stats-inner">
+        <div class="stat">
+          <p class="stat-value">18+</p>
+          <p class="stat-label">Age Required</p>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <p class="stat-value">🌍</p>
+          <p class="stat-label">Global Community</p>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <p class="stat-value">24/7</p>
+          <p class="stat-label">Live Rooms</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Footer ─── -->
+    <footer class="footer">
+      <nav class="legal-links" aria-label="Legal">
+        <a href="/privacy-policy" class="legal-link">Privacy Policy</a>
+        <a href="/terms-of-service" class="legal-link">Terms of Service</a>
+      </nav>
+      <p class="footer-contact">
+        Questions? Reach us at
+        <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a>
+      </p>
+      <p class="footer-copy">&copy; 2026 FlyLive. All rights reserved.</p>
+    </footer>
+
+  </div>
+</body>
+</html>
