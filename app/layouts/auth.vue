@@ -27,11 +27,10 @@ const showForm = ref(false)
 
       <!-- Hero – height animates via interpolate-size -->
       <div
-        class="hero-area flex flex-col justify-end bg-neutral-200 rounded-b-4xl overflow-hidden relative"
+        class="hero-area flex flex-col justify-end bg-neutral-200 rounded-b-4xl overflow-hidden relative animated-gradient"
         :class="{ 'hero-area--collapsed': showForm }"
       >
-        <NuxtImg :src="ASSETS.COVER_PLACEHOLDER" alt="Background" class="absolute inset-0 object-cover blur-xs w-full h-full" loading="lazy" fetchpriority="low" />
-        <LogoLarge class="mx-auto relative z-10 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
+        <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
         <AuthScrollingCards />
       </div>
 
@@ -151,5 +150,30 @@ const showForm = ref(false)
 .icon-morph__icon--in {
   opacity: 1;
   transform: rotate(0deg) scale(1);
+}
+
+.animated-gradient::before,
+.animated-gradient::after{
+  content:"";
+  position:absolute;
+  inset:-30%;
+  background:
+      radial-gradient(60% 60% at 50% 50%, var(--gradient-primary-soft), transparent 50%),
+      radial-gradient(50% 50% at 70% 60%, var(--gradient-secondary-soft), transparent 70%),
+      radial-gradient(60% 60% at 40% 80%, var(--gradient-info-soft), transparent 70%),
+      radial-gradient(50% 50% at 30% 40%, var(--gradient-tertiary-soft), transparent 40%),
+      linear-gradient(180deg, var(--color-neutral-900), var(--color-neutral-950));
+
+  animation:move 18s ease-in-out infinite alternate;
+  will-change:transform;
+  filter: blur(50px) saturate(120%);
+}
+
+@keyframes move {
+  0%{transform:translate(-10%,-10%) scale(1)}
+  30%{transform:translate(20%,10%) scale(1.5)}
+  50%{transform:translate(-20%,15%) scale(1.1)}
+  70%{transform:translate(10%,-10%) scale(1.9)}
+  100%{transform:translate(-5%,10%) scale(1)}
 }
 </style>

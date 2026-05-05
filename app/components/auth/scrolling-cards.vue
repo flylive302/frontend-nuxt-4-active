@@ -15,7 +15,7 @@ const columns = [
 </script>
 
 <template>
-  <div class="flex gap-3 absolute inset-0 p-4" style="content-visibility: auto; contain-intrinsic-size: auto 100% auto 500px;">
+  <div class="flex gap-3 absolute inset-0 p-4 z-10" style="content-visibility: auto; contain-intrinsic-size: auto 100% auto 500px;">
     <div
       v-for="(column, i) in columns"
       :key="i"

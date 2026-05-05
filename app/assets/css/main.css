@@ -26,6 +26,7 @@
     }
 }
 
+
 @theme static {
     /* Override default pink color */
     --color-pink-50: #fff0f3;
@@ -61,6 +62,20 @@
     --ui-info: var(--ui-color-info-500);
     --ui-warning: var(--ui-color-warning-500);
     --ui-error: var(--ui-color-error-500);
+}
+
+:root {
+    /* Core gradient colors (same source for everything) */
+    --gradient-primary: var(--color-pink-500);
+    --gradient-secondary: #7c4dff;
+    --gradient-tertiary: #f59723;
+    --gradient-info: #00d4ff;
+
+    /* Soft blended versions (for background) */
+    --gradient-primary-soft: color-mix(in srgb, var(--gradient-primary) 90%, transparent);
+    --gradient-secondary-soft: color-mix(in srgb, var(--gradient-secondary) 75%, transparent);
+    --gradient-tertiary-soft: color-mix(in srgb, var(--gradient-tertiary) 85%, transparent);
+    --gradient-info-soft: color-mix(in srgb, var(--gradient-info) 80%, transparent);
 }
 
 /* Fullscreen PWA: ensure the app stretches edge-to-edge */
@@ -179,13 +194,12 @@
 
 .glowing-border {
     --gradient-glow:
-        var(--ui-color-primary-50),
-        var(--ui-color-primary-500),
-        var(--ui-color-primary-500),
-        var(--ui-color-secondary-500),
-        var(--ui-color-tertiary-500),
-        var(--ui-color-info-500),
-        var(--ui-color-primary-50);
+        var(--gradient-primary),
+        var(--gradient-primary),
+        var(--gradient-secondary),
+        var(--gradient-tertiary),
+        var(--gradient-info),
+        var(--gradient-primary);
 
     border: var(--border-width, 2px) solid transparent;
     background: linear-gradient(var(--surface, canvas) 0 0) padding-box,
