@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import { useInfiniteScroll } from '@vueuse/core'
 import { createLogger } from '~/utils/logger';
 import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';

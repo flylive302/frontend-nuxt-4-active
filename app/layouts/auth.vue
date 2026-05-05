@@ -1,16 +1,4 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
-/**
- * Auth Layout
- *
- * Shared shell for login, sign-up, and forgot-password pages.
- * Owns the hero area, social auth buttons, mail/close morph toggle,
- * and the animated form reveal. Pages supply only their form via <slot />.
- *
- * Pages that set `authHeading` in definePageMeta() get the full hero chrome.
- * Pages without it (complete-profile, callback) get a plain slot.
- */
-
 useThemeColor('#000002')
 
 const route = useRoute()
@@ -19,6 +7,15 @@ const authHeading = computed(() => route.meta.authHeading as string | undefined)
 const hasHeroChrome = computed(() => !!authHeading.value)
 
 const showForm = ref(false)
+
+// Defer decorative card carousel until after LCP — browser is idle
+const cardsVisible = ref(false)
+onMounted(() => {
+  const schedule = typeof requestIdleCallback !== 'undefined'
+    ? requestIdleCallback
+    : (cb: () => void) => setTimeout(cb, 200)
+  schedule(() => { cardsVisible.value = true })
+})
 </script>
 
 <template>
@@ -31,7 +28,9 @@ const showForm = ref(false)
         :class="{ 'hero-area--collapsed': showForm }"
       >
         <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
-        <AuthScrollingCards />
+        <Transition name="cards-fade">
+          <AuthScrollingCards v-if="cardsVisible" />
+        </Transition>
       </div>
 
       <h1 class="text-center font-bold text-lg mt-4">{{ authHeading }}</h1>
@@ -176,4 +175,8 @@ const showForm = ref(false)
   70%{transform:translate(10%,-10%) scale(1.9)}
   100%{transform:translate(-5%,10%) scale(1)}
 }
+
+/* Cards fade-in after idle */
+.cards-fade-enter-active { transition: opacity 0.6s ease; }
+.cards-fade-enter-from   { opacity: 0; }
 </style>

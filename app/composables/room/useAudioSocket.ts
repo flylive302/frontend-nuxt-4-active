@@ -71,6 +71,7 @@ let _userStore: ReturnType<typeof useUserStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 let _apiInstance: ReturnType<typeof useApi> | null = null;
 let _authActions: ReturnType<typeof useAuthActions> | null = null;
+let _realtimeEvents: ReturnType<typeof useRealtimeEvents> | null = null;
 
 // ============================================
 // Composable
@@ -94,9 +95,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
   if (!_toast) _toast = useToast();
   if (!_apiInstance) _apiInstance = useApi();
   if (!_authActions) _authActions = useAuthActions();
+  if (!_realtimeEvents) _realtimeEvents = useRealtimeEvents();
 
-  // Initialize realtime events composable
-  const { registerRealtimeEventHandlers } = useRealtimeEvents();
+  const { registerRealtimeEventHandlers } = _realtimeEvents;
 
   // Use cached references
   const config = _config;

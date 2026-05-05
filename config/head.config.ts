@@ -69,19 +69,22 @@ const appleSplashScreens = [
 }))
 
 export const headConfig: HeadConfig = {
-    htmlAttrs: { class: 'dark' },
+    htmlAttrs: { class: 'dark', lang: 'en' },
     title: 'FlyLive',
     meta: [
         { name: 'viewport', content: 'initial-scale=1, viewport-fit=cover, width=device-width' },
         { name: 'theme-color', content: '#000000' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'apple-mobile-web-app-title', content: 'FlyLive' }
+        { name: 'apple-mobile-web-app-title', content: 'FlyLive' },
+        { name: 'description', content: 'FlyLive — live audio rooms, real-time gifting, and social broadcasting. Join thousands of listeners and hosts worldwide.' },
     ],
     link: [
         { rel: 'manifest', href: '/manifest.webmanifest' },
         { rel: 'apple-touch-icon', href: '/pwa-assets/apple-touch-icon-180x180.png', sizes: '180x180' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        // Critical asset preload — logo is always the LCP element on auth pages
+        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', fetchpriority: 'high' as 'high' },
         // Apple splash screens
         ...appleSplashScreens,
         // Preconnect to critical domains

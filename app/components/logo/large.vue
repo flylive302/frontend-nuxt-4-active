@@ -1,20 +1,25 @@
-<script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
-</script>
-
 <template>
    <div class="flex flex-col">
-      <NuxtImg
-         :src="ASSETS.LOGO_MAIN"
-         alt="Flylive Logo"
-         class="mx-auto"
+      <img
+         src="/logos/flylive-logo.webp"
+         alt="Flylive"
          width="256"
-      />
-      <NuxtImg
-         :src="ASSETS.LOGO_TEXT"
-         alt="Flylive Logo"
+         height="256"
+         class="mx-auto"
+         fetchpriority="high"
+         loading="eager"
+         decoding="async"
+      >
+      <img
+         src="/logos/flylive-text.png"
+         alt=""
+         aria-hidden="true"
+         width="150"
+         height="50"
          class="mx-auto -mt-10 bg-black/30 rounded-lg"
-         style="width: 150px"
-      />
+         fetchpriority="low"
+         loading="eager"
+         decoding="async"
+      >
    </div>
 </template>

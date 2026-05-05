@@ -4,7 +4,7 @@
 // Role: Action/Orchestrator — owns the bootstrap fetch pipeline.
 // Pipeline: GATE → EXECUTE → REACT
 
-import type { BootstrapConfig, BootstrapResponse, BootstrapUser } from '~/types/user/bootstrap'
+import type { BootstrapConfig, BootstrapUser } from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[BootstrapInit]')
@@ -155,8 +155,11 @@ export function useBootstrapInit() {
    * Schedule asset download during idle time.
    * Uses requestIdleCallback where available, falls back to setTimeout.
    * PERF: never blocks the main thread during boot.
+   * PERF: skipped for unauthenticated users — gifts/badges are irrelevant on guest routes.
    */
   function scheduleAssetDownload(): void {
+    if (!authStore.token) return
+
     const schedule = typeof requestIdleCallback !== 'undefined'
       ? requestIdleCallback
       : (cb: () => void) => setTimeout(cb, 100)

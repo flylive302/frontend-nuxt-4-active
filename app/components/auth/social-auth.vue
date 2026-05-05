@@ -36,6 +36,7 @@ async function loginWith(provider: SocialProvider) {
         size="xl"
         class="inset-shadow-sm inset-shadow-neutral-950/50 size-full"
         :square="true"
+        :aria-label="`Sign in with ${provider.label}`"
         :loading="isLoading === provider.name"
         :disabled="isLoading !== null && isLoading !== provider.name"
         @click="loginWith(provider.name)"

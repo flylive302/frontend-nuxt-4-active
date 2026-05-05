@@ -14,6 +14,9 @@ export default defineNuxtPlugin({
   setup() {
     const authStore = useAuthStore()
     const { subscribe, unsubscribe } = useInboxEcho()
+    // Capture during plugin init (setup context) so the watcher callback
+    // doesn't call useToast() outside of Vue's component setup.
+    const { fetchThreads } = useInboxActions()
 
     watch(
       () => authStore.isAuthenticated,
@@ -21,8 +24,6 @@ export default defineNuxtPlugin({
         if (isAuth && !wasAuth) {
           log.debug('Subscribing to DM channel...')
           subscribe()
-          // Fetch thread list in background so footer badge shows unread counts
-          const { fetchThreads } = useInboxActions()
           fetchThreads()
         }
         else if (!isAuth && wasAuth) {

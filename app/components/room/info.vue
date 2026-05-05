@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
 import type { LeaderboardPeriod, LeaderboardEntry } from '~/types/progression/leaderboard'
