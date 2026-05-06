@@ -59,7 +59,7 @@ export const ASSETS = {
   AUTH_CARD_5: `${IK}/placeholders/5.webp?tr=w-250,q-70,f-webp`,
   AUTH_CARD_6: `${IK}/placeholders/6.webp?tr=w-250,q-70,f-webp`,
 
-  COVER_PLACEHOLDER: `${IK}/placeholders/bg-fl.png?tr=w-420,q-60,f-webp`,
+  COVER_PLACEHOLDER: `${IK}/placeholders/auth-bg.webp?tr=w-420,q-60,f-webp`,
 
   // ── Gender (self-hosted) ──
   GENDER_FEMALE: `${IK}/gender/female.webp`,

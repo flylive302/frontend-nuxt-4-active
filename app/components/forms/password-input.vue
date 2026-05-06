@@ -65,6 +65,7 @@ const text = computed(() => {
       :disabled="disabled"
       :aria-invalid="showStrength ? score < 5 : undefined"
       :aria-describedby="showStrength ? 'password-strength' : undefined"
+      aria-label="Password"
       :ui="{ trailing: 'pe-1' }"
       class="w-full"
       size="lg"

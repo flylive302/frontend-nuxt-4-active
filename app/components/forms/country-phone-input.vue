@@ -155,7 +155,7 @@ onMounted(async () => {
       virtualize
       label-key="name"
       placeholder="Select your country"
-      :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...' }"
+      :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...', 'aria-label': 'Search countries' }"
       size="lg"
       class="w-full"
       @update:model-value="onCountryChange"
@@ -201,6 +201,7 @@ onMounted(async () => {
           </div>
 
           <UInput
+            id="phone"
             ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric"
             :placeholder="phonePlaceholder" size="lg" class="w-full" autocomplete="tel-national" :disabled="disabled"
             @paste="handlePaste" />

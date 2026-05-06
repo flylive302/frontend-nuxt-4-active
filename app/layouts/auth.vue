@@ -1,5 +1,16 @@
 <script setup lang="ts">
+import {ASSETS} from "~/constants/assets";
+
 useThemeColor('#000002')
+
+useHead({
+  link: [{
+    rel: 'preload',
+    as: 'image',
+    href: ASSETS.COVER_PLACEHOLDER,
+    fetchpriority: 'high' as const,
+  }]
+})
 
 const route = useRoute()
 
@@ -17,14 +28,11 @@ const showForm = ref(false)
 
       <!-- Hero – height animates via interpolate-size -->
       <div
-        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative animated-gradient"
+        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative bg-cover bg-center"
         :class="{ 'hero-area--collapsed': showForm }"
+        :style="{backgroundImage: `url(${ASSETS.COVER_PLACEHOLDER})`}"
       >
         <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
-        <!-- Decorative cards: client-only to avoid SSR mismatch + deferred for LCP -->
-        <ClientOnly>
-          <AuthScrollingCards />
-        </ClientOnly>
       </div>
 
       <h1 class="text-center font-bold text-lg mt-4">{{ authHeading }}</h1>

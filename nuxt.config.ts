@@ -8,10 +8,13 @@ export default defineNuxtConfig({
     ssr: true,
     spaLoadingTemplate: true,
     routeRules: {
-        // Auth pages: server-rendered for instant LCP (Lighthouse perf)
-        '/log-in': { ssr: true },
-        '/sign-up': { ssr: true },
-        '/forgot-password': { ssr: true },
+        // Auth pages: pre-rendered at build time → served from Cloudflare CDN edge (~50ms TTFB)
+        // These pages have no user-specific server data, so static HTML is identical for every visitor.
+        // Vue still hydrates on the client; SEO and LCP benefits are preserved.
+        '/log-in': { prerender: true },
+        '/sign-up': { prerender: true },
+        '/forgot-password': { prerender: true },
+        // Callback is dynamic (OAuth code exchange depends on URL params) → keep SSR
         '/callback': { ssr: true },
         // Everything else: SPA (preserves existing behaviour)
         '/**': { ssr: false },
