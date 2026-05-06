@@ -1,13 +1,25 @@
-import { Device } from 'mediasoup-client';
+import type { types as mediasoupTypes } from 'mediasoup-client';
 import type { RtpCapabilities } from '~/types/room/audio';
 import { createLogger } from '~/utils/logger';
+
+// Lazy-loaded: mediasoup-client must NOT be statically imported because
+// it uses the `debug` package which calls console.log.bind(console) —
+// this crashes in Cloudflare Workers (workerd) runtime during SSR.
+let _DeviceClass: typeof import('mediasoup-client')['Device'] | null = null;
+async function getDeviceClass() {
+  if (!_DeviceClass) {
+    const mod = await import('mediasoup-client');
+    _DeviceClass = mod.Device;
+  }
+  return _DeviceClass;
+}
 
 // ============================================
 // Shared State (Module-level Singleton)
 // ============================================
 // CRITICAL: Module-level to be shared across all component instances
 
-const device = ref<Device | null>(null);
+const device = ref<mediasoupTypes.Device | null>(null);
 
 // ============================================
 // Composable
@@ -50,6 +62,7 @@ export function useMediasoupDevice() {
     }
 
     try {
+      const Device = await getDeviceClass();
       device.value = new Device();
       await device.value.load({ routerRtpCapabilities: rtpCapabilities });
       log.debug('Device loaded');

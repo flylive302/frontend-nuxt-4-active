@@ -19,6 +19,7 @@ export function useInboxEcho() {
     if (!userId) return
 
     const channel = $echo.private(`dm.${userId}`)
+    if (!channel) return
 
     // New message received from the other participant
     channel.listen('.dm.message.received', (payload: {

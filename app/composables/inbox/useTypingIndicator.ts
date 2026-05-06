@@ -20,6 +20,7 @@ export function useTypingIndicator() {
     if (!threadId) return
 
     const channel = $echo.private(`dm.thread.${threadId}`)
+    if (!channel) return
     channel.whisper('typing', { userId: authStore.user?.id })
   }
 
@@ -28,6 +29,7 @@ export function useTypingIndicator() {
    */
   function listenForTyping(threadId: string): void {
     const channel = $echo.private(`dm.thread.${threadId}`)
+    if (!channel) return
     channel.listenForWhisper('typing', () => {
       isOtherTyping.value = true
 

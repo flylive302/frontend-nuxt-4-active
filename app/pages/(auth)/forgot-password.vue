@@ -11,6 +11,15 @@ definePageMeta({
   authHeading: 'Reset Password',
 })
 
+useSeoMeta({
+  title: 'Reset Password — FlyLive',
+  description: 'Reset your FlyLive account password to regain access to your account.',
+  ogTitle: 'Reset Password — FlyLive',
+  ogDescription: 'Reset your FlyLive account password to regain access to your account.',
+  ogType: 'website',
+  robots: 'index, follow',
+})
+
 const ROUTES = {
   LOGIN: '/log-in',
 } as const

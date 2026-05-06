@@ -19,7 +19,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main>
+  <main :aria-label="authHeading ? `${authHeading} — FlyLive` : 'FlyLive Authentication'">
     <template v-if="hasHeroChrome">
 
       <!-- Hero – height animates via interpolate-size -->
@@ -28,33 +28,34 @@ onMounted(() => {
         :class="{ 'hero-area--collapsed': showForm }"
       >
         <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
-        <Transition name="cards-fade">
-          <AuthScrollingCards v-if="cardsVisible" />
-        </Transition>
+        <!-- Decorative cards: client-only to avoid SSR mismatch + deferred for LCP -->
+        <ClientOnly>
+          <Transition name="cards-fade">
+            <AuthScrollingCards v-if="cardsVisible" />
+          </Transition>
+        </ClientOnly>
       </div>
 
       <h1 class="text-center font-bold text-lg mt-4">{{ authHeading }}</h1>
 
-      <div class="flex mx-8 gap-13 mt-2">
+      <div class="flex mx-8 gap-8 mt-2">
         <AuthSocialAuth class="w-full" />
 
         <!-- Mail button – morphs into form -->
-        <div class="mail-btn-anchor rounded-lg aspect-square glowing-border" :class="{ 'mail-btn-anchor--open': showForm }">
-          <UButton
-            variant="solid"
+        <UButton
             color="neutral"
-            class="inset-shadow-sm inset-shadow-neutral-950/50"
+            class="inset-shadow-sm inset-shadow-neutral-950/50 aspect-square mail-btn-anchor"
+            :class="{ 'mail-btn-anchor--open': showForm }"
             size="xl"
             :square="true"
             :aria-label="showForm ? 'Close email sign-in form' : 'Sign in with Email'"
             @click="showForm = !showForm"
-          >
+        >
             <span class="icon-morph">
               <UIcon name="i-lucide-mail" class="size-8 icon-morph__icon" :class="{ 'icon-morph__icon--out': showForm }" />
-              <UIcon name="i-lucide-x"    class="size-8 icon-morph__icon icon-morph__icon--x" :class="{ 'icon-morph__icon--in': showForm }" />
+              <UIcon name="i-lucide-x" class="size-8 icon-morph__icon icon-morph__icon--x" :class="{ 'icon-morph__icon--in': showForm }" />
             </span>
-          </UButton>
-        </div>
+        </UButton>
       </div>
 
       <!-- Form panel – grid-row trick for smooth height -->
@@ -152,21 +153,24 @@ onMounted(() => {
   transform: rotate(0deg) scale(1);
 }
 
+/* ── Animated gradient background ────────────── */
+/* PERF: Removed filter: blur(50px) saturate(120%) — extremely expensive on
+   mid-tier mobile GPUs (Lighthouse Moto G Power simulator). Replaced with
+   wider, softer gradient stops that approximate the blurred look natively. */
 .animated-gradient::before,
 .animated-gradient::after{
   content:"";
   position:absolute;
   inset:-30%;
   background:
-      radial-gradient(60% 60% at 50% 50%, var(--gradient-primary-soft), transparent 50%),
-      radial-gradient(50% 50% at 70% 60%, var(--gradient-secondary-soft), transparent 70%),
-      radial-gradient(60% 60% at 40% 80%, var(--gradient-info-soft), transparent 70%),
-      radial-gradient(50% 50% at 30% 40%, var(--gradient-tertiary-soft), transparent 40%),
+      radial-gradient(80% 80% at 50% 50%, var(--gradient-primary-soft), transparent 70%),
+      radial-gradient(70% 70% at 70% 60%, var(--gradient-secondary-soft), transparent 80%),
+      radial-gradient(80% 80% at 40% 80%, var(--gradient-info-soft), transparent 80%),
+      radial-gradient(70% 70% at 30% 40%, var(--gradient-tertiary-soft), transparent 60%),
       linear-gradient(180deg, var(--color-neutral-900), var(--color-neutral-950));
 
   animation:move 18s ease-in-out infinite alternate;
   will-change:transform;
-  filter: blur(50px) saturate(120%);
 }
 
 @keyframes move {
@@ -180,4 +184,28 @@ onMounted(() => {
 /* Cards fade-in after idle */
 .cards-fade-enter-active { transition: opacity 0.6s ease; }
 .cards-fade-enter-from   { opacity: 0; }
+
+/* ── Accessibility: respect reduced-motion preference ── */
+@media (prefers-reduced-motion: reduce) {
+  .animated-gradient::before,
+  .animated-gradient::after {
+    animation: none;
+  }
+
+  .hero-area {
+    transition: none;
+  }
+
+  .hero-logo {
+    transition: none;
+  }
+
+  .form-reveal {
+    transition: none;
+  }
+
+  .icon-morph__icon {
+    transition: none;
+  }
+}
 </style>

@@ -12,6 +12,14 @@ definePageMeta({
 })
 
 useThemeColor('#000002')
+useSeoMeta({
+  title: 'Sign Up — FlyLive',
+  description: 'Create your FlyLive account to join live audio rooms, connect with hosts, and start broadcasting.',
+  ogTitle: 'Sign Up — FlyLive',
+  ogDescription: 'Create your FlyLive account to join live audio rooms, connect with hosts, and start broadcasting.',
+  ogType: 'website',
+  robots: 'index, follow',
+})
 const MIN_PASSWORD_LENGTH = 8
 
 const ROUTES = {

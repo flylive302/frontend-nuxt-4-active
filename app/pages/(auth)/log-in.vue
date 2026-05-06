@@ -12,6 +12,18 @@ definePageMeta({
   authHeading: 'Login With',
 })
 
+// SEO — rendered server-side for crawler and Lighthouse SEO score
+useSeoMeta({
+  title: 'Log In — FlyLive',
+  description: 'Log in to FlyLive to join live audio rooms, send gifts, and connect with hosts worldwide.',
+  ogTitle: 'Log In — FlyLive',
+  ogDescription: 'Log in to FlyLive to join live audio rooms, send gifts, and connect with hosts worldwide.',
+  ogType: 'website',
+  ogUrl: 'https://flyliveapp.com/log-in',
+  ogSiteName: 'FlyLive',
+  robots: 'index, follow',
+})
+
 const ROUTES = {
   HOME: '/',
   SIGNUP: '/sign-up',

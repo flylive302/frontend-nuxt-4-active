@@ -82,12 +82,14 @@ const sampleItems: EnqueueItem[] = [
     assetType: 'video',
     priority: 'critical',
     giftId: 1,
+    scope: 'global',
     sortOrder: 1,
   },
   {
     url: 'https://example.com/asset2.webm',
     assetType: 'video',
     priority: 'normal',
+    scope: 'global',
     giftId: 2,
     sortOrder: 2,
   },
@@ -132,9 +134,9 @@ describe('assetDownloader', () => {
 
     it('should sort items by sortOrder (ascending)', async () => {
       const unsortedItems: EnqueueItem[] = [
-        { url: 'a.webm', assetType: 'video', priority: 'normal', sortOrder: 3 },
-        { url: 'b.webm', assetType: 'video', priority: 'critical', sortOrder: 1 },
-        { url: 'c.webm', assetType: 'video', priority: 'high', sortOrder: 2 },
+        { url: 'a.webm', assetType: 'video', priority: 'normal', sortOrder: 3, scope: 'global' },
+        { url: 'b.webm', assetType: 'video', priority: 'critical', sortOrder: 1, scope: 'global' },
+        { url: 'c.webm', assetType: 'video', priority: 'high', sortOrder: 2, scope: 'global' },
       ]
 
       await enqueue(unsortedItems)
@@ -160,6 +162,7 @@ describe('assetDownloader', () => {
       enqueueManual('https://example.com/manual.webm', {
         priority: 'high',
         assetType: 'video',
+        scope: 'global',
         giftId: 99,
       })
 
@@ -172,6 +175,7 @@ describe('assetDownloader', () => {
     it('should set critical priority items with sortOrder 0', async () => {
       enqueueManual('https://example.com/critical.webm', {
         priority: 'critical',
+        scope: 'global',
         assetType: 'video',
       })
 

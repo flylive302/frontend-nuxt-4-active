@@ -5,8 +5,17 @@ import { headConfig } from './config/head.config'
 
 export default defineNuxtConfig({
     compatibilityDate: '2025-02-03',
-    ssr: false,
+    ssr: true,
     spaLoadingTemplate: true,
+    routeRules: {
+        // Auth pages: server-rendered for instant LCP (Lighthouse perf)
+        '/log-in': { ssr: true },
+        '/sign-up': { ssr: true },
+        '/forgot-password': { ssr: true },
+        '/callback': { ssr: true },
+        // Everything else: SPA (preserves existing behaviour)
+        '/**': { ssr: false },
+    },
     devtools: { enabled: false },
     css: ['~/assets/css/main.css'],
     modules: ['@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
@@ -89,8 +98,8 @@ export default defineNuxtConfig({
                     manualChunks(id: string) {
                         if (!id.includes('node_modules')) return
 
-                        // ── Core: loaded at app init / login ──
-                        if (id.includes('socket.io')) return 'core-realtime'
+                        // ── Realtime: lazy-loaded on first socket connection ──
+                        if (id.includes('socket.io')) return 'realtime'
                         if (id.includes('zod')) return 'core-validation'
 
                         // ── Room: loaded when user joins a room ──

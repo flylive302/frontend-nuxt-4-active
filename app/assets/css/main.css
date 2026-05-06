@@ -208,7 +208,7 @@
 .glowing-border::before {
     content: "";
     position: absolute;
-    inset: -16%;
+    inset: -20%;
     background: conic-gradient(var(--gradient-glow));
     animation: glow-spin 10s linear infinite;
     z-index: -2;
@@ -238,5 +238,24 @@
     }
     50% {
         transform: scale(1.1);
+    }
+}
+
+/* ── Accessibility: reduced-motion preference ──────────────────────── */
+/* Disables all decorative infinite animations for users who prefer
+   reduced motion. Functional transitions (page, form) are handled
+   per-component. */
+@media (prefers-reduced-motion: reduce) {
+    .glowing-border::before {
+        animation: none;
+    }
+
+    .marquee-text {
+        animation: none;
+    }
+
+    .animate-scroll-up,
+    .animate-scroll-down {
+        animation: none;
     }
 }

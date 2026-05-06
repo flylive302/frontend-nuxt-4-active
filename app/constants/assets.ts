@@ -38,7 +38,7 @@ export const ASSETS = {
   GIFT_DRAWER_ICON: `${IK}/placeholders/gift-icon.png`,
   DEFAULT_SEAT_IMG: `${IK}/placeholders/seat.webp`,
   LOCK_SEAT_IMG: `${IK}/placeholders/seat-locked.webp`,
-  ROOM_CARD_TOP: `${IK}/siteAssets/room/room-card-top.webp`,
+  ROOM_CARD_TOP: `${IK}/placeholders/coin-icon.webp`,
   DIAMOND_ICON: `${IK}/placeholders/diamond-icon.webp`,
   COIN_ICON: `${IK}/placeholders/coin-icon.webp`,
   HERO_SECONDARY: `${IK}/placeholders/secondary.webp`,

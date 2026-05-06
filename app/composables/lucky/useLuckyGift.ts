@@ -199,7 +199,7 @@ export function useLuckyGift() {
  *   appAnnouncement(mult)     — App-wide SVGA slide-in
  *   all()                     — Fire all 3 in sequence
  */
-if (import.meta.dev) {
+if (import.meta.dev && import.meta.client) {
   const simulators = {
     /** Simulate a floating multiplier */
     float(multiplier = 2.5): void {

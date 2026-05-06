@@ -44,7 +44,7 @@ export interface AssetMetadata {
   priority: AssetPriority
   /** Logical scope/category */
   scope: AssetScope
-  /** Optional grouping key for page or feature */
+  /** Optional grouping key for a page or feature */
   groupKey?: string
   /** Size in bytes (from Content-Length or backend) */
   sizeBytes: number | null

@@ -1,7 +1,19 @@
-import { io } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
 import { createLogger } from '~/utils/logger';
 import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
+
+// Lazy-loaded: socket.io-client must NOT be statically imported because
+// it uses the `debug` package which calls console.log.bind(console) —
+// this crashes in Cloudflare Workers (workerd) runtime during SSR.
+let _io: typeof import('socket.io-client')['io'] | null = null;
+async function getIo() {
+  if (!_io) {
+    const mod = await import('socket.io-client');
+    _io = mod.io;
+  }
+  return _io;
+}
 
 // ============================================
 // Types
@@ -360,8 +372,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
     // Create new socket connection
     _connectedUrl = serverUrl;
+    const io = await getIo();
     socket.value = io(serverUrl, {
-      auth: (cb) => {
+      auth: (cb: (data: { token: string | null }) => void) => {
         cb({ token: authStore.msabToken });
       },
       reconnection: true,
