@@ -84,7 +84,7 @@ export const headConfig: HeadConfig = {
         { rel: 'apple-touch-icon', href: '/pwa-assets/apple-touch-icon-180x180.png', sizes: '180x180' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         // Critical asset preload — logo is always the LCP element on auth pages
-        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', fetchpriority: 'high' as 'high' },
+        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', imagesrcset: '/logos/flylive-logo.webp 1x, /logos/flylive-logo-2x.webp 2x', fetchpriority: 'high' as 'high' },
         // Apple splash screens
         ...appleSplashScreens,
         // Preconnect to critical domains

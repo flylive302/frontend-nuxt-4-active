@@ -8,14 +8,7 @@ const hasHeroChrome = computed(() => !!authHeading.value)
 
 const showForm = ref(false)
 
-// Defer decorative card carousel until after LCP — browser is idle
-const cardsVisible = ref(false)
-onMounted(() => {
-  const schedule = typeof requestIdleCallback !== 'undefined'
-    ? requestIdleCallback
-    : (cb: () => void) => setTimeout(cb, 200)
-  schedule(() => { cardsVisible.value = true })
-})
+
 </script>
 
 <template>
@@ -24,15 +17,13 @@ onMounted(() => {
 
       <!-- Hero – height animates via interpolate-size -->
       <div
-        class="hero-area flex flex-col justify-end bg-neutral-200 rounded-b-4xl overflow-hidden relative animated-gradient"
+        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative animated-gradient"
         :class="{ 'hero-area--collapsed': showForm }"
       >
         <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
         <!-- Decorative cards: client-only to avoid SSR mismatch + deferred for LCP -->
         <ClientOnly>
-          <Transition name="cards-fade">
-            <AuthScrollingCards v-if="cardsVisible" />
-          </Transition>
+          <AuthScrollingCards />
         </ClientOnly>
       </div>
 
@@ -180,10 +171,6 @@ onMounted(() => {
   70%{transform:translate(10%,-10%) scale(1.9)}
   100%{transform:translate(-5%,10%) scale(1)}
 }
-
-/* Cards fade-in after idle */
-.cards-fade-enter-active { transition: opacity 0.6s ease; }
-.cards-fade-enter-from   { opacity: 0; }
 
 /* ── Accessibility: respect reduced-motion preference ── */
 @media (prefers-reduced-motion: reduce) {
