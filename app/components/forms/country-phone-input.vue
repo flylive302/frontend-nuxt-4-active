@@ -148,42 +148,43 @@ onMounted(async () => {
   <div class="space-y-2">
     <UFormField label="Country" name="countryCode" required>
       <USelectMenu
-      v-model="selectedCountry"
-      :items="(countries as Country[])"
-      :loading="loading || externalDetectingLocation"
-      :disabled="disabled"
-      virtualize
-      label-key="name"
-      placeholder="Select your country"
-      :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...', 'aria-label': 'Search countries' }"
-      size="lg"
-      class="w-full"
-      @update:model-value="onCountryChange"
-    >
-      <template #leading>
-        <UIcon
-          v-if="selectedCountry?.code"
-          :name="getFlagIconName(selectedCountry.code)"
-          class="size-5 rounded overflow-hidden h-4"
-        />
-        <UIcon v-else :name="DEFAULT_FLAG_ICON" />
-      </template>
-
-      <template #item-leading="{ item }">
-        <UIcon
-          v-if="(item as Country)?.code"
-          :name="getFlagIconName((item as Country).code)"
-          class="size-5 rounded overflow-hidden h-4"
-        />
-      </template>
-
-      <template #item-label="{ item }">
-        <template v-if="item">
-          {{ (item as Country).name }}
-          <span class="text-xs text-muted ms-1">{{ (item as Country).dial_code }}</span>
+        v-model="selectedCountry"
+        :items="(countries as Country[])"
+        :loading="loading || externalDetectingLocation"
+        :disabled="disabled"
+        virtualize
+        label-key="name"
+        label="countries select"
+        placeholder="Select your country"
+        :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...', 'aria-label': 'Search countries' }"
+        size="lg"
+        class="w-full"
+        @update:model-value="onCountryChange"
+      >
+        <template #leading>
+          <UIcon
+            v-if="selectedCountry?.code"
+            :name="getFlagIconName(selectedCountry.code)"
+            class="size-5 rounded overflow-hidden h-4"
+          />
+          <UIcon v-else :name="DEFAULT_FLAG_ICON" />
         </template>
-      </template>
-    </USelectMenu>
+
+        <template #item-leading="{ item }">
+          <UIcon
+            v-if="(item as Country)?.code"
+            :name="getFlagIconName((item as Country).code)"
+            class="size-5 rounded overflow-hidden h-4"
+          />
+        </template>
+
+        <template #item-label="{ item }">
+          <template v-if="item">
+            {{ (item as Country).name }}
+            <span class="text-xs text-muted ms-1">{{ (item as Country).dial_code }}</span>
+          </template>
+        </template>
+      </USelectMenu>
     </UFormField>
 
     <Transition
@@ -202,7 +203,7 @@ onMounted(async () => {
 
           <UInput
             id="phone"
-            ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric"
+            ref="phoneInputRef" v-model="phoneValue" type="tel" inputmode="numeric" aria-label="phone"
             :placeholder="phonePlaceholder" size="lg" class="w-full" autocomplete="tel-national" :disabled="disabled"
             @paste="handlePaste" />
         </div>
