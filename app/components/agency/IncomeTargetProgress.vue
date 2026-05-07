@@ -37,12 +37,12 @@ const earnedDisplay = computed(() => {
 
 const requiredDisplay = computed(() => {
   const required = parseFloat(target.value?.required_coins ?? '0')
-  return formatCurrency(required * 3.333333)
+  return formatCurrency(required )
 })
 
 const coinsToCompleteDisplay = computed(() => {
   const coins = parseFloat(coinsToComplete.value)
-  return formatCurrency(coins * 3.333333)
+  return formatCurrency(coins)
 })
 
 const rewardDisplay = computed(() => {

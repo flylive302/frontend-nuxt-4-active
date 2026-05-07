@@ -28,10 +28,10 @@ const showForm = ref(false)
 
       <!-- Hero – height animates via interpolate-size -->
       <div
-        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative bg-cover bg-center"
+        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative"
         :class="{ 'hero-area--collapsed': showForm }"
-        :style="{backgroundImage: `url(${ASSETS.COVER_PLACEHOLDER})`}"
       >
+        <NuxtImg :src="ASSETS.COVER_PLACEHOLDER" class="absolute inset-0 object-cover" width="420" height="630"/>
         <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
       </div>
 
