@@ -77,24 +77,25 @@
     --gradient-tertiary-soft: color-mix(in srgb, var(--gradient-tertiary) 85%, transparent);
     --gradient-info-soft: color-mix(in srgb, var(--gradient-info) 80%, transparent);
 }
+html,
+body {
+    /* Allow content to draw behind status bar / notch */
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #000002;
+    min-height: 100dvh;
+    overscroll-behavior-y: contain;
+}
 
+/* Nuxt root: let each page/layout paint the background */
+#__nuxt {
+    background: transparent;
+}
 /* Fullscreen PWA: ensure the app stretches edge-to-edge */
 @supports (padding: env(safe-area-inset-top)) {
 
-    html,
-    body {
-        /* Allow content to draw behind status bar / notch */
-        padding: 0;
-        margin: 0;
-        width: 100%;
-        background-color: #000002;
-        min-height: 100dvh;
-    }
 
-    /* Nuxt root: let each page/layout paint the background */
-    #__nuxt {
-        background: transparent;
-    }
 }
 
 .page-enter-active,
@@ -156,13 +157,13 @@
    to prevent content from hiding behind notches and status bars
    when the PWA is running in fullscreen/standalone mode. */
 
-.safe-area-top {
-    padding-top: env(safe-area-inset-top, 0px);
-}
+/*.safe-area-top {*/
+/*    padding-top: env(safe-area-inset-top, 0px);*/
+/*}*/
 
-.safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 20px);
-}
+/*.safe-area-bottom {*/
+/*    padding-bottom: env(safe-area-inset-bottom, 20px);*/
+/*}*/
 
 
 .squircle {

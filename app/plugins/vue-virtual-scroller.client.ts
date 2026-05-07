@@ -1,7 +1,4 @@
-import { defineNuxtPlugin } from 'nuxt/app'
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
-import VueVirtualScroller from 'vue-virtual-scroller'
-
-export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.use(VueVirtualScroller)
-})
+// vue-virtual-scroller components and CSS are imported locally in each consuming
+// component (chat-panel, info, infinite-scroll) so they only load on pages that
+// need them — not on auth/public pages where they cause render-blocking CSS.
+export default defineNuxtPlugin(() => {})

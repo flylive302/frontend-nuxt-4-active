@@ -1,0 +1,10 @@
+name = "flylive"
+# The entry point built by Nuxt (dist/server) – adjust if needed
+main = "./.output/server/index.mjs"
+# Use the latest compatibility date that includes nodejs_compat
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+# Optional: kv_namespaces, vars, etc. can be added as needed
+
+[env.production]
+# Production specific settings can go here

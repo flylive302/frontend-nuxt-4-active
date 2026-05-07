@@ -4,12 +4,12 @@ import {ASSETS} from "~/constants/assets";
 useThemeColor('#000002')
 
 useHead({
-  link: [{
-    rel: 'preload',
-    as: 'image',
-    href: ASSETS.COVER_PLACEHOLDER,
-    fetchpriority: 'high' as const,
-  }]
+  // link: [{
+  //   rel: 'preload',
+  //   as: 'image',
+  //   href: ASSETS.COVER_PLACEHOLDER,
+  //   fetchpriority: 'high' as const,
+  // }]
 })
 
 const route = useRoute()
@@ -28,11 +28,12 @@ const showForm = ref(false)
 
       <!-- Hero – height animates via interpolate-size -->
       <div
-        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative"
+        class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative animated-gradient"
         :class="{ 'hero-area--collapsed': showForm }"
       >
-        <NuxtImg :src="ASSETS.COVER_PLACEHOLDER" class="absolute inset-0 object-cover" width="420" height="630"/>
-        <LogoLarge class="mx-auto relative z-20 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
+        <div class="absolute z-20 rounded-4xl inset-0 m-4 hero-overlay" aria-hidden="true"></div>
+<!--        <NuxtImg :src="ASSETS.COVER_PLACEHOLDER" class="absolute inset-0 object-cover" width="420" height="630"/>-->
+        <LogoLarge class="mx-auto relative z-30 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
       </div>
 
       <h1 class="text-center font-bold text-lg mt-4">{{ authHeading }}</h1>
@@ -48,6 +49,7 @@ const showForm = ref(false)
             size="xl"
             :square="true"
             :aria-label="showForm ? 'Close email sign-in form' : 'Sign in with Email'"
+            :aria-expanded="showForm"
             @click="showForm = !showForm"
         >
             <span class="icon-morph">
@@ -174,10 +176,16 @@ const showForm = ref(false)
 
 @keyframes move {
   0%{transform:translate(-10%,-10%) scale(1)}
-  30%{transform:translate(20%,10%) scale(1.5)}
-  50%{transform:translate(-20%,15%) scale(1.1)}
-  70%{transform:translate(10%,-10%) scale(1.9)}
+  30%{transform:translate(20%,10%) scale(1.1)}
+  50%{transform:translate(-20%,15%) scale(1.05)}
+  70%{transform:translate(10%,-10%) scale(1.15)}
   100%{transform:translate(-5%,10%) scale(1)}
+}
+
+/* ── Hero overlay: dark vignette without filter:blur (paint-free) ── */
+/* Replaces blur-3xl which costs ~30ms paint on mid-tier mobile GPUs */
+.hero-overlay {
+  background: radial-gradient(ellipse 120% 120% at 50% 60%, var(--color-neutral-950) 0%, transparent 70%);
 }
 
 /* ── Accessibility: respect reduced-motion preference ── */

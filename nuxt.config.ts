@@ -20,6 +20,9 @@ export default defineNuxtConfig({
         '/**': { ssr: false },
     },
     devtools: { enabled: false },
+    experimental: {
+        inlineStyles: true,
+    },
     css: ['~/assets/css/main.css'],
     modules: ['@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     pwa: pwaConfig,
@@ -77,14 +80,15 @@ export default defineNuxtConfig({
         },
     },
     vite: {
-        optimizeDeps: {
-            include: ['svga/dist/index.esm.min.js']
-        },
         build: {
-            chunkSizeWarningLimit: 500,
+            sourcemap: false,
+            chunkSizeWarningLimit: 1000,
             rollupOptions: {
                 onwarn(warning, warn) {
                     if (warning.code === 'EVAL' && warning.id?.includes('svga')) {
+                        return
+                    }
+                    if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message.includes('"use client"')) {
                         return
                     }
                     warn(warning)
@@ -129,7 +133,14 @@ export default defineNuxtConfig({
             }
         },
         // Cloudflare Pages deployment
-        preset: 'cloudflare_pages'
+        preset: 'cloudflare-pages',
+        cloudflare: {
+            pages: {
+                routes: {
+                    exclude: ['/sw.js', '/workbox-*']
+                }
+            }
+        },
     },
     runtimeConfig: {
         public: {

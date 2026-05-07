@@ -73,10 +73,11 @@ export const headConfig: HeadConfig = {
     title: 'FlyLive',
     meta: [
         { name: 'viewport', content: 'initial-scale=1, viewport-fit=cover, width=device-width' },
-        { name: 'theme-color', content: '#000000' },
+        { name: 'theme-color', content: 'black-translucent' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'apple-mobile-web-app-title', content: 'FlyLive' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'description', content: 'FlyLive — live audio rooms, real-time gifting, and social broadcasting. Join thousands of listeners and hosts worldwide.' },
     ],
     link: [

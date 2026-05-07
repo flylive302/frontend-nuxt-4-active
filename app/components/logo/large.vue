@@ -1,8 +1,9 @@
+<script setup lang="ts">
+</script>
 <template>
    <div class="flex flex-col">
       <img
          src="/logos/flylive-logo.webp"
-         srcset="/logos/flylive-logo.webp 1x, /logos/flylive-logo-2x.webp 2x"
          alt="Flylive"
          width="256"
          height="160"
@@ -25,3 +26,5 @@
       >
    </div>
 </template>
+
+<!-- srcset="/logos/flylive-logo.webp 1x, /logos/flylive-logo-2x.webp 2x" -->

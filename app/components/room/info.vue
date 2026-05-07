@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'

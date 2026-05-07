@@ -24,6 +24,7 @@ export const pwaConfig: ModuleOptions = {
         display: 'standalone',
         display_override: ['window-controls-overlay', 'standalone'],
         orientation: 'portrait',
+        categories: ['entertainment', 'music', 'social'],
         id: '/',
         start_url: '/?fullscreen=true',
         scope: '/',
