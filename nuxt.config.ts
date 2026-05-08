@@ -8,12 +8,15 @@ export default defineNuxtConfig({
     ssr: true,
     spaLoadingTemplate: true,
     routeRules: {
-        // Auth pages: pre-rendered at build time → served from Cloudflare CDN edge (~50ms TTFB)
-        // These pages have no user-specific server data, so static HTML is identical for every visitor.
-        // Vue still hydrates on the client; SEO and LCP benefits are preserved.
-        '/log-in': { prerender: true },
-        '/sign-up': { prerender: true },
-        '/forgot-password': { prerender: true },
+        // Auth pages: pre-rendered at build time → served from Cloudflare CDN edge (~50ms TTFB).
+        // ssr: true is REQUIRED here even though the page is prerendered: route rules use
+        // deep-merge, so without it these inherit `ssr: false` from `/**` below and Nitro
+        // would emit only the SPA shell (empty `<div id="__nuxt">`). With ssr: true the
+        // hero <img> and form are baked into the static HTML, the preloaded LCP image
+        // matches what the parser sees, and Chrome can paint pre-hydration.
+        '/log-in': { prerender: true, ssr: true },
+        '/sign-up': { prerender: true, ssr: true },
+        '/forgot-password': { prerender: true, ssr: true },
         // Callback is dynamic (OAuth code exchange depends on URL params) → keep SSR
         '/callback': { ssr: true },
         // Everything else: SPA (preserves existing behaviour)
