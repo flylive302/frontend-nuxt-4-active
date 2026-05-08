@@ -16,22 +16,26 @@ const log = createLogger('[Socket]')
  * Room-specific lifecycle (join/leave/reconnect) is handled by
  * useRoomLifecycle composable in app.vue.
  */
-export default defineNuxtPlugin(() => {
-  const authStore = useAuthStore()
-  const { connect, disconnect } = useAudioSocket()
+export default defineNuxtPlugin({
+  name: 'audio-socket',
+  parallel: true,
+  setup() {
+    const authStore = useAuthStore()
+    const { connect, disconnect } = useAudioSocket()
 
-  // Watch auth state and connect/disconnect accordingly
-  watch(
-    () => authStore.isAuthenticated,
-    async (isAuth, wasAuth) => {
-      if (isAuth && !wasAuth) {
-        log.debug('User authenticated, connecting socket...')
-        await connect()
-      } else if (!isAuth && wasAuth) {
-        log.debug('User logged out, disconnecting socket...')
-        disconnect()
-      }
-    },
-    { immediate: true }
-  )
+    // Watch auth state and connect/disconnect accordingly
+    watch(
+      () => authStore.isAuthenticated,
+      async (isAuth, wasAuth) => {
+        if (isAuth && !wasAuth) {
+          log.debug('User authenticated, connecting socket...')
+          await connect()
+        } else if (!isAuth && wasAuth) {
+          log.debug('User logged out, disconnecting socket...')
+          disconnect()
+        }
+      },
+      { immediate: true }
+    )
+  }
 })

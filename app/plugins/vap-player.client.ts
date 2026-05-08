@@ -154,8 +154,9 @@ function tryGetWebGLContext(canvas: HTMLCanvasElement): WebGLRenderingContext | 
       })
       return ctx
     }
-    catch (err: any) {
-      log.warn(`getContext("${name}") threw:`, err?.message || err)
+    catch (err) {
+      const message = err instanceof Error ? err.message : err
+      log.warn(`getContext("${name}") threw:`, message)
     }
   }
 
@@ -339,7 +340,7 @@ function createCanvas2DRenderer(
 // Plugin
 // ========================================
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
   // Cache for parsed VAP JSON configs
   const configCache = new Map<string, Promise<VapConfig>>()
 
@@ -409,8 +410,9 @@ export default defineNuxtPlugin(() => {
       try {
         renderer = createWebGLRenderer(options.canvas, gl, info)
       }
-      catch (webglErr: any) {
-        log.warn('WebGL renderer creation failed, falling back to 2D:', webglErr?.message || webglErr)
+      catch (webglErr) {
+        const message = webglErr instanceof Error ? webglErr.message : webglErr
+        log.warn('WebGL renderer creation failed, falling back to 2D:', message)
         renderer = createCanvas2DRenderer(options.canvas, info)
       }
     }
@@ -580,4 +582,4 @@ export default defineNuxtPlugin(() => {
   return {
     provide: { vap: { createVapPlayer, preloadConfig, isCached } },
   }
-})
+} })

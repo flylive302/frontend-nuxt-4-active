@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { z } from 'zod'
+import type { z } from 'zod'
 import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchema'
 import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
@@ -9,6 +9,8 @@ definePageMeta({
   layout: 'auth',
   middleware: 'guest',
   authHeading: 'Reset Password',
+  pageTransition: false,
+  layoutTransition: false,
 })
 
 useSeoMeta({

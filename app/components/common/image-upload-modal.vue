@@ -3,8 +3,17 @@
 // Imports & Types
 // ========================================
 import type { Component } from 'vue'
-import { Cropper, CircleStencil } from 'vue-advanced-cropper'
-import 'vue-advanced-cropper/dist/style.css'
+import { defineAsyncComponent } from 'vue'
+
+// Async-load cropper + its stylesheet only when this modal is mounted, so the
+// vue-advanced-cropper chunk + its CSS stay out of the auth-route critical path.
+const Cropper = defineAsyncComponent(async () => {
+  if (import.meta.client) await import('vue-advanced-cropper/dist/style.css')
+  return (await import('vue-advanced-cropper')).Cropper as unknown as Component
+})
+const CircleStencil = defineAsyncComponent(async () =>
+  (await import('vue-advanced-cropper')).CircleStencil as unknown as Component
+)
 
 // ========================================
 // Constants
@@ -21,7 +30,8 @@ type OutputFormat = 'image/jpeg' | 'image/png' | 'image/webp'
 interface Props {
   modelValue: boolean
   imageFile: File | null
-  /** Custom stencil component (defaults to CircleStencil) */
+  /** Custom stencil component (defaults to CircleStencil, resolved in setup) */
+  // eslint-disable-next-line vue/require-default-prop
   stencilComponent?: Component
   /** Output image format */
   outputFormat?: OutputFormat
@@ -41,15 +51,19 @@ interface Emits {
 // Component State
 // ========================================
 const props = withDefaults(defineProps<Props>(), {
-  stencilComponent: () => CircleStencil,
+  // stencilComponent default resolved in setup body — defineProps is hoisted
+  // outside setup, so it can't reference the locally-defined async CircleStencil.
   outputFormat: 'image/jpeg',
   outputQuality: 0.9,
   aspectRatio: 1,
 })
 
+const resolvedStencil = computed(() => props.stencilComponent ?? CircleStencil)
+
 const emit = defineEmits<Emits>()
 
-const cropperRef = ref<InstanceType<typeof Cropper> | null>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cropperRef = ref<any>(null)
 const imageSrc = ref<string | null>(null)
 const isProcessing = ref(false)
 
@@ -169,7 +183,7 @@ onBeforeUnmount(() => {
               ref="cropperRef"
               class="h-[60vh] border w-auto rounded-lg overflow-hidden inset-shadow-sm"
               :src="imageSrc"
-              :stencil-component="props.stencilComponent"
+              :stencil-component="resolvedStencil"
               :stencil-props="{
                 aspectRatio: props.aspectRatio,
                 previewClass: 'border'

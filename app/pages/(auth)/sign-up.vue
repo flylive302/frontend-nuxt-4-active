@@ -9,6 +9,8 @@ definePageMeta({
   layout: 'auth',
   middleware: 'guest',
   authHeading: 'Sign Up With',
+  pageTransition: false,
+  layoutTransition: false,
 })
 
 useThemeColor('#000002')

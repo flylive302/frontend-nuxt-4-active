@@ -84,14 +84,17 @@ export const headConfig: HeadConfig = {
         { rel: 'manifest', href: '/manifest.webmanifest' },
         { rel: 'apple-touch-icon', href: '/pwa-assets/apple-touch-icon-180x180.png', sizes: '180x180' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        // Critical asset preload — logo is always the LCP element on auth pages
-        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', imagesrcset: '/logos/flylive-logo.webp 1x, /logos/flylive-logo-2x.webp 2x', fetchpriority: 'high' as 'high' },
+        // Critical asset preload — logo is always the LCP element on auth pages.
+        // imagesizes MUST match the rendered <img>'s `sizes` attribute so the preload
+        // scanner picks the same density variant the page actually requests; otherwise
+        // the preload fetches a different file from the <img>'s src and is wasted.
+        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', imagesrcset: '/logos/flylive-logo.webp 1x, /logos/flylive-logo-2x.webp 2x', imagesizes: '256px', fetchpriority: 'high' as const },
         // Apple splash screens
         ...appleSplashScreens,
-        // Preconnect to critical domains
-        { rel: 'preconnect', href: 'https://ik.imagekit.io', crossorigin: '' as const },
-        { rel: 'dns-prefetch', href: 'https://ik.imagekit.io' },
-        { rel: 'preconnect', href: 'https://assets.flyliveapp.com', crossorigin: '' as const },
-        { rel: 'dns-prefetch', href: 'https://assets.flyliveapp.com' }
+        // NOTE: Preconnects to ik.imagekit.io and assets.flyliveapp.com used
+        // to live here, but they're unused on auth routes (no images loaded
+        // from those origins on /log-in, /sign-up, /forgot-password — Lighthouse
+        // flagged them as unused preconnects). They're now injected from
+        // app.vue via useHead so only non-auth routes pay the handshake cost.
     ]
 }

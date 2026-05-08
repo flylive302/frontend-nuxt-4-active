@@ -19,7 +19,7 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[Echo]')
 
 // Module-level Echo instance — set once when user first authenticates.
-let _echoInstance: any = null
+let _echoInstance: object | null = null
 
 // Stable Proxy provided once to nuxtApp.$echo.
 // Forwards all property access/calls to _echoInstance when available.
@@ -37,6 +37,7 @@ const _echoProxy = new Proxy(Object.create(null), {
 
 export default defineNuxtPlugin({
   name: 'echo',
+  parallel: true,
   setup(nuxtApp) {
     const config = useRuntimeConfig()
     const authStore = useAuthStore()
@@ -79,7 +80,6 @@ export default defineNuxtPlugin({
         wssPort: wsPort,
         forceTLS: wsScheme === 'https',
         enabledTransports: ['ws', 'wss'],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         authorizer: (channel: { name: string }) => ({
           authorize: (socketId: string, callback: (error: Error | null, authData: { auth: string; channel_data?: string } | null) => void) => {
             const token = useCookie('sanctum_token').value ?? authStore.token
@@ -103,8 +103,8 @@ export default defineNuxtPlugin({
                 callback(err instanceof Error ? err : new Error(String(err)), null)
               })
           },
-        }) as any,
-      })
+        }),
+      } as ConstructorParameters<typeof Echo>[0])
 
       echo.connector.pusher.connection.bind('connected', () => log.debug('✅ WebSocket connected'))
       echo.connector.pusher.connection.bind('error', (err: unknown) => log.error('❌ WebSocket error:', err))

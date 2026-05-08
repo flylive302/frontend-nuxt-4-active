@@ -1,64 +1,37 @@
 <script lang="ts" setup>
-import {defineAsyncComponent} from 'vue'
+import { defineAsyncComponent } from 'vue'
 
-const roomStore = useRoomStore()
-// ========================================
-// Asset Download Progress (bound to download bar in template)
-// ========================================
-const assetStore = useAssetStore()
-const { progress, phase } = storeToRefs(assetStore);
+const route = useRoute()
 
-// Lazy-load minimized room button — only loaded when user joins a room
-const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
+// Auth routes are prerendered + lightweight. They don't need the room/wake-lock/
+// media-session lifecycle, persistent room socket, or the system modal stack —
+// skipping that work here is the largest TBT/render-delay win on /log-in/, /sign-up/,
+// /forgot-password/.
+const isAuthRoute = computed(() => /^\/(log-in|sign-up|forgot-password)(\/|$)/.test(route.path))
 
-// ========================================
-// Persistent Room Lifecycle (join/leave/reconnect)
-// ========================================
-// Watchers survive across all route changes — audio stays connected
-useRoomLifecycle();
+// Preconnect to image CDN + R2 only on routes that actually fetch from them.
+// Auth routes have no images from these origins; emitting the preconnect there
+// burned TLS handshake budget for no gain (Lighthouse: "unused preconnect").
+useHead(() => isAuthRoute.value ? {} : {
+    link: [
+        { rel: 'preconnect', href: 'https://ik.imagekit.io', crossorigin: '' },
+        { rel: 'dns-prefetch', href: 'https://ik.imagekit.io' },
+        { rel: 'preconnect', href: 'https://assets.flyliveapp.com', crossorigin: '' },
+        { rel: 'dns-prefetch', href: 'https://assets.flyliveapp.com' },
+    ]
+})
 
-// ========================================
-// Screen Wake Lock (prevents screen timeout while app is active)
-// ========================================
-const {init: initWakeLock} = useWakeLock()
-initWakeLock()
-
-// ========================================
-// Media Session (keeps audio alive in background on iOS PWA / Android TWA)
-// ========================================
-const {init: initMediaSession} = useMediaSession()
-initMediaSession()
+const GlobalShell = defineAsyncComponent(() => import('~/components/system/global-shell.client.vue'))
 </script>
 
 <template>
   <UApp>
-    <NuxtRouteAnnouncer/>
-    <NuxtLoadingIndicator/>
+    <NuxtRouteAnnouncer />
+    <NuxtLoadingIndicator />
     <NuxtLayout>
-      <NuxtPage/>
+      <NuxtPage />
     </NuxtLayout>
 
-    <!-- Minimized Room Button (floating, only when room is active & minimized) -->
-    <RoomMinimized v-if="roomStore.currentRoom && roomStore.isMinimized"/>
-
-    <!-- Download Progress Bar (top of screen during asset download) -->
-    <SystemDownloadProgressBar
-        :progress="progress"
-        :visible="phase === 'downloading'"
-    />
-
-    <!-- Storage Permission Banner (auto-shows on first visit) -->
-    <SystemStoragePermissionBanner/>
-
-    <!-- PWA Install Prompt (auto-shows when browser fires before install prompt) -->
-    <SystemPwaInstallPrompt/>
-
-    <!-- Update Available Toast (auto-shows when new SW version is ready) -->
-    <SystemUpdateAvailableToast/>
-
-    <!-- Achievement Modals (triggered by socket events) -->
-    <EventsBadgeEarnedModal/>
-    <EventsLevelUpModal/>
-    <EventsIncomeTargetModal/>
+    <GlobalShell v-if="!isAuthRoute" />
   </UApp>
 </template>

@@ -11,74 +11,65 @@
  *
  * @see https://github.com/svga/SVGAPlayer-Web-Lite
  */
-export default defineNuxtPlugin(async () => {
-    const { Player, Parser } = await import((`svga/dist/index.esm.min.js`));
+export default defineNuxtPlugin({
+    name: 'svga-player',
+    // Don't block app init on the svga library or its WebWorker. Auth/login
+    // pages never play SVGA animations — defer the import + Parser construction
+    // until the first consumer actually calls createSvgaPlayer/fetchAnimation.
+    parallel: true,
+    setup() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let _PlayerCtor: any = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let _parser: any = null;
+        let _initPromise: Promise<void> | null = null;
 
-    // Single shared parser — reuses its internal WebWorker across all loads
-    const parser = new Parser();
+        const ensureSvga = (): Promise<void> => {
+            if (_initPromise) return _initPromise;
+            _initPromise = (async () => {
+                const mod = await import('svga/dist/index.esm.min.js');
+                _PlayerCtor = mod.Player;
+                _parser = new mod.Parser();
+            })();
+            return _initPromise;
+        };
 
-    // Cache parsed VideoEntity objects for instant replay
-    const cache = new Map<string, Promise<unknown>>();
+        const cache = new Map<string, Promise<unknown>>();
+        let loadChain: Promise<void> = Promise.resolve();
 
-    /**
-     * Serialization chain — ensures only one parser.load() runs at a time.
-     * Each new load awaits the previous one before starting.
-     */
-    let loadChain: Promise<void> = Promise.resolve();
+        const fetchAnimation = (url: string): Promise<unknown> => {
+            if (!cache.has(url)) {
+                const loadPromise = loadChain.then(async () => {
+                    await ensureSvga();
+                    return _parser.load(url);
+                });
+                loadChain = loadPromise.then(() => {}, () => {});
+                cache.set(url, loadPromise);
+            }
+            return cache.get(url)!;
+        };
 
-    /**
-     * Parse and cache an SVGA animation from a URL.
-     * Uses the Parser's WebWorker for off-thread decompression and decoding.
-     * Loads are serialized to prevent concurrent WebWorker callback overwrites.
-     *
-     * @param url - URL to the .svga file
-     */
-    const fetchAnimation = (url: string): Promise<unknown> => {
-        if (!cache.has(url)) {
-            // Chain this load behind the previous one
-            const loadPromise = loadChain.then(() => parser.load(url));
+        const isCached = (url: string): boolean => cache.has(url);
 
-            // Extend the chain — next load waits for this one to finish
-            // Use .catch() on the chain so a single failure doesn't block the queue
-            loadChain = loadPromise.then(() => {}, () => {});
+        const createSvgaPlayer = async (options: {
+            canvas: HTMLCanvasElement;
+            name: string;
+            loop?: number;
+            autoplay?: boolean;
+        }) => {
+            await ensureSvga();
+            const player = new _PlayerCtor({
+                container: options.canvas,
+                loop: options.loop ?? 0
+            });
+            const videoEntity = await fetchAnimation(options.name);
+            await player.mount(videoEntity);
+            if (options.autoplay ?? true) player.start();
+            return player;
+        };
 
-            cache.set(url, loadPromise);
-        }
-        return cache.get(url)!;
-    };
-
-    /**
-     * Check if an animation's VideoEntity is already cached.
-     */
-    const isCached = (url: string): boolean => {
-        return cache.has(url);
-    };
-
-    /**
-     * Create a new SVGA player instance, load animation, and optionally autoplay.
-     *
-     * @param options.canvas - Target canvas element for rendering
-     * @param options.name - Full URL to the .svga file
-     * @param options.loop - Loop count (0 = infinite)
-     * @param options.autoplay - Whether to start immediately
-     */
-    const createSvgaPlayer = async (options: {
-        canvas: HTMLCanvasElement;
-        name: string;
-        loop?: number;
-        autoplay?: boolean;
-    }) => {
-        const player = new Player({
-            container: options.canvas,
-            loop: options.loop ?? 0
-        });
-        const videoEntity = await fetchAnimation(options.name);
-        await player.mount(videoEntity);
-        if (options.autoplay ?? true) player.start();
-        return player;
-    };
-
-    return {
-        provide: { svga: { createSvgaPlayer, fetchAnimation, isCached } }
-    };
+        return {
+            provide: { svga: { createSvgaPlayer, fetchAnimation, isCached } }
+        };
+    }
 });

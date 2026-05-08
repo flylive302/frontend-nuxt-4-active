@@ -1,16 +1,5 @@
 <script setup lang="ts">
-import {ASSETS} from "~/constants/assets";
-
 useThemeColor('#000002')
-
-useHead({
-  // link: [{
-  //   rel: 'preload',
-  //   as: 'image',
-  //   href: ASSETS.COVER_PLACEHOLDER,
-  //   fetchpriority: 'high' as const,
-  // }]
-})
 
 const route = useRoute()
 
@@ -19,7 +8,21 @@ const hasHeroChrome = computed(() => !!authHeading.value)
 
 const showForm = ref(false)
 
-
+// Defer the decorative gradient animation until the browser is idle, so its
+// per-frame transform/scale work doesn't compete with the LCP measurement
+// window. The animation itself is GPU-composited (cheap), but starting it
+// after first idle keeps it out of the initial paint critical path.
+const animateGradient = ref(false)
+onMounted(() => {
+  if (typeof window === 'undefined') return
+  const start = () => { animateGradient.value = true }
+  if ('requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void })
+        .requestIdleCallback?.(start, { timeout: 1500 })
+  } else {
+    setTimeout(start, 800)
+  }
+})
 </script>
 
 <template>
@@ -29,9 +32,9 @@ const showForm = ref(false)
       <!-- Hero – height animates via interpolate-size -->
       <div
         class="hero-area flex flex-col justify-end rounded-b-4xl overflow-hidden relative animated-gradient"
-        :class="{ 'hero-area--collapsed': showForm }"
+        :class="{ 'hero-area--collapsed': showForm, 'animated-gradient--running': animateGradient }"
       >
-        <div class="absolute z-20 rounded-4xl inset-0 m-4 hero-overlay" aria-hidden="true"></div>
+        <div class="absolute z-20 rounded-4xl inset-0 m-4 hero-overlay" aria-hidden="true" />
 <!--        <NuxtImg :src="ASSETS.COVER_PLACEHOLDER" class="absolute inset-0 object-cover" width="420" height="630"/>-->
         <LogoLarge class="mx-auto relative z-30 hero-logo" :class="{ 'hero-logo--small': showForm }"/>
       </div>
@@ -59,8 +62,16 @@ const showForm = ref(false)
         </UButton>
       </div>
 
-      <!-- Form panel – grid-row trick for smooth height -->
-      <div class="form-reveal" :class="{ 'form-reveal--open': showForm }">
+      <!-- Form panel – grid-row trick for smooth height. When collapsed the inputs
+           are still in the DOM (so the open animation works), but `inert` removes
+           them from the a11y tree and tab order so axe-core stops auditing the
+           USelectMenu hidden inputs. -->
+      <div
+        class="form-reveal"
+        :class="{ 'form-reveal--open': showForm }"
+        :inert="!showForm || null"
+        :aria-hidden="!showForm || null"
+      >
         <div class="form-reveal__inner mx-8">
           <USeparator color="primary" class="my-4" label="OR" />
           <slot />
@@ -170,8 +181,14 @@ const showForm = ref(false)
       radial-gradient(70% 70% at 30% 40%, var(--gradient-tertiary-soft), transparent 60%),
       linear-gradient(180deg, var(--color-neutral-900), var(--color-neutral-950));
 
-  animation:move 18s ease-in-out infinite alternate;
   will-change:transform;
+}
+
+/* Animation only kicks in once the page is idle; gates a per-frame transform
+   that would otherwise compete with the LCP measurement window. */
+.animated-gradient--running::before,
+.animated-gradient--running::after{
+  animation:move 18s ease-in-out infinite alternate;
 }
 
 @keyframes move {

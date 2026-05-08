@@ -3,7 +3,16 @@
 // Imports & Types
 // ========================================
 import type { Component } from 'vue'
-import { CircleStencil, RectangleStencil } from 'vue-advanced-cropper'
+import { defineAsyncComponent } from 'vue'
+
+// Async-load stencils so the vue-advanced-cropper chunk doesn't get pulled
+// into bundles that import this component (e.g., auth routes via auto-imports).
+const CircleStencil = defineAsyncComponent(async () =>
+  (await import('vue-advanced-cropper')).CircleStencil as unknown as Component
+)
+const RectangleStencil = defineAsyncComponent(async () =>
+  (await import('vue-advanced-cropper')).RectangleStencil as unknown as Component
+)
 
 // ========================================
 // Constants
@@ -33,6 +42,7 @@ interface Props {
   /** Aspect ratio for cropper (default: 1 for square) */
   aspectRatio?: number
   /** Custom container class (overrides size-based dimensions) */
+  // eslint-disable-next-line vue/require-default-prop
   containerClass?: string
   /** Enable image cropping modal */
   crop?: boolean
@@ -303,8 +313,9 @@ function handleCropCancel() {
       >
     </div>
 
-    <!-- Crop Modal -->
-    <ImageUploadModal
+    <!-- Crop Modal — Lazy-prefixed so the cropper chunk only loads when the user
+         actually opens the cropper (not on initial page render). -->
+    <LazyImageUploadModal
       v-if="crop && isCropModalOpen"
       v-model="isCropModalOpen"
       :image-file="selectedFile"

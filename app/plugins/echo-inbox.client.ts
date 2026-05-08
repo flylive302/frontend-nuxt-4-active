@@ -13,6 +13,7 @@ const log = createLogger('[EchoInbox]')
 export default defineNuxtPlugin({
   name: 'echo-inbox',
   dependsOn: ['echo'],
+  parallel: true,
   setup(nuxtApp) {
     const authStore = useAuthStore()
     // Capture during plugin init (setup context) so callbacks
