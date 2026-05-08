@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
+import type { Component } from 'vue'
+import { defineAsyncComponent } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
 import type { LeaderboardPeriod, LeaderboardEntry } from '~/types/progression/leaderboard'
+
+// Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
+// doesn't get linked as render-blocking CSS on routes that don't reach this
+// component (e.g., auth routes).
+const DynamicScroller = defineAsyncComponent(async () => {
+  if (import.meta.client) await import('vue-virtual-scroller/dist/vue-virtual-scroller.css')
+  return (await import('vue-virtual-scroller')).DynamicScroller as unknown as Component
+})
+const DynamicScrollerItem = defineAsyncComponent(async () =>
+  (await import('vue-virtual-scroller')).DynamicScrollerItem as unknown as Component
+)
 
 
 // ========================================

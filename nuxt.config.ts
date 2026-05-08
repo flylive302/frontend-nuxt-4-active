@@ -105,26 +105,14 @@ export default defineNuxtConfig({
                      *
                      * Core chunks load at app init. Feature chunks load on demand.
                      */
-                    manualChunks(id: string) {
-                        if (!id.includes('node_modules')) return
-
-                        // ── Realtime: lazy-loaded on first socket connection ──
-                        if (id.includes('socket.io')) return 'realtime'
-                        if (id.includes('zod')) return 'core-validation'
-
-                        // ── Room: loaded when user joins a room ──
-                        if (id.includes('mediasoup')) return 'room-audio'
-                        if (id.includes('svga')) return 'room-animations'
-
-                        // ── Feature: loaded on specific pages ──
-                        if (id.includes('vue-advanced-cropper')) return 'feature-cropper'
-                        if (id.includes('libphonenumber')) return 'feature-phone'
-                        if (id.includes('internationalized/date')) return 'feature-dates'
-                        if (id.includes('vue-virtual-scroller')) return 'feature-scroller'
-
-                        // Let Vite handle remaining deps organically via its
-                        // module graph analysis (vue, pinia, nuxt, vueuse, etc.)
-                    }
+                    // No manualChunks: returning a chunk name for a library
+                    // whose transitive deps are shared with other code makes Vite
+                    // pull those shared deps into the named chunk, turning it
+                    // into a vendor bucket that other chunks then statically
+                    // import from. That defeats `defineAsyncComponent` wrapping
+                    // and pulls render-blocking CSS onto unrelated routes
+                    // (e.g. `feature-cropper.css` was leaking onto `/log-in/`).
+                    // Vite's organic splitting handles dynamic imports correctly.
                 }
             }
         }

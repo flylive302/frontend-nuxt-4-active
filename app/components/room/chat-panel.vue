@@ -1,11 +1,18 @@
 <script setup lang="ts">
-/**
- * ChatPanel - Room chat interface component
- * Displays ephemeral messages and provides input for sending new messages
- */
-import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+import type { Component } from 'vue';
+import { defineAsyncComponent } from 'vue';
 import { useRoomAudio } from '~/composables/room/useRoomAudio';
+
+// Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
+// doesn't get linked as render-blocking CSS on routes that don't reach this
+// component (e.g., auth routes).
+const DynamicScroller = defineAsyncComponent(async () => {
+  if (import.meta.client) await import('vue-virtual-scroller/dist/vue-virtual-scroller.css');
+  return (await import('vue-virtual-scroller')).DynamicScroller as unknown as Component;
+});
+const DynamicScrollerItem = defineAsyncComponent(async () =>
+  (await import('vue-virtual-scroller')).DynamicScrollerItem as unknown as Component
+);
 
 const audioStore = useRoomAudioStore();
 const { sendChatMessage } = useRoomAudio();
@@ -15,15 +22,13 @@ const messageInput = ref('');
 const inputRef = ref<{ $el: HTMLElement } | null>(null);
 
 // Auto-scroll to bottom when new messages arrive
-const scrollerRef = ref<InstanceType<typeof DynamicScroller> | null>(null);
+const scrollerRef = ref<{ scrollToBottom?: () => void } | null>(null);
 
 watch(
   () => audioStore.messages.length,
   () => {
     nextTick(() => {
-      // Use type assertion for DynamicScroller which has scrollToBottom
-      const scroller = scrollerRef.value as { scrollToBottom?: () => void } | null;
-      scroller?.scrollToBottom?.();
+      scrollerRef.value?.scrollToBottom?.();
     });
   }
 );
