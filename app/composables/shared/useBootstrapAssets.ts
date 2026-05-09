@@ -45,6 +45,10 @@ function toEnqueueItem(item: AssetManifestItem): EnqueueItem {
  * Downloads gift, badge, page, and manual assets into Cache Storage
  * with priority-based queuing and progress tracking.
  */
+function isHomePath(path: string): boolean {
+  return path === '/' || path === ''
+}
+
 export function useBootstrapAssets() {
   const bootstrapStore = useBootstrapStore()
   const assetStore = useAssetStore()
@@ -68,26 +72,31 @@ export function useBootstrapAssets() {
     return []
   }
 
-  function getBootstrapAssets(): AssetManifestItem[] {
+  function getBootstrapAssets(filters?: { skipGiftVideos?: boolean; giftVideosOnly?: boolean }): AssetManifestItem[] {
     const items: AssetManifestItem[] = []
 
     const badges = bootstrapStore.badges ?? []
-    for (const badge of badges) {
-      if (!badge.image_url) continue
-      items.push({
-        url: badge.image_url,
-        assetType: 'image',
-        scope: 'badge',
-        priority: 'normal',
-        badgeId: badge.id,
-        groupKey: 'bootstrap-badges',
-        sortOrder: 50,
-      })
+    if (!filters?.giftVideosOnly) {
+      for (const badge of badges) {
+        if (!badge.image_url) continue
+        items.push({
+          url: badge.image_url,
+          assetType: 'image',
+          scope: 'badge',
+          priority: 'normal',
+          badgeId: badge.id,
+          groupKey: 'bootstrap-badges',
+          sortOrder: 50,
+        })
+      }
     }
 
     const gifts = bootstrapStore.gifts ?? []
     for (const gift of gifts) {
       if (!gift.animation_url || gift.asset_type === 'image') continue
+      const isVideo = gift.asset_type === 'video'
+      if (filters?.giftVideosOnly && !isVideo) continue
+      if (filters?.skipGiftVideos && isVideo) continue
       items.push({
         url: resolveVideoUrl(gift.animation_url),
         assetType: gift.asset_type === 'svga' ? 'svga' : 'video',
@@ -102,12 +111,17 @@ export function useBootstrapAssets() {
     return items
   }
 
-  function buildAssetQueue(): EnqueueItem[] {
-    const allItems = [
-      ...MANUAL_ASSET_MANIFEST,
-      ...getBootstrapAssets(),
-      ...getPageAssets(),
-    ]
+  function buildAssetQueue(options?: { giftBootstrapVideosOnly?: boolean }): EnqueueItem[] {
+    const giftVideosOnly = options?.giftBootstrapVideosOnly === true
+    const skipGiftVideos = !giftVideosOnly && isHomePath(route.path)
+
+    const allItems = giftVideosOnly
+      ? getBootstrapAssets({ giftVideosOnly: true })
+      : [
+          ...MANUAL_ASSET_MANIFEST,
+          ...getBootstrapAssets({ skipGiftVideos }),
+          ...getPageAssets(),
+        ]
 
     const seen = new Set<string>()
     const queue: EnqueueItem[] = []
@@ -133,27 +147,28 @@ export function useBootstrapAssets() {
 
   /**
    * Start downloading all relevant assets after bootstrap.
+   * `giftBootstrapVideosOnly`: enqueue bootstrap gift `.webm` after `window` load so home LCP is not competing with ~MB videos.
    */
-  async function startAssetDownload(): Promise<void> {
-    if (assetStore.phase === 'downloading') {
-      log.warn('Asset download already in progress')
-      return
-    }
-
-    // PERF: Skip preloading on save-data connections to preserve bandwidth
-    // const { getNetworkInfo } = await import('~/services/networkDetector')
-    // const networkInfo = getNetworkInfo()
-    // if (networkInfo.saveData) {
-    //   log.debug('Save-data mode active, skipping asset preload')
-    //   return
-    // }
-
+  async function startAssetDownload(options?: { giftBootstrapVideosOnly?: boolean }): Promise<void> {
     await cacheStorage.initCacheStorage()
     await assetIndex.initAssetIndex()
 
-    const items = buildAssetQueue()
+    const items = buildAssetQueue({ giftBootstrapVideosOnly: options?.giftBootstrapVideosOnly })
     if (items.length === 0) {
-      assetStore.setPhase('complete')
+      if (!options?.giftBootstrapVideosOnly) {
+        assetStore.setPhase('complete')
+      }
+      return
+    }
+
+    if (options?.giftBootstrapVideosOnly) {
+      await assetDownloader.enqueue(items)
+      assetDownloader.start()
+      return
+    }
+
+    if (assetStore.phase === 'downloading') {
+      log.warn('Asset download already in progress')
       return
     }
 

@@ -261,7 +261,7 @@ defineExpose({
         <slot name="loading">Loading…</slot>
       </div>
     </template>
-    <div :aria-busy="isLoading">
+    <div :aria-busy="isLoading" class="min-h-14">
       <DynamicScroller
           :items="rows"
           key-field="__rowKey"
@@ -302,16 +302,16 @@ defineExpose({
       </template>
       </DynamicScroller>
 
-      <div v-if="fetchError" class="py-4 text-center text-md text-rose-300 font-semibold">
+      <div v-if="fetchError" class="min-h-14 py-6 text-center text-md text-rose-300 font-semibold">
         <slot name="error" :error="fetchError">Something went wrong. Please try again.</slot>
       </div>
-      <div v-else-if="isLoading" class="py-4 text-center text-md text-white font-bold">
+      <div v-else-if="isLoading" class="min-h-14 py-6 text-center text-md text-white font-bold">
         <slot name="loading">Loading…</slot>
       </div>
-      <div v-else-if="rows.length === 0" class="py-6 text-center text-md text-white/70 font-semibold">
+      <div v-else-if="rows.length === 0" class="min-h-14 py-6 text-center text-md text-white/70 font-semibold">
         <slot name="empty">No results yet.</slot>
       </div>
-      <div v-else-if="!hasMore" class="py-6 text-center text-md text-white font-bold">
+      <div v-else-if="!hasMore" class="min-h-14 py-6 text-center text-md text-white font-bold">
         <slot name="complete">You're all caught up.</slot>
       </div>
     </div>

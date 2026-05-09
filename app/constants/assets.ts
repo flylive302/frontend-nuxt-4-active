@@ -67,8 +67,8 @@ export const ASSETS = {
   GENDER_MALE: `${IK}/gender/male.webp`,
 
   // ── Placeholders & Fallbacks (precached by SW) ──
-  AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp`,
-  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp`,
+  AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp?tr=w-128,q-75,c-maintain_ratio,f-auto`,
+  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp?tr=w-520,q-75,c-maintain_ratio,f-auto`,
   PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-bg.jpeg`,
 
   // ── Videos (self-hosted for now, candidate for R2 migration) ──
@@ -315,31 +315,35 @@ export const vipUIAssetBase = (level: number) =>
 // Event Banners (ImageKit)
 // ========================================
 
+const BANNER_BG_TR = 'tr=w-400,q-75,c-maintain_ratio,f-auto'
+const BANNER_HDR_TR = 'tr=w-280,q-75,c-maintain_ratio,f-auto'
+const BANNER_DECOR_TR = 'tr=w-120,q-75,c-maintain_ratio,f-auto'
+
 export const EVENT_BANNERS = {
   cp: {
-    banner: `${IK}/banners/cp.webp`,
-    header: `${IK}/banners/cp-header.webp`,
-    decor: `${IK}/banners/decor-main-content.webp`,
+    banner: `${IK}/banners/cp.webp?${BANNER_BG_TR}`,
+    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
+    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
   },
   country: {
-    banner: `${IK}/banners/country.webp`,
-    header: `${IK}/banners/cp-header.webp`,
-    decor: `${IK}/banners/decor-main-content.webp`,
+    banner: `${IK}/banners/country.webp?${BANNER_BG_TR}`,
+    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
+    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
   },
   pretty_id: {
-    banner: `${IK}/banners/pretty-id.webp`,
-    header: `${IK}/banners/cp-header.webp`,
-    decor: `${IK}/banners/decor-main-content.webp`,
+    banner: `${IK}/banners/pretty-id.webp?${BANNER_BG_TR}`,
+    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
+    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
   },
   recharge_tycoon: {
-    banner: `${IK}/banners/recharge-tycoon.webp`,
-    header: `${IK}/banners/cp-header.webp`,
-    decor: `${IK}/banners/decor-main-content.webp`,
+    banner: `${IK}/banners/recharge-tycoon.webp?${BANNER_BG_TR}`,
+    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
+    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
   },
   supreme_recharge: {
-    banner: `${IK}/banners/supreme-recharge.webp`,
-    header: `${IK}/banners/cp-header.webp`,
-    decor: `${IK}/banners/decor-main-content.webp`,
+    banner: `${IK}/banners/supreme-recharge.webp?${BANNER_BG_TR}`,
+    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
+    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
   },
 } as const satisfies Record<
   string,

@@ -18,6 +18,24 @@ export default defineNuxtPlugin(() => {
 
   init()
 
+  // After first paint / LCP, prefetch bootstrap gift videos (multi-MB .webm) so they do not
+  // contend with ImageKit on `/` (see useBootstrapAssets home-path skip + second phase).
+  if (import.meta.client) {
+    window.addEventListener(
+      'load',
+      () => {
+        const schedule =
+          typeof requestIdleCallback !== 'undefined'
+            ? (cb: IdleRequestCallback) => requestIdleCallback(cb, { timeout: 12_000 })
+            : (cb: () => void) => setTimeout(cb, 1500)
+        schedule(() => {
+          void startAssetDownload({ giftBootstrapVideosOnly: true })
+        })
+      },
+      { once: true },
+    )
+  }
+
   // When a user logs in or registers mid-session, the plugin has already run
   // with no token. This watcher catches the null → token transition and starts
   // the asset download so gifts/badges preload during the onboarding flow.

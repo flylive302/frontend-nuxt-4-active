@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
+import { ASSETS } from '~/constants/assets'
 import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 definePageMeta({
   layout: 'home',
@@ -15,6 +18,9 @@ const roomRef = ref(null)
 const roomSectionInView = ref(true)
 /** Embla snap index — LCP image must match the snapped slide, not always index 0 */
 const roomCarouselSnapIndex = ref(0)
+/** Until Embla has fired `select`, keep the first two slides eager (center-align snap race). */
+const hadRoomCarouselSelectEvent = ref(false)
+const roomCarouselRef = shallowRef<{ emblaApi?: import('vue').Ref<unknown> } | null>(null)
 const roomAutoplayAfterPaint = ref(false)
 
 const roomAutoplay = computed(() => {
@@ -83,7 +89,53 @@ useIntersectionObserver(roomRef, ([entry]) => {
 
 function onRoomCarouselSelect(index: number): void {
   roomCarouselSnapIndex.value = index
+  hadRoomCarouselSelectEvent.value = true
 }
+
+function roomCardPriorityLcp(index: number): boolean {
+  if (!hadRoomCarouselSelectEvent.value) return index === 0 || index === 1
+  return index === roomCarouselSnapIndex.value
+}
+
+function syncRoomCarouselSnapFromEmbla(): void {
+  const inst = roomCarouselRef.value
+  const api = inst?.emblaApi ? unref(inst.emblaApi) : null
+  if (api && typeof (api as { selectedScrollSnap?: () => number }).selectedScrollSnap === 'function') {
+    onRoomCarouselSelect((api as { selectedScrollSnap: () => number }).selectedScrollSnap())
+  }
+}
+
+watch(
+  () => [carouselRooms.value.length, roomCarouselRef.value] as const,
+  async () => {
+    if (!import.meta.client || carouselRooms.value.length === 0 || !roomCarouselRef.value) return
+    await nextTick()
+    requestAnimationFrame(() => syncRoomCarouselSnapFromEmbla())
+  },
+  { flush: 'post' },
+)
+
+const lcpRoomPreloadHref = computed(() => {
+  const first = carouselRooms.value[0]
+  if (!first) return ''
+  return withImageKitTransform(first.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 520, q: 75 })
+})
+
+useHead(() => {
+  const href = lcpRoomPreloadHref.value
+  if (!href) return {}
+  return {
+    link: [
+      {
+        rel: 'preload',
+        as: 'image',
+        href,
+        fetchpriority: 'high',
+        imagesizes: 'min(72vw, 240px)',
+      },
+    ],
+  }
+})
 
 // Preload room page chunk after idle so first paint / LCP stay unblocked
 onMounted(() => {
@@ -226,6 +278,7 @@ const banners: Banner[] = [
       <div ref="roomRef">
         <UCarousel
             v-if="carouselRooms.length > 0"
+            ref="roomCarouselRef"
             :items="carouselRooms"
             :autoplay="roomAutoplay"
             class-names
@@ -241,7 +294,7 @@ const banners: Banner[] = [
               :room="item"
               card-layout="carousel"
               class="h-72 max-w-60"
-              :priority-lcp="index === roomCarouselSnapIndex"
+              :priority-lcp="roomCardPriorityLcp(index)"
             />
           </template>
         </UCarousel>

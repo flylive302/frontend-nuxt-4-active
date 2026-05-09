@@ -9,6 +9,7 @@
 
 import type { Room } from '~/types/room/room'
 import { ASSETS } from '~/constants/assets'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 defineOptions({
   inheritAttrs: false
@@ -47,8 +48,19 @@ const badgeDisplay = computed(() => {
 
 const roomImageSizes = computed(() =>
   props.cardLayout === 'carousel'
-    ? '(min-width: 640px) 240px, 72vw'
-    : '(min-width: 640px) 200px, 48vw',
+    ? '(min-width: 640px) 240px, min(72vw, 240px)'
+    : '(min-width: 640px) 200px, min(48vw, 160px)',
+)
+
+const roomBackgroundSrc = computed(() =>
+  withImageKitTransform(
+    props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER,
+    { w: props.cardLayout === 'carousel' ? 520 : 400, q: 75 },
+  ),
+)
+
+const roomLogoSrc = computed(() =>
+  withImageKitTransform(props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER, { w: 72, q: 75 }),
 )
 
 /** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 for aspect box + ImageKit requests */
@@ -72,7 +84,7 @@ function handleRoomClick(): void {
   <article v-bind="$attrs" class="relative rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
       <NuxtImg
-        :src="props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER"
+        :src="roomBackgroundSrc"
         :alt="props.room.name ?? undefined"
         :width="roomImageWidth"
         :height="roomImageHeight"
@@ -93,11 +105,14 @@ function handleRoomClick(): void {
       <div class="backdrop-blur-sm shadow-md rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1">
           <NuxtImg
-              :src="props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER"
+              :src="roomLogoSrc"
               alt="Live"
-              width="12"
-              height="12"
+              width="24"
+              height="24"
+              sizes="24px"
               class="size-6 object-cover rounded-full ring-2 ring-primary"
+              loading="lazy"
+              decoding="async"
           />
 
           <!-- Text -->
