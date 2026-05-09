@@ -29,6 +29,16 @@ const {
 const selectedCountry = ref<Country | undefined>(undefined)
 const showPhone = ref(false)
 const phoneInputRef = ref<{ inputRef: HTMLInputElement } | null>(null)
+const rootRef = ref<HTMLElement | null>(null)
+
+// Hide USelectMenu's hidden form-submission inputs from the a11y tree — they
+// are programmatic helpers (1×1px, tabindex -1) and must not be audited.
+function hideHiddenInputs() {
+  rootRef.value?.querySelectorAll<HTMLInputElement>('input[data-hidden]').forEach(el => {
+    el.setAttribute('aria-hidden', 'true')
+  })
+}
+onMounted(() => nextTick(hideHiddenInputs))
 
 const INVALID_FLAG_CODES = new Set(['an'])
 const DEFAULT_FLAG_ICON = 'i-lucide-earth'
@@ -145,7 +155,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-2">
+  <div ref="rootRef" class="space-y-2">
     <UFormField label="Country" name="countryCode" required>
       <USelectMenu
         v-model="selectedCountry"
@@ -154,7 +164,7 @@ onMounted(async () => {
         :disabled="disabled"
         virtualize
         label-key="name"
-        label="countries select"
+        :aria-label="selectedCountry ? `Country: ${selectedCountry.name}` : 'Select country'"
         placeholder="Select your country"
         :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...', autocomplete: 'off' }"
         size="lg"

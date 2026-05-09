@@ -144,7 +144,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
 
       <UButton
         type="submit" size="xl"
-        class="w-full justify-center"
+        class="w-full justify-center bg-primary-700 hover:bg-primary-800"
         icon="i-lucide-send"
         :loading="isSubmitting"
         :disabled="isSubmitting"
