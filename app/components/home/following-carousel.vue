@@ -33,6 +33,7 @@ defineProps<{
         >
           <UserAvatar
             :animated="true"
+            defer-frame-animation
             :frame-asset-url="item.frame ?? undefined"
             :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-14"
@@ -42,7 +43,6 @@ defineProps<{
               {{ item.name }}
             </span>
           </div>
-<!--          <ProfileBadge :txt="item.signature" :show-badge="false" />-->
         </NuxtLink>
       </template>
     </UCarousel>

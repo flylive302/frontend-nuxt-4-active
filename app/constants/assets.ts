@@ -46,8 +46,9 @@ export const ASSETS = {
   HERO_CHARM: `${IK}/placeholders/charm.webp`,
   HERO_WEALTH: `${IK}/placeholders/wealth.webp`,
   DEFAULT_ROOM_BADGE: `${IK}/badges/room/level_1.webp`,
-  DEFAULT_PROFILE_BADGE: `${IK}/badges/profile-1.webp`,
-  DEFAULT_HISTORY_BADGE: `${IK}/badges/profile-1.webp`,
+  /** Thumbnail params keep home/bootstrap badge decode small vs. full ~1MB source */
+  DEFAULT_PROFILE_BADGE: `${IK}/badges/profile-1.webp?tr=w-64,q-75,f-webp`,
+  DEFAULT_HISTORY_BADGE: `${IK}/badges/profile-1.webp?tr=w-64,q-75,f-webp`,
   DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/level_1.webp`,
   DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/level_1.webp`,
 
@@ -322,23 +323,23 @@ export const EVENT_BANNERS = {
   },
   country: {
     banner: `${IK}/banners/country.webp`,
-    header: `${IK}/banners/country-header.svg`,
-    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
+    header: `${IK}/banners/cp-header.webp`,
+    decor: `${IK}/banners/decor-main-content.webp`,
   },
   pretty_id: {
     banner: `${IK}/banners/pretty-id.webp`,
-    header: `${IK}/banners/country-header.svg`,
-    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
+    header: `${IK}/banners/cp-header.webp`,
+    decor: `${IK}/banners/decor-main-content.webp`,
   },
   recharge_tycoon: {
     banner: `${IK}/banners/recharge-tycoon.webp`,
-    header: `${IK}/banners/country-header.svg`,
-    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
+    header: `${IK}/banners/cp-header.webp`,
+    decor: `${IK}/banners/decor-main-content.webp`,
   },
   supreme_recharge: {
     banner: `${IK}/banners/supreme-recharge.webp`,
-    header: `${IK}/banners/country-header.svg`,
-    decor: `${IK}/banners/decor-recharge-tycoon.webp`,
+    header: `${IK}/banners/cp-header.webp`,
+    decor: `${IK}/banners/decor-main-content.webp`,
   },
 } as const satisfies Record<
   string,

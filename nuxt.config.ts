@@ -83,6 +83,16 @@ export default defineNuxtConfig({
         },
     },
     vite: {
+        // Dev-only: same-origin proxy so fetches to R2 avoid browser CORS on localhost (Lighthouse / AssetDownloader).
+        server: {
+            proxy: {
+                '/__r2': {
+                    target: 'https://assets.flyliveapp.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/__r2/, '') || '/',
+                },
+            },
+        },
         build: {
             sourcemap: false,
             chunkSizeWarningLimit: 1000,
@@ -137,7 +147,10 @@ export default defineNuxtConfig({
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
-            audioServerUrl: process.env.NUXT_PUBLIC_AUDIO_SERVER_URL || 'wss://localhost:3030',
+            // Prefer ws:// with local HTTP dev server; use wss:// when the MSAB TLS endpoint matches.
+            audioServerUrl:
+                process.env.NUXT_PUBLIC_AUDIO_SERVER_URL
+                || (process.env.NODE_ENV === 'development' ? 'ws://localhost:3030' : 'wss://localhost:3030'),
             reverbAppKey: process.env.NUXT_PUBLIC_REVERB_APP_KEY || '',
             reverbHost: process.env.NUXT_PUBLIC_REVERB_HOST || 'localhost',
             reverbPort: process.env.NUXT_PUBLIC_REVERB_PORT || '8080',

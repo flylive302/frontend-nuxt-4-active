@@ -1,9 +1,6 @@
 <script setup lang="ts">
+import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
-// ========================================
-// Imports
-// ========================================
-
 // ========================================
 // Constants
 // ========================================
@@ -20,12 +17,31 @@ const props = withDefaults(defineProps<{
   frameAssetUrl?: string
   img?: string | undefined | null
   animated?: boolean
+  /**
+   * When true with `animated`, SVGA frame loads only after the avatar enters
+   * the viewport (or near it). Cuts main-thread decode work for off-screen carousels.
+   */
+  deferFrameAnimation?: boolean
 }>(), {
   frameName: '',
   frameAssetUrl: ASSETS.DEFAULT_FRAME,
   img: undefined,
   animated: false,
+  deferFrameAnimation: false,
 });
+
+const rootRef = ref<HTMLElement | null>(null)
+const svgaAllowed = ref(!props.deferFrameAnimation)
+
+useIntersectionObserver(
+  rootRef,
+  ([entry]) => {
+    if (entry?.isIntersecting) {
+      svgaAllowed.value = true
+    }
+  },
+  { rootMargin: '100px', threshold: 0.01 },
+)
 
 // ========================================
 // Computed
@@ -80,7 +96,7 @@ const frameConfig = computed(() => {
 </script>
 
 <template>
-  <div class="relative aspect-square cursor-pointer">
+  <div ref="rootRef" class="relative aspect-square cursor-pointer">
     <div class="relative" :style="{ padding: frameConfig?.padding ?? DEFAULT_PADDING }">
       <!-- Avatar Image -->
       <NuxtImg
@@ -96,7 +112,7 @@ const frameConfig = computed(() => {
       />
       <!-- Frame layer (on top) -->
       <SvgaPlayer
-        v-if="props.animated && frameConfig?.name"
+        v-if="props.animated && frameConfig?.name && svgaAllowed"
         class="absolute" height="auto"
         :name="frameConfig.name"
         :style="frameConfig.style"

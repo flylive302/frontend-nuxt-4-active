@@ -18,9 +18,16 @@ defineOptions({
 // Props
 // ========================================
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   room: Room
-}>()
+  /** First visible carousel card: prioritize LCP image fetch */
+  priorityLcp?: boolean
+  /** Controls responsive `sizes` for ImageKit — carousel vs 2-col grid */
+  cardLayout?: 'carousel' | 'grid'
+}>(), {
+  priorityLcp: false,
+  cardLayout: 'grid',
+})
 
 // ========================================
 // Dependencies
@@ -37,6 +44,16 @@ const badgeDisplay = computed(() => {
   if (!props.room.is_live) return null
   return `Live / ${props.room.participant_count}`
 })
+
+const roomImageSizes = computed(() =>
+  props.cardLayout === 'carousel'
+    ? '(min-width: 640px) 240px, 72vw'
+    : '(min-width: 640px) 200px, 48vw',
+)
+
+/** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 for aspect box + ImageKit requests */
+const roomImageWidth = computed(() => (props.cardLayout === 'carousel' ? 240 : 160))
+const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 224))
 
 // ========================================
 // Navigation
@@ -57,11 +74,15 @@ function handleRoomClick(): void {
       <NuxtImg
         :src="props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER"
         :alt="props.room.name ?? undefined"
-        :width="384"
-        class="h-auto w-full object-cover"
+        :width="roomImageWidth"
+        :height="roomImageHeight"
+        class="h-full min-h-0 w-full object-cover"
         format="webp"
         densities="x1 x2"
-        loading="lazy"
+        :sizes="roomImageSizes"
+        :loading="props.priorityLcp ? 'eager' : 'lazy'"
+        :fetchpriority="props.priorityLcp ? 'high' : undefined"
+        decoding="async"
       />
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>

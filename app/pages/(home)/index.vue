@@ -8,11 +8,19 @@ definePageMeta({
 })
 
 const bannerAutoplay = ref<{ delay: number } | undefined>({ delay: BANNER_AUTOPLAY_DELAY_MS })
-const roomAutoplay = ref<{ delay: number } | undefined>({ delay: ROOM_AUTOPLAY_DELAY_MS })
 
-// ---- Optimization: Pause Autoplay when off-screen
+// ---- Optimization: Pause Autoplay when off-screen; delay room autoplay until after first paint (LCP)
 const bannerRef = ref(null)
 const roomRef = ref(null)
+const roomSectionInView = ref(true)
+/** Embla snap index — LCP image must match the snapped slide, not always index 0 */
+const roomCarouselSnapIndex = ref(0)
+const roomAutoplayAfterPaint = ref(false)
+
+const roomAutoplay = computed(() => {
+  if (!roomAutoplayAfterPaint.value || !roomSectionInView.value) return undefined
+  return { delay: ROOM_AUTOPLAY_DELAY_MS }
+})
 
 // ---- Following Carousel (ranked, Redis-cached)
 const { fetchRankedFollowing } = useFollowingData()
@@ -70,12 +78,28 @@ useIntersectionObserver(bannerRef, ([entry]) => {
 })
 
 useIntersectionObserver(roomRef, ([entry]) => {
-  roomAutoplay.value = entry?.isIntersecting ? { delay: ROOM_AUTOPLAY_DELAY_MS } : undefined
+  roomSectionInView.value = entry?.isIntersecting ?? false
 })
 
-// Preload room page chunk so entering a room is instant
+function onRoomCarouselSelect(index: number): void {
+  roomCarouselSnapIndex.value = index
+}
+
+// Preload room page chunk after idle so first paint / LCP stay unblocked
 onMounted(() => {
-  preloadRouteComponents('/room/0')
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      roomAutoplayAfterPaint.value = true
+    })
+  })
+  const run = () => {
+    preloadRouteComponents('/room/0')
+  }
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(run, { timeout: 2500 })
+  } else {
+    setTimeout(run, 0)
+  }
 })
 
 // ---- Types
@@ -160,7 +184,6 @@ const banners: Banner[] = [
 <template>
   <main>
 
-<!--    <VapPlayer name="/temp/vip/10/entry" :muted="false" />-->
     <!-- Following Carousel (ranked by XP + follower count) -->
     <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3"/>
     
@@ -210,9 +233,16 @@ const banners: Banner[] = [
               item: 'basis-2/3 transition duration-300 ease-in-out scale-90 [&.is-snapped]:scale-100'
             }"
             class="mb-6"
+            @select="onRoomCarouselSelect"
         >
-          <template #default="{ item }">
-            <RoomCard v-if="item" :room="item" class="h-72 max-w-60"/>
+          <template #default="{ item, index }">
+            <RoomCard
+              v-if="item"
+              :room="item"
+              card-layout="carousel"
+              class="h-72 max-w-60"
+              :priority-lcp="index === roomCarouselSnapIndex"
+            />
           </template>
         </UCarousel>
       </div>
@@ -225,10 +255,13 @@ const banners: Banner[] = [
           :per-page="15"
         >
           <template #cell="{ cell }">
-            <RoomCard
-              :room="cell"
-              class="h-56 max-w-40 mb-4"
-            />
+            <div role="listitem">
+              <RoomCard
+                :room="cell"
+                card-layout="grid"
+                class="h-56 max-w-40 mb-4"
+              />
+            </div>
           </template>
         </InfiniteScroll>
       </div>

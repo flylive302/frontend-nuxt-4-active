@@ -4,7 +4,19 @@ import { ASSETS } from '~/constants/assets'
 
 <template>
   <div class="flex">
-    <NuxtImg :src="ASSETS.LOGO_MAIN" preload fetchpriority="high" class="h-10 mt-1"/>
-    <NuxtImg :src="ASSETS.LOGO_TEXT" preload fetchpriority="high" class="h-10 mt-2"/>
+    <NuxtImg
+        :src="ASSETS.LOGO_MAIN"
+        alt="FlyLive"
+        preload
+        fetchpriority="high"
+        class="h-10 mt-1"
+    />
+    <NuxtImg
+        :src="ASSETS.LOGO_TEXT"
+        alt=""
+        preload
+        fetchpriority="high"
+        class="h-10 mt-2"
+    />
   </div>
 </template>

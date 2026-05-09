@@ -47,6 +47,15 @@ const completeCallbacks = new Set<CompleteCallback>()
 let isPaused = false
 let isProcessing = false
 
+const R2_ORIGIN = 'https://assets.flyliveapp.com'
+
+/** In Vite dev, load R2 through same-origin `/__r2` proxy (see `nuxt.config` vite.server.proxy). */
+function rewriteR2UrlForDevFetch(url: string): string {
+  if (!import.meta.dev || typeof window === 'undefined') return url
+  if (!url.startsWith(R2_ORIGIN)) return url
+  return `/__r2${url.slice(R2_ORIGIN.length)}`
+}
+
 function normalizeUrl(url: string): string {
   try {
     const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
@@ -236,7 +245,8 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
       throw new Error(result.error ?? 'SW download failed')
     }
 
-    const response = await fetch(item.url)
+    const fetchUrl = rewriteR2UrlForDevFetch(item.url)
+    const response = await fetch(fetchUrl)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }

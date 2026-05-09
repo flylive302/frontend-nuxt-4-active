@@ -29,7 +29,7 @@ const getFlagIcon = (code: string): string => {
       class="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold transition-colors duration-200"
       :class="modelValue === ''
         ? 'bg-primary text-white'
-        : 'bg-white/10 text-white/70'"
+        : 'bg-white/15 text-white ring-1 ring-white/25'"
       @click="emit('update:modelValue', '')"
     >
       <UIcon name="i-lucide-globe" class="size-5" />

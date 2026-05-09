@@ -43,8 +43,10 @@ const variantMap: Record<BadgeColor, string> = {
         :height="64"
         format="webp"
         densities="x1 x2"
-        sizes="64px"
+        sizes="24px"
         loading="lazy"
+        fetchpriority="low"
+        decoding="async"
     />
     <p
         class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1  truncate"

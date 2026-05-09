@@ -54,6 +54,7 @@ const inboxBadge = computed(() => {
     <div class="grid grid-cols-5 items-center gap-6 px-2 py-1 touch-manipulation select-none rounded-xl backdrop-blur-lg">
       <UButton 
         to="/" class="flex-middle"
+        aria-label="Home"
         :variant="activeIndex === 0 ? 'solid' : 'ghost'"
         square
         size="xl"
@@ -62,6 +63,7 @@ const inboxBadge = computed(() => {
       </UButton>
       <UButton 
         to="/discover-all-events" class="flex-middle" 
+        aria-label="Discover events"
         :variant="activeIndex === 1 ? 'solid' : 'ghost'"
         square
         size="xl"
@@ -70,6 +72,7 @@ const inboxBadge = computed(() => {
       </UButton>
       <UButton 
         class="flex-middle" 
+        aria-label="My room"
         :variant="activeIndex === 2 ? 'solid' : 'ghost'" 
         size="xl"
         square
@@ -85,6 +88,7 @@ const inboxBadge = computed(() => {
       </UButton>
       <UButton 
         to="/inbox" class="flex-middle relative" 
+        :aria-label="inboxBadge ? `Inbox, ${inboxBadge} unread` : 'Inbox'"
         :variant="activeIndex === 3 ? 'solid' : 'ghost'"
         square
         size="xl"
@@ -101,6 +105,7 @@ const inboxBadge = computed(() => {
         <UserAvatar
             class="w-13"
             :animated="true"
+            defer-frame-animation
             :frame-asset-url="authStore?.user?.frame ?? undefined"
             :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
         />

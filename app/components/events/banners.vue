@@ -92,7 +92,12 @@ const headingId = `duel-card-title-${props.type}`
         :src="config.banner"
         alt=""
         aria-hidden="true"
+        width="360"
+        height="120"
+        sizes="(max-width: 768px) 85vw, 360px"
         class="select-none absolute inset-0 h-full w-full object-cover rounded-lg border border-white/50 shadow-lg"
+        loading="lazy"
+        decoding="async"
     />
 
     <div class="relative">
@@ -102,7 +107,12 @@ const headingId = `duel-card-title-${props.type}`
             :src="config.header"
             alt=""
             aria-hidden="true"
-            class="h-8 -mt-3"
+            width="280"
+            height="32"
+            sizes="280px"
+            class="h-8 w-auto max-w-[min(280px,85vw)] -mt-3"
+            loading="lazy"
+            decoding="async"
         />
         <h2
             :id="headingId"
@@ -119,6 +129,7 @@ const headingId = `duel-card-title-${props.type}`
         <figure class="col-span-3 grid grid-cols-2">
           <UserAvatar
               :animated="true"
+              defer-frame-animation
               :frame-girth="props.lFrameGirth"
               :top="props.lTop"
               :frame-name="props.lFrameName"
@@ -134,9 +145,12 @@ const headingId = `duel-card-title-${props.type}`
             :src="config.decor"
             alt=""
             aria-hidden="true"
-            sizes="64px"
+            width="80"
+            height="80"
+            sizes="80px"
             class="col-span-1"
-            preload
+            loading="lazy"
+            decoding="async"
         />
         <!-- Right user -->
         <figure class="col-span-3 grid grid-cols-2">
@@ -145,6 +159,7 @@ const headingId = `duel-card-title-${props.type}`
           </figcaption>
           <UserAvatar
               :animated="true"
+              defer-frame-animation
               :frame-girth="props.rFrameGirth"
               :top="props.rTop"
               :frame-name="props.rFrameName"

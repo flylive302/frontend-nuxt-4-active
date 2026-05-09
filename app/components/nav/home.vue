@@ -41,15 +41,16 @@ const officialBadge = computed(() => {
         </svg>
       </UButton>
       <UButton
-          aria-label="Official Messages"
+          :aria-label="officialBadge ? `Official messages, ${officialBadge} unread` : 'Official messages'"
           size="md"
           variant="ghost"
           to="/inbox/official"
           class="relative"
       >
-        <UIcon name="i-lucide-bell" class="size-5 text-white" />
+        <UIcon name="i-lucide-bell" class="size-5 text-white" aria-hidden="true" />
         <span
             v-if="officialBadge"
+            aria-hidden="true"
             class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 bg-error text-white text-[10px] font-bold rounded-full flex items-center justify-center"
         >
           {{ officialBadge }}
