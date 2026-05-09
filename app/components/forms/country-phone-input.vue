@@ -39,6 +39,9 @@ function hideHiddenInputs() {
   })
 }
 onMounted(() => nextTick(hideHiddenInputs))
+// Re-run after every country change — detectIfAllowed() is async and resolves
+// after the first tick, so USelectMenu creates its hidden inputs late.
+watch(selectedCountry, () => nextTick(hideHiddenInputs))
 
 const INVALID_FLAG_CODES = new Set(['an'])
 const DEFAULT_FLAG_ICON = 'i-lucide-earth'
@@ -86,6 +89,7 @@ function onCountryChange(country: Country | undefined): void {
 
   showPhone.value = true
   focusPhoneInput()
+  nextTick(hideHiddenInputs)
 }
 
 /**
@@ -197,18 +201,22 @@ onMounted(async () => {
       </USelectMenu>
     </UFormField>
 
-    <Transition
-      enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
+    <!-- Space is always reserved (no v-if) so the submit button never shifts → CLS = 0.
+         The field is invisible+inert until a country is selected. -->
+    <div
+      class="transition-opacity duration-200"
+      :class="(showPhone && !!selectedCountry) ? '' : 'opacity-0 pointer-events-none'"
+      :inert="!(showPhone && selectedCountry) || undefined"
+      aria-live="polite"
     >
-      <UFormField
-        v-if="showPhone && selectedCountry" label="Phone Number" name="phone"
-        :help="`Enter your number for ${selectedCountry.name}`" :error="error" required>
+      <UFormField label="Phone Number" name="phone"
+        :help="selectedCountry ? `Enter your number for ${selectedCountry.name}` : ''"
+        :error="error" required>
         <div class="flex items-center gap-1">
           <div
             class="text-base flex items-center font-semibold border border-neutral-700 h-9 rounded-md px-2 bg-neutral-950 shrink-0">
             <UIcon name="i-lucide-phone" class="mr-1 size-4" />
-            <span>{{ selectedCountry.dial_code }}</span>
+            <span>{{ selectedCountry?.dial_code }}</span>
           </div>
 
           <UInput
@@ -218,6 +226,6 @@ onMounted(async () => {
             @paste="handlePaste" />
         </div>
       </UFormField>
-    </Transition>
+    </div>
   </div>
 </template>
