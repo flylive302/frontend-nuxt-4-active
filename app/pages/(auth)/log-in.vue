@@ -9,10 +9,7 @@ import type { LoginPayload } from '~/types/user/auth'
 definePageMeta({
   layout: 'auth',
   middleware: 'guest',
-  authHeading: 'Login With',
-  // Auth routes are prerendered. The global page transition uses
-  // .page-enter-from { opacity: 0; transform: translateX(2.5rem) } which can
-  // briefly hide the prerendered LCP image during hydration. Disable here.
+  authHeading: 'Login To Your Flylive Account',
   pageTransition: false,
   layoutTransition: false,
 })

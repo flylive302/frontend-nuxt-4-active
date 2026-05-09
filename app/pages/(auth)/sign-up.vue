@@ -8,7 +8,7 @@ import type { FormSubmitEvent, Form } from '@nuxt/ui'
 definePageMeta({
   layout: 'auth',
   middleware: 'guest',
-  authHeading: 'Sign Up With',
+  authHeading: 'Create a new FlyLive account',
   pageTransition: false,
   layoutTransition: false,
 })
