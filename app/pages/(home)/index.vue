@@ -51,7 +51,7 @@ const { data: roomsResponse, status: roomsStatus } = useAsyncData(
   },
   {
     watch: [selectedCountry],
-    lazy: true,
+    lazy: false,
     // Always fetch fresh data — active_countries must be current
     getCachedData: () => undefined,
   }
