@@ -33,7 +33,8 @@ const { fetchRankedFollowing } = useFollowingData()
 const { data: rankedFollowing } = useAsyncData(
   'home-following-ranked',
   () => fetchRankedFollowing(),
-  { lazy: true }
+  // Blocking: SSR must agree with client on following vs banner branch (v-if / v-else) or Vue hydration mismatches.
+  { lazy: false }
 )
 
 // ---- Room Logic
@@ -118,7 +119,7 @@ watch(
 const lcpRoomPreloadHref = computed(() => {
   const first = carouselRooms.value[0]
   if (!first) return ''
-  return withImageKitTransform(first.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 520, q: 75 })
+  return withImageKitTransform(first.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 400, q: 75 })
 })
 
 useHead(() => {

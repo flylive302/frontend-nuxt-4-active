@@ -47,11 +47,12 @@ const badgeDisplay = computed(() => {
 })
 
 
+/** Carousel ~240px css width — w=400 ~ mobile DPR without 520px waste; grid cells ~160px — w=320 */
 const roomBackgroundSrc = computed(() =>
-  withImageKitTransform(
-    props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER,
-    { w: props.cardLayout === 'carousel' ? 520 : 400, q: 75 },
-  ),
+  withImageKitTransform(props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, {
+    w: props.cardLayout === 'carousel' ? 400 : 320,
+    q: 75,
+  }),
 )
 
 const roomLogoSrc = computed(() =>
@@ -83,6 +84,7 @@ function handleRoomClick(): void {
         :alt="props.room.name ?? undefined"
         :width="roomImageWidth"
         :height="roomImageHeight"
+        :sizes="props.cardLayout === 'carousel' ? '(max-width: 640px) 72vw, 240px' : '(max-width: 640px) 45vw, 160px'"
         class="h-full min-h-0 w-full object-cover"
         :loading="props.priorityLcp ? 'eager' : 'lazy'"
         :fetchpriority="props.priorityLcp ? 'high' : undefined"
