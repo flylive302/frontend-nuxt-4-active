@@ -46,11 +46,6 @@ const badgeDisplay = computed(() => {
   return `Live / ${props.room.participant_count}`
 })
 
-const roomImageSizes = computed(() =>
-  props.cardLayout === 'carousel'
-    ? '(min-width: 640px) 240px, min(72vw, 240px)'
-    : '(min-width: 640px) 200px, min(48vw, 160px)',
-)
 
 const roomBackgroundSrc = computed(() =>
   withImageKitTransform(
@@ -83,15 +78,12 @@ function handleRoomClick(): void {
 <template>
   <article v-bind="$attrs" class="relative rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
     <figure class="h-full w-full">
-      <NuxtImg
+      <img
         :src="roomBackgroundSrc"
         :alt="props.room.name ?? undefined"
         :width="roomImageWidth"
         :height="roomImageHeight"
         class="h-full min-h-0 w-full object-cover"
-        format="webp"
-        densities="x1 x2"
-        :sizes="roomImageSizes"
         :loading="props.priorityLcp ? 'eager' : 'lazy'"
         :fetchpriority="props.priorityLcp ? 'high' : undefined"
         decoding="async"
@@ -104,12 +96,11 @@ function handleRoomClick(): void {
 
       <div class="backdrop-blur-sm shadow-md rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1">
-          <NuxtImg
+          <img
               :src="roomLogoSrc"
               alt="Live"
               width="24"
               height="24"
-              sizes="24px"
               class="size-6 object-cover rounded-full ring-2 ring-primary"
               loading="lazy"
               decoding="async"
