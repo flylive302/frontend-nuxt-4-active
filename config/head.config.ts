@@ -84,11 +84,9 @@ export const headConfig: HeadConfig = {
         { rel: 'manifest', href: '/manifest.webmanifest' },
         { rel: 'apple-touch-icon', href: '/pwa-assets/apple-touch-icon-180x180.png', sizes: '180x180' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        // Critical asset preload — logo is always the LCP element on auth pages.
-        // imagesizes MUST match the rendered <img>'s `sizes` attribute so the preload
-        // scanner picks the same density variant the page actually requests; otherwise
-        // the preload fetches a different file from the <img>'s src and is wasted.
-        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', imagesrcset: '/logos/flylive-logo.webp 1x, /logos/flylive-logo-2x.webp 2x', imagesizes: '256px', fetchpriority: 'high' as const },
+        // Hint first logo bytes only — Nav uses NuxtImg with a single src (no srcset); preloading
+        // imagesrcset pulled flylive-logo-2x.webp on DPR≥2 but it often went unused (Lighthouse warning).
+        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', fetchpriority: 'high' as const },
         // Apple splash screens
         ...appleSplashScreens,
         // NOTE: Preconnects to ik.imagekit.io and assets.flyliveapp.com used

@@ -71,12 +71,16 @@ export function useWakeLock() {
     // (the browser auto-releases on hide, so we must re-acquire)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        request()
+        void request()
+      } else {
+        void release()
       }
     })
 
-    // Acquire immediately
-    request()
+    // Must not call request() while hidden — Chrome throws NotAllowedError (see DevTools console)
+    if (document.visibilityState === 'visible') {
+      void request()
+    }
   }
 
   return {

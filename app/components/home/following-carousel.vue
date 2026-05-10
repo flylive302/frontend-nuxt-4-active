@@ -18,34 +18,61 @@ defineProps<{
 
 <template>
   <section aria-label="Following">
-    <UCarousel
-      :items="users"
-      :drag-free="true"
-      :align="'start'"
-      :contain-scroll="'trimSnaps'"
-      :ui="{ item: 'basis-24' }"
-    >
-      <template #default="{ item, index }">
-        <NuxtLink
-          :to="`/profile/${item.signature}`"
-          class="following-card flex flex-col items-center gap-1 active:scale-95 transition-transform duration-150 "
-          :style="{ animationDelay: `${index * 50}ms` }"
-        >
-          <UserAvatar
-            :animated="true"
-            defer-frame-animation
-            :frame-asset-url="item.frame ?? undefined"
-            :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-            class="w-14"
-          />
-          <div class="marquee-container w-fit -mt-2">
-            <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
-              {{ item.name }}
-            </span>
-          </div>
-        </NuxtLink>
+    <!-- Embla output differs from SSR — fallback keeps hydration aligned -->
+    <ClientOnly>
+      <template #fallback>
+        <div class="flex gap-2 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <NuxtLink
+            v-for="(item, index) in users"
+            :key="item.signature"
+            :to="`/profile/${item.signature}`"
+            class="following-card flex shrink-0 basis-24 flex-col items-center gap-1 active:scale-95 transition-transform duration-150"
+            :style="{ animationDelay: `${index * 50}ms` }"
+          >
+            <UserAvatar
+              :animated="true"
+              defer-frame-animation
+              :frame-asset-url="item.frame ?? undefined"
+              :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+              class="w-14"
+            />
+            <div class="marquee-container w-fit -mt-2">
+              <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
+                {{ item.name }}
+              </span>
+            </div>
+          </NuxtLink>
+        </div>
       </template>
-    </UCarousel>
+      <UCarousel
+        :items="users"
+        :drag-free="true"
+        :align="'start'"
+        :contain-scroll="'trimSnaps'"
+        :ui="{ item: 'basis-24' }"
+      >
+        <template #default="{ item, index }">
+          <NuxtLink
+            :to="`/profile/${item.signature}`"
+            class="following-card flex flex-col items-center gap-1 active:scale-95 transition-transform duration-150 "
+            :style="{ animationDelay: `${index * 50}ms` }"
+          >
+            <UserAvatar
+              :animated="true"
+              defer-frame-animation
+              :frame-asset-url="item.frame ?? undefined"
+              :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+              class="w-14"
+            />
+            <div class="marquee-container w-fit -mt-2">
+              <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
+                {{ item.name }}
+              </span>
+            </div>
+          </NuxtLink>
+        </template>
+      </UCarousel>
+    </ClientOnly>
   </section>
 </template>
 

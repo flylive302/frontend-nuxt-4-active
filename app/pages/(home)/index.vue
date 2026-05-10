@@ -240,25 +240,45 @@ const banners: Banner[] = [
     <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3"/>
     
     <div v-else ref="bannerRef">
-      <UCarousel
-        :autoplay="bannerAutoplay"
-        :items="banners"
-        class-names
-        :ui="{
-          container: 'mt-4',
-          item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
-        }"
-      >
-        <template #default="{ item }">
-          <EventsBanners
+      <!-- Embla DOM differs after hydration — SSR markup matches #fallback to avoid console mismatches -->
+      <ClientOnly>
+        <template #fallback>
+          <div class="mt-4 flex gap-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div
+              v-for="(item, i) in banners"
+              :key="i"
+              class="shrink-0 basis-3/4 min-w-0"
+            >
+              <EventsBanners
+                v-if="item"
+                v-bind="item"
+                :type="item.type"
+              >
+                <span :class="item.textClass">{{ item.text }}</span>
+              </EventsBanners>
+            </div>
+          </div>
+        </template>
+        <UCarousel
+          :autoplay="bannerAutoplay"
+          :items="banners"
+          class-names
+          :ui="{
+            container: 'mt-4',
+            item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
+          }"
+        >
+          <template #default="{ item }">
+            <EventsBanners
               v-if="item"
               v-bind="item"
               :type="item.type"
-          >
-            <span :class="item.textClass">{{ item.text }}</span>
-          </EventsBanners>
-        </template>
-      </UCarousel>
+            >
+              <span :class="item.textClass">{{ item.text }}</span>
+            </EventsBanners>
+          </template>
+        </UCarousel>
+      </ClientOnly>
     </div>
 
     <!-- Country Filter -->
@@ -276,8 +296,20 @@ const banners: Banner[] = [
 
     <template v-else>
       <div ref="roomRef">
-        <UCarousel
-            v-if="carouselRooms.length > 0"
+        <ClientOnly v-if="carouselRooms.length > 0">
+          <template #fallback>
+            <div class="mb-6 flex gap-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <RoomCard
+                v-for="(item, index) in carouselRooms"
+                :key="item.id"
+                :room="item"
+                card-layout="carousel"
+                class="h-72 max-w-60 shrink-0"
+                :priority-lcp="roomCardPriorityLcp(index)"
+              />
+            </div>
+          </template>
+          <UCarousel
             ref="roomCarouselRef"
             :items="carouselRooms"
             :autoplay="roomAutoplay"
@@ -287,17 +319,18 @@ const banners: Banner[] = [
             }"
             class="mb-6"
             @select="onRoomCarouselSelect"
-        >
-          <template #default="{ item, index }">
-            <RoomCard
-              v-if="item"
-              :room="item"
-              card-layout="carousel"
-              class="h-72 max-w-60"
-              :priority-lcp="roomCardPriorityLcp(index)"
-            />
-          </template>
-        </UCarousel>
+          >
+            <template #default="{ item, index }">
+              <RoomCard
+                v-if="item"
+                :room="item"
+                card-layout="carousel"
+                class="h-72 max-w-60"
+                :priority-lcp="roomCardPriorityLcp(index)"
+              />
+            </template>
+          </UCarousel>
+        </ClientOnly>
       </div>
 
       <div class="mx-3">
