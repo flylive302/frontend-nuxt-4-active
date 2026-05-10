@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import type { Badge, UserBadge } from '~/types/progression/badge'
 import { BADGE_CATEGORY_COLORS, BADGE_RARITY_COLORS } from '~/constants/badges'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -34,6 +35,10 @@ const isDisplayed = computed(() => props.userBadge?.is_displayed ?? false)
 const _categoryColor = computed(() => BADGE_CATEGORY_COLORS[props.badge.category])
 const rarityColor = computed(() => 
   props.badge.rarity ? BADGE_RARITY_COLORS[props.badge.rarity] : 'text-gray-400'
+)
+
+const displayImageUrl = computed(() =>
+  withImageKitTransform(props.badge.image_url, { w: 128, q: 75 }),
 )
 
 /**
@@ -83,7 +88,7 @@ function handleToggle(): void {
 
     <!-- Badge Image -->
     <NuxtImg
-      :src="badge.image_url"
+      :src="displayImageUrl"
       :alt="badge.name"
       class="size-16 mx-auto mb-2 object-contain"
     />

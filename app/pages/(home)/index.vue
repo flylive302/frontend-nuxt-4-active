@@ -116,25 +116,32 @@ watch(
   { flush: 'post' },
 )
 
-const lcpRoomPreloadHref = computed(() => {
-  const first = carouselRooms.value[0]
-  if (!first) return ''
-  return withImageKitTransform(first.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 400, q: 75 })
+function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
+  if (!room) return ''
+  return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 400, q: 75 })
+}
+
+/** Preload first two carousel backgrounds — Embla often centers slide 0 or 1 before `select` fires. */
+const lcpRoomPreloadHrefs = computed(() => {
+  const hrefs = new Set<string>()
+  const href0 = roomBackgroundPreloadHref(carouselRooms.value[0])
+  const href1 = roomBackgroundPreloadHref(carouselRooms.value[1])
+  if (href0) hrefs.add(href0)
+  if (href1) hrefs.add(href1)
+  return [...hrefs]
 })
 
 useHead(() => {
-  const href = lcpRoomPreloadHref.value
-  if (!href) return {}
+  const hrefs = lcpRoomPreloadHrefs.value
+  if (!hrefs.length) return {}
   return {
-    link: [
-      {
-        rel: 'preload',
-        as: 'image',
-        href,
-        fetchpriority: 'high',
-        imagesizes: 'min(72vw, 240px)',
-      },
-    ],
+    link: hrefs.map((href) => ({
+      rel: 'preload',
+      as: 'image',
+      href,
+      fetchpriority: 'high' as const,
+      imagesizes: 'min(72vw, 240px)',
+    })),
   }
 })
 
@@ -237,50 +244,59 @@ const banners: Banner[] = [
 <template>
   <main>
 
-    <!-- Following Carousel (ranked by XP + follower count) -->
-    <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3"/>
-    
-    <div v-else ref="bannerRef">
-      <!-- Embla DOM differs after hydration — SSR markup matches #fallback to avoid console mismatches -->
-      <ClientOnly>
-        <template #fallback>
-          <div class="mt-4 flex gap-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div
-              v-for="(item, i) in banners"
-              :key="i"
-              class="shrink-0 basis-3/4 min-w-0"
+    <!-- Following vs banners depends on auth-specific API — SSR placeholder avoids branch mismatches -->
+    <ClientOnly>
+      <template #fallback>
+        <div
+          class="mt-4 mx-3 min-h-[156px] rounded-2xl bg-white/5 animate-pulse"
+          aria-hidden="true"
+        />
+      </template>
+      <div>
+        <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3" />
+        <div v-else ref="bannerRef">
+          <!-- Embla DOM differs after hydration — SSR markup matches #fallback to avoid console mismatches -->
+          <ClientOnly>
+            <template #fallback>
+              <div class="mt-4 flex gap-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div
+                  v-for="(item, i) in banners"
+                  :key="i"
+                  class="shrink-0 basis-3/4 min-w-0"
+                >
+                  <EventsBanners
+                    v-if="item"
+                    v-bind="item"
+                    :type="item.type"
+                  >
+                    <span :class="item.textClass">{{ item.text }}</span>
+                  </EventsBanners>
+                </div>
+              </div>
+            </template>
+            <UCarousel
+              :autoplay="bannerAutoplay"
+              :items="banners"
+              class-names
+              :ui="{
+                container: 'mt-4',
+                item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
+              }"
             >
-              <EventsBanners
-                v-if="item"
-                v-bind="item"
-                :type="item.type"
-              >
-                <span :class="item.textClass">{{ item.text }}</span>
-              </EventsBanners>
-            </div>
-          </div>
-        </template>
-        <UCarousel
-          :autoplay="bannerAutoplay"
-          :items="banners"
-          class-names
-          :ui="{
-            container: 'mt-4',
-            item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
-          }"
-        >
-          <template #default="{ item }">
-            <EventsBanners
-              v-if="item"
-              v-bind="item"
-              :type="item.type"
-            >
-              <span :class="item.textClass">{{ item.text }}</span>
-            </EventsBanners>
-          </template>
-        </UCarousel>
-      </ClientOnly>
-    </div>
+              <template #default="{ item }">
+                <EventsBanners
+                  v-if="item"
+                  v-bind="item"
+                  :type="item.type"
+                >
+                  <span :class="item.textClass">{{ item.text }}</span>
+                </EventsBanners>
+              </template>
+            </UCarousel>
+          </ClientOnly>
+        </div>
+      </div>
+    </ClientOnly>
 
     <!-- Country Filter -->
     <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />

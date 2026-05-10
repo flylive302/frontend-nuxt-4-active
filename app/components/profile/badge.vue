@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
 import type { Colors } from '~/types/colors'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ProfileBadge only supports a subset of colors
 type BadgeColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'>
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   color?: BadgeColor
   badgeSrc?: string
   txt?: string | number
@@ -18,6 +19,10 @@ withDefaults(defineProps<{
   imgAlt: "User badge",
   showBadge: true,
 })
+
+const displayBadgeSrc = computed(() =>
+  withImageKitTransform(props.badgeSrc, { w: 64, q: 75 }),
+)
 
 // Tailwind-safe variants
 const variantMap: Record<BadgeColor, string> = {
@@ -36,7 +41,7 @@ const variantMap: Record<BadgeColor, string> = {
   <div class="flex items-center w-fit">
     <NuxtImg
         v-if="showBadge"
-        :src="badgeSrc"
+        :src="displayBadgeSrc"
         :alt="imgAlt"
         class="w-6 relative z-10 shrink-0"
         :width="64"

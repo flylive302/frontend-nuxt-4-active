@@ -10,6 +10,7 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import type { LevelConfig } from '~/types/user/bootstrap'
 import { computeLevelStatus } from '~/utils/levels'
 import type { LevelComputedStatus } from '~/utils/levels'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props
@@ -123,6 +124,10 @@ const currentBadge = computed(() => {
     : null
 })
 
+const heroBadgeIconSrc = computed(() =>
+  withImageKitTransform(currentBadge.value?.image_url ?? props.defaultBadgeUrl, { w: 128, q: 75 }),
+)
+
 const levelConfig = computed<LevelConfig[]>(() =>
   sortedConfigs.value
 )
@@ -211,7 +216,7 @@ const tableData = computed<LevelRow[]>(() =>
       <!-- Level Description -->
       <div class="flex gap-2 items-center">
         <NuxtImg
-          :src="currentBadge?.image_url ?? defaultBadgeUrl"
+          :src="heroBadgeIconSrc"
           class="w-8 relative z-10 shrink-0"
           width="18"
           height="18"

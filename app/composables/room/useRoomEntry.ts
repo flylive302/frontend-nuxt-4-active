@@ -22,6 +22,7 @@ export function useRoomEntry() {
   const roomStore = useRoomStore()
   const authStore = useAuthStore()
   const { api } = useApi()
+  const { fetchRoomById } = useRoom()
   const route = useRoute()
 
   const showPasswordPrompt = ref(false)
@@ -100,6 +101,7 @@ export function useRoomEntry() {
 
     roomStore.setCurrentRoom(room, fromRoute)
     navigateTo(`/room/${room.id}`)
+    void fetchRoomById(room.id)
   }
 
   /**

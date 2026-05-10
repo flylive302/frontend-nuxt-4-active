@@ -14,9 +14,9 @@ const isAuthRoute = computed(() => /^\/(log-in|sign-up|forgot-password)(\/|$)/.t
 // burned TLS handshake budget for no gain (Lighthouse: "unused preconnect").
 useHead(() => isAuthRoute.value ? {} : {
     link: [
-        { rel: 'preconnect', href: 'https://ik.imagekit.io', crossorigin: '' },
+        { rel: 'preconnect', href: 'https://ik.imagekit.io', crossorigin: 'anonymous' },
         { rel: 'dns-prefetch', href: 'https://ik.imagekit.io' },
-        { rel: 'preconnect', href: 'https://assets.flyliveapp.com', crossorigin: '' },
+        { rel: 'preconnect', href: 'https://assets.flyliveapp.com', crossorigin: 'anonymous' },
         { rel: 'dns-prefetch', href: 'https://assets.flyliveapp.com' },
     ]
 })

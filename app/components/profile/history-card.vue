@@ -2,6 +2,7 @@
 import { ASSETS } from '~/constants/assets'
 import type { GiftRarity } from '~/types/user/user-profile'
 import { GIFT_RARITY_CONFIG } from '~/types/user/user-profile'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props
@@ -51,6 +52,10 @@ const formattedQuantity = computed(() => {
   }
   return String(props.quantity)
 })
+
+const displayBadgeSrc = computed(() =>
+  withImageKitTransform(props.badgeSrc, { w: 256, q: 75 }),
+)
 </script>
 
 <template>
@@ -70,7 +75,7 @@ const formattedQuantity = computed(() => {
 
     <!-- Item Image -->
     <NuxtImg
-      :src="badgeSrc"
+      :src="displayBadgeSrc"
       :alt="itemName"
       class="w-full aspect-square object-contain rounded-xl overflow-hidden"
       loading="lazy"
