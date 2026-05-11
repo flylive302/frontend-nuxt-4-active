@@ -22,10 +22,11 @@ export default defineNuxtConfig({
         '/forgot-password': { prerender: true, ssr: true },
         // Callback is dynamic (OAuth code exchange depends on URL params) → keep SSR
         '/callback': { ssr: true },
-        // Home: SSR + blocking rooms fetch so LCP img URLs are in the HTML (overrides /** below).
-        // Do not add public edge `cache`/`isr` here: HTML is session-specific (auth middleware).
-        // TTFB is dominated by worker + Laravel; API `GET /rooms` uses short `s-maxage` (see RoomController).
-        '/': { ssr: true },
+        // Home: SSR + ISR (60 s Cloudflare edge cache) drastically cuts TTFB.
+        // Rooms data is public (same for all users); user-specific data (badge, avatar,
+        // following carousel) loads client-side. Auth middleware runs client-side and
+        // redirects unauthenticated visitors to /log-in after hydration.
+        '/': { ssr: true, isr: 60 },
         // Everything else: SPA (preserves existing behaviour)
         '/**': { ssr: false },
     },

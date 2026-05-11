@@ -84,7 +84,9 @@ export const headConfig: HeadConfig = {
         { rel: 'manifest', href: '/manifest.webmanifest' },
         { rel: 'apple-touch-icon', href: '/pwa-assets/apple-touch-icon-180x180.png', sizes: '180x180' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp' },
+        // Logo preload is on auth pages only (where it is the LCP candidate).
+        // Home page uses LOGO_SM + LOGO_TEXT; preloading the large logo there wastes
+        // a high-priority connection slot and fires a "preloaded but unused" warning.
         ...appleSplashScreens,
     ]
 }

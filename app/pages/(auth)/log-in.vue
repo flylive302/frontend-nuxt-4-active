@@ -14,6 +14,9 @@ definePageMeta({
   layoutTransition: false,
 })
 
+// LCP preload — large logo is the LCP candidate on this prerendered page
+useHead({ link: [{ rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp' }] })
+
 // SEO — rendered server-side for crawler and Lighthouse SEO score
 useSeoMeta({
   title: 'Log In — FlyLive',

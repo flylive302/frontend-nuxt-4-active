@@ -4,9 +4,9 @@ import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { withImageKitTransform } from '~/utils/imagekit'
+import HomeCountryFilter from '~/components/home/country-filter.vue'
 
 const HomeFollowingCarousel = defineAsyncComponent(() => import('~/components/home/following-carousel.vue'))
-const HomeCountryFilter = defineAsyncComponent(() => import('~/components/home/country-filter.vue'))
 const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
 const EventsBanners = defineAsyncComponent(() => import('~/components/events/banners.vue'))
 
@@ -96,10 +96,12 @@ function onRoomCarouselSelect(index: number): void {
   hadRoomCarouselSelectEvent.value = true
 }
 
-function roomCardPriorityLcp(index: number): boolean {
-  if (index === 0) return true  // SSR-baked LCP candidate — always eager regardless of Embla snap
-  if (!hadRoomCarouselSelectEvent.value) return index === 1
-  return index === roomCarouselSnapIndex.value
+function roomCardPriorityLcp(_index: number): boolean {
+  // All carousel slides are eager — whichever Embla snaps to must already be loaded.
+  // loading=lazy can never be overridden by JS, so any lazy slide that becomes the LCP
+  // candidate forces a Low-priority fetch. Service worker serves all 5 from cache; no
+  // network cost on repeat visits.
+  return true
 }
 
 function roomCardHighFetchPriority(index: number): boolean {

@@ -13,6 +13,7 @@ definePageMeta({
   layoutTransition: false,
 })
 
+useHead({ link: [{ rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp' }] })
 useSeoMeta({
   title: 'Reset Password — FlyLive',
   description: 'Reset your FlyLive account password to regain access to your account.',

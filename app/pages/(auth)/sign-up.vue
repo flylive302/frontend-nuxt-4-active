@@ -14,6 +14,7 @@ definePageMeta({
 })
 
 useThemeColor('#000002')
+useHead({ link: [{ rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp' }] })
 useSeoMeta({
   title: 'Sign Up — FlyLive',
   description: 'Create your FlyLive account to join live audio rooms, connect with hosts, and start broadcasting.',
