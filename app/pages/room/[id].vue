@@ -213,7 +213,7 @@ onUnmounted(() => {
           @dismiss="dismissAppAnnouncement"
         />
 
-        <LazyRoomSeatDrawer title="Room Seat Drawer" description="Room Seat Description" />
+        <LazyRoomSeatDrawer />
 
         <!-- Bottom Section: Chat + Controls -->
         <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
