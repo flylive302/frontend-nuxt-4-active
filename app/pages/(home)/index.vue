@@ -5,6 +5,7 @@ import { ASSETS } from '~/constants/assets'
 import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { withImageKitTransform } from '~/utils/imagekit'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
+import type { RoomsResponse } from '~/types/room/room'
 
 const HomeFollowingCarousel = defineAsyncComponent(() => import('~/components/home/following-carousel.vue'))
 const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
@@ -51,9 +52,9 @@ const selectedCountry = ref<string>('')
 const { data: roomsResponse, status: roomsStatus } = useAsyncData(
   'home-rooms',
   async () => {
-    const params: { page: number; country?: string } = { page: 1 }
+    const params: Record<string, string | number> = { page: 1 }
     if (selectedCountry.value) params.country = selectedCountry.value
-    return await fetchRooms(params)
+    return await $fetch<RoomsResponse>('/api/rooms', { params })
   },
   {
     watch: [selectedCountry],
