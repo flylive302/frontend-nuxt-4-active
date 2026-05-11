@@ -88,6 +88,11 @@ body {
     overscroll-behavior-y: contain;
 }
 
+html {
+    /* Prevent viewport width shift when scrollbar appears/disappears (CLS) */
+    scrollbar-gutter: stable;
+}
+
 /* Nuxt root: let each page/layout paint the background */
 #__nuxt {
     background: transparent;

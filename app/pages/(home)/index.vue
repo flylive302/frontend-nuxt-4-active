@@ -97,12 +97,13 @@ function onRoomCarouselSelect(index: number): void {
 }
 
 function roomCardPriorityLcp(index: number): boolean {
-  if (!hadRoomCarouselSelectEvent.value) return index === 0 || index === 1
+  if (index === 0) return true  // SSR-baked LCP candidate — always eager regardless of Embla snap
+  if (!hadRoomCarouselSelectEvent.value) return index === 1
   return index === roomCarouselSnapIndex.value
 }
 
 function roomCardHighFetchPriority(index: number): boolean {
-  if (!hadRoomCarouselSelectEvent.value) return index === 0
+  if (index === 0) return true  // must match the preload URL (q=75) — never downgrade after snap
   return index === roomCarouselSnapIndex.value
 }
 
@@ -252,7 +253,8 @@ const banners: Banner[] = [
     <ClientOnly>
       <template #fallback>
         <div
-          class="mt-4 mx-3 min-h-[156px] rounded-2xl bg-white/5 animate-pulse"
+          class="pt-4 mx-3 rounded-2xl bg-white/5 animate-pulse"
+          style="min-height: 120px"
           aria-hidden="true"
         />
       </template>
