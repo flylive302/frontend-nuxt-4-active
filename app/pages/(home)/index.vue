@@ -360,7 +360,7 @@ const banners: Banner[] = [
               <RoomCard
                 :room="cell"
                 card-layout="grid"
-                class="h-56 max-w-40 mb-4"
+                class="h-56 w-full mb-4"
               />
             </div>
           </template>
