@@ -33,8 +33,8 @@ const { fetchRankedFollowing } = useFollowingData()
 const { data: rankedFollowing } = useAsyncData(
   'home-following-ranked',
   () => fetchRankedFollowing(),
-  // Blocking: SSR must agree with client on following vs banner branch (v-if / v-else) or Vue hydration mismatches.
-  { lazy: false }
+  // This branch is client-only rendered below; keep non-blocking to reduce home TTFB.
+  { lazy: true }
 )
 
 // ---- Room Logic
@@ -53,8 +53,6 @@ const { data: roomsResponse, status: roomsStatus } = useAsyncData(
   {
     watch: [selectedCountry],
     lazy: false,
-    // Always fetch fresh data — active_countries must be current
-    getCachedData: () => undefined,
   }
 )
 

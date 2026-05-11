@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const open = defineModel < boolean > ('open', { default: false })
 const inboxStore = useInboxStore()
+const isClientHydrated = ref(false)
+
+onMounted(() => {
+  isClientHydrated.value = true
+})
 
 const officialBadge = computed(() => {
   const count = inboxStore.officialUnreadCount
@@ -41,7 +46,7 @@ const officialBadge = computed(() => {
         </svg>
       </UButton>
       <UButton
-          :aria-label="officialBadge ? `Official messages, ${officialBadge} unread` : 'Official messages'"
+          :aria-label="isClientHydrated && officialBadge ? `Official messages, ${officialBadge} unread` : 'Official messages'"
           size="md"
           variant="ghost"
           to="/inbox/official"
@@ -49,7 +54,7 @@ const officialBadge = computed(() => {
       >
         <UIcon name="i-lucide-bell" class="size-5 text-white" aria-hidden="true" />
         <span
-            v-if="officialBadge"
+            v-if="isClientHydrated && officialBadge"
             aria-hidden="true"
             class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 bg-error text-white text-[10px] font-bold rounded-full flex items-center justify-center"
         >

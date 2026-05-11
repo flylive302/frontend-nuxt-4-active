@@ -159,6 +159,10 @@ export function useBootstrapInit() {
    */
   function scheduleAssetDownload(): void {
     if (!authStore.token) return
+    const route = useRoute()
+    // Home is on the critical perf path: avoid boot-time badge/image floods there.
+    // Route-scoped assets still load when users navigate to their feature pages.
+    if (route.path === '/' || route.path === '') return
 
     const schedule = typeof requestIdleCallback !== 'undefined'
       ? requestIdleCallback

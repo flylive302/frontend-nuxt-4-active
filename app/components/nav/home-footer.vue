@@ -10,8 +10,13 @@ const inboxStore = useInboxStore();
 const route = useRoute();
 const room = useRoom();
 const { enterRoom: doRoomEntry } = useRoomEntry();
+const isClientHydrated = ref(false);
 
 const createRoomOpen = ref(false);
+
+onMounted(() => {
+  isClientHydrated.value = true;
+});
 
 const navItems = [
   { to: '/', index: 0 },
@@ -47,6 +52,14 @@ const inboxBadge = computed(() => {
   if (count === 0) return null
   return count > 99 ? '99+' : String(count)
 })
+
+const profileFrameAssetUrl = computed(() =>
+  isClientHydrated.value ? (authStore?.user?.frame ?? undefined) : undefined
+)
+
+const profileAvatarImg = computed(() =>
+  isClientHydrated.value ? (authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER) : ASSETS.AVATAR_PLACEHOLDER
+)
 </script>
 
 <template>
@@ -88,14 +101,14 @@ const inboxBadge = computed(() => {
       </UButton>
       <UButton 
         to="/inbox" class="flex-middle relative" 
-        :aria-label="inboxBadge ? `Inbox, ${inboxBadge} unread` : 'Inbox'"
+        :aria-label="isClientHydrated && inboxBadge ? `Inbox, ${inboxBadge} unread` : 'Inbox'"
         :variant="activeIndex === 3 ? 'solid' : 'ghost'"
         square
         size="xl"
       >
         <UIcon class="size-8 drop-shadow-md" :name="activeIndex === 3 ? 'i-lucide-message-circle' : 'i-lucide-message-circle'" />
         <span
-            v-if="inboxBadge"
+            v-if="isClientHydrated && inboxBadge"
             class="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center"
         >
           {{ inboxBadge }}
@@ -106,8 +119,8 @@ const inboxBadge = computed(() => {
             class="w-13"
             :animated="true"
             defer-frame-animation
-            :frame-asset-url="authStore?.user?.frame ?? undefined"
-            :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+            :frame-asset-url="profileFrameAssetUrl"
+            :img="profileAvatarImg"
         />
       </NuxtLink>
     </div>
