@@ -22,7 +22,7 @@
       padding: 3rem 1.5rem 1.5rem;
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .header-inner { max-width: 32rem; margin: 0 auto; }
+    .header-inner { max-width: 36rem; margin: 0 auto; }
     .back-link {
       font-size: 0.75rem; color: #737373; display: inline-flex; align-items: center; gap: 0.25rem;
       margin-bottom: 1rem; transition: color 0.15s;
@@ -31,19 +31,13 @@
     .page-title { font-size: 1.5rem; font-weight: 700; margin-top: 0.75rem; }
     .page-date { font-size: 0.875rem; color: #737373; margin-top: 0.25rem; }
 
-    .content { padding: 2rem 1.5rem; }
-    .content-inner { max-width: 32rem; margin: 0 auto; }
-    .section-title { font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
-    .section-text { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; margin-bottom: 0.5rem; }
-    .section-list { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; padding-left: 1.25rem; margin-top: 0.5rem; }
-    .section-list li { margin-bottom: 0.25rem; }
-
-    .notice {
-      margin-top: 2rem; padding: 1rem; border-radius: 0.75rem;
-      background: rgba(120,53,15,0.3); border: 1px solid rgba(120,53,15,0.3);
-    }
-    .notice p { font-size: 0.75rem; color: #fbbf24; }
-    .notice strong { color: #fbbf24; }
+    .content { padding: 2rem 1.5rem 4rem; }
+    .content-inner { max-width: 36rem; margin: 0 auto; }
+    .section-title { font-size: 1.125rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #fff; }
+    .section-text { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; margin-bottom: 0.6rem; }
+    .section-list { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; padding-left: 1.25rem; margin-top: 0.5rem; margin-bottom: 0.6rem; }
+    .section-list li { margin-bottom: 0.3rem; }
+    .highlight { color: #e5e5e5; }
   </style>
 </head>
 <body>
@@ -57,57 +51,163 @@
 
   <main class="content">
     <article class="content-inner">
+
       <section>
         <h2 class="section-title">1. Introduction</h2>
         <p class="section-text">
-          FlyLive ("we", "our", "us") operates the FlyLive mobile application and website
-          (flyliveapp.com). This Privacy Policy explains how we collect, use, disclose,
-          and safeguard your information when you use our service.
+          FlyLive ("we", "our", "us") operates the FlyLive mobile application and website (flyliveapp.com). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service. By using FlyLive, you agree to the collection and use of information in accordance with this policy.
         </p>
         <p class="section-text">
-          By using FlyLive, you agree to the collection and use of information in accordance
-          with this policy. If you do not agree, please do not use our service.
+          FlyLive is restricted to users who are <span class="highlight">18 years of age or older</span>. We do not knowingly collect information from anyone under 18.
+        </p>
+        <p class="section-text">
+          Contact us at <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a> for any privacy-related questions.
         </p>
       </section>
 
       <section>
         <h2 class="section-title">2. Information We Collect</h2>
-        <p class="section-text">We collect information you provide directly, including:</p>
+        <p class="section-text"><strong class="highlight">Account information you provide:</strong></p>
         <ul class="section-list">
-          <li>Name and profile information</li>
-          <li>Phone number and country</li>
-          <li>Email address (optional, via social login)</li>
-          <li>Date of birth and gender</li>
-          <li>Profile photos and room images</li>
-          <li>Transaction and virtual currency data</li>
+          <li>Name, display name, and profile bio</li>
+          <li>Phone number, email address (optional via social login), date of birth, gender, and country</li>
+          <li>Profile photo and room logo — hosted via ImageKit CDN</li>
+          <li>Password (stored as a one-way cryptographic hash; we cannot read it)</li>
+        </ul>
+        <p class="section-text"><strong class="highlight">Authentication data:</strong></p>
+        <ul class="section-list">
+          <li>OAuth provider user IDs (Google, Facebook, Apple) and encrypted access tokens, when you sign in via social login</li>
+          <li>Session tokens issued by our platform</li>
+        </ul>
+        <p class="section-text"><strong class="highlight">Device and session data:</strong></p>
+        <ul class="section-list">
+          <li>IP address, user agent string, and login timestamps</li>
+          <li>Device fingerprint (a non-identifying hash derived from device characteristics, used for security and fraud prevention)</li>
+          <li>Push notification token, stored to deliver notifications you have opted into</li>
+        </ul>
+        <p class="section-text"><strong class="highlight">Location:</strong></p>
+        <ul class="section-list">
+          <li>We detect your country from your IP address to set regional defaults. We do not collect GPS coordinates or precise location.</li>
+        </ul>
+        <p class="section-text"><strong class="highlight">Platform activity:</strong></p>
+        <ul class="section-list">
+          <li>Login history, profile visits, in-app activity</li>
+          <li>Virtual economy data: coin and diamond balances, coin grant request history, diamond exchange history, lucky draw history</li>
+          <li>Direct messages and room chat messages</li>
+          <li>VIP status and level history</li>
         </ul>
       </section>
 
       <section>
-        <h2 class="section-title">3. Account Deletion</h2>
+        <h2 class="section-title">3. How We Use Your Information</h2>
+        <ul class="section-list">
+          <li>To create and maintain your account and authenticate your identity</li>
+          <li>To operate real-time audio rooms and platform features</li>
+          <li>To manage your virtual economy balance and transaction history</li>
+          <li>To send notifications you have opted into</li>
+          <li>To detect and prevent fraud, spam, abuse, and unauthorized access</li>
+          <li>To enforce our Terms of Service and community guidelines</li>
+          <li>To improve platform features and performance</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">4. Audio &amp; Real-Time Communications</h2>
         <p class="section-text">
-          You can delete your account at any time through the app's profile settings.
-          Upon deletion, your account enters a 30-day grace period during which you
-          can contact support to cancel. After 30 days, your personal data is permanently
-          deleted from our servers, except for transaction records retained for legal compliance.
+          Audio is streamed in real-time between room participants using WebRTC technology. <span class="highlight">Audio is never recorded, stored, or analyzed by FlyLive.</span> When a room session ends, no audio data is retained.
+        </p>
+        <p class="section-text">
+          Room session metadata (participant counts, activity timestamps) is retained for platform statistics. Audio content is not retained under any circumstances.
         </p>
       </section>
 
       <section>
-        <h2 class="section-title">4. Contact Us</h2>
+        <h2 class="section-title">5. Information Sharing</h2>
+        <p class="section-text">We do not sell your personal data. We share data only in the following limited circumstances:</p>
+        <ul class="section-list">
+          <li><strong class="highlight">ImageKit CDN</strong> — hosts your profile photos and room images. ImageKit receives image files only; no other personal data is shared.</li>
+          <li><strong class="highlight">Google, Facebook, Apple OAuth</strong> — used only for sign-in. We receive only the data you authorize during the OAuth flow.</li>
+          <li><strong class="highlight">Legal compliance</strong> — we may disclose data when required by valid legal process, court order, or applicable law.</li>
+          <li>No advertising networks, data brokers, or third-party analytics receive your data.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">6. Virtual Economy</h2>
         <p class="section-text">
-          For privacy-related questions, contact us at:
+          Coins and diamonds are <span class="highlight">virtual platform tokens with no monetary value</span>. They cannot be exchanged for real-world currency, goods, or services under any circumstances.
+        </p>
+        <p class="section-text">
+          Coin grants are allocated at our discretion based on platform engagement (account activity, community participation). Grant requests are not guaranteed. Transaction records are retained for platform audit purposes even after account deletion.
+        </p>
+        <p class="section-text">
+          Diamonds may be converted to coins at rates set by the platform for eligible agency members. No real-world currency is involved in any such conversion.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">7. Automated Content Filtering</h2>
+        <p class="section-text">
+          To protect users from spam and harassment, some messages from accounts displaying suspicious behavior may be automatically filtered and not delivered to their intended recipients. This is a security measure and does not imply any action against your account.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">8. Data Retention</h2>
+        <ul class="section-list">
+          <li><strong class="highlight">Active accounts:</strong> data is retained while your account is active.</li>
+          <li><strong class="highlight">Deleted accounts:</strong> a 30-day grace period applies. After 30 days, all personal data is permanently deleted. Transaction records may be retained for fraud prevention and legal compliance.</li>
+          <li><strong class="highlight">Security logs:</strong> login history and device security logs are retained for a reasonable period to support abuse prevention and account recovery.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">9. Your Rights</h2>
+        <ul class="section-list">
+          <li><strong class="highlight">Access &amp; edit:</strong> view and update your data in Profile Settings at any time.</li>
+          <li><strong class="highlight">Deletion:</strong> delete your account via Profile → Delete Account. A 30-day grace period applies before permanent deletion.</li>
+          <li><strong class="highlight">Data portability:</strong> contact <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a> to request a copy of your data.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">10. Children's Privacy</h2>
+        <p class="section-text">
+          FlyLive is restricted to users who are 18 years of age or older. We do not knowingly collect personal data from anyone under 18. If we determine that an account belongs to an underage user, that account will be terminated and its data deleted.
+        </p>
+        <p class="section-text">
+          If you believe a minor has created an account, please contact us at <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">11. Security</h2>
+        <ul class="section-list">
+          <li>OAuth tokens are stored encrypted at rest</li>
+          <li>All data is transmitted using HTTPS and WSS (TLS)</li>
+          <li>Failed login attempts trigger automatic account lockout</li>
+          <li>Device fingerprinting is used to detect suspicious login patterns</li>
+        </ul>
+        <p class="section-text">
+          No system is perfectly secure. We cannot guarantee absolute security of data in transit or at rest, but we implement industry-standard protections and continuously improve our security practices.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">12. Changes to This Policy</h2>
+        <p class="section-text">
+          We may update this Privacy Policy from time to time. Material changes will be communicated via in-app notification at least 7 days before they take effect. Continued use of FlyLive after changes take effect constitutes your acceptance of the updated policy.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">13. Contact</h2>
+        <p class="section-text">
+          For privacy-related questions or to exercise your data rights, contact us at:<br>
           <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a>
         </p>
       </section>
 
-      <div class="notice">
-        <p>
-          <strong>Note:</strong> This is a preliminary privacy policy. A comprehensive version
-          covering all data practices, third-party services, and international data transfers
-          will be published before the app's public release on the Google Play Store.
-        </p>
-      </div>
     </article>
   </main>
 </body>

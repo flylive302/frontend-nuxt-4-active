@@ -1,6 +1,5 @@
 /**
  * TypeScript types for Coin Request API
- * @see docs/Backend-Team/new-feature-implementation-complete-guide.md
  */
 
 // ========================================
@@ -14,7 +13,7 @@ export type CoinRequestStatus =
   | 'cancelled'
   | 'expired'
 
-export type CoinRequestType = 'cash' | 'credit'
+export type CoinRequestType = 'grant'
 
 // ========================================
 // Entity Types
@@ -30,21 +29,12 @@ export interface CoinRequestUser {
 }
 
 /**
- * Proof image attached to a coin request
- */
-export interface CoinRequestProof {
-  url: string
-  file_id: string
-  uploaded_at: string
-}
-
-/**
  * Full coin request object from API
  */
 export interface CoinRequest {
   id: number
   user: CoinRequestUser
-  reseller: CoinRequestUser
+  reviewer: CoinRequestUser
   amount: string
   approved_amount: string | null
   final_amount: string
@@ -61,11 +51,6 @@ export interface CoinRequest {
   }
   message: string | null
   admin_note: string | null
-  proofs: CoinRequestProof[] | null
-  credit_days: number | null
-  is_repaid: boolean
-  repaid_at: string | null
-  is_repayment_due: boolean
   processor: {
     id: number
     name: string
@@ -81,27 +66,12 @@ export interface CoinRequest {
 // ========================================
 
 /**
- * Pre-uploaded proof image for coin request (ImageKit CDN upload)
- */
-export interface UploadedProof {
-  url: string
-  file_id: string
-}
-
-/**
- * Payload for creating a new coin request
- * Note: reseller_id is optional - backend uses user's default reseller
+ * Payload for creating a new coin grant request.
+ * Backend automatically uses the user's default reviewer.
  */
 export interface CreateCoinRequestPayload {
   amount: number
   message?: string
-  /**
-   * @deprecated Use uploadedProofs with pre-uploaded URLs instead
-   */
-  proofs?: File[]
-  /** Pre-uploaded proof images (preferred - ImageKit CDN) */
-  uploadedProofs?: UploadedProof[]
-  reseller_id?: number
 }
 
 // ========================================
@@ -159,6 +129,5 @@ export const STATUS_COLORS = {
  * Type colors for UI badges
  */
 export const TYPE_COLORS: Record<CoinRequestType, string> = {
-  cash: 'success',
-  credit: 'info'
+  grant: 'success',
 }

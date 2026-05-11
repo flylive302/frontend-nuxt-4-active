@@ -1,0 +1,141 @@
+<script setup lang="ts">
+import { createLogger } from '~/utils/logger'
+
+type ReportableType = 'user' | 'message' | 'room'
+
+type ReportReason =
+  | 'harassment'
+  | 'spam'
+  | 'inappropriate_content'
+  | 'impersonation'
+  | 'hate_speech'
+  | 'other'
+
+const REASON_OPTIONS: { label: string; value: ReportReason }[] = [
+  { label: 'Harassment or Bullying', value: 'harassment' },
+  { label: 'Spam or Scam', value: 'spam' },
+  { label: 'Inappropriate Content', value: 'inappropriate_content' },
+  { label: 'Impersonation', value: 'impersonation' },
+  { label: 'Hate Speech or Discrimination', value: 'hate_speech' },
+  { label: 'Other', value: 'other' },
+]
+
+const props = defineProps<{
+  open: boolean
+  reportableType: ReportableType
+  reportableId: number
+}>()
+
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+  submitted: []
+}>()
+
+const log = createLogger('[ReportModal]')
+const toast = useToast()
+
+const reason = ref<ReportReason | null>(null)
+const description = ref('')
+const isSubmitting = ref(false)
+
+watch(() => props.open, (open) => {
+  if (open) {
+    reason.value = null
+    description.value = ''
+  }
+})
+
+async function handleSubmit(): Promise<void> {
+  if (!reason.value) return
+
+  isSubmitting.value = true
+  try {
+    const { api } = useApi()
+    await api('/reports', {
+      method: 'POST',
+      body: {
+        reportable_type: props.reportableType,
+        reportable_id: props.reportableId,
+        reason: reason.value,
+        description: description.value || undefined,
+      },
+    })
+
+    toast.add({
+      title: 'Report submitted',
+      description: 'We review all reports within 24 hours.',
+      color: 'success',
+    })
+
+    emit('update:open', false)
+    emit('submitted')
+  } catch (err) {
+    log.error('Failed to submit report:', err)
+    toast.add({
+      title: 'Failed to submit report',
+      description: 'Please try again.',
+      color: 'error',
+    })
+  } finally {
+    isSubmitting.value = false
+  }
+}
+</script>
+
+<template>
+  <UModal
+    :open="open"
+    title="Report"
+    :ui="{ content: 'bg-neutral-900 border border-white/10' }"
+    @update:open="$emit('update:open', $event)"
+  >
+    <template #body>
+      <div class="space-y-4">
+        <p class="text-sm text-neutral-400">
+          Help us keep FlyLive safe. Select the reason for your report.
+        </p>
+
+        <USelect
+          v-model="reason"
+          :items="REASON_OPTIONS"
+          value-key="value"
+          label-key="label"
+          placeholder="Select a reason"
+        />
+
+        <UTextarea
+          v-model="description"
+          placeholder="Additional details (optional)"
+          :rows="3"
+          :maxlength="500"
+        />
+
+        <p class="text-xs text-neutral-500">
+          We review all reports within 24 hours. Submitting false reports is a violation of our Terms of Service.
+        </p>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="flex gap-3 w-full">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          class="flex-1"
+          @click="$emit('update:open', false)"
+        >
+          Cancel
+        </UButton>
+        <UButton
+          color="error"
+          class="flex-1"
+          :disabled="!reason"
+          :loading="isSubmitting"
+          @click="handleSubmit"
+        >
+          Submit Report
+        </UButton>
+      </div>
+    </template>
+  </UModal>
+</template>

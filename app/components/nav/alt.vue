@@ -14,8 +14,8 @@ const props = withDefaults(defineProps<{
   color: 'primary',
   backTo: '/',
   subMenuTo: undefined,
-  firstLink: '/wallet/purchase-coins',
-  secondLink: '/wallet/exchange-diamonds',
+  firstLink: '/coins/request',
+  secondLink: '/coins/exchange',
   linked: false,
 })
 const route = useRoute()

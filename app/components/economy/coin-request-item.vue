@@ -49,13 +49,13 @@ function getStatusIcon(status: CoinRequestStatus): string {
     <div class="flex items-start justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <UAvatar
-          :src="request.reseller.avatar || undefined"
-          :alt="request.reseller.name"
+          :src="request.reviewer.avatar || undefined"
+          :alt="request.reviewer.name"
           size="md"
           :class="[borderClass, 'ring-2 shrink-0']"
         />
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold truncate">{{ request.reseller.name }}</p>
+          <p class="text-sm font-semibold truncate">{{ request.reviewer.name }}</p>
           <p class="text-xs text-muted flex items-center gap-1">
             <UIcon name="i-lucide-calendar" class="w-3 h-3" />
             {{ formatDate(request.created_at) }}
@@ -77,14 +77,6 @@ function getStatusIcon(status: CoinRequestStatus): string {
       </div>
       <div class="flex items-center gap-2">
         <span v-if="request.was_adjusted" class="text-xs text-muted line-through">{{ request.amount }}</span>
-        <UBadge
-          v-if="request.status.value === 'approved' && request.type"
-          :color="request.type.value === 'credit' ? 'info' : 'success'"
-          variant="soft"
-          size="xs"
-        >
-          {{ request.type.label }}
-        </UBadge>
       </div>
     </div>
 
@@ -109,15 +101,5 @@ function getStatusIcon(status: CoinRequestStatus): string {
       </UButton>
     </div>
 
-    <!-- Credit Info -->
-    <div
-      v-if="request.status.value === 'approved' && request.type?.value === 'credit' && request.credit_days"
-      class="mt-3 flex items-center gap-2 text-xs p-2 rounded-lg"
-      :class="request.is_repayment_due ? 'bg-error/10 text-error' : 'bg-info/10 text-info'"
-    >
-      <UIcon :name="request.is_repayment_due ? 'i-lucide-alert-triangle' : 'i-lucide-info'" class="w-4 h-4" />
-      <span v-if="request.is_repayment_due">Credit overdue - please repay!</span>
-      <span v-else>Credit: {{ request.credit_days }} days {{ request.is_repaid ? '(Repaid)' : '' }}</span>
-    </div>
   </div>
 </template>

@@ -1,6 +1,5 @@
 /**
- * TypeScript types for Reseller API
- * @see docs/Backend-Team/chose-or-update-default-coin-reseller-feature.md
+ * TypeScript types for Reviewer API
  */
 
 // ========================================
@@ -31,13 +30,13 @@ export interface ApiValidationError {
 }
 
 // ========================================
-// Reseller Types
+// Reviewer Types
 // ========================================
 
 /**
- * Reseller data returned from API endpoints:
- * - GET /api/resellers
- * - GET /api/user/default-reseller
+ * Reviewer data returned from API endpoints:
+ * - GET /api/reviewers
+ * - GET /api/user/default-reviewer
  */
 export interface ResellerApiRow {
   id: number        // Unique identifier for update requests
@@ -48,9 +47,9 @@ export interface ResellerApiRow {
 }
 
 /**
- * Request body for updating default reseller
- * PUT /api/user/default-reseller
+ * Request body for updating default reviewer
+ * PUT /api/user/default-reviewer
  */
 export interface UpdateDefaultResellerRequest {
-  reseller_id: number
+  reviewer_id: number
 }

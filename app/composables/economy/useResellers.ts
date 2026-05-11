@@ -9,10 +9,8 @@ import { useApi } from '../shared/useApi'
 // ========================================
 
 /**
- * Composable for managing reseller-related API operations.
- * Provides methods to fetch resellers, get/update user's default reseller.
- *
- * @see docs/Backend-Team/chose-or-update-default-coin-reseller-feature.md
+ * Composable for managing reviewer-related API operations.
+ * Provides methods to fetch reviewers, get/update user's default reviewer.
  */
 export function useResellers() {
   // ========================================
@@ -25,33 +23,32 @@ export function useResellers() {
   // ========================================
 
   /**
-   * Fetch all available resellers with optional signature filter.
+   * Fetch all available reviewers with optional signature filter.
    * @param signature - Optional partial match filter for signature field
-   * @returns Promise resolving to array of resellers
+   * @returns Promise resolving to array of reviewers
    */
   async function fetchResellers(signature?: string): Promise<ApiResponse<ResellerApiRow[]>> {
-    // Only include params if signature is provided (ofetch handles undefined gracefully)
     const options = signature ? { params: { signature } } : {}
-    return await api<ApiResponse<ResellerApiRow[]>>('/resellers', options)
+    return await api<ApiResponse<ResellerApiRow[]>>('/reviewers', options)
   }
 
   /**
-   * Get the current user's default reseller.
+   * Get the current user's default reviewer.
    * Returns null in data field if no default is set.
-   * @returns Promise resolving to current default reseller or null
+   * @returns Promise resolving to current default reviewer or null
    */
   async function getDefaultReseller(): Promise<ApiResponse<ResellerApiRow | null>> {
-    return await api<ApiResponse<ResellerApiRow | null>>('/user/default-reseller')
+    return await api<ApiResponse<ResellerApiRow | null>>('/user/default-reviewer')
   }
 
   /**
-   * Update the current user's default reseller.
-   * @param resellerId - ID of the reseller to set as default
-   * @returns Promise resolving to the newly set default reseller
+   * Update the current user's default reviewer.
+   * @param reviewerId - ID of the reviewer to set as default
+   * @returns Promise resolving to the newly set default reviewer
    */
-  async function updateDefaultReseller(resellerId: number): Promise<ApiResponse<ResellerApiRow>> {
-    const body: UpdateDefaultResellerRequest = { reseller_id: resellerId }
-    return await api<ApiResponse<ResellerApiRow>>('/user/default-reseller', {
+  async function updateDefaultReseller(reviewerId: number): Promise<ApiResponse<ResellerApiRow>> {
+    const body: UpdateDefaultResellerRequest = { reviewer_id: reviewerId }
+    return await api<ApiResponse<ResellerApiRow>>('/user/default-reviewer', {
       method: 'PUT',
       body
     })

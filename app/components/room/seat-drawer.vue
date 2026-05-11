@@ -15,6 +15,7 @@ const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockS
 const { myMembership } = useRoomMembers()
 
 const isLoading = ref(false)
+const showMicDialog = ref(false)
 
 // Separate drawer open state from activeSeat (keep seat selected when drawer closes)
 const isOpen = ref(false)
@@ -65,6 +66,27 @@ function handleStartInvite() {
  * loss if the take then races and fails.
  */
 async function handleTakeSeat() {
+  if (seatIndex.value === null) return
+
+  // Check mic permission state — show rationale dialog before the browser prompt fires
+  try {
+    const result = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+    if (result.state === 'prompt') {
+      showMicDialog.value = true
+      return
+    }
+  } catch {
+    // permissions API not supported — proceed directly
+  }
+
+  await doTakeSeat()
+}
+
+async function handleMicPermissionConfirmed() {
+  await doTakeSeat()
+}
+
+async function doTakeSeat() {
   if (seatIndex.value === null) return
 
   isLoading.value = true
@@ -188,7 +210,12 @@ const isVap = computed(() => {
 </script>
 
 <template>
-  <UDrawer 
+  <RoomMicPermissionDialog
+    v-model:open="showMicDialog"
+    @confirm="handleMicPermissionConfirmed"
+  />
+
+  <UDrawer
     v-model:open="isOpen" 
     title="Seat Options" 
     :class="isVip ? 'min-h-9/12' : ''"

@@ -182,17 +182,49 @@ function handleSelectGift(gift: Gift) {
  */
 async function handleSend() {
   const giftCategory = giftStore.selectedGift?.category;
+  if (giftCategory === 'lucky') {
+    await handleSendLucky();
+    return;
+  }
   const success = await send();
   if (success) {
     haptic("success");
-    enterComboMode(giftCategory === 'lucky' ? 'lucky' : 'normal');
+    enterComboMode('normal');
   }
 }
 
 const roomStore = useRoomStore();
+
+// Lucky Draw odds disclosure — shown before the first lucky gift per session
+const oddsDisclosure = ref<InstanceType<typeof import('../lucky/odds-disclosure.vue').default> | null>(null)
+let pendingLuckySend = false
+
+async function handleSendLucky(): Promise<void> {
+  if (!oddsDisclosure.value) {
+    // Disclosure component not mounted yet — proceed directly
+    await doLuckySend()
+    return
+  }
+  pendingLuckySend = true
+  await oddsDisclosure.value.show()
+}
+
+async function doLuckySend(): Promise<void> {
+  const success = await send()
+  if (success) {
+    haptic('success')
+    enterComboMode('lucky')
+  }
+}
 </script>
 
 <template>
+  <RoomLuckyOddsDisclosure
+    ref="oddsDisclosure"
+    @acknowledged="pendingLuckySend && doLuckySend().then(() => { pendingLuckySend = false })"
+    @dismissed="pendingLuckySend = false"
+  />
+
   <UDrawer v-model:open="isOpen" title="Send Gift" :overlay="false" :ui="{
     content: 'bg-transparent backdrop-blur-xl',
   }" description="Send gifts to speakers in the room">

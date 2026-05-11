@@ -22,7 +22,7 @@
       padding: 3rem 1.5rem 1.5rem;
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .header-inner { max-width: 32rem; margin: 0 auto; }
+    .header-inner { max-width: 36rem; margin: 0 auto; }
     .back-link {
       font-size: 0.75rem; color: #737373; display: inline-flex; align-items: center; gap: 0.25rem;
       margin-bottom: 1rem; transition: color 0.15s;
@@ -31,19 +31,13 @@
     .page-title { font-size: 1.5rem; font-weight: 700; margin-top: 0.75rem; }
     .page-date { font-size: 0.875rem; color: #737373; margin-top: 0.25rem; }
 
-    .content { padding: 2rem 1.5rem; }
-    .content-inner { max-width: 32rem; margin: 0 auto; }
-    .section-title { font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
-    .section-text { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; margin-bottom: 0.5rem; }
-    .section-list { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; padding-left: 1.25rem; margin-top: 0.5rem; }
-    .section-list li { margin-bottom: 0.25rem; }
-
-    .notice {
-      margin-top: 2rem; padding: 1rem; border-radius: 0.75rem;
-      background: rgba(120,53,15,0.3); border: 1px solid rgba(120,53,15,0.3);
-    }
-    .notice p { font-size: 0.75rem; color: #fbbf24; }
-    .notice strong { color: #fbbf24; }
+    .content { padding: 2rem 1.5rem 4rem; }
+    .content-inner { max-width: 36rem; margin: 0 auto; }
+    .section-title { font-size: 1.125rem; font-weight: 600; margin: 2rem 0 0.75rem; color: #fff; }
+    .section-text { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; margin-bottom: 0.6rem; }
+    .section-list { font-size: 0.875rem; color: #a3a3a3; line-height: 1.7; padding-left: 1.25rem; margin-top: 0.5rem; margin-bottom: 0.6rem; }
+    .section-list li { margin-bottom: 0.3rem; }
+    .highlight { color: #e5e5e5; }
   </style>
 </head>
 <body>
@@ -57,20 +51,21 @@
 
   <main class="content">
     <article class="content-inner">
+
       <section>
         <h2 class="section-title">1. Acceptance of Terms</h2>
         <p class="section-text">
-          By accessing or using FlyLive, you agree to be bound by these Terms of Service.
-          If you disagree with any part of the terms, you may not access the service.
+          By accessing or using FlyLive ("we", "our", "us"), you agree to be bound by these Terms of Service and our <a href="/privacy-policy">Privacy Policy</a>. If you do not agree with any part of these Terms, you may not use the service.
+        </p>
+        <p class="section-text">
+          We may update these Terms from time to time. Material changes will be communicated via in-app notification at least 7 days before they take effect. Continued use of FlyLive after changes take effect constitutes your acceptance of the updated Terms.
         </p>
       </section>
 
       <section>
         <h2 class="section-title">2. Age Requirement</h2>
         <p class="section-text">
-          You must be at least 18 years old to use FlyLive. By creating an account,
-          you confirm that you are at least 18 years of age. We do not knowingly
-          collect information from anyone under the age of 18.
+          You must be at least <span class="highlight">18 years of age</span> to create an account or use FlyLive. By registering, you confirm that you are at least 18 years old. We do not knowingly collect information from anyone under 18. Accounts determined to belong to underage users will be terminated and their data deleted.
         </p>
       </section>
 
@@ -78,52 +73,130 @@
         <h2 class="section-title">3. User Conduct</h2>
         <p class="section-text">You agree not to engage in any of the following prohibited activities:</p>
         <ul class="section-list">
-          <li>Posting or sharing explicit, pornographic, or sexually suggestive content</li>
+          <li>Posting or broadcasting explicit, pornographic, or sexually suggestive content</li>
           <li>Harassment, bullying, or threatening behavior toward other users</li>
           <li>Sharing content that promotes violence, hatred, or discrimination</li>
-          <li>Impersonating other users or public figures</li>
+          <li>Impersonating other users, public figures, or FlyLive staff</li>
           <li>Engaging in fraud, scams, or deceptive practices</li>
-          <li>Attempting to exploit, manipulate, or circumvent platform systems</li>
+          <li>Spam, unsolicited messages, or automated account activity</li>
+          <li>Attempting to exploit, circumvent, or reverse-engineer platform systems</li>
+          <li>Creating multiple accounts to evade a suspension or ban</li>
+          <li>Any activity that violates applicable laws or regulations</li>
         </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">4. Virtual Economy &amp; Coin Grant System</h2>
         <p class="section-text">
-          Violation of these rules will result in immediate and permanent account suspension.
+          FlyLive features virtual currencies — <span class="highlight">Coins</span> and <span class="highlight">Diamonds</span>. These are platform tokens with <span class="highlight">no monetary value</span>. They cannot be exchanged for real-world currency, goods, or services under any circumstances.
+        </p>
+        <ul class="section-list">
+          <li>Coins are allocated at the sole discretion of FlyLive based on your account engagement (account age, activity level, community contributions). Coin grants are not guaranteed; the platform may approve, deny, or adjust any grant request at any time without providing a reason.</li>
+          <li>Coin and diamond allocations are final and non-reversible. No real-money transactions occur within FlyLive.</li>
+          <li>Diamonds may be converted to coins at rates set by the platform for eligible agency members only. No real-world currency is involved in any such conversion.</li>
+          <li>The platform reserves the right to adjust, revoke, or expire virtual currency balances at any time, including for violations of these Terms.</li>
+          <li>Transaction records are retained for platform audit purposes even after account deletion.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">5. Lucky Draw</h2>
+        <p class="section-text">
+          Lucky Draw is an entertainment feature where users spend virtual coins for a chance to receive a larger virtual coin amount. All prizes are virtual coins with no monetary value. Lucky Draw does not constitute gambling.
+        </p>
+        <ul class="section-list">
+          <li>The odds and multipliers for each outcome are disclosed in the app before participation.</li>
+          <li>No real-world prizes, monetary consideration, or cash equivalents are awarded under any circumstances.</li>
+          <li>Participation requires virtual coins; no real money is spent.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">6. Audio Rooms &amp; User Content</h2>
+        <p class="section-text">
+          FlyLive provides real-time audio rooms powered by WebRTC. <span class="highlight">Audio is never recorded, stored, or analyzed by FlyLive.</span> When a room session ends, no audio data is retained.
+        </p>
+        <ul class="section-list">
+          <li>You may not broadcast content that violates these Terms or applicable laws.</li>
+          <li>Room owners and platform administrators may mute, remove, or restrict users from rooms at their discretion.</li>
+          <li>VIP members may have additional platform privileges, including enhanced protections within rooms.</li>
+          <li>You retain responsibility for all content you broadcast or share. By broadcasting, you represent that you have the right to do so.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">7. Content Reporting &amp; Moderation</h2>
+        <p class="section-text">
+          FlyLive provides in-app reporting tools to report users, messages, or room content that violates these Terms.
+        </p>
+        <ul class="section-list">
+          <li>We review all reports and aim to action confirmed violations within <span class="highlight">24 hours</span>.</li>
+          <li>Confirmed violations may result in content removal, account suspension, or permanent ban.</li>
+          <li>Submitting false or malicious reports is itself a violation of these Terms.</li>
+          <li>To report content or users, use the in-app report feature available on user profiles, in direct messages, and in room participant lists.</li>
+          <li>For urgent safety concerns, contact us directly at <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a>.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">8. Automated Content Filtering</h2>
+        <p class="section-text">
+          To protect users from spam and harassment, some messages from accounts displaying suspicious behavior may be automatically filtered and not delivered to their intended recipients. This is a security measure and does not imply any action against your account.
         </p>
       </section>
 
       <section>
-        <h2 class="section-title">4. Virtual Currency & Gifts</h2>
+        <h2 class="section-title">9. Account Management &amp; Termination</h2>
         <p class="section-text">
-          FlyLive features virtual currencies (diamonds, coins) and virtual gifts.
-          Virtual currencies have no real-world monetary value and cannot be exchanged
-          for real currency except through our official programs. All purchases of
-          virtual currency are final and non-refundable.
+          You may delete your account at any time via Profile → Delete Account. A 30-day grace period applies before your data is permanently removed.
+        </p>
+        <p class="section-text">
+          We reserve the right to suspend or permanently terminate accounts for violations of these Terms. In cases of severe violations — including spam, harassment, fraud, illegal activity, or threats to platform integrity — immediate suspension without prior notice may be necessary.
+        </p>
+        <p class="section-text">
+          You may appeal a suspension by contacting <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a>. Banned users may not create new accounts.
         </p>
       </section>
 
       <section>
-        <h2 class="section-title">5. Account Termination</h2>
+        <h2 class="section-title">10. Intellectual Property</h2>
         <p class="section-text">
-          We reserve the right to terminate or suspend your account immediately,
-          without prior notice, for conduct that we determine violates these Terms
-          or is harmful to other users, us, or third parties. You may delete your
-          account at any time through the app settings.
+          FlyLive and its original content, features, and functionality are owned by FlyLive and are protected by applicable intellectual property laws. You may not copy, distribute, or create derivative works from our platform without written permission.
+        </p>
+        <p class="section-text">
+          By sharing content on FlyLive (profile photos, room names, messages), you grant FlyLive a limited, non-exclusive license to display that content within the platform for the purpose of providing the service.
         </p>
       </section>
 
       <section>
-        <h2 class="section-title">6. Contact</h2>
+        <h2 class="section-title">11. Disclaimer of Warranties</h2>
         <p class="section-text">
-          Questions about these Terms? Contact us at
+          FlyLive is provided "as is" and "as available" without warranties of any kind, either express or implied. We do not warrant that the service will be uninterrupted, error-free, or free of harmful components.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">12. Limitation of Liability</h2>
+        <p class="section-text">
+          To the maximum extent permitted by law, FlyLive shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of or inability to use the service, including loss of virtual currency or platform access.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">13. Governing Law</h2>
+        <p class="section-text">
+          These Terms shall be governed by and construed in accordance with applicable law. Any disputes arising under these Terms shall be resolved through good-faith negotiation before resorting to formal proceedings.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">14. Contact</h2>
+        <p class="section-text">
+          Questions about these Terms? Contact us at:<br>
           <a href="mailto:support@flyliveapp.com">support@flyliveapp.com</a>
         </p>
       </section>
 
-      <div class="notice">
-        <p>
-          <strong>Note:</strong> This is a preliminary Terms of Service. A comprehensive version
-          will be published before the app's public release on the Google Play Store.
-        </p>
-      </div>
     </article>
   </main>
 </body>

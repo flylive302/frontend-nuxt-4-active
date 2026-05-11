@@ -1,5 +1,5 @@
 <!-- ~/components/from-conversion-request.vue -->
-<!-- Coin Request Form - Creates coin requests using the user's default reseller -->
+<!-- Coin Request Form - Creates coin grant requests using the user's default reviewer -->
 <script setup lang="ts">
 import { onBeforeUnmount, ref, toRef } from 'vue'
 import type { Colors } from '~/types/colors'

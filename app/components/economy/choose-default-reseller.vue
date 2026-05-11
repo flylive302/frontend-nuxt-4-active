@@ -197,13 +197,13 @@ async function selectReseller(item: CommandItem): Promise<void> {
         selectedReseller.value = response.data
         emit('update:modelValue', response.data.id)
         isModalOpen.value = false
-        toast.add({ title: `${item.name} set as default`, color: 'success' })
+        toast.add({ title: `${item.name} set as default reviewer`, color: 'success' })
       }
     }
   } catch (err) {
     const normalized = normalizeError(err)
     toast.add({
-      title: 'Failed to update reseller',
+      title: 'Failed to update reviewer',
       description: normalized.message,
       color: 'error'
     })
@@ -228,7 +228,7 @@ const commandItems = computed<CommandItem[]>(() =>
 const paletteGroups = computed<CommandGroup[]>(() => [
   {
     id: 'resellers',
-    label: searchTerm.value ? `Resellers matching "${searchTerm.value}"` : 'Resellers',
+    label: searchTerm.value ? `Reviewers matching "${searchTerm.value}"` : 'Reviewers',
     items: commandItems.value
   }
 ])
@@ -237,7 +237,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
 <template>
   <section class="space-y-2">
     <header class="flex items-end justify-between">
-      <h3 class="text-lg font-semibold leading-none">Default Reseller</h3>
+      <h3 class="text-lg font-semibold leading-none">Default Reviewer</h3>
 
       <UButton
         label="Change"
@@ -252,15 +252,15 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       <UDrawer
         id="choose-reseller"
         v-model:open="isModalOpen"
-        title="Choose default reseller"
-        description="Search and select a reseller from the list."
+        title="Choose default reviewer"
+        description="Search and select a reviewer from the list."
       >
         <template #content>
           <UCommandPalette
             v-model:search-term="searchTerm"
             :loading="isFetching || isUpdating"
             :groups="paletteGroups"
-            placeholder="Search Resellers..."
+            placeholder="Search Reviewers..."
             class="h-90"
             selected-icon="i-lucide-circle-check"
             :virtualize="{ estimateSize: 54 }"
@@ -296,7 +296,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
 
             <template #empty>
               <div class="py-6 text-center text-sm opacity-70">
-                No reseller found.
+                No reviewer found.
               </div>
             </template>
           </UCommandPalette>
@@ -305,7 +305,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
             v-if="fetchError"
             color="error"
             variant="subtle"
-            title="Couldn't load resellers"
+            title="Couldn't load reviewers"
             description="Network error. Please try again."
           />
         </template>
@@ -337,6 +337,6 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       </div>
     </div>
 
-    <p v-else class="text-xs text-muted">— No reseller selected —</p>
+    <p v-else class="text-xs text-muted">— No reviewer selected —</p>
   </section>
 </template>

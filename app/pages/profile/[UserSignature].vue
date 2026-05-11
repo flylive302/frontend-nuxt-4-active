@@ -146,6 +146,11 @@ useInfiniteScroll(
 
 const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
 const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions(readonlyProfile, enterRoom)
+
+// ========================================
+// Report User
+// ========================================
+const showReportModal = ref(false)
 </script>
 
 <template>
@@ -390,8 +395,27 @@ const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions
           <UButton v-if="profileId !== authStore.user?.id" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="outline" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
             Chat
           </UButton>
+
+          <UButton
+            v-if="profileId !== authStore.user?.id"
+            icon="i-lucide-flag"
+            variant="ghost"
+            size="md"
+            color="neutral"
+            class="backdrop-blur-xs"
+            @click="showReportModal = true"
+          />
         </div>
       </footer>
+
+      <!-- Report User Modal -->
+      <CommonReportModal
+        v-if="profileId && profileId !== authStore.user?.id"
+        v-model:open="showReportModal"
+        reportable-type="user"
+        :reportable-id="profileId"
+      />
+
       <!-- Password Prompt Modal (for password-protected rooms) -->
       <RoomPasswordPromptModal
         v-if="showPasswordPrompt && pendingRoom"

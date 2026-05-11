@@ -96,9 +96,10 @@ async function handleSend(content: string): Promise<void> {
   await sendMessage(threadId.value, content)
 }
 
-// ── Block / Delete Chat ───────────────────────────────
+// ── Block / Delete Chat / Report ──────────────────────
 const showBlockConfirm = ref(false)
 const showDeleteConfirm = ref(false)
+const showReportModal = ref(false)
 
 function handleBlock(): void {
   showBlockConfirm.value = true
@@ -106,6 +107,10 @@ function handleBlock(): void {
 
 function handleDeleteChat(): void {
   showDeleteConfirm.value = true
+}
+
+function handleReport(): void {
+  showReportModal.value = true
 }
 
 async function confirmBlock(): Promise<void> {
@@ -152,6 +157,7 @@ onBeforeUnmount(() => {
       :gender="thread?.participant.gender"
       @block="handleBlock"
       @delete-chat="handleDeleteChat"
+      @report="handleReport"
     />
 
     <!-- Messages -->
@@ -314,6 +320,14 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </UModal>
+
+    <!-- Report user modal -->
+    <CommonReportModal
+      v-if="thread?.participant.id"
+      v-model:open="showReportModal"
+      reportable-type="user"
+      :reportable-id="thread.participant.id"
+    />
 
     <!-- Delete chat confirm dialog -->
     <UModal v-model:open="showDeleteConfirm">

@@ -38,18 +38,18 @@ onMounted(async () => {
   if (!agencyStore.isAgencyMember) {
     await fetchUserAgency()
   }
-  
+
   // Redirect non-agency members
   if (!agencyStore.isAgencyMember) {
     toast.add({
       title: 'Access Denied',
-      description: 'Only agency members can exchange diamonds for coins.',
+      description: 'Only agency members can convert diamonds to coins.',
       color: 'error',
     })
     await navigateTo('/profile')
     return
   }
-  
+
   // Fetch exchange info (balance updates via socket 'balance.updated')
   await fetchExchangeInfo()
 })
@@ -111,19 +111,19 @@ const userCoins = computed((): number => {
 /**
  * Exchange rate: coins received per diamond.
  */
-const exchangeRate = computed(() => 
+const exchangeRate = computed(() =>
   exchangeInfo.value?.coins_per_diamond ?? 1750
 )
 
 /**
- * Preview calculation showing balance changes after exchange.
+ * Preview calculation showing balance changes after conversion.
  */
 const preview = computed(() => {
   if (!state.diamonds || state.diamonds < 1) return null
   if (state.diamonds > userDiamonds.value) return null
-  
+
   const coinsToReceive = state.diamonds * exchangeRate.value
-  
+
   return {
     diamondsAfter: userDiamonds.value - state.diamonds,
     coinsAfter: userCoins.value + coinsToReceive,
@@ -132,7 +132,7 @@ const preview = computed(() => {
 })
 
 /**
- * Whether exchange can be submitted.
+ * Whether conversion can be submitted.
  */
 const canExchange = computed(() => {
   if (!exchangeInfo.value?.is_enabled) return false
@@ -150,7 +150,7 @@ const canExchange = computed(() => {
  */
 async function fetchExchangeInfo(): Promise<void> {
   isLoading.value = true
-  
+
   try {
     exchangeInfo.value = await loadExchangeInfo()
   } catch (err) {
@@ -166,27 +166,27 @@ async function fetchExchangeInfo(): Promise<void> {
 }
 
 /**
- * Submit exchange request.
+ * Submit conversion request.
  */
 async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
   if (!canExchange.value || isSubmitting.value) return
-  
+
   isSubmitting.value = true
-  
+
   try {
     const { data, message } = await postExchange(state.diamonds!)
-    
+
     // Update local exchange info with new balances
     if (exchangeInfo.value) {
       exchangeInfo.value.user_coins_balance = data.new_coin_balance
       exchangeInfo.value.user_diamonds_balance = data.new_diamond_balance
     }
-    
+
     // Clear form
     state.diamonds = undefined
-    
+
     toast.add({
-      title: 'Exchange Successful',
+      title: 'Conversion Successful',
       description: `Received ${data.coins_received.toLocaleString()} coins`,
       color: 'success',
       icon: 'i-lucide-coins',
@@ -194,7 +194,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
   } catch (err) {
     const normalized = normalizeError(err)
     toast.add({
-      title: 'Exchange Failed',
+      title: 'Conversion Failed',
       description: normalized.message,
       color: 'error',
     })
@@ -206,12 +206,12 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
 
 <template>
   <main>
-    <NavAlt 
-      color="secondary" 
-      back-to="/profile" 
-      :linked="true" 
-      first-link="/wallet/purchase-coins" 
-      second-link="/wallet/exchange-diamonds"
+    <NavAlt
+      color="secondary"
+      back-to="/profile"
+      :linked="true"
+      first-link="/coins/request"
+      second-link="/coins/exchange"
     >
       <template #first-link-text>Coins</template>
       <template #second-link-text>Diamonds</template>
@@ -226,7 +226,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
       class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-secondary/50 animate-[zoom_60s_ease-in-out_infinite]"
     />
 
-    <!-- Exchange Section (Agency Members Only) -->
+    <!-- Convert Diamonds Section (Agency Members Only) -->
     <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-t-4xl -mt-34 relative">
       <div class="glowing-border rounded-lg">
         <div class="flex justify-between items-baseline mx-3">
@@ -240,35 +240,44 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
         </div>
       </div>
 
-      <NuxtLink to="/wallet/transaction-history" class="flex justify-between items-center mt-2">
-        <h2 class="text-md font-semibold">Transaction History:</h2>
+      <NuxtLink to="/coins/activity" class="flex justify-between items-center mt-2">
+        <h2 class="text-md font-semibold">Activity History:</h2>
         <UButton icon="i-lucide-history" color="secondary" variant="soft" class="shadow-xl">Visit</UButton>
       </NuxtLink>
 
       <h2 class="text-lg font-bold leading-tight mt-8">
-        Exchange Your Diamonds with <span class="text-tertiary">FlyLive Coins</span>
+        Convert Your Diamonds to <span class="text-tertiary">FlyLive Coins</span>
       </h2>
       <p class="text-sm text-success">
-        Exchange Rate: 1 Diamond = {{ exchangeRate.toLocaleString() }} Coins
+        Rate: 1 Diamond = {{ exchangeRate.toLocaleString() }} Coins
       </p>
 
-      <!-- Exchange Disabled Alert -->
+      <UAlert
+        color="info"
+        variant="subtle"
+        icon="i-lucide-info"
+        class="mt-3"
+        title="Virtual tokens only"
+        description="This is a conversion between platform virtual tokens. Diamonds and Coins have no real-world monetary value and cannot be converted to real currency."
+      />
+
+      <!-- Conversion Disabled Alert -->
       <UAlert
         v-if="exchangeInfo?.is_enabled === false"
         color="warning"
         variant="subtle"
         icon="i-lucide-alert-triangle"
-        title="Exchange Unavailable"
-        description="Diamond to coin exchange is currently disabled."
+        title="Conversion Unavailable"
+        description="Diamond to coin conversion is currently disabled."
         class="mt-3"
       />
 
-      <!-- Exchange Form -->
-      <UForm 
+      <!-- Conversion Form -->
+      <UForm
         v-else
-        :schema="schema" 
-        :state="state" 
-        class="space-y-3 mt-3" 
+        :schema="schema"
+        :state="state"
+        class="space-y-3 mt-3"
         @submit="onSubmit"
       >
         <UFormField label="Enter Number of Diamonds" name="diamonds" class="w-full" required>
@@ -277,24 +286,24 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
               Available: {{ userDiamonds.toLocaleString() }} diamonds
             </span>
           </template>
-          <UInputNumber 
-            v-model="state.diamonds" 
+          <UInputNumber
+            v-model="state.diamonds"
             :min="1"
             :max="userDiamonds"
-            placeholder="Enter amount" 
-            color="secondary" 
+            placeholder="Enter amount"
+            color="secondary"
             class="w-full"
           />
         </UFormField>
 
         <!-- Preview Section -->
         <template v-if="preview">
-          <p class="font-semibold text-base leading-none">Change in Balances after Exchange:</p>
+          <p class="font-semibold text-base leading-none">Change in Balances after Conversion:</p>
           <div class="flex items-center gap-2 bg-linear-to-br from-neutral-950 to-primary-950 px-2 py-1 inset-shadow-sm ring ring-primary/50 rounded-md">
             <div class="flex items-center gap-1 w-full">
               <NuxtImg :src="ASSETS.DIAMOND_ICON" class="w-8" />
               <p class="text-base font-semibold leading-none">
-                Diamonds: <br> 
+                Diamonds: <br>
                 <span class="text-secondary-400 font-bold text-base">
                   {{ preview.diamondsAfter.toLocaleString() }}
                 </span>
@@ -328,26 +337,18 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
           :description="`You only have ${userDiamonds.toLocaleString()} diamonds available.`"
         />
 
-        <UButton 
-          size="lg" 
-          class="w-full justify-center mt-2" 
-          icon="i-lucide-repeat" 
-          color="secondary" 
+        <UButton
+          size="lg"
+          class="w-full justify-center mt-2"
+          icon="i-lucide-repeat"
+          color="secondary"
           type="submit"
           :loading="isSubmitting"
           :disabled="!canExchange"
         >
-          Exchange
+          Convert
         </UButton>
       </UForm>
-
-<!--      <USeparator color="secondary" class="my-4" label="OR" />-->
-
-<!--      <h2 class="text-lg font-bold leading-tight">-->
-<!--        Request Payout of your Diamonds in <span class="text-success">Real Money</span>.-->
-<!--      </h2>-->
-<!--      <EconomyChooseDefaultReseller color="secondary" />-->
-<!--      <EconomyFromConversionRequest color="secondary" class="mb-18 mt-4" />-->
     </section>
   </main>
 </template>

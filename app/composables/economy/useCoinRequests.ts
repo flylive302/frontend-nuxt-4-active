@@ -16,8 +16,6 @@ import { useApi } from '../shared/useApi'
 /**
  * Composable for managing coin request API operations.
  * Provides methods to create, list, view, and cancel coin requests.
- *
- * @see docs/Backend-Team/new-feature-implementation-complete-guide.md
  */
 export function useCoinRequests() {
   // ========================================
@@ -45,47 +43,21 @@ export function useCoinRequests() {
   }
 
   /**
-   * Create a new coin request.
-   * Backend automatically uses the user's default reseller.
-   * Prefers pre-uploaded proofs (uploadedProofs) over File-based proofs.
+   * Create a new coin grant request.
+   * Backend automatically uses the user's default reviewer.
    *
-   * @param payload - Request data (amount, message, proofs or uploadedProofs)
+   * @param payload - Request data (amount, optional message)
    * @returns Promise resolving to the created coin request
    */
   async function createRequest(
     payload: CreateCoinRequestPayload
   ): Promise<CoinRequestApiResponse<CoinRequest>> {
-    // Use JSON payload if uploadedProofs are provided (new ImageKit CDN flow)
-    if (payload.uploadedProofs?.length) {
-      return await api<CoinRequestApiResponse<CoinRequest>>('/coin-requests', {
-        method: 'POST',
-        body: {
-          amount: payload.amount,
-          message: payload.message?.trim(),
-          proofs: payload.uploadedProofs,
-        },
-      })
-    }
-
-    // Fallback to FormData for backward compatibility with File-based proofs
-    const formData = new FormData()
-    formData.append('amount', String(payload.amount))
-
-    if (payload.message?.trim()) {
-      formData.append('message', payload.message.trim())
-    }
-
-    if (payload.proofs?.length) {
-      payload.proofs.forEach((file, index) => {
-        formData.append(`proofs[${index}]`, file)
-      })
-    }
-
-    // reseller_id is intentionally not sent - backend uses user's default
-
     return await api<CoinRequestApiResponse<CoinRequest>>('/coin-requests', {
       method: 'POST',
-      body: formData
+      body: {
+        amount: payload.amount,
+        message: payload.message?.trim() || undefined,
+      },
     })
   }
 

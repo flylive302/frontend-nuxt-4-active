@@ -11,6 +11,7 @@ defineProps<{
 defineEmits<{
   (e: 'block'): void
   (e: 'deleteChat'): void
+  (e: 'report'): void
 }>()
 
 const router = useRouter()
@@ -64,6 +65,7 @@ const genderLabel = computed(() => {
       v-if="!isSystem"
       :items="[
         [
+          { label: 'Report User', icon: 'i-lucide-flag', color: 'error' as const, onSelect: () => $emit('report') },
           { label: 'Block User', icon: 'i-lucide-ban', color: 'error' as const, onSelect: () => $emit('block') },
           { label: 'Delete Chat', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => $emit('deleteChat') },
         ],

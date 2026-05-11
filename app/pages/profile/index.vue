@@ -101,7 +101,7 @@ onMounted(() => {
     -->
 
     <div class="px-4 mb-12">
-      <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Balance" />
+      <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />

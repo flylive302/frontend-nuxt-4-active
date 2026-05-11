@@ -42,7 +42,7 @@ const currentFilter = computed(() => transactionStore.currentFilter)
 // SSR Data Loading
 // ========================================
 
-await useAsyncData('transaction-history', async () => {
+await useAsyncData('coin-activity', async () => {
   if (transactionStore.transactions.transactionsByDate.length === 0) {
     await fetchTransactions({ type: 'all' }, true)
   }
@@ -88,7 +88,7 @@ if (import.meta.client) {
 
 <template>
   <main>
-    <NavAlt back-to="/wallet/purchase-coins">Transaction History</NavAlt>
+    <NavAlt back-to="/coins/request">Activity History</NavAlt>
     <div class="h-9" />
 
     <!-- Filter Tabs -->
@@ -108,7 +108,7 @@ if (import.meta.client) {
         color="error"
         variant="soft"
         icon="i-lucide-alert-circle"
-        title="Failed to load transactions"
+        title="Failed to load activity"
         :description="error"
       />
       <UButton
@@ -124,9 +124,9 @@ if (import.meta.client) {
     <!-- Empty State -->
     <div v-else-if="isEmpty && !isLoading" class="px-3 py-16 text-center">
       <icon name="i-lucide-receipt" class="size-16 mx-auto text-muted mb-4" />
-      <p class="text-lg font-semibold">No Transactions Yet</p>
+      <p class="text-lg font-semibold">No Activity Yet</p>
       <p class="text-sm text-muted mt-1">
-        Your transaction history will appear here.
+        Your coin activity will appear here.
       </p>
     </div>
 

@@ -50,7 +50,7 @@ watch(lastCoinRequestUpdate, () => {
 
 <template>
   <main>
-    <NavAlt color="tertiary" back-to="/profile" :linked="true" first-link="/wallet/purchase-coins" second-link="/wallet/exchange-diamonds">
+    <NavAlt color="tertiary" back-to="/profile" :linked="true" first-link="/coins/request" second-link="/coins/exchange">
       <template #first-link-text>Coins</template>
       <template #second-link-text>Diamonds</template>
     </NavAlt>
@@ -78,22 +78,14 @@ watch(lastCoinRequestUpdate, () => {
         </div>
       </div>
 
-      <NuxtLink to="/wallet/transaction-history" class="flex justify-between items-center mt-2">
-        <h2 class="text-md font-semibold">Transaction History:</h2>
+      <NuxtLink to="/coins/activity" class="flex justify-between items-center mt-2">
+        <h2 class="text-md font-semibold">Activity History:</h2>
         <UButton icon="i-lucide-history" color="tertiary" variant="soft" class="shadow-xl">Visit</UButton>
       </NuxtLink>
 
       <h2 class="text-lg font-bold mt-8"><span class="text-success">Claim your</span> Coins for using the app</h2>
-      <p class="text-sm text-muted mb-4">Click the Claim button to request your coins. We’ll review your eligibility and automatically add coins to your balance if approved. If rejected, contact support for eligibility details.</p>
+      <p class="text-sm text-muted mb-4">Click the Claim button to request your coins. We'll review your eligibility and automatically add coins to your balance if approved. If rejected, contact support for eligibility details.</p>
 <!--      <EconomyChooseDefaultReseller color="tertiary" />-->
-
-      <!-- <USeparator color="tertiary" class="my-6" label="OR" />
-      <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
-      <div class="flex flex-col gap-3">
-        <EconomyListItemPurchaseCoins />
-        <EconomyListItemPurchaseCoins :coins="3200" :price="1.55" />
-        <EconomyListItemPurchaseCoins :coins="6400" :price="3.25" />
-      </div> -->
 
       <!-- Form - Hidden when pending request exists -->
       <Transition
@@ -109,8 +101,6 @@ watch(lastCoinRequestUpdate, () => {
     </section>
 
     <section class="mx-3">
-
-
 
       <!-- Pending Notice -->
       <UAlert
