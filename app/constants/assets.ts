@@ -68,7 +68,8 @@ export const ASSETS = {
 
   // ── Placeholders & Fallbacks (precached by SW) ──
   AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp?tr=w-128,q-75,c-maintain_ratio,f-auto`,
-  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp?tr=w-520,q-75,c-maintain_ratio,f-auto`,
+  /** Base URL only — callers use `withImageKitTransform` so card width matches layout (no stuck w-520). */
+  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp`,
   PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-bg.jpeg`,
 
   // ── Videos (self-hosted for now, candidate for R2 migration) ──
@@ -315,9 +316,10 @@ export const vipUIAssetBase = (level: number) =>
 // Event Banners (ImageKit)
 // ========================================
 
-const BANNER_BG_TR = 'tr=w-400,q-75,c-maintain_ratio,f-auto'
-const BANNER_HDR_TR = 'tr=w-280,q-75,c-maintain_ratio,f-auto'
-const BANNER_DECOR_TR = 'tr=w-120,q-75,c-maintain_ratio,f-auto'
+/** ~360px max card width on mobile; avoids overserving w-400 vs painted box */
+const BANNER_BG_TR = 'tr=w-360,q-72,c-maintain_ratio,f-auto'
+const BANNER_HDR_TR = 'tr=w-240,q-72,c-maintain_ratio,f-auto'
+const BANNER_DECOR_TR = 'tr=w-96,q-72,c-maintain_ratio,f-auto'
 
 export const EVENT_BANNERS = {
   cp: {

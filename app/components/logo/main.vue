@@ -5,7 +5,7 @@ import { ASSETS } from '~/constants/assets'
 <template>
   <div class="flex">
     <NuxtImg
-        :src="ASSETS.LOGO_MAIN"
+        :src="ASSETS.LOGO_SM"
         alt="FlyLive"
         width="64"
         height="40"
@@ -21,7 +21,7 @@ import { ASSETS } from '~/constants/assets'
         height="40"
         sizes="111px"
         preload
-        fetchpriority="high"
+        fetchpriority="low"
         class="h-10 mt-2 w-auto"
     />
   </div>

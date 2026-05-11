@@ -126,7 +126,7 @@ watch(
 
 function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
   if (!room) return ''
-  return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 400, q: 75 })
+  return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 360, q: 75 })
 }
 
 /** Single high-priority preload — secondary slides stay eager via <img> without competing preloads. */

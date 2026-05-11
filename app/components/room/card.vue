@@ -53,13 +53,13 @@ const badgeDisplay = computed(() => {
 })
 
 
-/** Carousel ~240px css width — w=400 ~ mobile DPR without 520px waste; grid cells ~160px — w=320 */
-const roomBackgroundSrc = computed(() =>
-  withImageKitTransform(props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, {
-    w: props.cardLayout === 'carousel' ? 400 : 320,
-    q: 75,
-  }),
-)
+/** Carousel ~240px CSS width — w=360 (~1.5x) balances DPR vs Lighthouse oversize; grid ~160 — w=320 */
+const roomBackgroundSrc = computed(() => {
+  const isCarousel = props.cardLayout === 'carousel'
+  const w = isCarousel ? 360 : 320
+  const q = isCarousel && !effectiveHighFetchPriority.value ? 68 : 75
+  return withImageKitTransform(props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
+})
 
 const roomLogoSrc = computed(() =>
   withImageKitTransform(props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER, { w: 72, q: 75 }),

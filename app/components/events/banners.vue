@@ -102,21 +102,21 @@ const headingId = `duel-card-title-${props.type}`
 
     <div class="relative">
       <!-- Header -->
-      <header class="relative flex items-center justify-center">
+      <header class="relative flex min-h-8 items-center justify-center">
         <NuxtImg
             :src="config.header"
             alt=""
             aria-hidden="true"
             width="280"
             height="32"
-            sizes="280px"
-            class="h-8 w-auto max-w-[min(280px,85vw)] -mt-3"
+            sizes="(max-width: 768px) min(85vw, 280px), 280px"
+            class="h-8 w-auto max-w-[min(280px,85vw)]"
             loading="lazy"
             decoding="async"
         />
         <h2
             :id="headingId"
-            class="absolute inset-0 -mt-3 text-center text-lg font-bold text-shadow-md"
+            class="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-lg font-bold text-shadow-md"
             :class="config.textShadow"
         >
           <slot />

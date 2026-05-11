@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
+
+const BackgroundDecorationsVariant1 = defineAsyncComponent(
+  () => import('~/components/background-decorations/variant1.vue'),
+)
 </script>
 
 <template>

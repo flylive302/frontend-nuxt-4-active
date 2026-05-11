@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
+import { withImageKitTransform } from '~/utils/imagekit'
 /**
  * Room Page — Full-screen room UI
  *
@@ -15,6 +16,13 @@ definePageMeta({
 });
 
 const roomStore = useRoomStore();
+
+const roomBackgroundDisplaySrc = computed(() =>
+  withImageKitTransform(
+    roomStore.currentRoom?.background ?? ASSETS.ROOM_BG_PLACEHOLDER,
+    { w: 960, q: 75 },
+  ),
+)
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
 
 const {
@@ -165,7 +173,8 @@ onUnmounted(() => {
       <!-- Background Image (prefer background field, fallback to logo) -->
       <div class="absolute inset-0 z-0 tint-500">
         <NuxtImg
-          :src="roomStore.currentRoom?.background ?? ASSETS.ROOM_BG_PLACEHOLDER"
+          :src="roomBackgroundDisplaySrc"
+          sizes="100vw"
           class="bg-fixed object-cover size-full"
           format="webp"
           loading="eager"

@@ -257,7 +257,7 @@ defineExpose({
 <template>
   <ClientOnly :ssr="false">
     <template #fallback>
-      <div class="py-6 text-center text-md text-white/70 font-semibold">
+      <div class="min-h-14 py-6 text-center text-md font-semibold text-white/70">
         <slot name="loading">Loading…</slot>
       </div>
     </template>
@@ -302,16 +302,17 @@ defineExpose({
       </template>
       </DynamicScroller>
 
-      <div v-if="fetchError" class="min-h-14 py-6 text-center text-md text-rose-300 font-semibold">
+      <!-- Unified min-height + font-weight avoids CLS when swapping loading / empty / complete -->
+      <div v-if="fetchError" class="min-h-14 py-6 text-center text-md font-semibold text-rose-300">
         <slot name="error" :error="fetchError">Something went wrong. Please try again.</slot>
       </div>
-      <div v-else-if="isLoading" class="min-h-14 py-6 text-center text-md text-white font-bold">
+      <div v-else-if="isLoading" class="min-h-14 py-6 text-center text-md font-semibold text-white">
         <slot name="loading">Loading…</slot>
       </div>
-      <div v-else-if="rows.length === 0" class="min-h-14 py-6 text-center text-md text-white/70 font-semibold">
+      <div v-else-if="rows.length === 0" class="min-h-14 py-6 text-center text-md font-semibold text-white/70">
         <slot name="empty">No results yet.</slot>
       </div>
-      <div v-else-if="!hasMore" class="min-h-14 py-6 text-center text-md text-white font-bold">
+      <div v-else-if="!hasMore" class="min-h-14 py-6 text-center text-md font-semibold text-white">
         <slot name="complete">You're all caught up.</slot>
       </div>
     </div>

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "build:analyze": "NUXT_ANALYZE=true nuxt build",
     "dev": "nuxt dev --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -42,6 +43,7 @@
     "@types/node": "^24.10.2",
     "@vite-pwa/nuxt": "^1.1.0",
     "eslint": "^9.37.0",
+    "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },

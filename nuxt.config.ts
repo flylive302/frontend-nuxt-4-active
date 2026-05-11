@@ -1,7 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { defineNuxtConfig } from 'nuxt/config'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { pwaConfig } from './config/pwa.config'
 import { headConfig } from './config/head.config'
+
+const bundleAnalyze = process.env.NUXT_ANALYZE === 'true' || process.env.ANALYZE === 'true'
 
 export default defineNuxtConfig({
     compatibilityDate: '2025-02-03',
@@ -21,6 +24,7 @@ export default defineNuxtConfig({
         '/callback': { ssr: true },
         // Home: SSR + blocking rooms fetch so LCP img URLs are in the HTML (overrides /** below).
         // Do not add public edge `cache`/`isr` here: HTML is session-specific (auth middleware).
+        // TTFB is dominated by worker + Laravel; API `GET /rooms` uses short `s-maxage` (see RoomController).
         '/': { ssr: true },
         // Everything else: SPA (preserves existing behaviour)
         '/**': { ssr: false },
@@ -86,6 +90,17 @@ export default defineNuxtConfig({
         },
     },
     vite: {
+        plugins: bundleAnalyze
+            ? [
+                visualizer({
+                    filename: '.nuxt/bundle-stats.html',
+                    gzipSize: true,
+                    brotliSize: true,
+                    open: false,
+                    template: 'treemap',
+                }),
+            ]
+            : [],
         // Dev-only: same-origin proxy so fetches to R2 avoid browser CORS on localhost (Lighthouse / AssetDownloader).
         server: {
             proxy: {
