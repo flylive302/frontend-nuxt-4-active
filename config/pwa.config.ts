@@ -50,7 +50,10 @@ export const pwaConfig: ModuleOptions = {
         // Disable navigateFallback – Cloudflare Pages handles SPA routing.
         navigateFallback: undefined,
         navigateFallbackDenylist: [/^\/api/],
-        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,webp}'],
+        globPatterns: ['**/*.{js,css,png,svg,ico,woff,woff2,webp}'],
+        // HTML pages are SSR-rendered (dynamic) — precaching them causes 500s when the
+        // dev server or backend is unavailable, and stale HTML in production breaks navigation.
+        globIgnores: ['**/*.html'],
         // LT-1: Include custom asset download handler in generated SW
         importScripts: ['/sw-asset-handler.js'],
         runtimeCaching: [

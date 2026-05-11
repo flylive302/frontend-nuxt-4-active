@@ -56,14 +56,14 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt color="tertiary" back-to="/agency/my-agency">My Income</NavAlt>
+    <NavAlt color="tertiary" back-to="/profile">My Agency Targets</NavAlt>
     
     <!-- Not Agency Member -->
     <div v-if="!isAgencyMember" class="px-3 py-14 text-center">
       <UIcon name="i-lucide-building-2" class="size-16 text-muted mb-4" />
       <h2 class="text-lg font-semibold mb-2">Agency Members Only</h2>
       <p class="text-sm text-muted mb-4">
-        You need to be a member of an agency to view your income.
+        You need to be a member of an agency to view your targets.
       </p>
       <UButton to="/agency/list" color="primary">
         Browse Agencies
@@ -74,7 +74,7 @@ onMounted(async () => {
     <div v-else class="px-3 py-14 space-y-6">
       <!-- Active Income Target -->
       <section v-if="incomeStore.hasActiveTarget">
-        <SectionTitle type="tertiary">Current Income Target</SectionTitle>
+        <SectionTitle type="tertiary">Current Target</SectionTitle>
         <AgencyIncomeTargetProgress class="mt-2" />
       </section>
       
@@ -84,12 +84,12 @@ onMounted(async () => {
         class="text-center py-6 bg-elevated rounded-lg"
       >
         <UIcon name="i-lucide-target" class="size-10 text-muted mb-2" />
-        <p class="text-sm text-muted">No active income target</p>
+        <p class="text-sm text-muted">No active target</p>
       </div>
       
       <!-- Recent Earnings -->
       <section v-if="incomeStore.recentEarnings.length > 0">
-        <SectionTitle type="tertiary">Recent Earnings</SectionTitle>
+        <SectionTitle type="tertiary">Recently Achieved Targets</SectionTitle>
         <AgencyRecentEarnings class="mt-2" />
       </section>
       

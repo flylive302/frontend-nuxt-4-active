@@ -56,23 +56,26 @@ watch(lastCoinRequestUpdate, () => {
     </NavAlt>
 
     <NuxtImg
-        :src="ASSETS.HERO_TERTIARY"
-        format="webp"
-        densities="x1 x2"
-        sizes="320px"
-        width="100%"
-        class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-tertiary/70 animate-[zoom_60s_ease-in-out_infinite]"
+      :src="ASSETS.HERO_TERTIARY"
+      format="webp"
+      densities="x1 x2"
+      sizes="320px"
+      width="100%"
+      class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-tertiary/70 animate-[zoom_60s_ease-in-out_infinite]"
     />
 
     <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-4xl -mt-34 relative">
-      <div class="flex justify-between items-baseline glowing-border rounded-lg px-2">
-        <h1 class="text-lg font-bold">
-          Available Coins:
-        </h1>
-        <p class="text-2xl font-bold flex justify-center items-center gap-1">
-          <UIcon name="i-streamline-ultimate-color-accounting-coins" class="size-6" />
-          {{ formatCurrency(authStore.user?.coins) }}
-        </p>
+
+      <div class="glowing-border rounded-lg">
+        <div class="flex justify-between items-baseline mx-3">
+          <h1 class="text-lg font-bold">
+            Available Coins:
+          </h1>
+          <p class="text-2xl font-bold flex justify-center items-center gap-1">
+            <UIcon name="i-streamline-ultimate-color-accounting-coins" class="size-6" />
+            {{ formatCurrency(authStore.user?.coins) }}
+          </p>
+        </div>
       </div>
 
       <NuxtLink to="/wallet/transaction-history" class="flex justify-between items-center mt-2">
@@ -80,9 +83,9 @@ watch(lastCoinRequestUpdate, () => {
         <UButton icon="i-lucide-history" color="tertiary" variant="soft" class="shadow-xl">Visit</UButton>
       </NuxtLink>
 
-      <h2 class="text-lg font-bold mt-8"><span class="text-success">Get</span> Coins From the Resellers</h2>
-      <p class="text-sm text-muted mb-4">Keep your default reseller or select a Different One</p>
-      <EconomyChooseDefaultReseller color="tertiary" />
+      <h2 class="text-lg font-bold mt-8"><span class="text-success">Claim your</span> Coins for using the app</h2>
+      <p class="text-sm text-muted mb-4">Click the Claim button to request your coins. We’ll review your eligibility and automatically add coins to your balance if approved. If rejected, contact support for eligibility details.</p>
+<!--      <EconomyChooseDefaultReseller color="tertiary" />-->
 
       <!-- <USeparator color="tertiary" class="my-6" label="OR" />
       <h2 class="text-lg font-bold mb-2">Purchase Coins By Card:</h2>
@@ -91,9 +94,6 @@ watch(lastCoinRequestUpdate, () => {
         <EconomyListItemPurchaseCoins :coins="3200" :price="1.55" />
         <EconomyListItemPurchaseCoins :coins="6400" :price="3.25" />
       </div> -->
-    </section>
-
-    <section class="mx-3">
 
       <!-- Form - Hidden when pending request exists -->
       <Transition
@@ -106,6 +106,11 @@ watch(lastCoinRequestUpdate, () => {
       >
         <EconomyFromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
       </Transition>
+    </section>
+
+    <section class="mx-3">
+
+
 
       <!-- Pending Notice -->
       <UAlert

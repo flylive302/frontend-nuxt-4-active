@@ -214,7 +214,7 @@ html {
 .glowing-border::before {
     content: "";
     position: absolute;
-    inset: -20%;
+    inset: -450%;
     background: conic-gradient(var(--gradient-glow));
     animation: glow-spin 10s linear infinite;
     z-index: -2;

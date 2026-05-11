@@ -41,9 +41,11 @@ export function useBootstrapInit() {
    * REACT: Start asset downloads (via caller)
    */
   async function init(): Promise<BootstrapConfig | null> {
+    // Capture route synchronously before any await — calling useRoute() after an
+    // await can land in a middleware execution context and trigger a Nuxt warning.
+    const route = useRoute()
 
     // GATE — skip on OAuth callback route (callback page handles its own auth flow)
-    const route = useRoute()
     if (route.path === '/callback') {
       log.debug('On callback route, deferring to callback handler')
       return null
@@ -62,7 +64,7 @@ export function useBootstrapInit() {
     if (!bootstrapStore.needsRefresh) {
       log.debug('Bootstrap data fresh, skipping fetch')
       // Still schedule asset downloads — may have new items since last boot
-      scheduleAssetDownload()
+      scheduleAssetDownload(route)
       return null
     }
 
@@ -87,7 +89,7 @@ export function useBootstrapInit() {
     }
 
     // REACT — defer asset downloads to idle time, never block rendering
-    scheduleAssetDownload()
+    scheduleAssetDownload(route)
 
     return data
   }
@@ -160,9 +162,8 @@ export function useBootstrapInit() {
    * PERF: never blocks the main thread during boot.
    * PERF: skipped for unauthenticated users — gifts/badges are irrelevant on guest routes.
    */
-  function scheduleAssetDownload(): void {
+  function scheduleAssetDownload(route: ReturnType<typeof useRoute>): void {
     if (!authStore.token) return
-    const route = useRoute()
     // Home is on the critical perf path: avoid boot-time badge/image floods there.
     // Route-scoped assets still load when users navigate to their feature pages.
     if (route.path === '/' || route.path === '') return

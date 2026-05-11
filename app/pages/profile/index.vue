@@ -101,7 +101,7 @@ onMounted(() => {
     -->
 
     <div class="px-4 mb-12">
-      <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Wallet" />
+      <NavProfileItem to="/wallet/purchase-coins" icon="i-lucide-wallet" txt="Balance" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />
@@ -118,7 +118,7 @@ onMounted(() => {
       <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-agency" icon="i-lucide-home" txt="My Agency" />
       
       <!-- My Income (visible if agency member) -->
-      <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-income" icon="i-lucide-dollar-sign" txt="My Income" />
+      <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-income" icon="i-lucide-dollar-sign" txt="My Agency Targets" />
       
       <!-- Agency Invitations (visible if not agency member) -->
       <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/invitations" icon="i-lucide-mail" txt="Agency Invitations" :badge="agencyStore.receivedInvitations.items.length || undefined" />

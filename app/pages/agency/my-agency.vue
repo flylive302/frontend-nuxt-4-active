@@ -192,13 +192,13 @@ onMounted(async () => {
 
         <!-- Rejection Notice -->
         <UAlert
-            v-if="agency.status === 'rejected' && agency.rejection_note"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-x-circle"
-            title="Application Rejected"
-            :description="agency.rejection_note"
-            class="mx-3 mt-4"
+          v-if="agency.status === 'rejected' && agency.rejection_note"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-x-circle"
+          title="Application Rejected"
+          :description="agency.rejection_note"
+          class="mx-3 mt-4"
         />
 
         <!-- Navigation Menu -->
@@ -227,7 +227,7 @@ onMounted(async () => {
             <NavProfileItem
                 to="/agency/member-income"
                 icon="i-lucide-dollar-sign"
-                txt="Member Income"
+                txt="Member Targets"
             />
           </template>
 

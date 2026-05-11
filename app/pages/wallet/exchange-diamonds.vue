@@ -228,14 +228,16 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
 
     <!-- Exchange Section (Agency Members Only) -->
     <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-t-4xl -mt-34 relative">
-      <div class="flex justify-between items-baseline glowing-border rounded-lg px-2">
-        <h1 class="text-xl font-bold">
-          Available Diamonds:
-        </h1>
-        <p class="text-4xl font-bold flex justify-center items-center gap-1">
-          <UIcon name="i-ri-diamond-fill" class="size-8" />
-          {{ formatCurrency(userDiamonds) }}
-        </p>
+      <div class="glowing-border rounded-lg">
+        <div class="flex justify-between items-baseline mx-3">
+          <h1 class="text-xl font-bold">
+            Available Diamonds:
+          </h1>
+          <p class="text-3xl font-bold flex justify-center items-center gap-1">
+            <UIcon name="i-ri-diamond-fill" class="size-8" />
+            {{ formatCurrency(userDiamonds) }}
+          </p>
+        </div>
       </div>
 
       <NuxtLink to="/wallet/transaction-history" class="flex justify-between items-center mt-2">
@@ -339,13 +341,13 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
         </UButton>
       </UForm>
 
-      <USeparator color="secondary" class="my-4" label="OR" />
+<!--      <USeparator color="secondary" class="my-4" label="OR" />-->
 
-      <h2 class="text-lg font-bold leading-tight">
-        Request Payout of your Diamonds in <span class="text-success">Real Money</span>.
-      </h2>
-      <EconomyChooseDefaultReseller color="secondary" />
-      <EconomyFromConversionRequest color="secondary" class="mb-18 mt-4" />
+<!--      <h2 class="text-lg font-bold leading-tight">-->
+<!--        Request Payout of your Diamonds in <span class="text-success">Real Money</span>.-->
+<!--      </h2>-->
+<!--      <EconomyChooseDefaultReseller color="secondary" />-->
+<!--      <EconomyFromConversionRequest color="secondary" class="mb-18 mt-4" />-->
     </section>
   </main>
 </template>

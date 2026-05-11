@@ -1,9 +1,7 @@
 <!-- ~/components/from-conversion-request.vue -->
 <!-- Coin Request Form - Creates coin requests using the user's default reseller -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch, toRef } from 'vue'
-import { z } from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import { onBeforeUnmount, ref, toRef } from 'vue'
 import type { Colors } from '~/types/colors'
 import type { CoinRequest } from '~/types/economy/coin-request'
 import { useCoinRequests } from '~/composables/economy/useCoinRequests'
@@ -29,37 +27,14 @@ const emit = defineEmits<{
 }>()
 
 // ========================================
-// Schema (amount ≥1, optional message, max 3 proofs)
+// Constants & State
 // ========================================
-const imageFile = z.instanceof(File, { message: 'Only image files are allowed' })
-  .refine(f => /^image\//.test(f.type), 'Only image files are allowed')
-  .refine(f => f.size <= 5 * 1024 * 1024, 'Each file must be ≤ 5MB')
+const AMOUNTS = [3_000, 10_000, 50_000, 100_000, 250_000, 500_000] as const
 
-const schema = z.object({
-  amount: z.coerce.number()
-    .refine(val => !Number.isNaN(val), 'Invalid number')
-    .int('Must be a whole number')
-    .gte(1, 'Minimum amount is 1'),
-  message: z.string().trim().max(1000, 'Message too long').optional(),
-  proofs: z.array(imageFile).max(3, 'Up to 3 images only').optional()
-})
-
-type Schema = z.infer<typeof schema>
-
-// ========================================
-// State
-// ========================================
-const state = reactive<Schema>({
-  amount: 100,
-  message: undefined,
-  proofs: []
-})
-const initialState: Schema = { amount: 100, message: undefined, proofs: [] }
-
-const formRef = ref<{ validate: () => unknown; clear: () => void } | null>(null)
+const selectedAmount = ref<number>(3_000)
+const lastClaimedAmount = ref<number>(3_000)
 const showSuccess = ref(false)
 const formError = ref('')
-const serverFieldErrors = reactive<Record<string, string[]>>({})
 const isSubmitting = ref(false)
 let abortController: AbortController | null = null
 
@@ -68,63 +43,33 @@ let abortController: AbortController | null = null
 // ========================================
 const { createRequest, normalizeError } = useCoinRequests()
 const toast = useToast()
-const uiColor = computed(() => color.value)
 
 // ========================================
-// Live Validation (debounced)
+// Handlers
 // ========================================
-let handle: number | undefined
-watch(state, () => {
-  if (handle) clearTimeout(handle)
-  handle = window.setTimeout(() => formRef.value?.validate(), 250)
-}, { deep: true })
-
-// ========================================
-// Form Submission
-// ========================================
-async function onSubmit(e: FormSubmitEvent<Schema>) {
+async function onClaim() {
   if (props.disabled || isSubmitting.value) return
 
   formError.value = ''
-  // Clear field errors by setting to empty object
-  for (const key of Object.keys(serverFieldErrors)) {
-    serverFieldErrors[key] = []
-  }
   isSubmitting.value = true
   abortController = new AbortController()
 
   try {
-    const response = await createRequest({
-      amount: e.data.amount,
-      message: e.data.message || undefined,
-      proofs: e.data.proofs?.length ? e.data.proofs : undefined
-    })
+    const response = await createRequest({ amount: selectedAmount.value })
 
     if (response.status === 'success' && response.data) {
+      lastClaimedAmount.value = selectedAmount.value
       toast.add({
-        title: 'Coin request created!',
-        description: `Requested ${response.data.amount} coins`,
+        title: 'Coins claimed!',
+        description: `${selectedAmount.value.toLocaleString()} coins added to your account`,
         color: 'success'
       })
-
-      // Reset form
-      Object.assign(state, initialState, { proofs: [] })
-      formRef.value?.clear()
       showSuccess.value = true
-
       emit('success', response.data)
     }
   } catch (error: unknown) {
     const normalized = normalizeError(error)
     formError.value = normalized.message
-
-    // Map field errors (422) under inputs
-    if (normalized.fieldErrors) {
-      for (const [k, v] of Object.entries(normalized.fieldErrors)) {
-        serverFieldErrors[k] = v
-      }
-    }
-
     toast.add({ title: 'Error', description: normalized.message, color: 'error' })
     emit('error', { message: normalized.message, details: normalized })
   } finally {
@@ -133,13 +78,9 @@ async function onSubmit(e: FormSubmitEvent<Schema>) {
   }
 }
 
-function submitAnother() {
+function claimAnother() {
   showSuccess.value = false
   formError.value = ''
-  // Clear field errors
-  for (const key of Object.keys(serverFieldErrors)) {
-    serverFieldErrors[key] = []
-  }
 }
 
 onBeforeUnmount(() => {
@@ -149,104 +90,81 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
+    <UAlert
+      v-if="formError"
+      icon="i-lucide-alert-triangle"
+      color="error"
+      variant="subtle"
+      :description="formError"
+      class="mb-4"
+      aria-live="assertive"
+    />
+
     <Transition
       enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
       leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-1"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
     >
-      <UForm
+      <div
         v-if="!showSuccess"
-        ref="formRef"
-        :schema="schema"
-        :state="state"
-        :ui="{ wrapper: 'space-y-4' }"
+        class="relative overflow-hidden rounded-2xl p-6 space-y-4"
         :class="[gradientClass]"
-        class="space-y-4 rounded-lg shadow-lg p-3"
-        @submit="onSubmit"
       >
-        <UAlert
-          v-if="formError"
-          icon="i-lucide-alert-triangle"
-          color="error"
-          variant="subtle"
-          :description="formError"
-          class="mb-2"
-          aria-live="assertive"
-        />
+        <span class="shimmer pointer-events-none absolute inset-0" aria-hidden="true" />
 
-        <UFormField label="Amount (Coins)" name="amount" hint="Minimum 1 coin">
-          <UInputNumber
-            v-model="state.amount"
-            :min="1"
-            :step="1"
-            :disabled="disabled || isSubmitting"
-            :color="uiColor"
-            placeholder="100"
-            orientation="vertical"
-            class="w-full"
-            required
-          />
-          <p v-if="serverFieldErrors['amount']" class="mt-1 text-xs text-error">
-            {{ serverFieldErrors['amount'][0] }}
-          </p>
-        </UFormField>
-
-        <UFormField label="Message (optional)" name="message" hint="Max 1000 characters">
-          <UTextarea
-            v-model="state.message"
-            :disabled="disabled || isSubmitting"
-            :color="uiColor"
-            :rows="2"
-            class="w-full"
-            placeholder="Add a note for the reseller..."
-          />
-          <p v-if="serverFieldErrors['message']" class="mt-1 text-xs text-error">
-            {{ serverFieldErrors['message'][0] }}
-          </p>
-        </UFormField>
-
-        <UFormField label="Proof Images (optional)" name="proofs" hint="Max 3 images, 5MB each">
-          <UFileUpload
-            v-model="state.proofs"
-            multiple
-            highlight
-            :color="uiColor"
-            accept="image/jpeg,image/png,image/webp"
-            :disabled="disabled || isSubmitting"
-            class="w-full min-h-32"
-          />
-          <div v-if="state.proofs?.length" class="mt-2 flex flex-wrap gap-2">
-            <UBadge
-              v-for="f in state.proofs"
-              :key="f.name + f.size"
-              variant="soft"
-              color="neutral"
+        <!-- Amount grid -->
+        <div class="relative grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <button
+            v-for="amount in AMOUNTS"
+            :key="amount"
+            class="amount-card relative rounded-xl px-3 py-4 text-white text-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            :class="selectedAmount === amount
+              ? 'bg-white/30 ring-2 ring-white shadow-lg scale-[1.04]'
+              : 'bg-white/10 ring-1 ring-white/20 opacity-60 hover:opacity-90 hover:bg-white/20 hover:scale-[1.02]'"
+            :disabled="isSubmitting"
+            @click="selectedAmount = amount"
+          >
+            <UIcon
+              name="i-lucide-coins"
+              class="h-5 w-5 mx-auto mb-1.5 opacity-80"
+              :class="{ 'coin-float': selectedAmount === amount }"
+            />
+            <div class="text-xl font-black tabular-nums leading-tight">
+              {{ amount.toLocaleString() }}
+            </div>
+            <div class="text-xs font-medium opacity-70 mt-0.5 tracking-widest uppercase">
+              Coins
+            </div>
+            <div
+              v-if="selectedAmount === amount"
+              class="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-white flex items-center justify-center shadow"
             >
-              {{ f.name }}
-            </UBadge>
-          </div>
-          <p v-if="serverFieldErrors['proofs']" class="mt-1 text-xs text-error">
-            {{ serverFieldErrors['proofs'][0] }}
-          </p>
-          <p v-if="serverFieldErrors['proofs.0']" class="mt-1 text-xs text-error">
-            {{ serverFieldErrors['proofs.0'][0] }}
-          </p>
-        </UFormField>
+              <UIcon name="i-lucide-check" class="h-2.5 w-2.5 text-black" />
+            </div>
+          </button>
+        </div>
 
-        <UButton
-          type="submit"
-          :color="uiColor"
-          :loading="isSubmitting"
+        <!-- Claim button -->
+        <button
+          class="claim-btn group relative w-full overflow-hidden rounded-xl py-4 px-6 text-white text-center cursor-pointer select-none transition-all duration-300 bg-white/20 hover:bg-white/30 ring-1 ring-white/30 backdrop-blur-sm hover:scale-[1.01] hover:shadow-xl active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
           :disabled="disabled || isSubmitting"
-          class="w-full justify-center"
-          icon="i-lucide-send"
+          @click="onClaim"
         >
-          Submit Request
-        </UButton>
-      </UForm>
+          <div class="relative flex items-center justify-center gap-3">
+            <UIcon
+              :name="isSubmitting ? 'i-lucide-loader-2' : 'i-lucide-zap'"
+              class="h-5 w-5 shrink-0"
+              :class="{ 'animate-spin': isSubmitting }"
+            />
+            <span class="text-lg font-bold tracking-tight">
+              {{ isSubmitting ? 'Claiming…' : `Claim ${selectedAmount.toLocaleString()} Coins` }}
+            </span>
+          </div>
+        </button>
+      </div>
     </Transition>
 
     <Transition
@@ -259,19 +177,46 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="showSuccess"
-        class="rounded-lg border-2 border-success/30 bg-success/5 p-6 text-center"
+        class="rounded-2xl border-2 border-success/30 bg-success/5 p-8 text-center"
       >
-        <div class="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
-          <UIcon name="i-lucide-badge-check" class="h-5 w-5 text-success" />
+        <div class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-success/20">
+          <UIcon name="i-lucide-badge-check" class="h-7 w-7 text-success" />
         </div>
-        <p class="text-base font-medium">Request submitted!</p>
-        <p class="mt-1 text-sm text-gray-600">
-          Your reseller will process your request soon.
+        <p class="text-lg font-semibold">{{ lastClaimedAmount.toLocaleString() }} coins claimed!</p>
+        <p class="mt-1 text-sm text-gray-500">
+          Your coins have been added to your account.
         </p>
-        <UButton class="mt-4" :color="uiColor" @click="submitAnother">
-          Submit another request
+        <UButton class="mt-5" :color="color" @click="claimAnother">
+          Claim again
         </UButton>
       </div>
     </Transition>
   </div>
 </template>
+
+<style scoped>
+.shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.coin-float {
+  animation: coin-float 3s ease-in-out infinite;
+}
+
+@keyframes coin-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-4px) rotate(4deg); }
+}
+</style>

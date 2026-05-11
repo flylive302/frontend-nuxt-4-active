@@ -113,14 +113,14 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt color="primary" back-to="/agency/my-agency">Member Income</NavAlt>
+    <NavAlt color="primary" back-to="/agency/my-agency">Member Target</NavAlt>
 
     <!-- Not Authorized -->
     <div v-if="!isOwnerOrAdmin" class="px-3 py-14 text-center">
       <icon name="i-lucide-lock" class="size-16 text-muted mb-4" />
       <h2 class="text-lg font-semibold mb-2">Access Denied</h2>
       <p class="text-sm text-muted mb-4">
-        Only agency owners and admins can view member income.
+        Only agency owners and admins can view member targets.
       </p>
       <UButton to="/agency/my-agency" color="primary">
         Go to My Agency
@@ -132,7 +132,7 @@ onMounted(async () => {
       <!-- Agency Header -->
       <div class="text-center">
         <h1 class="text-xl font-bold">{{ agencyName || 'Agency' }}</h1>
-        <p class="text-sm text-muted">Member income overview</p>
+        <p class="text-sm text-muted">Member targets overview</p>
       </div>
 
       <!-- Summary Stats -->
@@ -148,7 +148,7 @@ onMounted(async () => {
               {{ totalDiamonds.toLocaleString() }}
             </p>
           </div>
-          <p class="text-xs text-white">Total Diamonds Earned</p>
+          <p class="text-xs text-white">Total Diamonds Gained</p>
         </div>
 
         <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
