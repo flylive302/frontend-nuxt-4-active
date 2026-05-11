@@ -7,6 +7,7 @@
 // echo-inbox would try to subscribe before Echo's async init completes.
 
 import { createLogger } from '~/utils/logger'
+import { scheduleAfterFirstPaint } from '~/utils/schedule-after-first-paint'
 
 const log = createLogger('[EchoInbox]')
 
@@ -26,11 +27,13 @@ export default defineNuxtPlugin({
     // including on re-login after logout.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(nuxtApp as any).hook('echo:ready', () => {
-      if (authStore.isAuthenticated) {
+      if (!authStore.isAuthenticated) return
+      // PERF: inbox + /broadcasting/auth + /inbox/threads after first paint — not LCP-critical.
+      scheduleAfterFirstPaint(() => {
         log.debug('Subscribing to DM channel...')
         subscribe()
         fetchThreads()
-      }
+      })
     })
 
     // Unsubscribe on logout only (no immediate — only react to transitions).

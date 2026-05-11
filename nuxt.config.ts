@@ -19,7 +19,8 @@ export default defineNuxtConfig({
         '/forgot-password': { prerender: true, ssr: true },
         // Callback is dynamic (OAuth code exchange depends on URL params) → keep SSR
         '/callback': { ssr: true },
-        // Home: SSR + blocking rooms fetch so LCP img URLs are in the HTML (overrides /** below)
+        // Home: SSR + blocking rooms fetch so LCP img URLs are in the HTML (overrides /** below).
+        // Do not add public edge `cache`/`isr` here: HTML is session-specific (auth middleware).
         '/': { ssr: true },
         // Everything else: SPA (preserves existing behaviour)
         '/**': { ssr: false },

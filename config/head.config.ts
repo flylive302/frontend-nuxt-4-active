@@ -86,7 +86,8 @@ export const headConfig: HeadConfig = {
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         // Hint first logo bytes only — Nav uses NuxtImg with a single src (no srcset); preloading
         // imagesrcset pulled flylive-logo-2x.webp on DPR≥2 but it often went unused (Lighthouse warning).
-        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp', fetchpriority: 'high' as const },
+        // No fetchpriority hint: auth routes may use this as LCP; home route adds a higher-priority room preload in-page.
+        { rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp' },
         // Apple splash screens
         ...appleSplashScreens,
         // NOTE: Preconnects to ik.imagekit.io and assets.flyliveapp.com used

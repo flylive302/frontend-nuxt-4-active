@@ -21,8 +21,10 @@ defineOptions({
 
 const props = withDefaults(defineProps<{
   room: Room
-  /** First visible carousel card: prioritize LCP image fetch */
+  /** Eager decode for likely-LCP carousel cells (may be multiple while Embla settles). */
   priorityLcp?: boolean
+  /** Only one carousel cell should use fetchpriority=high (true LCP candidate). */
+  highFetchPriority?: boolean
   /** Controls responsive `sizes` for ImageKit — carousel vs 2-col grid */
   cardLayout?: 'carousel' | 'grid'
 }>(), {
@@ -39,6 +41,10 @@ const { enterRoom, showPasswordPrompt, pendingRoom, entering: _entering, onPassw
 // ========================================
 // Computed
 // ========================================
+
+const effectiveHighFetchPriority = computed(
+  () => props.highFetchPriority ?? props.priorityLcp,
+)
 
 /** Live badge label */
 const badgeDisplay = computed(() => {
@@ -87,7 +93,7 @@ function handleRoomClick(): void {
         :sizes="props.cardLayout === 'carousel' ? '(max-width: 640px) 72vw, 240px' : '(max-width: 640px) 45vw, 160px'"
         class="h-full min-h-0 w-full object-cover"
         :loading="props.priorityLcp ? 'eager' : 'lazy'"
-        :fetchpriority="props.priorityLcp ? 'high' : undefined"
+        :fetchpriority="effectiveHighFetchPriority ? 'high' : undefined"
         decoding="async"
       />
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>

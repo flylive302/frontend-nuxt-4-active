@@ -6,6 +6,7 @@
 
 import type { BootstrapConfig, BootstrapUser } from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
+import { scheduleAfterFirstPaint } from '~/utils/schedule-after-first-paint'
 
 const log = createLogger('[BootstrapInit]')
 
@@ -50,9 +51,11 @@ export function useBootstrapInit() {
 
     // Background user re-hydration — persisted user is good enough for initial render.
     // Pinia-persist restores user from localStorage; this API call patches stale data.
-    // PERF: fire-and-forget — never blocks rendering.
+    // PERF: defer past first paint so /auth/user stays off the LCP-critical chain.
     if (authStore.token) {
-      refreshUser()
+      scheduleAfterFirstPaint(() => {
+        void refreshUser()
+      })
     }
 
     // GATE — check freshness

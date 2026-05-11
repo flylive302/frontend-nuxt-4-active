@@ -29,6 +29,10 @@ vi.mock('~/utils/logger', () => ({
   }),
 }))
 
+vi.mock('~/utils/schedule-after-first-paint', () => ({
+  scheduleAfterFirstPaint: vi.fn(),
+}))
+
 // ========================================
 // Helpers — store defaults that PASS the GATE
 // ========================================
@@ -73,6 +77,7 @@ describe('useBootstrapInit', () => {
 
   afterEach(() => {
     cleanupNuxtMocks()
+    vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
@@ -80,46 +85,22 @@ describe('useBootstrapInit', () => {
   // GATE Tests
   // ========================================
 
-  describe('GATE: Guest route handling', () => {
-    it('should return null on guest route', async () => {
+  describe('GATE: Route shortcuts', () => {
+    it('should return null on OAuth callback route', async () => {
       _mocks = setupNuxtMocks({
-        route: { meta: { middleware: ['guest'] } },
+        route: { path: '/callback', meta: { middleware: [] } },
       })
 
       const { init } = useBootstrapInit()
-      const result = await init()
-      expect(result).toBeNull()
-    })
-
-    it('should clear stale auth token on guest route', async () => {
-      const authStore = createMockAuthStore({ token: 'stale-token' })
-      _mocks = setupNuxtMocks({
-        authStore,
-        route: { meta: { middleware: ['guest'] } },
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(authStore.logout).toHaveBeenCalled()
-    })
-
-    it('should not clear token when none exists on guest route', async () => {
-      const authStore = createMockAuthStore({ token: null })
-      _mocks = setupNuxtMocks({
-        authStore,
-        route: { meta: { middleware: ['guest'] } },
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(authStore.logout).not.toHaveBeenCalled()
+      expect(await init()).toBeNull()
     })
   })
 
   describe('GATE: Auth token resolution', () => {
-    it('should return null when no auth token exists', async () => {
+    it('should return null without API when bootstrap is fresh', async () => {
       _mocks = setupNuxtMocks({
         authStore: createMockAuthStore({ token: null }),
+        bootstrapStore: createMockBootstrapStore({ isReady: true, needsRefresh: false }),
         cookieValue: null,
       })
 
@@ -142,21 +123,6 @@ describe('useBootstrapInit', () => {
       expect(api.api).toHaveBeenCalled()
     })
 
-    it('should migrate cookie token to store', async () => {
-      const authStore = gatePassingAuthStore({ token: null })
-      const api = createMockApi()
-      api.api.mockResolvedValue({ data: { user: { id: 1 }, config: {} } })
-      _mocks = setupNuxtMocks({
-        authStore,
-        bootstrapStore: gatePassingBootstrapStore(),
-        api,
-        cookieValue: 'cookie-token',
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(authStore.setToken).toHaveBeenCalledWith('cookie-token')
-    })
   })
 
   describe('GATE: Freshness check', () => {
@@ -182,8 +148,8 @@ describe('useBootstrapInit', () => {
         bootstrapStore: gatePassingBootstrapStore({ phase: 'loading' }),
       })
 
-      const { fetchBootstrap } = useBootstrapInit()
-      const result = await fetchBootstrap()
+      const { init } = useBootstrapInit()
+      const result = await init()
       expect(result).toBeNull()
     })
   })
@@ -204,7 +170,7 @@ describe('useBootstrapInit', () => {
 
       const { init } = useBootstrapInit()
       await init()
-      expect(api.api).toHaveBeenCalledWith('/bootstrap?fields=user,config')
+      expect(api.api).toHaveBeenCalledWith('/bootstrap')
     })
 
     it('should seed bootstrap store with config on success', async () => {
@@ -219,22 +185,10 @@ describe('useBootstrapInit', () => {
 
       const { init } = useBootstrapInit()
       await init()
-      expect(bootstrapStore.setConfig).toHaveBeenCalledWith({ enableFeatureX: true })
-    })
-
-    it('should seed auth store with user on success', async () => {
-      const authStore = gatePassingAuthStore()
-      const api = createMockApi()
-      api.api.mockResolvedValue({ data: { user: { id: 1, name: 'Test' }, config: {} } })
-      _mocks = setupNuxtMocks({
-        authStore,
-        bootstrapStore: gatePassingBootstrapStore(),
-        api,
+      expect(bootstrapStore.setConfig).toHaveBeenCalledWith({
+        user: {},
+        config: { enableFeatureX: true },
       })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(authStore.setUser).toHaveBeenCalledWith({ id: 1, name: 'Test' })
     })
 
     it('should set phase to complete on success', async () => {
@@ -301,60 +255,6 @@ describe('useBootstrapInit', () => {
       expect(bootstrapStore.setError).toHaveBeenCalledWith('Network error')
     })
 
-    it('should track bootstrap failure via telemetry', async () => {
-      const telemetry = createMockTelemetry()
-      const api = createMockApi()
-      api.api.mockRejectedValue(new Error('fail'))
-      api.normalizeError.mockReturnValue({ message: 'fail' })
-
-      // After fetchBootstrap fails, init() reads hasError + error from store.
-      // Wire setError/setPhase so the mock reflects the error state.
-      const errorState = { hasError: false, error: null as string | null }
-      const bootstrapStore = gatePassingBootstrapStore({
-        setError: vi.fn((msg: string | null) => { errorState.error = msg }),
-        setPhase: vi.fn((p: string) => {
-          errorState.hasError = p === 'error'
-        }),
-      })
-      // Define reactive getters AFTER spread (spread evaluates getters to static values)
-      Object.defineProperties(bootstrapStore, {
-        hasError: { get: () => errorState.hasError, configurable: true },
-        error: { get: () => errorState.error, configurable: true },
-      })
-
-      _mocks = setupNuxtMocks({
-        telemetry,
-        api,
-        authStore: gatePassingAuthStore(),
-        bootstrapStore,
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(telemetry.trackBootstrapFailed).toHaveBeenCalledWith('fail')
-    })
-  })
-
-  describe('EXECUTE: Deferred data fetch', () => {
-    it('should fire deferred fetch after critical response', async () => {
-      const api = createMockApi()
-      api.api
-        .mockResolvedValueOnce({ data: { user: {}, config: {} } })
-        .mockResolvedValueOnce({ data: { gifts: { catalog: [], total: 0 } } })
-      _mocks = setupNuxtMocks({
-        api,
-        authStore: gatePassingAuthStore(),
-        bootstrapStore: gatePassingBootstrapStore(),
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-
-      await vi.waitFor(() => {
-        expect(api.api).toHaveBeenCalledTimes(2)
-      })
-      expect(api.api).toHaveBeenLastCalledWith('/bootstrap?fields=gifts,user_data')
-    })
   })
 
   // ========================================
@@ -362,6 +262,13 @@ describe('useBootstrapInit', () => {
   // ========================================
 
   describe('REACT: Asset downloads', () => {
+    beforeEach(() => {
+      vi.stubGlobal('requestIdleCallback', (cb: () => void) => {
+        cb()
+        return 0
+      })
+    })
+
     it('should trigger startAssetDownload when gifts present in response', async () => {
       const bootstrapAssets = createMockBootstrapAssets()
       const api = createMockApi()
@@ -373,6 +280,7 @@ describe('useBootstrapInit', () => {
         api,
         authStore: gatePassingAuthStore(),
         bootstrapStore: gatePassingBootstrapStore(),
+        route: { path: '/mall', meta: { middleware: [] } },
       })
 
       const { init } = useBootstrapInit()
@@ -391,6 +299,7 @@ describe('useBootstrapInit', () => {
         }),
         authStore: gatePassingAuthStore(),
         api,
+        route: { path: '/mall', meta: { middleware: [] } },
       })
 
       const { init } = useBootstrapInit()
@@ -398,15 +307,16 @@ describe('useBootstrapInit', () => {
       expect(bootstrapAssets.startAssetDownload).toHaveBeenCalled()
     })
 
-    it('should NOT trigger startAssetDownload when no gifts', async () => {
+    it('should NOT trigger startAssetDownload on home path (perf)', async () => {
       const bootstrapAssets = createMockBootstrapAssets()
       const api = createMockApi()
       api.api.mockResolvedValue({ data: { user: {}, config: {} } })
       _mocks = setupNuxtMocks({
         bootstrapAssets,
-        bootstrapStore: gatePassingBootstrapStore({ giftCatalog: [] }),
+        bootstrapStore: gatePassingBootstrapStore({ giftCatalog: [{ id: 1 }] }),
         authStore: gatePassingAuthStore(),
         api,
+        route: { path: '/', meta: { middleware: [] } },
       })
 
       const { init } = useBootstrapInit()

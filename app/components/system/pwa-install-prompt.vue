@@ -101,15 +101,15 @@ function handleDismiss(): void {
             :src="ASSETS.LOGO_MAIN"
             alt="FlyLive"
             class="h-12 w-auto"
-            width="auto"
-            height="32"
+            width="64"
+            height="40"
         />
 
         <!-- Content -->
         <div class="flex-1">
-          <h4 class="text-md font-medium text-white">
+          <h2 class="text-md font-medium text-white">
             Install FlyLive
-          </h4>
+          </h2>
           <p class="text-xs text-neutral-400">
             Get the best experience with our app
           </p>
@@ -120,6 +120,7 @@ function handleDismiss(): void {
           <UButton
             size="sm"
             color="primary"
+            class="bg-[#D90045] hover:bg-[#C0003D] focus-visible:outline-[#D90045]"
             @click="handleInstall"
           >
             Install
@@ -129,6 +130,7 @@ function handleDismiss(): void {
             variant="ghost"
             color="neutral"
             icon="i-heroicons-x-mark"
+            aria-label="Dismiss install prompt"
             @click="handleDismiss"
           />
         </div>

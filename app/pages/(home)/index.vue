@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { nextTick, shallowRef, unref, watch } from 'vue'
+import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { withImageKitTransform } from '~/utils/imagekit'
+
+const HomeFollowingCarousel = defineAsyncComponent(() => import('~/components/home/following-carousel.vue'))
+const HomeCountryFilter = defineAsyncComponent(() => import('~/components/home/country-filter.vue'))
+const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
+const EventsBanners = defineAsyncComponent(() => import('~/components/events/banners.vue'))
 
 definePageMeta({
   layout: 'home',
@@ -96,6 +101,11 @@ function roomCardPriorityLcp(index: number): boolean {
   return index === roomCarouselSnapIndex.value
 }
 
+function roomCardHighFetchPriority(index: number): boolean {
+  if (!hadRoomCarouselSelectEvent.value) return index === 0
+  return index === roomCarouselSnapIndex.value
+}
+
 function syncRoomCarouselSnapFromEmbla(): void {
   const inst = roomCarouselRef.value
   const api = inst?.emblaApi ? unref(inst.emblaApi) : null
@@ -119,14 +129,10 @@ function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | 
   return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 400, q: 75 })
 }
 
-/** Preload first two carousel backgrounds — Embla often centers slide 0 or 1 before `select` fires. */
+/** Single high-priority preload — secondary slides stay eager via <img> without competing preloads. */
 const lcpRoomPreloadHrefs = computed(() => {
-  const hrefs = new Set<string>()
-  const href0 = roomBackgroundPreloadHref(carouselRooms.value[0])
-  const href1 = roomBackgroundPreloadHref(carouselRooms.value[1])
-  if (href0) hrefs.add(href0)
-  if (href1) hrefs.add(href1)
-  return [...hrefs]
+  const href = roomBackgroundPreloadHref(carouselRooms.value[0])
+  return href ? [href] : []
 })
 
 useHead(() => {
@@ -321,6 +327,7 @@ const banners: Banner[] = [
                 card-layout="carousel"
                 class="h-72 max-w-60 shrink-0"
                 :priority-lcp="roomCardPriorityLcp(index)"
+                :high-fetch-priority="roomCardHighFetchPriority(index)"
               />
             </div>
           </template>
@@ -342,6 +349,7 @@ const banners: Banner[] = [
                 card-layout="carousel"
                 class="h-72 max-w-60"
                 :priority-lcp="roomCardPriorityLcp(index)"
+                :high-fetch-priority="roomCardHighFetchPriority(index)"
               />
             </template>
           </UCarousel>
