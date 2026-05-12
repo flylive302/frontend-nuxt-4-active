@@ -11,23 +11,12 @@ export default defineNuxtConfig({
     ssr: true,
     spaLoadingTemplate: true,
     routeRules: {
-        // Auth pages: pre-rendered at build time → served from Cloudflare CDN edge (~50ms TTFB).
-        // ssr: true is REQUIRED here even though the page is prerendered: route rules use
-        // deep-merge, so without it these inherit `ssr: false` from `/**` below and Nitro
-        // would emit only the SPA shell (empty `<div id="__nuxt">`). With ssr: true the
-        // hero <img> and form are baked into the static HTML, the preloaded LCP image
-        // matches what the parser sees, and Chrome can paint pre-hydration.
         '/log-in': { prerender: true, ssr: true },
         '/sign-up': { prerender: true, ssr: true },
         '/forgot-password': { prerender: true, ssr: true },
         // Callback is dynamic (OAuth code exchange depends on URL params) → keep SSR
         '/callback': { ssr: true },
-        // Home: SSR + ISR (60 s Cloudflare edge cache) drastically cuts TTFB.
-        // Rooms data is public (same for all users); user-specific data (badge, avatar,
-        // following carousel) loads client-side. Auth middleware runs client-side and
-        // redirects unauthenticated visitors to /log-in after hydration.
         '/': { ssr: true, isr: 60 },
-        // Everything else: SPA (preserves existing behaviour)
         '/**': { ssr: false },
     },
     devtools: { enabled: false },
@@ -125,24 +114,7 @@ export default defineNuxtConfig({
                     }
                     warn(warning)
                 },
-                output: {
-                    /**
-                     * Granular vendor chunking strategy.
-                     *
-                     * Splits node_modules into purpose-based chunks so users only download
-                     * code for the features they actually use on the current page.
-                     *
-                     * Core chunks load at app init. Feature chunks load on demand.
-                     */
-                    // No manualChunks: returning a chunk name for a library
-                    // whose transitive deps are shared with other code makes Vite
-                    // pull those shared deps into the named chunk, turning it
-                    // into a vendor bucket that other chunks then statically
-                    // import from. That defeats `defineAsyncComponent` wrapping
-                    // and pulls render-blocking CSS onto unrelated routes
-                    // (e.g. `feature-cropper.css` was leaking onto `/log-in/`).
-                    // Vite's organic splitting handles dynamic imports correctly.
-                }
+                output: {}
             }
         }
     },
@@ -166,7 +138,6 @@ export default defineNuxtConfig({
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
-            // Prefer ws:// with local HTTP dev server; use wss:// when the MSAB TLS endpoint matches.
             audioServerUrl:
                 process.env.NUXT_PUBLIC_AUDIO_SERVER_URL
                 || (process.env.NODE_ENV === 'development' ? 'ws://localhost:3030' : 'wss://localhost:3030'),

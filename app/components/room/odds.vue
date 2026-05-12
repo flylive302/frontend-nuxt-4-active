@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createLogger } from '~/utils/logger'
+import { createLogger } from '~/utils/logger';
 
 const SESSION_KEY = 'lucky_odds_acknowledged'
 
@@ -35,15 +35,19 @@ async function fetchOdds(): Promise<void> {
   }
 }
 
-/** Call this before the first lucky gift send in a session. */
-async function show(): Promise<void> {
+/**
+ * Call this before the first lucky gift send in a session.
+ * Returns true if the modal was opened, false if already acknowledged (event fired immediately).
+ */
+async function show(): Promise<boolean> {
   if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_KEY) === '1') {
     emit('acknowledged')
-    return
+    return false
   }
   await fetchOdds()
   understood.value = false
   isOpen.value = true
+  return true
 }
 
 function handleConfirm(): void {
@@ -65,16 +69,15 @@ defineExpose({ show })
 
 <template>
   <UModal
-    :open="isOpen"
-    :prevent-close="true"
+    v-model:open="isOpen"
+    :dismissible="false"
     title="Lucky Draw — Prize Odds"
     :ui="{
       content: 'bg-neutral-900 border border-white/10',
     }"
-    @update:open="isOpen = $event"
   >
     <template #body>
-      <div class="space-y-4">
+      <div class="space-y-4 bg-info">
         <p class="text-sm text-neutral-400 leading-relaxed">
           Lucky Draw prizes are determined randomly from the tiers below. Spending virtual coins does not guarantee any particular outcome.
           <span class="text-white font-medium">No real-world currency or prizes are involved.</span>

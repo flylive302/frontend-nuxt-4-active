@@ -196,17 +196,31 @@ async function handleSend() {
 const roomStore = useRoomStore();
 
 // Lucky Draw odds disclosure — shown before the first lucky gift per session
-const oddsDisclosure = ref<InstanceType<typeof import('../lucky/odds-disclosure.vue').default> | null>(null)
+const oddsDisclosure = ref<InstanceType<typeof import('../odds.vue').default> | null>(null)
 let pendingLuckySend = false
 
 async function handleSendLucky(): Promise<void> {
   if (!oddsDisclosure.value) {
-    // Disclosure component not mounted yet — proceed directly
     await doLuckySend()
     return
   }
   pendingLuckySend = true
-  await oddsDisclosure.value.show()
+  const willShow = await oddsDisclosure.value.show()
+  if (willShow) {
+    // Close drawer so the odds modal isn't blocked behind it
+    isOpen.value = false
+  }
+}
+
+function onOddsAcknowledged(): void {
+  if (!pendingLuckySend) return
+  isOpen.value = true
+  doLuckySend().then(() => { pendingLuckySend = false })
+}
+
+function onOddsDismissed(): void {
+  pendingLuckySend = false
+  isOpen.value = true
 }
 
 async function doLuckySend(): Promise<void> {
@@ -219,10 +233,11 @@ async function doLuckySend(): Promise<void> {
 </script>
 
 <template>
-  <RoomLuckyOddsDisclosure
+
+  <RoomOdds
     ref="oddsDisclosure"
-    @acknowledged="pendingLuckySend && doLuckySend().then(() => { pendingLuckySend = false })"
-    @dismissed="pendingLuckySend = false"
+    @acknowledged="onOddsAcknowledged"
+    @dismissed="onOddsDismissed"
   />
 
   <UDrawer v-model:open="isOpen" title="Send Gift" :overlay="false" :ui="{
@@ -251,7 +266,7 @@ async function doLuckySend(): Promise<void> {
               size="sm" @click="async () => {
                 isOpen = false;
                 roomStore.isMinimized = true;
-                await navigateTo(`/wallet/purchase-coins`);
+                await navigateTo(`/coins/request`);
               }">
               {{ formatCurrency(authStore.user?.coins) }}
             </UButton>

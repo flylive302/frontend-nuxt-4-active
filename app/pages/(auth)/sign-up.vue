@@ -14,7 +14,6 @@ definePageMeta({
 })
 
 useThemeColor('#000002')
-useHead({ link: [{ rel: 'preload', as: 'image', href: '/logos/flylive-logo.webp' }] })
 useSeoMeta({
   title: 'Sign Up — FlyLive',
   description: 'Create your FlyLive account to join live audio rooms, connect with hosts, and start broadcasting.',
@@ -138,9 +137,9 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 
       <p class="text-xs text-neutral-500 text-center mt-2 leading-relaxed">
         By signing up, you agree to our
-        <NuxtLink to="/privacy-policy" class="text-primary hover:underline">Privacy Policy</NuxtLink>
+        <a href="/privacy-policy" class="text-primary hover:underline">Privacy Policy</a>
         and
-        <NuxtLink to="/terms-of-service" class="text-primary hover:underline">Terms of Service</NuxtLink>.
+        <a href="/terms-of-service" class="text-primary hover:underline">Terms of Service</a>.
         You must be at least 18 years old.
       </p>
     </UForm>

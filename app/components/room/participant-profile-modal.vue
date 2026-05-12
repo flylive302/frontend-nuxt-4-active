@@ -73,13 +73,13 @@ const showAdminActions = computed(() => {
   return canManageMembers.value && !isOwnProfile.value && props.participant
 })
 
-/** Get participant's current role */
+/** Get a participant's current role */
 const participantRole = computed((): 'owner' | 'admin' | 'member' => {
   // Check if participant is room owner
   if (props.participant?.id === roomStore.currentRoom?.owner?.id) {
     return 'owner'
   }
-  // Check from members list
+  // Check from member list
   const membershipStore = useRoomMembershipStore()
   const member = membershipStore.members.items.find(
     m => m.user_id === props.participant?.id || m.user?.id === props.participant?.id

@@ -42,8 +42,7 @@ export const pwaConfig: ModuleOptions = {
     },
     devOptions: {
         enabled: true,
-        type: 'module',
-        suppressWarnings: true
+        suppressWarnings: true,
     },
     workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
