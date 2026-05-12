@@ -10,7 +10,7 @@
   provides the FCP/LCP content directly.
 -->
 <div id="spa-loader">
-  <img src="/logos/flylive-logo.webp" alt="FlyLive" width="140" height="88" class="spa-loader__logo" fetchpriority="high" />
+  <img src="/logos/logo-full.svg" alt="FlyLive" width="140" height="88" class="spa-loader__logo" fetchpriority="high" />
   <div class="spa-loader__spinner"></div>
 </div>
 
@@ -44,17 +44,34 @@
   }
 
   @keyframes spa-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   @keyframes spa-logo-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(0.95); }
+
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.7;
+      transform: scale(0.95);
+    }
   }
 
   /* Respect reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .spa-loader__logo { animation: none; }
-    .spa-loader__spinner { animation: none; border-color: #ff2465; }
+    .spa-loader__logo {
+      animation: none;
+    }
+
+    .spa-loader__spinner {
+      animation: none;
+      border-color: #ff2465;
+    }
   }
 </style>
