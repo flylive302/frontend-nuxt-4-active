@@ -35,7 +35,7 @@ export const pwaConfig: ModuleOptions = {
             { src: '/pwa-assets/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ],
         screenshots: [
-            { src: '/pwa-assets/720x1280.web', sizes: '720x1280', type: 'image/webp', form_factor: 'narrow', label: 'FlyLive Home - Live Audio Rooms' },
+            { src: '/pwa-assets/screenshots/720x1280.webp', sizes: '720x1280', type: 'image/webp', form_factor: 'narrow', label: 'FlyLive Home - Live Audio Rooms' },
         ]
     },
     devOptions: {

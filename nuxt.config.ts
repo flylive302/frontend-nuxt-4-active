@@ -21,7 +21,7 @@ export default defineNuxtConfig({
     },
     devtools: { enabled: false },
     features: {
-        inlineStyles: true,
+        inlineStyles: false,
     },
     css: ['~/assets/css/main.css'],
     modules: ['@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
@@ -126,6 +126,9 @@ export default defineNuxtConfig({
         },
         // Cloudflare Pages deployment
         preset: 'cloudflare-pages',
+        prerender: {
+            autoSubfolderIndex: false,
+        },
         cloudflare: {
             pages: {
                 routes: {
