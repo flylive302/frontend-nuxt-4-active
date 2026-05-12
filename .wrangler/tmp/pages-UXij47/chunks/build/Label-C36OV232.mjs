@@ -1,0 +1,2 @@
+import{v as e,C as r,P as t}from"./server.mjs";var o=e.defineComponent({__name:"Label",props:{for:{type:String,required:!1},asChild:{type:Boolean,required:!1},as:{type:null,required:!1,default:"label"}},setup(o){const a=o;return r(),(r,o)=>(e.openBlock(),e.createBlock(e.unref(t),e.mergeProps(a,{onMousedown:o[0]||(o[0]=e=>{!e.defaultPrevented&&e.detail>1&&e.preventDefault()})}),{default:e.withCtx(()=>[e.renderSlot(r.$slots,"default")]),_:3},16))}});export{o as L};
+//# sourceMappingURL=Label-C36OV232.mjs.map

@@ -1,0 +1,2 @@
+const a=[".gift-playback-container[data-v-41da9e5b]{position:fixed;transition:all .3s cubic-bezier(.4,0,.2,1);z-index:9999}.gift-playback--fullscreen[data-v-41da9e5b]{background:hsl(var(--color-info)/.1);inset:0}.gift-playback--minimized[data-v-41da9e5b]{border-radius:.5rem;box-shadow:0 10px 15px -3px #0000001a,0 4px 6px -4px #0000001a;cursor:move;left:0;margin:0;overflow:hidden;top:0;touch-action:none}"];export{a as default};
+//# sourceMappingURL=playback-modal-styles.BEs8eOfn.mjs.map
