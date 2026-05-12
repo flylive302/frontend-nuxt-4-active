@@ -77,7 +77,7 @@ defineExpose({ show })
     }"
   >
     <template #body>
-      <div class="space-y-4 bg-info">
+      <div class="space-y-4">
         <p class="text-sm text-neutral-400 leading-relaxed">
           Lucky Draw prizes are determined randomly from the tiers below. Spending virtual coins does not guarantee any particular outcome.
           <span class="text-white font-medium">No real-world currency or prizes are involved.</span>
