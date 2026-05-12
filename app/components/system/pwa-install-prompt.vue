@@ -98,7 +98,7 @@ function handleDismiss(): void {
       <div class="flex items-center gap-3">
         <!-- Icon -->
         <NuxtImg
-            :src="ASSETS.LOGO_MAIN"
+            :src="ASSETS.LOGO_XL"
             alt="FlyLive"
             class="h-12 w-auto"
             width="64"

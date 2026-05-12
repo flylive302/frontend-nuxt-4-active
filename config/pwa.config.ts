@@ -11,9 +11,9 @@ export const pwaConfig: ModuleOptions = {
     injectRegister: 'auto',
     includeAssets: [
         'favicon.ico',
-        'pwa-assets/icon-192x192.png',
-        'pwa-assets/icon.png',
-        'pwa-assets/apple-touch-icon-180x180.png'
+        'pwa-assets/android/launchericon-192x192.png',
+        'pwa-assets/android/launchericon-512x512.png',
+        'pwa-assets/ios/180.png',
     ],
     manifest: {
         name: 'FlyLive',
@@ -30,10 +30,9 @@ export const pwaConfig: ModuleOptions = {
         scope: '/',
         handle_links: 'preferred',
         icons: [
-            { src: '/pwa-assets/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-            { src: '/pwa-assets/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-            { src: '/pwa-assets/maskable-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-            { src: '/pwa-assets/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+            { src: '/pwa-assets/android/launchericon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-assets/android/launchericon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-assets/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ],
         screenshots: [
             { src: '/screenshots/desktop.jpeg', sizes: '1024x1024', type: 'image/jpeg', form_factor: 'wide', label: 'FlyLive Home - Live Audio Rooms' },

@@ -21,11 +21,10 @@ const IK = 'https://ik.imagekit.io/flylive'
 export const ASSETS = {
 
   // ── Logos (self-hosted, critical path) ──
-  LOGO_MAIN: '/logos/flylive-logo.webp',
-  LOGO_TEXT: '/logos/flylive-text.png',
-  LOGO_ICON: '/logos/flylive-logo-icon.webp',
-  LOGO_SM: '/logos/flylive-logo-sm.webp',
-  LOGO_XL: '/logos/flylive-logo-xl.webp',
+  LOGO_MAIN: '/logos/logo-wide.webp',
+  LOGO_TEXT: '/logos/logo-text.png',
+  LOGO_ICON: '/logos/icon.png',
+  LOGO_XL: '/logos/logo-full.png',
 
   // ── R2 CDN — Binary / Animations ──
   DEFAULT_FRAME: `${R2}/frames/10.svga`,

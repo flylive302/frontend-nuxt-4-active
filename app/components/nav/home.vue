@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import {ASSETS} from "~/constants/assets";
+
 const open = defineModel < boolean > ('open', { default: false })
 const inboxStore = useInboxStore()
 const isClientHydrated = ref(false)
@@ -14,14 +16,18 @@ const officialBadge = computed(() => {
 })
 </script>
 <template>
-  <header
-    class="
-      fixed inset-x-0 top-0 z-50 px-2 pb-1
-      flex items-center justify-between backdrop-blur-lg border-b border-white/10
-      safe-area-top
-  ">
+  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 flex items-center justify-between backdrop-blur-lg border-b border-white/10">
     <!-- Brand -->
-    <LogoMain />
+    <NuxtImg
+        :src="ASSETS.LOGO_MAIN"
+        alt="FlyLive"
+        width="172"
+        height="47"
+        sizes="64px"
+        preload
+        fetchpriority="high"
+        class="h-10 mt-1 w-auto"
+    />
 
     <!-- Actions -->
     <div class="flex items-center gap-1.5">

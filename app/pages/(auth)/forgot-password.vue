@@ -4,7 +4,7 @@ import { contactSupportSchema, useContactSupport, type ContactSupportFormData } 
 
 definePageMeta({
   layout: 'auth',
-  authHeading: 'Contact Support',
+  authHeading: 'Contact Support We reply ASAP',
   pageTransition: false,
   layoutTransition: false,
 })
@@ -44,7 +44,7 @@ async function onSubmit(event: FormSubmitEvent<ContactSupportFormData>): Promise
 
 <template>
   <div>
-    <h2 id="contact-support-heading" class="sr-only">Contact Support Form</h2>
+    <h2 id="contact-support-heading" class="sr-only">Contact Support We reply in 24 hours</h2>
 
     <div
       v-if="submitted"
