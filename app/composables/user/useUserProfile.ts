@@ -174,9 +174,8 @@ export function useUserProfile(
 
       profile.value = response.data
 
-      // Determine if there are more gifts to load
-      // If we received a full page, there might be more
-      giftsHasMore.value = response.data.gifts_received.length >= perPage
+      giftsCursor.value = response.data.gifts_next_cursor ?? null
+      giftsHasMore.value = response.data.gifts_has_more ?? false
 
       // Compute level info (sync, uses bootstrap store)
       computeLevelInfo()

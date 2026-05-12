@@ -78,6 +78,8 @@ export interface UserProfile {
   following_count: number
   is_follow_list_public: boolean
   gifts_received: ProfileGiftReceived[]
+  gifts_next_cursor: string | null
+  gifts_has_more: boolean
 }
 
 /**

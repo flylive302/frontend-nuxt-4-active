@@ -83,32 +83,19 @@ async function handleSubmit(): Promise<void> {
 </script>
 
 <template>
-  <UModal
-    :open="open"
-    title="Report"
-    :ui="{ content: 'bg-neutral-900 border border-white/10' }"
-    @update:open="$emit('update:open', $event)"
-  >
+  <UModal :open="open" title="Report" :ui="{ content: 'bg-neutral-900 border border-white/10' }"
+    @update:open="$emit('update:open', $event)">
     <template #body>
       <div class="space-y-4">
         <p class="text-sm text-neutral-400">
           Help us keep FlyLive safe. Select the reason for your report.
         </p>
 
-        <USelect
-          v-model="reason"
-          :items="REASON_OPTIONS"
-          value-key="value"
-          label-key="label"
-          placeholder="Select a reason"
-        />
+        <USelect v-model="reason" :items="REASON_OPTIONS" value-key="value" label-key="label"
+          placeholder="Select a reason" class="w-full" />
 
-        <UTextarea
-          v-model="description"
-          placeholder="Additional details (optional)"
-          :rows="3"
-          :maxlength="500"
-        />
+        <UTextarea v-model="description" placeholder="Additional details (optional)" :rows="3" :maxlength="500"
+          class="w-full" />
 
         <p class="text-xs text-neutral-500">
           We review all reports within 24 hours. Submitting false reports is a violation of our Terms of Service.
@@ -118,21 +105,10 @@ async function handleSubmit(): Promise<void> {
 
     <template #footer>
       <div class="flex gap-3 w-full">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          class="flex-1"
-          @click="$emit('update:open', false)"
-        >
+        <UButton variant="ghost" color="neutral" class="flex-1" @click="$emit('update:open', false)">
           Cancel
         </UButton>
-        <UButton
-          color="error"
-          class="flex-1"
-          :disabled="!reason"
-          :loading="isSubmitting"
-          @click="handleSubmit"
-        >
+        <UButton color="error" class="flex-1" :disabled="!reason" :loading="isSubmitting" @click="handleSubmit">
           Submit Report
         </UButton>
       </div>

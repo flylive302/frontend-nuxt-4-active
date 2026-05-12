@@ -244,9 +244,9 @@ const showReportModal = ref(false)
       </template>
     </ProfileHeader>
 
-    <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
+<!--    <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>-->
 
-    <EventsProfileCard />
+<!--    <EventsProfileCard />-->
 
     <!-- Agency Section (conditional) -->
     <template v-if="hasAgency && profileWritable?.agency">
@@ -342,7 +342,7 @@ const showReportModal = ref(false)
         aria-label="Primary"
         class="fixed inset-x-2 z-50 bottom-4"
       >
-        <div class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
+        <div v-if="profileId !== authStore.user?.id" class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
           <UButton
               :loading="isTracking"
               :disabled="isTracking"
@@ -392,12 +392,11 @@ const showReportModal = ref(false)
             Room
           </UButton>
 
-          <UButton v-if="profileId !== authStore.user?.id" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="outline" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
+          <UButton :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="outline" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
             Chat
           </UButton>
 
           <UButton
-            v-if="profileId !== authStore.user?.id"
             icon="i-lucide-flag"
             variant="ghost"
             size="md"
@@ -409,7 +408,7 @@ const showReportModal = ref(false)
       </footer>
 
       <!-- Report User Modal -->
-      <CommonReportModal
+      <ReportModal
         v-if="profileId && profileId !== authStore.user?.id"
         v-model:open="showReportModal"
         reportable-type="user"
