@@ -39,11 +39,10 @@ export interface ApiValidationError {
  * - GET /api/user/default-reviewer
  */
 export interface ResellerApiRow {
-  id: number        // Unique identifier for update requests
-  name: string      // Display name
-  signature: string // Unique identifier slug
-  contact: string   // Phone (formatted) or email
-  avatar: string | null    // Avatar URL (can be null)
+  id: number
+  name: string
+  signature: string
+  avatar: string | null
 }
 
 /**

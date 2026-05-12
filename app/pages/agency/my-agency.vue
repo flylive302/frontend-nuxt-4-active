@@ -60,9 +60,6 @@ const agencyCoinReseller = computed(() => {
     name: agency.value.coin_reseller.name,
     avatar: agency.value.coin_reseller.avatar ?? null,
     signature: agency.value.coin_reseller.signature ?? null,
-    contact: typeof agency.value.coin_reseller.phone === 'object' && agency.value.coin_reseller.phone !== null
-        ? agency.value.coin_reseller.phone.formatted
-        : (agency.value.coin_reseller.phone ?? ''),
   }
 })
 

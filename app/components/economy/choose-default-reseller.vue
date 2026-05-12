@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
   /** When true, changes the agency coin reseller instead of user default */
   agencyMode?: boolean
   /** Initial reseller to display (for agency mode when showing agency's coin reseller) */
-  initialReseller?: { id: number; name: string; avatar?: string | null; signature?: string | null; contact?: string } | null
+  initialReseller?: { id: number; name: string; avatar?: string | null; signature?: string | null } | null
 }>(), {
   color: 'primary',
   modelValue: undefined,
@@ -64,7 +64,6 @@ type CommandItem = {
   id: number
   label: string
   name: string
-  suffix?: string
   avatar?: { src: string }
 }
 
@@ -86,8 +85,8 @@ async function initReseller() {
   if (props.agencyMode && props.initialReseller) {
     const reseller = props.initialReseller
 
-    // If we have a signature but no contact info, try to fetch full details
-    if (!reseller.contact && reseller.signature) {
+    // If we have a signature, try to fetch full details
+    if (reseller.signature) {
       try {
         const response = await fetchResellers(reseller.signature)
         if (response.status === 'success' && response.data?.length > 0) {
@@ -110,7 +109,6 @@ async function initReseller() {
       name: reseller.name,
       avatar: reseller.avatar ?? null,
       signature: reseller.signature ?? '',
-      contact: reseller.contact ?? '', // Might be empty if fetch failed
     }
     emit('update:modelValue', reseller.id)
     return
@@ -183,7 +181,6 @@ async function selectReseller(item: CommandItem): Promise<void> {
           id: item.id,
           name: item.name,
           signature: item.label,
-          contact: item.suffix ?? '',
           avatar: item.avatar?.src ?? null,
         }
         emit('update:modelValue', item.id)
@@ -220,7 +217,6 @@ const commandItems = computed<CommandItem[]>(() =>
     id: r.id,
     label: r.signature,
     name: r.name,
-    suffix: r.contact,
     avatar: r.avatar ? { src: r.avatar } : undefined
   }))
 )
@@ -322,18 +318,8 @@ const paletteGroups = computed<CommandGroup[]>(() => [
       </div>
 
       <div class="w-full leading-tight min-w-0 flex flex-col justify-center">
-        <p class="font-bold truncate">
-          {{ selectedReseller.name }}
-          <span class="text-sm font-semibold text-muted truncate">{{ selectedReseller.signature }}</span>
-        </p>
-        <UButton
-            :to="`https://wa.me/${selectedReseller.contact}`" target="_blank"
-            variant="subtle" color="info" size="xl"
-            class="justify-center items-center inset-shadow-sm mt-1"
-        >
-          <UIcon name="i-logos-whatsapp" />
-          {{ selectedReseller.contact }}
-        </UButton>
+        <p class="font-bold truncate">{{ selectedReseller.name }}</p>
+        <p class="text-sm font-semibold text-muted truncate">{{ selectedReseller.signature }}</p>
       </div>
     </div>
 
