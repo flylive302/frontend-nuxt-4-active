@@ -21,7 +21,7 @@ const IK = 'https://ik.imagekit.io/flylive'
 export const ASSETS = {
 
   // ── Logos (self-hosted, critical path) ──
-  LOGO_MAIN: '/logos/logo-wide.webp',
+  LOGO_MAIN: '/logos/flylive-logo-wide.png',
   LOGO_TEXT: '/logos/logo-text.png',
   LOGO_ICON: '/logos/icon.png',
   LOGO_XL: '/logos/logo-full.png',
