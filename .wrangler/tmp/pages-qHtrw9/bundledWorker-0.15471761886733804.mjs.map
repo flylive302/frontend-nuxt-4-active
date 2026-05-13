@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "sources": ["../../../dist/_worker.js/index.js"],
+  "sourceRoot": "/home/xha/Flylive/frontend-nuxt-4-active/.wrangler/tmp/pages-qHtrw9/bundledWorker-0.15471761886733804.mjs",
+  "sourcesContent": ["globalThis._importMeta_={url:\"file:///_entry.js\",env:{}};export{aa as default}from\"./chunks/nitro/nitro.mjs\";\n//# sourceMappingURL=index.js.map\n"],
+  "mappings": ";AAAyD,SAAa,UAAY;AAAlF,WAAW,eAAa,EAAC,KAAI,qBAAoB,KAAI,CAAC,EAAC;",
+  "names": []
+}

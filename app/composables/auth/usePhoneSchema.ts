@@ -3,7 +3,13 @@
 // ========================================
 import { z } from 'zod'
 import { computed, toValue, type MaybeRef } from 'vue'
-import { parsePhoneNumber, type CountryCode } from 'libphonenumber-js/min'
+import type { CountryCode } from 'libphonenumber-js/min'
+
+// Loaded asynchronously — 118 KB that must not block initial render.
+// Starts fetching when this module first evaluates; by the time a user
+// selects a country and types digits, it is already resolved.
+let _parsePhone: typeof import('libphonenumber-js/min').parsePhoneNumber | null = null
+import('libphonenumber-js/min').then(m => { _parsePhone = m.parsePhoneNumber }).catch(() => {})
 
 // ========================================
 // Types
@@ -62,9 +68,11 @@ export function usePhoneSchema(country: MaybeRef<Pick<Country, 'code' | 'name'> 
         return
       }
 
+      if (!_parsePhone) return
+
       try {
         const e164 = normalizePhone(data.dialCode, data.phone)
-        const parsed = parsePhoneNumber(e164, c.code.toUpperCase() as CountryCode)
+        const parsed = _parsePhone(e164, c.code.toUpperCase() as CountryCode)
 
         if (!parsed?.isValid()) {
           throw new Error('invalid')
