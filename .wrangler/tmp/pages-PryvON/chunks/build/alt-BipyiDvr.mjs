@@ -1,2 +1,0 @@
-import{_ as e}from"./_plugin-vue_export-helper-1tPrXgE0.mjs";import{v as s}from"./server.mjs";import{I as t,C as r}from"../routes/renderer.mjs";import"../nitro/nitro.mjs";import"../_/shared.esm-bundler.mjs";const o={};const m=o.setup;o.setup=(e,t)=>{const r=s.useSSRContext();return(r.modules||(r.modules=new Set)).add("layouts/alt.vue"),m?m(e,t):void 0};const n=e(o,[["ssrRender",function(e,s,o,m){s(`<div${t(m)}>`),r(e.$slots,"default",{},null,s,o),s("</div>")}]]);export{n as default};
-//# sourceMappingURL=alt-BipyiDvr.mjs.map

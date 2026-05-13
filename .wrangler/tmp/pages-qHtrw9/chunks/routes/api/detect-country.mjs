@@ -1,2 +1,0 @@
-import{d as o,g as r,a as t}from"../../nitro/nitro.mjs";const n=o(async o=>{var n,e;try{const c=r(o,"cf-ipcountry");if(c&&"XX"!==c&&"T1"!==c)return{country_code:c.toUpperCase()};const u=t(o,{xForwardedFor:!0});if(!u||"127.0.0.1"===u||"::1"===u)return{country_code:null};return{country_code:null!=(e=null==(n=(await $fetch(`https://get.geojs.io/v1/ip/country/${u}.json`,{timeout:3e3})).country)?void 0:n.toUpperCase())?e:null}}catch(o){return console.error("Geolocation error:",o),{country_code:null}}});export{n as default};
-//# sourceMappingURL=detect-country.mjs.map
