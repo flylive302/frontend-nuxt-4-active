@@ -35,9 +35,42 @@ const currentRoomId = ref<string | null>(null);
 export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
   const log = createLogger('[MediasoupTransports]');
   const emitAsync = createEmitAsync(socket);
+  const toast = useToast();
 
   // Get device from device composable
   const { device } = useMediasoupDevice();
+
+  // Diagnose European/symmetric-NAT failures: log whether the server handed us
+  // TURN candidates (only `stun:` URLs means TURN is unavailable for this user).
+  function logIceServers(label: string, iceServers: RTCIceServer[] | undefined) {
+    if (!iceServers || iceServers.length === 0) {
+      log.warn(`${label}: no iceServers received from server`);
+      return;
+    }
+    const schemes = new Set<string>();
+    for (const server of iceServers) {
+      const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+      for (const url of urls) {
+        const scheme = url.split(':', 1)[0];
+        if (scheme) schemes.add(scheme);
+      }
+    }
+    log.debug(`${label}: iceServers count=${iceServers.length} schemes=${[...schemes].join(',')}`);
+  }
+
+  function attachFailureListener(transport: Transport, label: string) {
+    transport.on('connectionstatechange', (state: mediasoupTypes.ConnectionState) => {
+      log.debug(`${label} connectionstatechange:`, state);
+      if (state === 'failed') {
+        log.error(`${label} ICE/DTLS connection failed`);
+        toast.add({
+          title: 'Audio connection failed',
+          description: 'Your network may be blocking the audio relay. Try a different network or check firewall settings.',
+          color: 'error',
+        });
+      }
+    });
+  }
 
   // ========================================
   // Public Methods
@@ -78,6 +111,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       throw new Error(consumerResponse.error || 'Failed to create consumer transport');
     }
 
+    logIceServers('Consumer transport', consumerResponse.data.iceServers);
+
     consumerTransport.value = device.value.createRecvTransport({
       id: consumerResponse.data.id,
       iceParameters: consumerResponse.data.iceParameters,
@@ -85,6 +120,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       dtlsParameters: consumerResponse.data.dtlsParameters,
       iceServers: consumerResponse.data.iceServers,
     });
+
+    attachFailureListener(consumerTransport.value, 'Consumer transport');
 
     // Handle consumer transport connection
     consumerTransport.value.on(
@@ -147,6 +184,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       throw new Error(response.error || 'Failed to create producer transport');
     }
 
+    logIceServers('Producer transport', response.data.iceServers);
+
     producerTransport.value = device.value.createSendTransport({
       id: response.data.id,
       iceParameters: response.data.iceParameters,
@@ -154,6 +193,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       dtlsParameters: response.data.dtlsParameters,
       iceServers: response.data.iceServers,
     });
+
+    attachFailureListener(producerTransport.value, 'Producer transport');
 
     // Handle producer transport connection
     producerTransport.value.on(

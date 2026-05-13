@@ -1,4 +1,3 @@
-import type { Socket } from 'socket.io-client';
 import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
 import { createLogger } from '~/utils/logger';
 import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
@@ -191,7 +190,17 @@ export function useAudioSocket(): UseAudioSocketReturn {
       err.message === 'Authentication failed' ||
       err.message === 'Authentication required';
 
-    if (!authFailed) return;
+    if (!authFailed) {
+      // Network / DNS / TLS / server-unreachable. Socket.IO will keep retrying
+      // automatically, but surface the failure so the user knows audio is down
+      // instead of watching the seat-taking UI spin forever.
+      toast.add({
+        title: 'Cannot reach audio server',
+        description: 'Network issue or server unreachable. Audio is unavailable; chat still works.',
+        color: 'error',
+      });
+      return;
+    }
 
     if (_authRetryInFlight) {
       // Second auth failure — token refresh didn't help.

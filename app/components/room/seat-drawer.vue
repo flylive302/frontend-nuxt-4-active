@@ -68,6 +68,10 @@ function handleStartInvite() {
 async function handleTakeSeat() {
   if (seatIndex.value === null) return
 
+  // Close the drawer before any permission flow so the explanatory dialog
+  // and the browser's native permission prompt aren't visually blocked.
+  isOpen.value = false
+
   // Check mic permission state — show rationale dialog before the browser prompt fires
   try {
     const result = await navigator.permissions.query({ name: 'microphone' as PermissionName })
@@ -98,6 +102,8 @@ async function doTakeSeat() {
     }
   } catch (error) {
     log.error('Failed to take seat:', error)
+    // Reset activeSeat so the watcher doesn't re-open the drawer on next interaction.
+    seatsStore.closeSeat()
   } finally {
     isLoading.value = false
   }
