@@ -26,7 +26,7 @@ export const pwaConfig: ModuleOptions = {
         orientation: 'portrait',
         categories: ['entertainment', 'music', 'social'],
         id: '/',
-        start_url: '/?fullscreen=true',
+        start_url: '/welcome',
         scope: '/',
         handle_links: 'preferred',
         icons: [

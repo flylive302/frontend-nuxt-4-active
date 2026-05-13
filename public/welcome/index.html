@@ -3,6 +3,19 @@
 
 <head>
   <meta charset="utf-8">
+  <!-- Instant redirect for returning authenticated users — runs before first paint -->
+  <script>
+    try {
+      var s = localStorage.getItem('auth');
+      if (s) {
+        var a = JSON.parse(s);
+        if (a && a.token) {
+          document.documentElement.style.display = 'none';
+          location.replace('/');
+        }
+      }
+    } catch (e) {}
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>FlyLive — Live Audio Rooms & Social Platform</title>
   <meta name="description"
