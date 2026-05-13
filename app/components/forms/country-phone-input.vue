@@ -151,9 +151,15 @@ onMounted(async () => {
     }
   }
 
-  const detected = await detectIfAllowed()
-  if (detected) {
-    onCountryChange(detected)
+  // Defer geolocation to idle — it fires a network request that competes with hydration
+  const runDetect = async () => {
+    const detected = await detectIfAllowed()
+    if (detected) onCountryChange(detected)
+  }
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => runDetect(), { timeout: 3000 })
+  } else {
+    setTimeout(runDetect, 200)
   }
 })
 </script>

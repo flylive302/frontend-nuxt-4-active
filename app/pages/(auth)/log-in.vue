@@ -5,6 +5,9 @@ import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
 import type { LoginPayload } from '~/types/user/auth'
+const FormsCountryPhoneInput = defineAsyncComponent(
+    () => import('~/components/forms/country-phone-input.vue')
+)
 
 definePageMeta({
   layout: 'auth',

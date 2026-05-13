@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { Form, FormSubmitEvent } from '@nuxt/ui'
 import { contactSupportSchema, useContactSupport, type ContactSupportFormData } from '~/composables/support/useContactSupport'
+const FormsCountryPhoneInput = defineAsyncComponent(
+    () => import('~/components/forms/country-phone-input.vue')
+)
 
 definePageMeta({
   layout: 'auth',

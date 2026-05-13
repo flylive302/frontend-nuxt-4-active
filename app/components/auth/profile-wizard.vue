@@ -141,7 +141,7 @@ async function onAvatarFileSelected(file: File) {
 </script>
 
 <template>
-  <div class="flex flex-col min-h-[80dvh] py-6 px-4 [contain:layout_style]">
+  <div class="flex flex-col min-h-[80dvh] py-6 px-4 contain-[layout_style]">
     <!-- Progress dots -->
     <div class="flex justify-center gap-2 mb-8">
       <button
@@ -180,7 +180,7 @@ async function onAvatarFileSelected(file: File) {
       <template v-if="currentStep.id === 'gender'">
         <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.gender }}</h1>
 
-        <div class="grid grid-cols-2 gap-4 w-full max-w-[22rem] mx-auto my-6">
+        <div class="grid grid-cols-2 gap-4 w-full max-w-88 mx-auto my-6">
           <button
             class="gender-card"
             :class="{ 'gender-card--female-selected': formState.gender === GENDER_FEMALE }"
@@ -226,7 +226,7 @@ async function onAvatarFileSelected(file: File) {
         <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.dob }}</h1>
         <p class="text-sm text-neutral-400 text-center mb-8">You must be at least 18 years old</p>
 
-        <div class="dob-wrapper flex items-center gap-3 w-full max-w-[22rem] py-4 px-5 rounded-2xl border-2 border-neutral-700 bg-neutral-900">
+        <div class="dob-wrapper flex items-center gap-3 w-full max-w-88 py-4 px-5 rounded-2xl border-2 border-neutral-700 bg-neutral-900">
           <UIcon name="i-lucide-calendar" class="size-6 text-primary-400" />
           <input
             type="date"
