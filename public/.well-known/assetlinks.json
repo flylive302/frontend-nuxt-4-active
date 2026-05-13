@@ -1,8 +1,12 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.flyliveapp.app",
-    "sha256_cert_fingerprints": ["TODO:REPLACE_WITH_YOUR_UPLOAD_KEY_SHA256_FINGERPRINT"]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.flylive.app",
+      "sha256_cert_fingerprints": [
+        "66:89:F1:52:70:7F:78:EC:25:31:BE:50:9E:30:5B:1D:96:DB:DB:CF:B7:D8:12:49:84:B9:27:D0:BE:49:84:FB"
+      ]
+    }
   }
-}]
+]
