@@ -37,7 +37,7 @@ export function useRoomLifecycle(): void {
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
   const audioStore = useRoomAudioStore();
-  const { joinRoom, leaveRoom, startAudio, connectionStatus } = useRoomAudio();
+  const { joinRoom, leaveRoom, startAudio, recoverPlayback, connectionStatus } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect, recoverFromSuspension } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
@@ -55,6 +55,14 @@ export function useRoomLifecycle(): void {
         log.warn('Failed to auto-resume audio after reconnect:', err);
       }
     }
+  }
+
+  async function rebuildRoomAudio(roomId: string): Promise<void> {
+    seatsStore.resetSeats();
+    disconnectSocket(true);
+    await connectSocket();
+    await joinRoom(roomId);
+    await resumeAudioIfSeated();
   }
 
   // ========================================
@@ -117,11 +125,7 @@ export function useRoomLifecycle(): void {
           if (isJoining.value) return; // Prevent double-join
           isJoining.value = true;
           try {
-            seatsStore.resetSeats();
-            disconnectSocket();
-            await connectSocket();
-            await joinRoom(String(roomStore.currentRoom.id));
-            await resumeAudioIfSeated();
+            await rebuildRoomAudio(String(roomStore.currentRoom.id));
           } catch (err) {
             log.warn('Reconnect after un-minimize failed:', err);
             toast.add({
@@ -192,24 +196,22 @@ export function useRoomLifecycle(): void {
       // Socket-level: refresh token + force reconnect if stale connection detected
       await recoverFromSuspension();
 
-      // If no room is open or socket already reconnected, nothing more to do.
-      // Watcher 3 (onReconnect) handles room rejoin when auto-reconnect succeeds.
-      if (!roomStore.currentRoom || isConnected.value) return;
+      if (!roomStore.currentRoom) return;
 
-      // Give Socket.IO auto-reconnect a moment to complete
+      // Give Socket.IO and the browser media stack a moment to settle after resume.
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Re-check after wait — conditions may have changed
-      if (!roomStore.currentRoom || isConnected.value || isJoining.value) return;
+      if (!roomStore.currentRoom || isJoining.value) return;
 
-      // Fallback: auto-reconnect hasn't succeeded — trigger manual reconnect + rejoin
+      if (isConnected.value) {
+        const playbackRecovered = await recoverPlayback();
+        if (playbackRecovered) return;
+      }
+
+      // Fallback: Socket.IO did not reconnect or WebRTC playback stayed unhealthy.
       isJoining.value = true;
       try {
-        seatsStore.resetSeats();
-        disconnectSocket();
-        await connectSocket();
-        await joinRoom(String(roomStore.currentRoom.id));
-        await resumeAudioIfSeated();
+        await rebuildRoomAudio(String(roomStore.currentRoom.id));
       } catch (err) {
         log.warn('Reconnect after PWA resume failed:', err);
         toast.add({

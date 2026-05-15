@@ -25,6 +25,40 @@ const audioElements = new Map<string, HTMLAudioElement>();
 const isLocalMuted = ref(false);
 const currentVolume = ref(1);
 
+const REMOTE_AUDIO_CONTAINER_ID = 'flylive-remote-audio';
+
+function getRemoteAudioContainer(): HTMLElement | null {
+  if (!import.meta.client) return null;
+
+  let container = document.getElementById(REMOTE_AUDIO_CONTAINER_ID);
+  if (container) return container;
+
+  container = document.createElement('div');
+  container.id = REMOTE_AUDIO_CONTAINER_ID;
+  container.setAttribute('aria-hidden', 'true');
+  container.style.position = 'fixed';
+  container.style.width = '1px';
+  container.style.height = '1px';
+  container.style.overflow = 'hidden';
+  container.style.opacity = '0';
+  container.style.pointerEvents = 'none';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  document.body.appendChild(container);
+
+  return container;
+}
+
+function attachAudioElement(audio: HTMLAudioElement): void {
+  audio.autoplay = true;
+  audio.setAttribute('playsinline', 'true');
+
+  const container = getRemoteAudioContainer();
+  if (container && audio.parentElement !== container) {
+    container.appendChild(audio);
+  }
+}
+
 // ============================================
 // Composable
 // ============================================
@@ -219,6 +253,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     const audio = new Audio();
     audio.srcObject = new MediaStream([consumer.track]);
     audio.volume = currentVolume.value;
+    attachAudioElement(audio);
     audioElements.set(producerId, audio);
 
     // Try to play, handling autoplay policy
@@ -256,6 +291,13 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     consumer.on('transportclose', () => {
       log.debug('Consumer transport closed for:', producerId);
       consumers.value.delete(producerId);
+      const audio = audioElements.get(producerId);
+      if (audio) {
+        audio.pause();
+        audio.srcObject = null;
+        audio.remove();
+        audioElements.delete(producerId);
+      }
     });
 
     log.debug('Started consuming producer:', producerId);
@@ -278,6 +320,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (audio) {
       audio.pause();
       audio.srcObject = null;
+      audio.remove();
       audioElements.delete(producerId);
     }
 
@@ -302,10 +345,43 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     audioElements.forEach((audio) => {
       audio.pause();
       audio.srcObject = null;
+      audio.remove();
     });
     audioElements.clear();
 
     log.debug('Streaming cleanup complete');
+  }
+
+  /**
+   * Recover remote playback after mobile/PWA background suspension.
+   * Socket.IO may recover while WebRTC audio elements remain paused/stalled.
+   */
+  async function recoverPlayback(): Promise<boolean> {
+    if (audioElements.size === 0) return true;
+
+    let recovered = true;
+
+    for (const [producerId, audio] of audioElements) {
+      const consumer = consumers.value.get(producerId);
+
+      if (!consumer || consumer.closed || consumer.track.readyState === 'ended') {
+        log.warn('Cannot recover playback: consumer is closed or ended', { producerId });
+        recovered = false;
+        continue;
+      }
+
+      attachAudioElement(audio);
+
+      try {
+        await audio.play();
+        log.debug('Recovered playback for producer:', producerId);
+      } catch (err) {
+        log.warn('Failed to recover playback for producer:', producerId, err);
+        recovered = false;
+      }
+    }
+
+    return recovered;
   }
 
   /**
@@ -352,6 +428,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     consumeProducer,
     stopConsumer,
     cleanup,
+    recoverPlayback,
     setVolume,
     getVolume,
   };

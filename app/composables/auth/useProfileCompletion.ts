@@ -79,7 +79,7 @@ export function useProfileCompletion() {
   const needsAvatar = computed(() => !authStore.user?.avatar)
 
   const hasMissingFields = computed(() =>
-    needsGender.value || needsEmail.value || needsDateOfBirth.value || needsCountry.value
+    needsGender.value || needsEmail.value || needsDateOfBirth.value
   )
 
   // ========================================
@@ -229,11 +229,12 @@ export function useProfileCompletion() {
     try {
       isUploadingAvatar.value = true
       await uploadAvatar(file)
-    } catch {
+    } catch (error: unknown) {
+      const normalized = normalizeError(error)
       // REACT — toast on failure
       toast.add({
         title: 'Upload Failed',
-        description: 'Failed to upload avatar. Please try again.',
+        description: normalized.message || 'Failed to upload avatar. Please try again.',
         color: 'error',
       })
     } finally {
@@ -288,6 +289,10 @@ export function useProfileCompletion() {
 
     try {
       const payload = buildProfileUpdatePayload()
+      if (Object.keys(payload).length === 0 && !hasMissingFields.value) {
+        await navigateTo('/', { replace: true })
+        return
+      }
       await updateProfile(payload)
       await navigateTo('/', { replace: true })
     } catch (error: unknown) {

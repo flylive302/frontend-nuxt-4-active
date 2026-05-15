@@ -36,7 +36,7 @@ export interface UseAudioSocketReturn {
   /** Connect to the audio server. Pass targetUrl for regional routing. */
   connect: (targetUrl?: string) => Promise<void>;
   /** Disconnect from the audio server */
-  disconnect: () => void;
+  disconnect: (preserveReconnectCallback?: boolean) => void;
   /** Whether currently connected */
   isConnected: ComputedRef<boolean>;
   /** Register a callback to fire after Socket.IO auto-reconnects */
@@ -432,7 +432,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
    * Disconnect from the audio server and clean up resources.
    * Clears all module-level singleton state so the next login starts fresh.
    */
-  function disconnect() {
+  function disconnect(preserveReconnectCallback = false) {
     if (socket.value) {
       socket.value.removeAllListeners();
       socket.value.disconnect();
@@ -441,7 +441,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'disconnected';
     error.value = null;
     _connectedUrl = null;
-    _reconnectCallback = null;
+    if (!preserveReconnectCallback) {
+      _reconnectCallback = null;
+    }
     _hiddenSince = null;
     _authRetryInFlight = false;
     // Reset handlers so they can be re-registered on next connection

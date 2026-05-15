@@ -52,6 +52,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   isAudioReady: ComputedRef<boolean>;
   /** Set volume for all consumer audio (0-1) */
   setVolume: (volume: number) => void;
+  /** Recover remote playback after mobile/PWA resume */
+  recoverPlayback: () => Promise<boolean>;
   /** Audio player composable for music playback */
   audioPlayer: ReturnType<typeof import('./audio/useRoomAudioPlayer').useRoomAudioPlayer>;
 }
@@ -109,6 +111,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     startAudio: startMediasoupAudio,
     stopAudio: stopMediasoupAudio,
     consumeProducer,
+    recoverPlayback,
     cleanup: cleanupMediasoup,
     isDeviceLoaded,
     isProducing,
@@ -483,6 +486,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Volume
     setVolume: setMediasoupVolume,
+    recoverPlayback,
 
     // Audio player
     audioPlayer,

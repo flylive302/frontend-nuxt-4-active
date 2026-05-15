@@ -5,6 +5,31 @@ export interface NormalizedError {
   raw?: unknown
 }
 
+function humanizeFieldName(field: string): string {
+  return field
+    .replace(/\./g, ' ')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function firstValidationMessage(
+  fieldErrors: Record<string, string[]> | undefined,
+  fallback: string,
+): string {
+  if (!fieldErrors) return fallback
+
+  for (const [field, messages] of Object.entries(fieldErrors)) {
+    const first = messages.find((message) => typeof message === 'string' && message.trim().length > 0)
+    if (first) return first
+
+    if (messages.length > 0) {
+      return `${humanizeFieldName(field)} is invalid.`
+    }
+  }
+
+  return fallback
+}
+
 export function normalizeFetchError(error: unknown): NormalizedError {
   const e = error as Record<string, unknown> & { name?: string; message?: string }
   const response = e?.response as { status?: number; _data?: unknown } | undefined
@@ -18,7 +43,10 @@ export function normalizeFetchError(error: unknown): NormalizedError {
   if (status === 422 && data && typeof data === 'object') {
     const d = data as { errors?: Record<string, string[]>; message?: string }
     const fieldErrors = d.errors
-    const message: string = d.message || 'Validation failed'
+    const fallback = d.message && d.message !== 'Validation failed'
+      ? d.message
+      : 'Please check your profile details and try again.'
+    const message = firstValidationMessage(fieldErrors, fallback)
     return { status, message, fieldErrors, raw: error }
   }
 

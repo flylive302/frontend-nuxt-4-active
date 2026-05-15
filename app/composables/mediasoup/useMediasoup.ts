@@ -67,6 +67,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     toggleLocalMute: streamingComposable.toggleLocalMute,
     consumeProducer: streamingComposable.consumeProducer,
     stopConsumer: streamingComposable.stopConsumer,
+    recoverPlayback: streamingComposable.recoverPlayback,
 
     // Volume
     setVolume: streamingComposable.setVolume,
