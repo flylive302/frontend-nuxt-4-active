@@ -111,6 +111,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     startAudio: startMediasoupAudio,
     stopAudio: stopMediasoupAudio,
     consumeProducer,
+    stopConsumer,
     recoverPlayback,
     cleanup: cleanupMediasoup,
     isDeviceLoaded,
@@ -284,6 +285,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
         leaveRoom,
         stopAudio,
         consumeProducer,
+        stopConsumer,
         acceptInvite: seatActions.acceptInvite,
         declineInvite: seatActions.declineInvite,
         startAudio,
@@ -397,7 +399,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
       // log.debug('Consuming', response.existingProducers.length, 'existing producers');
       for (const producer of response.existingProducers) {
         try {
-          await consumeProducer(producer.producerId, roomId);
+          await consumeProducer(producer.producerId, roomId, producer.userId);
         } catch (err) {
           log.warn('Failed to consume producer:', producer.producerId, err);
         }

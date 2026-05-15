@@ -159,6 +159,11 @@ export interface NewProducerEvent {
   kind: 'audio';
 }
 
+export interface ProducerClosedEvent {
+  producerId: string;
+  userId?: number;
+}
+
 export interface ActiveSpeakerEvent {
   userId: string;
   activeSpeakers?: string[];
@@ -250,6 +255,9 @@ export interface ChatMessagePayload {
 export interface ChatMessageEvent {
   id: string;
   userId: number;
+  userName?: string | null;
+  userAvatar?: string | null;
+  userFrame?: string | null;
   content: string;
   type: string;
   timestamp: number;

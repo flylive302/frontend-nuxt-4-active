@@ -15,13 +15,12 @@ const props = defineProps<{
 
 const audioStore = useRoomAudioStore();
 
-// Resolve live participant data. The chat payload is ID-only; if the user
-// has left the room their participant entry is gone and we render a generic
-// fallback (acceptable for ephemeral chat).
+// Resolve live participant data first, then fall back to the message author
+// snapshot. Cross-region/rejoin races can deliver chat before participant sync.
 const participant = computed(() => audioStore.participants.get(props.message.userId));
-const displayName = computed(() => participant.value?.name ?? 'Unknown');
-const displayAvatar = computed(() => participant.value?.avatar ?? undefined);
-const displayFrame = computed(() => participant.value?.frame ?? undefined);
+const displayName = computed(() => participant.value?.name ?? props.message.userName ?? 'Unknown');
+const displayAvatar = computed(() => participant.value?.avatar ?? props.message.userAvatar ?? undefined);
+const displayFrame = computed(() => participant.value?.frame ?? props.message.userFrame ?? undefined);
 
 // Format timestamp to relative time
 const formattedTime = computed(() => {

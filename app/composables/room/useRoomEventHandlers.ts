@@ -10,6 +10,7 @@ import type {
   UserLeftEvent,
   RoomClosedEvent,
   NewProducerEvent,
+  ProducerClosedEvent,
   ChatMessageEvent,
   GiftReceivedEvent,
   GiftErrorEvent,
@@ -52,7 +53,9 @@ export interface UseRoomEventHandlersParams {
   /** Stop audio callback */
   stopAudio: () => void;
   /** Consume producer callback */
-  consumeProducer: (producerId: string, roomId: string) => Promise<void>;
+  consumeProducer: (producerId: string, roomId: string, producerUserId?: number) => Promise<void>;
+  /** Stop consuming a producer */
+  stopConsumer: (producerId: string) => void;
   /** Accept invite callback */
   acceptInvite: () => Promise<boolean>;
   /** Decline invite callback */
@@ -73,6 +76,7 @@ const ROOM_EVENT_NAMES = [
   'room:kicked',
   'user:profile_updated',
   'audio:newProducer',
+  'audio:producerClosed',
   'speaker:active',
   'seat:updated',
   'seat:cleared',
@@ -124,6 +128,7 @@ export function setupRoomEventHandlers({
   leaveRoom,
   stopAudio,
   consumeProducer,
+  stopConsumer,
   acceptInvite,
   declineInvite,
   startAudio,
@@ -200,8 +205,12 @@ export function setupRoomEventHandlers({
   socket.on('audio:newProducer', async (event: NewProducerEvent) => {
     // log.debug('New producer from user:', event.userId);
     if (roomStore.currentRoom) {
-      await consumeProducer(event.producerId, roomStore.currentRoom.id.toString());
+      await consumeProducer(event.producerId, roomStore.currentRoom.id.toString(), event.userId);
     }
+  });
+
+  socket.on('audio:producerClosed', (event: ProducerClosedEvent) => {
+    stopConsumer(event.producerId);
   });
 
   socket.on('speaker:active', (event: ActiveSpeakerEvent) => {

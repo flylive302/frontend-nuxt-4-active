@@ -22,6 +22,7 @@ const producer = shallowRef<Producer | null>(null);
 const musicProducer = shallowRef<Producer | null>(null);
 const consumers = ref<Map<string, Consumer>>(new Map());
 const audioElements = new Map<string, HTMLAudioElement>();
+const consumerProducerByUserId = new Map<number, string>();
 const isLocalMuted = ref(false);
 const currentVolume = ref(1);
 
@@ -91,6 +92,11 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    * Creates producer transport if not exists.
    */
   async function startAudio(): Promise<void> {
+    if (producer.value && !producer.value.closed) {
+      log.debug('Already producing audio:', producer.value.id);
+      return;
+    }
+
     // Create producer transport if needed
     if (!producerTransport.value) {
       await createProducerTransport();
@@ -205,10 +211,23 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    * @param producerId - ID of the remote producer to consume
    * @param roomId - Room ID for the consume request
    */
-  async function consumeProducer(producerId: string, roomId: string): Promise<void> {
+  async function consumeProducer(producerId: string, roomId: string, producerUserId?: number): Promise<void> {
     if (!device.value?.loaded || !consumerTransport.value) {
       log.error('Cannot consume: device or transport not ready');
       return;
+    }
+
+    const authStore = useAuthStore();
+    if (producerUserId !== undefined && producerUserId === authStore.user?.id) {
+      log.debug('Skipping own producer:', producerId);
+      return;
+    }
+
+    if (producerUserId !== undefined) {
+      const existingProducerId = consumerProducerByUserId.get(producerUserId);
+      if (existingProducerId && existingProducerId !== producerId) {
+        stopConsumer(existingProducerId);
+      }
     }
 
     // Check if already consuming
@@ -237,6 +256,9 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     });
 
     consumers.value.set(producerId, consumer);
+    if (producerUserId !== undefined) {
+      consumerProducerByUserId.set(producerUserId, producerId);
+    }
 
     // Resume the consumer (consumers start paused)
     const resumeResponse = await emitAsync<object, ConsumerResumeResponse>('consumer:resume', {
@@ -291,6 +313,11 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     consumer.on('transportclose', () => {
       log.debug('Consumer transport closed for:', producerId);
       consumers.value.delete(producerId);
+      for (const [userId, trackedProducerId] of consumerProducerByUserId) {
+        if (trackedProducerId === producerId) {
+          consumerProducerByUserId.delete(userId);
+        }
+      }
       const audio = audioElements.get(producerId);
       if (audio) {
         audio.pause();
@@ -313,6 +340,12 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (consumer) {
       consumer.close();
       consumers.value.delete(producerId);
+    }
+
+    for (const [userId, trackedProducerId] of consumerProducerByUserId) {
+      if (trackedProducerId === producerId) {
+        consumerProducerByUserId.delete(userId);
+      }
     }
 
     // Clean up associated audio element
@@ -340,6 +373,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // Close all consumers
     consumers.value.forEach((consumer) => consumer.close());
     consumers.value.clear();
+    consumerProducerByUserId.clear();
 
     // Clean up all audio elements to prevent memory leaks
     audioElements.forEach((audio) => {
