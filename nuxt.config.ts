@@ -8,15 +8,8 @@ const bundleAnalyze = process.env.NUXT_ANALYZE === 'true' || process.env.ANALYZE
 
 export default defineNuxtConfig({
     compatibilityDate: '2025-02-03',
-    ssr: true,
+    ssr: false,
     spaLoadingTemplate: true,
-    routeRules: {
-        '/welcome': { prerender: true, ssr: true },
-        '/privacy-policy': { prerender: true, ssr: true },
-        '/terms-of-service': { prerender: true, ssr: true },
-        '/child-safety': { prerender: true, ssr: true },
-        '/**': { ssr: false },
-    },
     devtools: { enabled: false },
     features: {
         inlineStyles: false,
