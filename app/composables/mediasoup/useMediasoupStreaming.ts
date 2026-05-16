@@ -26,6 +26,19 @@ const consumerProducerByUserId = new Map<number, string>();
 const isLocalMuted = ref(false);
 const currentVolume = ref(1);
 
+// ---- Mic capture pipeline (Web Audio passthrough) ----
+// We route the raw getUserMedia track through an AudioContext graph before
+// handing the resulting track to mediasoup. This is the standard fix for
+// Android Chrome / TWA pausing microphone capture in the background when no
+// local AudioContext is consuming the track (F-26).
+let _micStream: MediaStream | null = null;
+let _micRawTrack: MediaStreamTrack | null = null;
+let _micAudioContext: AudioContext | null = null;
+let _micSourceNode: MediaStreamAudioSourceNode | null = null;
+let _micGainNode: GainNode | null = null;
+let _micDestinationNode: MediaStreamAudioDestinationNode | null = null;
+let _micVisibilityHandler: (() => void) | null = null;
+
 const REMOTE_AUDIO_CONTAINER_ID = 'flylive-remote-audio';
 
 function getRemoteAudioContainer(): HTMLElement | null {
@@ -89,7 +102,17 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
   /**
    * Start producing audio from the microphone.
-   * Creates producer transport if not exists.
+   *
+   * Pipeline: `getUserMedia` → `AudioContext.createMediaStreamSource` →
+   * `GainNode` → `MediaStreamAudioDestinationNode` → `producerTransport.produce`.
+   *
+   * The local AudioContext acts as a live consumer of the mic stream so the
+   * browser keeps the capture pipeline active when the page is backgrounded.
+   * Without it, Android Chrome / TWA pauses the underlying mic input after
+   * ~2-3 seconds in the background, causing other users to hear the speaker
+   * cut out (F-26). AEC, noise suppression, and AGC are still applied by
+   * `getUserMedia` BEFORE the AudioContext sees the stream, so audio quality
+   * is unchanged.
    */
   async function startAudio(): Promise<void> {
     if (producer.value && !producer.value.closed) {
@@ -97,12 +120,10 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    // Create producer transport if needed
     if (!producerTransport.value) {
       await createProducerTransport();
     }
 
-    // Get microphone access
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
@@ -111,10 +132,27 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       },
     });
 
-    const track = stream.getAudioTracks()[0];
+    const rawTrack = stream.getAudioTracks()[0];
+    if (!rawTrack) {
+      throw new Error('getUserMedia returned no audio track');
+    }
 
-    // Produce the audio track
-    producer.value = await producerTransport.value!.produce({ track });
+    _micStream = stream;
+    _micRawTrack = rawTrack;
+
+    rawTrack.addEventListener('mute', () => {
+      log.warn('Raw mic track muted by the OS (background suspension or permission change)');
+    });
+    rawTrack.addEventListener('unmute', () => {
+      log.debug('Raw mic track unmuted by the OS');
+    });
+    rawTrack.addEventListener('ended', () => {
+      log.warn('Raw mic track ended (device unplugged or permission revoked)');
+    });
+
+    const trackForProducer = wireMicThroughAudioContext(stream);
+
+    producer.value = await producerTransport.value!.produce({ track: trackForProducer });
 
     producer.value.on('transportclose', () => {
       log.debug('Producer transport closed');
@@ -130,7 +168,109 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   }
 
   /**
+   * Build (or rebuild) the AudioContext passthrough graph for the mic.
+   * Returns the track that should be handed to mediasoup. See `startAudio()`
+   * doc for why this exists.
+   */
+  function wireMicThroughAudioContext(stream: MediaStream): MediaStreamTrack {
+    if (!import.meta.client) {
+      const fallback = stream.getAudioTracks()[0];
+      if (!fallback) throw new Error('No audio track');
+      return fallback;
+    }
+
+    const Ctor = (window.AudioContext
+      || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+    if (!Ctor) {
+      log.warn('AudioContext not supported in this browser — falling back to raw mic track');
+      const fallback = stream.getAudioTracks()[0];
+      if (!fallback) throw new Error('No audio track');
+      return fallback;
+    }
+
+    teardownMicAudioContext();
+
+    const ctx = new Ctor();
+    const source = ctx.createMediaStreamSource(stream);
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    const destination = ctx.createMediaStreamDestination();
+    source.connect(gain);
+    gain.connect(destination);
+
+    _micAudioContext = ctx;
+    _micSourceNode = source;
+    _micGainNode = gain;
+    _micDestinationNode = destination;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch((err) => {
+        log.warn('Initial AudioContext.resume failed:', err);
+      });
+    }
+
+    const visibilityHandler = () => {
+      if (typeof document === 'undefined') return;
+      if (document.visibilityState !== 'visible') return;
+      const current = _micAudioContext;
+      if (!current) return;
+      if (current.state === 'suspended') {
+        log.debug('Visibility resume: AudioContext suspended, resuming');
+        current.resume().catch((err) => {
+          log.warn('AudioContext.resume on visibility failed:', err);
+        });
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', visibilityHandler);
+      _micVisibilityHandler = visibilityHandler;
+    }
+
+    const producedTrack = destination.stream.getAudioTracks()[0];
+    if (!producedTrack) {
+      throw new Error('MediaStreamDestination produced no audio track');
+    }
+    return producedTrack;
+  }
+
+  /** Tear down the mic AudioContext graph. Safe to call when nothing is set up. */
+  function teardownMicAudioContext(): void {
+    if (_micVisibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', _micVisibilityHandler);
+    }
+    _micVisibilityHandler = null;
+
+    try { _micSourceNode?.disconnect(); } catch { /* noop */ }
+    try { _micGainNode?.disconnect(); } catch { /* noop */ }
+    try { _micDestinationNode?.disconnect(); } catch { /* noop */ }
+    _micSourceNode = null;
+    _micGainNode = null;
+    _micDestinationNode = null;
+
+    const ctx = _micAudioContext;
+    _micAudioContext = null;
+    if (ctx && ctx.state !== 'closed') {
+      ctx.close().catch((err) => log.warn('AudioContext.close failed:', err));
+    }
+  }
+
+  /** Stop the raw mic capture and release the device. */
+  function teardownMicStream(): void {
+    if (_micStream) {
+      _micStream.getTracks().forEach((track) => {
+        try { track.stop(); } catch { /* noop */ }
+      });
+    }
+    _micStream = null;
+    _micRawTrack = null;
+  }
+
+  /**
    * Stop producing audio and close the producer.
+   *
+   * Also tears down the mic AudioContext graph and releases the raw mic
+   * device. Otherwise the mic light stays on after the user leaves the seat,
+   * the AudioContext leaks, and on next start we'd stack a second pipeline.
    */
   function stopAudio(): void {
     if (producer.value) {
@@ -139,6 +279,8 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       isLocalMuted.value = false;
       log.debug('Stopped producing audio');
     }
+    teardownMicAudioContext();
+    teardownMicStream();
   }
 
   /**
@@ -432,6 +574,23 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       }
       if (producer.value.track && producer.value.track.readyState === 'ended') {
         log.debug('Probe: producer track ended');
+        return 'needs-rebuild';
+      }
+      // F-26: the OS may have muted the raw mic during background. The producer
+      // track itself (AudioContext destination) does not surface this — the
+      // signal is on the raw `getUserMedia` track. If we detect it here, mark
+      // the session as rebuild-required so the lifecycle layer reacquires
+      // the mic from scratch.
+      if (_micRawTrack && _micRawTrack.muted) {
+        log.debug('Probe: raw mic track muted by OS -> needs-rebuild');
+        return 'needs-rebuild';
+      }
+      if (_micRawTrack && _micRawTrack.readyState === 'ended') {
+        log.debug('Probe: raw mic track ended -> needs-rebuild');
+        return 'needs-rebuild';
+      }
+      if (_micAudioContext && _micAudioContext.state === 'closed') {
+        log.debug('Probe: mic AudioContext closed while producing -> needs-rebuild');
         return 'needs-rebuild';
       }
     }
