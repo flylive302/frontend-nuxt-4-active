@@ -251,6 +251,18 @@ export function setupRoomEventHandlers({
       return;
     }
 
+    // Self-retake guard (F-24). MSAB's in-process seat-grace timer (F-6) can
+    // fire a `seat:cleared` ~15s after a brief disconnect, EVEN IF the same
+    // user reconnected within ~1s and retook their own seat. The previous
+    // guard above only handles "someone else took the seat" — this branch
+    // catches "the same user retook their own seat within the grace window".
+    if (event.userId !== undefined) {
+      const recent = seatsStore.getRecentClaim(event.seatIndex);
+      if (recent && recent.userId === event.userId && Date.now() - recent.at < 10_000) {
+        return;
+      }
+    }
+
     const wasCurrentUserSeated = seat?.user?.id === authStore.user?.id;
     const leftUserId = seat?.user?.id;
 

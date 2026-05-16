@@ -387,6 +387,94 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   }
 
   /**
+   * Probe the audio session for health after a PWA/TWA foreground resume.
+   *
+   * Returns one of three outcomes so the lifecycle layer can decide what to do
+   * without tearing down a healthy session (which is what triggers MSAB's
+   * seat-grace timer and the self-retake `seat:cleared` race):
+   *
+   *  - `healthy`: socket connected, transports alive, producer/consumers live,
+   *    audio elements playing and advancing.
+   *  - `needs-playback-recovery`: socket/transports/consumers alive, but one or
+   *    more HTMLAudioElements are paused/stalled. `recoverPlayback()` is enough.
+   *  - `needs-rebuild`: socket dead, a transport failed/closed, producer or any
+   *    consumer track ended. Full rejoin path required.
+   */
+  async function probeAudioHealth(): Promise<'healthy' | 'needs-playback-recovery' | 'needs-rebuild'> {
+    if (!import.meta.client) return 'healthy';
+
+    if (!socket.value?.connected) {
+      log.debug('Probe: socket not connected -> needs-rebuild');
+      return 'needs-rebuild';
+    }
+
+    const transports: Array<[string, mediasoupTypes.Transport | null]> = [
+      ['producer', producerTransport.value],
+      ['consumer', consumerTransport.value],
+    ];
+    for (const [name, transport] of transports) {
+      if (!transport) continue;
+      if (transport.closed) {
+        log.debug('Probe: transport closed', name);
+        return 'needs-rebuild';
+      }
+      const state = transport.connectionState;
+      if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+        log.debug('Probe: transport unhealthy', name, state);
+        return 'needs-rebuild';
+      }
+    }
+
+    if (producer.value) {
+      if (producer.value.closed) {
+        log.debug('Probe: producer closed');
+        return 'needs-rebuild';
+      }
+      if (producer.value.track && producer.value.track.readyState === 'ended') {
+        log.debug('Probe: producer track ended');
+        return 'needs-rebuild';
+      }
+    }
+
+    for (const [producerId, consumer] of consumers.value) {
+      if (consumer.closed || consumer.track.readyState === 'ended') {
+        log.debug('Probe: consumer ended', producerId);
+        return 'needs-rebuild';
+      }
+    }
+
+    let pausedOrUnready = false;
+    for (const [producerId, audio] of audioElements) {
+      if (audio.paused || audio.readyState < 2) {
+        log.debug('Probe: audio element paused/unready', producerId, {
+          paused: audio.paused,
+          readyState: audio.readyState,
+        });
+        pausedOrUnready = true;
+        break;
+      }
+    }
+    if (pausedOrUnready) return 'needs-playback-recovery';
+
+    if (audioElements.size > 0) {
+      const before = new Map<string, number>();
+      for (const [producerId, audio] of audioElements) {
+        before.set(producerId, audio.currentTime);
+      }
+      await new Promise<void>(resolve => setTimeout(resolve, 500));
+      for (const [producerId, audio] of audioElements) {
+        const prev = before.get(producerId) ?? 0;
+        if (!audio.paused && audio.currentTime === prev) {
+          log.debug('Probe: audio element stalled (currentTime not advancing)', producerId);
+          return 'needs-playback-recovery';
+        }
+      }
+    }
+
+    return 'healthy';
+  }
+
+  /**
    * Recover remote playback after mobile/PWA background suspension.
    * Socket.IO may recover while WebRTC audio elements remain paused/stalled.
    */
@@ -463,6 +551,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     stopConsumer,
     cleanup,
     recoverPlayback,
+    probeAudioHealth,
     setVolume,
     getVolume,
   };

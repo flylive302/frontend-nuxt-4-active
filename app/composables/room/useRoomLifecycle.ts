@@ -37,8 +37,8 @@ export function useRoomLifecycle(): void {
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
   const audioStore = useRoomAudioStore();
-  const { joinRoom, leaveRoom, startAudio, recoverPlayback, connectionStatus } = useRoomAudio();
-  const { connect: connectSocket, disconnect: disconnectSocket, isConnected, onReconnect, recoverFromSuspension } = useAudioSocket();
+  const { joinRoom, leaveRoom, startAudio, recoverPlayback, probeAudioHealth, connectionStatus } = useRoomAudio();
+  const { connect: connectSocket, disconnect: disconnectSocket, onReconnect } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
 
@@ -157,9 +157,12 @@ export function useRoomLifecycle(): void {
     isJoining.value = true;
 
     try {
-      // Drop stale seat snapshot before rejoin so the user can never see
-      // pre-disconnect state. Server's room:state response repopulates atomically.
-      seatsStore.resetSeats();
+      // NOTE: We intentionally do NOT call `seatsStore.resetSeats()` here.
+      // The subsequent `joinRoom(roomId)` causes MSAB to send a fresh
+      // `room:state` snapshot which overwrites stale seat data via
+      // `seatsStore.updateSeat(...)`. Resetting first creates a visible
+      // "seat disappears then reappears" flicker for User A on the other end
+      // of the room — see §13.8 / F-24 in AUDIT.md.
 
       // Refresh room metadata from API (may have changed while disconnected)
       fetchRoomById(roomStore.currentRoom.id);
@@ -188,27 +191,32 @@ export function useRoomLifecycle(): void {
   watch(visibility, async (state, oldState) => {
     if (state !== 'visible' || oldState !== 'hidden') return;
 
-    // Prevent overlapping recovery attempts from rapid visibility changes
     if (isRecovering.value) return;
     isRecovering.value = true;
 
     try {
-      // Socket-level: refresh token + force reconnect if stale connection detected
-      await recoverFromSuspension();
-
       if (!roomStore.currentRoom) return;
 
-      // Give Socket.IO and the browser media stack a moment to settle after resume.
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Let the browser settle one frame so paused <audio> elements can self-resume
+      // and Socket.IO's heartbeat can confirm liveness before we sample.
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       if (!roomStore.currentRoom || isJoining.value) return;
 
-      if (isConnected.value) {
-        const playbackRecovered = await recoverPlayback();
-        if (playbackRecovered) return;
+      const health = await probeAudioHealth();
+      if (health === 'healthy') {
+        log.debug('Resume: session healthy, no action');
+        return;
       }
 
-      // Fallback: Socket.IO did not reconnect or WebRTC playback stayed unhealthy.
+      if (health === 'needs-playback-recovery') {
+        log.debug('Resume: playback recovery required');
+        const ok = await recoverPlayback();
+        if (ok) return;
+      }
+
+      // Genuine breakage: socket dead, transport failed, or consumer ended.
+      log.debug('Resume: rebuild required (health=', health, ')');
       isJoining.value = true;
       try {
         await rebuildRoomAudio(String(roomStore.currentRoom.id));

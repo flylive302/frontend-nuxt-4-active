@@ -68,6 +68,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     consumeProducer: streamingComposable.consumeProducer,
     stopConsumer: streamingComposable.stopConsumer,
     recoverPlayback: streamingComposable.recoverPlayback,
+    probeAudioHealth: streamingComposable.probeAudioHealth,
 
     // Volume
     setVolume: streamingComposable.setVolume,

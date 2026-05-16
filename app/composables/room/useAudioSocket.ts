@@ -463,34 +463,39 @@ export function useAudioSocket(): UseAudioSocketReturn {
   /**
    * Recover the socket connection after the PWA resumes from OS-level suspension.
    *
-   * GATE:    Skip if hidden < 5s (let Socket.IO handle naturally) or no socket exists.
-   * EXECUTE: Force engine transport close to trigger Socket.IO's reconnect cycle.
-   *          The dynamic auth callback ensures the latest token from the store is used.
-   * REACT:   Logging only — room rejoin is handled by Watcher 4 via _reconnectCallback.
+   * GATE:    Skip if no socket exists or hidden < 5s (let Socket.IO handle naturally).
+   * EXECUTE: Only force a reconnect when the socket truly looks dead. If
+   *          `socket.connected === true` we trust engine.io's built-in ping/pong
+   *          heartbeat and do nothing — yanking a healthy connection triggers
+   *          MSAB's in-process seat-grace timer (F-6) and the post-resume seat
+   *          flicker (F-24). If `socket.connected === false` we trigger a direct
+   *          `connect()` so the user sees an immediate reconnect attempt.
+   * REACT:   Logging only — room rejoin is handled by Watcher 3 via _reconnectCallback.
+   *
+   * NOTE: After the §13.8 health-first resume work, `useRoomLifecycle`'s
+   * Watcher 4 no longer calls this method on every visibility change — the
+   * `probeAudioHealth()` flow drives recovery decisions instead. This function
+   * is kept for any future callers that want an explicit "verify and reconnect
+   * if dead" hook.
    */
   async function recoverFromSuspension(): Promise<void> {
     const hiddenMs = _hiddenSince ? Date.now() - _hiddenSince : 0;
     _hiddenSince = null;
 
-    // Short hide — let Socket.IO handle naturally
+    if (!socket.value) return;
+
     if (hiddenMs < 5_000) {
       log.debug('Short suspension (', Math.round(hiddenMs / 1000), 's) — skipping recovery');
       return;
     }
 
-    log.debug('Recovering from', Math.round(hiddenMs / 1000), 's suspension');
-
-    // Force Socket.IO to detect dead connection and auto-reconnect.
-    // Closing the engine transport triggers the full reconnect cycle:
-    //   disconnect → reconnect_attempt (handleReconnectAttempt) → reconnect (handleReconnect)
-    // This reuses all existing infrastructure: token refresh, room rejoin via _reconnectCallback.
-    if (socket.value?.connected) {
-      log.debug('Forcing engine close to trigger reconnect cycle');
-      socket.value.io.engine.close();
-    } else if (socket.value) {
-      log.debug('Forcing immediate reconnection attempt');
+    if (!socket.value.connected) {
+      log.debug('Suspension recovery: socket disconnected, forcing reconnect after', Math.round(hiddenMs / 1000), 's');
       socket.value.connect();
+      return;
     }
+
+    log.debug('Suspension recovery: socket connected after', Math.round(hiddenMs / 1000), 's — engine.io heartbeat will detect any stale state');
   }
 
   // ========================================

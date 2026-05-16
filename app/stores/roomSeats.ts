@@ -35,6 +35,15 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   const inviteModeSeat = ref<number | null>(null);
 
   // ========================================
+  // Self-retake staleness window (F-24)
+  // ========================================
+  // Records when each seat was last claimed by which user. The `seat:cleared`
+  // handler uses this to drop delayed grace-clear events from MSAB that arrive
+  // AFTER the same user has retaken their own seat (the post-resume race that
+  // triggered the rapid "Removed from seat" flicker on User B).
+  const seatLastClaimedAt = new Map<number, { userId: number; at: number }>();
+
+  // ========================================
   // Computed
   // ========================================
   const speakersCount = computed(() => seats.value.filter((s) => s.user !== null).length);
@@ -64,6 +73,18 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     };
 
     seats.value[seatIndex] = newSeat;
+
+    if (user) {
+      seatLastClaimedAt.set(seatIndex, { userId: user.id, at: Date.now() });
+    }
+  }
+
+  /**
+   * Return the most recent claim recorded for `seatIndex`, if any.
+   * Used by the `seat:cleared` handler to drop stale grace-clear events.
+   */
+  function getRecentClaim(seatIndex: number): { userId: number; at: number } | undefined {
+    return seatLastClaimedAt.get(seatIndex);
   }
 
   /**
@@ -141,6 +162,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   /** Reset all seats and gift totals. */
   function resetSeats() {
     seatGiftTotals.value.clear();
+    seatLastClaimedAt.clear();
     seats.value = createEmptySeats();
   }
 
@@ -181,6 +203,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     updateSeat,
     clearSeat,
     setSeatLocked,
+    getRecentClaim,
 
     // Seat gift totals
     seatGiftTotals,
