@@ -31,13 +31,30 @@ const currentVolume = ref(1);
 // handing the resulting track to mediasoup. This is the standard fix for
 // Android Chrome / TWA pausing microphone capture in the background when no
 // local AudioContext is consuming the track (F-26).
+//
+// The passthrough alone is not enough on every Android build: Chrome can
+// suspend the AudioContext itself in background, which stops it from
+// "consuming" the mic, which then lets Chrome pause the mic source. To keep
+// the context alive we add TWO anchors that both write to the real speaker
+// at zero gain — silent for the user, but enough for the browser to treat
+// the context as actively producing audible output:
+//   1. A silent tap of the mic signal itself (`micGain → silentTapGain →
+//      ctx.destination`).
+//   2. A silent oscillator (`oscillator → silentOscGain → ctx.destination`).
+// Either alone is reportedly enough on some Chrome builds; both together
+// cover the long tail.
 let _micStream: MediaStream | null = null;
 let _micRawTrack: MediaStreamTrack | null = null;
 let _micAudioContext: AudioContext | null = null;
 let _micSourceNode: MediaStreamAudioSourceNode | null = null;
 let _micGainNode: GainNode | null = null;
 let _micDestinationNode: MediaStreamAudioDestinationNode | null = null;
+let _micSpeakerTapGain: GainNode | null = null;
+let _micOscillator: OscillatorNode | null = null;
+let _micOscillatorGain: GainNode | null = null;
+let _micProducedTrack: MediaStreamTrack | null = null;
 let _micVisibilityHandler: (() => void) | null = null;
+let _micStateChangeHandler: (() => void) | null = null;
 
 const REMOTE_AUDIO_CONTAINER_ID = 'flylive-remote-audio';
 
@@ -198,16 +215,59 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     source.connect(gain);
     gain.connect(destination);
 
+    // Silent speaker tap #1: route the mic signal at zero gain into the
+    // real speaker output. The mic data is processed all the way to
+    // ctx.destination, which makes the browser keep the context alive in
+    // background even though the user hears nothing.
+    const speakerTapGain = ctx.createGain();
+    speakerTapGain.gain.value = 0;
+    gain.connect(speakerTapGain);
+    speakerTapGain.connect(ctx.destination);
+
+    // Silent speaker tap #2: a 0-Hz / 0-gain oscillator into the same
+    // ctx.destination. Some Chrome builds stop pulling data from a
+    // MediaStreamSource in background even with the mic tap above; the
+    // oscillator is a synthesised source that never goes idle.
+    const oscillator = ctx.createOscillator();
+    oscillator.frequency.value = 0;
+    const oscillatorGain = ctx.createGain();
+    oscillatorGain.gain.value = 0;
+    oscillator.connect(oscillatorGain);
+    oscillatorGain.connect(ctx.destination);
+    try {
+      oscillator.start();
+    } catch (err) {
+      log.warn('Silent oscillator failed to start:', err);
+    }
+
     _micAudioContext = ctx;
     _micSourceNode = source;
     _micGainNode = gain;
     _micDestinationNode = destination;
+    _micSpeakerTapGain = speakerTapGain;
+    _micOscillator = oscillator;
+    _micOscillatorGain = oscillatorGain;
 
     if (ctx.state === 'suspended') {
       ctx.resume().catch((err) => {
         log.warn('Initial AudioContext.resume failed:', err);
       });
     }
+
+    // Observability: log every AudioContext state transition so we can tell
+    // in production whether the keep-alive anchors are working or whether
+    // Chrome is still suspending the context in background.
+    const stateChangeHandler = () => {
+      log.debug('AudioContext statechange:', ctx.state);
+      if (ctx.state === 'suspended' && document.visibilityState === 'visible') {
+        // Should not happen in foreground — recover immediately.
+        ctx.resume().catch((err) => {
+          log.warn('AudioContext.resume after unexpected suspend failed:', err);
+        });
+      }
+    };
+    ctx.addEventListener('statechange', stateChangeHandler);
+    _micStateChangeHandler = stateChangeHandler;
 
     const visibilityHandler = () => {
       if (typeof document === 'undefined') return;
@@ -230,6 +290,21 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (!producedTrack) {
       throw new Error('MediaStreamDestination produced no audio track');
     }
+
+    // The track mediasoup actually consumes — log its mute/unmute/ended
+    // separately from the raw mic so we can tell whether the OS muted the
+    // source (`_micRawTrack.muted`) or the MediaStreamDestination diverged.
+    producedTrack.addEventListener('mute', () => {
+      log.warn('Produced MediaStreamDestination track muted');
+    });
+    producedTrack.addEventListener('unmute', () => {
+      log.debug('Produced MediaStreamDestination track unmuted');
+    });
+    producedTrack.addEventListener('ended', () => {
+      log.warn('Produced MediaStreamDestination track ended');
+    });
+    _micProducedTrack = producedTrack;
+
     return producedTrack;
   }
 
@@ -240,12 +315,25 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     }
     _micVisibilityHandler = null;
 
+    if (_micStateChangeHandler && _micAudioContext) {
+      try { _micAudioContext.removeEventListener('statechange', _micStateChangeHandler); } catch { /* noop */ }
+    }
+    _micStateChangeHandler = null;
+
+    try { _micOscillator?.stop(); } catch { /* noop */ }
+    try { _micOscillator?.disconnect(); } catch { /* noop */ }
+    try { _micOscillatorGain?.disconnect(); } catch { /* noop */ }
+    try { _micSpeakerTapGain?.disconnect(); } catch { /* noop */ }
     try { _micSourceNode?.disconnect(); } catch { /* noop */ }
     try { _micGainNode?.disconnect(); } catch { /* noop */ }
     try { _micDestinationNode?.disconnect(); } catch { /* noop */ }
+    _micOscillator = null;
+    _micOscillatorGain = null;
+    _micSpeakerTapGain = null;
     _micSourceNode = null;
     _micGainNode = null;
     _micDestinationNode = null;
+    _micProducedTrack = null;
 
     const ctx = _micAudioContext;
     _micAudioContext = null;
@@ -587,6 +675,14 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       }
       if (_micRawTrack && _micRawTrack.readyState === 'ended') {
         log.debug('Probe: raw mic track ended -> needs-rebuild');
+        return 'needs-rebuild';
+      }
+      if (_micProducedTrack && _micProducedTrack.muted) {
+        log.debug('Probe: produced track muted -> needs-rebuild');
+        return 'needs-rebuild';
+      }
+      if (_micProducedTrack && _micProducedTrack.readyState === 'ended') {
+        log.debug('Probe: produced track ended -> needs-rebuild');
         return 'needs-rebuild';
       }
       if (_micAudioContext && _micAudioContext.state === 'closed') {
