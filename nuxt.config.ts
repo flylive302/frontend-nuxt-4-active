@@ -11,12 +11,10 @@ export default defineNuxtConfig({
     ssr: true,
     spaLoadingTemplate: true,
     routeRules: {
-        '/log-in': { prerender: true, ssr: true },
-        '/sign-up': { prerender: true, ssr: true },
-        '/forgot-password': { prerender: true, ssr: true },
-        // Callback is dynamic (OAuth code exchange depends on URL params) → keep SSR
-        '/callback': { ssr: true },
-        '/': { ssr: true, isr: 60 },
+        '/welcome': { prerender: true, ssr: true },
+        '/privacy-policy': { prerender: true, ssr: true },
+        '/terms-of-service': { prerender: true, ssr: true },
+        '/child-safety': { prerender: true, ssr: true },
         '/**': { ssr: false },
     },
     devtools: { enabled: false },

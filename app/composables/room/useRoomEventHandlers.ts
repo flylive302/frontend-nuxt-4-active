@@ -243,6 +243,14 @@ export function setupRoomEventHandlers({
 
   socket.on('seat:cleared', (event: SeatClearedEvent) => {
     const seat = seatsStore.seats[event.seatIndex];
+
+    // Ignore stale delayed clears. MSAB now includes the user being cleared;
+    // if the seat has since been reused or rehydrated with another user, this
+    // event must not evict the current occupant.
+    if (event.userId !== undefined && seat?.user?.id !== event.userId) {
+      return;
+    }
+
     const wasCurrentUserSeated = seat?.user?.id === authStore.user?.id;
     const leftUserId = seat?.user?.id;
 

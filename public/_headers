@@ -5,15 +5,4 @@
   Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin-allow-popups
-
-/log-in
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss://audio.flyliveapp.com wss://frankfurt.audio.flyliveapp.com wss://mumbai.audio.flyliveapp.com wss://*.reverb.laravel.cloud; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
-  Cache-Control: public, max-age=60, stale-while-revalidate=3600
-
-/sign-up
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss://audio.flyliveapp.com wss://frankfurt.audio.flyliveapp.com wss://mumbai.audio.flyliveapp.com wss://*.reverb.laravel.cloud; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
-  Cache-Control: public, max-age=60, stale-while-revalidate=3600
-
-/forgot-password
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss://audio.flyliveapp.com wss://frankfurt.audio.flyliveapp.com wss://mumbai.audio.flyliveapp.com wss://*.reverb.laravel.cloud; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
-  Cache-Control: public, max-age=60, stale-while-revalidate=3600
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss://audio.flyliveapp.com wss://frankfurt.audio.flyliveapp.com wss://mumbai.audio.flyliveapp.com wss://*.laravel.cloud; font-src 'self' data: https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'

@@ -222,6 +222,7 @@ export interface SeatUpdatedEvent {
 
 export interface SeatClearedEvent {
   seatIndex: number;
+  userId?: number;
 }
 
 export interface SeatUserMutedEvent {
