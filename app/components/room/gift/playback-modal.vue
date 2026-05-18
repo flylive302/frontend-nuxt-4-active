@@ -18,6 +18,7 @@ const {
   videoPlayerRef,
   svgaPlayerRef,
   staticDisplayRef,
+  vapPlayerRef,
   handleComplete,
   handleCombo,
 
@@ -82,7 +83,7 @@ onMounted(() => {
       isMinimized
         ? 'gift-playback--minimized bg-black/50'
         : 'gift-playback--fullscreen bg-white/20',
-      isDragging ? '!transition-none' : ''
+      isDragging ? 'transition-none!' : ''
     ]"
     @click="onToggleMinimize"
   >
@@ -93,6 +94,10 @@ onMounted(() => {
 
       <!-- SVGA Player -->
       <RoomGiftSvgaPlayer v-else-if="currentPlayback.gift.asset_type === 'svga'" :key="`svga-${currentPlayback.id}`" ref="svgaPlayerRef" class="w-full"
+        :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete" />
+
+      <!-- VAP Player (MP4 + alpha via WebGL) -->
+      <VapPlayer v-else-if="currentPlayback.gift.asset_type === 'vap'" :key="`vap-${currentPlayback.id}`" ref="vapPlayerRef" class="w-full"
         :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete" />
 
       <!-- Static Image -->

@@ -32,6 +32,7 @@ export function useGiftPlayback() {
   const videoPlayerRef = ref<PlaybackController | null>(null)
   const svgaPlayerRef = ref<PlaybackController | null>(null)
   const staticDisplayRef = ref<PlaybackController | null>(null)
+  const vapPlayerRef = ref<PlaybackController | null>(null)
 
   // ========================================
   // State
@@ -94,12 +95,15 @@ export function useGiftPlayback() {
       case 'image':
         staticDisplayRef.value?.restart()
         break
+      case 'vap':
+        vapPlayerRef.value?.restart()
+        break
     }
   }
 
   /** Register a player ref for restart control */
   function registerPlayer(
-    type: 'video' | 'svga' | 'static',
+    type: 'video' | 'svga' | 'static' | 'vap',
     controller: PlaybackController | null,
   ): void {
     switch (type) {
@@ -111,6 +115,9 @@ export function useGiftPlayback() {
         break
       case 'static':
         staticDisplayRef.value = controller
+        break
+      case 'vap':
+        vapPlayerRef.value = controller
         break
     }
   }
@@ -187,6 +194,7 @@ export function useGiftPlayback() {
     videoPlayerRef,
     svgaPlayerRef,
     staticDisplayRef,
+    vapPlayerRef,
 
     // Methods
     handleComplete,

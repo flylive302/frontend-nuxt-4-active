@@ -87,7 +87,7 @@ function handleSelect(): void {
       class="aspect-square relative bg-muted/20 cursor-pointer"
       @click="handleSelect"
     >
-      <NuxtImg 
+      <img
         v-if="userProp.thumbnail_url"
         :src="userProp.thumbnail_url"
         :alt="userProp.name"

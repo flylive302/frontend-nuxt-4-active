@@ -9,7 +9,7 @@
 // CORE TYPES
 // ============================================
 
-export type GiftAssetType = 'video' | 'svga' | 'image';
+export type GiftAssetType = 'video' | 'svga' | 'image' | 'vap';
 export type GiftRarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type GiftCategory = 'normal' | 'vip-gifts' | 'lucky' | 'cp-gift';
 

@@ -28,6 +28,7 @@ import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/use
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
+import { propToEntryAnimationGift } from '~/utils/prop';
 
 // ============================================
 // Types
@@ -137,10 +138,25 @@ export function setupRoomEventHandlers({
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
   const { triggerFly } = useLuckyFly();
+  const { resolveProp } = usePropLookup();
 
   // Room events
   socket.on('room:userJoined', (event: UserJoinedEvent) => {
     audioStore.addParticipant(event.user);
+
+    if (event.user.entry_animation_id && !roomStore.isMinimized) {
+      const prop = resolveProp(event.user.entry_animation_id);
+      if (prop) {
+        giftStore.enqueuePlayback({
+          gift: propToEntryAnimationGift(prop),
+          senderId: event.user.id,
+          senderName: event.user.name,
+          senderAvatar: event.user.avatar ?? undefined,
+          recipientIds: [],
+          quantity: 1,
+        });
+      }
+    }
   });
 
   socket.on('room:userLeft', (event: UserLeftEvent) => {
