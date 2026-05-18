@@ -13,6 +13,7 @@ const roomStore = useRoomStore();
 const bootstrapStore = useBootstrapStore();
 const { isRoomOwner } = useRoomPermissions();
 const { leaveRoom } = useRoomAudio();
+const { resolvePropAsset } = usePropLookup();
 
 // ========================================
 // State
@@ -34,7 +35,7 @@ const loading = computed(() => !bootstrapStore.isReady);
 
 /** Room level config from bootstrap store */
 const levelConfig = computed<LevelConfig[]>(() => 
-  bootstrapStore.config?.room_levels ?? []
+  bootstrapStore.roomLevels ?? []
 );
 
 /** Current room level */
@@ -160,7 +161,7 @@ const settingsOpen = ref(false);
           style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
       >
         <div class="w-10">
-          <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="thisRoom?.owner?.frame ?? undefined" />
+          <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="resolvePropAsset(thisRoom?.owner?.frame_id) ?? undefined" />
           <p class="text-xs text-center">LvL. {{ thisRoom?.current_level != null ? thisRoom.current_level : 0 }}</p>
         </div>
 

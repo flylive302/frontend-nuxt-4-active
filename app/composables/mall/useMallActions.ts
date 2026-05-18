@@ -7,18 +7,29 @@
  * This composable owns:
  * - API calls for mutations
  * - Toast notifications (REACT)
- * - Cross-store writes (frame sync via userStore)
- * - Socket emissions (profile sync for frames)
+ * - Cross-store writes (prop_id sync via userStore for column-based props)
+ * - Socket emissions (profile sync for column-based props)
  * - Optimistic updates with rollback
  */
 import { createLogger } from '~/utils/logger'
 import type {
   PropPurchaseResponse,
   PropEquipResponse,
+  PropType,
 } from '~/types/mall/prop'
+import type { ProfileSyncFields } from '~/types/user/profile-sync'
 import { useAuthStore } from '~/stores/auth'
 
 const log = createLogger('[MallActions]')
+
+/** Map PropType → user profile field key (e.g., 'frame' → 'frame_id'). */
+const PROP_TYPE_TO_COLUMN: Partial<Record<PropType, keyof ProfileSyncFields>> = {
+  frame: 'frame_id',
+  chat_bubble: 'chat_bubble_id',
+  entry_animation: 'entry_animation_id',
+  data_card: 'data_card_id',
+  mice_wave: 'mice_wave_id',
+}
 
 // ========================================
 // Module-level state — shared across all useMallActions() callers
@@ -118,7 +129,7 @@ export function useMallActions() {
    *
    * GATE:    check isEquipping guard, find prop
    * EXECUTE: optimistic update → API POST → confirm or rollback
-   * REACT:   toast, frame sync socket emission
+   * REACT:   toast, column-prop sync socket emission
    */
   async function equipProp(userPropId: number): Promise<boolean> {
     // GATE
@@ -146,10 +157,11 @@ export function useMallActions() {
       asset_url: prop.asset_url,
     })
 
-    // Cross-store frame sync (optimistic)
-    const previousFrame = prop.type === 'frame' ? (authStore.user?.frame ?? null) : null
-    if (prop.type === 'frame') {
-      userStore.patchProfile({ frame: prop.asset_url })
+    // Cross-store column sync (optimistic) — write prop_id to user profile
+    const columnKey = PROP_TYPE_TO_COLUMN[prop.type]
+    const previousValue = columnKey ? (authStore.user?.[columnKey] ?? null) : null
+    if (columnKey) {
+      userStore.patchProfile({ [columnKey]: prop.prop_id })
     }
 
     try {
@@ -161,9 +173,9 @@ export function useMallActions() {
         color: 'success',
       })
 
-      // Push frame change to room participants via socket
-      if (prop.type === 'frame') {
-        emitFrameSync(prop.asset_url)
+      // Push column prop change to room participants via socket
+      if (columnKey) {
+        emitColumnSync(columnKey, prop.prop_id)
       }
 
       return true
@@ -176,8 +188,8 @@ export function useMallActions() {
         mallStore.setUserPropEquipped(previousEquipped.id, true)
       }
 
-      if (prop.type === 'frame') {
-        userStore.patchProfile({ frame: previousFrame })
+      if (columnKey) {
+        userStore.patchProfile({ [columnKey]: previousValue })
       }
 
       // REACT — error feedback (after rollback is complete)
@@ -204,7 +216,7 @@ export function useMallActions() {
    *
    * GATE:    check isEquipping guard, find prop
    * EXECUTE: optimistic update → API POST → confirm or rollback
-   * REACT:   toast, frame sync socket emission
+   * REACT:   toast, column-prop sync socket emission
    */
   async function unequipProp(userPropId: number): Promise<boolean> {
     // GATE
@@ -220,10 +232,11 @@ export function useMallActions() {
     mallStore.setUserPropEquipped(userPropId, false)
     mallStore.setEquippedForType(prop.type, null)
 
-    // Cross-store frame sync (optimistic)
-    const previousFrame = prop.type === 'frame' ? (authStore.user?.frame ?? null) : null
-    if (prop.type === 'frame') {
-      userStore.patchProfile({ frame: null })
+    // Cross-store column sync (optimistic)
+    const columnKey = PROP_TYPE_TO_COLUMN[prop.type]
+    const previousValue = columnKey ? (authStore.user?.[columnKey] ?? null) : null
+    if (columnKey) {
+      userStore.patchProfile({ [columnKey]: null })
     }
 
     try {
@@ -235,9 +248,9 @@ export function useMallActions() {
         color: 'neutral',
       })
 
-      // Push frame removal to room participants via socket
-      if (prop.type === 'frame') {
-        emitFrameSync(null)
+      // Push column prop removal to room participants via socket
+      if (columnKey) {
+        emitColumnSync(columnKey, null)
       }
 
       return true
@@ -253,8 +266,8 @@ export function useMallActions() {
         })
       }
 
-      if (prop.type === 'frame') {
-        userStore.patchProfile({ frame: previousFrame })
+      if (columnKey) {
+        userStore.patchProfile({ [columnKey]: previousValue })
       }
 
       // REACT — error feedback (after rollback is complete)
@@ -277,12 +290,12 @@ export function useMallActions() {
   // ========================================
 
   /**
-   * Push frame change through the audio socket for immediate room propagation.
+   * Push column-prop change through the audio socket for immediate room propagation.
    * Best-effort / fire-and-forget (REACT).
    */
-  function emitFrameSync(frame: string | null): void {
+  function emitColumnSync(columnKey: keyof ProfileSyncFields, value: number | null): void {
     try {
-      emitProfileSync({ frame })
+      emitProfileSync({ [columnKey]: value })
     } catch {
       // Silent — best-effort optimization
     }

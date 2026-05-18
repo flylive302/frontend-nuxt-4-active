@@ -14,13 +14,14 @@ const props = defineProps<{
 }>();
 
 const audioStore = useRoomAudioStore();
+const { resolvePropAsset } = usePropLookup();
 
 // Resolve live participant data first, then fall back to the message author
 // snapshot. Cross-region/rejoin races can deliver chat before participant sync.
 const participant = computed(() => audioStore.participants.get(props.message.userId));
 const displayName = computed(() => participant.value?.name ?? props.message.userName ?? 'Unknown');
 const displayAvatar = computed(() => participant.value?.avatar ?? props.message.userAvatar ?? undefined);
-const displayFrame = computed(() => participant.value?.frame ?? props.message.userFrame ?? undefined);
+const displayFrame = computed(() => resolvePropAsset(participant.value?.frame_id ?? props.message.userFrameId) ?? undefined);
 
 // Format timestamp to relative time
 const formattedTime = computed(() => {

@@ -25,6 +25,7 @@ const { getBadgeFromXp, getLevelFromXp } = useLevelLookup()
 const { fetchUserAgency } = useAgencyMembership()
 const { fetchReceivedInvitations } = useAgencyInvitations()
 const { fetchMyJoinRequests } = useAgencyJoinRequests()
+const { resolvePropAsset } = usePropLookup()
 
 const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(authStore.user?.wealth_xp, 'wealth'))
 const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_xp, 'charm'))
@@ -65,7 +66,7 @@ onMounted(() => {
         <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }" class="-mt-15">
           <UserAvatar
             :animated="true"
-            :frame-asset-url="authStore?.user?.frame ?? undefined"
+            :frame-asset-url="resolvePropAsset(authStore?.user?.frame_id) ?? undefined"
             :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-24"
           />

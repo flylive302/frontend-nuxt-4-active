@@ -15,6 +15,7 @@ const props = defineProps<{
 // ========================================
 
 const { getLevelFromXp } = useLevelLookup()
+const { resolvePropAsset } = usePropLookup()
 
 const roomStore = useRoomStore();
 
@@ -61,7 +62,7 @@ const genderColor = computed(() =>
       <UserAvatar 
         :img="user.avatar" 
         animated 
-        :frame-asset-url="user.frame ?? undefined" 
+        :frame-asset-url="resolvePropAsset(user.frame_id) ?? undefined" 
         class="w-14 ml-1"
         @click="async () => {
           roomStore.minimizeRoom();

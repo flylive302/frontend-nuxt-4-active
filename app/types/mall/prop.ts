@@ -9,7 +9,7 @@
 /**
  * Prop type categories.
  */
-export type PropType = 'frame' | 'signature' | 'room_theme' | 'chat_bubble' | 'entry_animation'
+export type PropType = 'frame' | 'signature' | 'room_theme' | 'chat_bubble' | 'entry_animation' | 'data_card' | 'mice_wave'
 
 /**
  * Prop status for user-owned props.
@@ -97,6 +97,8 @@ export interface EquippedPropsMap {
   room_theme: EquippedProp | null
   chat_bubble: EquippedProp | null
   entry_animation: EquippedProp | null
+  data_card: EquippedProp | null
+  mice_wave: EquippedProp | null
 }
 
 // ========================================

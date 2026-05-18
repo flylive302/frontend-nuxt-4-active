@@ -13,6 +13,7 @@ const seatsStore = useRoomSeatsStore()
 const authStore = useAuthStore()
 const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
 const { myMembership } = useRoomMembers()
+const { resolvePropAsset } = usePropLookup()
 
 const isLoading = ref(false)
 const showMicDialog = ref(false)
@@ -254,7 +255,7 @@ const isVap = computed(() => {
         <div v-if="currentSeat?.user" class="flex flex-col justify-center items-center relative z-10">
           <LazyUserAvatar
             :img="currentSeat.user.avatar ?? undefined"
-            :frame-asset-url="currentSeat.user.frame ?? undefined"
+            :frame-asset-url="resolvePropAsset(currentSeat.user.frame_id) ?? undefined"
             :animated="true" class="size-32" 
             @click="async () => {
               try {

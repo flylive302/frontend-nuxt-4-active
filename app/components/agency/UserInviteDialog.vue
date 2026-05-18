@@ -27,6 +27,7 @@ const emit = defineEmits<{
 // ========================================
 const { users, loading, error, searchUsers } = useUserSearch()
 const { borderClass, gradientClass } = useColorClasses(ref('primary'))
+const { resolvePropAsset } = usePropLookup()
 
 // ========================================
 // State
@@ -174,7 +175,7 @@ function handleConfirm() {
             <div class="absolute -right-6 -top-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none" />
             
             <div class="flex flex-col items-center text-center relative z-10">
-              <LazyUserAvatar :img="selectedUser.avatar ?? undefined" :frame-asset-url="selectedUser.frame ?? undefined" :animated="true" class="size-24"/>
+              <LazyUserAvatar :img="selectedUser.avatar ?? undefined" :frame-asset-url="resolvePropAsset(selectedUser.frame_id) ?? undefined" :animated="true" class="size-24"/>
               
               <h3 class="text-xl font-bold">{{ selectedUser.name }}</h3>
               

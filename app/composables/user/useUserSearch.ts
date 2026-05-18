@@ -100,7 +100,11 @@ export function useUserSearch() {
         country: u.country,
         avatar: u.avatar,
         cover_image: u.cover_image,
-        frame: u.frame,
+        frame_id: u.frame_id,
+        chat_bubble_id: u.chat_bubble_id,
+        entry_animation_id: u.entry_animation_id,
+        data_card_id: u.data_card_id,
+        mice_wave_id: u.mice_wave_id,
         vip_level: u.vip_level,
       }))
 

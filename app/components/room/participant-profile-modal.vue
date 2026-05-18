@@ -48,6 +48,7 @@ const roomStore = useRoomStore()
 
 const { updateMemberRole } = useRoomMemberActions()
 const { blockUser } = useRoomBlocking()
+const { resolvePropAsset } = usePropLookup()
 
 // ========================================
 // Computed
@@ -227,7 +228,7 @@ async function handleDemote() {
           <div class="absolute -left-6 -bottom-6 size-24 bg-primary/20 blur-2xl rounded-full pointer-events-none animate-pulse" />
 
           <div class="flex flex-col items-center text-center relative z-10">
-            <LazyUserAvatar :img="participant.avatar ?? undefined" :frame-asset-url="participant.frame ?? undefined" :animated="true" class="size-24" />
+            <LazyUserAvatar :img="participant.avatar ?? undefined" :frame-asset-url="resolvePropAsset(participant.frame_id) ?? undefined" :animated="true" class="size-24" />
 
             <h3 class="text-xl font-bold mt-2">{{ participant.name }}</h3>
 

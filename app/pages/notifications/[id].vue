@@ -15,6 +15,7 @@ const notificationStore = useNotificationStore()
 const inboxStore = useInboxStore()
 const { markAsRead, fetchNotifications } = useNotificationActions()
 const { loadMessages, sendMessage } = useInboxActions()
+const { resolvePropAsset } = usePropLookup()
 
 // ── Active thread meta (DM only) ──────────────────────
 const thread = computed(() => inboxStore.threadById(threadId.value))
@@ -22,7 +23,7 @@ const thread = computed(() => inboxStore.threadById(threadId.value))
 // ── Header props ──────────────────────────────────────
 const headerName = computed(() => isSystem.value ? 'Official' : (thread.value?.participant.name ?? ''))
 const headerAvatar = computed(() => thread.value?.participant.avatar ?? null)
-const headerFrame = computed(() => thread.value?.participant.frame ?? null)
+const headerFrame = computed(() => resolvePropAsset(thread.value?.participant.frame_id) ?? null)
 
 // ── Scroll container ──────────────────────────────────
 const scrollEl = ref<HTMLElement | null>(null)

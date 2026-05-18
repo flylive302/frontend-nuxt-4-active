@@ -26,6 +26,7 @@ export function useBootstrapInit() {
   const { api, normalizeError } = useApi()
   const bootstrapStore = useBootstrapStore()
   const authStore = useAuthStore()
+  const mallStore = useMallStore()
   const { trackBootstrapStarted, trackBootstrapCompleted, trackBootstrapFailed } = useTelemetry()
   const { startAssetDownload } = useBootstrapAssets()
 
@@ -117,6 +118,11 @@ export function useBootstrapInit() {
       // Seed bootstrap store with config
       if (criticalData) {
         bootstrapStore.setConfig(criticalData)
+
+        // Cross-store seed: bootstrap delivers props manifest → mallStore owns prop data
+        if (criticalData.props?.length) {
+          mallStore.seedPropIndex(criticalData.props)
+        }
       }
 
       // Mark bootstrap complete — UI can render

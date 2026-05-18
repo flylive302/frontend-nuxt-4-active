@@ -10,6 +10,7 @@ const inboxStore = useInboxStore();
 const route = useRoute();
 const room = useRoom();
 const { enterRoom: doRoomEntry } = useRoomEntry();
+const { resolvePropAsset } = usePropLookup();
 const isClientHydrated = ref(false);
 
 const createRoomOpen = ref(false);
@@ -54,7 +55,7 @@ const inboxBadge = computed(() => {
 })
 
 const profileFrameAssetUrl = computed(() =>
-  isClientHydrated.value ? (authStore?.user?.frame ?? undefined) : undefined
+  isClientHydrated.value ? (resolvePropAsset(authStore?.user?.frame_id) ?? undefined) : undefined
 )
 
 const profileAvatarImg = computed(() =>

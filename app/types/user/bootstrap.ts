@@ -21,7 +21,11 @@ export interface MinimalUser {
   country: string
   wealth_xp: string
   charm_xp: string
-  frame: string | null
+  frame_id: number | null
+  chat_bubble_id: number | null
+  entry_animation_id: number | null
+  data_card_id: number | null
+  mice_wave_id: number | null
   avatar: string | null
   cover_image: string | null
   email: string | null
@@ -41,7 +45,11 @@ export interface BootstrapUser {
   signature: string
   avatar: string | null
   cover_image: string | null
-  frame: string | null // ID-based not full name - TO DO
+  frame_id: number | null
+  chat_bubble_id: number | null
+  entry_animation_id: number | null
+  data_card_id: number | null
+  mice_wave_id: number | null
 
   // Contact & Location
   phone: string | null          // E.164 format
@@ -224,6 +232,19 @@ export interface BootstrapConfig {
   badges: Badge[]
   gifts: Gift[]
   vapid_public_key: string | null
+  props: BootstrapProp[]
+}
+
+/**
+ * Lightweight prop manifest for O(1) lookups.
+ * Seeded into mallStore.propIndex at bootstrap time.
+ */
+export interface BootstrapProp {
+  id: number
+  name: string
+  type: string
+  thumbnail_url: string
+  asset_url: string
 }
 
 // ========================================

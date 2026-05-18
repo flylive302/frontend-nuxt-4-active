@@ -10,6 +10,7 @@ const store = useInboxStore()
 const { loadMessages, loadOlderMessages, sendMessage, markRead } = useInboxActions()
 const { acceptRequest, denyRequest, unsendMessage, deleteMessage, deleteThread, blockUser } = useInboxThread()
 const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
+const { resolvePropAsset } = usePropLookup()
 
 // ── Date separator helper ─────────────────────────────
 function shouldShowDate(index: number): boolean {
@@ -152,7 +153,7 @@ onBeforeUnmount(() => {
     <InboxThreadHeader
       :name="thread?.participant.name ?? ''"
       :avatar="thread?.participant.avatar"
-      :frame="thread?.participant.frame"
+      :frame="resolvePropAsset(thread?.participant.frame_id) ?? undefined"
       :signature="thread?.participant.signature"
       :gender="thread?.participant.gender"
       @block="handleBlock"

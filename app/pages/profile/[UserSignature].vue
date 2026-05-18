@@ -146,6 +146,7 @@ useInfiniteScroll(
 
 const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
 const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions(readonlyProfile, enterRoom)
+const { resolvePropAsset } = usePropLookup()
 
 // ========================================
 // Report User
@@ -214,7 +215,7 @@ const showReportModal = ref(false)
       <template #avatar>
         <UserAvatar
           :animated="true"
-          :frame-asset-url="profileWritable?.frame ?? undefined"
+          :frame-asset-url="resolvePropAsset(profileWritable?.frame_id) ?? undefined"
           :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
           class="w-24 -mt-15"
         />

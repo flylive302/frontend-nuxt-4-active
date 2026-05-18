@@ -258,7 +258,8 @@ export interface ChatMessageEvent {
   userId: number;
   userName?: string | null;
   userAvatar?: string | null;
-  userFrame?: string | null;
+  userFrameId?: number | null;
+  userChatBubbleId?: number | null;
   content: string;
   type: string;
   timestamp: number;
@@ -343,7 +344,11 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     name: user.name,
     signature: user.signature,
     avatar: user.avatar,
-    frame: user.frame,
+    frame_id: user.frame_id,
+    chat_bubble_id: user.chat_bubble_id,
+    entry_animation_id: user.entry_animation_id,
+    data_card_id: user.data_card_id,
+    mice_wave_id: user.mice_wave_id,
     cover_image: user.cover_image,
     gender: user.gender,
     // PII fields stripped — participants should contain only visual/identity data

@@ -9,6 +9,7 @@ const props = defineProps<{
 }>();
 
 const seatsStore = useRoomSeatsStore();
+const { resolvePropAsset } = usePropLookup();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
 const seatIndex = computed(() => props.seatId - 1);
@@ -50,9 +51,9 @@ const avatarSrc = computed(() => {
 // Avatar source - only set when seat is occupied
 const userFrame = computed(() => {
   if (isEmpty.value) {
-    return undefined; // Don't pass img prop when empty
+    return undefined;
   }
-  return seat.value?.user?.frame || undefined;
+  return resolvePropAsset(seat.value?.user?.frame_id) ?? undefined;
 });
 
 // Display name+

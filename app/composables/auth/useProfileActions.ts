@@ -49,7 +49,11 @@ export function useProfileActions() {
       name: data.name,
       signature: data.signature ?? undefined,
       avatar: data.avatar ?? undefined,
-      frame: data.frame ?? null,
+      frame_id: data.frame_id ?? null,
+      chat_bubble_id: data.chat_bubble_id ?? null,
+      entry_animation_id: data.entry_animation_id ?? null,
+      data_card_id: data.data_card_id ?? null,
+      mice_wave_id: data.mice_wave_id ?? null,
       gender: data.gender ?? undefined,
     })
 

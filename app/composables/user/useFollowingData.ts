@@ -11,7 +11,7 @@ export interface FollowingCard {
   id: number
   name: string
   avatar: string | null
-  frame: string | null
+  frame_id: number | null
   signature: string
 }
 

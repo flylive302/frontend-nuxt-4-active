@@ -14,6 +14,8 @@ defineOptions({ name: 'HomeFollowingCarousel' })
 defineProps<{
   users: FollowingCard[]
 }>()
+
+const { resolvePropAsset } = usePropLookup()
 </script>
 
 <template>
@@ -32,7 +34,7 @@ defineProps<{
             <UserAvatar
               :animated="true"
               defer-frame-animation
-              :frame-asset-url="item.frame ?? undefined"
+              :frame-asset-url="resolvePropAsset(item.frame_id) ?? undefined"
               :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
               class="w-14"
             />
@@ -60,7 +62,7 @@ defineProps<{
             <UserAvatar
               :animated="true"
               defer-frame-animation
-              :frame-asset-url="item.frame ?? undefined"
+              :frame-asset-url="resolvePropAsset(item.frame_id) ?? undefined"
               :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
               class="w-14"
             />

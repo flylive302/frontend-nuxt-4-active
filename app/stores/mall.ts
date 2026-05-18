@@ -18,6 +18,7 @@ import type {
   CatalogState,
   UserPropsState,
 } from '~/types/mall/prop'
+import type { BootstrapProp } from '~/types/user/bootstrap'
 import { PROP_TYPE_ORDER, MALL_STALE_TIME } from '~/constants/mall'
 
 // ========================================
@@ -54,6 +55,8 @@ export const useMallStore = defineStore('mall', () => {
     room_theme: null,
     chat_bubble: null,
     entry_animation: null,
+    data_card: null,
+    mice_wave: null,
   })
   const equippedLoading = ref(false)
 
@@ -65,6 +68,11 @@ export const useMallStore = defineStore('mall', () => {
   /** Timestamp of last successful data fetch */
   const lastFetchedAt = ref<number | null>(null)
 
+  /**
+   * Prop manifest index — keyed by prop ID for O(1) lookups.
+   * Seeded from bootstrap, enriched lazily on cache-miss.
+   */
+  const propIndex = ref<Record<number, BootstrapProp>>({})
 
 
   // ========================================
@@ -215,6 +223,29 @@ export const useMallStore = defineStore('mall', () => {
   }
 
   // ========================================
+  // Setters — Prop Index (O(1) lookups)
+  // ========================================
+
+  /**
+   * Seed the prop index from bootstrap manifest (array → id-keyed object).
+   * Called once during bootstrap init via cross-store write.
+   */
+  function seedPropIndex(props: BootstrapProp[]): void {
+    const index: Record<number, BootstrapProp> = {}
+    for (const p of props) {
+      index[p.id] = p
+    }
+    propIndex.value = index
+  }
+
+  /**
+   * Add or update a single prop in the index (failsafe lazy-fetch).
+   */
+  function addToPropIndex(prop: BootstrapProp): void {
+    propIndex.value[prop.id] = prop
+  }
+
+  // ========================================
   // Reset
   // ========================================
 
@@ -240,12 +271,15 @@ export const useMallStore = defineStore('mall', () => {
       room_theme: null,
       chat_bubble: null,
       entry_animation: null,
+      data_card: null,
+      mice_wave: null,
     }
     currentType.value = undefined
     currentStatus.value = 'active'
     selectedProp.value = null
     selectedUserProp.value = null
     lastFetchedAt.value = null
+    propIndex.value = {}
   }
 
   // ========================================
@@ -305,10 +339,15 @@ export const useMallStore = defineStore('mall', () => {
 
     // Reset
     reset,
+
+    // Prop Index (O(1) lookups)
+    propIndex,
+    seedPropIndex,
+    addToPropIndex,
   }
 }, {
   // Persist equipped state to avoid flicker on navigation
   persist: {
-    pick: ['equipped', 'types'],
+    pick: ['equipped', 'types', 'propIndex'],
   },
 })

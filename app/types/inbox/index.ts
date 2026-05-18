@@ -8,7 +8,7 @@ export interface ThreadParticipant {
   id: string
   name: string
   avatar: string | null
-  frame: string | null
+  frame_id: number | null
   signature: string | null
   gender: number | null
 }

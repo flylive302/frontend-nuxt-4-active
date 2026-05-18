@@ -6,7 +6,11 @@ export interface ProfileSyncFields {
   name?: string
   signature?: string
   avatar?: string
-  frame?: string | null
+  frame_id?: number | null
+  chat_bubble_id?: number | null
+  entry_animation_id?: number | null
+  data_card_id?: number | null
+  mice_wave_id?: number | null
   gender?: string | number
   vip_level?: number
 }

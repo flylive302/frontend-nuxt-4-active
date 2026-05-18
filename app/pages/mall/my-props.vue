@@ -19,6 +19,7 @@ definePageMeta({
 const mallStore = useMallStore()
 const authStore = useAuthStore()
 const { equipProp, unequipProp, isEquipping } = useMallActions()
+const { resolvePropAsset } = usePropLookup()
 const {
   tabItems,
   selectedTab,
@@ -68,7 +69,7 @@ async function handleUnequip(userPropId: number): Promise<void> {
 
     <UserAvatar
         animated
-        :frame-asset-url="authStore?.user?.frame ?? undefined"
+        :frame-asset-url="resolvePropAsset(authStore?.user?.frame_id) ?? undefined"
         :img="authStore?.user?.avatar ?? undefined"
         class="w-28 -mt-32 mx-auto"
     />
