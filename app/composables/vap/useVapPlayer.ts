@@ -70,12 +70,12 @@ export function useVapPlayer(
     const currentPlaybackId = ++playbackId
 
     try {
-      // Create new player instance
+      // Load without autoplay so we can register callbacks before the first frame runs
       const newPlayer = await (nuxtApp.$vap as VapPlugin).createVapPlayer({
         canvas: canvas.value,
         name: animationName,
         loop: options.loop?.value ?? 1,
-        autoplay: options.autoplay?.value ?? true,
+        autoplay: false,
         muted: options.muted?.value ?? true,
       })
 
@@ -87,22 +87,24 @@ export function useVapPlayer(
 
       player.value = newPlayer
 
-      // Register event callbacks
-      if (player.value) {
-        player.value.onStart = () => {
-          isPlaying.value = true
-        }
+      // Register callbacks before start() so onEnd is always set before the first frame
+      player.value.onStart = () => {
+        isPlaying.value = true
+      }
 
-        player.value.onEnd = () => {
-          // Only fire if this playback is still current (prevents stale callbacks)
-          if (currentPlaybackId !== playbackId) return
-          isPlaying.value = false
-          options.onComplete?.()
-        }
+      player.value.onEnd = () => {
+        // Only fire if this playback is still current (prevents stale callbacks)
+        if (currentPlaybackId !== playbackId) return
+        isPlaying.value = false
+        options.onComplete?.()
+      }
 
-        player.value.onStop = () => {
-          isPlaying.value = false
-        }
+      player.value.onStop = () => {
+        isPlaying.value = false
+      }
+
+      if (options.autoplay?.value !== false) {
+        player.value.start()
       }
     }
     catch (error) {

@@ -22,6 +22,7 @@ import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 import { REGION_ENDPOINTS } from '~/constants/audio';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
+import { propToEntryAnimationGift } from '~/utils/prop';
 
 // ============================================
 // Types
@@ -101,6 +102,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const giftStore = _giftStore;
   const toast = _toast;
   const log = createLogger('[RoomAudio]');
+
+  const { resolveProp } = usePropLookup();
 
   // Media Session (background audio signal)
   const { activate: activateMediaSession, deactivate: deactivateMediaSession } = useMediaSession();
@@ -344,6 +347,20 @@ export function useRoomAudio(): UseRoomAudioReturn {
         }, { isSpeaker: false }
       );
       audioStore.addParticipant(participant);
+
+      if (authStore.user.entry_animation_id) {
+        const prop = resolveProp(authStore.user.entry_animation_id);
+        if (prop) {
+          giftStore.enqueuePlayback({
+            gift: propToEntryAnimationGift(prop),
+            senderId: authStore.user.id,
+            senderName: authStore.user.name,
+            senderAvatar: authStore.user.avatar ?? undefined,
+            recipientIds: [],
+            quantity: 1,
+          });
+        }
+      }
     }
 
     // Handle initial room state from server

@@ -98,7 +98,7 @@ onMounted(() => {
 
       <!-- VAP Player (MP4 + alpha via WebGL) -->
       <VapPlayer v-else-if="currentPlayback.gift.asset_type === 'vap'" :key="`vap-${currentPlayback.id}`" ref="vapPlayerRef" class="w-full"
-        :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete" />
+        :name="currentPlayback.gift.animation_url ?? ''" :loop="1" @complete="handleComplete" />
 
       <!-- Static Image -->
       <RoomGiftStaticDisplay v-else :key="`static-${currentPlayback.id}`" ref="staticDisplayRef" class="w-full" :src="currentPlayback.gift.thumbnail_url"
