@@ -17,6 +17,7 @@
  * @see https://github.com/Tencent/vap
  */
 import type { VapConfig, VapPlayer } from '~/types/asset/vap'
+import * as giftAssetCache from '~/services/giftAssetCache'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[VAP]')
@@ -583,6 +584,24 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
     // IMPORTANT: Attach listeners BEFORE setting src to prevent race condition
     // where canplaythrough fires before the listener is registered (common on
     // page refresh when the video is already cached by the browser)
+    // Resolve through the shared asset cache. getCachedVideoUrl checks L1/L2
+    // only — it never downloads — so a cache hit yields an instant same-origin
+    // blob (also removes the WebGL CORS dependency) while a miss returns the
+    // network URL fast. On a miss we stream from the network (fast `canplay`
+    // on a partial buffer, same as before) AND fill Cache Storage in the
+    // background so the next play of this asset is instant. The background
+    // preloadVideo dedupes (videoPending) with any pre-warm already in flight.
+    let resolvedVideoUrl = videoUrl
+    try {
+      resolvedVideoUrl = await giftAssetCache.getCachedVideoUrl(videoUrl)
+    }
+    catch {
+      resolvedVideoUrl = videoUrl
+    }
+    if (resolvedVideoUrl === videoUrl) {
+      void giftAssetCache.preloadVideo(videoUrl).catch(() => {})
+    }
+
     log.info('Loading video:', videoUrl)
     await new Promise<void>((resolve, reject) => {
       // If video is already loaded (cached), resolve immediately
@@ -601,7 +620,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         reject(new Error(`[VAP] Video load failed: ${videoUrl} (code: ${mediaErr?.code}, ${mediaErr?.message})`))
       }, { once: true })
       // Set src AFTER listeners are attached to avoid missing events
-      video.src = videoUrl
+      video.src = resolvedVideoUrl
       video.load()
     })
 

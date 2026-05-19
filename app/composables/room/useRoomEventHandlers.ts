@@ -147,8 +147,13 @@ export function setupRoomEventHandlers({
     if (event.user.entry_animation_id && !roomStore.isMinimized) {
       const prop = await resolvePropAsync(event.user.entry_animation_id);
       if (prop) {
+        const giftForPlayback = propToEntryAnimationGift(prop);
+        // REACT: start the asset download the moment we learn the animation,
+        // not when the modal mounts. Fire-and-forget — never await a ~7MB
+        // download here or it stalls the handler. Deduped with the VAP plugin.
+        void giftAssetCache.preloadGift(giftForPlayback);
         giftStore.enqueuePlayback({
-          gift: propToEntryAnimationGift(prop),
+          gift: giftForPlayback,
           senderId: event.user.id,
           senderName: event.user.name,
           senderAvatar: event.user.avatar ?? undefined,

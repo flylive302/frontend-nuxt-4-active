@@ -120,6 +120,21 @@ export async function preloadSvga(name: string, svgaPlugin?: SvgaPlugin): Promis
 }
 
 /**
+ * Preload a VAP asset: the MP4 (persisted via preloadVideo's L1/L2 cache)
+ * plus a fire-and-forget warm of the tiny sidecar JSON config.
+ */
+export async function preloadVap(rawMp4Url: string): Promise<void> {
+  const base = rawMp4Url.endsWith('.mp4') ? rawMp4Url.slice(0, -4) : rawMp4Url
+  try {
+    await preloadVideo(`${base}.mp4`)
+  } catch (error) {
+    log.warn('❌ VAP video failed:', rawMp4Url, error)
+  }
+  // Config is <1% of the cost — just warm the browser HTTP cache, don't block.
+  fetch(`${base}.json`).catch(() => {})
+}
+
+/**
  * Preload a gift's animation asset.
  */
 export async function preloadGift(
@@ -134,6 +149,8 @@ export async function preloadGift(
       await preloadVideo(gift.animation_url)
     } else if (gift.asset_type === 'svga') {
       await preloadSvga(gift.animation_url, svgaPlugin)
+    } else if (gift.asset_type === 'vap') {
+      await preloadVap(gift.animation_url)
     }
     preloadedGiftIds.add(gift.id)
   } catch (error) {

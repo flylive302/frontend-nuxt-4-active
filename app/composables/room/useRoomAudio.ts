@@ -23,6 +23,7 @@ import { REGION_ENDPOINTS } from '~/constants/audio';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
 import { propToEntryAnimationGift } from '~/utils/prop';
+import * as giftAssetCache from '~/services/giftAssetCache';
 
 // ============================================
 // Types
@@ -365,6 +366,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Handle initial room state from server
     // 1. Add existing participants
+    const entryWarmIds = new Set<number>();
     if (response.participants && response.participants.length > 0) {
       // log.debug('Adding', response.participants.length, 'existing participants');
       for (const p of response.participants) {
@@ -392,7 +394,24 @@ export function useRoomAudio(): UseRoomAudioReturn {
         );
 
         audioStore.addParticipant(participant);
+
+        if (p.entry_animation_id) entryWarmIds.add(p.entry_animation_id);
       }
+    }
+
+    // REACT: warm the shared entry-animation prop assets (fire-and-forget),
+    // deferred so the ~7MB-each downloads don't contend with the join
+    // handshake / seat sync / gift catalog on slow mobile links. Later joiners
+    // reusing the same popular prop then hit Cache Storage, not cold network.
+    if (entryWarmIds.size > 0) {
+      setTimeout(() => {
+        for (const propId of entryWarmIds) {
+          const entryProp = resolveProp(propId);
+          if (entryProp) {
+            void giftAssetCache.preloadGift(propToEntryAnimationGift(entryProp));
+          }
+        }
+      }, 1500);
     }
 
     // 2. Initialize seats from server state
