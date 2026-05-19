@@ -113,58 +113,14 @@ function handleClose(): void {
         <div class="space-y-4 overflow-scroll">
           <!-- Asset Preview - Type Specific Rendering -->
           <div class="max-w-50 mx-auto">
-            <!-- Frame: UserAvatar with frame -->
-            <template v-if="prop.type === 'frame'">
-              <UserAvatar
-                  :animated="true"
-                  :frame-name="prop.name"
-                  :frame-asset-url="prop.asset_url"
-                  :img="authStore?.user?.avatar ?? undefined"
-              />
-            </template>
-
-            <!-- Entry Animation / Chat Bubble: SvgaPlayer -->
-            <template v-else-if="prop.type === 'entry_animation' || prop.type === 'chat_bubble'">
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
-                <SvgaPlayer 
-                  class="relative min-w-full z-10" 
-                  :name="prop.asset_url" 
-                  height="auto" 
-                />
-              </div>
-            </template>
-
-            <!-- Room Theme: Show thumbnail and asset images -->
-            <template v-else-if="prop.type === 'room_theme'">
-              <div class="space-y-2">
-                <img 
-                  v-if="prop.thumbnail_url" 
-                  :src="prop.thumbnail_url" 
-                  :alt="prop.name" 
-                  class="w-full h-auto object-contain rounded-xl" 
-                >
-                <img 
-                  v-if="prop.asset_url" 
-                  :src="prop.asset_url" 
-                  :alt="prop.name" 
-                  class="w-full h-auto object-contain rounded-xl" 
-                >
-              </div>
-            </template>
-
-            <!-- Signature / Unique ID: ProfileBadge -->
-            <template v-else-if="prop.type === 'signature'">
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
-                <ProfileBadge :txt="String(prop.signature_value ?? prop.name)" />
-              </div>
-            </template>
-
-            <!-- Fallback: Icon -->
-            <template v-else>
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
-                <icon :name="icon" class="size-16" :class="iconColor" />
-              </div>
-            </template>
+            <MallPropAssetView
+              :type="prop.type"
+              :name="prop.name"
+              :asset-url="prop.asset_url"
+              :thumbnail-url="prop.thumbnail_url"
+              :signature-value="prop.signature_value"
+              :avatar-img="authStore?.user?.avatar ?? undefined"
+            />
           </div>
 
           <!-- Name -->

@@ -125,58 +125,13 @@ function handleClose(): void {
         <div class="space-y-4 overflow-scroll">
           <!-- Asset Preview - Type Specific Rendering -->
           <div class="max-w-50 mx-auto">
-            <!-- Frame: UserAvatar with frame -->
-            <template v-if="userProp.type === 'frame'">
-              <UserAvatar
-                :animated="true"
-                :frame-name="userProp.name"
-                :frame-asset-url="userProp.asset_url"
-                :img="authStore?.user?.avatar ?? undefined"
-              />
-            </template>
-
-            <!-- Entry Animation / Chat Bubble: SvgaPlayer -->
-            <template v-else-if="userProp.type === 'entry_animation' || userProp.type === 'chat_bubble'">
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
-                <SvgaPlayer
-                  class="relative min-w-full z-10"
-                  :name="userProp.asset_url"
-                  height="auto"
-                />
-              </div>
-            </template>
-
-            <!-- Room Theme: Show thumbnail and asset images -->
-            <template v-else-if="userProp.type === 'room_theme'">
-              <div class="space-y-2">
-                <img
-                  v-if="userProp.thumbnail_url"
-                  :src="userProp.thumbnail_url"
-                  :alt="userProp.name"
-                  class="w-full h-auto object-contain rounded-xl"
-                >
-                <img
-                  v-if="userProp.asset_url"
-                  :src="userProp.asset_url"
-                  :alt="userProp.name"
-                  class="w-full h-auto object-contain rounded-xl"
-                >
-              </div>
-            </template>
-
-            <!-- Signature / Unique ID: ProfileBadge -->
-            <template v-else-if="userProp.type === 'signature'">
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
-                <ProfileBadge :txt="String(userProp.name)" />
-              </div>
-            </template>
-
-            <!-- Fallback: Icon -->
-            <template v-else>
-              <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
-                <icon :name="icon" class="size-16" :class="iconColor" />
-              </div>
-            </template>
+            <MallPropAssetView
+              :type="userProp.type"
+              :name="userProp.name"
+              :asset-url="userProp.asset_url"
+              :thumbnail-url="userProp.thumbnail_url"
+              :avatar-img="authStore?.user?.avatar ?? undefined"
+            />
           </div>
 
           <!-- Name -->

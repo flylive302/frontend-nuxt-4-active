@@ -32,16 +32,6 @@ const authStore = useAuthStore()
 // ========================================
 
 /**
- * Whether the prop uses SVGA animation.
- */
-const isSvgaAsset = computed(() => props.prop?.asset_url?.endsWith('.svga') ?? false)
-
-/**
- * Whether the prop uses VAP (mp4+json) animation.
- */
-const isVapAsset = computed(() => props.prop?.asset_url?.endsWith('.mp4') ?? false)
-
-/**
  * Whether this is a frame type prop.
  */
 const isFrame = computed(() => props.prop?.type === 'frame')
@@ -92,28 +82,22 @@ function handleClose(): void {
               />
             </template>
 
-            <!-- SVGA animation -->
-            <template v-else-if="isSvgaAsset">
+            <!-- Animated / static asset (svga · vap · video · image) -->
+            <template v-else-if="prop.asset_url">
               <div class="bg-accented rounded-xl overflow-hidden flex items-center justify-center max-h-100">
-                <SvgaPlayer
+                <AssetPlayer
                   class="relative min-w-full z-10"
-                  :name="prop.asset_url!"
-                  height="auto"
+                  :src="prop.asset_url"
+                  :thumbnail-src="prop.thumbnail_url ?? undefined"
+                  :muted="false"
                 />
               </div>
             </template>
 
-            <!-- VAP animation (mp4 + json) -->
-            <template v-else-if="isVapAsset">
-              <div class="bg-accented rounded-xl overflow-hidden flex items-center justify-center max-h-100">
-                <VapPlayer :name="prop.asset_url!" :muted="false" />
-              </div>
-            </template>
-
-            <!-- Image fallback: thumbnail or asset -->
-            <template v-else-if="prop.thumbnail_url || prop.asset_url">
+            <!-- Thumbnail-only fallback -->
+            <template v-else-if="prop.thumbnail_url">
               <img
-                :src="prop.thumbnail_url ?? prop.asset_url ?? ''"
+                :src="prop.thumbnail_url"
                 :alt="prop.name"
                 class="w-full h-auto object-contain rounded-xl"
               >
