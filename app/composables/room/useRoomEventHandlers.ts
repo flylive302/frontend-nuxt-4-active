@@ -138,14 +138,14 @@ export function setupRoomEventHandlers({
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
   const { triggerFly } = useLuckyFly();
-  const { resolveProp } = usePropLookup();
+  const { resolvePropAsync } = usePropLookup();
 
   // Room events
-  socket.on('room:userJoined', (event: UserJoinedEvent) => {
+  socket.on('room:userJoined', async (event: UserJoinedEvent) => {
     audioStore.addParticipant(event.user);
 
     if (event.user.entry_animation_id && !roomStore.isMinimized) {
-      const prop = resolveProp(event.user.entry_animation_id);
+      const prop = await resolvePropAsync(event.user.entry_animation_id);
       if (prop) {
         giftStore.enqueuePlayback({
           gift: propToEntryAnimationGift(prop),

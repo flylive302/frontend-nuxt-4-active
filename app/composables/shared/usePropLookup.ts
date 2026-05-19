@@ -65,6 +65,18 @@ export function usePropLookup() {
   }
 
   /**
+   * Resolve a prop by ID, awaiting a background fetch on cache-miss.
+   * Use in async contexts where the animation must not be silently skipped.
+   */
+  async function resolvePropAsync(propId: number | null | undefined): Promise<BootstrapProp | null> {
+    if (propId == null) return null
+    const cached = mallStore.propIndex[propId]
+    if (cached) return cached
+    await triggerFailsafeFetch(propId)
+    return mallStore.propIndex[propId] ?? null
+  }
+
+  /**
    * Background fetch for a cache-miss prop.
    * Deduplicates concurrent requests for the same ID.
    * On success, merges the prop into mallStore.propIndex — reactive consumers re-render.
@@ -88,6 +100,7 @@ export function usePropLookup() {
 
   return {
     resolveProp,
+    resolvePropAsync,
     resolvePropAsset,
     resolvePropThumbnail,
     resolvePropName,
