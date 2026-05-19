@@ -431,9 +431,18 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
     document.body.appendChild(video)
 
     // State
-    let animFrameId: number | null = null
+    let frameHandle: number | null = null
+    let usingRVFC = false
     let currentLoop = 0
     let destroyed = false
+
+    // requestVideoFrameCallback accessor — typed defensively because it is
+    // absent from some TS DOM libs and older WebView engines.
+    const rvfc = video as unknown as {
+      requestVideoFrameCallback?: (cb: () => void) => number
+      cancelVideoFrameCallback?: (handle: number) => void
+    }
+    const supportsRVFC = typeof rvfc.requestVideoFrameCallback === 'function'
 
     // Player instance
     const player: VapPlayer = {
@@ -450,7 +459,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         video.play().then(() => {
           log.info('Play succeeded (muted:', video.muted, ')')
           player.onStart?.()
-          renderLoop()
+          scheduleFrame()
         }).catch((err) => {
           log.warn('Play failed (muted:', video.muted, '):', err?.message || err)
 
@@ -462,7 +471,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
             video.play().then(() => {
               log.info('Muted fallback play succeeded')
               player.onStart?.()
-              renderLoop()
+              scheduleFrame()
             }).catch((err2) => {
               log.error('Muted fallback also failed:', err2?.message || err2)
             })
@@ -486,14 +495,14 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         video.currentTime = 0
         video.play().then(() => {
           player.onStart?.()
-          renderLoop()
+          scheduleFrame()
         }).catch((err) => {
           log.warn('Restart play failed:', err?.message || err)
           if (!video.muted) {
             video.muted = true
             video.play().then(() => {
               player.onStart?.()
-              renderLoop()
+              scheduleFrame()
             }).catch(() => {})
           }
         })
@@ -503,6 +512,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         if (destroyed) return
         destroyed = true
         cancelRender()
+        video.removeEventListener('ended', handleEnded)
         video.pause()
         video.removeAttribute('src')
         video.load()
@@ -511,37 +521,63 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
       },
     }
 
-    // Render loop — uses whichever renderer was initialized
-    function renderLoop() {
-      if (destroyed) return
-
-      if (video.ended) {
-        currentLoop++
-        if (loopCount > 0 && currentLoop >= loopCount) {
-          // All loops done
-          cancelRender()
-          player.onEnd?.()
-          return
-        }
-        // Loop again
-        video.currentTime = 0
-        video.play().catch(() => {})
-      }
-
-      // Draw current frame if video has data
+    // Render scheduling — one GPU upload per *decoded* video frame via
+    // requestVideoFrameCallback. The old rAF loop re-uploaded the full
+    // video frame (~7MB here) on every display refresh (~60fps) even though
+    // the video only decodes ~25-30 unique frames/sec, doubling texImage2D
+    // bandwidth for zero visual gain. rAF is the fallback where rVFC is absent.
+    function drawCurrentFrame() {
       if (video.readyState >= video.HAVE_CURRENT_DATA) {
         renderer.drawFrame(video)
       }
+    }
 
-      animFrameId = requestAnimationFrame(renderLoop)
+    function scheduleFrame() {
+      if (destroyed) return
+      if (supportsRVFC) {
+        usingRVFC = true
+        frameHandle = rvfc.requestVideoFrameCallback!(onFrame)
+      }
+      else {
+        usingRVFC = false
+        frameHandle = requestAnimationFrame(onFrame)
+      }
+    }
+
+    function onFrame() {
+      if (destroyed) return
+      drawCurrentFrame()
+      scheduleFrame()
     }
 
     function cancelRender() {
-      if (animFrameId !== null) {
-        cancelAnimationFrame(animFrameId)
-        animFrameId = null
-      }
+      if (frameHandle === null) return
+      if (usingRVFC) rvfc.cancelVideoFrameCallback?.(frameHandle)
+      else cancelAnimationFrame(frameHandle)
+      frameHandle = null
     }
+
+    // Loop/completion is driven by the `ended` event, not by polling
+    // `video.ended` in the loop: rVFC stops firing once playback ends, so a
+    // poll-based check would never observe the final state.
+    function handleEnded() {
+      currentLoop++
+      if (loopCount > 0 && currentLoop >= loopCount) {
+        cancelRender()
+        player.onEnd?.()
+        return
+      }
+      // Loop again
+      video.currentTime = 0
+      video.play()
+        .then(() => {
+          drawCurrentFrame()
+          scheduleFrame()
+        })
+        .catch(() => {})
+    }
+
+    video.addEventListener('ended', handleEnded)
 
     // Wait for video to be ready
     // IMPORTANT: Attach listeners BEFORE setting src to prevent race condition
