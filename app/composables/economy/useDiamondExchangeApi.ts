@@ -9,13 +9,14 @@ export function useDiamondExchangeApi() {
   }
 
   async function submitExchange(diamondAmount: number): Promise<{ data: ExchangeResult; message: string }> {
+    // F-54: per-click UUID makes the exchange idempotent on the backend.
     const response = await api<{
       success: true
       data: ExchangeResult
       message: string
     }>('/user/exchange', {
       method: 'POST',
-      body: { diamond_amount: diamondAmount },
+      body: { diamond_amount: diamondAmount, idempotency_key: crypto.randomUUID() },
     })
     return { data: response.data, message: response.message }
   }

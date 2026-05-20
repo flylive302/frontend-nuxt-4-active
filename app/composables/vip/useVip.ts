@@ -72,8 +72,12 @@ export function useVip() {
    * @returns Promise resolving to purchase result
    */
   async function purchaseVip(vipLevelId: number): Promise<VipPurchaseResult> {
+    // F-54: a UUID per click makes the call idempotent on the backend. A
+    // fast-double-click or HTTP retry sends the same key and gets the same
+    // success response without a second deduction or VIP extension.
     const response = await api<VipApiResponse<VipPurchaseResult>>(`/vip/${vipLevelId}/purchase`, {
       method: 'POST',
+      body: { idempotency_key: crypto.randomUUID() },
     })
     return response.data
   }
@@ -90,7 +94,11 @@ export function useVip() {
   ): Promise<VipPurchaseResult> {
     const response = await api<VipApiResponse<VipPurchaseResult>>('/vip/gift', {
       method: 'POST',
-      body: { vip_level_id: vipLevelId, recipient_id: recipientId },
+      body: {
+        vip_level_id: vipLevelId,
+        recipient_id: recipientId,
+        idempotency_key: crypto.randomUUID(),
+      },
     })
     return response.data
   }
