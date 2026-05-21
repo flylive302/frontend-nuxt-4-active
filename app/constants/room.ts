@@ -22,6 +22,14 @@ export const SOCKET_TIMEOUT_MS = 10_000;
 /** Connection wait timeout in milliseconds */
 export const CONNECTION_TIMEOUT_MS = 10_000;
 
+/**
+ * Backstop ceiling for a full room join / rebuild operation, in milliseconds.
+ * Sits above the inner 10s deadlines (connect wait + socket acks) so it only
+ * fires if some await never settles — guaranteeing the lifecycle `isJoining` /
+ * `isRecovering` flags always reset rather than wedging future joins.
+ */
+export const ROOM_OP_TIMEOUT_MS = 30_000;
+
 /** Body scroll unlock delay in milliseconds */
 export const BODY_UNLOCK_DELAY_MS = 1_000;
 

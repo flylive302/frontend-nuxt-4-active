@@ -10,6 +10,8 @@
  */
 import { useDocumentVisibility } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
+import { withTimeout } from '~/utils/with-timeout';
+import { ROOM_OP_TIMEOUT_MS } from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
 
@@ -79,6 +81,10 @@ export function useRoomLifecycle(): void {
 
       // Case 2: Room Changed (switched rooms)
       if (oldRoom && newRoom && oldRoom.id !== newRoom.id) {
+        // No await needed (F-72): leaveRoom's mediasoup teardown is synchronous,
+        // so the old room is fully torn down before the fall-through joinRoom
+        // runs; and the MSAB join handler re-leaves any prior room before
+        // joining (F-31, join-room.handler.ts), so server-side ordering is safe.
         leaveRoom(String(oldRoom.id)); // Leave old room first (pass explicit ID since currentRoom is already updated)
         // Fall through to join new room
       }
@@ -89,7 +95,7 @@ export function useRoomLifecycle(): void {
 
         isJoining.value = true;
         try {
-          await joinRoom(String(newRoom.id));
+          await withTimeout(joinRoom(String(newRoom.id)), ROOM_OP_TIMEOUT_MS, 'joinRoom');
         } catch (error) {
           log.error('Failed to join audio:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -125,7 +131,7 @@ export function useRoomLifecycle(): void {
           if (isJoining.value) return; // Prevent double-join
           isJoining.value = true;
           try {
-            await rebuildRoomAudio(String(roomStore.currentRoom.id));
+            await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
           } catch (err) {
             log.warn('Reconnect after un-minimize failed:', err);
             toast.add({
@@ -168,7 +174,7 @@ export function useRoomLifecycle(): void {
       fetchRoomById(roomStore.currentRoom.id);
 
       // Re-join the audio room on MSAB server
-      await joinRoom(roomId);
+      await withTimeout(joinRoom(roomId), ROOM_OP_TIMEOUT_MS, 'joinRoom');
       await resumeAudioIfSeated();
       log.debug('Successfully re-joined room after reconnect');
     } catch (error) {
@@ -219,7 +225,7 @@ export function useRoomLifecycle(): void {
       log.debug('Resume: rebuild required (health=', health, ')');
       isJoining.value = true;
       try {
-        await rebuildRoomAudio(String(roomStore.currentRoom.id));
+        await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
       } catch (err) {
         log.warn('Reconnect after PWA resume failed:', err);
         toast.add({

@@ -94,7 +94,14 @@ export const useAuthStore = defineStore('auth', () => {
     setSuspensionInfo,
   }
 }, {
-  persist: {
-    pick: ['token', 'msabToken', 'user'],
-  },
+  // F-69: keep token + user on the default SSR-safe cookie storage (shared
+  // login across tabs), but isolate msabToken to per-tab sessionStorage so a
+  // logout / user-switch in one tab can't clear another tab's in-use MSAB
+  // session. A fresh tab with empty sessionStorage transparently re-fetches its
+  // own msabToken on first connect (useAudioSocket.connect → refreshMsabToken,
+  // which uses the shared Sanctum token).
+  persist: [
+    { pick: ['token', 'user'] },
+    { pick: ['msabToken'], storage: piniaPluginPersistedstate.sessionStorage() },
+  ],
 })
