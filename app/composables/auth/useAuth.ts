@@ -159,7 +159,7 @@ export function useAuthActions() {
         log.warn('MSAB token refreshed:', `${data.msab_token.length} chars`)
         return true
       } catch (err) {
-        // Non-blocking — stale JWT (now 30-day lifetime) is better than no JWT
+        // Non-blocking — stale JWT (24-hour lifetime) is better than no JWT
         log.warn('Failed to refresh MSAB token:', err)
         return false
       } finally {
