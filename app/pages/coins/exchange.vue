@@ -7,7 +7,7 @@ import { ASSETS } from '~/constants/assets'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { ref, reactive, computed, onMounted } from 'vue'
-import type { ExchangeInfo, ExchangeResult } from '~/types/economy/exchange'
+import type { ExchangeInfo } from '~/types/economy/exchange'
 import { formatCurrency } from '~/utils/currency'
 
 // ========================================
@@ -82,11 +82,6 @@ const isSubmitting = ref(false)
 // ========================================
 // Computed
 // ========================================
-
-/**
- * Check if user is an agency member (for conditional rendering).
- */
-const isAgencyMember = computed(() => agencyStore.isAgencyMember)
 
 /**
  * User's current diamond balance from exchange info or auth store.
@@ -174,7 +169,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
   isSubmitting.value = true
 
   try {
-    const { data, message } = await postExchange(state.diamonds!)
+    const { data } = await postExchange(state.diamonds!)
 
     // Update local exchange info with new balances
     if (exchangeInfo.value) {

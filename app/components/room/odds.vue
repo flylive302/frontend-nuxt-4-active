@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { createLogger } from '~/utils/logger';
+import { useLuckyOdds, type OddsTier } from '~/composables/lucky/useLuckyOdds'
 
 const SESSION_KEY = 'lucky_odds_acknowledged'
 
-const log = createLogger('[LuckyOddsDisclosure]')
-
-interface OddsTier {
-  name: string
-  multiplier: number
-  probability: number
-}
+const { fetchOdds: fetchOddsTiers } = useLuckyOdds()
 
 const emit = defineEmits<{
   acknowledged: []
@@ -23,16 +17,8 @@ const understood = ref(false)
 
 async function fetchOdds(): Promise<void> {
   isLoading.value = true
-  try {
-    const { api } = useApi()
-    const response = await api<{ data: { tiers: OddsTier[] } }>('/lucky-draws/odds')
-    tiers.value = response.data?.tiers ?? []
-  } catch (err) {
-    log.error('Failed to fetch lucky odds:', err)
-    tiers.value = []
-  } finally {
-    isLoading.value = false
-  }
+  tiers.value = await fetchOddsTiers()
+  isLoading.value = false
 }
 
 /**

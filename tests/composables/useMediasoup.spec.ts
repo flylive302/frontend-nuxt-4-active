@@ -32,6 +32,9 @@ vi.stubGlobal('shallowRef', shallowRef)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('onUnmounted', vi.fn())
 
+// Mock useToast (useMediasoupTransports surfaces transport failures via toast)
+vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
+
 // Mock navigator.mediaDevices
 const mockMediaStream = {
   getAudioTracks: () => [{ kind: 'audio', stop: vi.fn() }],

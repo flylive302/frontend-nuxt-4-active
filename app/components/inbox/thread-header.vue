@@ -9,16 +9,10 @@ defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'block'): void
-  (e: 'deleteChat'): void
-  (e: 'report'): void
+  (e: 'block' | 'deleteChat' | 'report'): void
 }>()
 
 const router = useRouter()
-
-const genderLabel = computed(() => {
-  // convention: 1 = male, 2 = female
-})
 </script>
 
 <template>

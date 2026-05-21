@@ -30,14 +30,6 @@ const displayName = computed<string>(() => {
   return 'Unknown'
 })
 
-const subtitle = computed<string | null>(() => {
-  const e = props.entry
-  if (e.user) return e.user.signature ? `@${e.user.signature}` : null
-  if (e.room) return e.room.owner ? e.room.owner.name : null
-  if (e.agency) return e.agency.owner ? e.agency.owner.name : null
-  return null
-})
-
 const avatarSrc = computed<string>(() => {
   const e = props.entry
   if (e.user) return e.user.avatar ?? ''

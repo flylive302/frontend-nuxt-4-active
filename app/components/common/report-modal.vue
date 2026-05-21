@@ -1,15 +1,5 @@
 <script setup lang="ts">
-import { createLogger } from '~/utils/logger'
-
-type ReportableType = 'user' | 'message' | 'room'
-
-type ReportReason =
-  | 'harassment'
-  | 'spam'
-  | 'inappropriate_content'
-  | 'impersonation'
-  | 'hate_speech'
-  | 'other'
+import { useReporting, type ReportableType, type ReportReason } from '~/composables/user/useReporting'
 
 const REASON_OPTIONS: { label: string; value: ReportReason }[] = [
   { label: 'Harassment or Bullying', value: 'harassment' },
@@ -31,8 +21,7 @@ const emit = defineEmits<{
   submitted: []
 }>()
 
-const log = createLogger('[ReportModal]')
-const toast = useToast()
+const { submitReport } = useReporting()
 
 const reason = ref<ReportReason | null>(null)
 const description = ref('')
@@ -49,35 +38,17 @@ async function handleSubmit(): Promise<void> {
   if (!reason.value) return
 
   isSubmitting.value = true
-  try {
-    const { api } = useApi()
-    await api('/reports', {
-      method: 'POST',
-      body: {
-        reportable_type: props.reportableType,
-        reportable_id: props.reportableId,
-        reason: reason.value,
-        description: description.value || undefined,
-      },
-    })
+  const ok = await submitReport({
+    reportableType: props.reportableType,
+    reportableId: props.reportableId,
+    reason: reason.value,
+    description: description.value,
+  })
+  isSubmitting.value = false
 
-    toast.add({
-      title: 'Report submitted',
-      description: 'We review all reports within 24 hours.',
-      color: 'success',
-    })
-
+  if (ok) {
     emit('update:open', false)
     emit('submitted')
-  } catch (err) {
-    log.error('Failed to submit report:', err)
-    toast.add({
-      title: 'Failed to submit report',
-      description: 'Please try again.',
-      color: 'error',
-    })
-  } finally {
-    isSubmitting.value = false
   }
 }
 </script>

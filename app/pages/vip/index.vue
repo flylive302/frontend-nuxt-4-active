@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { vipAssetBase, vipUIAssetBase } from '~/constants/assets'
+import { ASSETS } from '~/constants/assets'
 // ========================================
 // VIP Page
 // ========================================
@@ -80,31 +80,10 @@ const congratsLevel = ref(0)
 const activeLevel = computed(() => levels.value[activeIndex.value] ?? null)
 
 /**
- * Asset base path for current level's visual assets.
- */
-const assetBasePath = computed(() =>
-  activeLevel.value
-    ? vipAssetBase(activeLevel.value.level)
-    : '',
-)
-
-/**
- * Asset base path for current level's visual assets.
- */
-const uiAssetBasePath = computed(() =>
-  activeLevel.value
-    ? vipUIAssetBase(activeLevel.value.level)
-    : '',
-)
-/**
  * Background color style derived from level color.
  */
 const bgColor = computed(() => ({
   backgroundColor: activeLevel.value?.color ?? '#1a1a2e',
-}))
-
-const txtColor = computed(() => ({
-  color: activeLevel.value?.color ?? '#1a1a2e',
 }))
 
 /**
@@ -326,9 +305,6 @@ onMounted(() => {
 onUnmounted(() => {
   cleanupCongrats?.()
 })
-
-
-import { ASSETS } from '~/constants/assets';
 
 const url = computed(() => {
   const level = activeLevel.value?.level;

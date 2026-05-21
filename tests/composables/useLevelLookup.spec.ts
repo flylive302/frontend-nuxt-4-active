@@ -90,8 +90,10 @@ describe('useLevelLookup', () => {
       expect(result.name).toBe('Super Star')
     })
 
-    it('should return level 0 when config is missing', () => {
+    it('should return level 0 when bootstrap is not ready', () => {
+      // Source guards on bootstrapStore.isReady (config absent ⇒ not ready)
       bootstrapStore.config = null
+      bootstrapStore.isReady = false
       const { getLevelFromXp } = useLevelLookup()
       const result = getLevelFromXp(100, 'wealth')
       expect(result.level).toBe(0)

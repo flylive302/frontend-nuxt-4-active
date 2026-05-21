@@ -104,44 +104,7 @@ const isSavingPrivacy = ref(false)
 
 // ── Block list ────────────────────────────────────────
 const showBlockList = ref(false)
-const { api, normalizeError } = useApi()
-
-interface BlockEntry {
-  id: number
-  name: string
-  avatar: string | null
-  signature: string | null
-  blockedAt: string
-}
-const blockList = ref<BlockEntry[]>([])
-const blockListLoaded = ref(false)
-const blockListLoading = ref(false)
-
-async function loadBlockList(): Promise<void> {
-  blockListLoading.value = true
-  try {
-    const res = await api<{ data: { items: BlockEntry[] } }>('/profile/blocks')
-    blockList.value = res.data.items
-    blockListLoaded.value = true
-  }
-  catch (err) {
-    log.error('loadBlockList failed:', err)
-  }
-  finally {
-    blockListLoading.value = false
-  }
-}
-
-async function unblock(userId: number): Promise<void> {
-  try {
-    await api(`/profile/blocks/${userId}`, { method: 'DELETE' })
-    blockList.value = blockList.value.filter(b => b.id !== userId)
-  }
-  catch (err) {
-    const { message } = normalizeError(err)
-    toast.add({ title: message, color: 'error' })
-  }
-}
+const { blockList, blockListLoading, loadBlockList, unblock } = useBlockedUsers()
 
 function openBlockList(): void {
   showBlockList.value = true

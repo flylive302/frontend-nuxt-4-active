@@ -66,6 +66,7 @@ const canProceed = computed(() => {
     case 'dob': return !!formState.dateOfBirth
     case 'email': return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)
     case 'avatar': return true // optional, can skip
+    default: return false
   }
 })
 

@@ -48,7 +48,6 @@ const {
   blockUser,
 } = useRoomBlocking();
 const { updateMemberRole } = useRoomMemberActions();
-const roomStore = useRoomStore();
 const { isRoomOwner } = useRoomPermissions();
 
 // ========================================

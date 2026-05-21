@@ -188,6 +188,18 @@ export function createMockBootstrapAssets() {
 }
 
 // ========================================
+// Mall Store Mock
+// ========================================
+
+export function createMockMallStore(overrides: Record<string, unknown> = {}) {
+  return {
+    seedPropIndex: vi.fn(),
+    propIndex: {},
+    ...overrides,
+  }
+}
+
+// ========================================
 // Export helper to set up global auto-import mocks
 // ========================================
 
@@ -203,6 +215,7 @@ export function setupNuxtMocks(mocks: {
   api?: ReturnType<typeof createMockApi>
   telemetry?: ReturnType<typeof createMockTelemetry>
   bootstrapAssets?: ReturnType<typeof createMockBootstrapAssets>
+  mallStore?: ReturnType<typeof createMockMallStore>
   route?: Record<string, unknown>
   cookieValue?: string | null
 } = {}) {
@@ -213,6 +226,7 @@ export function setupNuxtMocks(mocks: {
   const api = mocks.api ?? createMockApi()
   const telemetry = mocks.telemetry ?? createMockTelemetry()
   const bootstrapAssets = mocks.bootstrapAssets ?? createMockBootstrapAssets()
+  const mallStore = mocks.mallStore ?? createMockMallStore()
   const route = mocks.route ?? { meta: { middleware: [] } }
   const cookieValue = mocks.cookieValue ?? null
 
@@ -224,6 +238,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).useApi = () => api
   ;(globalThis as Record<string, unknown>).useTelemetry = () => telemetry
   ;(globalThis as Record<string, unknown>).useBootstrapAssets = () => bootstrapAssets
+  ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useRoute = () => route
   ;(globalThis as Record<string, unknown>).useCookie = () => ref(cookieValue)
   ;(globalThis as Record<string, unknown>).ref = ref
@@ -231,7 +246,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).reactive = reactive
   ;(globalThis as Record<string, unknown>).readonly = <T>(value: T) => value
 
-  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets }
+  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets, mallStore }
 }
 
 /**
@@ -241,7 +256,7 @@ export function setupNuxtMocks(mocks: {
 export function cleanupNuxtMocks(): void {
   const keys = [
     'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore',
-    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useRoute', 'useCookie',
+    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useMallStore', 'useRoute', 'useCookie',
     'ref', 'computed', 'reactive', 'readonly',
   ] as const
   for (const key of keys) {

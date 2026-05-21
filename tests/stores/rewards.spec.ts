@@ -42,10 +42,11 @@ describe('rewards actions', () => {
     const store = useRewardsStore()
     const { claimAll } = useRewardsActions()
 
+    type RewardItem = (typeof store.pending.items)[number]
     store.pending.items = [
-      { id: 101 } as any,
-      { id: 102 } as any,
-      { id: 103 } as any,
+      { id: 101 } as unknown as RewardItem,
+      { id: 102 } as unknown as RewardItem,
+      { id: 103 } as unknown as RewardItem,
     ]
 
     const claimed = await claimAll()

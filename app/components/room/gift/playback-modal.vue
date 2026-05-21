@@ -20,7 +20,6 @@ const {
   staticDisplayRef,
   vapPlayerRef,
   handleComplete,
-  handleCombo,
 
   toggleMinimize,
 } = useGiftPlayback();

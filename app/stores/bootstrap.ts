@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import type {
   BootstrapConfig,
-  LevelBadge, LevelConfig,
+  LevelConfig,
 } from '~/types/user/bootstrap'
 import type { Gift } from '~/types/gift/gift'
 import type { Badge } from "~/types/progression/badge";

@@ -21,7 +21,7 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 const route = useRoute()
 const router = useRouter()
-const { api, normalizeError } = useApi()
+const { fetchPage, normalizeError } = useFollowsList()
 const authStore = useAuthStore()
 const toast = useToast()
 
@@ -85,17 +85,10 @@ async function loadFollowers(reset = false): Promise<void> {
   }
 
   try {
-    const params = new URLSearchParams({ per_page: '20' })
-    if (followersNextCursor.value) params.set('cursor', followersNextCursor.value)
+    const { data, nextCursor } = await fetchPage('followers', targetUserId.value, followersNextCursor.value)
 
-    const response = await api<{
-      status: string
-      data: MinimalUser[]
-      meta: { pagination: { next_cursor: string | null } }
-    }>(`/users/${targetUserId.value}/followers?${params}`)
-
-    followers.value.push(...response.data)
-    followersNextCursor.value = response.meta?.pagination?.next_cursor ?? null
+    followers.value.push(...data)
+    followersNextCursor.value = nextCursor
     followersInitialized.value = true
   }
   catch (err: unknown) {
@@ -125,17 +118,10 @@ async function loadFollowing(reset = false): Promise<void> {
   }
 
   try {
-    const params = new URLSearchParams({ per_page: '20' })
-    if (followingNextCursor.value) params.set('cursor', followingNextCursor.value)
+    const { data, nextCursor } = await fetchPage('following', targetUserId.value, followingNextCursor.value)
 
-    const response = await api<{
-      status: string
-      data: MinimalUser[]
-      meta: { pagination: { next_cursor: string | null } }
-    }>(`/users/${targetUserId.value}/following?${params}`)
-
-    following.value.push(...response.data)
-    followingNextCursor.value = response.meta?.pagination?.next_cursor ?? null
+    following.value.push(...data)
+    followingNextCursor.value = nextCursor
     followingInitialized.value = true
   }
   catch (err: unknown) {

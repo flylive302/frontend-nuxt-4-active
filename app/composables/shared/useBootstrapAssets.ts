@@ -7,7 +7,6 @@
 import type { AssetManifestItem } from '~/constants/assetManifest'
 import { MANUAL_ASSET_MANIFEST, PAGE_ASSET_MANIFESTS } from '~/constants/assetManifest'
 import type { AssetScope, EnqueueItem, EnqueueOptions, AssetInvalidatePayload } from '~/types/asset/asset'
-import { ASSET_CONFIG } from '~/constants/asset'
 import * as assetDownloader from '~/services/assetDownloader'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'

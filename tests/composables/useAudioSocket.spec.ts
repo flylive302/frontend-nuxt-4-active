@@ -34,7 +34,10 @@ vi.mock('socket.io-client', () => ({
 
 // Mock useRealtimeEvents to prevent cascade into real Pinia stores
 vi.mock('../../app/composables/room/useRealtimeEvents', () => ({
-  registerRealtimeEventHandlers: vi.fn(),
+  useRealtimeEvents: vi.fn(() => ({
+    registerRealtimeEventHandlers: vi.fn(),
+    resetRealtimeHandlers: vi.fn(),
+  })),
   resetRealtimeHandlers: vi.fn(),
 }))
 
@@ -77,6 +80,14 @@ vi.stubGlobal('useAuthStore', () => mockAuthStore)
 const mockUserStore = { updateBalance: vi.fn() }
 vi.stubGlobal('useUserStore', () => mockUserStore)
 
+// Mock useAuthActions (connect() calls refreshMsabToken when no MSAB token)
+const mockAuthActions = { refreshMsabToken: vi.fn().mockResolvedValue(false) }
+vi.stubGlobal('useAuthActions', () => mockAuthActions)
+
+// Mock useAuthLifecycle (connect() wires the force-disconnect handler)
+const mockAuthLifecycle = { handleForceDisconnect: vi.fn() }
+vi.stubGlobal('useAuthLifecycle', () => mockAuthLifecycle)
+
 // ============================================
 // Tests
 // ============================================
@@ -104,6 +115,8 @@ describe('useAudioSocket', () => {
     vi.stubGlobal('useAuthStore', () => mockAuthStore)
     vi.stubGlobal('useApi', () => mockApi)
     vi.stubGlobal('useUserStore', () => mockUserStore)
+    vi.stubGlobal('useAuthActions', () => mockAuthActions)
+    vi.stubGlobal('useAuthLifecycle', () => mockAuthLifecycle)
   })
 
   afterEach(() => {
@@ -116,9 +129,9 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
-      connect()
+      await connect()
 
-      expect(error.value).toBe('Authentication required')
+      expect(error.value).toBe('No audio token available')
       expect(status.value).toBe('error')
     })
 
@@ -127,7 +140,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
-      connect()
+      await connect()
 
       expect(status.value).toBe('connecting')
     })
@@ -137,7 +150,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect } = useAudioSocket()
-      connect()
+      await connect()
 
       // Check that handlers were registered
       expect(mockSocket.on).toHaveBeenCalledWith('connect', expect.any(Function))
@@ -155,7 +168,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, disconnect, status } = useAudioSocket()
-      connect()
+      await connect()
       disconnect()
 
       expect(mockSocket.removeAllListeners).toHaveBeenCalled()
@@ -188,7 +201,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
-      connect()
+      await connect()
 
       // Get the connect handler and call it
       const connectHandler = mockSocket.on.mock.calls.find(
@@ -207,7 +220,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
-      connect()
+      await connect()
 
       // Get the disconnect handler and call it
       const disconnectHandler = mockSocket.on.mock.calls.find(
@@ -225,7 +238,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status, error } = useAudioSocket()
-      connect()
+      await connect()
 
       // Get the connect_error handler and call it
       const errorHandler = mockSocket.on.mock.calls.find(
@@ -247,7 +260,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect, status } = useAudioSocket()
-      connect('wss://mumbai.audio.flyliveapp.com')
+      await connect('wss://mumbai.audio.flyliveapp.com')
 
       expect(status.value).toBe('connecting')
       expect(mockIo).toHaveBeenCalledWith('wss://mumbai.audio.flyliveapp.com', expect.any(Object))
@@ -261,11 +274,11 @@ describe('useAudioSocket', () => {
       const { connect } = useAudioSocket()
 
       // First connect
-      connect('wss://mumbai.audio.flyliveapp.com')
+      await connect('wss://mumbai.audio.flyliveapp.com')
       mockSocket.connected = true
 
       // Second connect to same URL — should skip
-      connect('wss://mumbai.audio.flyliveapp.com')
+      await connect('wss://mumbai.audio.flyliveapp.com')
       expect(mockIo).toHaveBeenCalledTimes(1)
     })
 
@@ -277,11 +290,11 @@ describe('useAudioSocket', () => {
       const { connect } = useAudioSocket()
 
       // First connect to Mumbai
-      connect('wss://mumbai.audio.flyliveapp.com')
+      await connect('wss://mumbai.audio.flyliveapp.com')
       mockSocket.connected = true
 
       // Second connect to Frankfurt — should force-reconnect
-      connect('wss://frankfurt.audio.flyliveapp.com')
+      await connect('wss://frankfurt.audio.flyliveapp.com')
       expect(mockIo).toHaveBeenCalledTimes(2)
       expect(mockSocket.removeAllListeners).toHaveBeenCalled()
       expect(mockSocket.disconnect).toHaveBeenCalled()
@@ -295,11 +308,11 @@ describe('useAudioSocket', () => {
       const { connect } = useAudioSocket()
 
       // First connect
-      connect('wss://mumbai.audio.flyliveapp.com')
+      await connect('wss://mumbai.audio.flyliveapp.com')
       mockSocket.connected = true
 
       // Force-reconnect to different URL
-      connect('wss://frankfurt.audio.flyliveapp.com')
+      await connect('wss://frankfurt.audio.flyliveapp.com')
       expect(resetRealtimeHandlers).toHaveBeenCalled()
     })
 
@@ -309,7 +322,7 @@ describe('useAudioSocket', () => {
 
       const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
       const { connect } = useAudioSocket()
-      connect()
+      await connect()
 
       expect(mockIo).toHaveBeenCalledWith('ws://localhost:3030', expect.any(Object))
     })

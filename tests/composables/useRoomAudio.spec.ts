@@ -57,6 +57,7 @@ const mockSocket = {
   value: {
     emit: vi.fn(),
     on: vi.fn(),
+    once: vi.fn(),
     off: vi.fn(),
     removeAllListeners: vi.fn(),
     disconnect: vi.fn(),
@@ -143,6 +144,43 @@ let mockRoomStore: {
 vi.stubGlobal('useRoomStore', () => mockRoomStore)
 
 // ============================================
+// Mock Room Audio Store (audio state lives in useRoomAudioStore)
+// ============================================
+
+let mockAudioStore: {
+  participants: Map<number, unknown>
+  audioState: { isConnected: boolean; isProducing: boolean; isMuted: boolean; activeSpeakerIds: number[] }
+  addParticipant: ReturnType<typeof vi.fn>
+  setAudioConnected: ReturnType<typeof vi.fn>
+  setProducing: ReturnType<typeof vi.fn>
+  clearAudioState: ReturnType<typeof vi.fn>
+}
+
+vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
+
+// ============================================
+// Mock Room Seats Store
+// ============================================
+
+let mockSeatsStore: {
+  seats: Record<string, unknown>[]
+  resetSeats: ReturnType<typeof vi.fn>
+  setSeatLocked: ReturnType<typeof vi.fn>
+  updateSeat: ReturnType<typeof vi.fn>
+  addSeatGiftValue: ReturnType<typeof vi.fn>
+}
+
+vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
+
+// Mock usePropLookup (resolveProp used when building the self participant)
+const mockPropLookup = { resolveProp: vi.fn().mockReturnValue(null) }
+vi.stubGlobal('usePropLookup', () => mockPropLookup)
+
+// Mock useMediaSession (OS media-session activate/deactivate on join/leave)
+const mockMediaSession = { activate: vi.fn(), deactivate: vi.fn() }
+vi.stubGlobal('useMediaSession', () => mockMediaSession)
+
+// ============================================
 // Tests
 // ============================================
 
@@ -172,6 +210,23 @@ describe('useRoomAudio', () => {
       clearMessages: vi.fn(),
       clearParticipants: vi.fn(),
       clearSeats: vi.fn(),
+    }
+
+    mockAudioStore = {
+      participants: new Map(),
+      audioState: { isConnected: false, isProducing: false, isMuted: false, activeSpeakerIds: [] },
+      addParticipant: vi.fn(),
+      setAudioConnected: vi.fn(),
+      setProducing: vi.fn(),
+      clearAudioState: vi.fn(),
+    }
+
+    mockSeatsStore = {
+      seats: [],
+      resetSeats: vi.fn(),
+      setSeatLocked: vi.fn(),
+      updateSeat: vi.fn(),
+      addSeatGiftValue: vi.fn(),
     }
   })
 
@@ -212,6 +267,10 @@ describe('useRoomAudio', () => {
       // Reset module cache to ensure singleton picks up current mockRoomStore
       vi.resetModules()
       vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
+      vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
+      vi.stubGlobal('usePropLookup', () => mockPropLookup)
+      vi.stubGlobal('useMediaSession', () => mockMediaSession)
       vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
       vi.stubGlobal('useMediasoup', () => mockMediasoup)
       vi.stubGlobal('useAuthStore', () => mockAuthStore)
@@ -238,8 +297,8 @@ describe('useRoomAudio', () => {
       // Should clean up mediasoup resources
       expect(mockMediasoup.cleanup).toHaveBeenCalled()
 
-      // Should clear audio state in store
-      expect(mockRoomStore.clearAudioState).toHaveBeenCalled()
+      // Should clear audio state in the audio store (moved off roomStore)
+      expect(mockAudioStore.clearAudioState).toHaveBeenCalled()
 
       // Should NOT disconnect — socket stays alive for app-wide events
       expect(mockAudioSocket.disconnect).not.toHaveBeenCalled()
@@ -431,25 +490,18 @@ describe('useRoomAudio', () => {
   })
 
   describe('gifts', () => {
-    describe('sendGift()', () => {
-      it('should emit gift:send event', async () => {
-        mockRoomStore.currentRoom = { id: 'room-123' }
-        mockRoomStore.seats = [
-          { index: 0, user: { id: 42, name: 'Recipient' }, isMuted: false, isActive: false, isLocked: false },
-        ]
-        mockAudioSocket.status.value = 'connected'
-        
-        // Reset modules and re-stub globals (required after previous test's resetModules)
+    // Gift sending was extracted from useRoomAudio into useRoomGifts (a
+    // parameterized composable). The send path now queues and emits via
+    // processGiftQueue — for a single gift this fires synchronously.
+    describe('sendGift() — useRoomGifts', () => {
+      it('emits gift:send for a seated recipient', async () => {
+        mockRoomStore.currentRoom = { id: 'room-123', room_xp: '0' }
+
+        // Reset modules and re-stub the globals useRoomGifts pulls in
         vi.resetModules()
         vi.stubGlobal('useRoomStore', () => mockRoomStore)
-        vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
-        vi.stubGlobal('useMediasoup', () => mockMediasoup)
-        vi.stubGlobal('useAuthStore', () => mockAuthStore)
-        vi.stubGlobal('useGiftStore', () => mockGiftStore)
+        vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
         vi.stubGlobal('useGiftData', () => mockGiftData)
-        vi.stubGlobal('useToast', () => mockToast)
-        vi.stubGlobal('navigateTo', vi.fn())
-        vi.stubGlobal('refundPendingCoins', vi.fn())
         vi.stubGlobal('ref', ref)
         vi.stubGlobal('computed', computed)
         vi.stubGlobal('shallowRef', shallowRef)
@@ -457,10 +509,18 @@ describe('useRoomAudio', () => {
         vi.stubGlobal('readonly', readonly)
         vi.stubGlobal('onUnmounted', vi.fn())
 
-        const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
-        const roomAudio = useRoomAudio()
+        // Recipient 42 must be seated (checked at send time AND re-checked at emit time)
+        mockSeatsStore.seats = [
+          { index: 0, user: { id: 42, name: 'Recipient' }, isMuted: false, isActive: false, isLocked: false },
+        ]
 
-        roomAudio.sendGift(123, 42, 5)
+        const { useRoomGifts } = await import('../../app/composables/room/useRoomGifts')
+        const { sendGift } = useRoomGifts({
+          socket: mockSocket as unknown as Parameters<typeof useRoomGifts>[0]['socket'],
+          getCurrentRoomId: () => 'room-123',
+        })
+
+        sendGift(123, 42, 5)
 
         expect(mockSocket.value.emit).toHaveBeenCalledWith('gift:send', {
           roomId: 'room-123',
@@ -506,6 +566,10 @@ describe('useRoomAudio', () => {
 
       vi.resetModules()
       vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
+      vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
+      vi.stubGlobal('usePropLookup', () => mockPropLookup)
+      vi.stubGlobal('useMediaSession', () => mockMediaSession)
       vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
       vi.stubGlobal('useMediasoup', () => mockMediasoup)
       vi.stubGlobal('useAuthStore', () => mockAuthStore)
@@ -552,6 +616,10 @@ describe('useRoomAudio', () => {
 
       vi.resetModules()
       vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
+      vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
+      vi.stubGlobal('usePropLookup', () => mockPropLookup)
+      vi.stubGlobal('useMediaSession', () => mockMediaSession)
       vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
       vi.stubGlobal('useMediasoup', () => mockMediasoup)
       vi.stubGlobal('useAuthStore', () => mockAuthStore)
@@ -588,6 +656,10 @@ describe('useRoomAudio', () => {
 
       vi.resetModules()
       vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
+      vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
+      vi.stubGlobal('usePropLookup', () => mockPropLookup)
+      vi.stubGlobal('useMediaSession', () => mockMediaSession)
       vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
       vi.stubGlobal('useMediasoup', () => mockMediasoup)
       vi.stubGlobal('useAuthStore', () => mockAuthStore)
