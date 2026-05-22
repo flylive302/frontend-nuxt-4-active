@@ -8,7 +8,7 @@
  *
  * Extracted from shell.vue to enable page-route-based room architecture.
  */
-import { useDocumentVisibility } from '@vueuse/core';
+import { useDocumentVisibility, useEventListener } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
 import { withTimeout } from '~/utils/with-timeout';
 import { ROOM_OP_TIMEOUT_MS } from '~/constants/room';
@@ -37,34 +37,19 @@ export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
-  const authStore = useAuthStore();
-  const audioStore = useRoomAudioStore();
-  const { joinRoom, leaveRoom, startAudio, recoverPlayback, probeAudioHealth, connectionStatus } = useRoomAudio();
+  const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, connectionStatus } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, onReconnect } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
 
-  // Auto-resume audio after reconnect if the server retained the user's seat
-  // during the 15 s grace period (see MSAB seat-grace.ts).
-  async function resumeAudioIfSeated(): Promise<void> {
-    const userId = authStore.user?.id;
-    if (!userId) return;
-    if (audioStore.participants.get(userId)?.isSpeaker) {
-      try {
-        await startAudio();
-        log.debug('Auto-resumed audio after reconnect — seat retained during grace period');
-      } catch (err) {
-        log.warn('Failed to auto-resume audio after reconnect:', err);
-      }
-    }
-  }
-
+  // NOTE: there is no auto-resume-on-reconnect. Connection loss is a full leave
+  // (the seat is released server-side on disconnect — no retention), so a
+  // reconnect re-joins as a listener with no seat to restore.
   async function rebuildRoomAudio(roomId: string): Promise<void> {
     seatsStore.resetSeats();
     disconnectSocket(true);
     await connectSocket();
     await joinRoom(roomId);
-    await resumeAudioIfSeated();
   }
 
   // ========================================
@@ -175,7 +160,6 @@ export function useRoomLifecycle(): void {
 
       // Re-join the audio room on MSAB server
       await withTimeout(joinRoom(roomId), ROOM_OP_TIMEOUT_MS, 'joinRoom');
-      await resumeAudioIfSeated();
       log.debug('Successfully re-joined room after reconnect');
     } catch (error) {
       log.error('Failed to re-join room after reconnect:', error);
@@ -238,6 +222,21 @@ export function useRoomLifecycle(): void {
       }
     } finally {
       isRecovering.value = false;
+    }
+  });
+
+  // ========================================
+  // Terminal cleanup: leave the room on real page unload (app / tab close)
+  // ========================================
+  // `pagehide` fires on genuine document unload (PWA/TWA close, tab close) —
+  // NOT on in-app route changes, so swipe-back stays minimized with the socket
+  // alive. Proactively emit room:leave so other users see this user removed
+  // instantly instead of waiting ~20s for the server socket's pingTimeout to
+  // fire the disconnect-driven full leave. Best-effort: if the frame doesn't
+  // flush before unload, the pingTimeout path still cleans up.
+  useEventListener(window, 'pagehide', () => {
+    if (roomStore.currentRoom) {
+      leaveRoom(String(roomStore.currentRoom.id));
     }
   });
 

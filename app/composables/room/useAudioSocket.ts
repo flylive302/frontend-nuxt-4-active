@@ -191,14 +191,11 @@ export function useAudioSocket(): UseAudioSocketReturn {
       err.message === 'Authentication required';
 
     if (!authFailed) {
-      // Network / DNS / TLS / server-unreachable. Socket.IO will keep retrying
-      // automatically, but surface the failure so the user knows audio is down
-      // instead of watching the seat-taking UI spin forever.
-      toast.add({
-        title: 'Cannot reach audio server',
-        description: 'Network issue or server unreachable. Audio is unavailable; chat still works.',
-        color: 'error',
-      });
+      // Network / DNS / TLS / server-unreachable. Socket.IO keeps retrying
+      // automatically and the connection degrades to chat-only. We deliberately
+      // do NOT toast here: a user going offline (or a brief blip) shouldn't get
+      // an error popup on every retry. The connection `status` reflects the
+      // state for any UI that wants a subtle indicator.
       return;
     }
 

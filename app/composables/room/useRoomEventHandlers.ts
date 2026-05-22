@@ -177,6 +177,10 @@ export function setupRoomEventHandlers({
       color: 'warning',
     });
     leaveRoom();
+    // Clear currentRoom so re-opening the SAME room later is a real transition
+    // (Watcher 1 only joins when the room id changes). Without this, currentRoom
+    // stays set and a return to the same room never re-emits room:join.
+    roomStore.leaveRoom();
     const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
     navigateTo(target, { replace: true });
   });
@@ -190,6 +194,11 @@ export function setupRoomEventHandlers({
       icon: 'i-lucide-log-out',
     });
     leaveRoom();
+    // Clear currentRoom (see room:closed) — otherwise a kicked user returning to
+    // the SAME room never re-joins (currentRoom unchanged → Watcher 1 no-ops),
+    // leaving audio stuck on "loading". A different room worked because its id
+    // changed. roomStore.leaveRoom() also re-triggers the lifecycle teardown.
+    roomStore.leaveRoom();
     const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
     navigateTo(target, { replace: true });
   });
@@ -314,6 +323,22 @@ export function setupRoomEventHandlers({
 
   socket.on('seat:locked', (event: SeatLockedEvent) => {
     seatsStore.setSeatLocked(event.seatIndex, event.isLocked);
+    // A locked seat is empty by definition (locking kicks any occupant). If the
+    // kick's `seat:cleared` was missed/dropped on this client, force-clear the
+    // occupant here so the locked-seat visual — which only renders on an EMPTY
+    // seat — shows for everyone, including the owner who issued the lock.
+    if (event.isLocked) {
+      const seat = seatsStore.seats[event.seatIndex];
+      if (seat?.user) {
+        const occupantId = seat.user.id;
+        seatsStore.clearSeat(event.seatIndex);
+        const p = audioStore.participants.get(occupantId);
+        if (p) {
+          p.isSpeaker = false;
+          p.seatIndex = undefined;
+        }
+      }
+    }
   });
 
   // Invite events

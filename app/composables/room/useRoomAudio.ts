@@ -364,40 +364,39 @@ export function useRoomAudio(): UseRoomAudioReturn {
       }
     }
 
-    // Handle initial room state from server
-    // 1. Add existing participants
+    // Handle initial room state from server.
+    // 1. Reconcile existing participants against the snapshot (authoritative).
+    //    Upsert everyone present, prune anyone absent (except self) — so a
+    //    re-join (reconnect / resume / un-minimize) self-heals instead of
+    //    merging the snapshot onto stale state and accumulating ghosts.
     const entryWarmIds = new Set<number>();
-    if (response.participants && response.participants.length > 0) {
-      // log.debug('Adding', response.participants.length, 'existing participants');
-      for (const p of response.participants) {
-        const participant = userToParticipant(
-            {
-              id: p.id,
-              name: p.name,
-              signature: p.signature,
-              frame_id: p.frame_id,
-              chat_bubble_id: p.chat_bubble_id,
-              entry_animation_id: p.entry_animation_id,
-              data_card_id: p.data_card_id,
-              mice_wave_id: p.mice_wave_id,
-              email: p.email,
-              phone: p.phone,
-              avatar: p.avatar,
-              gender: p.gender,
-              country: p.country,
-              date_of_birth: p.date_of_birth,
-              wealth_xp: p.wealth_xp,
-              charm_xp: p.charm_xp,
-              cover_image: p.cover_image ?? null,
-              vip_level: p.vip_level ?? 0,
-            }, { isSpeaker: false }
-        );
-
-        audioStore.addParticipant(participant);
-
-        if (p.entry_animation_id) entryWarmIds.add(p.entry_animation_id);
-      }
-    }
+    const snapshotParticipants = (response.participants ?? []).map((p) => {
+      if (p.entry_animation_id) entryWarmIds.add(p.entry_animation_id);
+      return userToParticipant(
+        {
+          id: p.id,
+          name: p.name,
+          signature: p.signature,
+          frame_id: p.frame_id,
+          chat_bubble_id: p.chat_bubble_id,
+          entry_animation_id: p.entry_animation_id,
+          data_card_id: p.data_card_id,
+          mice_wave_id: p.mice_wave_id,
+          email: p.email,
+          phone: p.phone,
+          avatar: p.avatar,
+          gender: p.gender,
+          country: p.country,
+          date_of_birth: p.date_of_birth,
+          wealth_xp: p.wealth_xp,
+          charm_xp: p.charm_xp,
+          cover_image: p.cover_image ?? null,
+          vip_level: p.vip_level ?? 0,
+        },
+        { isSpeaker: false },
+      );
+    });
+    audioStore.reconcileParticipants(snapshotParticipants, authStore.user?.id);
 
     // REACT: warm the shared entry-animation prop assets (fire-and-forget),
     // deferred so the ~7MB-each downloads don't contend with the join
@@ -414,24 +413,31 @@ export function useRoomAudio(): UseRoomAudioReturn {
       }, 1500);
     }
 
-    // 2. Initialize seats from server state
+    // 2. Reconcile seats from server state (authoritative): apply occupied
+    //    seats from the snapshot, clear seats whose occupant is absent. Resolve
+    //    each occupant from participants (placeholder if a seat references a
+    //    user the snapshot's participant list didn't carry).
     if (response.seats) {
       const activeIds = audioStore.audioState.activeSpeakerIds;
-      response.seats.forEach((seat) => {
+      const resolvedSeats = response.seats.map((seat) => {
         let user = seat.userId != null ? audioStore.participants.get(seat.userId) ?? null : null;
         if (seat.userId != null && !user) {
           user = createParticipantPlaceholder(seat.userId);
           audioStore.addParticipant(user);
         }
-        seatsStore.updateSeat(seat.seatIndex, user, seat.isMuted, activeIds);
-        if (user) {
-          const p = audioStore.participants.get(user.id);
-          if (p) {
-            p.isSpeaker = true;
-            p.seatIndex = seat.seatIndex;
-          }
-        }
+        return { seatIndex: seat.seatIndex, user, isMuted: seat.isMuted };
       });
+
+      seatsStore.reconcileSeats(resolvedSeats, activeIds);
+
+      for (const { user, seatIndex } of resolvedSeats) {
+        if (!user) continue;
+        const p = audioStore.participants.get(user.id);
+        if (p) {
+          p.isSpeaker = true;
+          p.seatIndex = seatIndex;
+        }
+      }
     }
 
     // Initialize locked seats (if provided by server)

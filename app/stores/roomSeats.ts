@@ -166,6 +166,33 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     seats.value = createEmptySeats();
   }
 
+  /**
+   * Reconcile seats against an authoritative join snapshot.
+   *
+   * Seats present in the snapshot are applied (upsert); occupied seats whose
+   * occupant is ABSENT from the snapshot are cleared. Locks are preserved.
+   * This is diff-based — an occupied seat that stays occupied is updated in
+   * place rather than emptied-then-refilled, so there is no "seat blinks
+   * empty" flicker (the §13.8 / F-24 regression that banned a blanket
+   * resetSeats() on reconnect).
+   */
+  function reconcileSeats(
+    snapshot: { seatIndex: number; user: RoomParticipant | null; isMuted: boolean }[],
+    activeSpeakerIds: readonly number[],
+  ) {
+    const occupied = new Set(snapshot.filter((s) => s.user != null).map((s) => s.seatIndex));
+
+    seats.value.forEach((seat, i) => {
+      if (seat.user != null && !occupied.has(i)) {
+        clearSeat(i);
+      }
+    });
+
+    for (const s of snapshot) {
+      updateSeat(s.seatIndex, s.user, s.isMuted, activeSpeakerIds);
+    }
+  }
+
   /** Clear a participant from their seat (on leave/disconnect). */
   function clearParticipantFromSeat(userId: number) {
     seatGiftTotals.value.delete(userId);
@@ -220,6 +247,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     // Cross-store helpers
     syncActiveSpeakers,
     resetSeats,
+    reconcileSeats,
     clearParticipantFromSeat,
     refreshSeatUser,
     setSeatUserMuted,
