@@ -46,6 +46,7 @@ vi.stubGlobal('useGiftStore', () => mockGiftStore)
 // Mock useGiftData
 const mockGiftData = {
   getGiftById: vi.fn().mockReturnValue({ id: 1, name: 'Test Gift' }),
+  ensureLoaded: vi.fn().mockResolvedValue(undefined),
 }
 vi.stubGlobal('useGiftData', () => mockGiftData)
 
@@ -151,6 +152,7 @@ let mockAudioStore: {
   participants: Map<number, unknown>
   audioState: { isConnected: boolean; isProducing: boolean; isMuted: boolean; activeSpeakerIds: number[] }
   addParticipant: ReturnType<typeof vi.fn>
+  reconcileParticipants: ReturnType<typeof vi.fn>
   setAudioConnected: ReturnType<typeof vi.fn>
   setProducing: ReturnType<typeof vi.fn>
   clearAudioState: ReturnType<typeof vi.fn>
@@ -172,8 +174,12 @@ let mockSeatsStore: {
 
 vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
 
-// Mock usePropLookup (resolveProp used when building the self participant)
-const mockPropLookup = { resolveProp: vi.fn().mockReturnValue(null) }
+// Mock usePropLookup (resolveProp used when building the self participant;
+// resolvePropAsync drives the self entry-animation enqueue)
+const mockPropLookup = {
+  resolveProp: vi.fn().mockReturnValue(null),
+  resolvePropAsync: vi.fn().mockResolvedValue(null),
+}
 vi.stubGlobal('usePropLookup', () => mockPropLookup)
 
 // Mock useMediaSession (OS media-session activate/deactivate on join/leave)
@@ -216,6 +222,7 @@ describe('useRoomAudio', () => {
       participants: new Map(),
       audioState: { isConnected: false, isProducing: false, isMuted: false, activeSpeakerIds: [] },
       addParticipant: vi.fn(),
+      reconcileParticipants: vi.fn(),
       setAudioConnected: vi.fn(),
       setProducing: vi.fn(),
       clearAudioState: vi.fn(),
@@ -522,13 +529,126 @@ describe('useRoomAudio', () => {
 
         sendGift(123, 42, 5)
 
-        expect(mockSocket.value.emit).toHaveBeenCalledWith('gift:send', {
-          roomId: 'room-123',
-          giftId: 123,
-          recipientId: 42,
-          quantity: 5,
-        })
+        expect(mockSocket.value.emit).toHaveBeenCalledWith(
+          'gift:send',
+          {
+            roomId: 'room-123',
+            giftId: 123,
+            recipientId: 42,
+            quantity: 5,
+          },
+          // [SLICE-3C TEMP DIAGNOSTIC] ack callback added to observe GATE result
+          expect.any(Function),
+        )
       })
+    })
+  })
+
+  describe('self entry-animation', () => {
+    // Fresh import per test so the module-level `lastSelfEntryRoomId` flag
+    // starts null. Returns a joinRoom bound to fully-stubbed dependencies.
+    async function setupJoinRoom() {
+      mockAuthStore.user = { id: 1, name: 'Test User', entry_animation_id: 99, avatar: 'a.png' } as typeof mockAuthStore.user
+      mockRoomStore.currentRoom = { id: 'room-1' }
+      ;(mockRoomStore as unknown as { isMinimized: boolean }).isMinimized = false
+      mockAudioSocket.status.value = 'connected'
+
+      // room:join ack returns rtpCapabilities so joinRoom proceeds to the self block
+      mockSocket.value.emit.mockImplementation((
+        event: string,
+        _payload: unknown,
+        callback?: (response: unknown) => void,
+      ) => {
+        if (event === 'room:join' && callback) {
+          callback({ rtpCapabilities: { codecs: [], headerExtensions: [] } })
+        }
+      })
+
+      // resolvePropAsync resolves the equipped entry prop (id 99)
+      mockPropLookup.resolvePropAsync.mockResolvedValue({
+        id: 99,
+        name: 'Grand Entry',
+        thumbnail_url: 'thumb.png',
+        asset_url: 'entry.svga',
+      })
+
+      vi.resetModules()
+      vi.stubGlobal('useRoomStore', () => mockRoomStore)
+      vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
+      vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
+      vi.stubGlobal('usePropLookup', () => mockPropLookup)
+      vi.stubGlobal('useMediaSession', () => mockMediaSession)
+      vi.stubGlobal('useAudioSocket', () => mockAudioSocket)
+      vi.stubGlobal('useMediasoup', () => mockMediasoup)
+      vi.stubGlobal('useAuthStore', () => mockAuthStore)
+      vi.stubGlobal('useGiftStore', () => mockGiftStore)
+      vi.stubGlobal('useGiftData', () => mockGiftData)
+      vi.stubGlobal('useToast', () => mockToast)
+      vi.stubGlobal('navigateTo', vi.fn())
+      vi.stubGlobal('refundPendingCoins', vi.fn())
+      vi.stubGlobal('ref', ref)
+      vi.stubGlobal('computed', computed)
+      vi.stubGlobal('shallowRef', shallowRef)
+      vi.stubGlobal('reactive', reactive)
+      vi.stubGlobal('readonly', readonly)
+      vi.stubGlobal('onUnmounted', vi.fn())
+
+      const { useRoomAudio } = await import('../../app/composables/room/useRoomAudio')
+      return useRoomAudio()
+    }
+
+    // Let the fire-and-forget entry IIFE (await resolvePropAsync → enqueue) settle.
+    const flush = () => new Promise((r) => setTimeout(r, 0))
+
+    afterEach(() => {
+      mockAuthStore.user = { id: 1, name: 'Test User' } as typeof mockAuthStore.user
+    })
+
+    it('enqueues the self entry-animation on first join', async () => {
+      const roomAudio = await setupJoinRoom()
+      await roomAudio.joinRoom('room-1')
+      await flush()
+
+      expect(mockGiftStore.enqueuePlayback).toHaveBeenCalledTimes(1)
+      expect(mockGiftStore.enqueuePlayback).toHaveBeenCalledWith(
+        expect.objectContaining({ senderId: 1, recipientIds: [] }),
+      )
+    })
+
+    it('does NOT replay on a re-join of the same room (reconnect/resume)', async () => {
+      const roomAudio = await setupJoinRoom()
+      await roomAudio.joinRoom('room-1')
+      await flush()
+      await roomAudio.joinRoom('room-1') // simulate reconnect re-join
+      await flush()
+
+      expect(mockGiftStore.enqueuePlayback).toHaveBeenCalledTimes(1)
+    })
+
+    it('replays after leaving and re-entering, and on a room switch', async () => {
+      const roomAudio = await setupJoinRoom()
+      await roomAudio.joinRoom('room-1')
+      await flush()
+
+      // Leaving clears the gate → re-entering the same room replays
+      roomAudio.leaveRoom('room-1')
+      await roomAudio.joinRoom('room-1')
+      await flush()
+      expect(mockGiftStore.enqueuePlayback).toHaveBeenCalledTimes(2)
+
+      // A switch to a different room id also replays (no leave needed)
+      await roomAudio.joinRoom('room-2')
+      await flush()
+      expect(mockGiftStore.enqueuePlayback).toHaveBeenCalledTimes(3)
+    })
+
+    it('skips the entry when the prop cannot be resolved', async () => {
+      const roomAudio = await setupJoinRoom()
+      mockPropLookup.resolvePropAsync.mockResolvedValue(null)
+      await roomAudio.joinRoom('room-1')
+      await flush()
+
+      expect(mockGiftStore.enqueuePlayback).not.toHaveBeenCalled()
     })
   })
 

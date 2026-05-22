@@ -29,6 +29,7 @@ import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
 import { propToEntryAnimationGift } from '~/utils/prop';
+import { createLogger } from '~/utils/logger';
 
 // ============================================
 // Types
@@ -136,9 +137,12 @@ export function setupRoomEventHandlers({
 }: UseRoomEventHandlersParams): void {
 
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
-  const { getGiftById } = useGiftData();
+  const { getGiftById, gifts: giftCatalog } = useGiftData();
   const { triggerFly } = useLuckyFly();
   const { resolvePropAsync } = usePropLookup();
+
+  // [SLICE-3C TEMP DIAGNOSTIC — REMOVE AFTER ROOT CAUSE CONFIRMED]
+  const diag = createLogger('[GiftDiag]');
 
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
@@ -380,6 +384,17 @@ export function setupRoomEventHandlers({
 
   // Gift events
   socket.on('gift:received', (event: GiftReceivedEvent) => {
+
+    // [SLICE-3C TEMP DIAGNOSTIC — REMOVE AFTER ROOT CAUSE CONFIRMED]
+    // Discriminates issue 4: did the event arrive? is the catalog loaded? does
+    // the giftId resolve? One line on the receiver tells us which branch is real.
+    diag.info('gift:received', {
+      giftId: event.giftId,
+      senderId: event.senderId,
+      recipientId: event.recipientId,
+      catalogSize: giftCatalog.value.length,
+      found: !!getGiftById(event.giftId),
+    });
 
     // Accumulate gift coin value for seat display
     const giftForValue = getGiftById(event.giftId);

@@ -75,6 +75,14 @@ let _authStore: ReturnType<typeof useAuthStore> | null = null;
 let _giftStore: ReturnType<typeof useGiftStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 
+/**
+ * Room id the self entry-animation was last played for. Gates replay: a
+ * reconnect / resume / un-minimize calls joinRoom again for the SAME room and
+ * must NOT re-trigger the entry; only a genuine room switch (different id)
+ * should. Cleared in leaveRoom() so re-entering the same room later replays.
+ */
+let lastSelfEntryRoomId: string | null = null;
+
 // ============================================
 // Composable
 // ============================================
@@ -104,7 +112,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const toast = _toast;
   const log = createLogger('[RoomAudio]');
 
-  const { resolveProp } = usePropLookup();
+  const { resolveProp, resolvePropAsync } = usePropLookup();
+  const { ensureLoaded: ensureGiftsLoaded } = useGiftData();
 
   // Media Session (background audio signal)
   const { activate: activateMediaSession, deactivate: deactivateMediaSession } = useMediaSession();
@@ -239,6 +248,14 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear any stale gift playback from previous room
     giftStore.clearPlayback();
 
+    // Ensure the gift catalog is loaded for THIS participant before gifts can
+    // arrive — fire-and-forget, idempotent (guards on isInitialized/isLoading).
+    // Catalog loading used to be owned by the gift drawer's onMounted, leaving a
+    // race where an early `gift:received` on a passive listener (who never
+    // opened the drawer) found an empty catalog and silently dropped the
+    // animation. Owning it at room entry removes that dependency.
+    void ensureGiftsLoaded();
+
     // Connect to the correct regional MSAB endpoint (production only).
     // In development, always use the local MSAB URL from config to avoid
     // connecting to production endpoints that reject localhost origins.
@@ -349,18 +366,31 @@ export function useRoomAudio(): UseRoomAudioReturn {
       );
       audioStore.addParticipant(participant);
 
-      if (authStore.user.entry_animation_id) {
-        const prop = resolveProp(authStore.user.entry_animation_id);
-        if (prop) {
+      // Self entry-animation. Mirror the others' path (room:userJoined): resolve
+      // the prop ASYNCHRONOUSLY (failsafe-fetches on a prop-index cache miss) so
+      // it isn't silently skipped before the index has seeded, and run it
+      // fire-and-forget so a slow prop fetch never delays the join handshake.
+      // Gate on lastSelfEntryRoomId so reconnect / resume / un-minimize to the
+      // SAME room doesn't replay — only a genuine room switch does.
+      if (
+        authStore.user.entry_animation_id &&
+        !roomStore.isMinimized &&
+        roomId !== lastSelfEntryRoomId
+      ) {
+        lastSelfEntryRoomId = roomId;
+        const selfUser = authStore.user;
+        void (async () => {
+          const prop = await resolvePropAsync(selfUser.entry_animation_id);
+          if (!prop) return;
           giftStore.enqueuePlayback({
             gift: propToEntryAnimationGift(prop),
-            senderId: authStore.user.id,
-            senderName: authStore.user.name,
-            senderAvatar: authStore.user.avatar ?? undefined,
+            senderId: selfUser.id,
+            senderName: selfUser.name,
+            senderAvatar: selfUser.avatar ?? undefined,
             recipientIds: [],
             quantity: 1,
           });
-        }
+        })();
       }
     }
 
@@ -499,6 +529,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
     // Socket is managed by socket.client.ts plugin, disconnects only on logout
+
+    // Allow the self entry-animation to replay if the user re-enters this room.
+    lastSelfEntryRoomId = null;
 
     // Clear room state
     audioStore.clearAudioState();
