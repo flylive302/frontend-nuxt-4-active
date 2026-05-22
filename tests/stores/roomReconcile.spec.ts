@@ -102,3 +102,42 @@ describe('roomSeatsStore.reconcileSeats', () => {
     expect(store.seats[4]?.isActive).toBe(true) // user 8 is an active speaker
   })
 })
+
+// Locks in the single-occupancy invariant: placing a user on a seat must vacate
+// any other seat they hold. Without this, an observer that misses or suppresses
+// the compensating `seat:cleared` (e.g. the F-24 self-retake guard on a quick
+// move) shows the same user occupying every seat they have visited.
+describe('roomSeatsStore.updateSeat single-occupancy', () => {
+  it('vacates the user previous seat when they move to a new one', () => {
+    const store = useRoomSeatsStore()
+    store.updateSeat(0, user(1), false, [])
+
+    // Same user moves to seat 3 without an intervening clearSeat
+    store.updateSeat(3, user(1), false, [])
+
+    expect(store.seats[0]?.user).toBeNull()
+    expect(store.seats[3]?.user?.id).toBe(1)
+  })
+
+  it('does not duplicate a user across seats over repeated moves', () => {
+    const store = useRoomSeatsStore()
+    store.updateSeat(0, user(1), false, [])
+    store.updateSeat(3, user(1), false, [])
+    store.updateSeat(5, user(1), false, [])
+
+    const occupied = store.seats.filter((s) => s.user?.id === 1).map((s) => s.index)
+    expect(occupied).toEqual([5])
+  })
+
+  it('leaves other users seats untouched', () => {
+    const store = useRoomSeatsStore()
+    store.updateSeat(0, user(1), false, [])
+    store.updateSeat(1, user(2), false, [])
+
+    store.updateSeat(3, user(1), false, []) // user 1 moves; user 2 unaffected
+
+    expect(store.seats[1]?.user?.id).toBe(2)
+    expect(store.seats[0]?.user).toBeNull()
+    expect(store.seats[3]?.user?.id).toBe(1)
+  })
+})

@@ -63,6 +63,18 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   ) {
     if (seatIndex < 0 || seatIndex >= seats.value.length) return;
 
+    // Single-occupancy invariant: a user occupies at most one seat. Clear the
+    // same user from any other seat before placing them here, so observers
+    // self-correct even if the compensating `seat:cleared` is reordered or
+    // suppressed (e.g. by the F-24 self-retake guard on a quick seat move).
+    if (user) {
+      seats.value.forEach((s, i) => {
+        if (i !== seatIndex && s.user?.id === user.id) {
+          clearSeat(i);
+        }
+      });
+    }
+
     const currentSeat = seats.value[seatIndex];
     const newSeat: Seat = {
       index: seatIndex,

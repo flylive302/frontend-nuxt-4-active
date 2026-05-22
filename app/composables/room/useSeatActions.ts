@@ -101,16 +101,8 @@ export function useSeatActions({
         audioStore.addParticipant(participant);
       }
 
-      // If the user was already on another seat, clear that slot first
-      // so the local UI doesn't show the user occupying both seats.
-      // Other clients receive seat:cleared from the server.
-      const previousSeatIndex = seatsStore.seats.findIndex(
-        (s) => s.user?.id === authStore.user!.id,
-      );
-      if (previousSeatIndex >= 0 && previousSeatIndex !== seatIndex) {
-        seatsStore.clearSeat(previousSeatIndex);
-      }
-
+      // Note: clearing the user's previous seat is handled by updateSeat's
+      // single-occupancy invariant below — no manual findIndex/clearSeat needed.
       participant.isSpeaker = true;
       participant.seatIndex = seatIndex;
       seatsStore.updateSeat(
