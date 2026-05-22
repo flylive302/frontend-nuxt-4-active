@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeRouteLeave } from 'vue-router';
 import { ASSETS } from '~/constants/assets'
 import { withImageKitTransform } from '~/utils/imagekit'
 /**
@@ -54,6 +55,19 @@ watch(
 );
 
 // ========================================
+// Back-Button / Swipe-Back Auto-Minimize
+// ========================================
+// Intercepts Android hardware back, edge-swipe-back, and any other
+// navigation away from the room page. Minimizes instead of leaving,
+// keeping the audio session alive as a floating widget.
+onBeforeRouteLeave((to) => {
+  if (to.path.startsWith('/room/')) return; // room switch — lifecycle handles it
+  if (roomStore.currentRoom && !roomStore.isMinimized) {
+    roomStore.minimizeRoom();
+  }
+});
+
+// ========================================
 // Body Scroll Lock
 // ========================================
 onMounted(() => {
@@ -79,13 +93,19 @@ useThemeColor(roomColor)
 // Volume Control State
 // ========================================
 const VOLUME_STORAGE_KEY = 'flylive:room:volume';
+const LAST_VOLUME_KEY = 'flylive:room:lastNonZeroVolume';
 const savedVolume = typeof localStorage !== 'undefined'
   ? parseFloat(localStorage.getItem(VOLUME_STORAGE_KEY) ?? '0.8')
   : 0.8;
+const savedLastNonZero = typeof localStorage !== 'undefined'
+  ? parseFloat(localStorage.getItem(LAST_VOLUME_KEY) ?? '0.8')
+  : 0.8;
 const volume = ref(savedVolume);
-const isMuted = ref(false);
+// Sync isMuted with the actual saved state so un-minimizing reflects widget's mute
+const isMuted = ref(savedVolume === 0);
 const volumePopoverOpen = ref(false);
-const lastNonZeroVolume = ref(savedVolume > 0 ? savedVolume : 0.8);
+// Prefer the explicit last-non-zero key; fall back to savedVolume or a sane default
+const lastNonZeroVolume = ref(savedLastNonZero > 0 ? savedLastNonZero : savedVolume > 0 ? savedVolume : 0.8);
 
 /**
  * Handle volume slider change.
@@ -96,6 +116,9 @@ function onVolumeChange(value: number | undefined): void {
   isMuted.value = vol === 0;
   if (vol > 0) {
     lastNonZeroVolume.value = vol;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LAST_VOLUME_KEY, String(vol));
+    }
   }
   setVolume(vol);
 
@@ -119,10 +142,13 @@ function toggleMute(): void {
       localStorage.setItem(VOLUME_STORAGE_KEY, String(restored));
     }
   } else {
-    // Mute
+    // Mute — persist lastNonZeroVolume so widget can restore it too
     isMuted.value = true;
     if (volume.value > 0) {
       lastNonZeroVolume.value = volume.value;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(LAST_VOLUME_KEY, String(volume.value));
+      }
     }
     volume.value = 0;
     setVolume(0);
