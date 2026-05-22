@@ -529,17 +529,12 @@ describe('useRoomAudio', () => {
 
         sendGift(123, 42, 5)
 
-        expect(mockSocket.value.emit).toHaveBeenCalledWith(
-          'gift:send',
-          {
-            roomId: 'room-123',
-            giftId: 123,
-            recipientId: 42,
-            quantity: 5,
-          },
-          // [SLICE-3C TEMP DIAGNOSTIC] ack callback added to observe GATE result
-          expect.any(Function),
-        )
+        expect(mockSocket.value.emit).toHaveBeenCalledWith('gift:send', {
+          roomId: 'room-123',
+          giftId: 123,
+          recipientId: 42,
+          quantity: 5,
+        })
       })
     })
   })

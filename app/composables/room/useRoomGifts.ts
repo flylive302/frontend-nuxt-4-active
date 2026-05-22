@@ -7,10 +7,6 @@
 import { ref, type Ref } from 'vue';
 import { GIFT_QUEUE_INTERVAL_MS } from '../../constants/gift';
 import type { AudioSocket } from './useAudioSocket';
-import { createLogger } from '~/utils/logger';
-
-// [SLICE-3C TEMP DIAGNOSTIC — REMOVE AFTER ROOT CAUSE CONFIRMED]
-const diag = createLogger('[GiftDiag]');
 
 // ============================================
 // Types
@@ -71,13 +67,7 @@ function processGiftQueue(socket: Ref<AudioSocket | null>) {
         (seat) => seat.user !== null && seat.user.id === gift.recipientId,
       );
       if (stillSeated) {
-        // [SLICE-3C TEMP DIAGNOSTIC] Add an ack so the server's GATE result is
-        // visible — the production emit is fire-and-forget, so every rejection
-        // (NOT_IN_ROOM / RECIPIENT_NOT_SEATED / RATE_LIMITED / INVALID_PAYLOAD)
-        // is currently swallowed and the sender plays optimistically regardless.
-        socket.value.emit('gift:send', gift, (ack: unknown) => {
-          diag.info('gift:send ack', { gift, ack });
-        });
+        socket.value.emit('gift:send', gift);
       }
     }
 
