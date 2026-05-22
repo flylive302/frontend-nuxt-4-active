@@ -94,14 +94,33 @@ export const useAuthStore = defineStore('auth', () => {
     setSuspensionInfo,
   }
 }, {
-  // F-69: keep token + user on the default SSR-safe cookie storage (shared
-  // login across tabs), but isolate msabToken to per-tab sessionStorage so a
-  // logout / user-switch in one tab can't clear another tab's in-use MSAB
-  // session. A fresh tab with empty sessionStorage transparently re-fetches its
-  // own msabToken on first connect (useAudioSocket.connect → refreshMsabToken,
-  // which uses the shared Sanctum token).
+  // token → durable cookie (90-day, matches backend Sanctum expiration). The
+  // module's default cookie storage sets no maxAge, so token persisted as a
+  // SESSION cookie that is dropped when the browser closes. A returning user
+  // then had authStore.token === null, and the `auth` route middleware bounced
+  // them to /welcome — even though the separate durable `sanctum_token` cookie
+  // (read by useApi) was still valid. Persisting token durably keeps the route
+  // gate and bootstrap rehydration in sync with the API-layer auth.
+  //
+  // user → localStorage: durable across restarts without the ~4KB cookie size
+  // limit or per-request overhead of shipping the full user object on every
+  // call. refreshUser() re-fetches it on each boot, so a miss self-heals.
+  //
+  // F-69: msabToken stays on per-tab sessionStorage so a logout / user-switch
+  // in one tab can't clear another tab's in-use MSAB session. A fresh tab with
+  // empty sessionStorage transparently re-fetches its own msabToken on first
+  // connect (useAudioSocket.connect → refreshMsabToken, using the shared token).
   persist: [
-    { pick: ['token', 'user'] },
+    {
+      pick: ['token'],
+      storage: piniaPluginPersistedstate.cookies({
+        maxAge: 90 * 24 * 60 * 60,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+      }),
+    },
+    { pick: ['user'], storage: piniaPluginPersistedstate.localStorage() },
     { pick: ['msabToken'], storage: piniaPluginPersistedstate.sessionStorage() },
   ],
 })
