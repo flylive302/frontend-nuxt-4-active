@@ -150,14 +150,12 @@ export function useGiftSending() {
       // Optimistic coin deduction
       deductCoins(totalCost.value);
 
-      // Emit socket event for each recipient
+      // Emit socket event for each recipient. emitGift (useRoomGifts.sendGift)
+      // owns the sender-side optimistic accumulation (room XP + seat gift value)
+      // since the sender is excluded from the gift:received broadcast. Do NOT
+      // accumulate here too — that double-counts the seat total for the sender.
       for (const recipientId of selectedRecipients) {
         emitGift(selectedGift.id, recipientId, selectedQuantity);
-      }
-
-      // Sender-side gift value accumulation (sender is excluded from gift:received broadcast)
-      for (const recipientId of selectedRecipients) {
-        seatsStore.addSeatGiftValue(recipientId, selectedGift.price * selectedQuantity);
       }
 
       // Start playback immediately (optimistic)
@@ -242,18 +240,14 @@ export function useGiftSending() {
       return false;
     }
 
-    // Emit socket event for each valid (seated) recipient
+    // Emit socket event for each valid (seated) recipient. emitGift owns the
+    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
     for (const recipientId of validRecipients) {
       emitGift(currentPlayback.gift.id, recipientId, currentPlayback.quantity);
     }
 
     // Deduct coins for combo
     deductCoins(comboCost);
-
-    // Sender-side gift value accumulation
-    for (const recipientId of validRecipients) {
-      seatsStore.addSeatGiftValue(recipientId, currentPlayback.gift.price * currentPlayback.quantity);
-    }
 
     // Increment combo counter
     giftStore.incrementCombo();
@@ -289,7 +283,8 @@ export function useGiftSending() {
       return false;
     }
 
-    // Emit socket event for each valid (seated) recipient
+    // Emit socket event for each valid (seated) recipient. emitGift owns the
+    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
     for (const recipientId of validRecipients) {
       emitGift(ctx.gift.id, recipientId, ctx.quantity);
     }
@@ -298,11 +293,6 @@ export function useGiftSending() {
     deductCoins(comboCost);
     for (const recipientId of validRecipients) {
       triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
-    }
-
-    // Sender-side gift value accumulation
-    for (const recipientId of validRecipients) {
-      seatsStore.addSeatGiftValue(recipientId, ctx.gift.price * ctx.quantity);
     }
 
     // Increment combo counter

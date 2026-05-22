@@ -120,19 +120,20 @@ export function useRoomGifts({
     );
     if (!isRecipientSeated) return;
 
-    // --- ADD THIS SECTION ---
+    // Sender-side optimistic accumulation — SINGLE SOURCE. The sender is
+    // excluded from the gift:received broadcast, so we mirror what the receiver
+    // does in its gift:received handler here (room XP + seat gift value). Callers
+    // (send / combo / luckyCombo in useGiftSending) must NOT also accumulate, or
+    // the sender double-counts the seat total.
     const roomStore = useRoomStore();
     const { getGiftById } = useGiftData();
     const gift = getGiftById(giftId);
     if (gift && roomStore.currentRoom) {
-      // 1. Update the total Room XP
       const addedXp = gift.price * quantity;
       const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
       roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
-      // 2. Update the seat-specific XP (so your UI shows the gift on the seat)
       seatsStore.addSeatGiftValue(recipientId, addedXp);
     }
-    // -------------------------
 
     // Push to queue for background processing
     giftQueue.push({
