@@ -41,7 +41,6 @@ interface LevelRow {
   requiredXP: string
   badge: {
     badgeSrc: string
-    color: string
     txt: string
     class?: string
   }
@@ -60,7 +59,6 @@ const columns: ColumnDef<LevelRow>[] = [
       return h(profileBadge, {
         class: badge.class + 'mx-auto',
         badgeSrc: badge.badgeSrc,
-        color: badge.color,
         txt: badge.txt,
       })
     },
@@ -141,9 +139,8 @@ const tableData = computed<LevelRow[]>(() =>
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
         badgeSrc: badge?.image_url || props.defaultBadgeUrl,
-        color: props.color,
-        txt: String(item.level),
-        class: item.level === currentLevel.value ? `border border-${props.color} bg-${props.color}/10 rounded-md px-2 py-1 inset-shadow-sm ` : '',
+        txt: '',
+        class: item.level === currentLevel.value ? `border border-${props.color} bg-${props.color}/10 rounded-md px-2 py-1 inset-shadow-sm` : '',
       },
     }
   })
@@ -183,14 +180,16 @@ const tableData = computed<LevelRow[]>(() =>
           </template>
         </div>
         <div class="col-span-2 flex flex-col justify-center">
-          <ProfileBadge
-              v-if="currentBadge"
-              :badge-src="currentBadge.image_url"
-              class="ml-auto"
-              :color="color"
-              :txt="String(currentLevel)"
+          <NuxtImg
+              :src="heroBadgeIconSrc"
+              class="max-w-20 w-full relative z-10 shrink-0"
+              width="auto"
+              height="auto"
+              format="webp"
+              densities="x1 x2"
+              sizes="64px"
+              loading="lazy"
           />
-          <div v-else-if="loading" class="w-10 h-10 bg-muted rounded-full ml-auto animate-pulse" />
         </div>
       </div>
 
@@ -215,19 +214,7 @@ const tableData = computed<LevelRow[]>(() =>
 
     <div class="px-3 my-8">
       <!-- Level Description -->
-      <div class="flex gap-2 items-center">
-        <NuxtImg
-          :src="heroBadgeIconSrc"
-          class="w-8 relative z-10 shrink-0"
-          width="18"
-          height="18"
-          format="webp"
-          densities="x1 x2"
-          sizes="64px"
-          loading="lazy"
-        />
-        <h2 class="text-lg font-bold">Level Description</h2>
-      </div>
+      <h2 class="text-lg font-bold">Level Description</h2>
       <p class="text-sm font-semibold text-muted mt-1">
         {{ description }}
       </p>
@@ -243,7 +230,8 @@ const tableData = computed<LevelRow[]>(() =>
         :columns="columns"
         :data="tableData"
         sticky
-        class="rounded-lg glowing-border mt-2 w-full"
+        class="rounded-lg mt-2 w-full border"
+        :class="`border-${color}`"
       />
     </div>
   </div>

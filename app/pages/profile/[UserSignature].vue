@@ -65,8 +65,6 @@ const {
   hasAgency,
   hasRoom,
   allGifts,
-  wealthLevel,
-  charmLevel,
   wealthBadgeSrc,
   charmBadgeSrc,
   giftsLoading,
@@ -102,7 +100,7 @@ const isOwnProfile = computed(() => {
 })
 
 /**
- * Computed followers/following counts that react to global store for own profile (real-time fix).
+ * Computed followers/following counts that react to the global store for own profile (real-time fix).
  */
 const followersCount = computed(() => {
   return isOwnProfile.value ? (authStore.user?.followers_count ?? 0) : (profileWritable.value?.followers_count ?? 0)
@@ -113,7 +111,7 @@ const followingCount = computed(() => {
 })
 
 /**
- * Handle follow button click with animation trigger.
+ * Handle follow button click with the animation trigger.
  */
 async function handleFollowClick(): Promise<void> {
   const wasFollowing = isFollowing.value
@@ -199,7 +197,7 @@ const showReportModal = ref(false)
     <ProfileHeader v-else-if="hasProfile">
       <template #cover>
         <NuxtImg
-          :src="profileWritable?.cover_image ?? ASSETS.COVER_PLACEHOLDER"
+          :src="profileWritable?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER"
           format="webp"
           densities="x1 x2"
           sizes="320px"
@@ -209,21 +207,23 @@ const showReportModal = ref(false)
       </template>
 
       <template #signature-badges>
-        <ProfileBadge :txt="profileWritable?.signature || undefined" />
+        <ProfileBadge :show-badge="false" :txt="profileWritable?.signature || undefined" />
       </template>
 
       <template #avatar>
-        <UserAvatar
-          :animated="true"
-          :frame-asset-url="resolvePropAsset(profileWritable?.frame_id) ?? undefined"
-          :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-          class="w-24 -mt-15"
-        />
+        <div class="w-64 -mt-15">
+          <UserAvatar
+            :animated="true"
+            :frame-asset-url="resolvePropAsset(profileWritable?.frame_id) ?? undefined"
+            :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+            class="w-full"
+          />
+        </div>
       </template>
 
       <template #badges>
-        <ProfileBadge :badge-src="wealthBadgeSrc" color="tertiary" :txt="String(wealthLevel)" />
-        <ProfileBadge :badge-src="charmBadgeSrc" color="secondary" :txt="String(charmLevel)" />
+        <div class=""><img :src="charmBadgeSrc" alt="current badge" class="w-13 mt-1.5" width="56" height="17" /></div>
+        <div class=""><img :src="wealthBadgeSrc" alt="current badge" class="w-18 mt-1" width="56" height="17" /></div>
       </template>
 
       <template #name>

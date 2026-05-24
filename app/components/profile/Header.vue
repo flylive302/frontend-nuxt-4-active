@@ -8,11 +8,13 @@
 
     <div class="bg-neutral-900 relative z-10 -mt-6 rounded-t-4xl">
       <div class="flex justify-center w-full gap-3">
-        <slot name="signature-badges" />
+        <div class="w-full flex items-center justify-center">
+          <slot name="signature-badges" />
+        </div>
 
         <slot name="avatar" />
 
-        <div class="flex gap-2">
+        <div class="flex w-full">
           <slot name="badges" />
         </div>
       </div>

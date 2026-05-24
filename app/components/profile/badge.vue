@@ -43,7 +43,7 @@ const variantMap: Record<BadgeColor, string> = {
         v-if="showBadge"
         :src="displayBadgeSrc"
         :alt="imgAlt"
-        class="w-6 relative z-10 shrink-0"
+        class="relative z-10 shrink-0"
         :width="64"
         :height="64"
         format="webp"
@@ -54,6 +54,7 @@ const variantMap: Record<BadgeColor, string> = {
         decoding="async"
     />
     <p
+        v-if="color == 'primary' && txt"
         class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1  truncate"
         :class="[
           variantMap[color],

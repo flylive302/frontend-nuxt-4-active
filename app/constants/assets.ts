@@ -29,9 +29,9 @@ export const ASSETS = {
   // ── R2 CDN — Binary / Animations ──
   DEFAULT_FRAME: `${R2}/frames/10.svga`,
   MICE_WAVE_SVGA: `${R2}/vip/1/mice-wave.svga`,
-  DEFAULT_WEALTH_BADGE: `${R2}/badges/wealth/level_0.webp`,
-  DEFAULT_CHARM_BADGE: `${R2}/badges/charm/level_0.webp`,
-  DEFAULT_TRANSACTION_THUMB: `${R2}/badges/charm/level_0.webp`,
+  DEFAULT_WEALTH_BADGE: `${IK}/badges/wealth/1.webp`,
+  DEFAULT_CHARM_BADGE: `${IK}/badges/charm/1.webp`,
+  DEFAULT_TRANSACTION_THUMB: `${IK}/badges/charm/1.webp`,
 
   // ── ImageKit CDN — UI Images ──
   GIFT_DRAWER_ICON: `${IK}/placeholders/gift-icon.png`,
@@ -44,12 +44,12 @@ export const ASSETS = {
   HERO_TERTIARY: `${IK}/placeholders/tertiary.webp`,
   HERO_CHARM: `${IK}/placeholders/charm.webp`,
   HERO_WEALTH: `${IK}/placeholders/wealth.webp`,
-  DEFAULT_ROOM_BADGE: `${IK}/badges/room/level_1.webp`,
+  DEFAULT_ROOM_BADGE: `${IK}/badges/room/1.webp`,
   /** Thumbnail params keep home/bootstrap badge decode small vs. full ~1MB source */
   DEFAULT_PROFILE_BADGE: `${IK}/badges/profile-1.webp?tr=w-64,q-75,f-webp`,
   DEFAULT_HISTORY_BADGE: `${IK}/badges/profile-1.webp?tr=w-64,q-75,f-webp`,
-  DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/level_1.webp`,
-  DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/level_1.webp`,
+  DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/1.webp`,
+  DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/1.webp`,
 
   // ── Auth page cards (mobile-optimized: 250px wide, q70, WebP) ──
   AUTH_CARD_1: `${IK}/placeholders/1.webp?tr=w-250,q-70,f-webp`,

@@ -21,7 +21,7 @@ definePageMeta({
 
 const authStore = useAuthStore()
 const agencyStore = useAgencyStore()
-const { getBadgeFromXp, getLevelFromXp } = useLevelLookup()
+const { getBadgeFromXp } = useLevelLookup()
 const { fetchUserAgency } = useAgencyMembership()
 const { fetchReceivedInvitations } = useAgencyInvitations()
 const { fetchMyJoinRequests } = useAgencyJoinRequests()
@@ -29,8 +29,6 @@ const { resolvePropAsset } = usePropLookup()
 
 const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(authStore.user?.wealth_xp, 'wealth'))
 const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_xp, 'charm'))
-const CURRENT_WEALTH_LEVEL = computed(() => String(getLevelFromXp(authStore.user?.wealth_xp, 'wealth').level))
-const CURRENT_CHARM_LEVEL = computed(() => String(getLevelFromXp(authStore.user?.charm_xp, 'charm').level))
 
 // ========================================
 // Lifecycle
@@ -59,7 +57,7 @@ onMounted(() => {
       </template>
 
       <template #signature-badges>
-        <ProfileBadge :txt="authStore?.user?.signature || undefined" />
+        <ProfileBadge :show-badge="false" :txt="authStore?.user?.signature || undefined" />
       </template>
 
       <template #avatar>
@@ -74,8 +72,8 @@ onMounted(() => {
       </template>
 
       <template #badges>
-        <ProfileBadge :badge-src="CURRENT_WEALTH_BADGE" color="tertiary" :txt="CURRENT_WEALTH_LEVEL" />
-        <ProfileBadge :badge-src="CURRENT_CHARM_BADGE" color="secondary" :txt="CURRENT_CHARM_LEVEL" />
+        <div class=""><img :src="CURRENT_CHARM_BADGE" alt="current badge" class="w-13 mt-1.5" width="56" height="17" /></div>
+        <div class=""><img :src="CURRENT_WEALTH_BADGE" alt="current badge" class="w-18 mt-1" width="56" height="17" /></div>
       </template>
 
       <template #name>
