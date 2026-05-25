@@ -195,11 +195,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
       emitAsync<SelfMutePayload, SelfMuteResponse>(event, { roomId, producerId })
         .then((res) => {
           if (!res.success) {
-            log.warn(`${event} failed:`, res.error);
           }
         })
         .catch((err) => {
-          log.warn(`${event} emit error:`, err);
         });
     }
 
@@ -320,7 +318,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     const ownerId = roomStore.currentRoom?.owner_id;
     const seatCount = roomStore.currentRoom?.max_seats ?? 15;
 
-    // log.debug('room:join payload:', { roomId, ownerId, seatCount, hasOwner: !!roomStore.currentRoom?.owner });
+    // undefined
 
     const response = await emitAsync<{ roomId: string; ownerId: number; seatCount: number }, JoinRoomResponse>(
       'room:join',
@@ -479,12 +477,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // 3. Consume existing producers (listen to active speakers)
     if (response.existingProducers && response.existingProducers.length > 0) {
-      // log.debug('Consuming', response.existingProducers.length, 'existing producers');
+      // undefined
       for (const producer of response.existingProducers) {
         try {
           await consumeProducer(producer.producerId, roomId, producer.userId);
         } catch (err) {
-          log.warn('Failed to consume producer:', producer.producerId, err);
         }
       }
     }
@@ -499,7 +496,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     const room = roomStore.currentRoom;
     if (room) activateMediaSession(room.name, room.logo ?? null);
 
-    // log.debug('Joined room:', roomId);
+    // undefined
   }
 
   /**
@@ -540,7 +537,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clear OS media session
     deactivateMediaSession();
 
-    // log.debug('Left room (socket stays connected)');
+    // undefined
   }
 
 

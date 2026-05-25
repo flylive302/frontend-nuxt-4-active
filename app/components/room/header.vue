@@ -288,7 +288,6 @@ const settingsOpen = ref(false);
                       open = false;
                       navigateTo(target, { replace: true });
                     } catch (error) {
-                      log.error('Failed to leave room:', error);
                     }
                   }"
                 >

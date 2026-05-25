@@ -92,18 +92,15 @@ function addFloater(multiplier: number): void {
 // ============================================
 
 function handleLuckyResult(data: LuckyDrawResult): void {
-  log.info('🎰 lucky:result received', JSON.stringify(data));
   addFloater(data.multiplier);
 }
 
 function handleRoomAnnouncement(data: LuckyRoomAnnouncement): void {
-  log.info('🏆 lucky:room_announcement received', JSON.stringify(data));
   roomAnnouncement.value = data;
   isRoomAnnouncementVisible.value = true;
 }
 
 function handleAppAnnouncement(data: LuckyAppAnnouncement): void {
-  log.info('🌟 lucky:app_announcement received', JSON.stringify(data));
   appAnnouncement.value = data;
   isAppAnnouncementVisible.value = true;
 }
@@ -120,7 +117,6 @@ export function setupLuckyEventHandlers(socket: AudioSocket): void {
   socket.on('lucky:result', handleLuckyResult);
   socket.on('lucky:room_announcement', handleRoomAnnouncement);
   socket.on('lucky:app_announcement', handleAppAnnouncement);
-  log.info('✅ Lucky gift listeners registered on socket', socket.id);
 }
 
 /**
@@ -203,7 +199,6 @@ if (import.meta.dev && import.meta.client) {
   const simulators = {
     /** Simulate a floating multiplier */
     float(multiplier = 2.5): void {
-      log.info('🧪 Simulating float', multiplier);
       handleLuckyResult({
         multiplier,
         coins_won: Math.round(multiplier * 100),
@@ -214,7 +209,6 @@ if (import.meta.dev && import.meta.client) {
 
     /** Simulate room announcement */
     roomAnnouncement(multiplier = 5.0): void {
-      log.info('🧪 Simulating room announcement', multiplier);
       handleRoomAnnouncement({
         user_id: 0,
         user_name: 'TestUser',
@@ -229,7 +223,6 @@ if (import.meta.dev && import.meta.client) {
 
     /** Simulate app-wide announcement */
     appAnnouncement(multiplier = 50.0): void {
-      log.info('🧪 Simulating app announcement', multiplier);
       handleAppAnnouncement({
         user_id: 0,
         user_name: 'TestUser',
@@ -255,6 +248,5 @@ if (import.meta.dev && import.meta.client) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__luckySimulate = simulators;
-  log.info('🧪 Debug simulator available: window.__luckySimulate.all()');
 }
 

@@ -99,7 +99,6 @@ async function loadFollowers(reset = false): Promise<void> {
     else {
       toast.add({ title: 'Failed to load followers', description: normalized.message, color: 'error' })
     }
-    log.error('loadFollowers error:', err)
   }
   finally {
     followersLoading.value = false
@@ -132,7 +131,6 @@ async function loadFollowing(reset = false): Promise<void> {
     else {
       toast.add({ title: 'Failed to load following', description: normalized.message, color: 'error' })
     }
-    log.error('loadFollowing error:', err)
   }
   finally {
     followingLoading.value = false

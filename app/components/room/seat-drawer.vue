@@ -102,7 +102,6 @@ async function doTakeSeat() {
       seatsStore.closeSeat()
     }
   } catch (error) {
-    log.error('Failed to take seat:', error)
     // Reset activeSeat so the watcher doesn't re-open the drawer on next interaction.
     seatsStore.closeSeat()
   } finally {
@@ -119,7 +118,6 @@ async function handleLeaveSeat() {
       seatsStore.closeSeat()
     }
   } catch (error) {
-    log.error('Failed to leave seat:', error)
   } finally {
     isLoading.value = false
   }
@@ -140,7 +138,6 @@ async function handleToggleMute() {
       await muteUser(userId)
     }
   } catch (error) {
-    log.error('Failed to toggle mute:', error)
   } finally {
     isLoading.value = false
   }
@@ -160,7 +157,6 @@ async function handleToggleLock() {
     }
     seatsStore.closeSeat()
   } catch (error) {
-    log.error('Failed to toggle lock:', error)
   } finally {
     isLoading.value = false
   }
@@ -180,7 +176,6 @@ async function handleKickUser() {
       seatsStore.closeSeat()
     }
   } catch (error) {
-    log.error('Failed to kick user:', error)
   } finally {
     isLoading.value = false
   }
@@ -263,7 +258,7 @@ const isVap = computed(() => {
                 roomStore.isMinimized = true;
                 await navigateTo(`/profile/${currentSeat?.user?.signature}`);
               } catch (error) {
-                log.error('Failed to navigate to profile:', error);
+                
               }
             }"
           />

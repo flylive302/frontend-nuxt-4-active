@@ -145,7 +145,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     const title = file.name.replace(/\.[^.]+$/, ''); // Strip extension
     const duration = audioBuffer.duration;
 
-    log.debug('Loaded audio file:', title, `(${duration.toFixed(1)}s)`);
 
     // Pre-set title and duration so play() has them
     playerState.title = title;
@@ -168,7 +167,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
    */
   async function play(roomId: string): Promise<MediaStreamTrack | null> {
     if (!audioBuffer) {
-      log.error('No audio file loaded');
       return null;
     }
 
@@ -182,7 +180,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     );
 
     if (!res.success) {
-      log.warn('Failed to acquire music player mutex:', res.error);
       return null;
     }
 
@@ -205,7 +202,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     // Handle track ending naturally
     sourceNode.onended = () => {
       if (playerState.status === 'playing') {
-        log.debug('Track ended naturally');
         stop(roomId);
       }
     };
@@ -225,7 +221,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     startPositionTracking();
     startStateUpdates(roomId);
 
-    log.debug('Playing:', title);
 
     // Return the track for the caller to produce via mediasoup
     return destinationNode.stream.getAudioTracks()[0] ?? null;
@@ -244,7 +239,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     playerState.position = playbackStartOffset;
     stopPositionTracking();
 
-    log.debug('Paused at:', playbackStartOffset.toFixed(1));
   }
 
   /**
@@ -259,7 +253,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     playerState.status = 'playing';
     startPositionTracking();
 
-    log.debug('Resumed from:', playbackStartOffset.toFixed(1));
   }
 
   /**
@@ -302,7 +295,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
       playbackStartTime = audioContext.currentTime;
     }
 
-    log.debug('Seeked to:', clampedPos.toFixed(1));
   }
 
   /**
@@ -341,7 +333,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
       emitAsync<AudioPlayerStopPayload, AudioPlayerResponse>(
         'audioPlayer:stop',
         { roomId },
-      ).catch((err) => log.warn('Failed to release music mutex:', err));
+      ).catch((err) => {});
     }
 
     // Reset state
@@ -357,7 +349,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
       audioContext = null;
     }
 
-    log.debug('Stopped');
   }
 
   /**
@@ -428,7 +419,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     playerState.duration = musicPlayer.duration;
     playerState.position = musicPlayer.position;
 
-    log.debug('Synced music player state from join:', musicPlayer.title);
   }
 
   /**

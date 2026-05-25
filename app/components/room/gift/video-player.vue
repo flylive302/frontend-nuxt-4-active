@@ -59,7 +59,6 @@ function safePlay(): void {
   videoRef.value.play().catch((err: unknown) => {
     // AbortError is expected when element is removed from DOM — suppress it
     if (err instanceof DOMException && err.name === 'AbortError') return;
-    log.error('Video play failed:', props.src, err);
   });
 }
 
@@ -69,19 +68,16 @@ onMounted(async () => {
   const syncUrl = giftAssetCache.getCachedVideoUrlSync(props.src);
   if (syncUrl !== props.src) {
     resolvedSrc.value = syncUrl;
-    log.debug('Video from L1 cache:', props.src);
   } else {
     // If not in L1, preload async (L2 cache / network)
     try {
       const url = await giftAssetCache.preloadVideo(props.src);
       if (isDestroyed) return;
       resolvedSrc.value = url;
-      log.debug('Video preloaded:', props.src);
     } catch {
       if (isDestroyed) return;
       // Use original URL as fallback
       resolvedSrc.value = props.src;
-      log.warn('Video preload failed, using original URL:', props.src);
     }
   }
 
@@ -115,7 +111,6 @@ function restart() {
  */
 function handleError(event: Event) {
   if (isDestroyed) return;
-  log.error('Error loading video:', props.src);
   emit('error', event);
   // Fallback: emit ended to prevent modal from hanging
   emit('ended');

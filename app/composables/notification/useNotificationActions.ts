@@ -33,7 +33,6 @@ export function useNotificationActions() {
       store.appendNotificationsPage(response.data, response.meta)
     } catch (err) {
       store.setError('Failed to load notifications')
-      log.error('fetchNotifications failed:', err)
     } finally {
       store.setLoading(false)
     }
@@ -44,7 +43,6 @@ export function useNotificationActions() {
       const response = await api<UnreadCountResponse>('/notifications/unread-count')
       store.setUnreadCount(response.data.count)
     } catch (err) {
-      log.error('fetchUnreadCount failed:', err)
     }
   }
 
@@ -54,7 +52,6 @@ export function useNotificationActions() {
       store.applyReadLocally(notificationId)
       return true
     } catch (err) {
-      log.error('markAsRead failed:', err)
       return false
     }
   }
@@ -75,7 +72,6 @@ export function useNotificationActions() {
         description: 'Failed to mark all as read.',
         color: 'error',
       })
-      log.error('markAllAsRead failed:', err)
       return false
     }
   }
@@ -83,7 +79,6 @@ export function useNotificationActions() {
   async function initialize(): Promise<void> {
     await fetchNotifications(true)
     await fetchUnreadCount()
-    log.info('Initialized (socket-based, no polling)')
   }
 
   /** REACT: prepend + toast (called from event wiring). */

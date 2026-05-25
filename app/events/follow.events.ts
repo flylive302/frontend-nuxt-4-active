@@ -40,7 +40,6 @@ export function useFollowEvents() {
 
   return function registerFollowEvents(socket: Socket): void {
     socket.on('user.followed', (payload: UserFollowedPayload) => {
-      log.debug('user.followed', payload)
 
       // Increment MY followers_count (REACT store update)
       userStore.incrementFollowers()
@@ -54,7 +53,6 @@ export function useFollowEvents() {
     })
 
     socket.on('user.unfollowed', (payload: UserUnfollowedPayload) => {
-      log.debug('user.unfollowed', payload)
 
       // Decrement MY followers_count (REACT store update)
       userStore.decrementFollowers()

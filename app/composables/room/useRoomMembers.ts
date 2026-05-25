@@ -91,7 +91,6 @@ export function useRoomMembers() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.members.error = normalized.message
-      log.error('fetchMembers failed:', err)
     } finally {
       store.members.loading = false
     }

@@ -23,7 +23,6 @@ export function useRoomEvents() {
 
   return function registerRoomEvents(socket: Socket): void {
     socket.on('room.level_up', (payload: RoomLevelUpPayload) => {
-      log.debug('room.level_up', payload)
       // Update room if it's the current room
       if (roomStore.currentRoom?.id === payload.room_id) {
         roomStore.updateRoomLevel(payload.new_level, payload.current_xp)
@@ -36,7 +35,6 @@ export function useRoomEvents() {
     })
 
     socket.on('room.participant_count', (payload: RoomParticipantCountPayload) => {
-      log.debug('room.participant_count', payload)
       // Update room store participant count if in a room
       if (roomStore.currentRoom) {
         roomStore.updateParticipantCount(payload.count)
@@ -44,7 +42,6 @@ export function useRoomEvents() {
     })
 
     socket.on('room.updated', (payload: RoomUpdatedPayload) => {
-      log.debug('room.updated', payload)
       // Security logic + merge logic lives in composable (ARCHITECTURE.md)
       handleRoomUpdated(payload)
     })

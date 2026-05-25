@@ -34,7 +34,6 @@ export function useTelemetry() {
       ...event,
       timestamp: event.timestamp ?? Date.now(),
     }
-    log.info(event.name, payload.properties)
 
     // Future: Send to analytics provider
     // window.gtag?.('event', event.name, payload.properties)

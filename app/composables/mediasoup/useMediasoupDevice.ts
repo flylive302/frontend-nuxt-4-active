@@ -3,7 +3,7 @@ import type { RtpCapabilities } from '~/types/room/audio';
 import { createLogger } from '~/utils/logger';
 
 // Lazy-loaded: mediasoup-client must NOT be statically imported because
-// it uses the `debug` package which calls console.log.bind(console) —
+// it uses the `debug` package which binds to the console —
 // this crashes in Cloudflare Workers (workerd) runtime during SSR.
 let _DeviceClass: typeof import('mediasoup-client')['Device'] | null = null;
 async function getDeviceClass() {
@@ -52,7 +52,6 @@ export function useMediasoupDevice() {
    */
   async function loadDevice(rtpCapabilities: RtpCapabilities): Promise<void> {
     if (device.value?.loaded) {
-      log.debug('Device already loaded');
       return;
     }
 
@@ -65,11 +64,9 @@ export function useMediasoupDevice() {
       const Device = await getDeviceClass();
       device.value = new Device();
       await device.value.load({ routerRtpCapabilities: rtpCapabilities });
-      log.debug('Device loaded');
     } catch (error) {
       // Handle UnsupportedError from mediasoup-client
       if (error instanceof Error && error.name === 'UnsupportedError') {
-        log.error('Device not supported:', error.message);
         throw new Error('Audio is not supported on this device/browser. Please try using Chrome, Firefox, or Safari on a desktop or mobile device.');
       }
       throw error;

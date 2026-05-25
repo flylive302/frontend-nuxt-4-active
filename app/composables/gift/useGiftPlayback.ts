@@ -63,7 +63,6 @@ export function useGiftPlayback() {
   function startPlaybackTimeout(): void {
     clearPlaybackTimeout()
     playbackTimeoutId = setTimeout(() => {
-      log.warn('Timeout reached — force closing playback')
       handleComplete()
     }, GIFT_PLAYBACK_TIMEOUT_MS)
   }

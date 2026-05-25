@@ -102,7 +102,6 @@ export function useGiftData() {
       gifts.value = response.data.gifts;
     } catch (e) {
       error.value = normalizeError(e);
-      log.error('Failed to fetch gifts:', error.value.message);
       // Don't set gifts to empty - keep any previously loaded data
     } finally {
       isInitialized.value = true;

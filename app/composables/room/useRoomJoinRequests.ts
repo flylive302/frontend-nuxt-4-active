@@ -44,7 +44,6 @@ export function useRoomJoinRequests() {
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
-      log.error('requestToJoin failed:', err)
       return null
     }
   }
@@ -75,7 +74,6 @@ export function useRoomJoinRequests() {
       store.myJoinRequests.items = response.data
       store.myJoinRequests.hasMore = false
     } catch (err) {
-      log.error('fetchMyJoinRequests failed:', err)
     }
   }
 
@@ -113,7 +111,6 @@ export function useRoomJoinRequests() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.joinRequests.error = normalized.message
-      log.error('fetchJoinRequests failed:', err)
     } finally {
       store.joinRequests.loading = false
     }

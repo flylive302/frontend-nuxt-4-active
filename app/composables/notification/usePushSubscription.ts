@@ -13,13 +13,11 @@ export function usePushSubscription() {
   async function register(): Promise<void> {
     if (!import.meta.client) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      log.error('Push not supported in this browser')
       return
     }
 
     const vapidKey = config.public.vapidPublicKey
     if (!vapidKey) {
-      log.error('VAPID public key not configured')
       return
     }
 
@@ -50,11 +48,9 @@ export function usePushSubscription() {
         },
       })
 
-      log.info('Push subscription registered')
     }
     catch (err) {
       // Non-fatal — user may have denied permission
-      log.error('Push subscription failed:', err)
     }
   }
 
@@ -72,7 +68,6 @@ export function usePushSubscription() {
       await subscription.unsubscribe()
     }
     catch (err) {
-      log.error('Push unsubscribe failed:', err)
     }
   }
 

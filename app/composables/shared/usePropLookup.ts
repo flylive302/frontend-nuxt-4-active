@@ -86,13 +86,11 @@ export function usePropLookup() {
     pendingFetches.add(propId)
 
     try {
-      log.debug(`Failsafe fetch for prop ${propId}`)
       const response = await api<{ data: { prop: BootstrapProp } }>(`/props/${propId}`)
       if (response?.data?.prop) {
         mallStore.addToPropIndex(response.data.prop)
       }
     } catch {
-      log.warn(`Failed to fetch prop ${propId} — will retry on next access`)
     } finally {
       pendingFetches.delete(propId)
     }

@@ -19,12 +19,10 @@ export function useSystemEvents() {
 
   return function registerSystemEvents(socket: Socket): void {
     socket.on('config:invalidate', (payload: ConfigInvalidatePayload) => {
-      log.debug('config:invalidate', payload)
       bootstrapStore.invalidateConfig(payload.type)
     })
 
     socket.on('asset:invalidate', (payload: AssetInvalidatePayload) => {
-      log.debug('asset:invalidate', payload)
       invalidateAsset(payload)
     })
   }

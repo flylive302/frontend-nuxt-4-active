@@ -65,7 +65,6 @@ export function useBadgeData() {
       // REACT — error is non-critical, log and continue
       const normalized = normalizeError(err)
       store.setCatalogError(normalized.message)
-      log.error('fetchCatalog failed:', err)
     } finally {
       store.setCatalogLoading(false)
     }
@@ -84,7 +83,6 @@ export function useBadgeData() {
 
       store.setCategories(response.data)
     } catch (err) {
-      log.error('fetchCategories failed:', err)
     }
   }
 
@@ -111,7 +109,6 @@ export function useBadgeData() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.setUserBadgesError(normalized.message)
-      log.error('fetchUserBadges failed:', err)
     } finally {
       store.setUserBadgesLoading(false)
     }
@@ -130,7 +127,6 @@ export function useBadgeData() {
 
       store.setStats(response.data)
     } catch (err) {
-      log.error('fetchStats failed:', err)
     }
   }
 

@@ -82,7 +82,6 @@ export function useRoomLifecycle(): void {
         try {
           await withTimeout(joinRoom(String(newRoom.id)), ROOM_OP_TIMEOUT_MS, 'joinRoom');
         } catch (error) {
-          log.error('Failed to join audio:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           toast.add({
             title: 'Audio connection failed',
@@ -118,7 +117,6 @@ export function useRoomLifecycle(): void {
           try {
             await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
           } catch (err) {
-            log.warn('Reconnect after un-minimize failed:', err);
             toast.add({
               title: 'Reconnecting...',
               description: 'Audio may take a moment to restore.',
@@ -142,7 +140,6 @@ export function useRoomLifecycle(): void {
     if (!roomStore.currentRoom) return;
 
     const roomId = String(roomStore.currentRoom.id);
-    log.debug('Socket reconnected — re-joining room:', roomId);
 
     if (isJoining.value) return; // Prevent double-join
     isJoining.value = true;
@@ -160,9 +157,7 @@ export function useRoomLifecycle(): void {
 
       // Re-join the audio room on MSAB server
       await withTimeout(joinRoom(roomId), ROOM_OP_TIMEOUT_MS, 'joinRoom');
-      log.debug('Successfully re-joined room after reconnect');
     } catch (error) {
-      log.error('Failed to re-join room after reconnect:', error);
     } finally {
       isJoining.value = false;
     }
@@ -195,23 +190,19 @@ export function useRoomLifecycle(): void {
 
       const health = await probeAudioHealth();
       if (health === 'healthy') {
-        log.debug('Resume: session healthy, no action');
         return;
       }
 
       if (health === 'needs-playback-recovery') {
-        log.debug('Resume: playback recovery required');
         const ok = await recoverPlayback();
         if (ok) return;
       }
 
       // Genuine breakage: socket dead, transport failed, or consumer ended.
-      log.debug('Resume: rebuild required (health=', health, ')');
       isJoining.value = true;
       try {
         await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
       } catch (err) {
-        log.warn('Reconnect after PWA resume failed:', err);
         toast.add({
           title: 'Reconnecting...',
           description: 'Audio may take a moment to restore.',

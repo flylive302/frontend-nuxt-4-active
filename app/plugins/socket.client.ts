@@ -28,10 +28,8 @@ export default defineNuxtPlugin({
       () => authStore.isAuthenticated,
       async (isAuth, wasAuth) => {
         if (isAuth && !wasAuth) {
-          log.debug('User authenticated, connecting socket...')
           await connect()
         } else if (!isAuth && wasAuth) {
-          log.debug('User logged out, disconnecting socket...')
           disconnect()
         }
       },

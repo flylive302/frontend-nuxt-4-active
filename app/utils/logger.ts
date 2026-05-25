@@ -2,7 +2,7 @@
  * Production-safe Logger Utility
  *
  * Provides logging functions that only output in development mode.
- * Use this instead of console.log to prevent log spam in production.
+ * Use this instead of direct console logging to prevent log spam in production.
  *
  * @example
  * import { logger } from '~/utils/logger';
@@ -27,7 +27,7 @@ const isDev = import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production';
  */
 export function createLogger(prefix: string) {
   return {
-    debug: (...args: unknown[]) => isDev && console.log(prefix, ...args),
+    debug: (...args: unknown[]) => isDev && console.debug(prefix, ...args),
     info: (...args: unknown[]) => isDev && console.info(prefix, ...args),
     warn: (...args: unknown[]) => console.warn(prefix, ...args),
     error: (...args: unknown[]) => console.error(prefix, ...args),
@@ -43,7 +43,7 @@ export const logger = {
    * Debug-level logging. Only outputs in development.
    * Use for verbose debugging information.
    */
-  debug: (...args: unknown[]) => isDev && console.log(...args),
+  debug: (...args: unknown[]) => isDev && console.debug(...args),
 
   /**
    * Info-level logging. Only outputs in development.

@@ -138,7 +138,6 @@ export function useUserProfile(
       wealthLevelInfo.value = getLevelFromXp(profile.value.wealth_xp, 'wealth')
       charmLevelInfo.value = getLevelFromXp(profile.value.charm_xp, 'charm')
     } catch (err) {
-      log.error('computeLevelInfo failed:', err)
       // Non-blocking: keep default values
     } finally {
       levelInfoLoading.value = false
@@ -182,7 +181,6 @@ export function useUserProfile(
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
-      log.error('fetchProfile failed:', err)
     } finally {
       loading.value = false
     }
@@ -213,7 +211,6 @@ export function useUserProfile(
       giftsCursor.value = response.meta.next_cursor
       giftsHasMore.value = response.meta.has_more
     } catch (err) {
-      log.error('fetchMoreGifts failed:', err)
       // Don't set error - gifts pagination failure shouldn't block profile view
     } finally {
       giftsLoading.value = false

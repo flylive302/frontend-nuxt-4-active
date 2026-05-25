@@ -103,7 +103,6 @@ export function useTransactionData() {
     } catch (error) {
       const err = normalizeError(error)
       store.setError(err.message)
-      log.error('fetchTransactions failed:', error)
     } finally {
       store.setLoading(false)
     }
@@ -136,7 +135,6 @@ export function useTransactionData() {
 
       store.setSummary(response.data)
     } catch (error) {
-      log.error('fetchSummary failed:', error)
     } finally {
       store.setSummaryLoading(false)
     }

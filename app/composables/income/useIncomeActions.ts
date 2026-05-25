@@ -26,7 +26,6 @@ export function useIncomeActions() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.setError(normalized.message)
-      log.error('fetchStats failed:', err)
     } finally {
       store.setStatsLoading(false)
     }
@@ -41,7 +40,6 @@ export function useIncomeActions() {
       )
       store.setActiveTarget(response.data)
     } catch (err) {
-      log.error('fetchActiveTarget failed:', err)
       store.setActiveTarget(null)
     } finally {
       store.setTargetLoading(false)
@@ -74,7 +72,6 @@ export function useIncomeActions() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.setHistoryError(normalized.message)
-      log.error('fetchHistory failed:', err)
     } finally {
       store.setHistoryLoading(false)
     }

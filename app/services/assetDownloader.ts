@@ -326,7 +326,6 @@ function handleError(item: DownloadQueueItem, error: Error): void {
   if (item.retryCount < ASSET_CONFIG.MAX_RETRIES) {
     item.status = 'pending'
     queue.push(item)
-    log.warn('Retrying download:', item.url, `(attempt ${item.retryCount + 1})`)
     setTimeout(() => void processQueue(), ASSET_CONFIG.RETRY_DELAY_MS * item.retryCount)
     return
   }
@@ -335,7 +334,6 @@ function handleError(item: DownloadQueueItem, error: Error): void {
   item.error = error.message
   progress.failed++
   notifyProgress()
-  log.error('Download failed:', item.url, error.message)
   void processQueue()
 }
 

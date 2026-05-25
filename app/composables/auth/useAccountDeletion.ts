@@ -38,7 +38,6 @@ export function useAccountDeletion() {
   async function deleteAccount(reason?: string): Promise<void> {
     // GATE — must be authenticated
     if (!authStore.isAuthenticated) {
-      log.warn('Attempted account deletion while unauthenticated')
       return
     }
 
@@ -60,10 +59,6 @@ export function useAccountDeletion() {
         body: reason ? { reason } : {},
       })
 
-      log.info('Account deletion scheduled', {
-        grace_period_days: response.data.grace_period_days,
-        scheduled_purge_at: response.data.scheduled_purge_at,
-      })
 
       // EXECUTE — clear all local state
       authStore.logout()
@@ -78,7 +73,6 @@ export function useAccountDeletion() {
 
       await navigateTo('/log-in')
     } catch (error) {
-      log.error('Account deletion failed', error)
 
       toast.add({
         title: 'Deletion Failed',

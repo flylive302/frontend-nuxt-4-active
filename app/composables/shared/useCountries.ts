@@ -53,7 +53,6 @@ async function loadCountries(): Promise<void> {
     } catch (err) {
         // Keep component resilient: log and fallback to empty list
         // Calling code should react to empty array as "no countries".
-        log.error('loadCountries error:', err)
         _countries.value = []
     } finally {
         _loading.value = false
@@ -72,7 +71,6 @@ async function autoDetectCountry(): Promise<Country | undefined> {
         if (match) return match
     } catch (err) {
         // non-fatal; just return undefined
-        log.error('autoDetectCountry failed:', err)
     }
     return undefined
 }

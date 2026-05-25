@@ -299,7 +299,6 @@ watch(
           }
         } catch (error) {
           // Silently fail if date parsing fails
-          log.warn('Failed to parse date_of_birth:', error)
         }
       }
     },

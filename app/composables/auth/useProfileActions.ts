@@ -148,7 +148,6 @@ export function useProfileActions() {
       if (!audioSocket.value?.connected) return
 
       audioSocket.value.emit('user:profileSync', { profile: fields })
-      log.debug('Profile sync emitted', Object.keys(fields))
     } catch {
       // Silent — Laravel SyncProfileToMsab provides cross-region consistency.
     }

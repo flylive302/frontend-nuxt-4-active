@@ -100,7 +100,6 @@ export function useFollow(
       statusLoaded.value = true
     }
     catch (err) {
-      log.error('fetchStatus failed:', err)
     }
   }
 
@@ -172,7 +171,6 @@ export function useFollow(
         description: normalized.message,
         color: 'error',
       })
-      log.error('toggleFollow failed:', err)
     }
     finally {
       isToggling.value = false

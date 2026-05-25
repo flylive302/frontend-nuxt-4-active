@@ -58,7 +58,6 @@ export function useAuthActions() {
       body: credentials,
     })
 
-    log.debug('Login successful:', data)
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
@@ -91,7 +90,6 @@ export function useAuthActions() {
       body: payload,
     })
 
-    log.debug('Registration successful:', data)
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
@@ -127,7 +125,6 @@ export function useAuthActions() {
       await api('/auth/logout', { method: 'POST' })
     } catch (error) {
       // Ignore logout errors from API, we still want to clear local state
-      log.warn('Logout API error (ignored):', error)
     } finally {
       authStore.logout()
       // REACT
@@ -151,16 +148,13 @@ export function useAuthActions() {
 
     _refreshPromise = (async () => {
       try {
-        log.warn('Refreshing MSAB token. Sanctum token:', authStore.token ? `present (${authStore.token.length} chars)` : 'MISSING')
         const { data } = await api<{ data: { msab_token: string } }>('/auth/msab-token/refresh', {
           method: 'POST',
         })
         authStore.setMsabToken(data.msab_token)
-        log.warn('MSAB token refreshed:', `${data.msab_token.length} chars`)
         return true
       } catch (err) {
         // Non-blocking — stale JWT (24-hour lifetime) is better than no JWT
-        log.warn('Failed to refresh MSAB token:', err)
         return false
       } finally {
         _refreshPromise = null

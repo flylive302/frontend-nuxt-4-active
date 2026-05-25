@@ -31,7 +31,6 @@ export function useBlockedUsers() {
       blockList.value = res.data.items
       blockListLoaded.value = true
     } catch (err) {
-      log.error('loadBlockList failed:', err)
     } finally {
       blockListLoading.value = false
     }

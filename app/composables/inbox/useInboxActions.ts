@@ -24,7 +24,6 @@ export function useInboxActions() {
       store.setThreads(res.data.official_unread, res.data.dm, res.data.requests)
     }
     catch (err) {
-      log.error('fetchThreads failed:', err)
     }
     finally {
       store.setThreadsLoading(false)
@@ -39,7 +38,6 @@ export function useInboxActions() {
       return res.data
     }
     catch (err) {
-      log.error('startThread failed:', err)
       return null
     }
   }
@@ -57,7 +55,6 @@ export function useInboxActions() {
       )
     }
     catch (err) {
-      log.error('loadMessages failed:', err)
     }
     finally {
       store.setMessagesLoading(false)
@@ -80,7 +77,6 @@ export function useInboxActions() {
       )
     }
     catch (err) {
-      log.error('loadOlderMessages failed:', err)
     }
     finally {
       store.setMessagesLoading(false)
@@ -118,7 +114,6 @@ export function useInboxActions() {
     catch (err) {
       // Remove the failed optimistic message (don't mark as "unsent" — that's for intentional unsends)
       store.messages = store.messages.filter(m => m.id !== tempId)
-      log.error('sendMessage failed:', err)
       const { message } = normalizeError(err)
       toast.add({ title: message, color: 'error' })
       return false
@@ -132,7 +127,6 @@ export function useInboxActions() {
       await api(`/inbox/threads/${threadId}/read`, { method: 'POST' })
     }
     catch (err) {
-      log.error('markRead failed:', err)
     }
   }
 

@@ -43,7 +43,6 @@ onErrorCaptured((error: Error, instance, info) => {
   
   // Log for debugging in development
   if (import.meta.env?.DEV) {
-    log.error('Caught error:', error, 'Component:', instance, 'Info:', info);
   }
   
   // Prevent error from propagating

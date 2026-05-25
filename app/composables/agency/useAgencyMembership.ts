@@ -51,7 +51,6 @@ export function useAgencyMembership() {
       }
     } catch (error) {
       store.userAgency.error = 'Failed to load agency information'
-      log.error(' fetchUserAgency failed:', error)
     } finally {
       store.userAgency.loading = false
     }
@@ -87,7 +86,6 @@ export function useAgencyMembership() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' leaveAgency failed:', error)
       return false
     }
   }
@@ -118,7 +116,6 @@ export function useAgencyMembership() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' dissolveAgency failed:', error)
       return false
     }
   }
@@ -148,7 +145,6 @@ export function useAgencyMembership() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' changeCoinReseller failed:', error)
       return false
     }
   }

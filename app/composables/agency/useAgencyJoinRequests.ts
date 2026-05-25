@@ -44,7 +44,6 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' requestToJoin failed:', error)
       return null
     }
   }
@@ -67,7 +66,6 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' cancelJoinRequest failed:', error)
       return false
     }
   }
@@ -104,7 +102,6 @@ export function useAgencyJoinRequests() {
       store.myJoinRequests.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       store.myJoinRequests.error = 'Failed to load join requests'
-      log.error(' fetchMyJoinRequests failed:', error)
     } finally {
       store.myJoinRequests.loading = false
     }
@@ -146,7 +143,6 @@ export function useAgencyJoinRequests() {
       store.joinRequests.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       store.joinRequests.error = 'Failed to load join requests'
-      log.error(' fetchJoinRequests failed:', error)
     } finally {
       store.joinRequests.loading = false
     }
@@ -168,7 +164,6 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' approveJoinRequest failed:', error)
       return false
     }
   }
@@ -189,7 +184,6 @@ export function useAgencyJoinRequests() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' rejectJoinRequest failed:', error)
       return false
     }
   }

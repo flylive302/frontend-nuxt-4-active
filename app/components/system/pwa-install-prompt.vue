@@ -34,7 +34,6 @@ onMounted(() => {
 
   // Check if already installed
   if (window.matchMedia('(display-mode: standalone)').matches) {
-    log.debug('App is already installed')
     return
   }
 })
@@ -57,7 +56,6 @@ function handleBeforeInstallPrompt(e: Event): void {
   // Show our custom prompt
   isVisible.value = true
 
-  log.debug('Install prompt captured')
 }
 
 async function handleInstall(): Promise<void> {
@@ -69,7 +67,6 @@ async function handleInstall(): Promise<void> {
   // Wait for user choice
   const { outcome } = await deferredPrompt.value.userChoice
 
-  log.debug('Install outcome:', outcome)
 
   // Clear the prompt
   deferredPrompt.value = null

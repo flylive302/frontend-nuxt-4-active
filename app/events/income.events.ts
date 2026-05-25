@@ -17,13 +17,11 @@ export function useIncomeEvents() {
 
   return function registerIncomeEvents(socket: Socket): void {
     socket.on('income_target.completed', (payload: IncomeTargetCompletedPayload) => {
-      log.debug('income_target.completed', payload)
       // Show celebratory modal with animation (same style as level up)
       showIncomeTargetCompleted(payload, false)
     })
 
     socket.on('income_target.member_completed', (payload: IncomeTargetCompletedPayload) => {
-      log.debug('income_target.member_completed', payload)
       // Show celebratory modal for owner
       showIncomeTargetCompleted(payload, true)
     })

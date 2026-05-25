@@ -45,7 +45,6 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' kickMember failed:', error)
       return false
     }
   }
@@ -63,7 +62,6 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' blockUser failed:', error)
       return false
     }
   }
@@ -80,7 +78,6 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' unblockUser failed:', error)
       return false
     }
   }
@@ -101,7 +98,6 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' blockAgency failed:', error)
       return false
     }
   }
@@ -118,7 +114,6 @@ export function useAgencyAdmin() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' unblockAgency failed:', error)
       return false
     }
   }

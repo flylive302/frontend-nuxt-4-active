@@ -59,7 +59,6 @@ export function useVapPlayer(
     // Defensive check — ensure name ref has a value
     const animationName = options.name?.value
     if (!animationName) {
-      log.warn('No animation name provided, skipping load')
       return
     }
 
@@ -108,7 +107,6 @@ export function useVapPlayer(
       }
     }
     catch (error) {
-      log.error('Failed to load animation:', options.name.value, error)
       isPlaying.value = false
       // Signal completion to prevent stuck modal
       options.onComplete?.()

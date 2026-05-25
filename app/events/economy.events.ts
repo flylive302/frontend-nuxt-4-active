@@ -44,7 +44,6 @@ export function useEconomyEvents() {
     })
 
     socket.on('reward.earned', (payload: RewardEarnedPayload) => {
-      log.debug('reward.earned', payload)
       toast.add({
         title: 'Reward Earned!',
         description: `You earned ${payload.reward.amount} ${payload.reward.type}`,
@@ -53,7 +52,6 @@ export function useEconomyEvents() {
     })
 
     socket.on('coin_request.status_changed', (payload: CoinRequestStatusChangedPayload) => {
-      log.debug('coin_request.status_changed', payload)
 
       const title = payload.status === 'approved' ? 'Request Approved!' : 'Request Declined'
       const description = payload.status === 'approved' && payload.approved_amount

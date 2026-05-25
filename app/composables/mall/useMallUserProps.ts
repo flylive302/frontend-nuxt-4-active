@@ -69,7 +69,6 @@ export function useMallUserProps() {
     } catch (err) {
       const normalized = normalizeError(err)
       mallStore.setUserPropsError(normalized.message)
-      log.error('fetchUserProps failed:', err)
     } finally {
       mallStore.setUserPropsLoading(false)
     }
@@ -90,7 +89,6 @@ export function useMallUserProps() {
       const response = await api<EquippedPropsResponse>('/user/props/equipped')
       mallStore.setEquipped(response.data.equipped)
     } catch (err) {
-      log.error('fetchEquipped failed:', err)
     } finally {
       mallStore.setEquippedLoading(false)
     }

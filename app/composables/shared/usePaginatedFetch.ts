@@ -88,7 +88,6 @@ export function usePaginatedFetch<T>(
       const { normalizeError } = useApi()
       const normalized = normalizeError(err)
       list.value.error = normalized.message
-      log.error('Fetch failed:', normalized.message)
     } finally {
       list.value.loading = false
     }

@@ -26,7 +26,6 @@ export function useInboxEcho() {
       threadId: number | string
       message: ThreadMessage
     }) => {
-      log.debug('dm.message.received', payload)
       const tid = String(payload.threadId)
       // Normalize IDs to strings (PHP sends integers, Vue routes use strings)
       const msg: ThreadMessage = { ...payload.message, threadId: tid }
@@ -45,13 +44,11 @@ export function useInboxEcho() {
 
     // A message was unsent by the other participant
     channel.listen('.dm.message.unsent', (payload: { threadId: string, messageId: string }) => {
-      log.debug('dm.message.unsent', payload)
       store.markMessageUnsent(String(payload.messageId))
     })
 
     // A stranger request you sent was accepted
     channel.listen('.dm.thread.accepted', (payload: { threadId: string | number }) => {
-      log.debug('dm.thread.accepted', payload)
       const tid = String(payload.threadId)
       const thread = store.threadById(tid)
       if (thread) store.upsertThread({ ...thread, kind: 'dm' })
@@ -62,7 +59,6 @@ export function useInboxEcho() {
       threadId: string | number
       thread: Thread
     }) => {
-      log.debug('dm.thread.request', payload)
       // Normalize thread ID to string
       const thread: Thread = { ...payload.thread, id: String(payload.thread.id) }
       store.upsertThread(thread)
@@ -74,7 +70,6 @@ export function useInboxEcho() {
       content: string
       sentAt: string
     }) => {
-      log.debug('official.message.received', payload)
       store.bumpOfficialUnread()
 
       // Show a toast notification

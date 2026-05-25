@@ -58,7 +58,6 @@ export function useOAuthCallback() {
       data: BootstrapUser
     }>('/auth/user')
 
-    log.debug('User data fetched successfully', { response })
     if (response?.data) {
       authStore.setUser(response.data)
     }
@@ -100,7 +99,6 @@ export function useOAuthCallback() {
 
     const result = await storeTokensAndFetchUser(params.token, params.msabToken, params.isNew)
 
-    log.debug('OAuth callback processed successfully', { isNew: params.isNew })
 
     return result
   }
@@ -128,7 +126,6 @@ export function useOAuthCallback() {
 
     const callbackResult = await storeTokensAndFetchUser(result.token, result.msabToken, result.isNew)
 
-    log.debug('OAuth popup result processed successfully', { isNew: result.isNew })
 
     return callbackResult
   }

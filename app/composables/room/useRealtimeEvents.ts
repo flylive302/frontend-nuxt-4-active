@@ -21,14 +21,12 @@ export function useRealtimeEvents() {
 
   function registerRealtimeEventHandlers(socket: Socket): void {
     if (handlersRegistered) {
-      log.debug('Event handlers already registered, skipping')
       return
     }
 
     registerAll(socket)
 
     handlersRegistered = true
-    log.debug('All realtime event handlers registered')
   }
 
   return {

@@ -44,7 +44,6 @@ export function useRoomBlocking() {
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
-      log.error('fetchBlockedUsers failed:', err)
     } finally {
       loading.value = false
     }

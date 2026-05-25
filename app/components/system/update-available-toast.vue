@@ -33,7 +33,6 @@ onMounted(() => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             // New version available
             isVisible.value = true
-            log.debug('New version available')
           }
         })
       })

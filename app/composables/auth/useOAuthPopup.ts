@@ -78,12 +78,10 @@ export function useOAuthPopup() {
     const popup = window.open(url, 'oauth-popup', features)
 
     if (!popup || popup.closed) {
-      log.warn('Popup was blocked by the browser')
       return null
     }
 
     popup.focus()
-    log.debug('OAuth popup opened:', url)
     return popup
   }
 
@@ -119,7 +117,6 @@ export function useOAuthPopup() {
       if (settled) return
       settled = true
 
-      log.debug('Received OAuth result from popup')
 
       const payload = event.data
       onResult({
@@ -136,7 +133,6 @@ export function useOAuthPopup() {
     const pollTimer = window.setInterval(() => {
       if (popup.closed && !settled) {
         settled = true
-        log.debug('OAuth popup was closed by user')
         onCancel()
         cleanup()
       }

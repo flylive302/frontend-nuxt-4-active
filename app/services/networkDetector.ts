@@ -77,7 +77,6 @@ function mapEffectiveType(type: string | undefined): NetworkInfo['effectiveType'
 
 function handleConnectionChange(): void {
   const info = getNetworkInfo()
-  log.debug('Connection changed:', info)
   callbacks.forEach((cb) => cb(info))
 }
 
@@ -142,7 +141,6 @@ export function onConnectionChange(callback: ConnectionChangeCallback): () => vo
     window.addEventListener('online', handleConnectionChange)
     window.addEventListener('offline', handleConnectionChange)
     isInitialized = true
-    log.debug('Network listeners initialized')
   }
 
   return () => {

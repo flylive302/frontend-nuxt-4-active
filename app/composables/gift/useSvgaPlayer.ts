@@ -50,7 +50,6 @@ export function useSvgaPlayer(
     // Defensive check - ensure name ref has a value
     const animationName = options.name?.value;
     if (!animationName) {
-      log.warn('No animation name provided, skipping load');
       return;
     }
 
@@ -97,7 +96,6 @@ export function useSvgaPlayer(
         player.value.start();
       }
     } catch (error) {
-      log.error('Failed to load animation:', options.name.value, error);
       isPlaying.value = false;
       // Signal completion to prevent stuck modal
       options.onComplete?.();

@@ -147,7 +147,6 @@ async function loadNextPage(): Promise<void> {
 
   const hasFetchSource = Boolean(props.fetcher) || endpointRef.value.length > 0
   if (!hasFetchSource) {
-    log.warn('Provide either an endpoint or a fetcher.')
     hasMore.value = false
     return
   }

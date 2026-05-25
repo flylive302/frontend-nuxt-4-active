@@ -35,7 +35,6 @@ export function useRoomMembershipEvents() {
       user: MinimalUser
       role: string
     }) => {
-      log.debug('room.member_joined', payload)
       if (membershipStore.isCurrentRoom(payload.room_id)) {
         const member = {
           user_id: payload.user_id,
@@ -53,7 +52,6 @@ export function useRoomMembershipEvents() {
 
     // ── member.left ───────────────────────────────────────────────
     socket.on('room.member_left', (payload: { room_id: number; user_id: number }) => {
-      log.debug('room.member_left', payload)
       if (membershipStore.isCurrentRoom(payload.room_id)) {
         membershipStore.removeMember(payload.user_id)
       }
@@ -67,7 +65,6 @@ export function useRoomMembershipEvents() {
       duration: string
       banned_until?: string
     }) => {
-      log.debug('room.member_removed', payload)
       if (membershipStore.isCurrentRoom(payload.room_id)) {
         membershipStore.removeMember(payload.user_id)
       }
@@ -89,7 +86,6 @@ export function useRoomMembershipEvents() {
       previous_role: string
       new_role: string
     }) => {
-      log.debug('room.member_role_changed', payload)
       if (membershipStore.isCurrentRoom(payload.room_id)) {
         membershipStore.updateMemberRole(payload.user_id, payload.new_role as RoomMember['role'])
       }
@@ -112,7 +108,6 @@ export function useRoomMembershipEvents() {
       user: MinimalUser
       message: string | null
     }) => {
-      log.debug('room.join_request_created', payload)
       toast.add({
         title: 'Join Request',
         description: `${payload.user.name} wants to join your room`,
@@ -140,7 +135,6 @@ export function useRoomMembershipEvents() {
       inviter_name: string
       message: string | null
     }) => {
-      log.debug('room.invitation_created', payload)
       toast.add({
         title: 'Room Invitation',
         description: `${payload.inviter_name} invited you to join ${payload.room_name}`,
@@ -159,7 +153,6 @@ export function useRoomMembershipEvents() {
 
     // ── join_request_approved ─────────────────────────────────────
     socket.on('room.join_request_approved', (payload: { room_id: number; room_name: string }) => {
-      log.debug('room.join_request_approved', payload)
       toast.add({
         title: 'Request Approved!',
         description: `Welcome to ${payload.room_name}!`,
@@ -183,7 +176,6 @@ export function useRoomMembershipEvents() {
 
     // ── join_request_rejected ─────────────────────────────────────
     socket.on('room.join_request_rejected', (payload: { room_id: number; room_name: string }) => {
-      log.debug('room.join_request_rejected', payload)
       toast.add({
         title: 'Request Declined',
         description: `Your request to join ${payload.room_name} was declined`,
@@ -198,7 +190,6 @@ export function useRoomMembershipEvents() {
       request_id: number
       user_id: number
     }) => {
-      log.debug('room.join_request_cancelled', payload)
       if (membershipStore.isCurrentRoom(payload.room_id)) {
         membershipStore.removeOwnerJoinRequest(payload.request_id)
         toast.add({
@@ -215,7 +206,6 @@ export function useRoomMembershipEvents() {
       room_name: string
       invitation_id: number
     }) => {
-      log.debug('room.invitation_cancelled', payload)
       membershipStore.removeReceivedInvitation(payload.invitation_id)
       toast.add({
         title: 'Invitation Withdrawn',
@@ -226,7 +216,6 @@ export function useRoomMembershipEvents() {
 
     // ── user_unblocked ────────────────────────────────────────────
     socket.on('room.user_unblocked', (payload: { room_id: number; room_name: string }) => {
-      log.debug('room.user_unblocked', payload)
       toast.add({
         title: 'Unblocked',
         description: `You have been unblocked from ${payload.room_name}`,

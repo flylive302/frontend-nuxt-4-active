@@ -44,7 +44,6 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
   // TURN candidates (only `stun:` URLs means TURN is unavailable for this user).
   function logIceServers(label: string, iceServers: RTCIceServer[] | undefined) {
     if (!iceServers || iceServers.length === 0) {
-      log.warn(`${label}: no iceServers received from server`);
       return;
     }
     const schemes = new Set<string>();
@@ -55,14 +54,11 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
         if (scheme) schemes.add(scheme);
       }
     }
-    log.debug(`${label}: iceServers count=${iceServers.length} schemes=${[...schemes].join(',')}`);
   }
 
   function attachFailureListener(transport: Transport, label: string) {
     transport.on('connectionstatechange', (state: mediasoupTypes.ConnectionState) => {
-      log.debug(`${label} connectionstatechange:`, state);
       if (state === 'failed') {
-        log.error(`${label} ICE/DTLS connection failed`);
         toast.add({
           title: 'Audio connection failed',
           description: 'Your network may be blocking the audio relay. Try a different network or check firewall settings.',
@@ -91,12 +87,10 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     if (consumerTransport.value) {
       consumerTransport.value.close();
       consumerTransport.value = null;
-      log.debug('Closed stale consumer transport before re-creation');
     }
     if (producerTransport.value) {
       producerTransport.value.close();
       producerTransport.value = null;
-      log.debug('Closed stale producer transport before re-creation');
     }
 
     currentRoomId.value = roomId;
@@ -147,7 +141,6 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       }
     );
 
-    log.debug('Consumer transport created');
   }
 
   /**
@@ -155,23 +148,12 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
    */
   async function createProducerTransport(): Promise<void> {
     // Enhanced debugging for seat-taking issue
-    log.debug('createProducerTransport called:', {
-      deviceLoaded: device.value?.loaded,
-      currentRoomId: currentRoomId.value,
-      hasSocket: !!socket.value,
-      socketConnected: socket.value?.connected,
-    });
 
     if (!device.value?.loaded || !currentRoomId.value) {
-      log.error('Cannot create producer transport:', {
-        deviceLoaded: device.value?.loaded ?? false,
-        currentRoomId: currentRoomId.value,
-      });
       throw new Error('Device not loaded or room not joined');
     }
 
     if (producerTransport.value) {
-      log.debug('Producer transport already exists');
       return;
     }
 
@@ -245,7 +227,6 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       }
     );
 
-    log.debug('Producer transport created');
   }
 
   /**
@@ -263,7 +244,6 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     }
 
     currentRoomId.value = null;
-    log.debug('Transports cleanup complete');
   }
 
   // ========================================

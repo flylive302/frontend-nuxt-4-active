@@ -116,7 +116,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    */
   async function startAudio(): Promise<void> {
     if (producer.value && !producer.value.closed) {
-      log.debug('Already producing audio:', producer.value.id);
       return;
     }
 
@@ -141,13 +140,10 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     _micRawTrack = rawTrack;
 
     rawTrack.addEventListener('mute', () => {
-      log.warn('Raw mic track muted by the OS (background suspension or permission change)');
     });
     rawTrack.addEventListener('unmute', () => {
-      log.debug('Raw mic track unmuted by the OS');
     });
     rawTrack.addEventListener('ended', () => {
-      log.warn('Raw mic track ended (device unplugged or permission revoked)');
     });
 
     const trackForProducer = wireMicThroughAudioContext(stream);
@@ -155,16 +151,13 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     producer.value = await producerTransport.value!.produce({ track: trackForProducer });
 
     producer.value.on('transportclose', () => {
-      log.debug('Producer transport closed');
       producer.value = null;
     });
 
     producer.value.on('trackended', () => {
-      log.debug('Producer track ended');
       stopAudio();
     });
 
-    log.debug('Started producing audio:', producer.value.id);
   }
 
   /**
@@ -182,7 +175,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     const Ctor = (window.AudioContext
       || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
     if (!Ctor) {
-      log.warn('AudioContext not supported in this browser — falling back to raw mic track');
       const fallback = stream.getAudioTracks()[0];
       if (!fallback) throw new Error('No audio track');
       return fallback;
@@ -205,7 +197,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     if (ctx.state === 'suspended') {
       ctx.resume().catch((err) => {
-        log.warn('Initial AudioContext.resume failed:', err);
       });
     }
 
@@ -215,9 +206,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       const current = _micAudioContext;
       if (!current) return;
       if (current.state === 'suspended') {
-        log.debug('Visibility resume: AudioContext suspended, resuming');
         current.resume().catch((err) => {
-          log.warn('AudioContext.resume on visibility failed:', err);
         });
       }
     };
@@ -250,7 +239,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     const ctx = _micAudioContext;
     _micAudioContext = null;
     if (ctx && ctx.state !== 'closed') {
-      ctx.close().catch((err) => log.warn('AudioContext.close failed:', err));
+      ctx.close().catch((err) => {});
     }
   }
 
@@ -277,7 +266,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       producer.value.close();
       producer.value = null;
       isLocalMuted.value = false;
-      log.debug('Stopped producing audio');
     }
     teardownMicAudioContext();
     teardownMicStream();
@@ -297,23 +285,19 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     }
 
     if (!producerTransport.value) {
-      log.error('Cannot produce track: no producer transport');
       return;
     }
 
     musicProducer.value = await producerTransport.value.produce({ track });
 
     musicProducer.value.on('transportclose', () => {
-      log.debug('Music producer transport closed');
       musicProducer.value = null;
     });
 
     musicProducer.value.on('trackended', () => {
-      log.debug('Music producer track ended');
       stopMusicProducer();
     });
 
-    log.debug('Started producing music track:', musicProducer.value.id);
   }
 
   /**
@@ -323,7 +307,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (musicProducer.value) {
       musicProducer.value.close();
       musicProducer.value = null;
-      log.debug('Stopped producing music');
     }
   }
 
@@ -333,7 +316,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    */
   function toggleLocalMute(): boolean {
     if (!producer.value) {
-      log.warn('Cannot toggle mute: no active producer');
       return isLocalMuted.value;
     }
 
@@ -341,7 +323,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (track) {
       isLocalMuted.value = !isLocalMuted.value;
       track.enabled = !isLocalMuted.value;
-      log.debug('Local mute toggled:', isLocalMuted.value ? 'muted' : 'unmuted');
     }
 
     return isLocalMuted.value;
@@ -355,13 +336,11 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    */
   async function consumeProducer(producerId: string, roomId: string, producerUserId?: number): Promise<void> {
     if (!device.value?.loaded || !consumerTransport.value) {
-      log.error('Cannot consume: device or transport not ready');
       return;
     }
 
     const authStore = useAuthStore();
     if (producerUserId !== undefined && producerUserId === authStore.user?.id) {
-      log.debug('Skipping own producer:', producerId);
       return;
     }
 
@@ -374,7 +353,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     // Check if already consuming
     if (consumers.value.has(producerId)) {
-      log.debug('Already consuming producer:', producerId);
       return;
     }
 
@@ -386,7 +364,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     });
 
     if (!response.success || !response.data) {
-      log.error('Failed to consume:', response.error);
       return;
     }
 
@@ -409,7 +386,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     });
 
     if (!resumeResponse.success) {
-      log.error('Failed to resume consumer:', resumeResponse.error);
       return;
     }
 
@@ -424,19 +400,15 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     const playAudio = async () => {
       try {
         await audio.play();
-        log.debug('Audio playing for producer:', producerId);
       } catch (err) {
         if (err instanceof Error && err.name === 'NotAllowedError') {
           // Autoplay blocked - wait for user interaction
-          log.warn('Autoplay blocked, waiting for user interaction');
 
           // Add a one-time click listener to resume playback
           const resumePlayback = async () => {
             try {
               await audio.play();
-              log.debug('Audio resumed after user interaction');
             } catch (e) {
-              log.error('Still failed to play after interaction:', e);
             }
             document.removeEventListener('click', resumePlayback);
             document.removeEventListener('touchstart', resumePlayback);
@@ -445,7 +417,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
           document.addEventListener('click', resumePlayback, { once: true });
           document.addEventListener('touchstart', resumePlayback, { once: true });
         } else {
-          log.error('Failed to play audio:', err);
         }
       }
     };
@@ -453,7 +424,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     playAudio();
 
     consumer.on('transportclose', () => {
-      log.debug('Consumer transport closed for:', producerId);
       consumers.value.delete(producerId);
       for (const [userId, trackedProducerId] of consumerProducerByUserId) {
         if (trackedProducerId === producerId) {
@@ -469,7 +439,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       }
     });
 
-    log.debug('Started consuming producer:', producerId);
   }
 
   /**
@@ -499,7 +468,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       audioElements.delete(producerId);
     }
 
-    log.debug('Stopped consuming producer:', producerId);
   }
 
   /**
@@ -525,7 +493,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     });
     audioElements.clear();
 
-    log.debug('Streaming cleanup complete');
   }
 
   /**
@@ -546,7 +513,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (!import.meta.client) return 'healthy';
 
     if (!socket.value?.connected) {
-      log.debug('Probe: socket not connected -> needs-rebuild');
       return 'needs-rebuild';
     }
 
@@ -557,23 +523,19 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     for (const [name, transport] of transports) {
       if (!transport) continue;
       if (transport.closed) {
-        log.debug('Probe: transport closed', name);
         return 'needs-rebuild';
       }
       const state = transport.connectionState;
       if (state === 'failed' || state === 'disconnected' || state === 'closed') {
-        log.debug('Probe: transport unhealthy', name, state);
         return 'needs-rebuild';
       }
     }
 
     if (producer.value) {
       if (producer.value.closed) {
-        log.debug('Probe: producer closed');
         return 'needs-rebuild';
       }
       if (producer.value.track && producer.value.track.readyState === 'ended') {
-        log.debug('Probe: producer track ended');
         return 'needs-rebuild';
       }
       // F-26: the OS may have muted the raw mic during background. The producer
@@ -582,22 +544,18 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       // the session as rebuild-required so the lifecycle layer reacquires
       // the mic from scratch.
       if (_micRawTrack && _micRawTrack.muted) {
-        log.debug('Probe: raw mic track muted by OS -> needs-rebuild');
         return 'needs-rebuild';
       }
       if (_micRawTrack && _micRawTrack.readyState === 'ended') {
-        log.debug('Probe: raw mic track ended -> needs-rebuild');
         return 'needs-rebuild';
       }
       if (_micAudioContext && _micAudioContext.state === 'closed') {
-        log.debug('Probe: mic AudioContext closed while producing -> needs-rebuild');
         return 'needs-rebuild';
       }
     }
 
     for (const [producerId, consumer] of consumers.value) {
       if (consumer.closed || consumer.track.readyState === 'ended') {
-        log.debug('Probe: consumer ended', producerId);
         return 'needs-rebuild';
       }
     }
@@ -605,10 +563,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     let pausedOrUnready = false;
     for (const [producerId, audio] of audioElements) {
       if (audio.paused || audio.readyState < 2) {
-        log.debug('Probe: audio element paused/unready', producerId, {
-          paused: audio.paused,
-          readyState: audio.readyState,
-        });
         pausedOrUnready = true;
         break;
       }
@@ -624,7 +578,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       for (const [producerId, audio] of audioElements) {
         const prev = before.get(producerId) ?? 0;
         if (!audio.paused && audio.currentTime === prev) {
-          log.debug('Probe: audio element stalled (currentTime not advancing)', producerId);
           return 'needs-playback-recovery';
         }
       }
@@ -646,7 +599,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       const consumer = consumers.value.get(producerId);
 
       if (!consumer || consumer.closed || consumer.track.readyState === 'ended') {
-        log.warn('Cannot recover playback: consumer is closed or ended', { producerId });
         recovered = false;
         continue;
       }
@@ -655,9 +607,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
       try {
         await audio.play();
-        log.debug('Recovered playback for producer:', producerId);
       } catch (err) {
-        log.warn('Failed to recover playback for producer:', producerId, err);
         recovered = false;
       }
     }
@@ -679,7 +629,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       audio.volume = clamped;
     });
 
-    log.debug('Volume set to:', clamped, `(${audioElements.size} elements)`);
   }
 
   /**

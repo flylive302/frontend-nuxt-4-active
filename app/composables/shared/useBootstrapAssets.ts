@@ -167,7 +167,6 @@ export function useBootstrapAssets() {
     }
 
     if (assetStore.phase === 'downloading') {
-      log.warn('Asset download already in progress')
       return
     }
 
@@ -197,7 +196,6 @@ export function useBootstrapAssets() {
    * Invalidate a cached asset and optionally re-download.
    */
   async function invalidateAsset(payload: AssetInvalidatePayload): Promise<void> {
-    log.debug('Invalidating asset:', payload.url)
 
     await cacheStorage.deleteAsset(payload.url)
     await assetIndex.remove(payload.url)
@@ -212,7 +210,6 @@ export function useBootstrapAssets() {
       })
     }
 
-    log.debug('Asset invalidated:', payload.url)
   }
 
   function pause(): void {

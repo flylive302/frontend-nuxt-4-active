@@ -72,7 +72,6 @@ export function useRoomSettingsHandler() {
       owner_id: roomStore.currentRoom.owner_id,
     }
     Object.assign(roomStore.currentRoom, payload.room, preserved)
-    log.info('Room settings updated:', payload.updated_fields)
   }
 
   return {

@@ -52,11 +52,9 @@ export function useRankingData() {
         data.current_user,
         data.updated_at,
       )
-      log.debug('Loaded slice', { category, period, count: data.entries.length })
     } catch (err) {
       const normalized = normalizeError(err)
       store.setError(category, period, normalized.message)
-      log.error('Fetch failed', { category, period, message: normalized.message })
     } finally {
       store.setLoading(category, period, false)
     }

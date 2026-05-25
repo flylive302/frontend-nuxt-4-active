@@ -54,7 +54,6 @@ export function useRoomInvitations() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.receivedInvitations.error = normalized.message
-      log.error('fetchReceivedInvitations failed:', err)
     } finally {
       store.receivedInvitations.loading = false
     }
@@ -93,7 +92,6 @@ export function useRoomInvitations() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.sentInvitations.error = normalized.message
-      log.error('fetchSentInvitations failed:', err)
     } finally {
       store.sentInvitations.loading = false
     }
@@ -119,7 +117,6 @@ export function useRoomInvitations() {
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
-      log.error('sendInvitation failed:', err)
       return null
     }
   }

@@ -23,7 +23,6 @@ export function useAuthLifecycle() {
    * Stores suspension info → kills the socket → clears auth → redirects.
    */
   async function handleForceDisconnect(payload: ForceDisconnectPayload): Promise<void> {
-    log.warn('Force-disconnected by server:', payload.reason)
 
     authStore.setSuspensionInfo({
       reason: payload.blocked_reason ?? 'Your account has been suspended.',

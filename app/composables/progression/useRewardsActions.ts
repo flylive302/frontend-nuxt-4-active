@@ -42,7 +42,6 @@ export function useRewardsActions() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.setPendingError(normalized.message)
-      log.error('fetchPending failed:', err)
     } finally {
       store.setPendingLoading(false)
     }
@@ -71,7 +70,6 @@ export function useRewardsActions() {
     } catch (err) {
       const normalized = normalizeError(err)
       store.setHistoryError(normalized.message)
-      log.error('fetchHistory failed:', err)
     } finally {
       store.setHistoryLoading(false)
     }
@@ -83,7 +81,6 @@ export function useRewardsActions() {
       const response = await api<{ success: true; data: RewardStats }>('/user/rewards/stats')
       store.setStats(response.data)
     } catch (err) {
-      log.error('fetchStats failed:', err)
     } finally {
       store.setStatsLoading(false)
     }
@@ -126,7 +123,6 @@ export function useRewardsActions() {
         description: normalized.message,
         color: 'error',
       })
-      log.error('claim failed:', err)
       return false
     } finally {
       store.setClaimingId(null)

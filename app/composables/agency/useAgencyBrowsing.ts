@@ -72,7 +72,6 @@ export function useAgencyBrowsing() {
       store.agencies.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       store.agencies.error = 'Failed to load agencies'
-      log.error(' fetchAgencies failed:', error)
     } finally {
       store.agencies.loading = false
     }
@@ -98,7 +97,6 @@ export function useAgencyBrowsing() {
       store.currentAgency.agency = response.data
     } catch (error) {
       store.currentAgency.error = 'Failed to load agency'
-      log.error(' fetchAgencyById failed:', error)
     } finally {
       store.currentAgency.loading = false
     }
@@ -138,7 +136,6 @@ export function useAgencyBrowsing() {
       store.currentAgency.membersCursor = response.meta.next_cursor
       store.currentAgency.membersHasMore = response.meta.next_cursor !== null
     } catch (error) {
-      log.error(' fetchAgencyMembers failed:', error)
     } finally {
       store.currentAgency.membersLoading = false
     }
@@ -188,7 +185,6 @@ export function useAgencyBrowsing() {
     } catch (error) {
       const err = normalizeError(error)
       toast.add({ title: 'Error', description: err.message, color: 'error' })
-      log.error(' createAgency failed:', error)
       return null
     }
   }

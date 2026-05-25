@@ -156,7 +156,6 @@ export function useImageUpload() {
           } catch {
             // Use default error message
           }
-          log.error('ImageKit error:', xhr.responseText)
           reject(new Error(errorMessage))
         }
       })

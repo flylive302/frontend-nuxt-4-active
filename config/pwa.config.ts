@@ -39,7 +39,7 @@ export const pwaConfig: ModuleOptions = {
         ]
     },
     devOptions: {
-        enabled: true,
+        enabled: false,
         suppressWarnings: true,
     },
     workbox: {
@@ -52,7 +52,7 @@ export const pwaConfig: ModuleOptions = {
         // dev server or backend is unavailable, and stale HTML in production breaks navigation.
         globIgnores: ['**/*.html'],
         // LT-1: Include custom asset download handler in generated SW
-        importScripts: ['/sw-asset-handler.js'],
+        importScripts: ['/sw-env.js', '/sw-asset-handler.js'],
         runtimeCaching: [
             // R2 CDN Assets – Gift videos (30 days)
             {

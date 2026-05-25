@@ -70,7 +70,6 @@ export function useBadgeActions() {
         description: normalized.message,
         color: 'error',
       })
-      log.error('toggleDisplay failed:', err)
 
       return false
     } finally {

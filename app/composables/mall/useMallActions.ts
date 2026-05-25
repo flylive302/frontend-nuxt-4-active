@@ -113,7 +113,6 @@ export function useMallActions() {
         })
       }
 
-      log.error('purchaseProp failed:', err)
       return false
     } finally {
       isPurchasing.value = false
@@ -200,7 +199,6 @@ export function useMallActions() {
         color: 'error',
       })
 
-      log.error('equipProp failed:', err)
       return false
     } finally {
       isEquipping.value = null
@@ -278,7 +276,6 @@ export function useMallActions() {
         color: 'error',
       })
 
-      log.error('unequipProp failed:', err)
       return false
     } finally {
       isEquipping.value = null

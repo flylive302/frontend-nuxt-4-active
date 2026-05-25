@@ -48,7 +48,6 @@ export function useBootstrapInit() {
 
     // GATE — skip on OAuth callback route (callback page handles its own auth flow)
     if (route.path === '/callback') {
-      log.debug('On callback route, deferring to callback handler')
       return null
     }
 
@@ -64,7 +63,6 @@ export function useBootstrapInit() {
 
     // GATE — check freshness
     if (!bootstrapStore.needsRefresh) {
-      log.debug('Bootstrap data fresh, skipping fetch')
       // Still schedule asset downloads — may have new items since last boot
       scheduleAssetDownload(route)
       return null
@@ -72,7 +70,6 @@ export function useBootstrapInit() {
 
     // GATE
     if (isFetchInProgress()) {
-      log.warn('Bootstrap already in progress')
       return null
     }
 
@@ -135,7 +132,6 @@ export function useBootstrapInit() {
       const normalized = normalizeError(e)
       bootstrapStore.setError(normalized.message)
       bootstrapStore.setPhase('error')
-      log.error('Bootstrap failed:', normalized)
       return null
     }
   }
@@ -152,7 +148,6 @@ export function useBootstrapInit() {
         authStore.setUser(response.data)
       }
     } catch {
-      log.warn('Failed to refresh user on boot — proceeding with persisted state')
     }
   }
 

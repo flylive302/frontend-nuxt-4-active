@@ -20,7 +20,6 @@ export function useVipEvents() {
 
   return function registerVipEvents(socket: Socket): void {
     socket.on('vip.updated', (payload: VipUpdatedPayload) => {
-      log.debug('vip.updated', payload)
 
       // Detect VIP level increase for congratulations modal
       const previousLevel = authStore.user?.vip_level ?? 0
@@ -38,7 +37,6 @@ export function useVipEvents() {
     })
 
     socket.on('vip.gifted', (payload: VipGiftedPayload) => {
-      log.debug('vip.gifted', payload)
 
       toast.add({
         title: 'VIP Gift Received! 🎁',

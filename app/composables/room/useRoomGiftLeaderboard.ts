@@ -80,7 +80,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     }
 
     loading.value = true
-    log.debug('Fetching leaderboard', { roomId: currentRoomId, period: period.value, reset })
 
     try {
       // Build query params
@@ -97,7 +96,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
         }
       )
 
-      log.debug('Leaderboard response', { count: response.data.leaderboard.length })
 
       // Extract leaderboard array from nested response
       entries.value = response.data.leaderboard
@@ -110,7 +108,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
 
       const normalized = normalizeError(err)
       error.value = normalized.message
-      log.error('Fetch failed:', normalized.message, err)
     } finally {
       loading.value = false
       refreshing.value = false

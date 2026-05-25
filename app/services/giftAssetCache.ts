@@ -86,7 +86,6 @@ export async function preloadVideo(rawUrl: string): Promise<string> {
 
       return blobUrl
     } catch (error) {
-      log.warn('❌ Video failed:', url, error)
       throw error
     } finally {
       videoPending.delete(url)
@@ -107,14 +106,12 @@ export async function preloadSvga(name: string, svgaPlugin?: SvgaPlugin): Promis
     try {
       await svgaPlugin.fetchAnimation(name)
     } catch (error) {
-      log.warn('❌ SVGA failed:', name, error)
     }
   } else {
     // Fallback if plugin not available
     try {
       await fetch(name)
     } catch (error) {
-      log.warn('❌ SVGA failed:', name, error)
     }
   }
 }
@@ -128,7 +125,6 @@ export async function preloadVap(rawMp4Url: string): Promise<void> {
   try {
     await preloadVideo(`${base}.mp4`)
   } catch (error) {
-    log.warn('❌ VAP video failed:', rawMp4Url, error)
   }
   // Config is <1% of the cost — just warm the browser HTTP cache, don't block.
   fetch(`${base}.json`).catch(() => {})
@@ -154,7 +150,6 @@ export async function preloadGift(
     }
     preloadedGiftIds.add(gift.id)
   } catch (error) {
-    log.debug('Gift preload skipped:', gift.id, error)
   }
 }
 

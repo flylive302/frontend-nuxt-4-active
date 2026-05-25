@@ -99,7 +99,6 @@ export function useVipSvgaPreloader(
   async function preloadAll() {
     const svga = nuxtApp.$svga as SvgaPlugin | undefined
     if (!svga) {
-      log.warn('SVGA plugin not available, skipping preload')
       return
     }
 
@@ -126,12 +125,10 @@ export function useVipSvgaPreloader(
     preloadedCount.value = 0
 
     if (urls.length === 0) {
-      log.info('All VIP SVGA assets already cached')
       return
     }
 
     isPreloading.value = true
-    log.info(`Preloading ${urls.length} VIP SVGA assets…`)
 
     for (const url of urls) {
       try {
@@ -139,12 +136,10 @@ export function useVipSvgaPreloader(
         preloadedCount.value++
       }
       catch (err) {
-        log.warn(`Failed to preload ${url}`, err)
       }
     }
 
     isPreloading.value = false
-    log.info('VIP SVGA preloading complete')
   }
 
   // ========================================

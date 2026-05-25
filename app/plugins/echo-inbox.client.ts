@@ -30,7 +30,6 @@ export default defineNuxtPlugin({
       if (!authStore.isAuthenticated) return
       // PERF: inbox + /broadcasting/auth + /inbox/threads after first paint — not LCP-critical.
       scheduleAfterFirstPaint(() => {
-        log.debug('Subscribing to DM channel...')
         subscribe()
         fetchThreads()
       })
@@ -41,7 +40,6 @@ export default defineNuxtPlugin({
       () => authStore.isAuthenticated,
       (isAuth, wasAuth) => {
         if (!isAuth && wasAuth) {
-          log.debug('Unsubscribing from DM channel...')
           unsubscribe()
         }
       },

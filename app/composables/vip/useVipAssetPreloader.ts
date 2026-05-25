@@ -128,7 +128,6 @@ export function useVipAssetPreloader(
     const vap = nuxtApp.$vap as VapPlugin | undefined
 
     if (!svga && !vap) {
-      log.warn('Neither SVGA nor VAP plugin available, skipping preload')
       return
     }
 
@@ -156,12 +155,10 @@ export function useVipAssetPreloader(
     preloadedCount.value = 0
 
     if (toPreload.length === 0) {
-      log.info('All VIP assets already cached')
       return
     }
 
     isPreloading.value = true
-    log.info(`Preloading ${toPreload.length} VIP assets…`)
 
     for (const asset of toPreload) {
       try {
@@ -174,12 +171,10 @@ export function useVipAssetPreloader(
         }
         preloadedCount.value++
       } catch (err) {
-        log.warn(`Failed to preload ${asset.url}`, err)
       }
     }
 
     isPreloading.value = false
-    log.info('VIP asset preloading complete')
   }
 
   // ========================================

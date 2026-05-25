@@ -145,23 +145,16 @@ function tryGetWebGLContext(canvas: HTMLCanvasElement): WebGLRenderingContext | 
       // or the GPU process crashed. The context object is non-null but useless.
       const renderer = ctx.getParameter(ctx.RENDERER)
       if (!renderer) {
-        log.warn(`getContext("${name}") returned a lost/zombie context (renderer: null) — skipping WebGL`)
         return null
       }
 
-      log.info(`WebGL context acquired via "${name}"`, {
-        renderer,
-        vendor: ctx.getParameter(ctx.VENDOR),
-      })
       return ctx
     }
     catch (err) {
       const message = err instanceof Error ? err.message : err
-      log.warn(`getContext("${name}") threw:`, message)
     }
   }
 
-  log.warn('WebGL not available — will use 2D canvas fallback')
   return null
 }
 
@@ -392,12 +385,10 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
     const loopCount = options.loop ?? 1
     const isMuted = options.muted ?? true
 
-    log.info('Creating player:', { name: options.name, jsonUrl, videoUrl, loop: loopCount, muted: isMuted })
 
     // EXECUTE: Fetch config
     const config = await preloadConfig(jsonUrl)
     const { info } = config
-    log.info('Config loaded:', { w: info.w, h: info.h, videoW: info.videoW, videoH: info.videoH })
 
     // EXECUTE: Set canvas dimensions to logical display size
     options.canvas.width = info.w
@@ -413,12 +404,10 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
       }
       catch (webglErr) {
         const message = webglErr instanceof Error ? webglErr.message : webglErr
-        log.warn('WebGL renderer creation failed, falling back to 2D:', message)
         renderer = createCanvas2DRenderer(options.canvas, info)
       }
     }
     else {
-      log.warn('WebGL unavailable — using 2D canvas software renderer')
       renderer = createCanvas2DRenderer(options.canvas, info)
     }
 
@@ -455,26 +444,20 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         if (destroyed) return
         currentLoop = 0
         video.currentTime = 0
-        log.info('Starting playback, muted:', video.muted)
 
         video.play().then(() => {
-          log.info('Play succeeded (muted:', video.muted, ')')
           player.onStart?.()
           scheduleFrame()
         }).catch((err) => {
-          log.warn('Play failed (muted:', video.muted, '):', err?.message || err)
 
           // Autoplay blocked — browser blocks unmuted autoplay without user gesture.
           // Fall back to muted playback so the animation at least renders.
           if (!video.muted) {
-            log.info('Retrying with muted=true for autoplay compliance')
             video.muted = true
             video.play().then(() => {
-              log.info('Muted fallback play succeeded')
               player.onStart?.()
               scheduleFrame()
             }).catch((err2) => {
-              log.error('Muted fallback also failed:', err2?.message || err2)
             })
           }
         })
@@ -498,7 +481,6 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
           player.onStart?.()
           scheduleFrame()
         }).catch((err) => {
-          log.warn('Restart play failed:', err?.message || err)
           if (!video.muted) {
             video.muted = true
             video.play().then(() => {
@@ -602,21 +584,17 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
       void giftAssetCache.preloadVideo(videoUrl).catch(() => {})
     }
 
-    log.info('Loading video:', videoUrl)
     await new Promise<void>((resolve, reject) => {
       // If video is already loaded (cached), resolve immediately
       if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-        log.info('Video already cached, readyState:', video.readyState)
         resolve()
         return
       }
       video.addEventListener('canplay', () => {
-        log.info('Video canplay fired, readyState:', video.readyState)
         resolve()
       }, { once: true })
       video.addEventListener('error', () => {
         const mediaErr = video.error
-        log.error('Video load error:', { code: mediaErr?.code, message: mediaErr?.message, url: videoUrl })
         reject(new Error(`[VAP] Video load failed: ${videoUrl} (code: ${mediaErr?.code}, ${mediaErr?.message})`))
       }, { once: true })
       // Set src AFTER listeners are attached to avoid missing events
@@ -624,7 +602,6 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
       video.load()
     })
 
-    log.info('Video loaded successfully, autoplay:', options.autoplay ?? true)
 
     // Autoplay if requested
     if (options.autoplay ?? true) {

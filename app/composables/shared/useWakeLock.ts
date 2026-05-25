@@ -28,18 +28,15 @@ export function useWakeLock() {
     try {
       wakeLockSentinel = await navigator.wakeLock.request('screen')
       isActive.value = true
-      log.debug('Wake lock acquired')
 
       // The browser releases the lock when the page becomes hidden.
       // We listen for the release event to keep our state in sync.
       wakeLockSentinel.addEventListener('release', () => {
         wakeLockSentinel = null
         isActive.value = false
-        log.debug('Wake lock released by system')
       })
     } catch (err) {
       // Can fail if the page is hidden or battery saver is active
-      log.warn('Wake lock request failed:', err)
     }
   }
 
@@ -53,9 +50,7 @@ export function useWakeLock() {
       await wakeLockSentinel.release()
       wakeLockSentinel = null
       isActive.value = false
-      log.debug('Wake lock released manually')
     } catch (err) {
-      log.warn('Wake lock release failed:', err)
     }
   }
 

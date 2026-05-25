@@ -28,7 +28,6 @@ onMounted(async () => {
   // Check if we already asked the user
   const alreadyAsked = localStorage.getItem(STORAGE_BANNER_KEY)
   if (alreadyAsked) {
-    log.debug('Storage permission already asked, skipping banner')
     return
   }
 
@@ -52,11 +51,9 @@ async function handleAllow(): Promise<void> {
 
   try {
     const granted = await navigator.storage.persist()
-    log.debug('Persistent storage:', granted ? 'granted' : 'denied')
     // Store the result regardless of outcome
     localStorage.setItem(STORAGE_BANNER_KEY, granted ? 'granted' : 'denied')
   } catch (e) {
-    log.error('Storage persist request failed:', e)
     localStorage.setItem(STORAGE_BANNER_KEY, 'error')
   } finally {
     isRequesting.value = false

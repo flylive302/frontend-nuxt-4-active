@@ -228,12 +228,12 @@ export function setupRoomEventHandlers({
       userStore.patchProfile(safeProfile);
     }
 
-    // log.debug('Profile updated for user:', event.user_id);
+    // undefined
   });
 
   // Audio events
   socket.on('audio:newProducer', async (event: NewProducerEvent) => {
-    // log.debug('New producer from user:', event.userId);
+    // undefined
     if (roomStore.currentRoom) {
       await consumeProducer(event.producerId, roomStore.currentRoom.id.toString(), event.userId);
     }

@@ -20,7 +20,6 @@ let cachePromise: Promise<Cache> | null = null
 async function getCache(): Promise<Cache | null> {
   // SSR guard
   if (typeof caches === 'undefined') {
-    log.warn('Cache Storage not available (SSR or unsupported browser)')
     return null
   }
 
@@ -45,10 +44,8 @@ export async function initCacheStorage(): Promise<void> {
     try {
       const deleted = await caches.delete(name)
       if (deleted) {
-        log.info('Deleted deprecated cache:', name)
       }
     } catch (e) {
-      log.warn('Failed to delete deprecated cache:', name, e)
     }
   }
 
@@ -83,7 +80,6 @@ export async function putAsset(url: string, blob: Blob): Promise<void> {
     await cache.put(url, response)
 
   } catch (e) {
-    log.error('Failed to cache asset:', url, e)
     throw e
   }
 }
@@ -106,7 +102,6 @@ export async function getAsset(url: string): Promise<string | null> {
 
     return blobUrl
   } catch (e) {
-    log.error('Failed to get cached asset:', url, e)
     return null
   }
 }
@@ -123,7 +118,6 @@ export async function hasAsset(url: string): Promise<boolean> {
     const response = await cache.match(url)
     return response !== undefined
   } catch (e) {
-    log.error('Failed to check cache:', url, e)
     return false
   }
 }
@@ -140,7 +134,6 @@ export async function deleteAsset(url: string): Promise<boolean> {
     const deleted = await cache.delete(url)
     return deleted
   } catch (e) {
-    log.error('Failed to delete from cache:', url, e)
     return false
   }
 }
@@ -155,9 +148,7 @@ export async function clearAll(): Promise<void> {
   try {
     await caches.delete(ASSET_CONFIG.CACHE_NAME)
     cachePromise = null
-    log.info('Cache cleared')
   } catch (e) {
-    log.error('Failed to clear cache:', e)
   }
 }
 
@@ -186,7 +177,6 @@ export async function getTotalSize(): Promise<number> {
 
     return totalSize
   } catch (e) {
-    log.error('Failed to calculate cache size:', e)
     return 0
   }
 }
@@ -202,7 +192,6 @@ export async function getCachedUrls(): Promise<string[]> {
     const keys = await cache.keys()
     return keys.map((req) => req.url)
   } catch (e) {
-    log.error('Failed to get cached URLs:', e)
     return []
   }
 }

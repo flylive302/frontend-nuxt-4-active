@@ -57,20 +57,13 @@ export default defineNuxtPlugin({
       const wsScheme = config.public.reverbScheme as string
       const wsKey = config.public.reverbAppKey as string
 
-      log.debug('Initializing Reverb connection', {
-        host: wsHost,
-        port: wsPort,
-        scheme: wsScheme,
-        keyPrefix: wsKey?.substring(0, 6) + '...',
-        forceTLS: wsScheme === 'https',
-      })
 
       // Pusher is Echo's transport layer when using Reverb
       // @ts-expect-error - Pusher needs to be on window for Echo
       window.Pusher = Pusher
 
       // Enable Pusher logging in non-production for debugging
-      Pusher.logToConsole = import.meta.dev
+      // Pusher.logToConsole = import.meta.dev
 
       const echo = new Echo({
         broadcaster: 'reverb',
@@ -84,7 +77,6 @@ export default defineNuxtPlugin({
           authorize: (socketId: string, callback: (error: Error | null, authData: { auth: string; channel_data?: string } | null) => void) => {
             const token = useCookie('sanctum_token').value ?? authStore.token
 
-            log.debug('Authorizing channel:', channel.name)
 
             $fetch<{ auth: string; channel_data?: string }>(`${config.public.apiRoot}/broadcasting/auth`, {
               method: 'POST',
@@ -95,21 +87,14 @@ export default defineNuxtPlugin({
               body: { socket_id: socketId, channel_name: channel.name },
             })
               .then((data) => {
-                log.debug('Channel authorized:', channel.name)
                 callback(null, data)
               })
               .catch((err) => {
-                log.error('Channel auth failed:', channel.name, err)
                 callback(err instanceof Error ? err : new Error(String(err)), null)
               })
           },
         }),
       } as ConstructorParameters<typeof Echo>[0])
-
-      echo.connector.pusher.connection.bind('connected', () => log.debug('✅ WebSocket connected'))
-      echo.connector.pusher.connection.bind('error', (err: unknown) => log.error('❌ WebSocket error:', err))
-      echo.connector.pusher.connection.bind('disconnected', () => log.warn('⚠️ WebSocket disconnected'))
-      echo.connector.pusher.connection.bind('unavailable', () => log.error('❌ WebSocket unavailable — check host/port/key'))
 
       _echoInstance = echo
       return echo

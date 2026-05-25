@@ -41,11 +41,9 @@ export function useMallCatalog() {
 
     try {
       const response = await api<PropTypesResponse>('/props/types')
-      log.debug('fetchTypes response:', response)
       mallStore.setTypes(response.data.types)
       mallStore.setLastFetchedAt(Date.now())
     } catch (err) {
-      log.error('fetchTypes failed:', err)
     } finally {
       mallStore.setTypesLoading(false)
     }
@@ -76,9 +74,7 @@ export function useMallCatalog() {
         queryParams.cursor = mallStore.catalog.cursor
       }
 
-      log.debug('fetchCatalog queryParams:', queryParams)
       const response = await api<PropListResponse>('/props', { params: queryParams })
-      log.debug('fetchCatalog response:', response)
 
       if (reset) {
         mallStore.setCatalogItems(response.data.props)
@@ -93,7 +89,6 @@ export function useMallCatalog() {
     } catch (err) {
       const normalized = normalizeError(err)
       mallStore.setCatalogError(normalized.message)
-      log.error('fetchCatalog failed:', err)
     } finally {
       mallStore.setCatalogLoading(false)
     }

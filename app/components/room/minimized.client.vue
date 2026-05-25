@@ -43,7 +43,7 @@ onMounted(async () => {
             leaveRoom();
             roomStore.leaveRoom();
           } catch (error) {
-            log.error('Failed to leave room:', error);
+            
           }
         }"
     />

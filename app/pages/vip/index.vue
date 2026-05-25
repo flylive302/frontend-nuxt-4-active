@@ -186,7 +186,6 @@ async function loadLevels() {
   }
   catch (err) {
     const error = normalizeError(err)
-    log.error('Failed to fetch VIP levels', error)
     useToast().add({
       title: 'Failed to load VIP levels',
       description: error.message,
@@ -203,7 +202,6 @@ async function loadRechargeProgress() {
     rechargeProgress.value = await fetchRechargeProgress()
   }
   catch (err) {
-    log.error('Failed to fetch recharge progress', normalizeError(err))
   }
 }
 

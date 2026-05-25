@@ -3,7 +3,7 @@ import { createLogger } from '~/utils/logger';
 import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
 
 // Lazy-loaded: socket.io-client must NOT be statically imported because
-// it uses the `debug` package which calls console.log.bind(console) —
+// it uses the `debug` package which binds to the console —
 // this crashes in Cloudflare Workers (workerd) runtime during SSR.
 let _io: typeof import('socket.io-client')['io'] | null = null;
 async function getIo() {
@@ -147,7 +147,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'connected';
     error.value = null;
     _authRetryInFlight = false;
-    log.debug('Connected:', socket.value?.id);
 
     // Register app-wide realtime event handlers (balance updates, badges, etc.)
     if (socket.value) {
@@ -158,7 +157,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
   /** Handle disconnection */
   function handleDisconnect(reason: string) {
     status.value = 'disconnected';
-    log.debug('Disconnected:', reason);
 
     // If server disconnected us, try to reconnect
     if (reason === 'io server disconnect') {
@@ -182,8 +180,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
   function handleConnectError(err: Error) {
     status.value = 'error';
     error.value = err.message;
-    log.error('Connection error:', err.message);
-    log.warn('Token state at error time:', authStore.msabToken ? `present (${authStore.msabToken.length} chars)` : 'NULL/EMPTY');
 
     const authFailed =
       err.message === 'Invalid credentials' ||
@@ -204,7 +200,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
       // Leave socket disconnected; user stays in chat-only mode.
       _authRetryInFlight = false;
       socket.value?.disconnect();
-      log.warn('Auth retry exhausted — audio unavailable (chat-only mode)');
       toast.add({
         title: 'Audio connection failed',
         description: 'Chat and gifting will still work.',
@@ -218,17 +213,14 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // token), refresh once, then manually reconnect with the fresh token.
     _authRetryInFlight = true;
     socket.value?.disconnect();
-    log.warn('Auth failure — refreshing MSAB token before retry');
 
     _authActions!.refreshMsabToken().then((success) => {
       if (success && _authStore!.msabToken) {
-        log.warn('Token refreshed — retrying connection. New token:', `${_authStore!.msabToken.length} chars`);
         socket.value?.connect();
       } else {
         // Refresh failed — leave socket disconnected, user keeps their session.
         _authRetryInFlight = false;
         socket.value?.disconnect();
-        log.warn('MSAB token refresh failed — audio unavailable');
         toast.add({
           title: 'Audio connection failed',
           description: 'Chat and gifting will still work.',
@@ -238,7 +230,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }).catch(() => {
       _authRetryInFlight = false;
       socket.value?.disconnect();
-      log.warn('MSAB token refresh error — audio unavailable');
       toast.add({
         title: 'Audio connection failed',
         description: 'Chat and gifting will still work.',
@@ -251,7 +242,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
   function handleReconnectFailed() {
     status.value = 'error';
     error.value = 'Unable to reconnect to audio server';
-    log.error('Reconnection failed after all attempts');
     toast.add({
       title: 'Connection lost',
       description: 'Could not reach the audio server. Please refresh the page.',
@@ -266,7 +256,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
    */
   function handleReconnectAttempt(attemptNumber: number) {
     status.value = 'connecting';
-    log.debug('Reconnecting... attempt:', attemptNumber);
   }
 
   /** Handle successful reconnection */
@@ -274,7 +263,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'connected';
     error.value = null;
     const recovered = socket.value?.recovered === true;
-    log.debug('Reconnected after', attemptNumber, 'attempts; recovered:', recovered);
 
     // Re-register app-wide realtime event handlers on new socket session
     if (socket.value) {
@@ -294,7 +282,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
 
   /** Handle server-sent error events */
   function handleError(errorEvent: SocketErrorEvent) {
-    log.error('Server error:', errorEvent.message);
 
     // Show toast for specific errors
     if (errorEvent.message === 'Too many messages') {
@@ -327,23 +314,19 @@ export function useAudioSocket(): UseAudioSocketReturn {
   async function connect(targetUrl?: string) {
     // Auto-refresh MSAB token if not available
     if (!authStore.msabToken) {
-      log.debug('No MSAB token — attempting refresh before connect');
       status.value = 'error';
       const refreshOk = await _authActions!.refreshMsabToken();
       if (!refreshOk || !authStore.msabToken) {
-        log.warn('MSAB token refresh failed or returned empty — cannot connect');
         error.value = 'No audio token available';
         return;
       }
     }
 
-    log.debug('Connecting with MSAB token:', authStore.msabToken ? `present (${authStore.msabToken.length} chars)` : 'MISSING');
 
     const serverUrl = targetUrl || (config.public.audioServerUrl as string);
     if (!serverUrl) {
       error.value = 'Audio server URL not configured';
       status.value = 'error';
-      log.error('Cannot connect: NUXT_PUBLIC_AUDIO_SERVER_URL not set');
       return;
     }
 
@@ -352,15 +335,12 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (socket.value?.connected) {
       if (targetUrl && _connectedUrl !== targetUrl) {
         // Connected to a different region — force reconnect
-        log.debug('Reconnecting to regional URL:', targetUrl);
       } else {
-        log.debug('Already connected');
         return;
       }
     } else if (status.value === 'connecting') {
       // Already in the process of connecting — skip unless targeting a different URL
       if (!targetUrl || _connectedUrl === serverUrl) {
-        log.debug('Connection already in progress, skipping');
         return;
       }
     }
@@ -420,7 +400,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // updated profile info without waiting for the next reconnect cycle.
     socket.value.on('user.profile.updated', () => {
       _authActions!.refreshMsabToken().catch(() => {
-        log.debug('Post-profile-update MSAB refresh failed (non-blocking)');
       });
     });
   }
@@ -445,7 +424,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
     _authRetryInFlight = false;
     // Reset handlers so they can be re-registered on next connection
     resetRealtimeHandlers();
-    log.debug('Disconnected by client');
   }
 
 
@@ -482,17 +460,14 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (!socket.value) return;
 
     if (hiddenMs < 5_000) {
-      log.debug('Short suspension (', Math.round(hiddenMs / 1000), 's) — skipping recovery');
       return;
     }
 
     if (!socket.value.connected) {
-      log.debug('Suspension recovery: socket disconnected, forcing reconnect after', Math.round(hiddenMs / 1000), 's');
       socket.value.connect();
       return;
     }
 
-    log.debug('Suspension recovery: socket connected after', Math.round(hiddenMs / 1000), 's — engine.io heartbeat will detect any stale state');
   }
 
   // ========================================

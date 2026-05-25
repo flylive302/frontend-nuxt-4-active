@@ -37,7 +37,6 @@ export function useMediaSession() {
       navigator.mediaSession.playbackState = 'playing'
     })
 
-    log.debug('initialized')
   }
 
   /**
@@ -54,7 +53,6 @@ export function useMediaSession() {
     })
     navigator.mediaSession.playbackState = 'playing'
 
-    log.debug('activated:', roomName)
   }
 
   /**
@@ -66,7 +64,6 @@ export function useMediaSession() {
     navigator.mediaSession.metadata = null
     navigator.mediaSession.playbackState = 'none'
 
-    log.debug('deactivated')
   }
 
   return { isSupported, init, activate, deactivate }
