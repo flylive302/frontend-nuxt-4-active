@@ -355,8 +355,8 @@ const isVap = computed(() => {
 
         <div class="relative z-20 mx-auto -mt-52 max-w-36">
           <SvgaPlayer
-              :key="`vip-emblem-${activeLevel?.level}`"
-              :name="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.emblemAnimated"
+            :key="`vip-emblem-${activeLevel?.level}`"
+            :name="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.emblemAnimated"
           />
         </div>
 
@@ -374,7 +374,7 @@ const isVap = computed(() => {
           <div class="px-10 pt-3" v-if="rechargeProgress?.has_active_event">
             <VipRechargeProgress :progress="rechargeProgress" :level-color="activeLevel.color" />
           </div>
-          <div class="pt-3 px-10">
+          <div class="pt-12 px-14">
             <!-- VIP Props Section -->
             <div v-if="activeLevelProps.length > 0" class="px-3">
               <h3 class="text-xl font-bold text-white mb-2 uppercase tracking-wide text-center">VIP Props</h3>
@@ -385,7 +385,7 @@ const isVap = computed(() => {
                     v-if="entryAnimationProp.thumbnail_url"
                     :src="entryAnimationProp.thumbnail_url"
                     :alt="entryAnimationProp.name"
-                    class="shadow-xl"
+                    class="shadow-xl w-full"
                 />
                 <p class="text-sm font-bold text-center py-2 text-white">
                   {{ entryAnimationProp.name }}
@@ -394,14 +394,18 @@ const isVap = computed(() => {
 
               <div class="grid grid-cols-3 gap-2">
                 <div v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
-                  class="flex flex-col items-center justify-center gap-2 cursor-pointer"
-                  @click="handlePropPreview(prop)">
-                  <div class="flex items-center justify-center aspect-square w-full
-                      rounded-md transition-all duration-300 overflow-hidden
-                      backdrop-blur-xs shadow-md border
-                    " :style="privilegeBoxStyle">
+                     class="flex flex-col items-center justify-center gap-2 cursor-pointer"
+                     @click="handlePropPreview(prop)">
+                  <div
+                      class="
+                        flex items-center justify-center aspect-square w-full
+                        rounded-md transition-all duration-300 overflow-hidden
+                        backdrop-blur-xs shadow-md border
+                      "
+                      :style="privilegeBoxStyle"
+                  >
                     <img v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
-                      class="w-full h-full object-contain">
+                         class="w-full h-full object-contain">
                     <UIcon v-else name="i-heroicons-gift" class="h-12 text-white/90" />
                   </div>
                   <p class="text-sm font-bold text-center leading-tight truncate w-24">

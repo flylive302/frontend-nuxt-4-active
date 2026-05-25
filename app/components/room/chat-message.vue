@@ -37,26 +37,25 @@ const formattedTime = computed(() => {
 </script>
 
 <template>
-  <div class="flex gap-2 py-1.5 px-2 hover:bg-white/5 rounded transition-colors">
+  <div class="flex">
     <!-- Avatar -->
-    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" size="xs" class="shrink-0 size-10" />
-
-    <!-- Content -->
-    <div class="flex-1 min-w-0 bg-neutral-800 rounded-md p-2">
-      <!-- Header -->
-      <div class="flex items-center gap-1.5">
-        <span class="text-xs font-medium text-primary-400 truncate">
-          {{ displayName }}
-        </span>
-        <span class="text-[10px] text-gray-500">
-          {{ formattedTime }}
-        </span>
+    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" />
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-1.5 backdrop-blur-xl pl-2 rounded-xl">
+        <span class="text-md font-bold truncate">{{ displayName }}</span>
+        <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
       </div>
-
-      <!-- Message -->
-      <p class="text-xs text-gray-200 wrap-break-word">
-        {{ message.content }}
-      </p>
+      <div class="bubble">
+        <p class="text-sm wrap-break-word">{{ message.content }}</p>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.bubble {
+  display: block;
+  border: 36px solid transparent;
+  border-image: url("https://ik.imagekit.io/flylive/vip/15/chat_bubble.png") 40 fill / 40px / 0 stretch;
+}
+</style>

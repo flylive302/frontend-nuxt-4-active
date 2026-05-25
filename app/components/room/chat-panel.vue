@@ -55,14 +55,14 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="bg-primary/20 rounded-lg grow overflow-hidden flex flex-col h-full">
+  <div class="grow overflow-hidden flex flex-col h-full">
     <!-- Messages Container -->
     <DynamicScroller
       ref="scrollerRef"
       :items="audioStore.messages"
       :min-item-size="48"
       key-field="id"
-      class="flex-1 overflow-y-auto"
+      class="flex-1 overflow-y-auto py-10"
     >
       <template #default="{ item, index, active }">
         <DynamicScrollerItem
@@ -82,17 +82,15 @@ function handleKeydown(event: KeyboardEvent) {
     </p>
 
     <!-- Input -->
-    <div class="p-2 border-t border-primary">
-      <div class="flex items-center gap-2">
-        <UInput ref="inputRef" v-model="messageInput" class="w-full" size="lg" icon="i-lucide-user" placeholder="Type a message..." @keydown="handleKeydown" />
-        <UButton
+    <div class="flex items-center gap-2">
+      <UInput ref="inputRef" v-model="messageInput" class="w-full" size="lg" icon="i-lucide-user" placeholder="Type a message..." @keydown="handleKeydown" />
+      <UButton
           icon="i-lucide-send"
           size="sm"
           class="size-8"
           :disabled="!messageInput.trim()"
           @click="handleSend"
-        />
-      </div>
+      />
     </div>
 
   </div>
