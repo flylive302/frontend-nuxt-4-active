@@ -139,6 +139,7 @@ export function setupRoomEventHandlers({
   const { getGiftById } = useGiftData();
   const { triggerFly } = useLuckyFly();
   const { resolvePropAsync } = usePropLookup();
+  const slideStore = useRoomSlideStore();
 
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
@@ -159,6 +160,21 @@ export function setupRoomEventHandlers({
           senderAvatar: event.user.avatar ?? undefined,
           recipientIds: [],
           quantity: 1,
+        });
+      }
+    }
+
+    // Slide overlay — non-blocking SVGA broadcast for the joiner's equipped
+    // slides prop. Runs alongside (not instead of) the entry animation; the
+    // two are independent layers.
+    if (event.user.slides_id && !roomStore.isMinimized) {
+      const slideProp = await resolvePropAsync(event.user.slides_id);
+      if (slideProp) {
+        void giftAssetCache.preloadSvga(slideProp.asset_url);
+        slideStore.addSlide({
+          assetUrl: slideProp.asset_url,
+          userId: event.user.id,
+          userName: event.user.name,
         });
       }
     }

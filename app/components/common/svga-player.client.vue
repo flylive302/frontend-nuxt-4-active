@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   height?: string;
   loop?: number;
   autoplay?: boolean;
+  replaceElements?: Record<string, HTMLImageElement>;
+  dynamicElements?: Record<string, HTMLCanvasElement>;
 }>(), {
   width: '100%',
   height: '100%',
@@ -19,11 +21,16 @@ const props = withDefaults(defineProps<{
   autoplay: true
 });
 
+const emit = defineEmits<{ complete: [] }>();
+
 const canvas = ref<HTMLCanvasElement | null>(null);
 const { reload } = useSvgaPlayer(canvas, {
   name: toRef(props, 'name'),
   loop: toRef(props, 'loop'),
-  autoplay: toRef(props, 'autoplay')
+  autoplay: toRef(props, 'autoplay'),
+  onComplete: () => emit('complete'),
+  replaceElements: props.replaceElements,
+  dynamicElements: props.dynamicElements,
 });
 
 defineExpose({ reload });

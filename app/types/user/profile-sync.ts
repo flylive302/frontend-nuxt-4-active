@@ -11,6 +11,7 @@ export interface ProfileSyncFields {
   entry_animation_id?: number | null
   data_card_id?: number | null
   mice_wave_id?: number | null
+  slides_id?: number | null
   gender?: string | number
   vip_level?: number
 }

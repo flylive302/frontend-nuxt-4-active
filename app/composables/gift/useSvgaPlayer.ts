@@ -15,6 +15,8 @@ export interface UseSvgaPlayerOptions {
   loop?: Ref<number>;
   autoplay?: Ref<boolean>;
   onComplete?: () => void;
+  replaceElements?: Record<string, HTMLImageElement>;
+  dynamicElements?: Record<string, HTMLCanvasElement>;
 }
 
 export function useSvgaPlayer(
@@ -66,6 +68,8 @@ export function useSvgaPlayer(
         name: animationName,
         loop: options.loop?.value ?? 1,
         autoplay: false,
+        replaceElements: options.replaceElements,
+        dynamicElements: options.dynamicElements,
       });
 
       // Guard: component unmounted during async load — discard the player

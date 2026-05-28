@@ -73,6 +73,7 @@ let _audioStore: ReturnType<typeof useRoomAudioStore> | null = null;
 let _seatsStore: ReturnType<typeof useRoomSeatsStore> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
 let _giftStore: ReturnType<typeof useGiftStore> | null = null;
+let _slideStore: ReturnType<typeof useRoomSlideStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 
 /**
@@ -82,6 +83,13 @@ let _toast: ReturnType<typeof useToast> | null = null;
  * should. Cleared in leaveRoom() so re-entering the same room later replays.
  */
 let lastSelfEntryRoomId: string | null = null;
+
+/**
+ * Room id the self slide overlay was last played for. Same replay-guard
+ * rationale as lastSelfEntryRoomId — reconnect / resume / un-minimize must
+ * NOT re-trigger the slide for the same room. Cleared in leaveRoom().
+ */
+let lastSelfSlideRoomId: string | null = null;
 
 // ============================================
 // Composable
@@ -101,6 +109,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   if (!_seatsStore) _seatsStore = useRoomSeatsStore();
   if (!_authStore) _authStore = useAuthStore();
   if (!_giftStore) _giftStore = useGiftStore();
+  if (!_slideStore) _slideStore = useRoomSlideStore();
   if (!_toast) _toast = useToast();
 
   // Use cached references
@@ -109,6 +118,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const seatsStore = _seatsStore;
   const authStore = _authStore;
   const giftStore = _giftStore;
+  const slideStore = _slideStore;
   const toast = _toast;
   const log = createLogger('[RoomAudio]');
 
@@ -350,6 +360,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           entry_animation_id: authStore.user.entry_animation_id,
           data_card_id: authStore.user.data_card_id,
           mice_wave_id: authStore.user.mice_wave_id,
+          slides_id: authStore.user.slides_id,
           email: null,
           phone: authStore.user.phone ?? '',
           avatar: authStore.user.avatar,
@@ -390,6 +401,29 @@ export function useRoomAudio(): UseRoomAudioReturn {
           });
         })();
       }
+
+      // Self slide overlay. Same two-path rationale as the entry animation
+      // above — MSAB's room:userJoined is emitted via socket.to(roomId),
+      // excluding the joiner, so we trigger our own slide here. Replay guard
+      // mirrors lastSelfEntryRoomId.
+      if (
+        authStore.user.slides_id &&
+        !roomStore.isMinimized &&
+        roomId !== lastSelfSlideRoomId
+      ) {
+        lastSelfSlideRoomId = roomId;
+        const selfUser = authStore.user;
+        void (async () => {
+          const prop = await resolvePropAsync(selfUser.slides_id);
+          if (!prop) return;
+          void giftAssetCache.preloadSvga(prop.asset_url);
+          slideStore.addSlide({
+            assetUrl: prop.asset_url,
+            userId: selfUser.id,
+            userName: selfUser.name,
+          });
+        })();
+      }
     }
 
     // Handle initial room state from server.
@@ -410,6 +444,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           entry_animation_id: p.entry_animation_id,
           data_card_id: p.data_card_id,
           mice_wave_id: p.mice_wave_id,
+          slides_id: p.slides_id,
           email: p.email,
           phone: p.phone,
           avatar: p.avatar,
@@ -529,6 +564,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Allow the self entry-animation to replay if the user re-enters this room.
     lastSelfEntryRoomId = null;
+    // Same rationale for the slide overlay.
+    lastSelfSlideRoomId = null;
+    slideStore.clearSlides();
 
     // Clear room state
     audioStore.clearAudioState();

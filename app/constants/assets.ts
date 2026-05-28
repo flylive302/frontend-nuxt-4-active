@@ -46,8 +46,8 @@ export const ASSETS = {
   HERO_WEALTH: `${IK}/placeholders/wealth.webp`,
   DEFAULT_ROOM_BADGE: `${IK}/badges/room/1.webp`,
   /** Thumbnail params keep home/bootstrap badge decode small vs. full ~1MB source */
-  DEFAULT_PROFILE_BADGE: `${IK}/badges/profile-1.webp?tr=w-64,q-75,f-webp`,
-  DEFAULT_HISTORY_BADGE: `${IK}/badges/profile-1.webp?tr=w-64,q-75,f-webp`,
+  DEFAULT_PROFILE_BADGE: `${IK}/profile-1.webp?tr=w-64,q-75,f-webp`,
+  DEFAULT_HISTORY_BADGE: `${IK}/profile-1.webp?tr=w-64,q-75,f-webp`,
   DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/1.webp`,
   DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/1.webp`,
 

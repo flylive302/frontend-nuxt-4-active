@@ -128,6 +128,8 @@ export interface CreateSvgaPlayerOptions {
   name: string
   loop?: number
   autoplay?: boolean
+  replaceElements?: Record<string, HTMLImageElement>
+  dynamicElements?: Record<string, HTMLCanvasElement>
 }
 
 /**

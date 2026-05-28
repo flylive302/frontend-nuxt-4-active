@@ -276,6 +276,9 @@ onUnmounted(() => {
       <!-- Gift Playback Modal (full-screen, outside content area) -->
       <LazyRoomGiftPlaybackModal />
 
+      <!-- Slide Broadcast Overlay (non-blocking, pointer-events: none) -->
+      <RoomSlideBroadcast />
+
       <!-- Lucky Gift Fly Animation (thumbnail: sender → center → receiver) -->
       <LuckyGiftFly />
 

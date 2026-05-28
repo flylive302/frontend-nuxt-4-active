@@ -29,6 +29,7 @@ const PROP_TYPE_TO_COLUMN: Partial<Record<PropType, keyof ProfileSyncFields>> = 
   entry_animation: 'entry_animation_id',
   data_card: 'data_card_id',
   mice_wave: 'mice_wave_id',
+  slides: 'slides_id',
 }
 
 // ========================================

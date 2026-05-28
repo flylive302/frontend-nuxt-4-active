@@ -349,6 +349,7 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     entry_animation_id: user.entry_animation_id,
     data_card_id: user.data_card_id,
     mice_wave_id: user.mice_wave_id,
+    slides_id: user.slides_id,
     cover_image: user.cover_image,
     gender: user.gender,
     // PII fields stripped — participants should contain only visual/identity data

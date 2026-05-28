@@ -72,6 +72,7 @@ export interface UserProfile {
   entry_animation_id: number | null
   data_card_id: number | null
   mice_wave_id: number | null
+  slides_id: number | null
   gender: ProfileGender | null
   wealth_xp: string   // Use instead of total_gift_coins_sent
   charm_xp: string    // Use instead of total_gift_coins_received

@@ -26,10 +26,10 @@ const getFlagIcon = (code: string): string => {
   <div class="flex items-start px-3 overflow-x-auto">
     <!-- "All" Chip -->
     <button
-      class="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold transition-colors duration-200"
+      class="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold transition-colors duration-200 text-white"
       :class="modelValue === ''
-        ? 'bg-primary text-neutral-950'
-        : 'bg-white/15 text-white ring-1 ring-white/25'"
+        ? 'bg-primary'
+        : 'bg-white/15 ring-1 ring-white/25'"
       @click="emit('update:modelValue', '')"
     >
       <UIcon name="i-lucide-globe" class="size-5" />
@@ -40,11 +40,11 @@ const getFlagIcon = (code: string): string => {
 
       <!-- Country Chips -->
       <button v-for="country in activeCountries" :key="country"
-        class="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold transition-all duration-200"
-        :class="modelValue === country
-          ? 'bg-primary text-neutral-950'
-          : 'bg-white/10 text-white/70 hover:bg-white/12 hover:text-white'" @click="emit('update:modelValue', country)">
-        <UIcon :name="getFlagIcon(country)" class="size-5" />
+        class="shrink-0 flex items-center gap-1.5 font-semibold transition-all duration-200 text-white rounded-t-md"
+        :class="modelValue === country ? 'border-b border-primary bg-primary/20 px-1' : ''"
+        @click="emit('update:modelValue', country)"
+      >
+        <UIcon :name="getFlagIcon(country)" class="size-7 rounded-lg overflow-hidden" />
         {{ country.toUpperCase() }}
       </button>
     </div>

@@ -56,6 +56,12 @@ export default defineNuxtPlugin({
             name: string;
             loop?: number;
             autoplay?: boolean;
+            // Named placeholders embedded in the .svga file by the designer.
+            // replaceElements: swap a placeholder with an image (e.g. user avatar).
+            // dynamicElements: inject a drawn canvas (e.g. username text).
+            // Keys must match the placeholder names in the .svga file.
+            replaceElements?: Record<string, HTMLImageElement>;
+            dynamicElements?: Record<string, HTMLCanvasElement>;
         }) => {
             await ensureSvga();
             const player = new _PlayerCtor({
@@ -63,7 +69,22 @@ export default defineNuxtPlugin({
                 loop: options.loop ?? 0
             });
             const videoEntity = await fetchAnimation(options.name);
-            await player.mount(videoEntity);
+            // Shallow-copy so the shared cache entry is never mutated.
+            const entityToMount =
+                options.replaceElements || options.dynamicElements
+                    ? {
+                          ...(videoEntity as object),
+                          replaceElements: {
+                              ...((videoEntity as Record<string, unknown>).replaceElements ?? {}),
+                              ...options.replaceElements
+                          },
+                          dynamicElements: {
+                              ...((videoEntity as Record<string, unknown>).dynamicElements ?? {}),
+                              ...options.dynamicElements
+                          }
+                      }
+                    : videoEntity;
+            await player.mount(entityToMount);
             if (options.autoplay ?? true) player.start();
             return player;
         };

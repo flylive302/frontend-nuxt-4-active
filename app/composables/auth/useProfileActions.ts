@@ -54,6 +54,7 @@ export function useProfileActions() {
       entry_animation_id: data.entry_animation_id ?? null,
       data_card_id: data.data_card_id ?? null,
       mice_wave_id: data.mice_wave_id ?? null,
+      slides_id: data.slides_id ?? null,
       gender: data.gender ?? undefined,
     })
 

@@ -26,6 +26,7 @@ export interface MinimalUser {
   entry_animation_id: number | null
   data_card_id: number | null
   mice_wave_id: number | null
+  slides_id: number | null
   avatar: string | null
   cover_image: string | null
   email: string | null
@@ -50,6 +51,7 @@ export interface BootstrapUser {
   entry_animation_id: number | null
   data_card_id: number | null
   mice_wave_id: number | null
+  slides_id: number | null
 
   // Contact & Location
   phone: string | null          // E.164 format

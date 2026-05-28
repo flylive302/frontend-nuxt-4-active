@@ -47,5 +47,12 @@ export const MAX_CHAT_MESSAGES = 500;
 /** Debounce delay for gift preload trigger in milliseconds */
 export const GIFT_PRELOAD_DEBOUNCE_MS = 300;
 
+// ============================================
+// Slide Overlay
+// ============================================
+
+/** Top offset (px) for the slide overlay within the room view */
+export const SLIDE_TOP_OFFSET_PX = 400;
+
 
 

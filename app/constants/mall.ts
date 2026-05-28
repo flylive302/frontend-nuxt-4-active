@@ -18,6 +18,7 @@ export const PROP_TYPE_ICONS: Record<PropType, string> = {
   entry_animation: 'i-lucide-sparkles',
   data_card: 'i-lucide-id-card',
   mice_wave: 'i-lucide-waves',
+  slides: 'i-lucide-presentation',
 }
 
 /**
@@ -31,6 +32,7 @@ export const PROP_TYPE_COLORS: Record<PropType, string> = {
   entry_animation: 'text-cyan-500',
   data_card: 'text-emerald-500',
   mice_wave: 'text-orange-500',
+  slides: 'text-violet-500',
 }
 
 /**
@@ -44,6 +46,7 @@ export const PROP_TYPE_LABELS: Record<PropType, string> = {
   entry_animation: 'Entries',
   data_card: 'Data Cards',
   mice_wave: 'Mice Waves',
+  slides: 'Slides',
 }
 
 /**
@@ -55,6 +58,7 @@ export const PROP_TYPE_ORDER: PropType[] = [
   'chat_bubble',
   'data_card',
   'mice_wave',
+  'slides',
   'signature',
   'room_theme',
 ]

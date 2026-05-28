@@ -32,8 +32,8 @@ const iconColor = computed(() => PROP_TYPE_COLORS[props.type])
     />
   </template>
 
-  <!-- Entry Animation / Chat Bubble: animated asset (svga · vap · video · image) -->
-  <template v-else-if="type === 'entry_animation' || type === 'chat_bubble'">
+  <!-- Animated props: animated asset (svga · vap · video · image) -->
+  <template v-else-if="type === 'entry_animation' || type === 'chat_bubble' || type === 'mice_wave' || type === 'data_card' || type === 'slides'">
     <div class="aspect-square bg-muted/20 rounded-xl overflow-hidden flex items-center justify-center">
       <AssetPlayer
         class="relative min-w-full z-10"
