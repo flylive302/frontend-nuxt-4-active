@@ -25,7 +25,7 @@ defineProps<{
     }"
   >
     <template #default="{ item }">
-      <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-1.5 text-white">
         <span>{{ item.label }}</span>
         <UBadge v-if="item.gifts.length > 0" size="xs" color="success" variant="subtle">
           {{ item.gifts.length }}

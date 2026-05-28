@@ -14,7 +14,7 @@ const props = defineProps<{
 }>();
 
 const audioStore = useRoomAudioStore();
-const { resolvePropAsset } = usePropLookup();
+const { resolvePropAsset, resolvePropThumbnail } = usePropLookup();
 
 // Resolve live participant data first, then fall back to the message author
 // snapshot. Cross-region/rejoin races can deliver chat before participant sync.
@@ -22,6 +22,19 @@ const participant = computed(() => audioStore.participants.get(props.message.use
 const displayName = computed(() => participant.value?.name ?? props.message.userName ?? 'Unknown');
 const displayAvatar = computed(() => participant.value?.avatar ?? props.message.userAvatar ?? undefined);
 const displayFrame = computed(() => resolvePropAsset(participant.value?.frame_id ?? props.message.userFrameId) ?? undefined);
+
+const chatBubbleId = computed(() => participant.value?.chat_bubble_id ?? props.message.userChatBubbleId ?? null);
+// Chat bubble props store the frame image in thumbnail_url (asset_url is empty for this type).
+// Falls back to the default bubble so the frame is always visible.
+const DEFAULT_BUBBLE_URL = 'https://ik.imagekit.io/flylive/vip/15/chat_bubble.png';
+const chatBubbleImage = computed(() => {
+  const url = chatBubbleId.value ? resolvePropThumbnail(chatBubbleId.value) : null;
+  return url || DEFAULT_BUBBLE_URL; // `||` so an empty string also falls back
+});
+
+const bubbleStyle = computed(() => ({
+  borderImageSource: `url(${chatBubbleImage.value})`,
+}));
 
 // Format timestamp to relative time
 const formattedTime = computed(() => {
@@ -41,11 +54,11 @@ const formattedTime = computed(() => {
     <!-- Avatar -->
     <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" />
     <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-1.5 backdrop-blur-xl pl-2 rounded-xl">
+      <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg rounded-md">
         <span class="text-md font-bold truncate">{{ displayName }}</span>
         <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
       </div>
-      <div class="bubble">
+      <div class="bubble" :style="bubbleStyle">
         <p class="text-sm wrap-break-word">{{ message.content }}</p>
       </div>
     </div>
@@ -53,9 +66,28 @@ const formattedTime = computed(() => {
 </template>
 
 <style scoped>
+/*
+ * 9-slice frame. Slices are PERCENTAGES (not pixels) so the same values land on
+ * the corner-art boundary regardless of the prop image's pixel dimensions
+ * (VIP bubbles range 143x85 → 161x94). 49% on each side keeps all four corners
+ * intact and leaves only a ~2% plain center strip that stretches to fit text.
+ */
 .bubble {
-  display: block;
-  border: 36px solid transparent;
-  border-image: url("https://ik.imagekit.io/flylive/vip/15/chat_bubble.png") 40 fill / 40px / 0 stretch;
+  width: fit-content;
+  max-width: 100%;
+  border-style: solid;
+  border-width: 46px 79px;
+  border-image-slice: 49% fill;
+  border-image-width: 1;
+  border-image-repeat: stretch;
+}
+
+/*
+ * The frame needs the full border-width to render its corner art, but most of
+ * that band is plain center fill. Pull the text back into the fill with a
+ * negative margin to tighten the gap without shrinking the frame itself.
+ */
+.bubble p {
+  margin: -16px -40px;
 }
 </style>

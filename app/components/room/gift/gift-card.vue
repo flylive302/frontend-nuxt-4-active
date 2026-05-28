@@ -22,11 +22,11 @@ const { formatGiftPrice } = useGiftData();
 
 <template>
   <div
-    class="flex flex-col items-center rounded cursor-pointer transition-all"
+    class="flex flex-col items-center rounded cursor-pointer transition-all bg-primary/10 ring-2 ring-transparent"
     :class="[
       selected
-        ? 'bg-primary/20 ring-2 ring-primary'
-        : 'bg-primary/5 border border-primary/30 hover:bg-primary/10',
+        ? 'bg-primary/30 ring-primary! scale-102'
+        : '',
     ]"
   >
     <div class="p-1 w-full">
