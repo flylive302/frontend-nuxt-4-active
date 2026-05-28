@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ASSETS } from '~/constants/assets'
-
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
 
@@ -50,8 +48,6 @@ const isSeatLocked = computed(() => currentSeat.value?.isLocked ?? false)
 
 // Check if current user is room owner
 const { isRoomOwner } = useRoomPermissions()
-
-const isVip = computed(() => (currentSeat.value?.user?.vip_level ?? 0) > 0)
 
 // Handle starting invite mode
 function handleStartInvite() {
@@ -204,11 +200,12 @@ const charmLevel = computed(() =>
     getLevelFromXp(currentSeat.value?.user?.charm_xp ?? '0', 'charm')
 )
 
-const url = computed(() => ASSETS.VIP[currentSeat.value?.user?.vip_level as keyof typeof ASSETS.VIP]?.cardAnimated);
+// Data card background asset — only shown when user has a data_card_id equipped
+const dataCardAsset = computed(() =>
+  resolvePropAsset(currentSeat.value?.user?.data_card_id) ?? null
+)
 
-const isVap = computed(() => {
-  return url.value?.endsWith('.mp4')
-})
+const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 </script>
 
 <template>
@@ -220,7 +217,7 @@ const isVap = computed(() => {
   <UDrawer
     v-model:open="isOpen" 
     title="Seat Options" 
-    :class="isVip ? 'min-h-9/12' : ''"
+    :class="dataCardAsset ? 'min-h-9/12' : ''"
     description="Manage seat actions like joining, leaving, muting, or locking."
     :ui="{
       content: 'bg-transparent backdrop-blur-xs',
@@ -230,22 +227,22 @@ const isVap = computed(() => {
   >
     <template #content>
       <!-- Background Animation -->
-      <div v-if="isVip" class="absolute z-0 overflow-hidden">
+      <div v-if="dataCardAsset" class="absolute z-0 overflow-hidden">
         <SvgaPlayer
             v-if="!isVap"
-            :key="`vip-card-${currentSeat?.user?.vip_level}`"
-            :name="url"
+            :key="`data-card-svga-${currentSeat?.user?.data_card_id}`"
+            :name="dataCardAsset"
             class="pointer-events-none -mt-28"
         />
         <VapPlayer
             v-else
-            :key="`vip-vap-${currentSeat?.user?.vip_level}`"
-            :name="url"
+            :key="`data-card-vap-${currentSeat?.user?.data_card_id}`"
+            :name="dataCardAsset"
             class="pointer-events-none -mt-28"
         />
       </div>
       
-      <div class="relative z-10 px-3" :class="isVip ? 'mt-32' : 'my-8'">
+      <div class="relative z-10 px-3" :class="dataCardAsset ? 'mt-32' : 'my-8'">
 
         <div v-if="currentSeat?.user" class="flex flex-col justify-center items-center relative z-10">
           <LazyUserAvatar

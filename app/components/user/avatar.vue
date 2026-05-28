@@ -33,6 +33,18 @@ const props = withDefaults(defineProps<{
 const rootRef = ref<HTMLElement | null>(null)
 const svgaAllowed = ref(!props.deferFrameAnimation)
 
+// Track load errors so we can fall back to AVATAR_PLACEHOLDER.
+// Reset on every src change so a seat user-swap retries the new URL.
+const hasImgError = ref(false)
+watch(() => props.img, () => { hasImgError.value = false })
+
+const resolvedImgSrc = computed(() => {
+  if (hasImgError.value) return ASSETS.AVATAR_PLACEHOLDER  // occupied + failed → person silhouette
+  return props.img ?? ASSETS.DEFAULT_SEAT_IMG               // no img → red chair (empty seat)
+})
+
+function onImgError() { hasImgError.value = true }
+
 useIntersectionObserver(
   rootRef,
   ([entry]) => {
@@ -98,17 +110,15 @@ const frameConfig = computed(() => {
 <template>
   <div ref="rootRef" class="relative aspect-square cursor-pointer">
     <div class="relative" :style="{ padding: frameConfig?.padding ?? DEFAULT_PADDING }">
-      <!-- Avatar Image -->
-      <NuxtImg
+      <!-- Avatar Image — plain img avoids NuxtImg routing external URLs (Google, etc.) through IPX.
+           referrerpolicy="no-referrer" lets Google/external CDN URLs load without the localhost origin
+           being sent as a Referer header, which can cause those CDNs to reject the request. -->
+      <img
         class="aspect-square rounded-full object-contain w-full"
-        :src="props.img ?? ASSETS.DEFAULT_SEAT_IMG" 
+        :src="resolvedImgSrc"
         alt="avatar"
-        :width="96"
-        :height="96"
-        format="webp"
-        densities="x1 x2"
-        sizes="96px"
-        loading="lazy"
+        referrerpolicy="no-referrer"
+        @error="onImgError"
       />
       <!-- Frame layer (on top) -->
       <SvgaPlayer

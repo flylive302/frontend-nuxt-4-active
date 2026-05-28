@@ -36,6 +36,7 @@ export function useAuthActions() {
   const authStore = _authStore
   const { api, fetchCsrfToken } = _api
   const toast = _toast
+  const { handlePopupResult } = useOAuthCallback()
 
   // ========================================
   // Actions
@@ -187,9 +188,6 @@ export function useAuthActions() {
         window.location.href = data.redirect_url
         return
       }
-
-      // Listen for OAuth result from popup
-      const { handlePopupResult } = useOAuthCallback()
 
       listenForResult(
         popup,

@@ -56,6 +56,11 @@ const userFrame = computed(() => {
   return resolvePropAsset(seat.value?.user?.frame_id) ?? undefined;
 });
 
+// Mice wave asset — custom if equipped, default otherwise
+const miceWaveAsset = computed(() => {
+  return resolvePropAsset(seat.value?.user?.mice_wave_id) ?? ASSETS.MICE_WAVE_SVGA;
+});
+
 // Display name+
 const displayName = computed(() => {
   if (isEmpty.value) {
@@ -104,15 +109,15 @@ const seatGiftTotal = computed(() => {
       </Transition>
 
       <!-- Speaking indicator -->
-      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" :name="ASSETS.MICE_WAVE_SVGA" />
+      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" :name="miceWaveAsset" />
 
     </div>
 
-    <p v-if="seat?.user" class="text-xs truncate font-semibold">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
+    <p v-if="seat?.user" class="text-xs pb-1.5 leading-none truncate font">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 
     <p v-if="displayName == props.seatId.toString()" class="text-xs font-semibold w-full leading-none">{{ displayName }}</p>
 
-    <div v-else class="w-full marquee-container">
+    <div v-else class="w-full marquee-container flex flex-col items-center justify-center">
       <p class="text-xs font-semibold w-full marquee-text leading-none">{{ displayName }}</p>
     </div>
 

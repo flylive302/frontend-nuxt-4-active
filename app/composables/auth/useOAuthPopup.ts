@@ -131,10 +131,14 @@ export function useOAuthPopup() {
 
     // --- Poll for popup close (user cancelled) ---
     const pollTimer = window.setInterval(() => {
-      if (popup.closed && !settled) {
-        settled = true
-        onCancel()
-        cleanup()
+      try {
+        if (popup.closed && !settled) {
+          settled = true
+          onCancel()
+          cleanup()
+        }
+      } catch {
+        // COOP policy may block popup.closed on cross-origin windows — ignore
       }
     }, POPUP_POLL_INTERVAL_MS)
 
