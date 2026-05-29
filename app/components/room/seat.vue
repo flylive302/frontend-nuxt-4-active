@@ -78,7 +78,7 @@ const seatGiftTotal = computed(() => {
 
 <template>
   <div
-    class="flex flex-col items-center gap-0 h-26 text-center cursor-pointer rounded-xl transition-all duration-300"
+    class="flex flex-col items-center h-28 text-center cursor-pointer"
     :class="{ 'ring-2 ring-secondary bg-secondary/10 animate-pulse': isInviteTarget }"
     :data-user-id="seat?.user?.id ?? undefined"
     @click="openDrawer"
@@ -109,17 +109,17 @@ const seatGiftTotal = computed(() => {
       </Transition>
 
       <!-- Speaking indicator -->
-      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 z-0 scale-145" :name="miceWaveAsset" />
+      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 scale-150" :name="miceWaveAsset" />
 
     </div>
 
-    <p v-if="seat?.user" class="text-xs pb-1.5 leading-none truncate font">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
-
     <MarqueeName
       class="w-full"
-      text-class="text-xs font-semibold leading-none text-center"
+      text-class="text-xs font-semibold text-center"
       :name="displayName"
     />
+
+    <p v-if="seat?.user" class="text-xs min-h-3 truncate font">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 
   </div>
 </template>

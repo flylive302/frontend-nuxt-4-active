@@ -8,6 +8,7 @@
  * Falls back to snapshot fields for users who have left the room.
  */
 import type { ChatMessageEvent } from '~/types/room/audio';
+import MarqueeName from "~/components/common/marquee-name.vue";
 
 const props = defineProps<{
   message: ChatMessageEvent;
@@ -55,7 +56,12 @@ const formattedTime = computed(() => {
     <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" />
     <div class="flex-1 min-w-0">
       <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg rounded-md">
-        <span class="text-md font-bold truncate">{{ displayName }}</span>
+        <MarqueeName
+          class="flex-1 max-w-24 mx-auto"
+          text-class="text-sm font-bold leading-none"
+          :name="displayName"
+          delay="0s"
+        />
         <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
       </div>
       <div class="bubble" :style="bubbleStyle">

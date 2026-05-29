@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="grid grid-cols-4 gap-2 bg-gray-900/40 rounded-t-lg p-2 max-h-[30vh] overflow-y-auto scrollbar-thin"
+    class="grid grid-cols-4 gap-2 bg-muted inset-shadow-sm inset-shadow-gray-700 rounded-t-lg p-2 max-h-[30vh] overflow-y-auto scrollbar-thin"
   >
     <RoomGiftCard
       v-for="gift in gifts"

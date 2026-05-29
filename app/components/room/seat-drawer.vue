@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
+import MarqueeName from "~/components/common/marquee-name.vue";
 
 const log = createLogger('[SeatDrawer]')
 
@@ -248,57 +249,48 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
           <LazyUserAvatar
             :img="currentSeat.user.avatar ?? undefined"
             :frame-asset-url="resolvePropAsset(currentSeat.user.frame_id) ?? undefined"
-            :animated="true" class="size-32" 
+            :animated="true" class="size-32 mt-6"
             @click="async () => {
               try {
                 isOpen = false;
                 roomStore.isMinimized = true;
                 await navigateTo(`/profile/${currentSeat?.user?.signature}`);
-              } catch (error) {
-                
-              }
+              } catch (error) {}
             }"
           />
 
-          <div class="text-center">
-            <h3 class="text-xl font-bold">{{ currentSeat.user.name }}</h3>
+        <MarqueeName
+            class="flex-1 max-w-36 mx-auto"
+            text-class="text-xl font-bold leading-none mt-6"
+            :name="currentSeat.user.name"
+            delay="0s"
+        />
 
-            <div class="flex items-center gap-2 justify-center">
-              <UBadge
-                  color="secondary"
-                  :icon="getGenderInfo(currentSeat.user.gender).icon"
-                  size="sm"
-                  class="w-fit text-white p-1"
-              >
-                {{ getAge(currentSeat.user.date_of_birth) }}
-              </UBadge>
-              <UIcon
-                :name="`i-flag-${currentSeat.user.country?.toLowerCase()}-4x3`"
-                class="rounded overflow-hidden h-6 size-8 shadow-lg"
-              />
-            </div>
-
-            <div class="flex items-center gap-1 justify-center mt-1">
-              <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
-              <ProfileBadge
-              v-if="wealthLevel.badge"
-              :badge-src="wealthLevel.badge.image_url"
-              color="tertiary"
-              :txt="String(wealthLevel.level)"
-              />
-              <ProfileBadge
-              v-if="charmLevel.badge"
-              :badge-src="charmLevel.badge.image_url"
+        <div class="flex items-center gap-2 justify-center">
+          <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+          <UBadge
               color="secondary"
-              :txt="String(charmLevel.level)"
-              />
-            </div>
-          
-          </div>
+              :icon="getGenderInfo(currentSeat.user.gender).icon"
+              size="sm"
+              class="w-fit text-white p-1"
+          >
+            {{ getAge(currentSeat.user.date_of_birth) }}
+          </UBadge>
+          <UIcon
+              v-if="currentSeat.user.country?.toLowerCase()?.trim() != ''"
+              :name="`i-flag-${currentSeat.user.country?.toLowerCase()?.trim()}-4x3`"
+              class="rounded overflow-hidden h-6 size-8 shadow-lg"
+          />
+        </div>
+
+        <div class="flex items-center gap-1 justify-center mt-1">
+          <img alt="" v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-7"/>
+          <img alt="" v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-6"/>
+        </div>
 
         </div>
 
-        <div class="flex justify-center gap-2 mt-12">
+        <div class="flex justify-center gap-2 mt-16">
           <div class="flex gap-2">
             <!-- Take Seat button — only when seat is empty and unlocked -->
             <UButton

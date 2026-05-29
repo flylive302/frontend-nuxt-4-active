@@ -29,7 +29,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="overflow-hidden min-w-0">
+  <div ref="containerRef" class="overflow-hidden">
     <p
       ref="textRef"
       class="whitespace-nowrap"

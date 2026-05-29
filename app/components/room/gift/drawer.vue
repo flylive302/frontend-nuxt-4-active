@@ -240,11 +240,16 @@ async function doLuckySend(): Promise<void> {
     @dismissed="onOddsDismissed"
   />
 
-  <UDrawer v-model:open="isOpen" title="Send Gift" :overlay="false" :ui="{
-    content: 'bg-transparent backdrop-blur-xl',
-  }" description="Send gifts to speakers in the room">
+  <UDrawer
+      v-model:open="isOpen" title="Send Gift" :overlay="false"
+      :ui="{
+        content: 'bg-transparent backdrop-blur-2xl ring-0',
+        handle: 'bg-white!',
+      }"
+      description="Send gifts to speakers in the room"
+  >
     <!-- Trigger Button -->
-    <NuxtImg :src="ASSETS.GIFT_DRAWER_ICON" alt="gifts" width="70px" class="cursor-pointer" />
+    <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gifts" width="60px" class="cursor-pointer" />
     <template #content>
       <div class="p-2">
         <!-- Recipient Selector -->
@@ -262,12 +267,19 @@ async function doLuckySend(): Promise<void> {
         <div class="flex items-center justify-between pt-1 border-t border-muted">
           <!-- Coin Balance -->
           <div class="flex items-center">
-            <UButton trailingIcon="i-lucide-chevron-right" icon="i-lucide-coins" variant="subtle" color="warning"
-              size="sm" @click="async () => {
+            <UButton
+              trailingIcon="i-lucide-chevron-right"
+              icon="i-lucide-coins"
+              variant="subtle"
+              color="warning"
+              class="text-white font-bold shadow-lg"
+              size="md"
+              @click="async () => {
                 isOpen = false;
                 roomStore.isMinimized = true;
                 await navigateTo(`/coins/request`);
-              }">
+              }"
+            >
               {{ formatCurrency(authStore.user?.coins) }}
             </UButton>
           </div>
@@ -290,7 +302,7 @@ async function doLuckySend(): Promise<void> {
             <div v-else key="send">
               <!-- Total Cost Display -->
               <div v-if="totalCost > 0" class="text-sm">
-                <span class="text-gray-400">Total:</span>
+                <span class="text-white">Total:</span>
                 <span class="font-bold text-warning ml-1">
                   🪙 {{ totalCost.toLocaleString() }}
                 </span>

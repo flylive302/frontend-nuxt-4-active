@@ -218,7 +218,7 @@ onUnmounted(() => {
         <!-- Bottom Section: Chat + Controls -->
         <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
           <!-- Chat Panel -->
-          <div class="size-full flex flex-col inset-shadow-2xs">
+          <div class="size-full flex flex-col bg-linear-to-b to-primary/20 scrollbar-hide p-2 rounded-xl">
             <RoomChatPanel />
           </div>
 
@@ -226,12 +226,13 @@ onUnmounted(() => {
           <div class="flex flex-col items-center gap-3 justify-end">
 
             <!-- Volume Control with Popover -->
-            <UPopover v-model:open="volumePopoverOpen" :ui="{ content: 'p-2' }" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));">
+            <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
               <UButton
                 :icon="volumeIcon"
                 size="md"
                 variant="subtle"
                 @click.right.prevent="toggleMute"
+                class="backdrop-blur-lg"
               />
 
               <template #content>
@@ -263,6 +264,7 @@ onUnmounted(() => {
               :variant="isLocalMuted ? 'solid' : 'subtle'"
               :color="isLocalMuted ? 'error' : 'primary'"
               @click="() => { toggleLocalMute() }"
+              class="backdrop-blur-lg"
             />
             <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
 
