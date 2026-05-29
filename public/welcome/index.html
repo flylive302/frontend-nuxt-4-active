@@ -6,13 +6,20 @@
   <!-- Instant redirect for returning authenticated users — runs before first paint -->
   <script>
     try {
+      // pinia-plugin-persistedstate stores `user` in localStorage under key "auth"
+      // and `token` in a cookie — check user presence for the authenticated guard
       var s = localStorage.getItem('auth');
       if (s) {
         var a = JSON.parse(s);
-        if (a && a.token) {
+        if (a && a.user) {
           document.documentElement.style.display = 'none';
           location.replace('/');
         }
+      }
+      // Belt-and-suspenders: also catch a live sanctum_token cookie (e.g. localStorage cleared)
+      if (document.cookie.split(';').some(function (c) { return c.trim().indexOf('sanctum_token=') === 0; })) {
+        document.documentElement.style.display = 'none';
+        location.replace('/');
       }
     } catch (e) {}
   </script>

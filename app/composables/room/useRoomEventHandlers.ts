@@ -23,7 +23,6 @@ import type {
   SeatInviteReceivedEvent,
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
-import { refundPendingCoins } from '../gift/useGiftSending';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
@@ -140,6 +139,8 @@ export function setupRoomEventHandlers({
   const { triggerFly } = useLuckyFly();
   const { resolvePropAsync } = usePropLookup();
   const slideStore = useRoomSlideStore();
+  const comboStore = useGiftComboStore();
+  const userStore = useUserStore();
 
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
@@ -447,8 +448,12 @@ export function setupRoomEventHandlers({
   });
 
   socket.on('gift:error', (event: GiftErrorEvent) => {
-    // Rollback coins on error using module-level function (avoids inject() issues)
-    refundPendingCoins();
+    // Rollback optimistic coin deduction on server error
+    if (comboStore.pendingRefund > 0) {
+      const currentCoins = Number(authStore.user?.coins ?? 0);
+      userStore.patchBalance({ coins: String(currentCoins + comboStore.pendingRefund) });
+      comboStore.pendingRefund = 0;
+    }
 
     // MSAB sends { code, reason }; normalize for display
     const errorCode = String(event.code ?? event.error ?? '');

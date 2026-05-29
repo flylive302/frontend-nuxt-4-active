@@ -57,8 +57,9 @@ export function useSvgaPlayer(
 
     // Cleanup existing player
     player.value?.destroy();
+    player.value = null;
 
-    // Increment playback ID to invalidate any pending callbacks
+    // Increment playback ID to invalidate any pending callbacks AND stale concurrent loads
     const currentPlaybackId = ++playbackId;
 
     try {
@@ -74,6 +75,14 @@ export function useSvgaPlayer(
 
       // Guard: component unmounted during async load — discard the player
       if (isDestroyed) {
+        newPlayer?.destroy();
+        return;
+      }
+
+      // Guard: a newer load started while we were awaiting — discard this stale result.
+      // Without this, two players can end up rendering to the same canvas simultaneously,
+      // causing rapid visual toggling between the two animations.
+      if (currentPlaybackId !== playbackId) {
         newPlayer?.destroy();
         return;
       }

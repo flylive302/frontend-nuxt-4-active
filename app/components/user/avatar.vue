@@ -110,9 +110,6 @@ const frameConfig = computed(() => {
 <template>
   <div ref="rootRef" class="relative aspect-square cursor-pointer">
     <div class="relative" :style="{ padding: frameConfig?.padding ?? DEFAULT_PADDING }">
-      <!-- Avatar Image — plain img avoids NuxtImg routing external URLs (Google, etc.) through IPX.
-           referrerpolicy="no-referrer" lets Google/external CDN URLs load without the localhost origin
-           being sent as a Referer header, which can cause those CDNs to reject the request. -->
       <img
         class="aspect-square rounded-full object-contain w-full"
         :src="resolvedImgSrc"

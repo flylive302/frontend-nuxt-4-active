@@ -4,52 +4,11 @@
  * Handles gift sending with balance validation, socket emission,
  * and playback triggering.
  */
-import type { Gift } from '~/types/gift/gift';
-
-
-// ========================================
-// Types
-// ========================================
-
-/** Context for lucky gift combo resending */
-interface LuckyComboContext {
-  readonly gift: Gift;
-  readonly senderId: number;
-  readonly recipientIds: readonly number[];
-  readonly quantity: number;
-}
-
-// ========================================
-// Module-level shared state (for use in socket callbacks)
-// ========================================
-
-/** Track pending transaction amount for potential rollback */
-const _pendingRefund = ref(0);
-
-/** Last sent lucky gift context — drives combo resending */
-const _lastLuckyContext = ref<LuckyComboContext | null>(null);
-
-/** Whether the lucky combo button should be visible */
-const _isLuckyComboActive = ref(false);
-
-/**
- * Refund coins to user balance (can be called from socket callbacks)
- * This is exported at module level to avoid inject() issues
- */
-export function refundPendingCoins(): void {
-  if (_pendingRefund.value > 0) {
-    const authStore = useAuthStore();
-    const userStore = useUserStore();
-    const currentCoins = Number(authStore.user?.coins ?? 0);
-    userStore.patchBalance({ coins: String(currentCoins + _pendingRefund.value) });
-    _pendingRefund.value = 0;
-  }
-}
-
 export function useGiftSending() {
   // ========================================
   // Dependencies
   // ========================================
+  const comboStore = useGiftComboStore();
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
   const seatsStore = useRoomSeatsStore();
@@ -70,13 +29,6 @@ export function useGiftSending() {
 
   /** Prevents double-sending while request is in progress */
   const isSending = ref(false);
-
-  /** Expose module-level pending refund for internal use */
-  const pendingRefund = _pendingRefund;
-
-  /** Module-level lucky combo state aliases */
-  const lastLuckyContext = _lastLuckyContext;
-  const isLuckyComboActive = _isLuckyComboActive;
 
   // ========================================
   // Computed
@@ -145,7 +97,7 @@ export function useGiftSending() {
 
     try {
       // Track amount for potential rollback
-      pendingRefund.value = totalCost.value;
+      comboStore.setPendingRefund(totalCost.value);
 
       // Optimistic coin deduction
       deductCoins(totalCost.value);
@@ -166,13 +118,12 @@ export function useGiftSending() {
         }
 
         // Activate lucky combo button
-        lastLuckyContext.value = {
+        comboStore.setLuckyContext({
           gift: selectedGift,
           senderId: authStore.user!.id,
           recipientIds: [...selectedRecipients],
           quantity: selectedQuantity,
-        };
-        isLuckyComboActive.value = true;
+        });
         giftStore.resetCombo();
         giftStore.incrementCombo();
       } else {
@@ -260,7 +211,7 @@ export function useGiftSending() {
    * @returns true if combo was successful
    */
   async function luckyCombo(): Promise<boolean> {
-    const ctx = lastLuckyContext.value;
+    const ctx = comboStore.lastLuckyContext;
     if (!ctx) return false;
 
     // GF-017: Filter against currently seated recipients (direct seat read)
@@ -305,8 +256,7 @@ export function useGiftSending() {
    * End lucky combo (called on combo timeout or when switching to non-lucky gift)
    */
   function endLuckyCombo(): void {
-    isLuckyComboActive.value = false;
-    lastLuckyContext.value = null;
+    comboStore.clearLuckyContext();
   }
 
   /**
@@ -336,8 +286,8 @@ export function useGiftSending() {
       }
 
       // Auto-end lucky combo
-      if (lastLuckyContext.value) {
-        const hasSeatedRecipient = lastLuckyContext.value.recipientIds
+      if (comboStore.lastLuckyContext) {
+        const hasSeatedRecipient = comboStore.lastLuckyContext.recipientIds
           .some(id => seatedIds.has(id));
         if (!hasSeatedRecipient) {
           endLuckyCombo();
@@ -353,8 +303,6 @@ export function useGiftSending() {
   return {
     // State
     isSending,
-    pendingRefund,
-    isLuckyComboActive: readonly(isLuckyComboActive),
 
     // Computed
     totalCost,

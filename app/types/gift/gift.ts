@@ -41,6 +41,18 @@ export interface GiftCategoryGroup {
 }
 
 // ============================================
+// COMBO TYPES
+// ============================================
+
+/** Context for lucky gift combo resending */
+export interface LuckyComboContext {
+  readonly gift: Gift;
+  readonly senderId: number;
+  readonly recipientIds: readonly number[];
+  readonly quantity: number;
+}
+
+// ============================================
 // PLAYBACK TYPES
 // ============================================
 

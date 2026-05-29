@@ -539,6 +539,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * NOTE: Socket stays connected for app-wide events.
    */
   function leaveRoom(roomId?: string): void {
+    useGiftComboStore().$reset();
+
     const targetRoomId = roomId ?? roomStore.currentRoom?.id?.toString();
     if (socket.value && targetRoomId) {
       socket.value.emit('room:leave', { roomId: targetRoomId });
