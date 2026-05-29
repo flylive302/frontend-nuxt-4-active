@@ -8,23 +8,14 @@ import { useMediasoupDevice } from './useMediasoupDevice';
 import { useMediasoupTransports } from './useMediasoupTransports';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
+import { storeToRefs } from 'pinia';
+import { useMediasoupSessionStore } from '~/stores/mediasoupSession';
 
 // ============================================
 // Types
 // ============================================
 type Producer = mediasoupTypes.Producer;
 type Consumer = mediasoupTypes.Consumer;
-
-// ============================================
-// Shared State (Module-level Singleton)
-// ============================================
-const producer = shallowRef<Producer | null>(null);
-const musicProducer = shallowRef<Producer | null>(null);
-const consumers = ref<Map<string, Consumer>>(new Map());
-const audioElements = new Map<string, HTMLAudioElement>();
-const consumerProducerByUserId = new Map<number, string>();
-const isLocalMuted = ref(false);
-const currentVolume = ref(1);
 
 // ---- Mic capture pipeline (Web Audio passthrough) ----
 // We route the raw getUserMedia track through an AudioContext graph before
@@ -79,7 +70,7 @@ function attachAudioElement(audio: HTMLAudioElement): void {
 
 /**
  * Mediasoup Audio Streaming
- * 
+ *
  * Handles audio production (microphone) and consumption (remote speakers).
  * Requires device and transports to be initialized first.
  */
@@ -90,6 +81,10 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   // Get device and transports from other composables
   const { device } = useMediasoupDevice();
   const { producerTransport, consumerTransport, createProducerTransport } = useMediasoupTransports(socket);
+
+  // Reactive session state lives in the store
+  const session = useMediasoupSessionStore();
+  const { producer, musicProducer, consumers, isLocalMuted, currentVolume, audioElements, consumerProducerByUserId } = storeToRefs(session);
 
   // ========================================
   // Computed Properties
@@ -330,7 +325,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
   /**
    * Consume audio from a remote producer.
-   * 
+   *
    * @param producerId - ID of the remote producer to consume
    * @param roomId - Room ID for the consume request
    */
@@ -345,7 +340,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     }
 
     if (producerUserId !== undefined) {
-      const existingProducerId = consumerProducerByUserId.get(producerUserId);
+      const existingProducerId = consumerProducerByUserId.value.get(producerUserId);
       if (existingProducerId && existingProducerId !== producerId) {
         stopConsumer(existingProducerId);
       }
@@ -374,9 +369,9 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       rtpParameters: response.data.rtpParameters,
     });
 
-    consumers.value.set(producerId, consumer);
+    session.addConsumer(producerId, consumer);
     if (producerUserId !== undefined) {
-      consumerProducerByUserId.set(producerUserId, producerId);
+      consumerProducerByUserId.value.set(producerUserId, producerId);
     }
 
     // Resume the consumer (consumers start paused)
@@ -394,7 +389,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     audio.srcObject = new MediaStream([consumer.track]);
     audio.volume = currentVolume.value;
     attachAudioElement(audio);
-    audioElements.set(producerId, audio);
+    audioElements.value.set(producerId, audio);
 
     // Try to play, handling autoplay policy
     const playAudio = async () => {
@@ -424,18 +419,18 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     playAudio();
 
     consumer.on('transportclose', () => {
-      consumers.value.delete(producerId);
-      for (const [userId, trackedProducerId] of consumerProducerByUserId) {
+      session.removeConsumer(producerId);
+      for (const [userId, trackedProducerId] of consumerProducerByUserId.value) {
         if (trackedProducerId === producerId) {
-          consumerProducerByUserId.delete(userId);
+          consumerProducerByUserId.value.delete(userId);
         }
       }
-      const audio = audioElements.get(producerId);
-      if (audio) {
-        audio.pause();
-        audio.srcObject = null;
-        audio.remove();
-        audioElements.delete(producerId);
+      const closedAudio = audioElements.value.get(producerId);
+      if (closedAudio) {
+        closedAudio.pause();
+        closedAudio.srcObject = null;
+        closedAudio.remove();
+        audioElements.value.delete(producerId);
       }
     });
 
@@ -443,35 +438,37 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
   /**
    * Stop consuming from a specific producer.
-   * 
+   *
    * @param producerId - ID of the producer to stop consuming
    */
   function stopConsumer(producerId: string): void {
     const consumer = consumers.value.get(producerId);
     if (consumer) {
       consumer.close();
-      consumers.value.delete(producerId);
+      session.removeConsumer(producerId);
     }
 
-    for (const [userId, trackedProducerId] of consumerProducerByUserId) {
+    for (const [userId, trackedProducerId] of consumerProducerByUserId.value) {
       if (trackedProducerId === producerId) {
-        consumerProducerByUserId.delete(userId);
+        consumerProducerByUserId.value.delete(userId);
       }
     }
 
     // Clean up associated audio element
-    const audio = audioElements.get(producerId);
+    const audio = audioElements.value.get(producerId);
     if (audio) {
       audio.pause();
       audio.srcObject = null;
       audio.remove();
-      audioElements.delete(producerId);
+      audioElements.value.delete(producerId);
     }
 
   }
 
   /**
-   * Clean up all producers and consumers
+   * Close all mediasoup producers and consumers.
+   * State clearing (Maps, primitives) is handled by useMediasoupSessionStore.$reset()
+   * which is called from leaveRoom().
    */
   function cleanup(): void {
     // Close producer
@@ -480,19 +477,8 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // Close music producer
     stopMusicProducer();
 
-    // Close all consumers
+    // Close all consumers via mediasoup API
     consumers.value.forEach((consumer) => consumer.close());
-    consumers.value.clear();
-    consumerProducerByUserId.clear();
-
-    // Clean up all audio elements to prevent memory leaks
-    audioElements.forEach((audio) => {
-      audio.pause();
-      audio.srcObject = null;
-      audio.remove();
-    });
-    audioElements.clear();
-
   }
 
   /**
@@ -561,7 +547,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     }
 
     let pausedOrUnready = false;
-    for (const [producerId, audio] of audioElements) {
+    for (const [producerId, audio] of audioElements.value) {
       if (audio.paused || audio.readyState < 2) {
         pausedOrUnready = true;
         break;
@@ -569,13 +555,13 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     }
     if (pausedOrUnready) return 'needs-playback-recovery';
 
-    if (audioElements.size > 0) {
+    if (audioElements.value.size > 0) {
       const before = new Map<string, number>();
-      for (const [producerId, audio] of audioElements) {
+      for (const [producerId, audio] of audioElements.value) {
         before.set(producerId, audio.currentTime);
       }
       await new Promise<void>(resolve => setTimeout(resolve, 500));
-      for (const [producerId, audio] of audioElements) {
+      for (const [producerId, audio] of audioElements.value) {
         const prev = before.get(producerId) ?? 0;
         if (!audio.paused && audio.currentTime === prev) {
           return 'needs-playback-recovery';
@@ -591,11 +577,11 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    * Socket.IO may recover while WebRTC audio elements remain paused/stalled.
    */
   async function recoverPlayback(): Promise<boolean> {
-    if (audioElements.size === 0) return true;
+    if (audioElements.value.size === 0) return true;
 
     let recovered = true;
 
-    for (const [producerId, audio] of audioElements) {
+    for (const [producerId, audio] of audioElements.value) {
       const consumer = consumers.value.get(producerId);
 
       if (!consumer || consumer.closed || consumer.track.readyState === 'ended') {
@@ -617,16 +603,15 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
   /**
    * Set volume for all consumer audio elements.
-   * Value is clamped between 0 and 1.
+   * Value is clamped between 0 and 1 by the store.
    *
    * @param volume - Volume level (0–1)
    */
   function setVolume(volume: number): void {
-    const clamped = Math.max(0, Math.min(1, volume));
-    currentVolume.value = clamped;
+    session.setVolume(volume);
 
-    audioElements.forEach((audio) => {
-      audio.volume = clamped;
+    audioElements.value.forEach((audio) => {
+      audio.volume = currentVolume.value;
     });
 
   }
@@ -646,7 +631,6 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     producer,
     musicProducer,
     consumers,
-    audioElements,
     isProducing,
     isLocalMuted,
     currentVolume,

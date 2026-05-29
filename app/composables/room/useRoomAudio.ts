@@ -546,8 +546,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
       socket.value.emit('room:leave', { roomId: targetRoomId });
     }
 
-    // Cleanup mediasoup
+    // Cleanup mediasoup (closes producers/consumers via mediasoup API)
     cleanupMediasoup();
+    // Reset mediasoup session state (closes audio elements, clears Maps)
+    useMediasoupSessionStore().$reset();
 
     // Clear pending gift queue to prevent stale gifts
     clearGiftQueue();

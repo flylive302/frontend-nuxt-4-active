@@ -28,7 +28,7 @@
 
 
 @theme static {
-    /* Override default pink color */
+
     --color-pink-50: #fff0f3;
     --color-pink-100: #ffe2e9;
     --color-pink-200: #ffcad8;
@@ -41,7 +41,7 @@
     --color-pink-900: #8f0c44;
     --color-pink-950: #500121;
 
-    /* Override default neutral color */
+
     --color-neutral-50: #FAFAFA;
     --color-neutral-100: #F5F5F5;
     --color-neutral-200: #E5E5E5;
@@ -65,13 +65,11 @@
 }
 
 :root {
-    /* Core gradient colors (same source for everything) */
-    --gradient-primary: var(--color-pink-500);
-    --gradient-secondary: #7c4dff;
-    --gradient-tertiary: #f59723;
-    --gradient-info: #00d4ff;
+    --gradient-primary: var(--ui-color-primary-500);
+    --gradient-secondary: var(--ui-color-secondary-500);
+    --gradient-tertiary: var(--ui-color-tertiary-500);
+    --gradient-info: var(--ui-color-info-500);
 
-    /* Soft blended versions (for background) */
     --gradient-primary-soft: color-mix(in srgb, var(--gradient-primary) 90%, transparent);
     --gradient-secondary-soft: color-mix(in srgb, var(--gradient-secondary) 75%, transparent);
     --gradient-tertiary-soft: color-mix(in srgb, var(--gradient-tertiary) 85%, transparent);
@@ -79,7 +77,6 @@
 }
 html,
 body {
-    /* Allow content to draw behind status bar / notch */
     padding: 0;
     margin: 0;
     width: 100%;
@@ -89,15 +86,13 @@ body {
 }
 
 html {
-    /* Prevent viewport width shift when scrollbar appears/disappears (CLS) */
     scrollbar-gutter: stable;
 }
 
-/* Nuxt root: let each page/layout paint the background */
 #__nuxt {
     background: transparent;
 }
-/* Fullscreen PWA: ensure the app stretches edge-to-edge */
+
 @supports (padding: env(safe-area-inset-top)) {
 
 
@@ -130,7 +125,6 @@ html {
     @apply bg-linear-to-r to-primary/60 rounded-full shadow-lg shadow-primary
 }
 
-/* Marquee animation - modern replacement for deprecated <marquee> */
 .marquee-container {
     overflow: hidden;
     white-space: nowrap;
@@ -157,11 +151,6 @@ html {
     }
 }
 
-/* ── PWA safe area utilities ── */
-/* Use these on elements at the top/bottom edges of the screen
-   to prevent content from hiding behind notches and status bars
-   when the PWA is running in fullscreen/standalone mode. */
-
 .safe-area {
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 20px);
@@ -178,16 +167,6 @@ html {
     justify-content: center;
     align-items: center;
 }
-
-/* ── Animated Glow Border ──────────────────────────────────
-   Wrap any element to add a holographic ripple border.
-   Customize via CSS vars:
-     --glow-w       border thickness   (default 2px)
-     --glow-r       corner radius      (default 14px)
-     --glow-speed   flow duration      (default 6s)
-
-   Usage: <div class="glow-gold"><UButton … /></div>
-   ────────────────────────────────────────────────────────── */
 
 @keyframes glow-spin {
     to { transform: rotate(360deg); }
@@ -244,10 +223,6 @@ html {
     }
 }
 
-/* ── Accessibility: reduced-motion preference ──────────────────────── */
-/* Disables all decorative infinite animations for users who prefer
-   reduced motion. Functional transitions (page, form) are handled
-   per-component. */
 @media (prefers-reduced-motion: reduce) {
     .glowing-border::before {
         animation: none;

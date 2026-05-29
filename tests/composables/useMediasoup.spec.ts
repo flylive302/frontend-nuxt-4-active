@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { ref, shallowRef, computed } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 
 // ============================================
 // Mock External Dependencies
@@ -108,6 +109,7 @@ describe('useMediasoup', () => {
   })
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     mockDevice.loaded = false
   })
