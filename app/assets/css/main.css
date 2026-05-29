@@ -125,14 +125,9 @@ html {
     @apply bg-linear-to-r to-primary/60 rounded-full shadow-lg shadow-primary
 }
 
-.marquee-container {
-    overflow: hidden;
-    white-space: nowrap;
-}
-
 .marquee-text {
     display: inline-block;
-    animation: marquee-scroll 5s linear infinite;
+    animation: marquee-scroll 3.5s linear infinite alternate;
     animation-fill-mode: backwards;
 }
 
@@ -142,13 +137,8 @@ html {
 }
 
 @keyframes marquee-scroll {
-    0% {
-        transform: translateX(100%);
-    }
-
-    100% {
-        transform: translateX(-100%);
-    }
+    0%, 20%   { transform: translateX(0); }
+    80%, 100% { transform: translateX(var(--marquee-offset, 0px)); }
 }
 
 .safe-area {

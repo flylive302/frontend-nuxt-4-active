@@ -22,6 +22,9 @@ const producerTransport = ref<Transport | null>(null);
 const consumerTransport = ref<Transport | null>(null);
 const currentRoomId = ref<string | null>(null);
 
+// Cached to prevent inject() warning when called outside Vue setup context
+let _toast: ReturnType<typeof useToast> | null = null;
+
 // ============================================
 // Composable
 // ============================================
@@ -35,7 +38,8 @@ const currentRoomId = ref<string | null>(null);
 export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
   const log = createLogger('[MediasoupTransports]');
   const emitAsync = createEmitAsync(socket);
-  const toast = useToast();
+  if (!_toast) _toast = useToast();
+  const toast = _toast;
 
   // Get device from device composable
   const { device } = useMediasoupDevice();

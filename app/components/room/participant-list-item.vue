@@ -14,6 +14,7 @@ const props = defineProps<{
   inviteModeSeat: number | null
   isRoomOwner: boolean
   isInviting: boolean
+  marqueeDelay?: string
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +31,7 @@ const canManageMembers = computed(() => {
 </script>
 
 <template>
-  <MinimalUserList :user="participant">
+  <MinimalUserList :user="participant" :marquee-delay="marqueeDelay">
     <template #default>
       <UBadge v-if="participant.isSpeaker" size="sm" color="primary" variant="soft" class="absolute top-0 right-0">Speaker</UBadge>
     </template>

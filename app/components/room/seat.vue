@@ -115,11 +115,11 @@ const seatGiftTotal = computed(() => {
 
     <p v-if="seat?.user" class="text-xs pb-1.5 leading-none truncate font">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 
-    <p v-if="displayName == props.seatId.toString()" class="text-xs font-semibold w-full leading-none">{{ displayName }}</p>
-
-    <div v-else class="w-full marquee-container flex flex-col items-center justify-center">
-      <p class="text-xs font-semibold w-full marquee-text leading-none">{{ displayName }}</p>
-    </div>
+    <MarqueeName
+      class="w-full"
+      text-class="text-xs font-semibold leading-none text-center"
+      :name="displayName"
+    />
 
   </div>
 </template>

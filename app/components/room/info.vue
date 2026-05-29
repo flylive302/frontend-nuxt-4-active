@@ -260,7 +260,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                       {{ entry.rank }}
                     </UBadge>
 
-                    <MinimalUserList class="grow" :user="entry.user">
+                    <MinimalUserList class="grow" :user="entry.user" :marquee-delay="`${(entry.user.id % 8) * 1.2}s`">
                       <UButton size="xs" variant="soft" color="tertiary" icon="i-lucide-coins" class="mr-1 px-1">
                         {{ formatCurrency(entry.total_value) }}
                       </UButton>
@@ -297,6 +297,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                     :invite-mode-seat="inviteModeSeat"
                     :is-room-owner="isRoomOwner"
                     :is-inviting="isInviting"
+                    :marquee-delay="`${(item.id % 8) * 1.2}s`"
                     @invite="handleInvite"
                   />
                 </DynamicScrollerItem>

@@ -9,7 +9,8 @@
  * Exposes setup/cleanup functions called by useRoomEventHandlers.ts
  * so lucky listeners are registered alongside all other room events.
  *
- * State is consumed by dedicated components mounted in the room page.
+ * State is owned by useLuckySessionStore and consumed by dedicated
+ * components mounted in the room page.
  */
 import { ASSETS } from '~/constants/assets'
 import type { AudioSocket } from '~/composables/room/useAudioSocket';
@@ -17,7 +18,6 @@ import type {
   LuckyDrawResult,
   LuckyRoomAnnouncement,
   LuckyAppAnnouncement,
-  FloatingMultiplier,
 } from '~/types/lucky';
 import { createLogger } from '~/utils/logger';
 
@@ -41,14 +41,12 @@ const LUCKY_EVENTS = [
 ] as const;
 
 // ============================================
-// Module-Level State (shared singleton)
+// Module-Level State
 // ============================================
 
-const floatingMultipliers = ref<FloatingMultiplier[]>([]);
-const roomAnnouncement = ref<LuckyRoomAnnouncement | null>(null);
-const isRoomAnnouncementVisible = ref(false);
-const appAnnouncement = ref<LuckyAppAnnouncement | null>(null);
-const isAppAnnouncementVisible = ref(false);
+// Cached store reference — initialised in setupLuckyEventHandlers (setup context),
+// then reused by socket callbacks that run outside Vue setup.
+let _store: ReturnType<typeof useLuckySessionStore> | null = null;
 
 let floaterIdCounter = 0;
 
@@ -71,19 +69,19 @@ function getColorClass(multiplier: number): string {
  * Add a floating multiplier and auto-remove after duration.
  */
 function addFloater(multiplier: number): void {
-  if (floatingMultipliers.value.length >= MAX_FLOATERS) {
-    floatingMultipliers.value.shift();
+  const store = _store;
+  if (!store) return;
+
+  if (store.floatingMultipliers.length >= MAX_FLOATERS) {
+    const first = store.floatingMultipliers[0];
+    if (first) store.removeFloater(first.id);
   }
 
   const id = ++floaterIdCounter;
-  floatingMultipliers.value.push({
-    id,
-    multiplier,
-    colorClass: getColorClass(multiplier),
-  });
+  store.addFloater({ id, multiplier, colorClass: getColorClass(multiplier) });
 
   setTimeout(() => {
-    floatingMultipliers.value = floatingMultipliers.value.filter((f) => f.id !== id);
+    store.removeFloater(id);
   }, FLOATER_DURATION);
 }
 
@@ -96,13 +94,11 @@ function handleLuckyResult(data: LuckyDrawResult): void {
 }
 
 function handleRoomAnnouncement(data: LuckyRoomAnnouncement): void {
-  roomAnnouncement.value = data;
-  isRoomAnnouncementVisible.value = true;
+  _store?.setRoomAnnouncement(data);
 }
 
 function handleAppAnnouncement(data: LuckyAppAnnouncement): void {
-  appAnnouncement.value = data;
-  isAppAnnouncementVisible.value = true;
+  _store?.setAppAnnouncement(data);
 }
 
 // ============================================
@@ -114,6 +110,7 @@ function handleAppAnnouncement(data: LuckyAppAnnouncement): void {
  * Called from useRoomEventHandlers.setupRoomEventHandlers().
  */
 export function setupLuckyEventHandlers(socket: AudioSocket): void {
+  if (!_store) _store = useLuckySessionStore();
   socket.on('lucky:result', handleLuckyResult);
   socket.on('lucky:room_announcement', handleRoomAnnouncement);
   socket.on('lucky:app_announcement', handleAppAnnouncement);
@@ -129,40 +126,35 @@ export function cleanupLuckyEventHandlers(socket: AudioSocket): void {
   }
 }
 
-/**
- * Reset all lucky state (called on room leave).
- */
-export function clearLuckyState(): void {
-  floatingMultipliers.value = [];
-  roomAnnouncement.value = null;
-  isRoomAnnouncementVisible.value = false;
-  appAnnouncement.value = null;
-  isAppAnnouncementVisible.value = false;
-}
-
 // ============================================
 // Composable (for components)
 // ============================================
 
 /**
  * Composable for consuming lucky gift state in Vue components.
- * No setup context required — state is module-level.
  */
 export function useLuckyGift() {
+  const store = useLuckySessionStore();
+  const {
+    floatingMultipliers,
+    roomAnnouncement,
+    isRoomAnnouncementVisible,
+    appAnnouncement,
+    isAppAnnouncementVisible,
+  } = storeToRefs(store);
+
   /**
    * Called by LuckyRoomAnnouncement component when animation completes.
    */
   function dismissRoomAnnouncement(): void {
-    isRoomAnnouncementVisible.value = false;
-    roomAnnouncement.value = null;
+    store.clearRoomAnnouncement();
   }
 
   /**
    * Called by LuckyAppAnnouncement component when animation completes.
    */
   function dismissAppAnnouncement(): void {
-    isAppAnnouncementVisible.value = false;
-    appAnnouncement.value = null;
+    store.clearAppAnnouncement();
   }
 
   return {
@@ -249,4 +241,3 @@ if (import.meta.dev && import.meta.client) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__luckySimulate = simulators;
 }
-

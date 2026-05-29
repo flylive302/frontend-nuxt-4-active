@@ -10,11 +10,13 @@ const emit = defineEmits<{
 }>()
 
 function handleConfirm() {
+  ;(document.activeElement as HTMLElement)?.blur()
   emit('update:open', false)
   emit('confirm')
 }
 
 function handleCancel() {
+  ;(document.activeElement as HTMLElement)?.blur()
   emit('update:open', false)
   emit('cancel')
 }

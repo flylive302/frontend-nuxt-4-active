@@ -15,7 +15,6 @@ import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEvent
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, clearGiftQueue, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
-import { clearLuckyState } from '../lucky/useLuckyGift';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
@@ -555,7 +554,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     clearGiftQueue();
 
     // Clear lucky animation state
-    clearLuckyState();
+    useLuckySessionStore().$reset();
 
     // Stop any playing gift animation and flush playback queue
     giftStore.clearPlayback();
