@@ -189,6 +189,13 @@ vi.stubGlobal('usePropLookup', () => mockPropLookup)
 const mockMediaSession = { activate: vi.fn(), deactivate: vi.fn() }
 vi.stubGlobal('useMediaSession', () => mockMediaSession)
 
+// These were missing from the original stubs; useRoomAudio.ts calls useRoomSlideStore()
+// at composable init time (line ~111), and setupRoomEventHandlers calls useUserStore()
+// at setup time — both need top-level stubs so they survive vi.resetModules().
+vi.stubGlobal('useRoomSlideStore', () => ({ addSlide: vi.fn(), clearSlides: vi.fn() }))
+vi.stubGlobal('useUserStore', () => ({ patchProfile: vi.fn(), patchBalance: vi.fn() }))
+vi.stubGlobal('useMediasoupSessionStore', () => ({ $reset: vi.fn() }))
+
 // ============================================
 // Tests
 // ============================================

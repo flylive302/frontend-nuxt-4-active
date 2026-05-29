@@ -33,34 +33,13 @@ import { propToEntryAnimationGift } from '~/utils/prop';
 // Types
 // ============================================
 
-export interface UseRoomEventHandlersParams {
-  /** Socket instance */
-  socket: AudioSocket;
-  /** Core room store */
-  roomStore: ReturnType<typeof useRoomStore>;
-  /** Audio store (participants, audio state, chat) */
-  audioStore: ReturnType<typeof useRoomAudioStore>;
-  /** Seats store (seats, gift totals) */
-  seatsStore: ReturnType<typeof useRoomSeatsStore>;
-  /** Auth store instance */
-  authStore: ReturnType<typeof useAuthStore>;
-  /** Gift store instance */
-  giftStore: ReturnType<typeof useGiftStore>;
-  /** Toast instance */
-  toast: ReturnType<typeof useToast>;
-  /** Leave room callback */
+export interface RoomActions {
   leaveRoom: () => void;
-  /** Stop audio callback */
   stopAudio: () => void;
-  /** Consume producer callback */
   consumeProducer: (producerId: string, roomId: string, producerUserId?: number) => Promise<void>;
-  /** Stop consuming a producer */
   stopConsumer: (producerId: string) => void;
-  /** Accept invite callback */
   acceptInvite: () => Promise<boolean>;
-  /** Decline invite callback */
   declineInvite: () => Promise<boolean>;
-  /** Start audio callback */
   startAudio: () => Promise<void>;
 }
 
@@ -117,22 +96,18 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
  * Setup all socket event listeners for room events.
  * Call this after joining a room.
  */
-export function setupRoomEventHandlers({
-  socket,
-  roomStore,
-  audioStore,
-  seatsStore,
-  authStore,
-  giftStore,
-  toast,
-  leaveRoom,
-  stopAudio,
-  consumeProducer,
-  stopConsumer,
-  acceptInvite,
-  declineInvite,
-  startAudio,
-}: UseRoomEventHandlersParams): void {
+export function setupRoomEventHandlers(
+  socket: AudioSocket,
+  { leaveRoom, stopAudio, consumeProducer, stopConsumer, acceptInvite, declineInvite, startAudio }: RoomActions,
+  toast: ReturnType<typeof useToast>,
+): void {
+
+  // Resolve Pinia stores here — safe outside Vue setup context
+  const roomStore = useRoomStore();
+  const audioStore = useRoomAudioStore();
+  const seatsStore = useRoomSeatsStore();
+  const authStore = useAuthStore();
+  const giftStore = useGiftStore();
 
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();

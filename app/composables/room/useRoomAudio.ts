@@ -305,22 +305,19 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Clean up any existing listeners first to prevent duplicates on rejoin
     if (socket.value) {
       cleanupRoomEventHandlers(socket.value);
-      setupRoomEventHandlers({
-        socket: socket.value,
-        roomStore,
-        audioStore,
-        seatsStore,
-        authStore,
-        giftStore,
+      setupRoomEventHandlers(
+        socket.value,
+        {
+          leaveRoom,
+          stopAudio,
+          consumeProducer,
+          stopConsumer,
+          acceptInvite: seatActions.acceptInvite,
+          declineInvite: seatActions.declineInvite,
+          startAudio,
+        },
         toast,
-        leaveRoom,
-        stopAudio,
-        consumeProducer,
-        stopConsumer,
-        acceptInvite: seatActions.acceptInvite,
-        declineInvite: seatActions.declineInvite,
-        startAudio,
-      });
+      );
     }
 
     // Join room via socket (send owner ID and seat count so server can configure room)
