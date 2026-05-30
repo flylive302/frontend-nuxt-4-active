@@ -57,6 +57,7 @@ export const useMallStore = defineStore('mall', () => {
     entry_animation: null,
     data_card: null,
     mice_wave: null,
+    slides: null,
   })
   const equippedLoading = ref(false)
 
@@ -273,6 +274,7 @@ export const useMallStore = defineStore('mall', () => {
       entry_animation: null,
       data_card: null,
       mice_wave: null,
+      slides: null,
     }
     currentType.value = undefined
     currentStatus.value = 'active'

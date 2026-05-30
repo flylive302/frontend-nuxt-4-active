@@ -4,9 +4,6 @@
 
 import { ref } from 'vue'
 import type { MinimalUser } from '~/types/user/bootstrap'
-import { createLogger } from '~/utils/logger'
-
-const log = createLogger('[useUserSearch]')
 
 // ========================================
 // Types
@@ -84,7 +81,7 @@ export function useUserSearch() {
 
       const response = await api<UserSearchResult>('/users/search', {
         method: 'GET',
-        params,
+        query: params,
       })
 
       const mappedUsers: MinimalUser[] = response.data.map(u => ({
@@ -106,6 +103,7 @@ export function useUserSearch() {
         data_card_id: u.data_card_id,
         mice_wave_id: u.mice_wave_id,
         vip_level: u.vip_level,
+        slides_id: u.slides_id,
       }))
 
       if (reset) {

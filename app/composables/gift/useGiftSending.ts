@@ -263,9 +263,8 @@ export function useGiftSending() {
    * Deduct coins from user balance (optimistic update)
    */
   function deductCoins(amount: number): void {
-    const userStore = useUserStore();
     const currentCoins = Number(authStore.user?.coins ?? 0);
-    userStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
+    authStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
   }
 
   // ========================================

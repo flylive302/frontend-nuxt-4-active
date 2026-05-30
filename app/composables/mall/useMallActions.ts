@@ -7,7 +7,7 @@
  * This composable owns:
  * - API calls for mutations
  * - Toast notifications (REACT)
- * - Cross-store writes (prop_id sync via userStore for column-based props)
+ * - Cross-store writes (prop_id sync via authStore for column-based props)
  * - Socket emissions (profile sync for column-based props)
  * - Optimistic updates with rollback
  */
@@ -51,7 +51,6 @@ export function useMallActions() {
   const toast = useToast()
   const mallStore = useMallStore()
   const authStore = useAuthStore()
-  const userStore = useUserStore()
   const { emitProfileSync } = useProfileActions()
 
   // ========================================
@@ -161,7 +160,7 @@ export function useMallActions() {
     const columnKey = PROP_TYPE_TO_COLUMN[prop.type]
     const previousValue = columnKey ? (authStore.user?.[columnKey] ?? null) : null
     if (columnKey) {
-      userStore.patchProfile({ [columnKey]: prop.prop_id })
+      authStore.patchProfile({ [columnKey]: prop.prop_id })
     }
 
     try {
@@ -189,7 +188,7 @@ export function useMallActions() {
       }
 
       if (columnKey) {
-        userStore.patchProfile({ [columnKey]: previousValue })
+        authStore.patchProfile({ [columnKey]: previousValue })
       }
 
       // REACT — error feedback (after rollback is complete)
@@ -235,7 +234,7 @@ export function useMallActions() {
     const columnKey = PROP_TYPE_TO_COLUMN[prop.type]
     const previousValue = columnKey ? (authStore.user?.[columnKey] ?? null) : null
     if (columnKey) {
-      userStore.patchProfile({ [columnKey]: null })
+      authStore.patchProfile({ [columnKey]: null })
     }
 
     try {
@@ -266,7 +265,7 @@ export function useMallActions() {
       }
 
       if (columnKey) {
-        userStore.patchProfile({ [columnKey]: previousValue })
+        authStore.patchProfile({ [columnKey]: previousValue })
       }
 
       // REACT — error feedback (after rollback is complete)

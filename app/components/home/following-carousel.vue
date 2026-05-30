@@ -8,6 +8,7 @@ import { ASSETS } from '~/constants/assets'
 // Uses UCarousel (Embla) with dragFree for momentum scrolling.
 
 import type { FollowingCard } from '~/composables/user/useFollowingData'
+import MarqueeName from "~/components/common/marquee-name.vue";
 
 defineOptions({ name: 'HomeFollowingCarousel' })
 
@@ -66,11 +67,12 @@ const { resolvePropAsset } = usePropLookup()
               :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
               class="w-14"
             />
-            <div class="marquee-container w-fit -mt-2">
-              <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
-                {{ item.name }}
-              </span>
-            </div>
+            <MarqueeName
+                class="mx-auto max-w-16"
+                text-class="text-xs leading-none font-bold"
+                :name="item.name"
+                delay="0.5s"
+            />
           </NuxtLink>
         </template>
       </UCarousel>

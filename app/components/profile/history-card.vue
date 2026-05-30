@@ -60,15 +60,15 @@ const displayBadgeSrc = computed(() =>
 
 <template>
   <div
-    class="bg-linear-to-b from-primary-950/30 to-neutral-950 p-2 rounded-md flex flex-col justify-between items-center relative"
+    class="backdrop-blur-lg p-2 rounded-md flex flex-col justify-between items-center relative ring-1 ring-primary"
     :class="rarityBorderClass"
   >
     <!-- Quantity Badge -->
     <UBadge
       v-if="showQuantity"
       color="primary"
-      variant="soft"
-      class="absolute -top-2 -right-2 z-10"
+      variant="subtle"
+      class="absolute -top-2 -right-2 z-10 text-white"
     >
       {{ formattedQuantity }}
     </UBadge>

@@ -18,7 +18,7 @@ function measure() {
 }
 
 onMounted(() => {
-  nextTick(measure)
+  nextTick(() => requestAnimationFrame(measure))
 
   if (containerRef.value) {
     const observer = new ResizeObserver(useDebounceFn(measure, 80))
@@ -34,7 +34,7 @@ onMounted(() => {
       ref="textRef"
       class="whitespace-nowrap"
       :class="[textClass, { 'marquee-text': shouldMarquee }]"
-      :style="shouldMarquee ? { '--marquee-offset': `${overflowOffset}px`, animationDelay: delay ?? '0s' } : {}"
+      :style="shouldMarquee ? { '--marquee-offset': `${overflowOffset}px`, ...(delay ? { animationDelay: delay } : {}) } : {}"
     >{{ name }}</p>
   </div>
 </template>

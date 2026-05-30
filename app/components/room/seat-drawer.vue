@@ -207,6 +207,20 @@ const dataCardAsset = computed(() =>
 )
 
 const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
+
+// For own seat: read directly from auth store so the value is always fresh.
+// For other seats: use whatever the participant map has (country is not PII-stripped).
+const seatUserCountry = computed(() => {
+  if (!currentSeat.value?.user) return null
+  if (isCurrentUserSeat.value) return authStore.user?.country?.trim() || currentSeat.value.user.country?.trim() || null
+  return currentSeat.value.user.country?.trim() || null
+})
+
+// Age is only available for the authenticated user's own seat — date_of_birth is
+// stripped from other participants' data for privacy.
+const seatUserAge = computed(() =>
+  isCurrentUserSeat.value ? getAge(authStore.user?.date_of_birth ?? null) : null
+)
 </script>
 
 <template>
@@ -259,33 +273,44 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
             }"
           />
 
-        <MarqueeName
-            class="flex-1 max-w-36 mx-auto"
-            text-class="text-xl font-bold leading-none mt-6"
-            :name="currentSeat.user.name"
-            delay="0s"
-        />
-
-        <div class="flex items-center gap-2 justify-center">
-          <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
-          <UBadge
-              color="secondary"
-              :icon="getGenderInfo(currentSeat.user.gender).icon"
-              size="sm"
-              class="w-fit text-white p-1"
-          >
-            {{ getAge(currentSeat.user.date_of_birth) }}
-          </UBadge>
+        <div class="flex gap-1 mt-4">
           <UIcon
-              v-if="currentSeat.user.country?.toLowerCase()?.trim() != ''"
-              :name="`i-flag-${currentSeat.user.country?.toLowerCase()?.trim()}-4x3`"
-              class="rounded overflow-hidden h-6 size-8 shadow-lg"
+            v-if="seatUserCountry"
+            :name="`i-flag-${seatUserCountry.toLowerCase()}-4x3`"
+            class="rounded overflow-hidden h-6 size-8 shadow-lg"
           />
+          <MarqueeName
+              class="flex-1 max-w-36 mx-auto"
+              text-class="text-xl font-bold leading-none"
+              :name="currentSeat.user.name"
+              delay="0s"
+          />
+          <div>
+            <UBadge
+                color="secondary"
+                :icon="getGenderInfo(currentSeat.user.gender).icon"
+                size="sm"
+                class="w-fit text-white p-1"
+            >
+              {{ seatUserAge }}
+            </UBadge>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 mt-2 justify-center">
+
+          <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+          <img
+              v-if="currentSeat.user.vip_level"
+              :src="`https://ik.imagekit.io/flylive/vip/${currentSeat.user.vip_level}/badge.png`"
+              class="w-14"
+              alt=""
+          >
+          <img alt="" v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-8"/>
+          <img alt="" v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-5"/>
         </div>
 
-        <div class="flex items-center gap-1 justify-center mt-1">
-          <img alt="" v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-7"/>
-          <img alt="" v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-6"/>
+        <div class="flex items-center gap-1 justify-center">
+
         </div>
 
         </div>

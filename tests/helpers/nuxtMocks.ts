@@ -7,6 +7,7 @@
 
 import { vi } from 'vitest'
 import { ref, computed, reactive } from 'vue'
+import type { Gift } from '~/types/gift/gift'
 
 // ========================================
 // Mock Logger (shared across all tests)
@@ -40,6 +41,7 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
       wealth_levels: { level: number; name: string; required_xp: number; badge_id: number | null }[]
       charm_levels: { level: number; name: string; required_xp: number; badge_id: number | null }[]
     } | null,
+    gifts: null as Gift[] | null,
     giftCatalog: [] as unknown[],
     isReady: true,
     needsRefresh: false,
@@ -138,7 +140,7 @@ export function createMockAssetStore(overrides: Record<string, unknown> = {}) {
 export function createMockAuthStore(overrides: Record<string, unknown> = {}) {
   const defaults = {
     token: 'mock-token',
-    user: { id: 1, name: 'Test User' },
+    user: { id: 1, name: 'Test User', wealth_xp: '0', charm_xp: '0' },
     setToken: vi.fn(),
     setUser: vi.fn(),
     logout: vi.fn(),

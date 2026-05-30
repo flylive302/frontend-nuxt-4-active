@@ -1,7 +1,3 @@
-import { createLogger } from '~/utils/logger'
-
-const log = createLogger('[usePushSubscription]')
-
 /**
  * Registers or refreshes the browser's Web Push subscription with the backend.
  * Call once after the user authenticates. Safe to call multiple times.
@@ -24,8 +20,7 @@ export function usePushSubscription() {
     try {
       const registration = await navigator.serviceWorker.ready
 
-      const existing = await registration.pushManager.getSubscription()
-      let subscription = existing
+      let subscription = await registration.pushManager.getSubscription()
 
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
@@ -74,9 +69,13 @@ export function usePushSubscription() {
   return { register, unregister }
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = atob(base64)
-  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)))
+  const output = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; i++) {
+    output[i] = rawData.charCodeAt(i)
+  }
+  return output
 }

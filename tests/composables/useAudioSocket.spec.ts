@@ -76,10 +76,6 @@ vi.stubGlobal('useApi', () => mockApi)
 let mockAuthStore = { token: null as string | null, msabToken: null as string | null }
 vi.stubGlobal('useAuthStore', () => mockAuthStore)
 
-// Mock useUserStore
-const mockUserStore = { updateBalance: vi.fn() }
-vi.stubGlobal('useUserStore', () => mockUserStore)
-
 // Mock useAuthActions (connect() calls refreshMsabToken when no MSAB token)
 const mockAuthActions = { refreshMsabToken: vi.fn().mockResolvedValue(false) }
 vi.stubGlobal('useAuthActions', () => mockAuthActions)
@@ -114,7 +110,6 @@ describe('useAudioSocket', () => {
     vi.stubGlobal('watch', watch)
     vi.stubGlobal('useAuthStore', () => mockAuthStore)
     vi.stubGlobal('useApi', () => mockApi)
-    vi.stubGlobal('useUserStore', () => mockUserStore)
     vi.stubGlobal('useAuthActions', () => mockAuthActions)
     vi.stubGlobal('useAuthLifecycle', () => mockAuthLifecycle)
   })

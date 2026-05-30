@@ -24,14 +24,14 @@ export const lastCoinRequestUpdate = ref<CoinRequestStatusChangedPayload | null>
  * Captures store, action, and toast dependencies during setup() phase.
  */
 export function useEconomyEvents() {
-  const userStore = useUserStore()
+  const authStore = useAuthStore()
   const { updateWealthXp, updateCharmXp } = useLevelActions()
   const toast = useToast()
 
   return function registerEconomyEvents(socket: Socket): void {
     socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
-      // Update user store (coins, diamonds, XP values on user object)
-      userStore.updateBalance({
+      // Update balance on auth user (coins, diamonds, XP values)
+      authStore.updateBalance({
         coins: payload.coins,
         diamonds: payload.diamonds,
         wealth_xp: payload.wealth_xp,

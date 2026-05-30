@@ -14,6 +14,8 @@ const props = defineProps<{
   message: ChatMessageEvent;
 }>();
 
+const { getLevelFromXp } = useLevelLookup()
+
 const audioStore = useRoomAudioStore();
 const { resolvePropAsset, resolvePropThumbnail } = usePropLookup();
 
@@ -48,6 +50,14 @@ const formattedTime = computed(() => {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
   return `${Math.floor(seconds / 86400)}d`;
 });
+
+const wealthLevel = computed(() =>
+    getLevelFromXp(participant?.value?.wealth_xp, 'wealth')
+)
+
+const charmLevel = computed(() =>
+    getLevelFromXp(participant?.value?.charm_xp, 'charm')
+)
 </script>
 
 <template>
@@ -63,6 +73,20 @@ const formattedTime = computed(() => {
           delay="0s"
         />
         <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+      </div>
+      <div class="flex items-center gap-0.5 mt-1">
+        <UIcon
+            :name="`i-flag-${participant?.country.toLowerCase().trim()}-4x3`"
+            class="rounded overflow-hidden h-5 size-6 shadow-lg"
+        />
+        <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge"/>
+        <img
+            v-if="participant?.vip_level"
+            :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
+            class="w-9"
+            alt=""
+        >
+        <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4 ml-1" alt="users charm badge"/>
       </div>
       <div class="bubble" :style="bubbleStyle">
         <p class="text-sm wrap-break-word">{{ message.content }}</p>

@@ -23,13 +23,13 @@ const emit = defineEmits<{
 
 const { submitReport } = useReporting()
 
-const reason = ref<ReportReason | null>(null)
+const reason = ref<ReportReason | undefined>(undefined)
 const description = ref('')
 const isSubmitting = ref(false)
 
 watch(() => props.open, (open) => {
   if (open) {
-    reason.value = null
+    reason.value = undefined
     description.value = ''
   }
 })

@@ -115,7 +115,6 @@ export function setupRoomEventHandlers(
   const { resolvePropAsync } = usePropLookup();
   const slideStore = useRoomSlideStore();
   const comboStore = useGiftComboStore();
-  const userStore = useUserStore();
 
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
@@ -216,8 +215,7 @@ export function setupRoomEventHandlers(
 
     // Also patch local user if the update is for the authenticated user
     if (event.user_id === authStore.user?.id) {
-      const userStore = useUserStore();
-      userStore.patchProfile(safeProfile);
+      authStore.patchProfile(safeProfile);
     }
 
     // undefined
@@ -426,7 +424,7 @@ export function setupRoomEventHandlers(
     // Rollback optimistic coin deduction on server error
     if (comboStore.pendingRefund > 0) {
       const currentCoins = Number(authStore.user?.coins ?? 0);
-      userStore.patchBalance({ coins: String(currentCoins + comboStore.pendingRefund) });
+      authStore.patchBalance({ coins: String(currentCoins + comboStore.pendingRefund) });
       comboStore.pendingRefund = 0;
     }
 

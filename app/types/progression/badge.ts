@@ -49,6 +49,7 @@ export interface Badge {
   category: BadgeCategory
   level: BadgeSourceType
   sort_order: number
+  rarity?: string
 }
 
 /**

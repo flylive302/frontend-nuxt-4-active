@@ -19,6 +19,7 @@ export const headConfig: HeadConfig = {
         { name: 'apple-mobile-web-app-title', content: 'FlyLive' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'description', content: 'FlyLive — live audio rooms, real-time gifting, and social broadcasting. Join thousands of listeners and hosts worldwide.' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' }
     ],
     link: [
         { rel: 'apple-touch-icon', href: '/pwa-assets/ios/180.png', sizes: '180x180' },

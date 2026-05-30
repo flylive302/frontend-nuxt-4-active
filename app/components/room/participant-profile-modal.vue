@@ -106,11 +106,11 @@ const canDemote = computed(() => {
 const adminActions = computed(() => {
   if (!showAdminActions.value) return []
 
-  const items: { label: string; icon: string; click?: () => void; color?: string }[][] = []
+  const items = []
 
   // Role management section (owner only)
   if (isRoomOwner.value) {
-    const roleItems: { label: string; icon: string; click?: () => void }[] = []
+    const roleItems = []
     if (canPromote.value) {
       roleItems.push({
         label: 'Promote to Admin',

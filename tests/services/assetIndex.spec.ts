@@ -141,6 +141,7 @@ function createMetadata(overrides: Partial<AssetMetadata> = {}): AssetMetadata {
     url: 'https://example.com/asset.webm',
     assetType: 'video',
     priority: 'normal',
+    scope: 'gift',
     sizeBytes: 1000000,
     giftId: 123,
     downloadedAt: Date.now(),

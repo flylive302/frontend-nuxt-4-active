@@ -107,8 +107,9 @@ const localError = ref<string | null>(null)
 // ========================================
 // Computed Styles & Logic
 // ========================================
+const sizeConfig = computed(() => SIZE_MAP[props.size])
 const resolvedContainerClass = computed(() =>
-  props.containerClass ?? SIZE_MAP[props.size].container
+  props.containerClass ?? sizeConfig.value.container
 )
 const shapeClass = computed(() => SHAPE_MAP[props.shape])
 const isCustomSized = computed(() => !!props.containerClass)
@@ -270,11 +271,11 @@ function handleCropCancel() {
               v-else
               class="flex h-full w-full items-center justify-center bg-elevated text-gray-400"
           >
-            <UIcon :name="icon" :class="SIZE_MAP[size].icon" />
+            <UIcon :name="icon" :class="sizeConfig.icon" />
           </div>
           <!-- Hover Overlay -->
           <div class="absolute inset-0 flex items-center justify-center bg-elevated opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-            <UIcon name="i-lucide-camera" class="text-white" :class="SIZE_MAP[size].hoverIcon" />
+            <UIcon name="i-lucide-camera" class="text-white" :class="sizeConfig.hoverIcon" />
           </div>
         </div>
         
@@ -293,7 +294,7 @@ function handleCropCancel() {
               />
             </div>
           </template>
-          <UIcon v-else name="i-lucide-loader-2" class="animate-spin text-primary" :class="SIZE_MAP[size].loader" />
+          <UIcon v-else name="i-lucide-loader-2" class="animate-spin text-primary" :class="sizeConfig.loader" />
         </div>
       </div>
 

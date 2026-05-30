@@ -18,8 +18,8 @@ type Transport = mediasoupTypes.Transport;
 // ============================================
 // Shared State (Module-level Singleton)
 // ============================================
-const producerTransport = ref<Transport | null>(null);
-const consumerTransport = ref<Transport | null>(null);
+const producerTransport = shallowRef<Transport | null>(null);
+const consumerTransport = shallowRef<Transport | null>(null);
 const currentRoomId = ref<string | null>(null);
 
 // Cached to prevent inject() warning when called outside Vue setup context

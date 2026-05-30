@@ -78,7 +78,6 @@ let _authRetryInFlight = false;
 
 let _config: ReturnType<typeof useRuntimeConfig> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
-let _userStore: ReturnType<typeof useUserStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 let _apiInstance: ReturnType<typeof useApi> | null = null;
 let _authActions: ReturnType<typeof useAuthActions> | null = null;
@@ -102,7 +101,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // Initialize on first call only (during Vue setup context)
   if (!_config) _config = useRuntimeConfig();
   if (!_authStore) _authStore = useAuthStore();
-  if (!_userStore) _userStore = useUserStore();
   if (!_toast) _toast = useToast();
   if (!_apiInstance) _apiInstance = useApi();
   if (!_authActions) _authActions = useAuthActions();

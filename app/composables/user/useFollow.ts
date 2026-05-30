@@ -42,7 +42,6 @@ export function useFollow(
 
   const { api, normalizeError } = useApi()
   const authStore = useAuthStore()
-  const userStore = useUserStore()
   const toast = useToast()
 
   // ========================================
@@ -130,10 +129,10 @@ export function useFollow(
       }
     }
     if (wasFollowing) {
-      userStore.decrementFollowing()
+      authStore.decrementFollowing()
     }
     else {
-      userStore.incrementFollowing()
+      authStore.incrementFollowing()
     }
 
     try {
@@ -158,10 +157,10 @@ export function useFollow(
       }
 
       if (wasFollowing) {
-        userStore.incrementFollowing()
+        authStore.incrementFollowing()
       }
       else {
-        userStore.decrementFollowing()
+        authStore.decrementFollowing()
       }
 
       // ── REACT (error) ──

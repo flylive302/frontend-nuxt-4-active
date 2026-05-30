@@ -36,13 +36,13 @@ interface UserUnfollowedPayload {
  */
 export function useFollowEvents() {
   const toast = useToast()
-  const userStore = useUserStore()
+  const authStore = useAuthStore()
 
   return function registerFollowEvents(socket: Socket): void {
     socket.on('user.followed', (payload: UserFollowedPayload) => {
 
       // Increment MY followers_count (REACT store update)
-      userStore.incrementFollowers()
+      authStore.incrementFollowers()
 
       toast.add({
         title: 'New Follower!',
@@ -55,7 +55,7 @@ export function useFollowEvents() {
     socket.on('user.unfollowed', (payload: UserUnfollowedPayload) => {
 
       // Decrement MY followers_count (REACT store update)
-      userStore.decrementFollowers()
+      authStore.decrementFollowers()
 
       // Silent — no toast for unfollows to avoid negativity
     })

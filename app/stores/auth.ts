@@ -76,6 +76,59 @@ export const useAuthStore = defineStore('auth', () => {
     suspensionInfo.value = info
   }
 
+  function updateBalance(balance: {
+    coins: string
+    diamonds: string
+    wealth_xp: string
+    charm_xp: string
+  }) {
+    if (user.value) {
+      user.value = { ...user.value, coins: balance.coins, diamonds: balance.diamonds, wealth_xp: balance.wealth_xp, charm_xp: balance.charm_xp }
+    }
+  }
+
+  function patchBalance(partial: Partial<Pick<BootstrapUser, 'coins' | 'diamonds' | 'wealth_xp' | 'charm_xp'>>) {
+    if (user.value) {
+      user.value = { ...user.value, ...partial }
+    }
+  }
+
+  function patchVip(vip: { vip_level: number; vip_level_id: number | null; vip_expires_at: string | null }) {
+    if (user.value) {
+      user.value = { ...user.value, vip_level: vip.vip_level, vip_level_id: vip.vip_level_id, vip_expires_at: vip.vip_expires_at }
+    }
+  }
+
+  function patchProfile(partial: Partial<BootstrapUser>) {
+    if (user.value) {
+      user.value = { ...user.value, ...partial }
+    }
+  }
+
+  function incrementFollowers() {
+    if (user.value) {
+      user.value = { ...user.value, followers_count: user.value.followers_count + 1 }
+    }
+  }
+
+  function decrementFollowers() {
+    if (user.value && user.value.followers_count > 0) {
+      user.value = { ...user.value, followers_count: user.value.followers_count - 1 }
+    }
+  }
+
+  function incrementFollowing() {
+    if (user.value) {
+      user.value = { ...user.value, following_count: user.value.following_count + 1 }
+    }
+  }
+
+  function decrementFollowing() {
+    if (user.value && user.value.following_count > 0) {
+      user.value = { ...user.value, following_count: user.value.following_count - 1 }
+    }
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -92,6 +145,14 @@ export const useAuthStore = defineStore('auth', () => {
     setMsabToken,
     logout,
     setSuspensionInfo,
+    updateBalance,
+    patchBalance,
+    patchVip,
+    patchProfile,
+    incrementFollowers,
+    decrementFollowers,
+    incrementFollowing,
+    decrementFollowing,
   }
 }, {
   // token → durable cookie (90-day, matches backend Sanctum expiration). The

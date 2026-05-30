@@ -1,67 +1,52 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
-import type { Colors } from '~/types/colors'
-import { withImageKitTransform } from '~/utils/imagekit'
-
-// ProfileBadge only supports a subset of colors
-type BadgeColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary' | 'success' | 'info' | 'warning' | 'error'>
+import { useClipboard } from '@vueuse/core'
 
 const props = withDefaults(defineProps<{
-  color?: BadgeColor
-  badgeSrc?: string
   txt?: string | number
-  imgAlt?: string
-  showBadge?: boolean
 }>(), {
-  color: "primary",
-  badgeSrc: ASSETS.DEFAULT_PROFILE_BADGE,
   txt: "UserSignature",
-  imgAlt: "User badge",
-  showBadge: true,
 })
 
-const displayBadgeSrc = computed(() =>
-  withImageKitTransform(props.badgeSrc, { w: 64, q: 75 }),
-)
+const source = computed(() => String(props.txt))
+const { copy } = useClipboard({ source })
 
-// Tailwind-safe variants
-const variantMap: Record<BadgeColor, string> = {
-  primary:   "bg-primary/30   border-primary/70",
-  secondary: "bg-secondary/30 border-secondary/70",
-  tertiary:  "bg-tertiary/30  border-tertiary/70",
-  success:   "bg-success/30   border-success/70",
-  info:      "bg-info/30      border-info/70",
-  warning:   "bg-warning/30   border-warning/70",
-  error:     "bg-error/30     border-error/70",
+const showCopied = ref(false)
+
+async function onCopy() {
+  await copy()
+  showCopied.value = false
+  await nextTick()
+  showCopied.value = true
+  setTimeout(() => { showCopied.value = false }, 800)
 }
-
 </script>
 
 <template>
-  <div class="flex items-center w-fit">
-    <NuxtImg
-        v-if="showBadge"
-        :src="displayBadgeSrc"
-        :alt="imgAlt"
-        class="relative z-10 shrink-0"
-        :width="64"
-        :height="64"
-        format="webp"
-        densities="x1 x2"
-        sizes="24px"
-        loading="lazy"
-        fetchpriority="low"
-        decoding="async"
-    />
-    <p
-        v-if="color == 'primary' && txt"
-        class="font-semibold border-2 rounded-full shadow-md backdrop-blur-md text-xs pr-1  truncate"
-        :class="[
-          variantMap[color],
-          showBadge ? 'pl-4 -ml-4' : 'pl-1 m-0'
-        ]"
-    >
+  <div class="relative inline-block">
+    <Transition name="float-up">
+      <span
+        v-if="showCopied"
+        class="absolute -top-5 left-2/2 -translate-x-1/2 text-sm text-white font-bold pointer-events-none whitespace-nowrap"
+      >
+        Copied!
+      </span>
+    </Transition>
+    <p @click="onCopy()" class="font-semibold border-2 bg-primary/40 border-primary rounded-full shadow-md backdrop-blur-md text-xs px-1 truncate cursor-pointer select-none text-center">
       {{ txt }}
     </p>
   </div>
 </template>
+
+<style scoped>
+.float-up-enter-active {
+  animation: float-up 1.5s ease-out forwards;
+}
+.float-up-leave-active {
+  display: none;
+}
+
+@keyframes float-up {
+  0%   { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -12px); }
+}
+</style>

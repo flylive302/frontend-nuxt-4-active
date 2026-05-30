@@ -8,8 +8,8 @@ vi.stubGlobal('computed', computed)
 const mockToast = { add: vi.fn() }
 vi.stubGlobal('useToast', () => mockToast)
 
-const mockUserStore = { patchBalance: vi.fn() }
-vi.stubGlobal('useUserStore', () => mockUserStore)
+const mockAuthStore = { patchBalance: vi.fn() }
+vi.stubGlobal('useAuthStore', () => mockAuthStore)
 
 const mockApi = vi.fn(async (path: string) => {
   if (path.includes('/claim')) {

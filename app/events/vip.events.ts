@@ -15,7 +15,6 @@ const log = createLogger('[VipEvents]')
  */
 export function useVipEvents() {
   const authStore = useAuthStore()
-  const userStore = useUserStore()
   const toast = useToast()
 
   return function registerVipEvents(socket: Socket): void {
@@ -24,7 +23,7 @@ export function useVipEvents() {
       // Detect VIP level increase for congratulations modal
       const previousLevel = authStore.user?.vip_level ?? 0
 
-      userStore.patchVip({
+      authStore.patchVip({
         vip_level: payload.vip_level,
         vip_level_id: payload.vip_level_id,
         vip_expires_at: payload.vip_expires_at,

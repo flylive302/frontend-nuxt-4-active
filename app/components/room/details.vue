@@ -70,9 +70,7 @@ const columns: ColumnDef<RoomLevelRow>[] = [
 // ========================================
 
 /** Room level config from bootstrap store */
-const levelConfig = computed<LevelConfig[]>(() => 
-  bootstrapStore.config?.room_levels ?? []
-);
+const levelConfig = computed<LevelConfig[]>(() => bootstrapStore.sortedRoomLevels);
 
 /** Current room level */
 const currentLevel = computed(() => 

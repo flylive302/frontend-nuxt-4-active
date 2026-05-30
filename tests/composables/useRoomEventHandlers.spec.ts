@@ -15,6 +15,7 @@ vi.mock('~/composables/lucky/useLuckyGift', () => ({
   cleanupLuckyEventHandlers: vi.fn(),
 }))
 
+// noinspection JSUnusedGlobalSymbols
 vi.mock('~/composables/lucky/useLuckyFly', () => ({
   useLuckyFly: () => ({ triggerFly: vi.fn() }),
 }))
@@ -24,6 +25,7 @@ vi.mock('~/services/giftAssetCache', () => ({
   preloadSvga: vi.fn(),
 }))
 
+// noinspection JSUnusedGlobalSymbols
 vi.mock('~/utils/room/participant-placeholder', () => ({
   createParticipantPlaceholder: (id: number) => ({ id, name: `User ${id}` }),
 }))
@@ -68,7 +70,11 @@ let mockRoomStore: {
   refreshCurrentRoom: ReturnType<typeof vi.fn>
 }
 
-const mockAuthStore = { user: { id: 1, name: 'Test' } }
+const mockAuthStore = {
+  user: { id: 1, name: 'Test' },
+  patchProfile: vi.fn(),
+  patchBalance: vi.fn(),
+}
 
 let mockGiftStore: {
   removeRecipient: ReturnType<typeof vi.fn>
@@ -82,7 +88,6 @@ vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(null)
 vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
 vi.stubGlobal('useRoomSlideStore', () => ({ addSlide: vi.fn(), clearSlides: vi.fn() }))
 vi.stubGlobal('useGiftComboStore', () => ({ pendingRefund: 0 }))
-vi.stubGlobal('useUserStore', () => ({ patchProfile: vi.fn(), patchBalance: vi.fn() }))
 vi.stubGlobal('navigateTo', vi.fn())
 
 // ============================================
@@ -107,7 +112,13 @@ function createMockSocket() {
 // ============================================
 
 describe('setupRoomEventHandlers', () => {
-  let mockToast: { add: ReturnType<typeof vi.fn> }
+  let mockToast: {
+    toasts: ReturnType<typeof vi.fn>
+    add: ReturnType<typeof vi.fn>
+    update: ReturnType<typeof vi.fn>
+    remove: ReturnType<typeof vi.fn>
+    clear: ReturnType<typeof vi.fn>
+  }
   let roomActions: {
     leaveRoom: ReturnType<typeof vi.fn>
     stopAudio: ReturnType<typeof vi.fn>
@@ -121,7 +132,13 @@ describe('setupRoomEventHandlers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockToast = { add: vi.fn() }
+    mockToast = {
+      toasts: vi.fn(),
+      add: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      clear: vi.fn(),
+    }
 
     roomActions = {
       leaveRoom: vi.fn(),
@@ -183,7 +200,7 @@ describe('setupRoomEventHandlers', () => {
       const { socket, trigger } = createMockSocket()
 
       const { setupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
-      setupRoomEventHandlers(socket as unknown as Parameters<typeof setupRoomEventHandlers>[0], roomActions, mockToast)
+      setupRoomEventHandlers(socket as unknown as Parameters<typeof setupRoomEventHandlers>[0], roomActions, mockToast as unknown as Parameters<typeof setupRoomEventHandlers>[2])
 
       trigger('room:userLeft', { userId: 42 })
 
@@ -198,7 +215,7 @@ describe('setupRoomEventHandlers', () => {
       const { socket, trigger } = createMockSocket()
 
       const { setupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
-      setupRoomEventHandlers(socket as unknown as Parameters<typeof setupRoomEventHandlers>[0], roomActions, mockToast)
+      setupRoomEventHandlers(socket as unknown as Parameters<typeof setupRoomEventHandlers>[0], roomActions, mockToast as unknown as Parameters<typeof setupRoomEventHandlers>[2])
 
       mockRoomStore.previousRoute = '/home'
       trigger('room:closed', { reason: 'Owner ended' })

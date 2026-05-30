@@ -3,29 +3,26 @@
 </script>
 
 <template>
-  <div class="relative w-full">
-    <slot name="cover" />
+  <div class="relative max-w-screen">
+    <div class="max-w-full overflow-hidden">
+      <slot name="cover" />
+    </div>
 
-    <div class="bg-neutral-900 relative z-10 -mt-6 rounded-t-4xl">
-      <div class="flex justify-center w-full gap-3">
-        <div class="w-full flex items-center justify-center">
-          <slot name="signature-badges" />
-        </div>
+    <div class="relative z-10 -mt-6 rounded-t-4xl bg-neutral-950">
+      <slot name="card" />
+      <div class="flex justify-center max-w-11/12 mx-auto gap-1 relative z-10">
+        <slot name="signature-badges" />
 
         <slot name="avatar" />
 
-        <div class="flex w-full">
-          <slot name="badges" />
-        </div>
+        <slot name="badges" />
       </div>
 
-      <h1 class="text-lg font-bold text-center">
+      <h1 class="text-lg font-bold text-center relative z-10 mt-3">
         <slot name="name" />
       </h1>
 
-      <div class="m-3 rounded-xl glowing-border overflow-hidden">
-        <slot name="stats" />
-      </div>
+      <slot name="stats" />
     </div>
   </div>
 </template>

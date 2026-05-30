@@ -67,6 +67,7 @@ export interface UserProfile {
   signature: string
   avatar: string | null  // Single URL - use Nuxt Image for transforms
   cover_image: string | null
+  vip_level: number
   frame_id: number | null
   chat_bubble_id: number | null
   entry_animation_id: number | null
