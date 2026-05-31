@@ -79,10 +79,10 @@ html,
 body {
     padding: 0;
     margin: 0;
-    width: 100%;
+    width: 100vw;
     background-color: #000002;
     min-height: 100dvh;
-    overscroll-behavior-y: contain;
+    overflow-x: hidden;
 }
 
 html {

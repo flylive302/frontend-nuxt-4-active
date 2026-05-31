@@ -5,7 +5,7 @@
 // UI + event binding for wealth/charm level pages.
 // Both pages are visually identical — only color, XP source, and description differ.
 
-import { h, computed, resolveComponent } from 'vue'
+import { h, computed } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { LevelConfig } from '~/types/user/bootstrap'
 import { computeLevelStatus } from '~/utils/levels'
@@ -41,12 +41,9 @@ interface LevelRow {
   requiredXP: string
   badge: {
     badgeSrc: string
-    txt: string
     class?: string
   }
 }
-
-const profileBadge = resolveComponent('ProfileBadge')
 
 const columns: ColumnDef<LevelRow>[] = [
   {
@@ -56,10 +53,9 @@ const columns: ColumnDef<LevelRow>[] = [
       const badge = getValue() as LevelRow['badge'] | undefined
       if (!badge) return null
 
-      return h(profileBadge, {
-        class: badge.class + 'mx-auto',
-        badgeSrc: badge.badgeSrc,
-        txt: badge.txt,
+      return h('img', {
+        src: badge.badgeSrc,
+        class: `mx-auto max-w-12 w-full ${badge.class ?? ''}`,
       })
     },
   },
@@ -139,7 +135,6 @@ const tableData = computed<LevelRow[]>(() =>
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
         badgeSrc: badge?.image_url || props.defaultBadgeUrl,
-        txt: '',
         class: item.level === currentLevel.value ? `border border-${props.color} bg-${props.color}/10 rounded-md px-2 py-1 inset-shadow-sm` : '',
       },
     }
