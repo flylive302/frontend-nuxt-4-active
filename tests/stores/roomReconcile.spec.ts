@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, nextTick, ref } from 'vue'
 
-import { useRoomAudioStore } from '../../app/stores/roomAudio'
+import { useRoomParticipantsStore } from '../../app/stores/roomParticipants'
 import { useRoomSeatsStore } from '../../app/stores/roomSeats'
 import type { RoomParticipant } from '../../app/types/room/audio'
 
@@ -24,9 +24,9 @@ beforeEach(() => {
 // seats that are no longer present rather than merge onto stale state. Before
 // the reconcile fix, the participant Map only ever grew and the displayed count
 // drifted asymmetrically between clients (the reported "1 vs 2" bug).
-describe('roomAudioStore.reconcileParticipants', () => {
+describe('roomParticipantsStore.reconcileParticipants', () => {
   it('prunes participants absent from the snapshot, preserving self', () => {
-    const store = useRoomAudioStore()
+    const store = useRoomParticipantsStore()
     store.addParticipant(user(1)) // self
     store.addParticipant(user(2)) // ghost — will be absent from next snapshot
     store.addParticipant(user(3))
@@ -39,7 +39,7 @@ describe('roomAudioStore.reconcileParticipants', () => {
   })
 
   it('does not accumulate ghosts across repeated re-joins', () => {
-    const store = useRoomAudioStore()
+    const store = useRoomParticipantsStore()
     store.addParticipant(user(1)) // self
 
     store.reconcileParticipants([user(2), user(3)], 1)
@@ -51,7 +51,7 @@ describe('roomAudioStore.reconcileParticipants', () => {
   })
 
   it('upserts an existing participant in place (no duplicate, fields updated)', () => {
-    const store = useRoomAudioStore()
+    const store = useRoomParticipantsStore()
     store.addParticipant(user(5, { name: 'Old' }))
 
     store.reconcileParticipants([user(5, { name: 'New' })], undefined)
@@ -64,42 +64,38 @@ describe('roomAudioStore.reconcileParticipants', () => {
 describe('roomSeatsStore.reconcileSeats', () => {
   it('clears a seat whose occupant is absent from the snapshot', () => {
     const store = useRoomSeatsStore()
-    store.updateSeat(0, user(1), false, [])
-    store.updateSeat(1, user(2), false, [])
+    store.updateSeat(0, 1, false)
+    store.updateSeat(1, 2, false)
 
-    // Snapshot only has user 1 on seat 0 — user 2 left their seat
-    store.reconcileSeats([{ seatIndex: 0, user: user(1), isMuted: false }], [])
+    // Snapshot only has occupant 1 on seat 0 — occupant 2 left their seat
+    store.reconcileSeats([{ seatIndex: 0, occupantId: 1, isMuted: false }])
 
-    expect(store.seats[0]?.user?.id).toBe(1)
-    expect(store.seats[1]?.user).toBeNull()
+    expect(store.seats[0]?.occupantId).toBe(1)
+    expect(store.seats[1]?.occupantId).toBeNull()
   })
 
   it('preserves seat lock state when clearing a vacated seat', () => {
     const store = useRoomSeatsStore()
-    store.updateSeat(2, user(9), false, [])
+    store.updateSeat(2, 9, false)
     store.setSeatLocked(2, true)
 
-    store.reconcileSeats([], []) // user 9 gone
+    store.reconcileSeats([]) // occupant 9 gone
 
-    expect(store.seats[2]?.user).toBeNull()
+    expect(store.seats[2]?.occupantId).toBeNull()
     expect(store.seats[2]?.isLocked).toBe(true)
   })
 
   it('applies occupied seats from the snapshot', () => {
     const store = useRoomSeatsStore()
 
-    store.reconcileSeats(
-      [
-        { seatIndex: 3, user: user(7), isMuted: true },
-        { seatIndex: 4, user: user(8), isMuted: false },
-      ],
-      [8],
-    )
+    store.reconcileSeats([
+      { seatIndex: 3, occupantId: 7, isMuted: true },
+      { seatIndex: 4, occupantId: 8, isMuted: false },
+    ])
 
-    expect(store.seats[3]?.user?.id).toBe(7)
+    expect(store.seats[3]?.occupantId).toBe(7)
     expect(store.seats[3]?.isMuted).toBe(true)
-    expect(store.seats[4]?.user?.id).toBe(8)
-    expect(store.seats[4]?.isActive).toBe(true) // user 8 is an active speaker
+    expect(store.seats[4]?.occupantId).toBe(8)
   })
 })
 
@@ -110,34 +106,34 @@ describe('roomSeatsStore.reconcileSeats', () => {
 describe('roomSeatsStore.updateSeat single-occupancy', () => {
   it('vacates the user previous seat when they move to a new one', () => {
     const store = useRoomSeatsStore()
-    store.updateSeat(0, user(1), false, [])
+    store.updateSeat(0, 1, false)
 
     // Same user moves to seat 3 without an intervening clearSeat
-    store.updateSeat(3, user(1), false, [])
+    store.updateSeat(3, 1, false)
 
-    expect(store.seats[0]?.user).toBeNull()
-    expect(store.seats[3]?.user?.id).toBe(1)
+    expect(store.seats[0]?.occupantId).toBeNull()
+    expect(store.seats[3]?.occupantId).toBe(1)
   })
 
   it('does not duplicate a user across seats over repeated moves', () => {
     const store = useRoomSeatsStore()
-    store.updateSeat(0, user(1), false, [])
-    store.updateSeat(3, user(1), false, [])
-    store.updateSeat(5, user(1), false, [])
+    store.updateSeat(0, 1, false)
+    store.updateSeat(3, 1, false)
+    store.updateSeat(5, 1, false)
 
-    const occupied = store.seats.filter((s) => s.user?.id === 1).map((s) => s.index)
+    const occupied = store.seats.filter((s) => s.occupantId === 1).map((s) => s.index)
     expect(occupied).toEqual([5])
   })
 
   it('leaves other users seats untouched', () => {
     const store = useRoomSeatsStore()
-    store.updateSeat(0, user(1), false, [])
-    store.updateSeat(1, user(2), false, [])
+    store.updateSeat(0, 1, false)
+    store.updateSeat(1, 2, false)
 
-    store.updateSeat(3, user(1), false, []) // user 1 moves; user 2 unaffected
+    store.updateSeat(3, 1, false) // user 1 moves; user 2 unaffected
 
-    expect(store.seats[1]?.user?.id).toBe(2)
-    expect(store.seats[0]?.user).toBeNull()
-    expect(store.seats[3]?.user?.id).toBe(1)
+    expect(store.seats[1]?.occupantId).toBe(2)
+    expect(store.seats[0]?.occupantId).toBeNull()
+    expect(store.seats[3]?.occupantId).toBe(1)
   })
 })

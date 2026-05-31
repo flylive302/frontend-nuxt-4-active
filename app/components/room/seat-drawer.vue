@@ -30,7 +30,7 @@ const seatIndex = computed(() => seatsStore.activeSeat)
 
 // Get current seat data (null when no seat is selected)
 const currentSeat = computed(() =>
-  seatIndex.value !== null ? seatsStore.seats[seatIndex.value] : null
+  seatIndex.value !== null ? seatsStore.seatsWithUsers[seatIndex.value] : null
 )
 
 // Check if the current user occupies this seat

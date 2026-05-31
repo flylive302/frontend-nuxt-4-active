@@ -22,7 +22,7 @@ const DynamicScrollerItem = defineAsyncComponent(async () =>
 // ========================================
 
 const roomStore = useRoomStore()
-const audioStore = useRoomAudioStore()
+const participantsStore = useRoomParticipantsStore()
 const seatsStore = useRoomSeatsStore()
 const { inviteToSeat } = useRoomAudio()
 
@@ -77,8 +77,8 @@ function onTabChange(value: string | number): void {
 // Participants (Right Drawer)
 // ========================================
 
-const participants = computed(() => audioStore.participantList)
-const participantCount = computed(() => audioStore.participantList.length)
+const participants = computed(() => participantsStore.participantList)
+const participantCount = computed(() => participantsStore.participantList.length)
 
 // Owner check and active seat for invite functionality
 const { isRoomOwner } = useRoomPermissions()

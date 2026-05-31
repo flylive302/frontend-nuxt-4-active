@@ -52,8 +52,8 @@ export function useGiftSending() {
     const currentUserId = authStore.user?.id;
     const ids = new Set<number>();
     for (const seat of seatsStore.seats) {
-      if (seat.user !== null && seat.user.id !== currentUserId) {
-        ids.add(seat.user.id);
+      if (seat.occupantId !== null && seat.occupantId !== currentUserId) {
+        ids.add(seat.occupantId);
       }
     }
     return ids;
@@ -271,7 +271,7 @@ export function useGiftSending() {
   // GF-017: Auto-end combo when all recipients leave seats
   // ========================================
   watch(
-    () => seatsStore.seats.map(s => s.user?.id ?? null),
+    () => seatsStore.seats.map(s => s.occupantId ?? null),
     () => {
       const seatedIds = getSeatedUserIds();
 

@@ -38,25 +38,26 @@ vi.mock('~/utils/prop', () => ({
 // Global stubs (Nuxt auto-imports resolved inside setupRoomEventHandlers)
 // ============================================
 
-let mockAudioStore: {
+let mockParticipantsStore: {
   removeParticipant: ReturnType<typeof vi.fn>
   addParticipant: ReturnType<typeof vi.fn>
   updateParticipantProfile: ReturnType<typeof vi.fn>
   participants: Map<number, unknown>
+}
+
+let mockAudioStore: {
   audioState: { activeSpeakerIds: number[] }
   addMessage: ReturnType<typeof vi.fn>
   setActiveSpeakers: ReturnType<typeof vi.fn>
-  setParticipantMuted: ReturnType<typeof vi.fn>
 }
 
 let mockSeatsStore: {
   clearParticipantFromSeat: ReturnType<typeof vi.fn>
   updateSeat: ReturnType<typeof vi.fn>
   clearSeat: ReturnType<typeof vi.fn>
-  setSeatUserMuted: ReturnType<typeof vi.fn>
+  setSeatMutedByUserId: ReturnType<typeof vi.fn>
   setSeatLocked: ReturnType<typeof vi.fn>
   syncActiveSpeakers: ReturnType<typeof vi.fn>
-  refreshSeatUser: ReturnType<typeof vi.fn>
   seats: unknown[]
   addSeatGiftValue: ReturnType<typeof vi.fn>
   getRecentClaim: ReturnType<typeof vi.fn>
@@ -150,25 +151,26 @@ describe('setupRoomEventHandlers', () => {
       startAudio: vi.fn().mockResolvedValue(undefined),
     }
 
-    mockAudioStore = {
+    mockParticipantsStore = {
       removeParticipant: vi.fn(),
       addParticipant: vi.fn(),
       updateParticipantProfile: vi.fn(),
       participants: new Map(),
+    }
+
+    mockAudioStore = {
       audioState: { activeSpeakerIds: [] },
       addMessage: vi.fn(),
       setActiveSpeakers: vi.fn(),
-      setParticipantMuted: vi.fn(),
     }
 
     mockSeatsStore = {
       clearParticipantFromSeat: vi.fn(),
       updateSeat: vi.fn(),
       clearSeat: vi.fn(),
-      setSeatUserMuted: vi.fn(),
+      setSeatMutedByUserId: vi.fn(),
       setSeatLocked: vi.fn(),
       syncActiveSpeakers: vi.fn(),
-      refreshSeatUser: vi.fn(),
       seats: [],
       addSeatGiftValue: vi.fn(),
       getRecentClaim: vi.fn().mockReturnValue(null),
@@ -189,6 +191,7 @@ describe('setupRoomEventHandlers', () => {
       currentPlayback: null,
     }
 
+    vi.stubGlobal('useRoomParticipantsStore', () => mockParticipantsStore)
     vi.stubGlobal('useRoomAudioStore', () => mockAudioStore)
     vi.stubGlobal('useRoomSeatsStore', () => mockSeatsStore)
     vi.stubGlobal('useRoomStore', () => mockRoomStore)
@@ -204,7 +207,7 @@ describe('setupRoomEventHandlers', () => {
 
       trigger('room:userLeft', { userId: 42 })
 
-      expect(mockAudioStore.removeParticipant).toHaveBeenCalledWith(42)
+      expect(mockParticipantsStore.removeParticipant).toHaveBeenCalledWith(42)
       expect(mockSeatsStore.clearParticipantFromSeat).toHaveBeenCalledWith(42)
       expect(mockGiftStore.removeRecipient).toHaveBeenCalledWith(42)
     })

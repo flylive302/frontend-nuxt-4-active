@@ -105,6 +105,7 @@ export function setupRoomEventHandlers(
   // Resolve Pinia stores here — safe outside Vue setup context
   const roomStore = useRoomStore();
   const audioStore = useRoomAudioStore();
+  const participantsStore = useRoomParticipantsStore();
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
@@ -118,7 +119,7 @@ export function setupRoomEventHandlers(
 
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
-    audioStore.addParticipant(event.user);
+    participantsStore.addParticipant(event.user);
 
     if (event.user.entry_animation_id && !roomStore.isMinimized) {
       const prop = await resolvePropAsync(event.user.entry_animation_id);
@@ -126,7 +127,7 @@ export function setupRoomEventHandlers(
         const giftForPlayback = propToEntryAnimationGift(prop);
         // REACT: start the asset download the moment we learn the animation,
         // not when the modal mounts. Fire-and-forget — never await a ~7MB
-        // download here or it stalls the handler. Deduped with the VAP plugin.
+        // download here, or it stalls the handler. Deduped with the VAP plugin.
         void giftAssetCache.preloadGift(giftForPlayback);
         giftStore.enqueuePlayback({
           gift: giftForPlayback,
@@ -156,7 +157,7 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('room:userLeft', (event: UserLeftEvent) => {
-    audioStore.removeParticipant(event.userId);
+    participantsStore.removeParticipant(event.userId);
     seatsStore.clearParticipantFromSeat(event.userId);
     giftStore.removeRecipient(event.userId);
   });
@@ -202,11 +203,8 @@ export function setupRoomEventHandlers(
     // Strip financial fields to prevent overwriting data from balance.updated
     const { coins: _c, diamonds: _d, wealth_xp: _w, charm_xp: _ch, ...safeProfile } = event.profile as Record<string, unknown>;
 
-    audioStore.updateParticipantProfile(event.user_id, safeProfile as Partial<RoomParticipant>);
-    const updated = audioStore.participants.get(event.user_id);
-    if (updated) {
-      seatsStore.refreshSeatUser(event.user_id, updated);
-    }
+    participantsStore.updateParticipantProfile(event.user_id, safeProfile as Partial<RoomParticipant>);
+    // seatsWithUsers computed reflects the update automatically — no sync call needed.
     if (roomStore.currentRoom?.owner?.id === event.user_id) {
       roomStore.refreshCurrentRoom({
         owner: { ...roomStore.currentRoom.owner, ...safeProfile },
@@ -243,22 +241,10 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
-    let user = audioStore.participants.get(event.userId) ?? null;
-    if (!user) {
-      user = createParticipantPlaceholder(event.userId);
-      audioStore.addParticipant(user);
+    if (!participantsStore.participants.get(event.userId)) {
+      participantsStore.addParticipant(createParticipantPlaceholder(event.userId));
     }
-    seatsStore.updateSeat(
-      event.seatIndex,
-      user,
-      event.isMuted,
-      audioStore.audioState.activeSpeakerIds,
-    );
-    const p = audioStore.participants.get(user.id);
-    if (p) {
-      p.isSpeaker = true;
-      p.seatIndex = event.seatIndex;
-    }
+    seatsStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
   });
 
   socket.on('seat:cleared', (event: SeatClearedEvent) => {
@@ -267,7 +253,7 @@ export function setupRoomEventHandlers(
     // Ignore stale delayed clears. MSAB now includes the user being cleared;
     // if the seat has since been reused or rehydrated with another user, this
     // event must not evict the current occupant.
-    if (event.userId !== undefined && seat?.user?.id !== event.userId) {
+    if (event.userId !== undefined && seat?.occupantId !== event.userId) {
       return;
     }
 
@@ -283,18 +269,9 @@ export function setupRoomEventHandlers(
       }
     }
 
-    const wasCurrentUserSeated = seat?.user?.id === authStore.user?.id;
-    const leftUserId = seat?.user?.id;
+    const wasCurrentUserSeated = seat?.occupantId === authStore.user?.id;
 
     seatsStore.clearSeat(event.seatIndex);
-
-    if (leftUserId != null) {
-      const p = audioStore.participants.get(leftUserId);
-      if (p) {
-        p.isSpeaker = false;
-        p.seatIndex = undefined;
-      }
-    }
 
     if (wasCurrentUserSeated) {
       stopAudio();
@@ -307,8 +284,7 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('seat:userMuted', (event: SeatUserMutedEvent) => {
-    audioStore.setParticipantMuted(event.userId, event.isMuted);
-    seatsStore.setSeatUserMuted(event.userId, event.isMuted);
+    seatsStore.setSeatMutedByUserId(event.userId, event.isMuted);
   });
 
   socket.on('seat:locked', (event: SeatLockedEvent) => {
@@ -319,12 +295,14 @@ export function setupRoomEventHandlers(
     // seat — shows for everyone, including the owner who issued the lock.
     if (event.isLocked) {
       const seat = seatsStore.seats[event.seatIndex];
-      if (seat?.user) {
-        const occupantId = seat.user.id;
+      if (seat?.occupantId != null) {
+        const occupantId = seat.occupantId;
         seatsStore.clearSeat(event.seatIndex);
-        const p = audioStore.participants.get(occupantId);
+        const p = participantsStore.participants.get(occupantId);
         if (p) {
+          // @ts-expect-error TODO Issue-06
           p.isSpeaker = false;
+          // @ts-expect-error TODO Issue-06
           p.seatIndex = undefined;
         }
       }
@@ -335,7 +313,7 @@ export function setupRoomEventHandlers(
   socket.on('seat:invite:received', (event: SeatInviteReceivedEvent) => {
     // Only show toast if this invite is for the current user
     if (event.targetUserId === authStore.user?.id) {
-      const inviter = audioStore.participants.get(event.invitedById);
+      const inviter = participantsStore.participants.get(event.invitedById);
       const inviterName = inviter?.name ?? 'Someone';
 
       toast.add({
@@ -391,8 +369,8 @@ export function setupRoomEventHandlers(
     // Skip if room is minimized
     if (roomStore.isMinimized) return;
 
-    // Look up sender from audio store participants
-    const sender = audioStore.participants.get(event.senderId);
+    // Look up sender from participants store
+    const sender = participantsStore.participants.get(event.senderId);
 
     const gift = getGiftById(event.giftId);
 

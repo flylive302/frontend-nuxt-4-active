@@ -10,7 +10,7 @@ export function useGiftEligibility() {
 
   const eligibleRecipients = computed((): RoomParticipant[] => {
     const currentUserId = authStore.user?.id
-    return seatsStore.seats
+    return seatsStore.seatsWithUsers
       .filter(seat => seat.user !== null && seat.user.id !== currentUserId)
       .map(seat => seat.user!)
   })

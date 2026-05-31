@@ -1,13 +1,15 @@
 import { defineStore } from 'pinia';
-import type { RoomParticipant, Seat } from '~/types/room/audio';
+import type { Seat, SeatWithUser } from '~/types/room/audio';
+import { useRoomParticipantsStore } from '~/stores/roomParticipants';
 import { SEAT_COUNT } from '~/constants/room';
+
 // ============================================
 // Helpers
 // ============================================
 function createEmptySeats(): Seat[] {
   return Array.from({ length: SEAT_COUNT }, (_, i) => ({
     index: i,
-    user: null,
+    occupantId: null,
     isMuted: false,
     isActive: false,
     isLocked: false,
@@ -44,50 +46,62 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   const seatLastClaimedAt = new Map<number, { userId: number; at: number }>();
 
   // ========================================
+  // Participants store (for seatsWithUsers join)
+  // ========================================
+  const participantsStore = useRoomParticipantsStore();
+
+  // ========================================
   // Computed
   // ========================================
-  const speakersCount = computed(() => seats.value.filter((s) => s.user !== null).length);
+  const speakersCount = computed(() => seats.value.filter((s) => s.occupantId !== null).length);
+
+  const seatsWithUsers = computed<SeatWithUser[]>(() =>
+    seats.value.map((seat) => ({
+      ...seat,
+      user:
+        seat.occupantId !== null
+          ? (participantsStore.participants.get(seat.occupantId) ?? null)
+          : null,
+    })),
+  );
+
+  const speakerIds = computed<Set<number>>(() => {
+    const ids = new Set<number>();
+    for (const seat of seats.value) {
+      if (seat.occupantId !== null) ids.add(seat.occupantId);
+    }
+    return ids;
+  });
 
   // ========================================
   // Seat Actions
   // ========================================
 
-  /**
-   * Update a seat snapshot. Caller resolves `user` from participants / placeholder.
-   */
-  function updateSeat(
-    seatIndex: number,
-    user: RoomParticipant | null,
-    isMuted: boolean,
-    activeSpeakerIds: readonly number[],
-  ) {
+  function updateSeat(seatIndex: number, occupantId: number | null, isMuted: boolean): void {
     if (seatIndex < 0 || seatIndex >= seats.value.length) return;
 
-    // Single-occupancy invariant: a user occupies at most one seat. Clear the
-    // same user from any other seat before placing them here, so observers
-    // self-correct even if the compensating `seat:cleared` is reordered or
-    // suppressed (e.g. by the F-24 self-retake guard on a quick seat move).
-    if (user) {
+    // Single-occupancy invariant: clear the same occupant from any other seat
+    // before placing them here, so observers self-correct even if the
+    // compensating `seat:cleared` is reordered or suppressed (F-24 guard).
+    if (occupantId !== null) {
       seats.value.forEach((s, i) => {
-        if (i !== seatIndex && s.user?.id === user.id) {
+        if (i !== seatIndex && s.occupantId === occupantId) {
           clearSeat(i);
         }
       });
     }
 
     const currentSeat = seats.value[seatIndex];
-    const newSeat: Seat = {
+    seats.value[seatIndex] = {
       index: seatIndex,
-      user: user ? { ...user } : null,
+      occupantId,
       isMuted,
-      isActive: user != null && activeSpeakerIds.includes(user.id),
+      isActive: currentSeat?.isActive ?? false,
       isLocked: currentSeat?.isLocked ?? false,
     };
 
-    seats.value[seatIndex] = newSeat;
-
-    if (user) {
-      seatLastClaimedAt.set(seatIndex, { userId: user.id, at: Date.now() });
+    if (occupantId !== null) {
+      seatLastClaimedAt.set(seatIndex, { userId: occupantId, at: Date.now() });
     }
   }
 
@@ -99,61 +113,61 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     return seatLastClaimedAt.get(seatIndex);
   }
 
-  /**
-   * Clear a seat (remove user).
-   */
-  function clearSeat(seatIndex: number) {
-    if (seatIndex >= 0 && seatIndex < seats.value.length) {
-      const seat = seats.value[seatIndex];
-      const user = seat?.user;
+  function clearSeat(seatIndex: number): void {
+    if (seatIndex < 0 || seatIndex >= seats.value.length) return;
+    const seat = seats.value[seatIndex];
 
-      seats.value[seatIndex] = {
-        index: seatIndex,
-        user: null,
-        isMuted: false,
-        isActive: false,
-        isLocked: seat?.isLocked ?? false,
-      };
-
-      if (user) {
-        seatGiftTotals.value.delete(user.id);
-      }
+    if (seat?.occupantId !== null && seat?.occupantId !== undefined) {
+      seatGiftTotals.value.delete(seat.occupantId);
     }
+
+    seats.value[seatIndex] = {
+      index: seatIndex,
+      occupantId: null,
+      isMuted: false,
+      isActive: false,
+      isLocked: seat?.isLocked ?? false,
+    };
   }
 
-  function setSeatLocked(seatIndex: number, isLocked: boolean) {
+  function setSeatLocked(seatIndex: number, isLocked: boolean): void {
     const seat = seats.value[seatIndex];
     if (seatIndex >= 0 && seatIndex < seats.value.length && seat) {
       seat.isLocked = isLocked;
     }
   }
 
-  function addSeatGiftValue(userId: number, coinValue: number) {
+  function addSeatGiftValue(userId: number, coinValue: number): void {
     const current = seatGiftTotals.value.get(userId) ?? 0;
     seatGiftTotals.value.set(userId, current + coinValue);
+  }
+
+  function setSeatMutedByUserId(userId: number, isMuted: boolean): void {
+    const seat = seats.value.find((s) => s.occupantId === userId);
+    if (seat) seat.isMuted = isMuted;
   }
 
   // ========================================
   // Seat UI Actions
   // ========================================
 
-  function startInviteMode(seatIndex: number) {
+  function startInviteMode(seatIndex: number): void {
     inviteModeSeat.value = seatIndex;
     activeSeat.value = null;
   }
 
-  function cancelInviteMode() {
+  function cancelInviteMode(): void {
     inviteModeSeat.value = null;
   }
 
-  function openSeat(seatIndex: number) {
+  function openSeat(seatIndex: number): void {
     activeSeat.value = null;
     nextTick(() => {
       activeSeat.value = seatIndex;
     });
   }
 
-  function closeSeat() {
+  function closeSeat(): void {
     activeSeat.value = null;
   }
 
@@ -162,9 +176,9 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   // ========================================
 
   /** Sync seat isActive state with active speaker IDs. */
-  function syncActiveSpeakers(userIds: number[]) {
+  function syncActiveSpeakers(userIds: number[]): void {
     seats.value.forEach((seat) => {
-      const shouldBeActive = seat.user != null && userIds.includes(seat.user.id);
+      const shouldBeActive = seat.occupantId !== null && userIds.includes(seat.occupantId);
       if (seat.isActive !== shouldBeActive) {
         seat.isActive = shouldBeActive;
       }
@@ -172,7 +186,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   }
 
   /** Reset all seats and gift totals. */
-  function resetSeats() {
+  function resetSeats(): void {
     seatGiftTotals.value.clear();
     seatLastClaimedAt.clear();
     seats.value = createEmptySeats();
@@ -189,46 +203,29 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
    * resetSeats() on reconnect).
    */
   function reconcileSeats(
-    snapshot: { seatIndex: number; user: RoomParticipant | null; isMuted: boolean }[],
-    activeSpeakerIds: readonly number[],
-  ) {
-    const occupied = new Set(snapshot.filter((s) => s.user != null).map((s) => s.seatIndex));
+    snapshot: { seatIndex: number; occupantId: number | null; isMuted: boolean }[],
+  ): void {
+    const occupied = new Set(snapshot.filter((s) => s.occupantId !== null).map((s) => s.seatIndex));
 
     seats.value.forEach((seat, i) => {
-      if (seat.user != null && !occupied.has(i)) {
+      if (seat.occupantId !== null && !occupied.has(i)) {
         clearSeat(i);
       }
     });
 
     for (const s of snapshot) {
-      updateSeat(s.seatIndex, s.user, s.isMuted, activeSpeakerIds);
+      updateSeat(s.seatIndex, s.occupantId, s.isMuted);
     }
   }
 
   /** Clear a participant from their seat (on leave/disconnect). */
-  function clearParticipantFromSeat(userId: number) {
+  function clearParticipantFromSeat(userId: number): void {
     seatGiftTotals.value.delete(userId);
-    const seat = seats.value.find((s) => s.user?.id === userId);
+    const seat = seats.value.find((s) => s.occupantId === userId);
     if (seat) {
-      seat.user = null;
+      seat.occupantId = null;
       seat.isMuted = false;
       seat.isActive = false;
-    }
-  }
-
-  /** Refresh a seat user's data snapshot (on profile update). */
-  function refreshSeatUser(userId: number, participant: RoomParticipant) {
-    const seat = seats.value.find((s) => s.user?.id === userId);
-    if (seat && seat.user) {
-      seat.user = { ...participant };
-    }
-  }
-
-  /** Update seat mute state for a user. */
-  function setSeatUserMuted(userId: number, isMuted: boolean) {
-    const seat = seats.value.find((s) => s.user?.id === userId);
-    if (seat) {
-      seat.isMuted = isMuted;
     }
   }
 
@@ -238,7 +235,9 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   return {
     // Seats
     seats,
+    seatsWithUsers,
     speakersCount,
+    speakerIds,
     updateSeat,
     clearSeat,
     setSeatLocked,
@@ -261,7 +260,6 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     resetSeats,
     reconcileSeats,
     clearParticipantFromSeat,
-    refreshSeatUser,
-    setSeatUserMuted,
+    setSeatMutedByUserId,
   };
 });

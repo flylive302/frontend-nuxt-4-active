@@ -304,14 +304,10 @@ export interface GiftPrepareEvent {
 // ============================================
 
 /**
- * Participant in a room (extends MinimalUser with room-specific fields)
+ * Participant in a room — identity only.
+ * Seat/speaker state is derived from the seats store (Issue 05 will re-introduce those fields).
  */
-export interface RoomParticipant extends MinimalUser {
-  // Room-specific fields
-  isSpeaker: boolean;
-  seatIndex?: number;
-  isMuted?: boolean;
-}
+export type RoomParticipant = MinimalUser;
 
 /**
  * State of audio connection
@@ -328,10 +324,16 @@ export interface AudioState {
  */
 export interface Seat {
   index: number;
-  user: RoomParticipant | null;
+  occupantId: number | null;
   isMuted: boolean;
   isActive: boolean;
   isLocked: boolean;
+}
+
+/** Seat with the live participant object resolved — what components consume. */
+export interface SeatWithUser extends Omit<Seat, 'occupantId'> {
+  occupantId: number | null;
+  user: RoomParticipant | null;
 }
 
 /**
@@ -352,17 +354,11 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     slides_id: user.slides_id,
     cover_image: user.cover_image,
     gender: user.gender,
-    // PII fields stripped — participants should contain only visual/identity data
-    // (consistent with MSAB join handler B-1 FIX)
-    phone: '',
-    email: null,
     country: user.country,
-    date_of_birth: null,
+    date_of_birth: user.date_of_birth,
     wealth_xp: user.wealth_xp,
     charm_xp: user.charm_xp,
     vip_level: user.vip_level,
-    isSpeaker: false,
-    isMuted: false,
     ...overrides,
   };
 }

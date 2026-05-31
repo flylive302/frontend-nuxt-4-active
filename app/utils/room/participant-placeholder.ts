@@ -16,12 +16,11 @@ export function createParticipantPlaceholder(userId: number): RoomParticipant {
     cover_image: null,
     gender: null,
     country: '',
-    phone: '',
-    email: null,
     date_of_birth: null,
     wealth_xp: '0',
     charm_xp: '0',
     vip_level: 0,
+    // @ts-expect-error TODO Issue-06
     isSpeaker: true,
   }
 }

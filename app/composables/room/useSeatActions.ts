@@ -16,6 +16,7 @@ export interface UseSeatActionsParams {
   emitAsync: <TPayload, TResponse>(event: string, payload: TPayload) => Promise<TResponse>;
   getCurrentRoomId: () => string | null;
   audioStore: ReturnType<typeof useRoomAudioStore>;
+  participantsStore: ReturnType<typeof useRoomParticipantsStore>;
   seatsStore: ReturnType<typeof useRoomSeatsStore>;
   authStore: ReturnType<typeof useAuthStore>;
   toast: ReturnType<typeof useToast>;
@@ -60,7 +61,8 @@ export interface UseSeatActionsReturn {
 export function useSeatActions({
   emitAsync,
   getCurrentRoomId,
-  audioStore,
+  audioStore: _audioStore,
+  participantsStore,
   seatsStore,
   authStore,
   toast,
@@ -87,30 +89,16 @@ export function useSeatActions({
     // (Socket.IO's socket.to() excludes sender, so we never receive a
     //  seat:updated event for our own action — we must update locally.)
     if (response.success && authStore.user) {
-      // Prefer the canonical participant already in the map (kept fresh by
-      // profile updates). If absent for any reason — e.g. a rejoin race
-      // where the local user hasn't been re-added yet — fall back to
-      // building one from authStore so the seat ALWAYS renders. This
-      // backstop also re-seeds the participants map.
-      let participant = audioStore.participants.get(authStore.user.id);
-      if (!participant) {
-        participant = userToParticipant(
-          { ...authStore.user, email: null } as MinimalUser,
-          { isSpeaker: true, seatIndex },
+      // Ensure the local user is in the participants map so seatsWithUsers
+      // can resolve them. If absent (e.g. rejoin race), seed from authStore.
+      if (!participantsStore.participants.get(authStore.user.id)) {
+        participantsStore.addParticipant(
+          userToParticipant({ ...authStore.user, email: null } as MinimalUser),
         );
-        audioStore.addParticipant(participant);
       }
 
-      // Note: clearing the user's previous seat is handled by updateSeat's
-      // single-occupancy invariant below — no manual findIndex/clearSeat needed.
-      participant.isSpeaker = true;
-      participant.seatIndex = seatIndex;
-      seatsStore.updateSeat(
-        seatIndex,
-        participant,
-        false,
-        audioStore.audioState.activeSpeakerIds,
-      );
+      // Single-occupancy invariant handled inside updateSeat.
+      seatsStore.updateSeat(seatIndex, authStore.user.id, false);
     }
 
     return response.success ?? false;
@@ -143,9 +131,11 @@ export function useSeatActions({
       const uid = authStore.user?.id;
       seatsStore.clearSeat(currentUserSeatIndex);
       if (uid != null) {
-        const p = audioStore.participants.get(uid);
+        const p = participantsStore.participants.get(uid);
         if (p) {
+          // @ts-expect-error TODO Issue-06
           p.isSpeaker = false;
+          // @ts-expect-error TODO Issue-06
           p.seatIndex = undefined;
         }
       }

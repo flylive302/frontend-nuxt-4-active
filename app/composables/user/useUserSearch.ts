@@ -87,13 +87,11 @@ export function useUserSearch() {
       const mappedUsers: MinimalUser[] = response.data.map(u => ({
         id: u.id,
         name: u.name,
-        email: u.email,
         signature: u.signature,
         gender: u.gender,
         date_of_birth: u.date_of_birth,
         wealth_xp: u.wealth_xp,
         charm_xp: u.charm_xp,
-        phone: u.phone,
         country: u.country,
         avatar: u.avatar,
         cover_image: u.cover_image,

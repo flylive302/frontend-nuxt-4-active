@@ -1,0 +1,274 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { computed, ref } from 'vue'
+import type { RoomParticipant } from '../../app/types/room/audio'
+
+vi.stubGlobal('ref', ref)
+vi.stubGlobal('computed', computed)
+
+function makeParticipant(id: number, extra: Partial<RoomParticipant> = {}): RoomParticipant {
+  return { id, name: `User${id}`, ...extra } as RoomParticipant
+}
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
+
+// ============================================================
+// Slices 8–9 — reconcileSeats (occupantId snapshot format)
+// ============================================================
+describe('roomSeatsStore.reconcileSeats', () => {
+  it('applies an occupied seat from the snapshot using occupantId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.reconcileSeats([{ seatIndex: 3, occupantId: 7, isMuted: true }])
+
+    expect(store.seats[3]?.occupantId).toBe(7)
+    expect(store.seats[3]?.isMuted).toBe(true)
+  })
+
+  it('clears a seat whose occupant is absent from the snapshot', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 1, false)
+    store.updateSeat(1, 2, false)
+
+    // Snapshot only has occupant 1 on seat 0 — occupant 2 left
+    store.reconcileSeats([{ seatIndex: 0, occupantId: 1, isMuted: false }])
+
+    expect(store.seats[0]?.occupantId).toBe(1)
+    expect(store.seats[1]?.occupantId).toBeNull()
+  })
+
+  it('preserves seat lock state when clearing a vacated seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(2, 9, false)
+    store.setSeatLocked(2, true)
+
+    store.reconcileSeats([]) // occupant 9 gone
+
+    expect(store.seats[2]?.occupantId).toBeNull()
+    expect(store.seats[2]?.isLocked).toBe(true)
+  })
+})
+
+// ============================================================
+// Slices 5–7 — speakerIds, setSeatMutedByUserId, clearParticipantFromSeat
+// ============================================================
+describe('roomSeatsStore.speakerIds', () => {
+  it('contains the occupantId of every occupied seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 1, false)
+    store.updateSeat(2, 3, true)
+
+    expect(store.speakerIds.has(1)).toBe(true)
+    expect(store.speakerIds.has(3)).toBe(true)
+    expect(store.speakerIds.size).toBe(2)
+  })
+
+  it('is empty when no seats are occupied', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    expect(store.speakerIds.size).toBe(0)
+  })
+
+  it('drops an id when the seat is cleared', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 1, false)
+    store.clearSeat(0)
+
+    expect(store.speakerIds.has(1)).toBe(false)
+  })
+})
+
+describe('roomSeatsStore.setSeatMutedByUserId', () => {
+  it('mutes the seat for the given userId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 5, false)
+    store.setSeatMutedByUserId(5, true)
+
+    expect(store.seats[0]?.isMuted).toBe(true)
+  })
+
+  it('unmutes the seat for the given userId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 5, true)
+    store.setSeatMutedByUserId(5, false)
+
+    expect(store.seats[0]?.isMuted).toBe(false)
+  })
+
+  it('is a no-op for a userId not on any seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    // Should not throw
+    expect(() => store.setSeatMutedByUserId(999, true)).not.toThrow()
+  })
+})
+
+describe('roomSeatsStore.clearParticipantFromSeat', () => {
+  it('clears the seat whose occupantId matches the userId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(1, 7, true)
+    store.clearParticipantFromSeat(7)
+
+    expect(store.seats[1]?.occupantId).toBeNull()
+    expect(store.seats[1]?.isMuted).toBe(false)
+  })
+
+  it('does not touch other seats', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 7, false)
+    store.updateSeat(1, 8, false)
+    store.clearParticipantFromSeat(7)
+
+    expect(store.seats[1]?.occupantId).toBe(8)
+  })
+})
+
+// ============================================================
+// Slice 4 — profile update propagates via seatsWithUsers automatically
+// ============================================================
+describe('roomSeatsStore.seatsWithUsers — reactivity', () => {
+  it('reflects a profile update without any explicit sync call', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(1, { name: 'Alice' }))
+    seats.updateSeat(0, 1, false)
+
+    expect(seats.seatsWithUsers[0]?.user?.name).toBe('Alice')
+
+    participants.updateParticipantProfile(1, { name: 'Bob' })
+
+    // No refreshSeatUser call — just read seatsWithUsers
+    expect(seats.seatsWithUsers[0]?.user?.name).toBe('Bob')
+  })
+})
+
+// ============================================================
+// Slice 2 — single-occupancy invariant
+// ============================================================
+describe('roomSeatsStore.updateSeat — single-occupancy', () => {
+  it('clears the previous seat when the same occupant moves', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 1, false)
+    store.updateSeat(3, 1, false) // same occupant moves to seat 3
+
+    expect(store.seats[0]?.occupantId).toBeNull()
+    expect(store.seats[3]?.occupantId).toBe(1)
+  })
+
+  it('does not duplicate occupant across repeated moves', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 1, false)
+    store.updateSeat(3, 1, false)
+    store.updateSeat(5, 1, false)
+
+    const occupied = store.seats.filter((s) => s.occupantId === 1).map((s) => s.index)
+    expect(occupied).toEqual([5])
+  })
+
+  it('does not disturb other occupants when one moves', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 1, false)
+    store.updateSeat(1, 2, false)
+    store.updateSeat(3, 1, false) // occupant 1 moves; occupant 2 stays
+
+    expect(store.seats[1]?.occupantId).toBe(2)
+    expect(store.seats[0]?.occupantId).toBeNull()
+    expect(store.seats[3]?.occupantId).toBe(1)
+  })
+})
+
+// ============================================================
+// Slice 3 — seatsWithUsers: joins occupantId → participant
+// ============================================================
+describe('roomSeatsStore.seatsWithUsers', () => {
+  it('resolves the live participant for an occupied seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(1, { name: 'Alice' }))
+    seats.updateSeat(0, 1, false)
+
+    expect(seats.seatsWithUsers[0]?.user?.name).toBe('Alice')
+  })
+
+  it('returns null user when occupantId is not in participants', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 99, false) // no participant 99
+
+    expect(seats.seatsWithUsers[0]?.user).toBeNull()
+  })
+
+  it('returns null user for an empty seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    expect(seats.seatsWithUsers[0]?.user).toBeNull()
+  })
+})
+
+// ============================================================
+// Slice 1 — updateSeat stores occupantId (not user object)
+// ============================================================
+describe('roomSeatsStore.updateSeat — occupantId', () => {
+  it('sets occupantId on the seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 42, false)
+
+    expect(store.seats[0]?.occupantId).toBe(42)
+  })
+
+  it('clears occupantId when called with null', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 42, false)
+    store.updateSeat(0, null, false)
+
+    expect(store.seats[0]?.occupantId).toBeNull()
+  })
+
+  it('stores isMuted on the seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(2, 7, true)
+
+    expect(store.seats[2]?.isMuted).toBe(true)
+  })
+})

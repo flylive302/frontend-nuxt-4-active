@@ -14,8 +14,8 @@ const { resolvePropAsset } = usePropLookup();
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
 const seatIndex = computed(() => props.seatId - 1);
 
-// Get seat data from store
-const seat = computed(() => seatsStore.seats[seatIndex.value]);
+// Get seat data from store (seatsWithUsers provides live user objects)
+const seat = computed(() => seatsStore.seatsWithUsers[seatIndex.value]);
 
 // Whether this seat has a user
 const isEmpty = computed(() => !seat.value?.user);

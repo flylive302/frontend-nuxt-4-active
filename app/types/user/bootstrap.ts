@@ -17,7 +17,6 @@ export interface MinimalUser {
   id: number
   name: string
   signature: string
-  phone: string
   country: string
   wealth_xp: string
   charm_xp: string
@@ -29,7 +28,6 @@ export interface MinimalUser {
   slides_id: number | null
   avatar: string | null
   cover_image: string | null
-  email: string | null
   gender: string | null
   date_of_birth: string | null
   vip_level: number

@@ -69,6 +69,7 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
 
 let _roomStore: ReturnType<typeof useRoomStore> | null = null;
 let _audioStore: ReturnType<typeof useRoomAudioStore> | null = null;
+let _participantsStore: ReturnType<typeof useRoomParticipantsStore> | null = null;
 let _seatsStore: ReturnType<typeof useRoomSeatsStore> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
 let _giftStore: ReturnType<typeof useGiftStore> | null = null;
@@ -105,6 +106,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   // Initialize on first call only (during Vue setup context)
   if (!_roomStore) _roomStore = useRoomStore();
   if (!_audioStore) _audioStore = useRoomAudioStore();
+  if (!_participantsStore) _participantsStore = useRoomParticipantsStore();
   if (!_seatsStore) _seatsStore = useRoomSeatsStore();
   if (!_authStore) _authStore = useAuthStore();
   if (!_giftStore) _giftStore = useGiftStore();
@@ -114,6 +116,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   // Use cached references
   const roomStore = _roomStore;
   const audioStore = _audioStore;
+  const participantsStore = _participantsStore;
   const seatsStore = _seatsStore;
   const authStore = _authStore;
   const giftStore = _giftStore;
@@ -222,6 +225,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     emitAsync,
     getCurrentRoomId,
     audioStore,
+    participantsStore,
     seatsStore,
     authStore,
     toast,
@@ -357,6 +361,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           data_card_id: authStore.user.data_card_id,
           mice_wave_id: authStore.user.mice_wave_id,
           slides_id: authStore.user.slides_id,
+          // @ts-expect-error TODO Issue-06
           email: null,
           phone: authStore.user.phone ?? '',
           avatar: authStore.user.avatar,
@@ -369,7 +374,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           vip_level: authStore.user.vip_level ?? 0,
         }, { isSpeaker: false }
       );
-      audioStore.addParticipant(participant);
+      participantsStore.addParticipant(participant);
 
       // Self entry-animation. Mirror the others' path (room:userJoined): resolve
       // the prop ASYNCHRONOUSLY (failsafe-fetches on a prop-index cache miss) so
@@ -441,7 +446,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
           data_card_id: p.data_card_id,
           mice_wave_id: p.mice_wave_id,
           slides_id: p.slides_id,
+          // @ts-expect-error TODO Issue-06
           email: p.email,
+          // @ts-expect-error TODO Issue-06
           phone: p.phone,
           avatar: p.avatar,
           gender: p.gender,
@@ -455,7 +462,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
         { isSpeaker: false },
       );
     });
-    audioStore.reconcileParticipants(snapshotParticipants, authStore.user?.id);
+    participantsStore.reconcileParticipants(snapshotParticipants, authStore.user?.id);
 
     // REACT: warm the shared entry-animation prop assets (fire-and-forget),
     // deferred so the ~7MB-each downloads don't contend with the join
@@ -477,26 +484,21 @@ export function useRoomAudio(): UseRoomAudioReturn {
     //    each occupant from participants (placeholder if a seat references a
     //    user the snapshot's participant list didn't carry).
     if (response.seats) {
-      const activeIds = audioStore.audioState.activeSpeakerIds;
-      const resolvedSeats = response.seats.map((seat) => {
-        let user = seat.userId != null ? audioStore.participants.get(seat.userId) ?? null : null;
-        if (seat.userId != null && !user) {
-          user = createParticipantPlaceholder(seat.userId);
-          audioStore.addParticipant(user);
-        }
-        return { seatIndex: seat.seatIndex, user, isMuted: seat.isMuted };
-      });
-
-      seatsStore.reconcileSeats(resolvedSeats, activeIds);
-
-      for (const { user, seatIndex } of resolvedSeats) {
-        if (!user) continue;
-        const p = audioStore.participants.get(user.id);
-        if (p) {
-          p.isSpeaker = true;
-          p.seatIndex = seatIndex;
+      // Ensure placeholder participants exist for any seat occupant not yet in
+      // the participants map, so seatsWithUsers can resolve them immediately.
+      for (const seat of response.seats) {
+        if (seat.userId != null && !participantsStore.participants.get(seat.userId)) {
+          participantsStore.addParticipant(createParticipantPlaceholder(seat.userId));
         }
       }
+
+      const snapshot = response.seats.map((seat) => ({
+        seatIndex: seat.seatIndex,
+        occupantId: seat.userId ?? null,
+        isMuted: seat.isMuted,
+      }));
+
+      seatsStore.reconcileSeats(snapshot);
     }
 
     // Initialize locked seats (if provided by server)
@@ -570,6 +572,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Clear room state
     audioStore.clearAudioState();
+    participantsStore.clear();
     seatsStore.resetSeats();
 
     // Clear OS media session
