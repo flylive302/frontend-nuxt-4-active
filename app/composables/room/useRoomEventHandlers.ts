@@ -195,12 +195,14 @@ export function setupRoomEventHandlers(
   });
 
   // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change.
-  // Financial fields (coins, diamonds, wealth_xp, charm_xp) are stripped as a safety
-  // net — they are handled exclusively by `balance.updated` to avoid data races.
+  // Private balance fields (coins, diamonds) are stripped — they are not stored in
+  // participantsStore and must never leak to other participants.
+  // XP fields (wealth_xp, charm_xp) pass through — they come from the
+  // balance.updated → user:profileSync path and represent public participant data.
 
   socket.on('user:profile_updated', (event: { user_id: number; profile: Partial<RoomParticipant> }) => {
-    // Strip financial fields to prevent overwriting data from balance.updated
-    const { coins: _c, diamonds: _d, wealth_xp: _w, charm_xp: _ch, ...safeProfile } = event.profile as Record<string, unknown>;
+    // Strip private balance fields only — XP is public participant data
+    const { coins: _c, diamonds: _d, ...safeProfile } = event.profile as Record<string, unknown>;
 
     participantsStore.updateParticipantProfile(event.user_id, safeProfile as Partial<RoomParticipant>);
     // seatsWithUsers computed reflects the update automatically — no sync call needed.

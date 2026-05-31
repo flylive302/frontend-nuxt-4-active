@@ -25,7 +25,7 @@ export const lastCoinRequestUpdate = ref<CoinRequestStatusChangedPayload | null>
  */
 export function useEconomyEvents() {
   const authStore = useAuthStore()
-  const { updateWealthXp, updateCharmXp } = useLevelActions()
+  const { updateWealthXp, updateCharmXp, syncXpFromBalance } = useLevelActions()
   const toast = useToast()
 
   return function registerEconomyEvents(socket: Socket): void {
@@ -41,6 +41,9 @@ export function useEconomyEvents() {
       // Update auth user XP — reactive consumers recompute automatically
       updateWealthXp(parseFloat(payload.wealth_xp))
       updateCharmXp(parseFloat(payload.charm_xp))
+
+      // Sync fresh XP to participants store and MSAB (composable handles both)
+      syncXpFromBalance(payload.wealth_xp, payload.charm_xp)
     })
 
     socket.on('reward.earned', (payload: RewardEarnedPayload) => {

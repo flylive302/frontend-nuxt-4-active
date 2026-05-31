@@ -52,6 +52,13 @@ export interface UseAudioSocketReturn {
 // Without this, each component calling useAudioSocket() would get its own isolated socket.
 
 const socket = shallowRef<AudioSocket | null>(null);
+
+/**
+ * Direct ref export — use this when calling useAudioSocket() would create a circular
+ * dependency (e.g. from composables that are themselves called during useAudioSocket init).
+ * It is the same singleton ref returned by useAudioSocket().socket.
+ */
+export const audioSocketRef = socket;
 const status = ref<ConnectionStatus>('disconnected');
 const error = ref<string | null>(null);
 

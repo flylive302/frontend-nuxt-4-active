@@ -1,6 +1,6 @@
 /**
  * Profile fields accepted by the user:profileSync socket event.
- * Only visual/identity fields — financial data is excluded.
+ * Visual/identity fields plus XP — private balance fields (coins, diamonds) excluded.
  */
 export interface ProfileSyncFields {
   name?: string
@@ -14,4 +14,6 @@ export interface ProfileSyncFields {
   slides_id?: number | null
   gender?: string | number
   vip_level?: number
+  wealth_xp?: string
+  charm_xp?: string
 }

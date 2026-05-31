@@ -6,6 +6,7 @@
 // Pipeline: GATE → EXECUTE (callers handle UI feedback as REACT)
 
 import type { UserLevelUpPayload } from '~/types/room/socket-events'
+import { audioSocketRef } from '~/composables/room/useAudioSocket'
 
 // ========================================
 // Composable
@@ -22,6 +23,7 @@ import type { UserLevelUpPayload } from '~/types/room/socket-events'
  */
 export function useLevelActions() {
   const authStore = useAuthStore()
+  const participantsStore = useRoomParticipantsStore()
 
   // ========================================
   // Public API
@@ -65,9 +67,33 @@ export function useLevelActions() {
     }
   }
 
+  /**
+   * Sync fresh XP from a balance.updated event into MSAB and the local
+   * participants store. Called exclusively from economy.events.ts.
+   *
+   * EXECUTE: patches own participant entry (cross-domain write — authorised
+   * because this is the composable EXECUTE stage, not a REACT event handler).
+   * REACT: emits user:profileSync to MSAB so other room participants see it.
+   */
+  function syncXpFromBalance(wealthXp: string, charmXp: string): void {
+    if (authStore.user) {
+      participantsStore.updateParticipantProfile(authStore.user.id, {
+        wealth_xp: wealthXp,
+        charm_xp: charmXp,
+      })
+    }
+
+    if (audioSocketRef.value?.connected) {
+      audioSocketRef.value.emit('user:profileSync', {
+        profile: { wealth_xp: wealthXp, charm_xp: charmXp },
+      })
+    }
+  }
+
   return {
     updateWealthXp,
     updateCharmXp,
     handleLevelUp,
+    syncXpFromBalance,
   }
 }
