@@ -8,6 +8,7 @@ import {
   cleanupNuxtMocks,
   createMockBootstrapStore,
 } from '../helpers/nuxtMocks'
+import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
 
 // Mock logger
 vi.mock('~/utils/logger', () => ({
@@ -144,7 +145,7 @@ describe('useLevelLookup', () => {
       bootstrapStore.badgeMap = new Map()
       const { getBadgeFromXp } = useLevelLookup()
       const result = getBadgeFromXp(0, 'wealth')
-      expect(result).toBe('https://assets.flyliveapp.com/badges/wealth/level_0.webp')
+      expect(result).toBe(DEFAULT_WEALTH_BADGE)
     })
 
     it('should return default charm fallback when no badge found', () => {
@@ -154,7 +155,7 @@ describe('useLevelLookup', () => {
       bootstrapStore.badgeMap = new Map()
       const { getBadgeFromXp } = useLevelLookup()
       const result = getBadgeFromXp(0, 'charm')
-      expect(result).toBe('https://assets.flyliveapp.com/badges/charm/level_0.webp')
+      expect(result).toBe(DEFAULT_CHARM_BADGE)
     })
 
     it('should use custom fallback when provided', () => {

@@ -180,7 +180,7 @@ async function handleKickUser() {
   }
 }
 
-const { isToggling, statusLoaded, isSelf, buttonIcon, toggleFollow } = useFollow(
+const { isToggling, statusLoaded, isSelf, buttonIcon, toggleFollow, buttonLabel } = useFollow(
   computed(() => currentSeat.value?.user?.id ?? null)
 )
 
@@ -189,6 +189,12 @@ function handleGiftButton() {
   if (!userId) return
   isOpen.value = false
   giftStore.setLockedRecipient(userId)
+}
+
+async function handleNavigateAway(path: string) {
+  isOpen.value = false
+  roomStore.minimizeRoom()
+  await navigateTo(path)
 }
 
 /** Current user can manage members (owner or admin) */
@@ -248,7 +254,7 @@ const seatUserAge = computed(() =>
     :class="dataCardAsset ? 'min-h-9/12' : ''"
     description="Manage seat actions like joining, leaving, muting, or locking."
     :ui="{
-      content: 'bg-transparent backdrop-blur-xs',
+      content: 'bg-transparent backdrop-blur-xs ring-0',
       overlay: 'bg-white/10',
       handle: 'border-4 border-primary',
     }"
@@ -277,149 +283,153 @@ const seatUserAge = computed(() =>
             :img="currentSeat.user.avatar ?? undefined"
             :frame-asset-url="resolvePropAsset(currentSeat.user.frame_id) ?? undefined"
             :animated="true" class="size-32 mt-6"
-            @click="async () => {
-              try {
-                isOpen = false;
-                roomStore.isMinimized = true;
-                await navigateTo(`/profile/${currentSeat?.user?.signature}`);
-              } catch (error) {}
-            }"
-          />
+            @click="() => handleNavigateAway(`/profile/${currentSeat?.user?.signature}`)"
+            />
 
-        <div class="flex gap-1 mt-4">
-          <UIcon
-            v-if="seatUserCountry"
-            :name="`i-flag-${seatUserCountry.toLowerCase()}-4x3`"
-            class="rounded overflow-hidden h-6 size-8 shadow-lg"
-          />
-          <MarqueeName
-              class="flex-1 max-w-36 mx-auto"
-              text-class="text-xl font-bold leading-none"
-              :name="currentSeat.user.name"
-              delay="0s"
-          />
-          <div>
-            <UBadge
-                color="secondary"
-                :icon="getGenderInfo(currentSeat.user.gender).icon"
-                size="sm"
-                class="w-fit text-white p-1"
-            >
-              {{ seatUserAge }}
-            </UBadge>
+          <div class="flex gap-1 mt-4">
+            <UIcon
+              v-if="seatUserCountry"
+              :name="`i-flag-${seatUserCountry.toLowerCase()}-4x3`"
+              class="rounded overflow-hidden h-6 size-8 shadow-lg"
+            />
+            <MarqueeName
+                class="flex-1 max-w-36 mx-auto"
+                text-class="text-xl font-bold leading-none"
+                :name="currentSeat.user.name"
+                delay="0s"
+            />
+              <UBadge
+                  color="secondary"
+                  :icon="getGenderInfo(currentSeat.user.gender).icon"
+                  size="sm"
+                  class="w-fit text-white p-1"
+              >
+                {{ seatUserAge }}
+              </UBadge>
           </div>
-        </div>
-        <div class="flex items-center gap-1 mt-2 justify-center">
+          <div class="flex items-center gap-1 mt-2 justify-center">
 
-          <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
-          <img
-              v-if="currentSeat.user.vip_level"
-              :src="`https://ik.imagekit.io/flylive/vip/${currentSeat.user.vip_level}/badge.png`"
-              class="w-14"
-              alt=""
-          >
-          <img alt="" v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-8"/>
-          <img alt="" v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-5"/>
-        </div>
-
-        <div class="flex items-center gap-1 justify-center">
-
-        </div>
+            <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+            <img
+                v-if="currentSeat.user.vip_level"
+                :src="`https://ik.imagekit.io/flylive/vip/${currentSeat.user.vip_level}/badge.png`"
+                class="w-14"
+                alt=""
+            >
+            <img alt="" v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-8"/>
+            <img alt="" v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-5"/>
+          </div>
 
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex justify-center gap-2 mt-16">
-          <div class="flex gap-2">
-            <!-- Take Seat button — only when seat is empty and unlocked -->
-            <UButton
-              v-if="(isSeatEmpty && !isSeatLocked)"
-              class="rounded-xl text-white"
-              size="xl" variant="solid" square color="success"
-              :loading="isLoading"
-              :disabled="!isAudioReady"
-              @click="handleTakeSeat"
-            >
-              <template v-if="!isAudioReady">(Loading...)</template>
-              <UIcon v-else name="i-lucide-plane-takeoff" size="xl" class="size-6" />
-            </UButton>
+        <div class="mt-6 max-w-24 mx-auto">
+          <div class="flex justify-center items-center gap-2 ">
+            <div class="flex gap-2">
+              <!-- Take Seat button — only when seat is empty and unlocked -->
+              <UButton
+                  v-if="(isSeatEmpty && !isSeatLocked)"
+                  class="rounded-xl text-white"
+                  size="xl" variant="solid" square color="success"
+                  :loading="isLoading"
+                  :disabled="!isAudioReady"
+                  @click="handleTakeSeat"
+              >
+                <template v-if="!isAudioReady">(Loading...)</template>
+                <UIcon v-else name="i-lucide-plane-takeoff" size="xl" class="size-6" />
+              </UButton>
 
-            <!-- Leave Seat button - only show if current user occupies this seat -->
-            <UButton
-              v-if="isCurrentUserSeat"
-              class="rounded-xl text-white" 
-              size="xl" variant="solid" square color="error" 
-              :loading="isLoading" icon="i-lucide-plane-landing" 
-              @click="handleLeaveSeat"
-            />
+              <!-- Leave Seat button - only show if current user occupies this seat -->
+              <UButton
+                  v-if="isCurrentUserSeat"
+                  class="rounded-xl text-white"
+                  size="xl" variant="solid" square color="error"
+                  :loading="isLoading" icon="i-lucide-plane-landing"
+                  @click="handleLeaveSeat"
+              />
+            </div>
+
+            <div v-if="canManageMembers" class="flex gap-2">
+              <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
+              <UButton
+                  v-if="!isSeatEmpty && !isCurrentUserSeat"
+                  class="rounded-xl text-white"
+                  size="xl" variant="solid"
+                  :color="isSeatMuted ? 'success' : 'warning'"
+                  :loading="isLoading"
+                  :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'"
+                  @click="handleToggleMute"
+              />
+
+              <!-- Lock/Unlock Seat - Owner only -->
+              <UButton
+                  class="rounded-xl text-white"
+                  size="xl" variant="solid" square
+                  :color="isSeatLocked ? 'success' : 'error'"
+                  :loading="isLoading"
+                  :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'"
+                  @click="handleToggleLock"
+              />
+
+              <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
+              <UButton
+                  v-if="isSeatEmpty"
+                  class="rounded-xl text-white" size="xl"
+                  variant="solid" color="info" :loading="isLoading"
+                  square
+                  icon="i-lucide-user-plus"
+                  @click="handleStartInvite"
+              />
+
+              <!-- Kick User from Room - Admin/Owner only, when seat is occupied by another user -->
+              <UButton
+                  v-if="!isSeatEmpty && !isCurrentUserSeat"
+                  class="rounded-xl text-white"
+                  size="xl" variant="solid" square color="error"
+                  :loading="isLoading"
+                  icon="i-lucide-log-out"
+                  @click="handleKickUser"
+              />
+            </div>
           </div>
 
-          <div v-if="!isSeatEmpty && !isCurrentUserSeat" class="flex gap-2">
+          <div v-if="!isSeatEmpty && !isCurrentUserSeat" class="flex items-center gap-1 justify-center mt-3">
+                        <!-- Follow button -->
+            <UButton
+                v-if="!isSelf"
+                class="rounded-xl text-white backdrop-blur-lg"
+                size="xl"
+                variant="outline"
+                :loading="!statusLoaded || isToggling"
+                :icon="buttonIcon"
+                @click="toggleFollow"
+            >
+              {{buttonLabel}}
+            </UButton>
+
+            <!-- Chat button -->
+            <UButton
+                v-if="!isSelf && !isSeatEmpty"
+                class="rounded-xl text-white backdrop-blur-lg"
+                size="xl"
+                variant="outline"
+                icon="i-lucide-message-circle-more"
+                @click="handleNavigateAway(`/inbox?start=${currentSeat?.user?.id}`)"
+            >
+              Chat
+            </UButton>
+
             <!-- Gift button -->
             <UButton
-              class="rounded-xl p-0 m-0"
-              size="xl"
-              variant="ghost"
-              square
-              @click="handleGiftButton"
+                v-if="!isSelf && !isSeatEmpty"
+                class="rounded-xl text-white backdrop-blur-lg py-1"
+                size="xl"
+                variant="outline"
+                @click="handleGiftButton"
             >
-              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="size-10" />
+              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="min-w-8" />
             </UButton>
 
-            <!-- Follow button -->
-            <UButton
-              v-if="!isSelf"
-              class="rounded-xl text-white"
-              size="xl"
-              variant="solid"
-              square
-              :loading="!statusLoaded || isToggling"
-              :icon="buttonIcon"
-              @click="toggleFollow"
-            />
-          </div>
-
-          <div v-if="canManageMembers" class="flex gap-2">
-            <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
-            <UButton
-              v-if="!isSeatEmpty && !isCurrentUserSeat" 
-              class="rounded-xl text-white"
-              size="xl" variant="solid" 
-              :color="isSeatMuted ? 'success' : 'warning'" 
-              :loading="isLoading"
-              :icon="isSeatMuted ? 'i-lucide-mic' : 'i-lucide-mic-off'" 
-              @click="handleToggleMute"
-            />
-
-            <!-- Lock/Unlock Seat - Owner only -->
-            <UButton
-              class="rounded-xl text-white" 
-              size="xl" variant="solid" square
-              :color="isSeatLocked ? 'success' : 'error'" 
-              :loading="isLoading"
-              :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'" 
-              @click="handleToggleLock"
-            />
-
-            <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
-            <UButton 
-              v-if="isSeatEmpty" 
-              class="rounded-xl text-white" size="xl"
-              variant="solid" color="info" :loading="isLoading" 
-              square
-              icon="i-lucide-user-plus" 
-              @click="handleStartInvite"
-            />
-
-            <!-- Kick User from Room - Admin/Owner only, when seat is occupied by another user -->
-            <UButton
-              v-if="!isSeatEmpty && !isCurrentUserSeat"
-              class="rounded-xl text-white"
-              size="xl" variant="solid" square color="error"
-              :loading="isLoading"
-              icon="i-lucide-log-out"
-              @click="handleKickUser"
-            />
           </div>
         </div>
 

@@ -323,7 +323,7 @@ onBeforeUnmount(() => {
     </UModal>
 
     <!-- Report user modal -->
-    <CommonReportModal
+    <ReportModal
       v-if="thread?.participant.id"
       v-model:open="showReportModal"
       reportable-type="user"

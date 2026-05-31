@@ -267,7 +267,7 @@ async function doLuckySend(): Promise<void> {
   <UDrawer
       v-model:open="isOpen" title="Send Gift" :overlay="false"
       :ui="{
-        content: 'bg-transparent backdrop-blur-2xl ring-0',
+        content: 'bg-transparent bg-neutral-900/80 ring-0',
         handle: 'bg-white!',
       }"
       description="Send gifts to speakers in the room"
@@ -278,12 +278,10 @@ async function doLuckySend(): Promise<void> {
       <div class="p-2">
         <!-- Recipient Selector -->
         <RoomGiftRecipientSelector />
-
         <!-- Category Tabs with Gift Grid -->
         <RoomGiftCategoryTabs :categories="giftsByCategory">
           <template #content="{ item }">
-            <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id"
-              @select="handleSelectGift" />
+            <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id" @select="handleSelectGift" />
           </template>
         </RoomGiftCategoryTabs>
 

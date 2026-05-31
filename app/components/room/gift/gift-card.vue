@@ -6,6 +6,7 @@
  */
 import type { Gift } from '~/types/gift/gift';
 import { useGiftData } from '~/composables/gift/useGiftData';
+import MarqueeName from "~/components/common/marquee-name.vue";
 
 withDefaults(
   defineProps<{
@@ -22,7 +23,7 @@ const { formatGiftPrice } = useGiftData();
 
 <template>
   <div
-    class="flex flex-col items-center rounded cursor-pointer transition-all bg-primary/10 ring-2 ring-transparent shadow-md"
+    class="flex flex-col items-center rounded cursor-pointer transition-all"
     :class="[
       selected
         ? 'bg-primary/30 ring-primary! scale-102'
@@ -33,7 +34,7 @@ const { formatGiftPrice } = useGiftData();
       <NuxtImg
         :src="gift.thumbnail_url"
         :alt="gift.label ?? gift.name"
-        class="w-full aspect-square object-contain rounded"
+        class="w-full aspect-square object-contain"
         :width="128"
         :height="128"
         format="webp"
@@ -42,10 +43,11 @@ const { formatGiftPrice } = useGiftData();
         loading="lazy"
       />
     </div>
-
-    <p class="text-xs truncate w-full text-center px-1">
-      {{ gift.label }}
-    </p>
+    <MarqueeName
+        text-class="text-xs w-full text-center px-1"
+        :name="gift.label ?? 'Gift'"
+        delay="0s"
+    />
 
     <p class="text-xs font-medium truncate w-full text-center pb-1">
       {{ formatGiftPrice(gift) }}
