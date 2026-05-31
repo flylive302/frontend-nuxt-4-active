@@ -5,6 +5,8 @@ import type { RoomParticipant } from '~/types/room/audio'
 
 defineOptions({ name: 'ParticipantListItem' })
 const { myMembership } = useRoomMembers();
+const seatsStore = useRoomSeatsStore()
+const speakerIds = computed(() => seatsStore.speakerIds)
 
 // ========================================
 // Props & Emits
@@ -33,12 +35,10 @@ const canManageMembers = computed(() => {
 <template>
   <MinimalUserList :user="participant" :marquee-delay="marqueeDelay">
     <template #default>
-      <!-- TODO Issue-06: participant.isSpeaker moves to seats store -->
-      <UBadge v-if="participant.isSpeaker" size="sm" color="primary" variant="soft" class="absolute top-0 right-0">Speaker</UBadge>
+      <UBadge v-if="speakerIds.has(participant.id)" size="sm" color="primary" variant="soft" class="absolute top-0 right-0">Speaker</UBadge>
     </template>
 
-    <!-- TODO Issue-06: participant.isSpeaker moves to seats store -->
-    <template v-if="inviteModeSeat !== null && !participant.isSpeaker && canManageMembers" #actions>
+    <template v-if="inviteModeSeat !== null && !speakerIds.has(participant.id) && canManageMembers" #actions>
       <UButton
           color="primary"
           variant="soft"

@@ -61,47 +61,49 @@ const charmLevel = computed(() =>
 </script>
 
 <template>
-  <div class="flex">
+  <div class="flex py-3">
     <!-- Avatar -->
     <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" />
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg rounded-md">
-        <MarqueeName
-          class="flex-1 max-w-24 mx-auto"
-          text-class="text-sm font-bold leading-none"
-          :name="displayName"
-          delay="0s"
-        />
-        <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+    <div class="min-w-0">
+
+      <div class="flex items-center gap-1">
+        <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg bg-primary-30 ring ring-primary rounded-md">
+          <MarqueeName
+              class="flex-1 max-w-24 mx-auto"
+              text-class="text-sm font-bold leading-none"
+              :name="displayName"
+              delay="0s"
+          />
+          <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+        </div>
+        <div class="flex items-center">
+          <UIcon
+              :name="`i-flag-${participant?.country.toLowerCase().trim()}-4x3`"
+              class="rounded overflow-hidden h-5 size-6 shadow-lg"
+          />
+          <img
+              v-if="participant?.vip_level"
+              :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
+              class="w-10"
+              alt=""
+          >
+          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge"/>
+
+          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge"/>
+        </div>
       </div>
-      <div class="flex items-center gap-0.5 mt-1">
-        <UIcon
-            :name="`i-flag-${participant?.country.toLowerCase().trim()}-4x3`"
-            class="rounded overflow-hidden h-5 size-6 shadow-lg"
-        />
-        <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge"/>
-        <img
-            v-if="participant?.vip_level"
-            :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
-            class="w-9"
-            alt=""
-        >
-        <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4 ml-1" alt="users charm badge"/>
+
+      <div v-if="participant?.vip_level" class="bubble" :style="bubbleStyle">
+        <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
       </div>
-      <div class="bubble" :style="bubbleStyle">
-        <p class="text-sm wrap-break-word">{{ message.content }}</p>
+      <div v-else class="w-fit p-2 rounded-md bg-primary/10 ring ring-primary my-2 backdrop-blur-xs max-w-10/12 ml-2">
+        <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/*
- * 9-slice frame. Slices are PERCENTAGES (not pixels) so the same values land on
- * the corner-art boundary regardless of the prop image's pixel dimensions
- * (VIP bubbles range 143x85 → 161x94). 49% on each side keeps all four corners
- * intact and leaves only a ~2% plain center strip that stretches to fit text.
- */
 .bubble {
   width: fit-content;
   max-width: 100%;
@@ -111,12 +113,6 @@ const charmLevel = computed(() =>
   border-image-width: 1;
   border-image-repeat: stretch;
 }
-
-/*
- * The frame needs the full border-width to render its corner art, but most of
- * that band is plain center fill. Pull the text back into the fill with a
- * negative margin to tighten the gap without shrinking the frame itself.
- */
 .bubble p {
   margin: -16px -40px;
 }

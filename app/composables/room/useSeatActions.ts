@@ -113,7 +113,7 @@ export function useSeatActions({
 
     // Find current user's seat before leaving
     const currentUserSeatIndex = authStore.user
-      ? seatsStore.seats.findIndex((s) => s.user?.id === authStore.user!.id)
+      ? seatsStore.seats.findIndex((s) => s.occupantId === authStore.user!.id)
       : -1;
 
     const response = await emitAsync<{ roomId: string }, SeatResponse>('seat:leave', {
@@ -128,17 +128,7 @@ export function useSeatActions({
     // Clear local seat state
     // (Socket.IO's socket.to() excludes sender, so we update locally)
     if (response.success && currentUserSeatIndex >= 0) {
-      const uid = authStore.user?.id;
       seatsStore.clearSeat(currentUserSeatIndex);
-      if (uid != null) {
-        const p = participantsStore.participants.get(uid);
-        if (p) {
-          // @ts-expect-error TODO Issue-06
-          p.isSpeaker = false;
-          // @ts-expect-error TODO Issue-06
-          p.seatIndex = undefined;
-        }
-      }
     }
 
     stopAudio();

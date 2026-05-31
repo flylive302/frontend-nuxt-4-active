@@ -20,7 +20,6 @@ import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 import { REGION_ENDPOINTS } from '~/constants/audio';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
-import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
 
@@ -361,9 +360,6 @@ export function useRoomAudio(): UseRoomAudioReturn {
           data_card_id: authStore.user.data_card_id,
           mice_wave_id: authStore.user.mice_wave_id,
           slides_id: authStore.user.slides_id,
-          // @ts-expect-error TODO Issue-06
-          email: null,
-          phone: authStore.user.phone ?? '',
           avatar: authStore.user.avatar,
           gender: authStore.user.gender,
           country: authStore.user.country ?? '',
@@ -372,7 +368,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           charm_xp: authStore.user.charm_xp,
           cover_image: authStore.user.cover_image ?? null,
           vip_level: authStore.user.vip_level ?? 0,
-        }, { isSpeaker: false }
+        }
       );
       participantsStore.addParticipant(participant);
 
@@ -435,32 +431,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     const entryWarmIds = new Set<number>();
     const snapshotParticipants = (response.participants ?? []).map((p) => {
       if (p.entry_animation_id) entryWarmIds.add(p.entry_animation_id);
-      return userToParticipant(
-        {
-          id: p.id,
-          name: p.name,
-          signature: p.signature,
-          frame_id: p.frame_id,
-          chat_bubble_id: p.chat_bubble_id,
-          entry_animation_id: p.entry_animation_id,
-          data_card_id: p.data_card_id,
-          mice_wave_id: p.mice_wave_id,
-          slides_id: p.slides_id,
-          // @ts-expect-error TODO Issue-06
-          email: p.email,
-          // @ts-expect-error TODO Issue-06
-          phone: p.phone,
-          avatar: p.avatar,
-          gender: p.gender,
-          country: p.country,
-          date_of_birth: p.date_of_birth,
-          wealth_xp: p.wealth_xp,
-          charm_xp: p.charm_xp,
-          cover_image: p.cover_image ?? null,
-          vip_level: p.vip_level ?? 0,
-        },
-        { isSpeaker: false },
-      );
+      return userToParticipant(p);
     });
     participantsStore.reconcileParticipants(snapshotParticipants, authStore.user?.id);
 
@@ -484,14 +455,6 @@ export function useRoomAudio(): UseRoomAudioReturn {
     //    each occupant from participants (placeholder if a seat references a
     //    user the snapshot's participant list didn't carry).
     if (response.seats) {
-      // Ensure placeholder participants exist for any seat occupant not yet in
-      // the participants map, so seatsWithUsers can resolve them immediately.
-      for (const seat of response.seats) {
-        if (seat.userId != null && !participantsStore.participants.get(seat.userId)) {
-          participantsStore.addParticipant(createParticipantPlaceholder(seat.userId));
-        }
-      }
-
       const snapshot = response.seats.map((seat) => ({
         seatIndex: seat.seatIndex,
         occupantId: seat.userId ?? null,

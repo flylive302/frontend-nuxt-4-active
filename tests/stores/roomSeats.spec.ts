@@ -263,6 +263,19 @@ describe('roomSeatsStore.updateSeat — occupantId', () => {
     expect(store.seats[0]?.occupantId).toBeNull()
   })
 
+  it('seatsWithUsers user is null after clearing with null', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(3))
+    seats.updateSeat(0, 3, false)
+    seats.updateSeat(0, null, false)
+
+    expect(seats.seatsWithUsers[0]?.user).toBeNull()
+  })
+
   it('stores isMuted on the seat', async () => {
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const store = useRoomSeatsStore()
@@ -270,5 +283,61 @@ describe('roomSeatsStore.updateSeat — occupantId', () => {
     store.updateSeat(2, 7, true)
 
     expect(store.seats[2]?.isMuted).toBe(true)
+  })
+})
+
+// ============================================================
+// clearSeat direct
+// ============================================================
+describe('roomSeatsStore.clearSeat', () => {
+  it('sets occupantId to null and isMuted to false', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(0, 5, true)
+    store.clearSeat(0)
+
+    expect(store.seats[0]?.occupantId).toBeNull()
+    expect(store.seats[0]?.isMuted).toBe(false)
+  })
+})
+
+// ============================================================
+// seatsWithUsers — order independence
+// ============================================================
+describe('roomSeatsStore.seatsWithUsers — order independence', () => {
+  it('resolves user when seat is set before participant is added', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    const userX = makeParticipant(10)
+    seats.updateSeat(2, 10, false)
+    participants.addParticipant(userX)
+
+    expect(seats.seatsWithUsers[2]?.user?.id).toBe(10)
+    expect(seats.seatsWithUsers[2]?.user?.name).toBe('User10')
+  })
+})
+
+// ============================================================
+// setSeatMutedByUserId — side-effect isolation
+// ============================================================
+describe('roomSeatsStore.setSeatMutedByUserId — side effects', () => {
+  it('does not modify the participants store', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(5))
+    seats.updateSeat(0, 5, false)
+    const participantRef = participants.participants.get(5)
+
+    seats.setSeatMutedByUserId(5, true)
+
+    expect(participants.participants.get(5)).toBe(participantRef)
+    expect(participants.participants.get(5)?.name).toBe('User5')
   })
 })

@@ -26,7 +26,6 @@ import type { AudioSocket } from './useAudioSocket';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
-import { createParticipantPlaceholder } from '~/utils/room/participant-placeholder';
 import { propToEntryAnimationGift } from '~/utils/prop';
 
 // ============================================
@@ -241,9 +240,6 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {
-    if (!participantsStore.participants.get(event.userId)) {
-      participantsStore.addParticipant(createParticipantPlaceholder(event.userId));
-    }
     seatsStore.updateSeat(event.seatIndex, event.userId, event.isMuted);
   });
 
@@ -296,15 +292,7 @@ export function setupRoomEventHandlers(
     if (event.isLocked) {
       const seat = seatsStore.seats[event.seatIndex];
       if (seat?.occupantId != null) {
-        const occupantId = seat.occupantId;
         seatsStore.clearSeat(event.seatIndex);
-        const p = participantsStore.participants.get(occupantId);
-        if (p) {
-          // @ts-expect-error TODO Issue-06
-          p.isSpeaker = false;
-          // @ts-expect-error TODO Issue-06
-          p.seatIndex = undefined;
-        }
       }
     }
   });

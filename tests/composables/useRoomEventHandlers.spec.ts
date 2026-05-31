@@ -25,11 +25,6 @@ vi.mock('~/services/giftAssetCache', () => ({
   preloadSvga: vi.fn(),
 }))
 
-// noinspection JSUnusedGlobalSymbols
-vi.mock('~/utils/room/participant-placeholder', () => ({
-  createParticipantPlaceholder: (id: number) => ({ id, name: `User ${id}` }),
-}))
-
 vi.mock('~/utils/prop', () => ({
   propToEntryAnimationGift: vi.fn(),
 }))
