@@ -225,10 +225,6 @@ const settingsOpen = ref(false);
           </div>  
           <UButton icon="i-lucide-bookmark" variant="subtle" class="shadow-md shadow-primary-950/50" size="sm" />
         </div>
-
-        <div class="flex items-center gap-1 mt-1">
-          <p class="text-xs">Show badges here</p>
-        </div>
       </div>
     </div>
 

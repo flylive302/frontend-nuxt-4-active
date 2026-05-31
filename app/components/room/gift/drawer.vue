@@ -23,6 +23,7 @@ const quantityOptions = [...GIFT_QUANTITY_OPTIONS];
 
 const giftStore = useGiftStore();
 const authStore = useAuthStore();
+const seatsStore = useRoomSeatsStore();
 const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo } = useGiftSending();
@@ -148,11 +149,34 @@ watch(isOpen, (open) => {
   if (open && eligibleRecipients.value.length > 0) {
     selectAllRecipients();
   }
-  // Exit combo mode when drawer closes
-  if (!open && isComboMode.value) {
-    exitComboMode();
+  if (!open) {
+    if (isComboMode.value) {
+      exitComboMode();
+    }
+    giftStore.clearLockedRecipient();
   }
 });
+
+// Open when a locked recipient is set (seat-drawer gift button flow)
+watch(
+  () => giftStore.lockedRecipientId,
+  (newId, oldId) => {
+    if (oldId === null && newId !== null) {
+      isOpen.value = true;
+    }
+  }
+);
+
+// Close when seat drawer opens while gift drawer is open (mutual exclusion)
+watch(
+  () => seatsStore.activeSeat,
+  (newSeat) => {
+    if (newSeat !== null && isOpen.value) {
+      isOpen.value = false;
+      giftStore.clearLockedRecipient();
+    }
+  }
+);
 
 // Exit combo mode when user selects a different gift
 watch(

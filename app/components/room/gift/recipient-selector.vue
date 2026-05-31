@@ -11,24 +11,21 @@ const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 
 const recipients = eligibleRecipients;
 const selectedRecipients = computed(() => giftStore.selectedRecipients);
+const isLocked = computed(() => giftStore.lockedRecipientId !== null);
 
-/**
- * Toggle recipient selection
- */
 function toggleRecipient(userId: number) {
   giftStore.toggleRecipient(userId);
 }
 
-/**
- * Select all eligible recipients
- */
 function selectAll() {
   selectAllRecipients();
 }
 
-/**
- * Check if a recipient is selected
- */
+function clearLock() {
+  giftStore.clearLockedRecipient();
+  selectAllRecipients();
+}
+
 function isSelected(userId: number): boolean {
   return selectedRecipients.value.includes(userId);
 }
@@ -36,9 +33,12 @@ function isSelected(userId: number): boolean {
 
 <template>
   <div class="flex items-center gap-2">
-    <!-- Select All Button -->
-    <UButton size="md" square class="rounded-lg size-7 justify-center" @click="selectAll">
+    <!-- Select All / Clear Lock Button -->
+    <UButton v-if="!isLocked" size="md" square class="rounded-lg size-7 justify-center" @click="selectAll">
       All
+    </UButton>
+    <UButton v-else size="md" class="rounded-lg justify-center" @click="clearLock">
+      Clear
     </UButton>
 
     <!-- Recipient Avatars -->

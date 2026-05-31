@@ -36,13 +36,17 @@ const targetUserId = computed(() => {
 
 const isOwnProfile = computed(() => targetUserId.value === authStore.user?.id)
 
-const activeTab = computed({
-  get: () => route.query.tab === 'following' ? 'following' : 'followers',
-  set: (val: string) => {
-    router.replace({
-      query: { ...route.query, tab: val },
-    })
-  },
+const activeTab = ref<string>(route.query.tab === 'following' ? 'following' : 'followers')
+
+// Sync local tab state to URL after DOM update to avoid Reka UI Presence crash
+watch(activeTab, (val) => {
+  router.replace({ query: { ...route.query, tab: val } })
+}, { flush: 'post' })
+
+// Sync from URL when navigating externally (back/forward, deep link)
+watch(() => route.query.tab, (tab) => {
+  const resolved = tab === 'following' ? 'following' : 'followers'
+  if (activeTab.value !== resolved) activeTab.value = resolved
 })
 
 const TAB_ITEMS = [
@@ -162,6 +166,11 @@ useInfiniteScroll(
 // ========================================
 
 onMounted(() => {
+  void loadFollowers(true)
+  void loadFollowing(true)
+})
+
+onActivated(() => {
   void loadFollowers(true)
   void loadFollowing(true)
 })

@@ -76,6 +76,7 @@ const genderColor = computed(() =>
         </div>
         <div class="flex items-center gap-0.5 mt-1">
           <UIcon
+            v-if="user.country"
             :name="`i-flag-${user.country.toLowerCase().trim()}-4x3`"
             class="rounded overflow-hidden h-5 size-6 shadow-lg"
           />

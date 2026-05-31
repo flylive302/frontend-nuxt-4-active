@@ -16,6 +16,7 @@ export const useGiftStore = defineStore('giftStore', () => {
   const selectedGift = ref<Gift | null>(null);
   const selectedRecipients = ref<number[]>([]);
   const selectedQuantity = ref<(typeof GIFT_QUANTITY_OPTIONS)[number]>(1);
+  const lockedRecipientId = ref<number | null>(null);
 
   // ========================================
   // Playback State
@@ -53,6 +54,15 @@ export const useGiftStore = defineStore('giftStore', () => {
     selectedGift.value = null;
     selectedRecipients.value = [];
     selectedQuantity.value = 1;
+    lockedRecipientId.value = null;
+  }
+
+  function setLockedRecipient(id: number) {
+    lockedRecipientId.value = id;
+  }
+
+  function clearLockedRecipient() {
+    lockedRecipientId.value = null;
   }
 
   /**
@@ -218,6 +228,7 @@ export const useGiftStore = defineStore('giftStore', () => {
     selectedGift,
     selectedRecipients,
     selectedQuantity,
+    lockedRecipientId,
 
     // Playback state
     isPlaying,
@@ -231,6 +242,8 @@ export const useGiftStore = defineStore('giftStore', () => {
     // Selection actions
     selectGift,
     clearSelection,
+    setLockedRecipient,
+    clearLockedRecipient,
     toggleRecipient,
     setSelectedRecipientIds,
     clearRecipients,

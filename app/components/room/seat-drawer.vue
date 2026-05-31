@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { createLogger } from '~/utils/logger'
 import MarqueeName from "~/components/common/marquee-name.vue";
+import { ASSETS } from '~/constants/assets'
 
 const log = createLogger('[SeatDrawer]')
 
@@ -10,6 +11,7 @@ const { getLevelFromXp } = useLevelLookup()
 const roomStore = useRoomStore()
 const seatsStore = useRoomSeatsStore()
 const authStore = useAuthStore()
+const giftStore = useGiftStore()
 const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
 const { myMembership } = useRoomMembers()
 const { resolvePropAsset } = usePropLookup()
@@ -178,6 +180,17 @@ async function handleKickUser() {
   }
 }
 
+const { isToggling, statusLoaded, isSelf, buttonIcon, toggleFollow } = useFollow(
+  computed(() => currentSeat.value?.user?.id ?? null)
+)
+
+function handleGiftButton() {
+  const userId = currentSeat.value?.user?.id
+  if (!userId) return
+  isOpen.value = false
+  giftStore.setLockedRecipient(userId)
+}
+
 /** Current user can manage members (owner or admin) */
 const canManageMembers = computed(() => {
   // Owner can always manage
@@ -315,6 +328,7 @@ const seatUserAge = computed(() =>
 
         </div>
 
+        <!-- Action Buttons -->
         <div class="flex justify-center gap-2 mt-16">
           <div class="flex gap-2">
             <!-- Take Seat button — only when seat is empty and unlocked -->
@@ -337,6 +351,31 @@ const seatUserAge = computed(() =>
               size="xl" variant="solid" square color="error" 
               :loading="isLoading" icon="i-lucide-plane-landing" 
               @click="handleLeaveSeat"
+            />
+          </div>
+
+          <div v-if="!isSeatEmpty && !isCurrentUserSeat" class="flex gap-2">
+            <!-- Gift button -->
+            <UButton
+              class="rounded-xl p-0 m-0"
+              size="xl"
+              variant="ghost"
+              square
+              @click="handleGiftButton"
+            >
+              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="size-10" />
+            </UButton>
+
+            <!-- Follow button -->
+            <UButton
+              v-if="!isSelf"
+              class="rounded-xl text-white"
+              size="xl"
+              variant="solid"
+              square
+              :loading="!statusLoaded || isToggling"
+              :icon="buttonIcon"
+              @click="toggleFollow"
             />
           </div>
 

@@ -173,6 +173,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
       <UButton
         variant="subtle" icon="i-lucide-coins" size="xs"
         class="cursor-pointer shadow-md backdrop-blur-xs font-bold"
+        @click="($event.currentTarget as HTMLElement)?.blur()"
       >
         {{formatCurrency(roomXp)}}
       </UButton>
@@ -279,6 +280,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
       <UButton
         variant="subtle" icon="i-lucide-users-round" size="xs"
         class="cursor-pointer shadow-md backdrop-blur-xs font-bold"
+        @click="($event.currentTarget as HTMLElement)?.blur()"
       >
         {{ participantCount }}
       </UButton>
