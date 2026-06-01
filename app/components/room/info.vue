@@ -63,7 +63,7 @@ const periodTabs = [
   { label: 'All Time', value: 'all_time' },
 ]
 
-const activePeriod = ref<LeaderboardPeriod>('daily')
+const activePeriod = ref<LeaderboardPeriod>('all_time')
 
 /**
  * Handle tab change - update period filter.

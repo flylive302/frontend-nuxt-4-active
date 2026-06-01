@@ -29,7 +29,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
   // ========================================
 
   const entries = ref<LeaderboardEntry[]>([])
-  const period = ref<LeaderboardPeriod>('daily')
+  const period = ref<LeaderboardPeriod>('all_time')
   const loading = ref(false)
   const refreshing = ref(false)
   const error = ref<string | null>(null)
@@ -37,6 +37,8 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
 
   // AbortController for request cancellation
   let abortController: AbortController | null = null
+  // Monotonic counter — ensures only the last-issued fetch updates state
+  let currentRequestId = 0
 
   // ========================================
   // Helpers
@@ -56,20 +58,18 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
    * @param reset - If true, clears existing entries before fetching
    */
   async function fetch(reset = false): Promise<void> {
-    // Guard: Prevent duplicate requests
-    if (loading.value) return
-
     const currentRoomId = getRoomId()
     if (!currentRoomId) {
       error.value = 'No room ID provided'
       return
     }
 
-    // Cancel any pending request
+    // Cancel any in-flight request and claim this slot
     if (abortController) {
       abortController.abort()
     }
     abortController = new AbortController()
+    const requestId = ++currentRequestId
 
     // Reset state if requested
     if (reset) {
@@ -80,7 +80,6 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     loading.value = true
 
     try {
-      // Build query params
       const params: Record<string, string> = {
         period: period.value,
       }
@@ -94,22 +93,25 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
         }
       )
 
+      // A newer fetch was started while we were in flight — discard this result
+      if (requestId !== currentRequestId) return
 
-      // Extract leaderboard array from nested response
       entries.value = response.data.leaderboard
       error.value = null
     } catch (err) {
-      // Ignore aborted requests
       if (err instanceof Error && err.name === 'AbortError') {
         return
       }
+      if (requestId !== currentRequestId) return
 
       const normalized = normalizeError(err)
       error.value = normalized.message
     } finally {
-      loading.value = false
-      refreshing.value = false
-      hasFetched.value = true
+      if (requestId === currentRequestId) {
+        loading.value = false
+        refreshing.value = false
+        hasFetched.value = true
+      }
     }
   }
 
@@ -141,7 +143,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
       abortController = null
     }
     entries.value = []
-    period.value = 'daily'
+    period.value = 'all_time'
     loading.value = false
     refreshing.value = false
     error.value = null

@@ -73,11 +73,11 @@ watch(open, (isOpen) => {
     <template #content>
       <div class="px-4 mt-3 pb-6 space-y-4">
         <div class="flex items-center gap-3 bg-neutral-800 rounded-lg p-3">
-          <UserAvatar :img="room.logo" :animated="true" class="w-12" />
-          <div>
-            <h3 class="text-base font-bold">{{ room.name }}</h3>
+          <UserAvatar :img="room.logo" :animated="true" class="w-24" />
+          <div class="w-full">
+            <MarqueeName text-class="text-base font-bold" :name="room.name" />
             <UBadge color="warning" variant="subtle" size="sm">
-              Password Protected
+              This Room is Password Protected
             </UBadge>
           </div>
         </div>

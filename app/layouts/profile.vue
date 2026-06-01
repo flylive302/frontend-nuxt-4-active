@@ -24,6 +24,8 @@
             />
         </header>
 
-        <slot />
+        <div class="h-screen overflow-hidden">
+          <slot />
+        </div>
     </main>
 </template>

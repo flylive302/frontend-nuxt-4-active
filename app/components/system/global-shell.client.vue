@@ -2,6 +2,8 @@
 import { defineAsyncComponent } from 'vue'
 
 const roomStore = useRoomStore()
+const authStore = useAuthStore()
+const route = useRoute()
 const assetStore = useAssetStore()
 const { progress, phase } = storeToRefs(assetStore)
 
@@ -18,7 +20,7 @@ initMediaSession()
 
 <template>
   <div>
-    <RoomMinimized v-if="roomStore.currentRoom && roomStore.isMinimized" />
+    <RoomMinimized v-if="authStore.isAuthenticated && roomStore.currentRoom && roomStore.isMinimized && !route.path.startsWith('/room/')" />
 
     <SystemDownloadProgressBar
       :progress="progress"

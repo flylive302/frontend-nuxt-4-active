@@ -9,7 +9,7 @@ const containerRef = ref<HTMLElement | null>(null)
 const textRef = ref<HTMLElement | null>(null)
 const overflowOffset = ref(0)
 
-const shouldMarquee = computed(() => props.name.length > 10)
+const shouldMarquee = computed(() => (props.name?.length ?? 0) > 10)
 
 function measure() {
   if (!containerRef.value || !textRef.value) return

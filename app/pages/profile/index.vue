@@ -51,7 +51,7 @@ const vip = authStore.user?.vip_level;
 </script>
 
 <template>
-  <div class="h-screen overflow-hidden">
+  <div>
     <ProfileHeader>
       <template #cover>
         <NuxtImg
@@ -115,7 +115,7 @@ const vip = authStore.user?.vip_level;
       </template>
 
       <template #stats>
-        <div class="rounded-xl glowing-border overflow-hidden relative z-10" :class="dataCardAsset ? 'm-6' : 'mx-4 my-2'">
+        <div class="rounded-xl glowing-border overflow-hidden relative z-10 my-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
           <UserStats
               class="mt-2"
               :wealth-xp="authStore.user?.wealth_xp ?? '0'"
@@ -130,12 +130,11 @@ const vip = authStore.user?.vip_level;
       </template>
     </ProfileHeader>
 
-    <!--
-      <SectionTitle class="mt-6 mb-2 mx-3">Cp RelationShips</SectionTitle>
-      <EventsProfileCard />
-    -->
-
     <div class="pb-24 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
+      <SectionTitle>Cp RelationShips</SectionTitle>
+      <EventsProfileCard class="mb-4" />
+
+
       <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />

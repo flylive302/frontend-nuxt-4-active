@@ -161,7 +161,7 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 </script>
 
 <template>
-  <div class="h-screen overflow-hidden">
+  <div>
     <!-- Loading State -->
     <div v-if="loading" class="pt-14 px-3 space-y-4">
       <div class="flex flex-col justify-center min-h-[55vw] bg-linear-to-br to-primary/30 rounded-lg p-3">
@@ -266,7 +266,7 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       </template>
 
       <template #stats>
-        <div class="rounded-xl glowing-border overflow-hidden relative z-10 mt-2 mb-6" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
+        <div class="rounded-xl glowing-border overflow-hidden relative z-10 mt-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
           <UserStats
               class="mt-1"
               :wealth-xp="profileWritable?.wealth_xp"
@@ -282,45 +282,44 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       </template>
     </ProfileHeader>
 
-    <div class="max-h-[58vh] overflow-scroll relative z-50">
+    <div class="max-h-[58vh] overflow-scroll relative z-50 mt-2">
       <SectionTitle class="mx-8">Cp RelationShips</SectionTitle>
       <EventsProfileCard class="mx-4"/>
+
       <!-- Agency Section (conditional) -->
-      <template v-if="hasAgency && profileWritable?.agency">
-        <div class="relative z-50">
-          <SectionTitle class="mt-4 mb-2 mx-3">Agency</SectionTitle>
-          <NuxtLink
-              :to="`/agency/${profileWritable.agency.id}`"
-              class="mx-auto flex rounded-md overflow-hidden gap-2 glowing-border w-2/4"
-          >
-            <div class="p-1 w-4/6">
-              <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
-            </div>
+      <div v-if="hasAgency && profileWritable?.agency" class="relative z-50 mt-4">
+        <SectionTitle class="mx-8">Agency</SectionTitle>
+        <NuxtLink
+            :to="`/agency/${profileWritable.agency.id}`"
+            class="flex rounded-md overflow-hidden gap-2 glowing-border mx-8"
+        >
+          <div class="p-1 w-2/6">
+            <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
+          </div>
 
-            <div class="w-full flex flex-col gap-2 py-1">
-              <p class="text-md font-bold truncate">{{ profileWritable.agency.name }}</p>
+          <div class="w-full flex flex-col gap-2 py-1">
+            <p class="text-md font-bold truncate">{{ profileWritable.agency.name }}</p>
 
-              <div class="flex gap-2 items-center">
-                <div class="flex pt-1 gap-1 items-center">
-                  <UIcon :name="`i-flag-${profileWritable.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
-                  <p class="text-sm text-muted! font-semibold truncate">
-                    {{ profileWritable.agency.country }}
-                  </p>
-                </div>
-
-                <div class="flex items-center mt-1 gap-1">
-                  <UBadge icon="i-lucide-users" square class="rounded-full text-white" variant="soft" />
-                  <p class="text-xs font-bold leading-none">
-                    {{ profileWritable.agency.total_member_count }}
-                  </p>
-                </div>
+            <div class="flex gap-2 items-center">
+              <div class="flex pt-1 gap-1 items-center">
+                <UIcon :name="`i-flag-${profileWritable.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
+                <p class="text-sm text-muted! font-semibold truncate">
+                  {{ profileWritable.agency.country }}
+                </p>
               </div>
 
+              <div class="flex items-center mt-1 gap-1">
+                <UBadge icon="i-lucide-users" square class="rounded-full text-white" variant="soft" />
+                <p class="text-xs font-bold leading-none">
+                  {{ profileWritable.agency.total_member_count }}
+                </p>
+              </div>
             </div>
 
-          </NuxtLink>
-        </div>
-      </template>
+          </div>
+
+        </NuxtLink>
+      </div>
 
       <!-- History Section -->
       <div ref="giftsContainerRef" class="mb-12 mt-4 relative z-30">

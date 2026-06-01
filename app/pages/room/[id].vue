@@ -57,6 +57,9 @@ watch(
 // Body Scroll Lock
 // ========================================
 onMounted(() => {
+  // Being on the room page means the room is open, never minimized
+  if (roomStore.isMinimized) roomStore.maximizeRoom();
+
   document.body.removeAttribute('style');
   document.body.classList.remove('unlock-body');
   document.body.classList.add('lock-body');
