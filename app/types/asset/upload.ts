@@ -13,6 +13,7 @@ export type ImageUploadFolder =
   | 'agencies/logos'
   | 'agencies/national-ids'
   | 'coin-request-proofs'
+  | 'support-attachments'
 
 /**
  * Authentication parameters from backend for ImageKit upload.

@@ -129,6 +129,7 @@ export default defineNuxtConfig({
         },
     },
     runtimeConfig: {
+        playStoreUrl: process.env.NUXT_PLAY_STORE_URL ?? 'https://play.google.com/store/apps/details?id=com.flylive.app',
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
