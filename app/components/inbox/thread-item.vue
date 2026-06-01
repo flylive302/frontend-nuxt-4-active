@@ -11,9 +11,11 @@ const { resolvePropAsset } = usePropLookup()
     class="flex items-center gap-3 px-4 py-3 hover:bg-elevated transition-colors cursor-pointer active:bg-elevated/80">
     <!-- Avatar -->
     <div class="relative shrink-0">
-      <UserAvatar :img="thread.participant.avatar"
+      <UserAvatar
+:img="thread.participant.avatar"
         :frame-asset-url="resolvePropAsset(thread.participant.frame_id) ?? undefined" class="size-12" />
-      <span v-if="thread.unreadCount > 0"
+      <span
+v-if="thread.unreadCount > 0"
         class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
         {{ thread.unreadCount > 99 ? '99+' : thread.unreadCount }}
       </span>

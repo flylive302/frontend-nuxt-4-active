@@ -287,7 +287,8 @@ function getUploadStatusColor(status: string): string {
           <template #hint>
             <p class="text-xs text-muted">Cannot be modified once created</p>
           </template>
-          <UInput v-model="state.address" class="w-full" size="lg" icon="i-lucide-map-pin"
+          <UInput
+v-model="state.address" class="w-full" size="lg" icon="i-lucide-map-pin"
             placeholder="Add your current address" :disabled="processing" />
         </UFormField>
 

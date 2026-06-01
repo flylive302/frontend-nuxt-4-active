@@ -4,9 +4,7 @@
 
 import type { Socket } from 'socket.io-client'
 import { useAllEventHandlers } from '~/events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[RealtimeEvents]')
 
 // Track if handlers are already registered
 let handlersRegistered = false

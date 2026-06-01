@@ -1,6 +1,5 @@
 import type { types as mediasoupTypes } from 'mediasoup-client';
 import type { RtpCapabilities } from '~/types/room/audio';
-import { createLogger } from '~/utils/logger';
 
 // Lazy-loaded: mediasoup-client must NOT be statically imported because
 // it uses the `debug` package which binds to the console —
@@ -32,8 +31,6 @@ const device = ref<mediasoupTypes.Device | null>(null);
  * Must be called before creating transports.
  */
 export function useMediasoupDevice() {
-  const log = createLogger('[MediasoupDevice]');
-
   // ========================================
   // Computed Properties
   // ========================================

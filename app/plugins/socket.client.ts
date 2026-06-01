@@ -2,9 +2,7 @@
 // Socket Client Plugin
 // ========================================
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[Socket]')
 
 /**
  * Socket Plugin - App-Wide Connection

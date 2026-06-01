@@ -109,6 +109,7 @@ export function useSvgaPlayer(
         player.value.start();
       }
     } catch (error) {
+      log.warn('Failed to load SVGA animation', error);
       isPlaying.value = false;
       // Signal completion to prevent stuck modal
       options.onComplete?.();

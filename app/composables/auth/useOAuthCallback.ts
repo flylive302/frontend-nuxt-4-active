@@ -7,9 +7,7 @@
 
 import type { OAuthPopupResult } from '~/composables/auth/useOAuthPopup'
 import type { BootstrapUser } from '~/types/user/bootstrap'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[OAuthCallback]')
 
 export interface OAuthCallbackParams {
   token?: string

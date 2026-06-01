@@ -50,6 +50,7 @@ export function useAgencyMembership() {
         store.userAgency.isOwner = false
       }
     } catch (error) {
+      log.warn('Failed to fetch user agency', error)
       store.userAgency.error = 'Failed to load agency information'
     } finally {
       store.userAgency.loading = false

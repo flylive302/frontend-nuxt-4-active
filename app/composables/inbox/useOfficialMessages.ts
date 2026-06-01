@@ -29,6 +29,7 @@ export function useOfficialMessages() {
       nextCursor.value = res.meta.next_cursor
     }
     catch (err) {
+      log.warn('Failed to fetch official messages', err)
     }
     finally {
       loading.value = false
@@ -46,6 +47,7 @@ export function useOfficialMessages() {
       nextCursor.value = res.meta.next_cursor
     }
     catch (err) {
+      log.warn('Failed to load older official messages', err)
     }
     finally {
       loading.value = false
@@ -58,6 +60,7 @@ export function useOfficialMessages() {
       store.clearOfficialUnread()
     }
     catch (err) {
+      log.warn('Failed to mark official messages as read', err)
     }
   }
 

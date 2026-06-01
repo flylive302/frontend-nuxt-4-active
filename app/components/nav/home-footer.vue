@@ -45,6 +45,7 @@ async function handleMyRoomClick() {
       createRoomOpen.value = true;
     }
   } catch (error) {
+    log.warn('Failed to fetch user room', error)
   }
 }
 const inboxBadge = computed(() => {

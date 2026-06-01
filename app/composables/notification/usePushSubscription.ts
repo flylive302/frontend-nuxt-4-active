@@ -1,3 +1,7 @@
+import { createLogger } from '~/utils/logger'
+
+const log = createLogger('[PushSubscription]')
+
 /**
  * Registers or refreshes the browser's Web Push subscription with the backend.
  * Call once after the user authenticates. Safe to call multiple times.
@@ -45,7 +49,7 @@ export function usePushSubscription() {
 
     }
     catch (err) {
-      // Non-fatal — user may have denied permission
+      log.warn('Failed to register push subscription', err)
     }
   }
 
@@ -63,6 +67,7 @@ export function usePushSubscription() {
       await subscription.unsubscribe()
     }
     catch (err) {
+      log.warn('Failed to unregister push subscription', err)
     }
   }
 

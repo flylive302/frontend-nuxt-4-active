@@ -273,7 +273,7 @@ async function doLuckySend(): Promise<void> {
       description="Send gifts to speakers in the room"
   >
     <!-- Trigger Button -->
-    <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gifts" width="60px" class="cursor-pointer" />
+    <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gifts" width="60px" class="cursor-pointer" >
     <template #content>
       <div class="p-2">
         <!-- Recipient Selector -->
@@ -290,7 +290,7 @@ async function doLuckySend(): Promise<void> {
           <!-- Coin Balance -->
           <div class="flex items-center">
             <UButton
-              trailingIcon="i-lucide-chevron-right"
+              trailing-icon="i-lucide-chevron-right"
               icon="i-lucide-coins"
               variant="subtle"
               color="warning"
@@ -332,12 +332,14 @@ async function doLuckySend(): Promise<void> {
 
               <!-- Quantity Selector -->
               <UFieldGroup class="flex items-center">
-                <USelect :model-value="giftStore.selectedQuantity" :items="quantityOptions" size="sm"
+                <USelect
+:model-value="giftStore.selectedQuantity" :items="quantityOptions" size="sm"
                   class="w-20 rounded-full overflow-hidden" @update:model-value="
                     (val: number) => giftStore.setQuantity(val)
                   " />
                 <!-- Send Button -->
-                <UButton :disabled="!canSend || isSending" :loading="isSending" size="sm" trailing-icon="i-lucide-send"
+                <UButton
+:disabled="!canSend || isSending" :loading="isSending" size="sm" trailing-icon="i-lucide-send"
                   @click="handleSend">
                   Send
                 </UButton>

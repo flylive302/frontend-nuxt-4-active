@@ -12,9 +12,7 @@ import type {
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[AssetDownloader]')
 
 // ========================================
 // State

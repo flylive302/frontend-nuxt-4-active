@@ -116,7 +116,7 @@ const frameConfig = computed(() => {
         alt="avatar"
         referrerpolicy="no-referrer"
         @error="onImgError"
-      />
+      >
       <!-- Frame layer (on top) -->
       <SvgaPlayer
         v-if="props.animated && frameConfig?.name && svgaAllowed"

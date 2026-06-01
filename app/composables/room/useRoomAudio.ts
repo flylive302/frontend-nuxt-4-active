@@ -206,9 +206,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
       emitAsync<SelfMutePayload, SelfMuteResponse>(event, { roomId, producerId })
         .then((res) => {
           if (!res.success) {
+            log.warn('Server rejected mute toggle')
           }
         })
         .catch((err) => {
+          log.warn('Failed to emit mute toggle to server', err)
         });
     }
 
@@ -478,6 +480,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
         try {
           await consumeProducer(producer.producerId, roomId, producer.userId);
         } catch (err) {
+          log.warn('Failed to consume producer', err)
         }
       }
     }

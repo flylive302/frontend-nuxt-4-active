@@ -34,16 +34,14 @@ const errorMessage = ref('')
 // ========================================
 // Error Handling
 // ========================================
-onErrorCaptured((error: Error, instance, info) => {
+onErrorCaptured((error: Error, _instance, _info) => {
   hasError.value = true
   errorMessage.value = error.message || props.fallbackMessage
-  
+
   // Emit error event for parent handling/logging
   emit('error', error)
-  
-  // Log for debugging in development
-  if (import.meta.env?.DEV) {
-  }
+
+  log.warn('Component error captured', error)
   
   // Prevent error from propagating
   return false

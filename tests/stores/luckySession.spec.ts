@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed } from 'vue'
-import { vi } from 'vitest'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)

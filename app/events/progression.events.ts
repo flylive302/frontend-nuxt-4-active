@@ -8,9 +8,7 @@ import type {
   UserLevelUpPayload,
   UserProgressionPayload,
 } from '~/types/room/socket-events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[ProgressionEvents]')
 
 /**
  * Composable to register progression-related socket event handlers.

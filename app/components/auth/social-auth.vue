@@ -7,8 +7,6 @@ const isLoading = ref<SocialProvider | null>(null)
 
 const providers: { name: SocialProvider; icon: string; label: string }[] = [
   { name: 'google', icon: 'i-logos-google-icon', label: 'Google' },
-  // { name: 'facebook', icon: 'i-logos-facebook', label: 'Facebook' },
-  // { name: 'apple', icon: 'i-simple-icons-apple', label: 'Apple' }
 ]
 
 async function loginWith(provider: SocialProvider) {
@@ -27,11 +25,22 @@ async function loginWith(provider: SocialProvider) {
 <template>
   <div class="flex justify-between">
     <div v-for="provider in providers" :key="provider.name" class="rounded-lg w-full glowing-border">
-      <UButton variant="solid" color="neutral" size="xl"
-        class="inset-shadow-sm inset-shadow-neutral-950/50 w-full justify-center" :square="true"
-        :aria-label="`Sign in with ${provider.label}`" :loading="isLoading === provider.name"
-        :disabled="isLoading !== null && isLoading !== provider.name" @click="loginWith(provider.name)">
-        <UIcon v-show="isLoading !== provider.name" :name="provider.icon" class="size-8" />
+      <UButton
+          variant="solid"
+          color="neutral"
+          size="xl"
+          class="inset-shadow-sm inset-shadow-neutral-950/50 w-full justify-center"
+          :square="true"
+          :aria-label="`Sign in with ${provider.label}`"
+          :loading="isLoading === provider.name"
+          :disabled="isLoading !== null && isLoading !== provider.name"
+          @click="loginWith(provider.name)"
+      >
+        <UIcon
+            v-show="isLoading !== provider.name"
+            :name="provider.icon"
+            class="size-8"
+        />
         <span v-show="isLoading !== provider.name">Login with {{ provider.label }}</span>
       </UButton>
     </div>

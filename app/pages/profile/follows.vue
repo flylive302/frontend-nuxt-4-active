@@ -4,10 +4,8 @@
 // ========================================
 
 import { useInfiniteScroll } from '@vueuse/core'
-import { createLogger } from '~/utils/logger'
 import type { MinimalUser } from '~/types/user/bootstrap'
 
-const log = createLogger('[FollowsPage]')
 
 // ========================================
 // Page Configuration

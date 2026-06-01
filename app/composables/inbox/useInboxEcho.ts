@@ -4,10 +4,8 @@
 // Subscribes to private-dm.{userId} and wires Reverb events → store.
 // Call subscribe() after login; unsubscribe() on logout.
 
-import { createLogger } from '~/utils/logger'
 import type { Thread, ThreadMessage } from '~/types/inbox'
 
-const log = createLogger('[useInboxEcho]')
 
 export function useInboxEcho() {
   const { $echo } = useNuxtApp()

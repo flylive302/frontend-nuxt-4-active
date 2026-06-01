@@ -107,6 +107,7 @@ export function useVapPlayer(
       }
     }
     catch (error) {
+      log.warn('Failed to load VAP animation', error)
       isPlaying.value = false
       // Signal completion to prevent stuck modal
       options.onComplete?.()

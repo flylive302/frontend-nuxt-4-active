@@ -18,7 +18,9 @@ const props = withDefaults(defineProps<{
   width: '100%',
   height: '100%',
   loop: 0,
-  autoplay: true
+  autoplay: true,
+  replaceElements: () => ({}),
+  dynamicElements: () => ({})
 });
 
 const emit = defineEmits<{ complete: [] }>();

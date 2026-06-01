@@ -8,7 +8,6 @@ import type {
 import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
 import { createEmitAsync } from '~/utils/socket';
-import { createLogger } from '~/utils/logger';
 
 // ============================================
 // Types
@@ -36,7 +35,6 @@ let _toast: ReturnType<typeof useToast> | null = null;
  * Requires device to be loaded first.
  */
 export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
-  const log = createLogger('[MediasoupTransports]');
   const emitAsync = createEmitAsync(socket);
   if (!_toast) _toast = useToast();
   const toast = _toast;
@@ -60,7 +58,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     }
   }
 
-  function attachFailureListener(transport: Transport, label: string) {
+  function attachFailureListener(transport: Transport, _label: string) {
     transport.on('connectionstatechange', (state: mediasoupTypes.ConnectionState) => {
       if (state === 'failed') {
         toast.add({

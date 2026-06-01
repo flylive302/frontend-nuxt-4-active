@@ -99,6 +99,7 @@ export function useFollow(
       statusLoaded.value = true
     }
     catch (err) {
+      log.warn('Failed to fetch follow status', err)
     }
   }
 

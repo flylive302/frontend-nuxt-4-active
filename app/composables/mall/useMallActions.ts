@@ -11,7 +11,6 @@
  * - Socket emissions (profile sync for column-based props)
  * - Optimistic updates with rollback
  */
-import { createLogger } from '~/utils/logger'
 import type {
   PropPurchaseResponse,
   PropEquipResponse,
@@ -20,7 +19,6 @@ import type {
 import type { ProfileSyncFields } from '~/types/user/profile-sync'
 import { useAuthStore } from '~/stores/auth'
 
-const log = createLogger('[MallActions]')
 
 /** Map PropType → user profile field key (e.g., 'frame' → 'frame_id'). */
 const PROP_TYPE_TO_COLUMN: Partial<Record<PropType, keyof ProfileSyncFields>> = {

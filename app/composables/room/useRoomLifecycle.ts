@@ -82,6 +82,7 @@ export function useRoomLifecycle(): void {
         try {
           await withTimeout(joinRoom(String(newRoom.id)), ROOM_OP_TIMEOUT_MS, 'joinRoom');
         } catch (error) {
+          log.warn('Room join failed', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           toast.add({
             title: 'Audio connection failed',
@@ -117,6 +118,7 @@ export function useRoomLifecycle(): void {
           try {
             await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
           } catch (err) {
+            log.warn('Failed to rebuild room audio on un-minimize', err);
             toast.add({
               title: 'Reconnecting...',
               description: 'Audio may take a moment to restore.',
@@ -158,6 +160,7 @@ export function useRoomLifecycle(): void {
       // Re-join the audio room on MSAB server
       await withTimeout(joinRoom(roomId), ROOM_OP_TIMEOUT_MS, 'joinRoom');
     } catch (error) {
+      log.warn('Failed to re-join room after socket reconnect', error);
     } finally {
       isJoining.value = false;
     }
@@ -203,6 +206,7 @@ export function useRoomLifecycle(): void {
       try {
         await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
       } catch (err) {
+        log.warn('Failed to rebuild room audio on visibility restore', err);
         toast.add({
           title: 'Reconnecting...',
           description: 'Audio may take a moment to restore.',

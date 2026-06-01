@@ -9,7 +9,9 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   showStrength?: boolean
 }>(), {
-  showStrength: true
+  showStrength: true,
+  modelValue: '',
+  placeholder: '',
 })
 
 const emit = defineEmits<{

@@ -14,9 +14,7 @@
 // to append the consumer <audio> elements to a hidden DOM node with
 // `playsInline` set — that is NOT done here to keep scope minimal.
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[MediaSession]')
 
 let _initialized = false
 

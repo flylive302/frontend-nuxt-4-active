@@ -54,6 +54,7 @@ export function useReporting() {
       })
       return true
     } catch (err) {
+      log.warn('Failed to submit report', err)
       toast.add({
         title: 'Failed to submit report',
         description: 'Please try again.',

@@ -14,9 +14,7 @@ import {
   MAX_IMAGE_SIZE,
   ALLOWED_IMAGE_TYPES,
 } from '~/types/asset/upload'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[ImageUpload]')
 
 // ========================================
 // Types

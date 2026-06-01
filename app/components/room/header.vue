@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { LevelConfig } from '~/types/user/bootstrap';
 import { ASSETS } from '~/constants/assets';
-import { createLogger } from '~/utils/logger';
 
-const log = createLogger('[RoomHeader]');
 
 // ========================================
 // Stores

@@ -11,9 +11,7 @@ import * as assetDownloader from '~/services/assetDownloader'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { resolveVideoUrl } from '~/utils/platform'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[BootstrapAssets]')
 
 function normalizeUrl(url: string): string {
   try {

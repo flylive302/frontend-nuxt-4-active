@@ -135,6 +135,7 @@ export function useTransactionData() {
 
       store.setSummary(response.data)
     } catch (error) {
+      log.warn('Failed to fetch transaction summary', error)
     } finally {
       store.setSummaryLoading(false)
     }

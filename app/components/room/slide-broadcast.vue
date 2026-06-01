@@ -49,9 +49,9 @@ function makeSlideElements(userName: string): Record<string, HTMLCanvasElement> 
         :name="slide.assetUrl"
         :loop="1"
         :dynamic-elements="makeSlideElements(slide.userName)"
-        @complete="onSlideComplete(slide.id)"
         height="56px"
         width="auto"
+        @complete="onSlideComplete(slide.id)"
       />
     </div>
   </div>

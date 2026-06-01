@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
+import type { Gift } from '~/types/gift/gift'
 
 vi.stubGlobal('ref', ref)
 
@@ -25,7 +26,7 @@ describe('useGiftComboStore', () => {
       const store = useGiftComboStore()
 
       const ctx = {
-        gift: { id: 7, price: 100 } as any,
+        gift: { id: 7, price: 100 } as Gift,
         senderId: 1,
         recipientIds: [2, 3],
         quantity: 1,
@@ -41,7 +42,7 @@ describe('useGiftComboStore', () => {
       const { useGiftComboStore } = await import('../../app/stores/giftCombo')
       const store = useGiftComboStore()
 
-      store.setLuckyContext({ gift: { id: 7 } as any, senderId: 1, recipientIds: [2], quantity: 1 })
+      store.setLuckyContext({ gift: { id: 7 } as Gift, senderId: 1, recipientIds: [2], quantity: 1 })
       store.clearLuckyContext()
 
       expect(store.lastLuckyContext).toBeNull()
@@ -55,7 +56,7 @@ describe('useGiftComboStore', () => {
       const store = useGiftComboStore()
 
       store.setPendingRefund(200)
-      store.setLuckyContext({ gift: { id: 5 } as any, senderId: 1, recipientIds: [3], quantity: 2 })
+      store.setLuckyContext({ gift: { id: 5 } as Gift, senderId: 1, recipientIds: [3], quantity: 2 })
 
       store.$reset()
 

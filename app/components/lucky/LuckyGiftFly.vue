@@ -95,7 +95,7 @@ function animateFlyItem(el: Element | null, item: LuckyFlyItem): void {
       alt=""
       loading="eager"
       decoding="async"
-    />
+    >
   </div>
 </template>
 

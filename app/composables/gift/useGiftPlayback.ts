@@ -6,7 +6,6 @@
  * Used by playback-modal.vue as a thin presentation component.
  */
 import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift'
-import { createLogger } from '~/utils/logger'
 
 // ========================================
 // Types
@@ -21,7 +20,6 @@ interface PlaybackController {
 // ========================================
 
 export function useGiftPlayback() {
-  const log = createLogger('[GiftPlayback]')
   const giftStore = useGiftStore()
   const authStore = useAuthStore()
 

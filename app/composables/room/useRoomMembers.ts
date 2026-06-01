@@ -3,9 +3,7 @@
 // ========================================
 
 import type { RoomMember, RoomMemberRole, GetRoomMembersParams } from '~/types/room/room'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[useRoomMembers]')
 
 /**
  * Composable for managing room members.

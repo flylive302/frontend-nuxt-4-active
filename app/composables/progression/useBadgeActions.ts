@@ -4,9 +4,7 @@
 // Handles mutating badge actions with GATE → EXECUTE → REACT pipeline.
 
 import type { UserBadge } from '~/types/progression/badge'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[BadgeActions]')
 
 /**
  * Composable for badge actions (mutations).

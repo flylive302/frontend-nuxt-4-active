@@ -251,8 +251,8 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
       <template #badges>
         <div class="flex justify-start items-center w-full relative z-10" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <img :src="charmBadgeSrc" alt="current badge" class="w-5/12" />
-          <img :src="wealthBadgeSrc" alt="current badge" class="w-7/12" />
+          <img :src="charmBadgeSrc" alt="current badge" class="w-5/12" >
+          <img :src="wealthBadgeSrc" alt="current badge" class="w-7/12" >
         </div>
       </template>
 

@@ -4,10 +4,8 @@
 
 import type { Socket } from 'socket.io-client'
 import type { VipGiftedPayload, VipUpdatedPayload } from '~/types/vip/vip-level'
-import { createLogger } from '~/utils/logger'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
 
-const log = createLogger('[VipEvents]')
 
 /**
  * Composable to register VIP-related socket event handlers.

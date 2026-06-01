@@ -21,6 +21,7 @@ export function useGeolocation() {
       const { country_code } = await $fetch<{ country_code: string | null }>('/api/detect-country')
       return country_code
     } catch (error) {
+      log.warn('Failed to detect country', error)
       return null
     }
   }

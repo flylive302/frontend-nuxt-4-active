@@ -202,6 +202,7 @@ async function loadRechargeProgress() {
     rechargeProgress.value = await fetchRechargeProgress()
   }
   catch (err) {
+    log.warn('Failed to load recharge progress', err)
   }
 }
 
@@ -336,7 +337,8 @@ const isVap = computed(() => {
       <div class="fixed w-full top-0 min-h-screen">
 
         <!-- User VIP Status Banner -->
-        <div v-if="isVip"
+        <div
+v-if="isVip"
           class="absolute w-7/8 ml-7 mt-12 z-50 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm">
           <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-tertiary" />
           <span class="text-sm font-medium text-white">
@@ -348,7 +350,8 @@ const isVap = computed(() => {
         </div>
 
         <NuxtImg :src="ASSETS.VIP_BACKGROUND" :alt="`VIP Background`" class="absolute inset-0 z-0" />
-        <NuxtImg :src="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.flag" :alt="`VIP Flag`"
+        <NuxtImg
+:src="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.flag" :alt="`VIP Flag`"
           class="relative z-20 mx-auto mt-12 max-w-3/4" />
 
         <div class="relative z-20 mx-auto -mt-52 max-w-36">
@@ -369,7 +372,7 @@ const isVap = computed(() => {
         <!-- Main Content -->
         <div class="absolute top-30 z-10 max-h-10/12 pb-46 overflow-y-auto">
           <!-- Recharge Progress -->
-          <div class="px-10 pt-3" v-if="rechargeProgress?.has_active_event">
+          <div v-if="rechargeProgress?.has_active_event" class="px-10 pt-3">
             <VipRechargeProgress :progress="rechargeProgress" :level-color="activeLevel.color" />
           </div>
           <div class="pt-12 px-14">
@@ -391,7 +394,8 @@ const isVap = computed(() => {
               </div>
 
               <div class="grid grid-cols-3 gap-2">
-                <div v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
+                <div
+v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
                      class="flex flex-col items-center justify-center gap-2 cursor-pointer"
                      @click="handlePropPreview(prop)">
                   <div
@@ -402,7 +406,8 @@ const isVap = computed(() => {
                       "
                       :style="privilegeBoxStyle"
                   >
-                    <img v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
+                    <img
+v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
                          class="w-full h-full object-contain">
                     <UIcon v-else name="i-heroicons-gift" class="h-12 text-white/90" />
                   </div>
@@ -419,9 +424,11 @@ const isVap = computed(() => {
                 Privileges
               </h3>
               <div class="grid grid-cols-3 gap-2">
-                <div v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`"
+                <div
+v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`"
                   class="flex flex-col items-center justify-center gap-2">
-                  <div class="flex aspect-square w-full items-center justify-center rounded-md transition-all duration-300"
+                  <div
+class="flex aspect-square w-full items-center justify-center rounded-md transition-all duration-300"
                     :style="privilegeBoxStyle">
                     <UIcon :name="VIP_PRIVILEGE_ICONS[privilege] ?? 'i-heroicons-star'" class="size-12 text-white/90" />
                   </div>
@@ -438,21 +445,24 @@ const isVap = computed(() => {
     </template>
 
     <!-- VIP Gift Modal -->
-    <VipGiftModal v-if="activeLevel" v-model:open="isGiftModalOpen" :level-name="`VIP ${activeLevel.level}`"
+    <VipGiftModal
+v-if="activeLevel" v-model:open="isGiftModalOpen" :level-name="`VIP ${activeLevel.level}`"
       :price="activeLevel.price" @confirm="handleGiftConfirm" />
 
     <!-- VIP Prop Preview Modal -->
     <VipPropPreviewModal :prop="selectedProp" :open="isPropPreviewOpen" @close="handlePropPreviewClose" />
 
     <!-- VIP Congratulations Modal -->
-    <VipCongratsModal :open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
+    <VipCongratsModal
+:open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
       :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props" @close="handleCongratsClose" />
 
     <!-- Footer Controls -->
     <footer aria-label="VIP Level Selection" class="fixed inset-x-0 bottom-0 pb-2 z-50 backdrop-blur-lg">
       <!-- VIP Level Tabs -->
       <div class="flex w-full overflow-x-auto scrollbar-hide">
-        <UButton v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
+        <UButton
+v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
           class="min-w-fit shrink-0 rounded-none transition-transform duration-200" :style="bgColor"
           :class="activeIndex === index ? 'scale-110 bg-tertiary!' : 'to-muted'" :aria-pressed="activeIndex === index"
           :aria-label="`Select VIP Level ${level.level}`" @click="setActiveLevel(index)">
@@ -466,11 +476,13 @@ const isVap = computed(() => {
 
       <!-- Action Buttons -->
       <div class="flex gap-2 px-3 py-2">
-        <UButton size="md" variant="soft" color="tertiary" class="w-full justify-center"
+        <UButton
+size="md" variant="soft" color="tertiary" class="w-full justify-center"
           aria-label="Gift VIP to a friend" @click="handleGiftOpen">
           Gift
         </UButton>
-        <UButton size="md" variant="solid" color="tertiary" class="w-full justify-center" :loading="isPurchasing"
+        <UButton
+size="md" variant="solid" color="tertiary" class="w-full justify-center" :loading="isPurchasing"
           :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
           @click="handlePurchase">
           {{ purchaseLabel }}

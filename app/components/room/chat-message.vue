@@ -87,9 +87,9 @@ const charmLevel = computed(() =>
               class="w-10"
               alt=""
           >
-          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge"/>
+          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge">
 
-          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge"/>
+          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge">
         </div>
       </div>
 

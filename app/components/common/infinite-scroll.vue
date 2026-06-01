@@ -2,7 +2,6 @@
 import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
 import { useInfiniteScroll } from '@vueuse/core'
-import { createLogger } from '~/utils/logger';
 import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
@@ -140,7 +139,6 @@ function evaluateHasMore(
   return fetchedItems.length >= metaFallback.perPage
 }
 
-const log = createLogger('[InfiniteScroll]');
 
 async function loadNextPage(): Promise<void> {
   if (isLoading.value || !hasMore.value) return

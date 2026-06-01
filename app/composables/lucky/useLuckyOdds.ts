@@ -22,6 +22,7 @@ export function useLuckyOdds() {
       const response = await api<{ data: { tiers: OddsTier[] } }>('/lucky-draws/odds')
       return response.data?.tiers ?? []
     } catch (err) {
+      log.warn('Failed to fetch lucky draw odds', err)
       return []
     }
   }

@@ -8,9 +8,7 @@ import type {
   RoomParticipantCountPayload,
   RoomUpdatedPayload,
 } from '~/types/room/socket-events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[RoomEvents]')
 
 /**
  * Composable to register room-level socket event handlers.

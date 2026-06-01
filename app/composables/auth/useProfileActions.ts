@@ -7,9 +7,7 @@
 
 import type { User, UpdateProfilePayload } from '~/types/user/auth'
 import type { ProfileSyncFields } from '~/types/user/profile-sync'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[ProfileActions]')
 
 export function useProfileActions() {
   // ========================================

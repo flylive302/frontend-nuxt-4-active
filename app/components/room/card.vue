@@ -95,7 +95,7 @@ function handleRoomClick(): void {
         :loading="props.priorityLcp ? 'eager' : 'lazy'"
         :fetchpriority="effectiveHighFetchPriority ? 'high' : undefined"
         decoding="async"
-      />
+      >
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
 
@@ -112,7 +112,7 @@ function handleRoomClick(): void {
               class="size-6 object-cover rounded-full ring-2 ring-primary"
               loading="lazy"
               decoding="async"
-          />
+          >
 
           <!-- Text -->
           <p class="text-sm font-bold max-w-24 leading-none">

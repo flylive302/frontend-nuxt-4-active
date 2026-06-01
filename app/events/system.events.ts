@@ -5,9 +5,7 @@
 import type { Socket } from 'socket.io-client'
 import type { ConfigInvalidatePayload } from '~/types/room/socket-events'
 import type { AssetInvalidatePayload } from '~/types/asset/asset'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[SystemEvents]')
 
 /**
  * Composable to register system-level socket event handlers.

@@ -231,8 +231,8 @@ onUnmounted(() => {
                 :icon="volumeIcon"
                 size="md"
                 variant="subtle"
-                @click.right.prevent="toggleMute"
                 class="backdrop-blur-lg"
+                @click.right.prevent="toggleMute"
               />
 
               <template #content>
@@ -263,8 +263,8 @@ onUnmounted(() => {
               :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
               :variant="isLocalMuted ? 'solid' : 'subtle'"
               :color="isLocalMuted ? 'error' : 'primary'"
-              @click="() => { toggleLocalMute() }"
               class="backdrop-blur-lg"
+              @click="() => { toggleLocalMute() }"
             />
             <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
 

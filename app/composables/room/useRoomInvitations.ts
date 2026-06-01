@@ -3,9 +3,7 @@
 // ========================================
 
 import type { RoomInvitation, InviteToRoomRequest, RoomMemberPagination } from '~/types/room/room'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[useRoomInvitations]')
 
 /**
  * Composable for managing room invitations.

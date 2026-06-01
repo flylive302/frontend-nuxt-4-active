@@ -1,5 +1,5 @@
+import { shallowRef, ref, computed } from 'vue';
 import type { SocketErrorEvent, AudioSocket } from '~/types/room/audio';
-import { createLogger } from '~/utils/logger';
 import { useRealtimeEvents, resetRealtimeHandlers } from './useRealtimeEvents';
 
 // Lazy-loaded: socket.io-client must NOT be statically imported because
@@ -144,9 +144,6 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // Internal Handlers
   // ========================================
 
-  /** Logger for this module */
-  const log = createLogger('[AudioSocket]');
-
   /** Handle a successful connection */
   function handleConnect() {
     status.value = 'connected';
@@ -259,12 +256,12 @@ export function useAudioSocket(): UseAudioSocketReturn {
    * The dynamic auth callback already ensures the socket uses the latest
    * token from the store — no proactive refresh is needed here.
    */
-  function handleReconnectAttempt(attemptNumber: number) {
+  function handleReconnectAttempt(_attemptNumber: number) {
     status.value = 'connecting';
   }
 
   /** Handle successful reconnection */
-  function handleReconnect(attemptNumber: number) {
+  function handleReconnect(_attemptNumber: number) {
     status.value = 'connected';
     error.value = null;
     const recovered = socket.value?.recovered === true;

@@ -4,9 +4,7 @@
 // Handles self-service account deletion with GDPR-compliant grace period.
 // Follows GATE → EXECUTE → REACT pipeline.
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[AccountDeletion]')
 
 export function useAccountDeletion() {
   // ========================================

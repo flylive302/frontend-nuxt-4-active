@@ -90,7 +90,8 @@ export function usePropLookup() {
       if (response?.data?.prop) {
         mallStore.addToPropIndex(response.data.prop)
       }
-    } catch {
+    } catch (e) {
+      log.warn('Failed to fetch prop from API', e)
     } finally {
       pendingFetches.delete(propId)
     }

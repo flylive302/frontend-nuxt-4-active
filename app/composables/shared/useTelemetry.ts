@@ -2,10 +2,6 @@
 // Telemetry Composable
 // ========================================
 
-import { createLogger } from '~/utils/logger'
-
-const log = createLogger('[Telemetry]')
-
 // ========================================
 // Types
 // ========================================
@@ -29,14 +25,8 @@ export function useTelemetry() {
    * Track an event.
    * Ready to integrate with analytics provider (GA4, Mixpanel, etc.)
    */
-  function track(event: TelemetryEvent): void {
-    const payload = {
-      ...event,
-      timestamp: event.timestamp ?? Date.now(),
-    }
-
+  function track(_event: TelemetryEvent): void {
     // Future: Send to analytics provider
-    // window.gtag?.('event', event.name, payload.properties)
   }
 
   // ========================================

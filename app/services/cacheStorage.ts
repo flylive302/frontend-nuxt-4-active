@@ -42,10 +42,9 @@ export async function initCacheStorage(): Promise<void> {
   // Clean up deprecated caches
   for (const name of DEPRECATED_CACHE_NAMES) {
     try {
-      const deleted = await caches.delete(name)
-      if (deleted) {
-      }
+      await caches.delete(name)
     } catch (e) {
+      log.warn('Failed to delete deprecated cache', name, e)
     }
   }
 
@@ -67,21 +66,15 @@ export async function putAsset(url: string, blob: Blob): Promise<void> {
   const cache = await getCache()
   if (!cache) return
 
-  try {
-    // Create a Response from the blob
-    const response = new Response(blob, {
-      headers: {
-        'Content-Type': blob.type,
-        'Content-Length': blob.size.toString(),
-        'X-Cached-At': Date.now().toString(),
-      },
-    })
+  const response = new Response(blob, {
+    headers: {
+      'Content-Type': blob.type,
+      'Content-Length': blob.size.toString(),
+      'X-Cached-At': Date.now().toString(),
+    },
+  })
 
-    await cache.put(url, response)
-
-  } catch (e) {
-    throw e
-  }
+  await cache.put(url, response)
 }
 
 /**
@@ -102,6 +95,7 @@ export async function getAsset(url: string): Promise<string | null> {
 
     return blobUrl
   } catch (e) {
+    log.warn('Failed to get asset from cache', e)
     return null
   }
 }
@@ -118,6 +112,7 @@ export async function hasAsset(url: string): Promise<boolean> {
     const response = await cache.match(url)
     return response !== undefined
   } catch (e) {
+    log.warn('Failed to check asset in cache', e)
     return false
   }
 }
@@ -134,6 +129,7 @@ export async function deleteAsset(url: string): Promise<boolean> {
     const deleted = await cache.delete(url)
     return deleted
   } catch (e) {
+    log.warn('Failed to delete asset from cache', e)
     return false
   }
 }
@@ -149,6 +145,7 @@ export async function clearAll(): Promise<void> {
     await caches.delete(ASSET_CONFIG.CACHE_NAME)
     cachePromise = null
   } catch (e) {
+    log.warn('Failed to clear all cached assets', e)
   }
 }
 
@@ -177,6 +174,7 @@ export async function getTotalSize(): Promise<number> {
 
     return totalSize
   } catch (e) {
+    log.warn('Failed to get total cache size', e)
     return 0
   }
 }
@@ -192,6 +190,7 @@ export async function getCachedUrls(): Promise<string[]> {
     const keys = await cache.keys()
     return keys.map((req) => req.url)
   } catch (e) {
+    log.warn('Failed to get cached URLs', e)
     return []
   }
 }

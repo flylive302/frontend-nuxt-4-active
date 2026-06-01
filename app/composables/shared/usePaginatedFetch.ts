@@ -5,7 +5,6 @@
 import type { Ref } from 'vue'
 import type { PaginatedList } from '~/types/shared'
 import { createPaginatedList } from '~/types/shared'
-import { createLogger } from '~/utils/logger'
 
 // ========================================
 // Types
@@ -85,6 +84,7 @@ export function usePaginatedFetch<T>(
       list.value.hasMore = result.hasMore
       list.value.cursor = result.cursor
     } catch (err) {
+      log.warn('Paginated fetch failed', err)
       const { normalizeError } = useApi()
       const normalized = normalizeError(err)
       list.value.error = normalized.message

@@ -51,8 +51,7 @@ async function loadCountries(): Promise<void> {
         _countries.value = Array.isArray(json) ? json : []
         _loaded.value = true
     } catch (err) {
-        // Keep component resilient: log and fallback to empty list
-        // Calling code should react to empty array as "no countries".
+        log.warn('Failed to load countries', err)
         _countries.value = []
     } finally {
         _loading.value = false
@@ -70,7 +69,7 @@ async function autoDetectCountry(): Promise<Country | undefined> {
         const match = _countries.value.find(c => c.code.toUpperCase() === code.toUpperCase())
         if (match) return match
     } catch (err) {
-        // non-fatal; just return undefined
+        log.warn('Failed to auto-detect country', err)
     }
     return undefined
 }

@@ -9,9 +9,7 @@
  * console errors when the component is destroyed mid-play.
  */
 import * as giftAssetCache from '~/services/giftAssetCache';
-import { createLogger } from '~/utils/logger';
 
-const log = createLogger('[VideoPlayer]');
 
 const props = defineProps<{
   src: string;

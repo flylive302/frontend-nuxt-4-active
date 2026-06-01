@@ -3,9 +3,7 @@
 // ========================================
 
 import type { KickMemberRequest } from '~/types/agency/agency'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[useAgencyAdmin]')
 
 // ========================================
 // Composable

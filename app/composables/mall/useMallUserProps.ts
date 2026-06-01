@@ -67,6 +67,7 @@ export function useMallUserProps() {
         response.data.pagination.has_more,
       )
     } catch (err) {
+      log.warn('Failed to fetch user props', err)
       const normalized = normalizeError(err)
       mallStore.setUserPropsError(normalized.message)
     } finally {
@@ -89,6 +90,7 @@ export function useMallUserProps() {
       const response = await api<EquippedPropsResponse>('/user/props/equipped')
       mallStore.setEquipped(response.data.equipped)
     } catch (err) {
+      log.warn('Failed to fetch equipped props', err)
     } finally {
       mallStore.setEquippedLoading(false)
     }

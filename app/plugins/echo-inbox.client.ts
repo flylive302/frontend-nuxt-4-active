@@ -6,10 +6,8 @@
 // isAuthenticated directly — this eliminates the race condition where
 // echo-inbox would try to subscribe before Echo's async init completes.
 
-import { createLogger } from '~/utils/logger'
 import { scheduleAfterFirstPaint } from '~/utils/schedule-after-first-paint'
 
-const log = createLogger('[EchoInbox]')
 
 export default defineNuxtPlugin({
   name: 'echo-inbox',

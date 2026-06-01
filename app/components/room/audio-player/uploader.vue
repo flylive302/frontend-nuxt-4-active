@@ -149,7 +149,7 @@ function openFilePicker() {
           accept="audio/*"
           class="hidden"
           @change="handleFileChange"
-        />
+        >
       </div>
     </template>
   </UDrawer>

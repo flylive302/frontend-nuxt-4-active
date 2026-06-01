@@ -74,6 +74,7 @@ export function useRoomJoinRequests() {
       store.myJoinRequests.items = response.data
       store.myJoinRequests.hasMore = false
     } catch (err) {
+      log.warn('Failed to fetch my join requests', err)
     }
   }
 

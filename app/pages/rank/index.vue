@@ -93,7 +93,7 @@ useHead({
         :category="category"
     />
 
-    <div class="h-24"></div>
+    <div class="h-24"/>
 
     <div class="relative z-10">
       <RankingError
@@ -140,8 +140,8 @@ useHead({
         </UButton>
         <RankingCategoryTabs
             :model-value="category"
-            @update:model-value="setCategory"
             class="w-full"
+            @update:model-value="setCategory"
         />
       </div>
     </footer>

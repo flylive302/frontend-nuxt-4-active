@@ -63,7 +63,7 @@ const { animationPhase } = useLuckyAnnouncementLifecycle({
               :src="announcement.user_avatar"
               :alt="announcement.user_name"
               class="lucky-room-avatar"
-            />
+            >
             <span class="lucky-room-name">{{ announcement.user_name }}</span>
           </div>
           <div class="lucky-room-multiplier">

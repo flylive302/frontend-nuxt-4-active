@@ -1,24 +1,20 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
 const items = [
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp',
-  'siteAssets/room/room-card-top.webp',
+  'https://assets.flyliveapp.com/events/cp/3.svga',
+  'https://assets.flyliveapp.com/events/cp/2.svga',
+  'https://assets.flyliveapp.com/events/cp/1.svga',
 ]
 </script>
 
 <template>
   <UCarousel
+      v-slot="{ item }"
       :items="items"
       :autoplay="{ delay: 4000 }"
-      :ui="{item: 'basis-9/11'}"
+      :ui="{ item: 'basis-9/11' }"
   >
     <div class="relative aspect-rectangle">
-      <svga-player name="https://assets.flyliveapp.com/events/cp/3.svga" />
+      <SvgaPlayer :name="item" />
     </div>
   </UCarousel>
 </template>
-
-<style scoped>
-
-</style>

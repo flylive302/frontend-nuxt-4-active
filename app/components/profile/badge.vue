@@ -31,7 +31,7 @@ async function onCopy() {
         Copied!
       </span>
     </Transition>
-    <p @click="onCopy()" class="font-semibold border-2 bg-primary/40 border-primary rounded-full shadow-md backdrop-blur-md text-xs px-1 truncate cursor-pointer select-none text-center">
+    <p class="font-semibold border-2 bg-primary/40 border-primary rounded-full shadow-md backdrop-blur-md text-xs px-1 truncate cursor-pointer select-none text-center" @click="onCopy()">
       {{ txt }}
     </p>
   </div>

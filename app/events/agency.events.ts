@@ -7,12 +7,9 @@ import type {
   AgencyInvitationPayload,
   AgencyJoinRequestPayload,
   AgencyStatusPayload,
-  AgencyMemberJoinedPayload,
   AgencyMemberLeftPayload,
 } from '~/types/room/socket-events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[AgencyEvents]')
 
 /**
  * Composable to register agency-related socket event handlers.
@@ -70,7 +67,7 @@ export function useAgencyEvents() {
       })
     })
 
-    socket.on('agency.member_joined', (payload: AgencyMemberJoinedPayload) => {
+    socket.on('agency.member_joined', () => {
       toast.add({
         title: 'New Member Joined',
         description: 'A new member has joined your agency!',

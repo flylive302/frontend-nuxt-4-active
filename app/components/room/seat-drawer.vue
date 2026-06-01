@@ -101,7 +101,7 @@ async function doTakeSeat() {
       seatsStore.closeSeat()
     }
   } catch (error) {
-    // Reset activeSeat so the watcher doesn't re-open the drawer on next interaction.
+    log.warn('Failed to take seat', error)
     seatsStore.closeSeat()
   } finally {
     isLoading.value = false
@@ -117,6 +117,7 @@ async function handleLeaveSeat() {
       seatsStore.closeSeat()
     }
   } catch (error) {
+    log.warn('Failed to leave seat', error)
   } finally {
     isLoading.value = false
   }
@@ -137,6 +138,7 @@ async function handleToggleMute() {
       await muteUser(userId)
     }
   } catch (error) {
+    log.warn('Failed to toggle mute for seat', error)
   } finally {
     isLoading.value = false
   }
@@ -156,6 +158,7 @@ async function handleToggleLock() {
     }
     seatsStore.closeSeat()
   } catch (error) {
+    log.warn('Failed to toggle lock for seat', error)
   } finally {
     isLoading.value = false
   }
@@ -175,6 +178,7 @@ async function handleKickUser() {
       seatsStore.closeSeat()
     }
   } catch (error) {
+    log.warn('Failed to kick user from seat', error)
   } finally {
     isLoading.value = false
   }
@@ -316,8 +320,8 @@ const seatUserAge = computed(() =>
                 class="w-14"
                 alt=""
             >
-            <img alt="" v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-8"/>
-            <img alt="" v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-5"/>
+            <img v-if="wealthLevel.badge" alt="" :src="wealthLevel.badge.image_url" class="h-8">
+            <img v-if="charmLevel.badge" alt="" :src="charmLevel.badge.image_url" class="h-5">
           </div>
 
         </div>
@@ -427,7 +431,7 @@ const seatUserAge = computed(() =>
                 variant="outline"
                 @click="handleGiftButton"
             >
-              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="min-w-8" />
+              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="min-w-8" >
             </UButton>
 
           </div>

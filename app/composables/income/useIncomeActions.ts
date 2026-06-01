@@ -40,6 +40,7 @@ export function useIncomeActions() {
       )
       store.setActiveTarget(response.data)
     } catch (err) {
+      log.warn('Failed to fetch active income target', err)
       store.setActiveTarget(null)
     } finally {
       store.setTargetLoading(false)

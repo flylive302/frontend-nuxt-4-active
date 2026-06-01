@@ -4,10 +4,6 @@ import { ASSETS } from '~/constants/assets'
 // PWA Install Prompt
 // ========================================
 
-import { createLogger } from '~/utils/logger'
-
-const log = createLogger('[PWAInstall]')
-
 // ========================================
 // State
 // ========================================
@@ -65,7 +61,7 @@ async function handleInstall(): Promise<void> {
   await deferredPrompt.value.prompt()
 
   // Wait for user choice
-  const { outcome } = await deferredPrompt.value.userChoice
+  await deferredPrompt.value.userChoice
 
 
   // Clear the prompt

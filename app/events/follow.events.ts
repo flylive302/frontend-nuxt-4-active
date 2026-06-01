@@ -5,9 +5,7 @@
 // REACT-only: updates UI via toasts. No business logic.
 
 import type { Socket } from 'socket.io-client'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[FollowEvents]')
 
 // ========================================
 // Payload Types
@@ -20,10 +18,6 @@ interface UserFollowedPayload {
     avatar: string | null
   }
   followed_at: string
-}
-
-interface UserUnfollowedPayload {
-  follower_id: number
 }
 
 // ========================================
@@ -52,7 +46,7 @@ export function useFollowEvents() {
       })
     })
 
-    socket.on('user.unfollowed', (payload: UserUnfollowedPayload) => {
+    socket.on('user.unfollowed', () => {
 
       // Decrement MY followers_count (REACT store update)
       authStore.decrementFollowers()

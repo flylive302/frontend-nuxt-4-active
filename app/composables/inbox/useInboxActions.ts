@@ -24,6 +24,9 @@ export function useInboxActions() {
       store.setThreads(res.data.official_unread, res.data.dm, res.data.requests)
     }
     catch (err) {
+      log.warn('Failed to fetch inbox threads', err)
+      const { message } = normalizeError(err)
+      toast.add({ title: message, color: 'error' })
     }
     finally {
       store.setThreadsLoading(false)
@@ -38,6 +41,7 @@ export function useInboxActions() {
       return res.data
     }
     catch (err) {
+      log.warn('Failed to start thread', err)
       return null
     }
   }
@@ -55,6 +59,9 @@ export function useInboxActions() {
       )
     }
     catch (err) {
+      log.warn('Failed to load messages', err)
+      const { message } = normalizeError(err)
+      toast.add({ title: message, color: 'error' })
     }
     finally {
       store.setMessagesLoading(false)
@@ -77,6 +84,9 @@ export function useInboxActions() {
       )
     }
     catch (err) {
+      log.warn('Failed to load older messages', err)
+      const { message } = normalizeError(err)
+      toast.add({ title: message, color: 'error' })
     }
     finally {
       store.setMessagesLoading(false)
@@ -127,6 +137,7 @@ export function useInboxActions() {
       await api(`/inbox/threads/${threadId}/read`, { method: 'POST' })
     }
     catch (err) {
+      log.warn('Failed to mark thread as read', err)
     }
   }
 

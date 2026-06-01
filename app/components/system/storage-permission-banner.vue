@@ -54,6 +54,7 @@ async function handleAllow(): Promise<void> {
     // Store the result regardless of outcome
     localStorage.setItem(STORAGE_BANNER_KEY, granted ? 'granted' : 'denied')
   } catch (e) {
+    log.warn('Failed to request storage persistence', e)
     localStorage.setItem(STORAGE_BANNER_KEY, 'error')
   } finally {
     isRequesting.value = false

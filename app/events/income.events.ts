@@ -4,9 +4,7 @@
 
 import type { Socket } from 'socket.io-client'
 import type { IncomeTargetCompletedPayload } from '~/types/room/socket-events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[IncomeEvents]')
 
 /**
  * Composable to register income-related socket event handlers.

@@ -64,7 +64,7 @@ async function handleUnequip(userPropId: number): Promise<void> {
     </NavAlt>
 
     <video class="w-full mt-12" autoplay muted loop playsinline>
-      <source :src="ASSETS.MALL_BG_VIDEO" type="video/mp4" />
+      <source :src="ASSETS.MALL_BG_VIDEO" type="video/mp4" >
     </video>
 
     <UserAvatar

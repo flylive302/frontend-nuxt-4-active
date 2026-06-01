@@ -129,6 +129,7 @@ export function useBootstrapInit() {
       return criticalData as BootstrapConfig
 
     } catch (e) {
+      log.warn('Failed to fetch bootstrap data', e)
       const normalized = normalizeError(e)
       bootstrapStore.setError(normalized.message)
       bootstrapStore.setPhase('error')
@@ -147,7 +148,8 @@ export function useBootstrapInit() {
       if (response?.data) {
         authStore.setUser(response.data)
       }
-    } catch {
+    } catch (e) {
+      log.warn('Failed to refresh user data', e)
     }
   }
 

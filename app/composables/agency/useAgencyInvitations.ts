@@ -51,6 +51,7 @@ export function useAgencyInvitations() {
       store.receivedInvitations.items = response.data
       store.receivedInvitations.hasMore = false // Uses offset pagination
     } catch (error) {
+      log.warn('Failed to fetch received invitations', error)
       store.receivedInvitations.error = 'Failed to load invitations'
     } finally {
       store.receivedInvitations.loading = false
@@ -146,6 +147,7 @@ export function useAgencyInvitations() {
       store.sentInvitations.items = response.data
       store.sentInvitations.hasMore = false
     } catch (error) {
+      log.warn('Failed to fetch sent invitations', error)
       store.sentInvitations.error = 'Failed to load sent invitations'
     } finally {
       store.sentInvitations.loading = false

@@ -44,6 +44,7 @@ export function useMallCatalog() {
       mallStore.setTypes(response.data.types)
       mallStore.setLastFetchedAt(Date.now())
     } catch (err) {
+      log.warn('Failed to fetch prop types', err)
     } finally {
       mallStore.setTypesLoading(false)
     }
@@ -87,6 +88,7 @@ export function useMallCatalog() {
         response.data.pagination.has_more,
       )
     } catch (err) {
+      log.warn('Failed to fetch prop catalog', err)
       const normalized = normalizeError(err)
       mallStore.setCatalogError(normalized.message)
     } finally {

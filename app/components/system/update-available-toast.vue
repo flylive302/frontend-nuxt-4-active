@@ -3,9 +3,7 @@
 // Update Available Toast
 // ========================================
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[UpdateToast]')
 
 // ========================================
 // State

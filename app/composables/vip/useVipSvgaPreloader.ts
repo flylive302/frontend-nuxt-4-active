@@ -136,6 +136,7 @@ export function useVipSvgaPreloader(
         preloadedCount.value++
       }
       catch (err) {
+        log.warn('Failed to preload VIP SVGA asset', err)
       }
     }
 

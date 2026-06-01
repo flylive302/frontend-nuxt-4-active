@@ -215,7 +215,8 @@ onMounted(async () => {
       :inert="!(showPhone && selectedCountry) || undefined"
       aria-live="polite"
     >
-      <UFormField label="Phone Number" name="phone"
+      <UFormField
+label="Phone Number" name="phone"
         :help="selectedCountry ? `Enter your number for ${selectedCountry.name}` : ''"
         :error="error" required>
         <div class="flex items-center gap-1">

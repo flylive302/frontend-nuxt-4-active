@@ -333,7 +333,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
       emitAsync<AudioPlayerStopPayload, AudioPlayerResponse>(
         'audioPlayer:stop',
         { roomId },
-      ).catch((err) => {});
+      ).catch((err) => { log.warn('Failed to emit audioPlayer:stop', err) });
     }
 
     // Reset state

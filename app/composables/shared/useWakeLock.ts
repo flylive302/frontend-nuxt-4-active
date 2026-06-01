@@ -36,7 +36,7 @@ export function useWakeLock() {
         isActive.value = false
       })
     } catch (err) {
-      // Can fail if the page is hidden or battery saver is active
+      log.warn('Failed to acquire wake lock', err)
     }
   }
 
@@ -51,6 +51,7 @@ export function useWakeLock() {
       wakeLockSentinel = null
       isActive.value = false
     } catch (err) {
+      log.warn('Failed to release wake lock', err)
     }
   }
 

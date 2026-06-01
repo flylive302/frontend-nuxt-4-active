@@ -91,6 +91,7 @@ export async function initAssetIndex(): Promise<void> {
     await openDatabase()
 
   } catch (e) {
+    log.warn('Failed to initialize asset index', e)
   }
 }
 
@@ -98,13 +99,8 @@ export async function initAssetIndex(): Promise<void> {
  * Insert or update asset metadata.
  */
 export async function upsert(metadata: AssetMetadata): Promise<void> {
-  try {
-    const store = await getStore('readwrite')
-    await promisifyRequest(store.put(metadata))
-
-  } catch (e) {
-    throw e
-  }
+  const store = await getStore('readwrite')
+  await promisifyRequest(store.put(metadata))
 }
 
 /**
@@ -116,6 +112,7 @@ export async function get(url: string): Promise<AssetMetadata | null> {
     const result = await promisifyRequest(store.get(url))
     return result ?? null
   } catch (e) {
+    log.warn('Failed to get asset metadata', e)
     return null
   }
 }
@@ -129,6 +126,7 @@ export async function remove(url: string): Promise<void> {
     await promisifyRequest(store.delete(url))
 
   } catch (e) {
+    log.warn('Failed to remove asset metadata', e)
   }
 }
 
@@ -142,6 +140,7 @@ export async function getByGiftId(giftId: number): Promise<AssetMetadata[]> {
     const result = await promisifyRequest(index.getAll(giftId))
     return result
   } catch (e) {
+    log.warn('Failed to get assets by gift ID', e)
     return []
   }
 }
@@ -160,6 +159,7 @@ export async function getAllByPriority(): Promise<AssetMetadata[]> {
       (a, b) => (priorityOrder[a.priority] ?? 4) - (priorityOrder[b.priority] ?? 4)
     )
   } catch (e) {
+    log.warn('Failed to get all assets by priority', e)
     return []
   }
 }
@@ -175,6 +175,7 @@ export async function getStale(days: number = ASSET_CONFIG.STALE_DAYS): Promise<
     const threshold = Date.now() - days * 24 * 60 * 60 * 1000
     return result.filter((m) => m.downloadedAt < threshold)
   } catch (e) {
+    log.warn('Failed to get stale assets', e)
     return []
   }
 }
@@ -187,6 +188,7 @@ export async function getAll(): Promise<AssetMetadata[]> {
     const store = await getStore('readonly')
     return await promisifyRequest(store.getAll())
   } catch (e) {
+    log.warn('Failed to get all assets', e)
     return []
   }
 }
@@ -199,6 +201,7 @@ export async function clearAll(): Promise<void> {
     const store = await getStore('readwrite')
     await promisifyRequest(store.clear())
   } catch (e) {
+    log.warn('Failed to clear asset index', e)
   }
 }
 
@@ -213,6 +216,7 @@ export async function updateLastAccessed(url: string): Promise<void> {
       await upsert(metadata)
     }
   } catch (e) {
+    log.warn('Failed to update last accessed timestamp', e)
   }
 }
 
@@ -224,6 +228,7 @@ export async function count(): Promise<number> {
     const store = await getStore('readonly')
     return await promisifyRequest(store.count())
   } catch (e) {
+    log.warn('Failed to count assets', e)
     return 0
   }
 }

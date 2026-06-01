@@ -125,7 +125,7 @@ export function useAuthActions() {
       // EXECUTE
       await api('/auth/logout', { method: 'POST' })
     } catch (error) {
-      // Ignore logout errors from API, we still want to clear local state
+      log.warn('Logout API call failed, clearing local state anyway', error)
     } finally {
       authStore.logout()
       // REACT
@@ -155,7 +155,7 @@ export function useAuthActions() {
         authStore.setMsabToken(data.msab_token)
         return true
       } catch (err) {
-        // Non-blocking — stale JWT (24-hour lifetime) is better than no JWT
+        log.warn('Failed to refresh MSAB token', err)
         return false
       } finally {
         _refreshPromise = null

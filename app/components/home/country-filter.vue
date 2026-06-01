@@ -39,7 +39,8 @@ const getFlagIcon = (code: string): string => {
     <div class="flex items-center gap-2 px-2 pb-1 overflow-x-auto scrollbar-horizontal">
 
       <!-- Country Chips -->
-      <button v-for="country in activeCountries" :key="country"
+      <button
+v-for="country in activeCountries" :key="country"
         class="shrink-0 flex items-center gap-1.5 font-semibold transition-all duration-200 text-white rounded-t-md"
         :class="modelValue === country ? 'border-b border-primary bg-primary/20 px-1' : ''"
         @click="emit('update:modelValue', country)"

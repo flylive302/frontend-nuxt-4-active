@@ -71,6 +71,7 @@ export function useAgencyBrowsing() {
       store.agencies.cursor = response.meta.next_cursor
       store.agencies.hasMore = response.meta.next_cursor !== null
     } catch (error) {
+      log.warn('Failed to fetch agencies', error)
       store.agencies.error = 'Failed to load agencies'
     } finally {
       store.agencies.loading = false
@@ -96,6 +97,7 @@ export function useAgencyBrowsing() {
       const response = await api<{ data: Agency }>(`/agencies/${id}`)
       store.currentAgency.agency = response.data
     } catch (error) {
+      log.warn('Failed to fetch agency by ID', error)
       store.currentAgency.error = 'Failed to load agency'
     } finally {
       store.currentAgency.loading = false
@@ -136,6 +138,7 @@ export function useAgencyBrowsing() {
       store.currentAgency.membersCursor = response.meta.next_cursor
       store.currentAgency.membersHasMore = response.meta.next_cursor !== null
     } catch (error) {
+      log.warn('Failed to fetch agency members', error)
     } finally {
       store.currentAgency.membersLoading = false
     }

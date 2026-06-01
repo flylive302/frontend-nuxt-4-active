@@ -151,7 +151,7 @@ function tryGetWebGLContext(canvas: HTMLCanvasElement): WebGLRenderingContext | 
       return ctx
     }
     catch (err) {
-      const message = err instanceof Error ? err.message : err
+      log.warn('Failed to get WebGL context', err)
     }
   }
 
@@ -403,7 +403,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         renderer = createWebGLRenderer(options.canvas, gl, info)
       }
       catch (webglErr) {
-        const message = webglErr instanceof Error ? webglErr.message : webglErr
+        log.warn('WebGL renderer failed, falling back to Canvas2D', webglErr)
         renderer = createCanvas2DRenderer(options.canvas, info)
       }
     }
@@ -449,15 +449,14 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
           player.onStart?.()
           scheduleFrame()
         }).catch((err) => {
-
-          // Autoplay blocked — browser blocks unmuted autoplay without user gesture.
-          // Fall back to muted playback so the animation at least renders.
+          log.warn('Autoplay blocked, attempting muted fallback', err)
           if (!video.muted) {
             video.muted = true
             video.play().then(() => {
               player.onStart?.()
               scheduleFrame()
             }).catch((err2) => {
+              log.warn('Muted autoplay fallback also failed', err2)
             })
           }
         })
@@ -481,6 +480,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
           player.onStart?.()
           scheduleFrame()
         }).catch((err) => {
+          log.warn('Restart autoplay blocked, attempting muted fallback', err)
           if (!video.muted) {
             video.muted = true
             video.play().then(() => {

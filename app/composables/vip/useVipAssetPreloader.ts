@@ -171,6 +171,7 @@ export function useVipAssetPreloader(
         }
         preloadedCount.value++
       } catch (err) {
+        log.warn('Failed to preload VIP asset', err)
       }
     }
 

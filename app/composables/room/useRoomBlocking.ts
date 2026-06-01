@@ -3,9 +3,7 @@
 // ========================================
 
 import type { RoomBlock, BlockUserRequest } from '~/types/room/room'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[useRoomBlocking]')
 
 /**
  * Composable for managing room blocking.

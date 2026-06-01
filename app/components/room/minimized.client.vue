@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue';
 import { ASSETS } from '~/constants/assets';
-import { createLogger } from '~/utils/logger';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
-const log = createLogger('[RoomMinimizedClient]');
 
 const roomStore = useRoomStore();
 const { leaveRoom } = useRoomAudio();

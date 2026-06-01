@@ -21,6 +21,7 @@ export function useInboxThread() {
       return res.data
     }
     catch (err) {
+      log.warn('Failed to accept thread request', err)
       toast.add({ title: 'Could not accept request', color: 'error' })
       return null
     }
@@ -34,6 +35,7 @@ export function useInboxThread() {
       return true
     }
     catch (err) {
+      log.warn('Failed to deny thread request', err)
       toast.add({ title: 'Could not deny request', color: 'error' })
       return false
     }
@@ -50,6 +52,7 @@ export function useInboxThread() {
       return true
     }
     catch (err) {
+      log.warn('Failed to delete message', err)
       toast.add({ title: 'Could not delete message', color: 'error' })
       return false
     }
@@ -63,6 +66,7 @@ export function useInboxThread() {
       return true
     }
     catch (err) {
+      log.warn('Failed to unsend message', err)
       toast.add({ title: 'Cannot unsend — time window has passed', color: 'warning' })
       return false
     }
@@ -75,6 +79,7 @@ export function useInboxThread() {
       return true
     }
     catch (err) {
+      log.warn('Failed to delete thread', err)
       toast.add({ title: 'Could not delete chat', color: 'error' })
       return false
     }
@@ -92,6 +97,7 @@ export function useInboxThread() {
       return true
     }
     catch (err) {
+      log.warn('Failed to block user', err)
       toast.add({ title: 'Could not block user', color: 'error' })
       return false
     }

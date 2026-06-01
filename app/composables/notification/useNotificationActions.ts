@@ -32,6 +32,7 @@ export function useNotificationActions() {
 
       store.appendNotificationsPage(response.data, response.meta)
     } catch (err) {
+      log.warn('Failed to fetch notifications', err)
       store.setError('Failed to load notifications')
     } finally {
       store.setLoading(false)
@@ -43,6 +44,7 @@ export function useNotificationActions() {
       const response = await api<UnreadCountResponse>('/notifications/unread-count')
       store.setUnreadCount(response.data.count)
     } catch (err) {
+      log.warn('Failed to fetch unread notification count', err)
     }
   }
 
@@ -52,6 +54,7 @@ export function useNotificationActions() {
       store.applyReadLocally(notificationId)
       return true
     } catch (err) {
+      log.warn('Failed to mark notification as read', err)
       return false
     }
   }
@@ -67,6 +70,7 @@ export function useNotificationActions() {
       })
       return true
     } catch (err) {
+      log.warn('Failed to mark all notifications as read', err)
       toast.add({
         title: 'Error',
         description: 'Failed to mark all as read.',

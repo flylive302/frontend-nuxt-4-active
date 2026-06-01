@@ -6,9 +6,7 @@
 // Per ARCHITECTURE.md: "Events are REACT handlers … No business logic."
 
 import type { RoomUpdatedPayload } from '~/types/room/socket-events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[RoomSettingsHandler]')
 
 // ========================================
 // Constants

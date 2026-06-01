@@ -19,9 +19,7 @@ import type {
   LuckyRoomAnnouncement,
   LuckyAppAnnouncement,
 } from '~/types/lucky';
-import { createLogger } from '~/utils/logger';
 
-const log = createLogger('[LuckyGift]');
 
 // ============================================
 // Constants

@@ -101,6 +101,7 @@ export function useAgencyJoinRequests() {
       store.myJoinRequests.cursor = response.meta.next_cursor
       store.myJoinRequests.hasMore = response.meta.next_cursor !== null
     } catch (error) {
+      log.warn('Failed to fetch my join requests', error)
       store.myJoinRequests.error = 'Failed to load join requests'
     } finally {
       store.myJoinRequests.loading = false
@@ -142,6 +143,7 @@ export function useAgencyJoinRequests() {
       store.joinRequests.cursor = response.meta.next_cursor
       store.joinRequests.hasMore = response.meta.next_cursor !== null
     } catch (error) {
+      log.warn('Failed to fetch incoming join requests', error)
       store.joinRequests.error = 'Failed to load join requests'
     } finally {
       store.joinRequests.loading = false

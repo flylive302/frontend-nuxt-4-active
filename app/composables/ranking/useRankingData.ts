@@ -15,9 +15,7 @@ import { useRankingStore } from '~/stores/ranking'
 import type { RankingApiResponse } from '~/types/ranking'
 import type { RankingCategory, RankingPeriod } from '~/constants/ranking'
 import { RANKING_STALE_MS } from '~/constants/ranking'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[Ranking]')
 
 export function useRankingData() {
   const { api, normalizeError } = useApi()

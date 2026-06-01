@@ -14,9 +14,7 @@
 // forward to it transparently. This avoids "Cannot redefine property"
 // errors that occur when nuxtApp.provide() is called more than once.
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[Echo]')
 
 // Module-level Echo instance — set once when user first authenticates.
 let _echoInstance: object | null = null

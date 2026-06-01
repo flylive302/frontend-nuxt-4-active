@@ -4,9 +4,7 @@
 // REACT layer for force-disconnect (admin block) events fired from MSAB.
 // Lives outside useAudioSocket so the socket layer stays infrastructure-only.
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[AuthLifecycle]')
 
 export interface ForceDisconnectPayload {
   reason: string

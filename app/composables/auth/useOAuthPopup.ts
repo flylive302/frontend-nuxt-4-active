@@ -5,9 +5,7 @@
 // Opens a centered popup for social auth, listens for postMessage
 // result from the callback page, and handles cleanup.
 
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[OAuthPopup]')
 
 // ========================================
 // Types

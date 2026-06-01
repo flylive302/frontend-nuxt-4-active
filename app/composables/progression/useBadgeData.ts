@@ -62,7 +62,7 @@ export function useBadgeData() {
       store.setCatalog(response.data)
       store.setLastFetchedAt(Date.now())
     } catch (err) {
-      // REACT — error is non-critical, log and continue
+      log.warn('Failed to fetch badge catalog', err)
       const normalized = normalizeError(err)
       store.setCatalogError(normalized.message)
     } finally {
@@ -83,6 +83,7 @@ export function useBadgeData() {
 
       store.setCategories(response.data)
     } catch (err) {
+      log.warn('Failed to fetch badge categories', err)
     }
   }
 
@@ -107,6 +108,7 @@ export function useBadgeData() {
 
       store.setUserBadges(response.data)
     } catch (err) {
+      log.warn('Failed to fetch user badges', err)
       const normalized = normalizeError(err)
       store.setUserBadgesError(normalized.message)
     } finally {
@@ -127,6 +129,7 @@ export function useBadgeData() {
 
       store.setStats(response.data)
     } catch (err) {
+      log.warn('Failed to fetch badge stats', err)
     }
   }
 

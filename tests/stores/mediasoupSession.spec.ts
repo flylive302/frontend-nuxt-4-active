@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia, storeToRefs } from 'pinia'
 import { ref, shallowRef } from 'vue'
+import type { types as mediasoupTypes } from 'mediasoup-client'
+
+type MockConsumer = { id?: string; close: () => void }
+type MockProducer = { closed: boolean; close: () => void }
+type MockAudioElement = Pick<HTMLAudioElement, 'pause' | 'srcObject' | 'remove'>
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('shallowRef', shallowRef)
@@ -29,8 +34,8 @@ describe('useMediasoupSessionStore', () => {
       const { useMediasoupSessionStore } = await import('../../app/stores/mediasoupSession')
       const store = useMediasoupSessionStore()
 
-      const mockConsumer = { id: 'consumer-1', close: vi.fn() } as any
-      store.addConsumer('producer-1', mockConsumer)
+      const mockConsumer: MockConsumer = { id: 'consumer-1', close: vi.fn() }
+      store.addConsumer('producer-1', mockConsumer as mediasoupTypes.Consumer)
 
       expect(store.consumers.size).toBe(1)
       expect(store.consumers.get('producer-1')).toStrictEqual(mockConsumer)
@@ -40,7 +45,8 @@ describe('useMediasoupSessionStore', () => {
       const { useMediasoupSessionStore } = await import('../../app/stores/mediasoupSession')
       const store = useMediasoupSessionStore()
 
-      store.addConsumer('producer-1', { close: vi.fn() } as any)
+      const mockConsumer: MockConsumer = { close: vi.fn() }
+      store.addConsumer('producer-1', mockConsumer as mediasoupTypes.Consumer)
       store.removeConsumer('producer-1')
 
       expect(store.consumers.size).toBe(0)
@@ -59,8 +65,8 @@ describe('useMediasoupSessionStore', () => {
       const { useMediasoupSessionStore } = await import('../../app/stores/mediasoupSession')
       const store = useMediasoupSessionStore()
 
-      const mockAudio = { pause: vi.fn(), srcObject: {} as any, remove: vi.fn() }
-      store.audioElements.set('producer-1', mockAudio as any)
+      const mockAudio: MockAudioElement = { pause: vi.fn(), srcObject: null, remove: vi.fn() }
+      store.audioElements.set('producer-1', mockAudio as HTMLAudioElement)
 
       store.$reset()
 
@@ -73,7 +79,8 @@ describe('useMediasoupSessionStore', () => {
       const { useMediasoupSessionStore } = await import('../../app/stores/mediasoupSession')
       const store = useMediasoupSessionStore()
 
-      store.audioElements.set('producer-1', { pause: vi.fn(), srcObject: null, remove: vi.fn() } as any)
+      const mockAudio: MockAudioElement = { pause: vi.fn(), srcObject: null, remove: vi.fn() }
+      store.audioElements.set('producer-1', mockAudio as HTMLAudioElement)
       store.$reset()
 
       expect(store.audioElements.size).toBe(0)
@@ -83,7 +90,8 @@ describe('useMediasoupSessionStore', () => {
       const { useMediasoupSessionStore } = await import('../../app/stores/mediasoupSession')
       const store = useMediasoupSessionStore()
 
-      store.addConsumer('producer-1', { close: vi.fn() } as any)
+      const mockConsumer: MockConsumer = { close: vi.fn() }
+      store.addConsumer('producer-1', mockConsumer as mediasoupTypes.Consumer)
       store.$reset()
 
       expect(store.consumers.size).toBe(0)
@@ -104,8 +112,10 @@ describe('useMediasoupSessionStore', () => {
       const store = useMediasoupSessionStore()
 
       const { producer, musicProducer } = storeToRefs(store)
-      producer.value = { closed: false, close: vi.fn() } as any
-      musicProducer.value = { closed: false, close: vi.fn() } as any
+      const mockProducer: MockProducer = { closed: false, close: vi.fn() }
+      const mockMusicProducer: MockProducer = { closed: false, close: vi.fn() }
+      producer.value = mockProducer as mediasoupTypes.Producer
+      musicProducer.value = mockMusicProducer as mediasoupTypes.Producer
 
       store.$reset()
 

@@ -6,7 +6,7 @@
 // setup functions before testing.
 
 import { vi } from 'vitest'
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, shallowRef } from 'vue'
 import type { Gift } from '~/types/gift/gift'
 
 // ========================================
@@ -243,7 +243,9 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useRoute = () => route
   ;(globalThis as Record<string, unknown>).useCookie = () => ref(cookieValue)
+  ;(globalThis as Record<string, unknown>).useRoomParticipantsStore = () => ({ updateParticipantProfile: vi.fn() })
   ;(globalThis as Record<string, unknown>).ref = ref
+  ;(globalThis as Record<string, unknown>).shallowRef = shallowRef
   ;(globalThis as Record<string, unknown>).computed = computed
   ;(globalThis as Record<string, unknown>).reactive = reactive
   ;(globalThis as Record<string, unknown>).readonly = <T>(value: T) => value
@@ -259,7 +261,7 @@ export function cleanupNuxtMocks(): void {
   const keys = [
     'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore',
     'useApi', 'useTelemetry', 'useBootstrapAssets', 'useMallStore', 'useRoute', 'useCookie',
-    'ref', 'computed', 'reactive', 'readonly',
+    'ref', 'shallowRef', 'computed', 'reactive', 'readonly', 'useRoomParticipantsStore',
   ] as const
   for (const key of keys) {
     Reflect.deleteProperty(globalThis, key)

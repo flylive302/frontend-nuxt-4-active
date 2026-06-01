@@ -101,8 +101,8 @@ const vip = authStore.user?.vip_level;
 
       <template #badges>
         <div class="flex justify-start items-center w-full relative z-10" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <img :src="CURRENT_WEALTH_BADGE" alt="current badge" class="w-7/12" />
-          <img :src="CURRENT_CHARM_BADGE" alt="current badge" class="w-5/12" />
+          <img :src="CURRENT_WEALTH_BADGE" alt="current badge" class="w-7/12" >
+          <img :src="CURRENT_CHARM_BADGE" alt="current badge" class="w-5/12" >
         </div>
       </template>
 

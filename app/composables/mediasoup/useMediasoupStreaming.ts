@@ -11,12 +11,6 @@ import { createLogger } from '~/utils/logger';
 import { storeToRefs } from 'pinia';
 import { useMediasoupSessionStore } from '~/stores/mediasoupSession';
 
-// ============================================
-// Types
-// ============================================
-type Producer = mediasoupTypes.Producer;
-type Consumer = mediasoupTypes.Consumer;
-
 // ---- Mic capture pipeline (Web Audio passthrough) ----
 // We route the raw getUserMedia track through an AudioContext graph before
 // handing the resulting track to mediasoup. This is the standard fix for
@@ -192,6 +186,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     if (ctx.state === 'suspended') {
       ctx.resume().catch((err) => {
+        log.warn('Failed to resume AudioContext', err)
       });
     }
 
@@ -202,6 +197,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       if (!current) return;
       if (current.state === 'suspended') {
         current.resume().catch((err) => {
+          log.warn('Failed to resume AudioContext on visibility change', err)
         });
       }
     };
@@ -234,7 +230,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     const ctx = _micAudioContext;
     _micAudioContext = null;
     if (ctx && ctx.state !== 'closed') {
-      ctx.close().catch((err) => {});
+      ctx.close().catch((err) => { log.warn('Failed to close AudioContext', err) });
     }
   }
 
@@ -404,6 +400,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
             try {
               await audio.play();
             } catch (e) {
+              log.warn('Failed to play audio after user interaction', e)
             }
             document.removeEventListener('click', resumePlayback);
             document.removeEventListener('touchstart', resumePlayback);
@@ -412,6 +409,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
           document.addEventListener('click', resumePlayback, { once: true });
           document.addEventListener('touchstart', resumePlayback, { once: true });
         } else {
+          log.warn('Failed to play audio', err)
         }
       }
     };
@@ -506,7 +504,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       ['producer', producerTransport.value],
       ['consumer', consumerTransport.value],
     ];
-    for (const [name, transport] of transports) {
+    for (const [, transport] of transports) {
       if (!transport) continue;
       if (transport.closed) {
         return 'needs-rebuild';
@@ -540,14 +538,14 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       }
     }
 
-    for (const [producerId, consumer] of consumers.value) {
+    for (const [, consumer] of consumers.value) {
       if (consumer.closed || consumer.track.readyState === 'ended') {
         return 'needs-rebuild';
       }
     }
 
     let pausedOrUnready = false;
-    for (const [producerId, audio] of audioElements.value) {
+    for (const [, audio] of audioElements.value) {
       if (audio.paused || audio.readyState < 2) {
         pausedOrUnready = true;
         break;
@@ -594,6 +592,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       try {
         await audio.play();
       } catch (err) {
+        log.warn('Failed to recover audio playback', err)
         recovered = false;
       }
     }

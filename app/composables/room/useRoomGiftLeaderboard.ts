@@ -8,9 +8,7 @@ import type {
   LeaderboardPeriod,
   GiftLeaderboardResponse,
 } from '~/types/progression/leaderboard'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[useRoomGiftLeaderboard]')
 
 // ========================================
 // Composable

@@ -203,7 +203,7 @@ function handleVolumeChange(vol: number): void {
           :value="localVolume"
           class="w-12 h-1 accent-primary"
           @input="handleVolumeChange(Number(($event.target as HTMLInputElement).value))"
-        />
+        >
       </div>
     </div>
   </div>

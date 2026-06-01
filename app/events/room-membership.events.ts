@@ -7,9 +7,7 @@
 
 import type { Socket } from 'socket.io-client'
 import type { RoomMember, RoomJoinRequest, RoomInvitation } from '~/types/room/room'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[RoomMembershipEvents]')
 
 interface MinimalUser {
   id: number

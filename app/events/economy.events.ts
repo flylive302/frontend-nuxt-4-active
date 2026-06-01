@@ -8,9 +8,7 @@ import type {
   RewardEarnedPayload,
   CoinRequestStatusChangedPayload,
 } from '~/types/room/socket-events'
-import { createLogger } from '~/utils/logger'
 
-const log = createLogger('[EconomyEvents]')
 
 /**
  * Reactive signal for coin request status changes.

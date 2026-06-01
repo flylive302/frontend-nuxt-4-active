@@ -40,6 +40,7 @@ export function useRewardsActions() {
 
       store.appendPendingPage(response.data.rewards, response.data.pagination)
     } catch (err) {
+      log.warn('Failed to fetch pending rewards', err)
       const normalized = normalizeError(err)
       store.setPendingError(normalized.message)
     } finally {
@@ -68,6 +69,7 @@ export function useRewardsActions() {
 
       store.appendHistoryPage(response.data.rewards, response.data.pagination)
     } catch (err) {
+      log.warn('Failed to fetch reward history', err)
       const normalized = normalizeError(err)
       store.setHistoryError(normalized.message)
     } finally {
@@ -81,6 +83,7 @@ export function useRewardsActions() {
       const response = await api<{ success: true; data: RewardStats }>('/user/rewards/stats')
       store.setStats(response.data)
     } catch (err) {
+      log.warn('Failed to fetch reward stats', err)
     } finally {
       store.setStatsLoading(false)
     }
