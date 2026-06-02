@@ -42,7 +42,7 @@ function buildApiMock() {
   const mock = createMockApi()
   mock.api.mockImplementation((url: string) => {
     if (url === '/support/upload-auth') {
-      return Promise.resolve(MOCK_AUTH_PARAMS)
+      return Promise.resolve({ data: MOCK_AUTH_PARAMS })
     }
     return Promise.resolve({})
   })
