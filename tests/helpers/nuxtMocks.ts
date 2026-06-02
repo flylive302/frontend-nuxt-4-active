@@ -28,18 +28,18 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
   const defaults = {
     config: {
       wealth_levels: [
-        { level: 1, name: 'Bronze', required_xp: 0, badge_id: 101 },
-        { level: 2, name: 'Silver', required_xp: 100, badge_id: 102 },
-        { level: 3, name: 'Gold', required_xp: 500, badge_id: 103 },
+        { level: 1, name: 'Bronze', required_xp: 0, image_url: 'https://example.com/bronze.webp' },
+        { level: 2, name: 'Silver', required_xp: 100, image_url: 'https://example.com/silver.webp' },
+        { level: 3, name: 'Gold', required_xp: 500, image_url: 'https://example.com/gold.webp' },
       ],
       charm_levels: [
-        { level: 1, name: 'Star', required_xp: 0, badge_id: 201 },
-        { level: 2, name: 'Super Star', required_xp: 200, badge_id: 202 },
-        { level: 3, name: 'Legend', required_xp: 1000, badge_id: 203 },
+        { level: 1, name: 'Star', required_xp: 0, image_url: 'https://example.com/star.webp' },
+        { level: 2, name: 'Super Star', required_xp: 200, image_url: 'https://example.com/superstar.webp' },
+        { level: 3, name: 'Legend', required_xp: 1000, image_url: 'https://example.com/legend.webp' },
       ],
     } as {
-      wealth_levels: { level: number; name: string; required_xp: number; badge_id: number | null }[]
-      charm_levels: { level: number; name: string; required_xp: number; badge_id: number | null }[]
+      wealth_levels: { level: number; name: string; required_xp: number; image_url: string | null }[]
+      charm_levels: { level: number; name: string; required_xp: number; image_url: string | null }[]
     } | null,
     gifts: null as Gift[] | null,
     giftCatalog: [] as unknown[],
@@ -47,15 +47,15 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
     needsRefresh: false,
     phase: 'idle' as string,
     sortedWealthLevels: [
-      { level: 1, name: 'Bronze', required_xp: 0, badge_id: 101 },
-      { level: 2, name: 'Silver', required_xp: 100, badge_id: 102 },
-      { level: 3, name: 'Gold', required_xp: 500, badge_id: 103 },
-    ] as { level: number; name: string; required_xp: number; badge_id: number | null }[],
+      { level: 1, name: 'Bronze', required_xp: 0, image_url: 'https://example.com/bronze.webp' },
+      { level: 2, name: 'Silver', required_xp: 100, image_url: 'https://example.com/silver.webp' },
+      { level: 3, name: 'Gold', required_xp: 500, image_url: 'https://example.com/gold.webp' },
+    ] as { level: number; name: string; required_xp: number; image_url: string | null }[],
     sortedCharmLevels: [
-      { level: 1, name: 'Star', required_xp: 0, badge_id: 201 },
-      { level: 2, name: 'Super Star', required_xp: 200, badge_id: 202 },
-      { level: 3, name: 'Legend', required_xp: 1000, badge_id: 203 },
-    ] as { level: number; name: string; required_xp: number; badge_id: number | null }[],
+      { level: 1, name: 'Star', required_xp: 0, image_url: 'https://example.com/star.webp' },
+      { level: 2, name: 'Super Star', required_xp: 200, image_url: 'https://example.com/superstar.webp' },
+      { level: 3, name: 'Legend', required_xp: 1000, image_url: 'https://example.com/legend.webp' },
+    ] as { level: number; name: string; required_xp: number; image_url: string | null }[],
     getBadgeById: vi.fn((id: number) => ({
       id,
       name: `Badge ${id}`,

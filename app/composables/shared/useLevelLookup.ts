@@ -22,7 +22,7 @@ export type LevelCategory = 'wealth' | 'charm'
 export interface LevelInfo {
   level: number
   name: string
-  badge: { id: number; name: string; image_url: string } | null
+  badge: { image_url: string } | null
 }
 
 // ========================================
@@ -52,13 +52,10 @@ export function useLevelLookup() {
 
     const status = computeLevelStatus(xp, sorted)
 
-    const badge = status.badge_id ? bootstrapStore.badgeMap.get(status.badge_id) : null
     return {
       level: status.current_level,
       name: status.level_name,
-      badge: badge?.image_url
-        ? { id: badge.id, name: badge.name, image_url: badge.image_url }
-        : null,
+      badge: status.image_url ? { image_url: status.image_url } : null,
     }
   }
 

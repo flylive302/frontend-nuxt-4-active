@@ -99,8 +99,6 @@ export interface LevelStatus {
   xp_remaining: number
   progress_percentage: number
   badge: {
-    id: number
-    name: string
     image_url: string
   } | null
   next_level: {
@@ -117,7 +115,7 @@ export interface LevelConfig {
   level: number
   name: string
   required_xp: number
-  badge_id: number | null
+  image_url: string | null
 }
 
 /**

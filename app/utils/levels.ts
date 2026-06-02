@@ -17,7 +17,7 @@ export interface LevelComputedStatus {
   xp_for_next_level: number
   xp_remaining: number
   progress_percentage: number
-  badge_id: number | null
+  image_url: string | null
   next_level: {
     level: number
     name: string
@@ -48,7 +48,7 @@ export function computeLevelStatus(
       xp_for_next_level: 0,
       xp_remaining: 0,
       progress_percentage: 0,
-      badge_id: null,
+      image_url: null,
       next_level: null,
     }
   }
@@ -74,7 +74,7 @@ export function computeLevelStatus(
       progress_percentage: first.required_xp > 0
         ? Math.min(100, (xpNum / first.required_xp) * 100)
         : 0,
-      badge_id: null,
+      image_url: null,
       next_level: { level: first.level, name: first.name, required_xp: first.required_xp },
     }
   }
@@ -97,7 +97,7 @@ export function computeLevelStatus(
     xp_for_next_level: nextThreshold,
     xp_remaining: remaining,
     progress_percentage: progress,
-    badge_id: current.badge_id,
+    image_url: current.image_url,
     next_level: next
       ? { level: next.level, name: next.name, required_xp: next.required_xp }
       : null,

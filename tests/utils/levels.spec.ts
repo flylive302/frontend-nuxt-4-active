@@ -5,9 +5,9 @@ import { computeLevelStatus } from '../../app/utils/levels'
 // Mirrors the level-math coverage that previously lived in useLevelActions.spec
 // (the composable now only writes XP; computeLevelStatus owns the calculation).
 const LEVELS = [
-  { level: 1, name: 'Bronze', required_xp: 0, badge_id: 101 },
-  { level: 2, name: 'Silver', required_xp: 100, badge_id: 102 },
-  { level: 3, name: 'Gold', required_xp: 500, badge_id: 103 },
+  { level: 1, name: 'Bronze', required_xp: 0, image_url: 'https://example.com/bronze.webp' },
+  { level: 2, name: 'Silver', required_xp: 100, image_url: 'https://example.com/silver.webp' },
+  { level: 3, name: 'Gold', required_xp: 500, image_url: 'https://example.com/gold.webp' },
 ]
 
 describe('computeLevelStatus', () => {
@@ -18,7 +18,7 @@ describe('computeLevelStatus', () => {
     expect(status.level_name).toBe('Silver')
     expect(status.progress_percentage).toBe(50)
     expect(status.xp_remaining).toBe(200)
-    expect(status.badge_id).toBe(102)
+    expect(status.image_url).toBe('https://example.com/silver.webp')
   })
 
   it('caps at the highest level with 100% progress and no remaining', () => {
@@ -27,7 +27,7 @@ describe('computeLevelStatus', () => {
     expect(status.level_name).toBe('Gold')
     expect(status.progress_percentage).toBe(100)
     expect(status.xp_remaining).toBe(0)
-    expect(status.badge_id).toBe(103)
+    expect(status.image_url).toBe('https://example.com/gold.webp')
   })
 
   it('returns level 1 (start of progression) for zero XP', () => {

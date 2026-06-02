@@ -67,12 +67,12 @@ export interface UserLevelUpPayload {
 }
 
 /**
- * user.progression - Single event combining all level-ups and badges from one gift transaction.
- * Replaces separate level.up + badge.earned events from the gift side-effects job.
+ * user.progression - Single event combining all level-ups from one gift transaction.
+ * Replaces separate level.up events from the gift side-effects job.
+ * Level-ups no longer award badges (badge system refactor).
  */
 export interface UserProgressionPayload {
   level_ups: UserLevelUpPayload[]
-  badges: BadgeEarnedPayload[]
 }
 
 // ========================================

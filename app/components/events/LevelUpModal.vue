@@ -6,10 +6,20 @@
 // Uses GPU-friendly animations (transform + opacity only).
 
 const { levelUpModalOpen, levelUpModalData, closeLevelUpModal } = useAchievementModals()
+const { getBadgeFromXp } = useLevelLookup()
 
 // ========================================
 // Computed
 // ========================================
+
+/**
+ * New level's badge image, read straight from the bootstrap level config
+ * (no extra request). Falls back to the type's default badge.
+ */
+const badgeImage = computed(() => {
+  if (!levelUpModalData.value) return null
+  return getBadgeFromXp(levelUpModalData.value.currentXp, levelUpModalData.value.type)
+})
 
 /**
  * Type-specific styling.
@@ -80,6 +90,14 @@ const formattedXp = computed(() => {
             />
           </div>
 
+          <!-- New Level Badge Image -->
+          <img
+            v-if="badgeImage"
+            :src="badgeImage"
+            :alt="`${typeStyle.label} ${levelUpModalData.newLevel} badge`"
+            class="relative mx-auto mb-3 h-20 w-20 object-contain drop-shadow-lg"
+          >
+
           <!-- Level Number Display -->
           <div class="relative mb-4">
             <div
@@ -90,8 +108,6 @@ const formattedXp = computed(() => {
                 {{ levelUpModalData.newLevel }}
               </span>
             </div>
-
-            
           </div>
           <!-- Previous Level -->
           <UBadge color="info" variant="soft" class="absolute left-2 top-2">

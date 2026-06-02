@@ -87,12 +87,12 @@ const progressValue = computed(() => {
   return Math.min(100, (xpInLevel / xpNeeded) * 100);
 });
 
-/** Current level badge from config's badge_id */
+/** Current level badge image from config */
 const currentBadge = computed(() => {
   const currentLevelConfig = levelConfig.value.find(l => l.level === currentLevel.value);
-  if (!currentLevelConfig?.badge_id) return null;
-  
-  return bootstrapStore.badgeMap.get(currentLevelConfig.badge_id) ?? null;
+  if (!currentLevelConfig?.image_url) return null;
+
+  return { image_url: currentLevelConfig.image_url };
 });
 
 /** Level status object for template conditional */

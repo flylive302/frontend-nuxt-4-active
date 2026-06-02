@@ -20,8 +20,8 @@ export function useProgressionEvents() {
   const { handleLevelUp } = useLevelActions()
 
   return function registerProgressionEvents(socket: Socket): void {
-    // badge.earned: standalone badges (rewards, admin grants, etc.)
-    // Gift-based level badges arrive via user.progression instead.
+    // badge.earned: standalone badges (rewards, agency targets, events, admin grants).
+    // Level-ups no longer award badges, so this is the only badge-earned path.
     socket.on('badge.earned', (payload: BadgeEarnedPayload) => {
       onBadgeEarned({
         id: 0, // Temporary ID; real data will be fetched on next store refresh
@@ -45,27 +45,13 @@ export function useProgressionEvents() {
     })
 
     // user.progression: single event from the gift side-effects job combining
-    // all level-ups and badges earned in one transaction for this user.
+    // all level-ups in one transaction for this user. Level-ups no longer award
+    // badges — the new level's image comes from the bootstrap level config, shown
+    // by the level-up modal (badge system refactor).
     socket.on('user.progression', (payload: UserProgressionPayload) => {
-
       for (const levelUp of payload.level_ups) {
         handleLevelUp(levelUp)
         showLevelUp(levelUp)
-      }
-
-      for (const badge of payload.badges) {
-        onBadgeEarned({
-          id: 0,
-          badge_id: badge.badge_id,
-          is_displayed: false,
-          earned_at: new Date().toISOString(),
-          badge: {
-            id: badge.badge_id,
-            name: badge.badge_name,
-            image_url: badge.badge_image,
-            category: badge.category,
-          },
-        } as import('~/types/progression/badge').UserBadge)
       }
     })
   }

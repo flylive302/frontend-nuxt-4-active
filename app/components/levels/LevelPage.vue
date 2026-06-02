@@ -111,12 +111,8 @@ const xpRemaining = computed(() =>
 )
 
 const currentBadge = computed(() => {
-  const badgeId = levelStatus.value.badge_id
-  if (!badgeId) return null
-  const badge = bootstrapStore.badgeMap.get(badgeId)
-  return badge?.image_url
-    ? { id: badge.id, name: badge.name, image_url: badge.image_url }
-    : null
+  const imageUrl = levelStatus.value.image_url
+  return imageUrl ? { image_url: imageUrl } : null
 })
 
 const heroBadgeIconSrc = computed(() =>
@@ -129,12 +125,11 @@ const levelConfig = computed<LevelConfig[]>(() =>
 
 const tableData = computed<LevelRow[]>(() =>
   levelConfig.value.map((item) => {
-    const badge = item.badge_id ? bootstrapStore.badgeMap.get(item.badge_id) : null
     return {
       level: item.name,
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
-        badgeSrc: badge?.image_url || props.defaultBadgeUrl,
+        badgeSrc: item.image_url || props.defaultBadgeUrl,
         class: item.level === currentLevel.value ? `border border-${props.color} bg-${props.color}/10 rounded-md px-2 py-1 inset-shadow-sm` : '',
       },
     }

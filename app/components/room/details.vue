@@ -80,13 +80,11 @@ const currentLevel = computed(() =>
 /** Table data derived from room level config */
 const tableData = computed<RoomLevelRow[]>(() => 
   levelConfig.value.map((item) => {
-    // Look up badge by badge_id using bootstrapStore.badgeMap
-    const badge = item.badge_id ? bootstrapStore.badgeMap.get(item.badge_id) : null;
     return {
       level: item.name,
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
-        badgeSrc: badge?.image_url || ASSETS.DEFAULT_ROOM_BADGE,
+        badgeSrc: item.image_url || ASSETS.DEFAULT_ROOM_BADGE,
         color: 'primary',
         txt: String(item.level),
         class: item.level === currentLevel.value 
