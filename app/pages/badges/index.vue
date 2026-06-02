@@ -3,15 +3,17 @@
 // Imports
 // ========================================
 
+import { VueDraggable } from 'vue-draggable-plus'
 import BadgeCard from '~/components/badges/BadgeCard.vue'
-import type { BadgeCategory } from '~/types/progression/badge'
-import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ICONS } from '~/constants/badges'
+import BadgeEquipSlots from '~/components/badges/BadgeEquipSlots.vue'
+import { assembleBadgeCatalog } from '~/utils/badgeCatalog'
+import type { CatalogBadgeEntry } from '~/types/progression/badge'
 
 // ========================================
 // Page Configuration
 // ========================================
 
-definePageMeta({ 
+definePageMeta({
   layout: 'alt',
   middleware: 'auth',
 })
@@ -21,59 +23,104 @@ definePageMeta({
 // ========================================
 
 const badgesStore = useBadgesStore()
-const { fetchCatalog, fetchUserBadges, setCategory } = useBadgeData()
+const { fetchCatalog, fetchUserBadges } = useBadgeData()
+const { equip, unequip, reorder } = useBadgeActions()
 
 // ========================================
-// Constants
+// Equip Selection State (page-local, transient)
 // ========================================
 
-const categoryTabs: { label: string; value: BadgeCategory | null; icon: string }[] = [
-  { label: 'All', value: null, icon: 'i-lucide-grid' },
-  { label: 'Wealth', value: 'wealth', icon: BADGE_CATEGORY_ICONS.wealth },
-  { label: 'Charm', value: 'charm', icon: BADGE_CATEGORY_ICONS.charm },
-  { label: 'Room', value: 'room', icon: BADGE_CATEGORY_ICONS.room },
-  { label: 'Agency', value: 'agency', icon: BADGE_CATEGORY_ICONS.agency },
-  { label: 'Special', value: 'special', icon: BADGE_CATEGORY_ICONS.special },
-]
-
-// ========================================
-// State
-// ========================================
-
-const activeTabIndex = ref(0)
+const selectedSlot = ref<number | null>(null)
+const pendingBadgeId = ref<number | null>(null)
 
 // ========================================
 // Computed
 // ========================================
 
-const badges = computed(() => badgesStore.catalog.items)
-const userBadges = computed(() => badgesStore.userBadges.items)
-const isLoading = computed(() => badgesStore.catalog.loading)
-const currentCategory = computed(() => badgesStore.currentCategory)
+const isLoading = computed(
+  () => badgesStore.catalog.loading || badgesStore.userBadges.loading,
+)
 
-/**
- * Get user badge for a catalog badge if earned.
- */
-function getUserBadge(badgeId: number) {
-  return userBadges.value.find(ub => ub.badge_id === badgeId) ?? null
-}
+const equippedBadgeIds = computed(() =>
+  badgesStore.equippedBadges.map(e => e.badge_id),
+)
 
-/**
- * Filter badges by current category.
- */
-const filteredBadges = computed(() => {
-  if (!currentCategory.value) return badges.value
-  return badges.value.filter(b => b.category === currentCategory.value)
+const catalogGrid = computed(() =>
+  assembleBadgeCatalog(
+    badgesStore.catalog.items,
+    badgesStore.userBadges.items,
+    equippedBadgeIds.value,
+  ),
+)
+
+// True when user has tapped an empty slot and we're waiting for a badge selection
+const isSelectingBadge = computed(() => {
+  if (selectedSlot.value === null) return false
+  return !badgesStore.equippedBadges.find(e => e.slot_position === selectedSlot.value)
 })
 
 // ========================================
-// Handlers
+// Grid model for VueDraggable (client-only)
 // ========================================
 
-async function handleTabChange(index: number): Promise<void> {
-  activeTabIndex.value = index
-  const category = categoryTabs[index]?.value ?? null
-  await setCategory(category)
+// Separate ref so VueDraggable has a writable model; synced from the computed catalogGrid.
+// pull:'clone' + put:false + sort:false means VueDraggable never mutates this array.
+const gridModel = ref<CatalogBadgeEntry[]>([])
+watch(catalogGrid, (grid) => { gridModel.value = [...grid] }, { immediate: true })
+
+// ========================================
+// Click Handlers
+// ========================================
+
+function onSlotClick(slotPos: number): void {
+  if (selectedSlot.value === slotPos) {
+    selectedSlot.value = null
+    pendingBadgeId.value = null
+    return
+  }
+  selectedSlot.value = slotPos
+  pendingBadgeId.value = null
+}
+
+function onBadgeSelect(badgeId: number): void {
+  if (!isSelectingBadge.value) return
+  pendingBadgeId.value = pendingBadgeId.value === badgeId ? null : badgeId
+}
+
+async function onEquip(): Promise<void> {
+  if (selectedSlot.value === null || pendingBadgeId.value === null) return
+  await equip(selectedSlot.value, pendingBadgeId.value)
+  selectedSlot.value = null
+  pendingBadgeId.value = null
+}
+
+async function onUnequip(): Promise<void> {
+  if (selectedSlot.value === null) return
+  await unequip(selectedSlot.value)
+  selectedSlot.value = null
+}
+
+// ========================================
+// Drag Handlers (same equip/reorder actions as click flow)
+// ========================================
+
+async function onDropFromGrid(slotPos: number, badgeId: number): Promise<void> {
+  await equip(slotPos, badgeId)
+  selectedSlot.value = null
+  pendingBadgeId.value = null
+}
+
+async function onReorderSlots(fromSlot: number, toSlot: number): Promise<void> {
+  // Swap if the target slot is occupied; move (equip) if the target is empty.
+  const toOccupied = badgesStore.equippedBadges.find(e => e.slot_position === toSlot)
+  if (toOccupied) {
+    await reorder(fromSlot, toSlot)
+  } else {
+    const fromBadge = badgesStore.equippedBadges.find(e => e.slot_position === fromSlot)
+    if (fromBadge) await equip(toSlot, fromBadge.badge_id)
+  }
+  selectedSlot.value = null
+  pendingBadgeId.value = null
 }
 
 // ========================================
@@ -81,9 +128,8 @@ async function handleTabChange(index: number): Promise<void> {
 // ========================================
 
 onMounted(async () => {
-  // Fetch catalog and user badges in parallel
   await Promise.all([
-    fetchCatalog({}, true),
+    fetchCatalog(true),
     fetchUserBadges(true),
   ])
 })
@@ -91,54 +137,88 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt color="secondary" back-to="/profile" :linked="true" first-link="/badges/" second-link="/badges/my-badges">
-      <template #first-link-text>Badges</template>
-      <template #second-link-text>My Badges</template>
-    </NavAlt>
+    <NavAlt color="secondary" back-to="/profile">Badges</NavAlt>
 
     <div class="px-3 mt-14 mb-32 overflow-hidden">
-      <!-- Category Tabs -->
-      <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
-        <UButton
-          v-for="(tab, index) in categoryTabs"
-          :key="tab.value ?? 'all'"
-          :variant="activeTabIndex === index ? 'solid' : 'soft'"
-          :color="activeTabIndex === index ? 'secondary' : 'neutral'"
-          size="sm"
-          :icon="tab.icon"
-          class="shrink-0"
-          @click="handleTabChange(index)"
-        >
-          {{ tab.label }}
-        </UButton>
+      <!-- Equip Slots Row (DnD handled inside via ClientOnly + VueDraggable) -->
+      <div class="mb-4">
+        <BadgeEquipSlots
+          :selected-slot="selectedSlot"
+          :pending-badge-id="pendingBadgeId"
+          @slot-click="onSlotClick"
+          @equip="onEquip"
+          @unequip="onUnequip"
+          @drop-from-grid="onDropFromGrid"
+          @reorder-slots="onReorderSlots"
+        />
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading && badges.length === 0" class="grid grid-cols-3 gap-2">
+      <div v-if="isLoading && catalogGrid.length === 0" class="grid grid-cols-3 gap-2">
         <div v-for="i in 9" :key="i" class="animate-pulse bg-elevated rounded-lg aspect-square" />
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredBadges.length === 0" class="py-16 text-center">
-        <icon name="i-lucide-award" class="size-16 mx-auto text-muted mb-4" />
-        <p class="text-lg font-semibold">No Badges Found</p>
-        <p class="text-sm text-muted mt-1">
-          {{ currentCategory ? `No ${BADGE_CATEGORY_LABELS[currentCategory]} badges available.` : 'Check back later for new badges!' }}
-        </p>
+      <div v-else-if="catalogGrid.length === 0" class="py-16 text-center">
+        <UIcon name="i-lucide-award" class="size-16 mx-auto text-muted mb-4" />
+        <p class="text-lg font-semibold">No Badges Available</p>
+        <p class="text-sm text-muted mt-1">Check back later for new badges!</p>
       </div>
 
-      <!-- Badge Grid -->
-      <div v-else class="grid grid-cols-3 gap-2">
-        <BadgeCard
-          v-for="badge in filteredBadges"
-          :key="badge.id"
-          :badge="badge"
-          :user-badge="getUserBadge(badge.id)"
-        />
-      </div>
+      <!-- Unified Badge Grid -->
+      <template v-else>
+        <!-- Section divider -->
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-px flex-1 bg-muted-400/20" />
+          <p class="text-[11px] font-bold tracking-widest text-muted uppercase">My Badges</p>
+          <div class="h-px flex-1 bg-muted-400/20" />
+        </div>
+
+        <!-- Client: DnD-enabled grid (badges can be dragged into equip slots) -->
+        <ClientOnly>
+          <VueDraggable
+            v-model="gridModel"
+            :group="{ name: 'badges-dnd', pull: 'clone', put: false }"
+            :sort="false"
+            filter=".badge-locked"
+            :prevent-on-filter="false"
+            :animation="150"
+            :delay="100"
+            :delay-on-touch-only="true"
+            class="grid grid-cols-3 gap-3"
+          >
+            <BadgeCard
+              v-for="entry in gridModel"
+              :key="entry.badge.id"
+              :class="{ 'badge-locked': entry.isLocked }"
+              :badge="entry.badge"
+              :count="entry.count"
+              :is-locked="entry.isLocked"
+              :selectable="isSelectingBadge && !entry.isLocked"
+              :selected="pendingBadgeId === entry.badge.id"
+              @select="onBadgeSelect"
+            />
+          </VueDraggable>
+          <!-- Fallback: same grid without DnD (SSR / pre-hydration) -->
+          <template #fallback>
+            <div class="grid grid-cols-3 gap-3">
+              <BadgeCard
+                v-for="entry in catalogGrid"
+                :key="entry.badge.id"
+                :badge="entry.badge"
+                :count="entry.count"
+                :is-locked="entry.isLocked"
+                :selectable="isSelectingBadge && !entry.isLocked"
+                :selected="pendingBadgeId === entry.badge.id"
+                @select="onBadgeSelect"
+              />
+            </div>
+          </template>
+        </ClientOnly>
+      </template>
 
       <!-- Loading More -->
-      <div v-if="isLoading && badges.length > 0" class="py-4 text-center">
+      <div v-if="isLoading && catalogGrid.length > 0" class="py-4 text-center">
         <UIcon name="i-lucide-loader-2" class="size-6 animate-spin" />
       </div>
     </div>

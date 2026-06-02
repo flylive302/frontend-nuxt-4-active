@@ -7,10 +7,7 @@
 import type {
   Badge,
   UserBadge,
-  BadgeCategoryInfo,
   BadgeStats,
-  BadgeCategory,
-  GetBadgesParams,
 } from '~/types/progression/badge'
 import { createLogger } from '~/utils/logger'
 
@@ -39,7 +36,7 @@ export function useBadgeData() {
    * EXECUTE: call API, write to store
    * REACT: log errors (fire-and-forget)
    */
-  async function fetchCatalog(params: GetBadgesParams = {}, reset = false): Promise<void> {
+  async function fetchCatalog(reset = false): Promise<void> {
     if (reset) {
       store.resetCatalog()
     }
@@ -52,12 +49,7 @@ export function useBadgeData() {
     store.setCatalogError(null)
 
     try {
-      const queryParams: Record<string, unknown> = {}
-      if (params.category) {
-        queryParams.category = params.category
-      }
-
-      const response = await api<{ data: Badge[] }>('/badges', { params: queryParams })
+      const response = await api<{ data: Badge[] }>('/badges')
 
       store.setCatalog(response.data)
       store.setLastFetchedAt(Date.now())
@@ -67,23 +59,6 @@ export function useBadgeData() {
       store.setCatalogError(normalized.message)
     } finally {
       store.setCatalogLoading(false)
-    }
-  }
-
-  // ========================================
-  // Fetch Categories
-  // ========================================
-
-  async function fetchCategories(): Promise<void> {
-    try {
-      const response = await api<{
-        success: true
-        data: BadgeCategoryInfo[]
-      }>('/badges/categories')
-
-      store.setCategories(response.data)
-    } catch (err) {
-      log.warn('Failed to fetch badge categories', err)
     }
   }
 
@@ -134,26 +109,12 @@ export function useBadgeData() {
   }
 
   // ========================================
-  // Set Category Filter
-  // ========================================
-
-  /**
-   * Set category filter and re-fetch catalog.
-   */
-  async function setCategory(category: BadgeCategory | null): Promise<void> {
-    store.setCurrentCategory(category)
-    await fetchCatalog({ category: category ?? undefined }, true)
-  }
-
-  // ========================================
   // Return
   // ========================================
 
   return {
     fetchCatalog,
-    fetchCategories,
     fetchUserBadges,
     fetchStats,
-    setCategory,
   }
 }

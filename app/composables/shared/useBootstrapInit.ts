@@ -147,6 +147,9 @@ export function useBootstrapInit() {
       const response = await api<{ data: BootstrapUser }>('/auth/user')
       if (response?.data) {
         authStore.setUser(response.data)
+        const badgesStore = useBadgesStore()
+        badgesStore.setEquippedBadges(response.data.equipped_badges)
+        badgesStore.setBadgeSlotLimit(response.data.badge_slot_limit)
       }
     } catch (e) {
       log.warn('Failed to refresh user data', e)

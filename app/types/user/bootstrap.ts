@@ -3,7 +3,7 @@
 // ========================================
 
 import type { Gift } from '../gift/gift'
-import type {Badge} from "~/types/progression/badge";
+import type {Badge, EquippedBadge} from "~/types/progression/badge";
 
 // ========================================
 // User Types
@@ -82,6 +82,10 @@ export interface BootstrapUser {
   blocked_at: string | null     // ISO 8601
   blocked_reason: string | null
   locked_until: string | null   // ISO 8601
+
+  // Equipped badges (self-only — present on login, /auth/user, /profile)
+  equipped_badges: EquippedBadge[] // slot-ordered
+  badge_slot_limit: number         // 6 / 9 / 12, expiry-aware
 }
 
 // ========================================

@@ -9,8 +9,7 @@ import type {
   Badge,
   UserBadge,
   BadgeStats,
-  BadgeCategory,
-  BadgeCategoryInfo,
+  EquippedBadge,
 } from '~/types/progression/badge'
 
 // ========================================
@@ -54,10 +53,9 @@ export const useBadgesStore = defineStore('badges', () => {
     hasMore: true,
   })
 
-  const categories = ref<BadgeCategoryInfo[]>([])
+  const equippedBadges = ref<EquippedBadge[]>([])
+  const badgeSlotLimit = ref<number>(6)
   const stats = ref<BadgeStats | null>(null)
-  const currentCategory = ref<BadgeCategory | null>(null)
-  const isTogglingDisplay = ref<number | null>(null)
 
   /** Timestamp of last successful data fetch */
   const lastFetchedAt = ref<number | null>(null)
@@ -73,14 +71,6 @@ export const useBadgesStore = defineStore('badges', () => {
   // Computed
   // ========================================
 
-  const displayedBadges = computed(() =>
-    userBadges.value.items.filter(b => b.is_displayed)
-  )
-
-  const hiddenBadges = computed(() =>
-    userBadges.value.items.filter(b => !b.is_displayed)
-  )
-
   const needsRefresh = computed<boolean>(() => {
     if (!lastFetchedAt.value) return true
     return Date.now() - lastFetchedAt.value > STALE_TIME
@@ -91,11 +81,7 @@ export const useBadgesStore = defineStore('badges', () => {
   // ========================================
 
   function hasUserBadge(badgeId: number): boolean {
-    return userBadges.value.items.some(b => b.badge_id === badgeId)
-  }
-
-  function badgesByCategory(category: BadgeCategory): Badge[] {
-    return catalog.value.items.filter(b => b.category === category)
+    return userBadges.value.items.some(b => b.badge.id === badgeId)
   }
 
   // ========================================
@@ -148,19 +134,16 @@ export const useBadgesStore = defineStore('badges', () => {
     userBadges.value.items.unshift(userBadge)
   }
 
-  function updateUserBadgeDisplay(userBadgeId: number, isDisplayed: boolean): void {
-    const badge = userBadges.value.items.find(b => b.id === userBadgeId)
-    if (badge) {
-      badge.is_displayed = isDisplayed
-    }
-  }
-
   // ========================================
   // Other Setters
   // ========================================
 
-  function setCategories(items: BadgeCategoryInfo[]): void {
-    categories.value = items
+  function setEquippedBadges(items: EquippedBadge[]): void {
+    equippedBadges.value = items
+  }
+
+  function setBadgeSlotLimit(limit: number): void {
+    badgeSlotLimit.value = limit
   }
 
   function setStats(data: BadgeStats): void {
@@ -171,14 +154,6 @@ export const useBadgesStore = defineStore('badges', () => {
     if (stats.value) {
       stats.value.total += 1
     }
-  }
-
-  function setCurrentCategory(category: BadgeCategory | null): void {
-    currentCategory.value = category
-  }
-
-  function setIsTogglingDisplay(id: number | null): void {
-    isTogglingDisplay.value = id
   }
 
   function setLastFetchedAt(timestamp: number): void {
@@ -202,10 +177,9 @@ export const useBadgesStore = defineStore('badges', () => {
       error: null,
       hasMore: true,
     }
-    categories.value = []
+    equippedBadges.value = []
+    badgeSlotLimit.value = 6
     stats.value = null
-    currentCategory.value = null
-    isTogglingDisplay.value = null
     lastFetchedAt.value = null
   }
 
@@ -217,20 +191,16 @@ export const useBadgesStore = defineStore('badges', () => {
     // State (read-only for components)
     catalog,
     userBadges,
-    categories,
+    equippedBadges,
+    badgeSlotLimit,
     stats,
-    currentCategory,
-    isTogglingDisplay,
     lastFetchedAt,
 
     // Computed
-    displayedBadges,
-    hiddenBadges,
     needsRefresh,
 
     // Pure lookups
     hasUserBadge,
-    badgesByCategory,
 
     // Catalog setters
     setCatalog,
@@ -244,14 +214,12 @@ export const useBadgesStore = defineStore('badges', () => {
     setUserBadgesError,
     resetUserBadges,
     addUserBadge,
-    updateUserBadgeDisplay,
 
     // Other setters
-    setCategories,
+    setEquippedBadges,
+    setBadgeSlotLimit,
     setStats,
     incrementStatsTotal,
-    setCurrentCategory,
-    setIsTogglingDisplay,
     setLastFetchedAt,
 
     // Reset

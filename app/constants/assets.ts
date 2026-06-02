@@ -350,3 +350,38 @@ export const EVENT_BANNERS = {
   string,
   { banner: string; header: string; decor: string }
 >
+
+
+// ========================================
+// Missions Assets (ImageKit)
+// ========================================
+
+/** Recharge Activity */
+
+export const RECHARGE_ACTIVITY = {
+  banner: `${IK}/missions/recharge-activity/banner.png`,
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

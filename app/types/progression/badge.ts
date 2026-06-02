@@ -7,7 +7,7 @@
 // ========================================
 
 /**
- * Badge category types.
+ * Badge category types (used in UI constants and stats).
  */
 export type BadgeCategory = 'wealth' | 'charm' | 'room' | 'agency' | 'special'
 
@@ -15,63 +15,56 @@ export type BadgeCategory = 'wealth' | 'charm' | 'room' | 'agency' | 'special'
  * Source that awards the badge.
  */
 export type BadgeSourceType =
-  | 'wealth_level'
-  | 'charm_level'
-  | 'room_level'
   | 'agency_target'
   | 'event'
   | 'achievement'
   | 'special'
+  | 'reward_claim'
 
 // ========================================
 // Badge Types
 // ========================================
 
 /**
- * Category metadata.
- * Matches Backend: BadgeService::getCategoriesWithMeta()
- */
-export interface BadgeCategoryInfo {
-  value: string
-  label: string
-  color: string
-  icon: string
-}
-
-/**
  * Badge from catalog.
+ * Matches Backend: BadgeResource ({ id, name, description, image_url }).
  */
 export interface Badge {
   id: number
   name: string
   description: string
   image_url: string
-  category: BadgeCategory
-  level: BadgeSourceType
-  sort_order: number
-  rarity?: string
 }
 
 /**
  * User's earned badge.
+ * Matches Backend: UserBadgeResource ({ id, badge, source_type, source_id, earned_at }).
  */
 export interface UserBadge {
   id: number
-  badge_id: number
   badge: Badge
-  is_displayed: boolean
   earned_at: string // ISO 8601
   source_type: BadgeSourceType
   source_id?: number
 }
 
 /**
+ * A single equipped badge slot for a user.
+ * Matches Backend: EquippedBadgeResource ({ slot_position, badge_id, image_url }).
+ * Delivered slot-ordered by the relation.
+ */
+export interface EquippedBadge {
+  slot_position: number
+  badge_id: number
+  image_url: string | null
+}
+
+/**
  * Badge statistics for user.
- * Matches Backend: BadgeService::getUserBadgeStats()
+ * Matches Backend: BadgeService::getUserBadgeStats().
  */
 export interface BadgeStats {
   total: number
-  by_category: Partial<Record<BadgeCategory, number>>
 }
 
 // ========================================
@@ -79,40 +72,20 @@ export interface BadgeStats {
 // ========================================
 
 /**
+ * A single entry in the unified catalog grid.
+ * Represents one badge_id: earned (count≥1) or locked (count=0).
+ * Equipped badge_ids are excluded before this is produced.
+ */
+export interface CatalogBadgeEntry {
+  badge: Badge
+  count: number
+  earnedAt: string | null
+  isLocked: boolean
+}
+
+/**
  * Parameters for fetching badges.
  */
 export interface GetBadgesParams {
-  category?: BadgeCategory
   per_page?: number
 }
-
-/**
- * API response for badge categories.
- */
-export interface BadgeCategoriesResponse {
-  success: true
-  data: BadgeCategoryInfo[]
-}
-
-/**
- * API response for badge stats.
- */
-export interface BadgeStatsResponse {
-  success: true
-  data: BadgeStats
-}
-
-/**
- * API response for toggle display.
- */
-export interface ToggleBadgeDisplayResponse {
-  success: true
-  data: {
-    badge: UserBadge
-    displayed_count: number
-    max_display: number
-  }
-  message: string
-}
-
-

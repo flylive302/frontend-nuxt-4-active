@@ -3,76 +3,175 @@
 // ========================================
 // Handles mutating badge actions with GATE → EXECUTE → REACT pipeline.
 
-import type { UserBadge } from '~/types/progression/badge'
+import type { EquippedBadge, UserBadge } from '~/types/progression/badge'
+import { createLogger } from '~/utils/logger'
 
+const log = createLogger('[BadgeActions]')
+
+// ========================================
+// Arrangement Builder (pure helper)
+// ========================================
+
+type ArrangementOp =
+  | { type: 'equip'; slotPosition: number; badgeId: number; imageUrl: string | null }
+  | { type: 'unequip'; slotPosition: number }
+  | { type: 'reorder'; fromSlot: number; toSlot: number }
+
+/**
+ * Builds a new EquippedBadge arrangement from the current one plus an operation.
+ * Pure function — no side effects.
+ */
+export function buildArrangement(current: EquippedBadge[], op: ArrangementOp): EquippedBadge[] {
+  if (op.type === 'equip') {
+    const filtered = current.filter(
+      e => e.slot_position !== op.slotPosition && e.badge_id !== op.badgeId,
+    )
+    return [...filtered, { slot_position: op.slotPosition, badge_id: op.badgeId, image_url: op.imageUrl }]
+  }
+  if (op.type === 'unequip') {
+    return current.filter(e => e.slot_position !== op.slotPosition)
+  }
+  // reorder: swap badge_ids between two slots
+  return current.map(e => {
+    if (e.slot_position === op.fromSlot) return { ...e, slot_position: op.toSlot }
+    if (e.slot_position === op.toSlot) return { ...e, slot_position: op.fromSlot }
+    return e
+  })
+}
 
 /**
  * Composable for badge actions (mutations).
  *
  * Responsibilities (ARCHITECTURE.md - Action/Orchestrator role):
  * - GATE: validate preconditions
- * - EXECUTE: optimistic update + API call + store write
- * - REACT: toast notifications (fire-and-forget)
+ * - EXECUTE: optimistic store update + PUT /user/equipped-badges
+ * - REACT: settle with server response, toast on error, rollback on failure
  */
 export function useBadgeActions() {
-  const { api, normalizeError } = useApi()
   const toast = useToast()
   const store = useBadgesStore()
+  const { api, normalizeError } = useApi()
 
   // ========================================
-  // Toggle Display
+  // Private Helpers
+  // ========================================
+
+  function findBadgeImageUrl(badgeId: number): string | null {
+    const inCatalog = store.catalog.items.find(b => b.id === badgeId)
+    if (inCatalog) return inCatalog.image_url
+    const inUserBadges = store.userBadges.items.find(ub => ub.badge.id === badgeId)
+    return inUserBadges?.badge.image_url ?? null
+  }
+
+  function toPutBody(arrangement: EquippedBadge[]): Array<{ slot_position: number; badge_id: number }> {
+    return arrangement.map(e => ({ slot_position: e.slot_position, badge_id: e.badge_id }))
+  }
+
+  async function applyArrangement(
+    snapshot: EquippedBadge[],
+    optimistic: EquippedBadge[],
+  ): Promise<void> {
+    store.setEquippedBadges(optimistic)
+    try {
+      const response = await api<{ data: EquippedBadge[] }>('/user/equipped-badges', {
+        method: 'PUT',
+        body: toPutBody(optimistic),
+      })
+      store.setEquippedBadges(response.data)
+    } catch (err) {
+      log.warn('PUT /user/equipped-badges failed — rolling back', err)
+      store.setEquippedBadges(snapshot)
+      const normalized = normalizeError(err)
+      toast.add({
+        title: 'Failed to update badges',
+        description: normalized.message,
+        color: 'error',
+        icon: 'i-lucide-alert-circle',
+      })
+    }
+  }
+
+  // ========================================
+  // Equip
   // ========================================
 
   /**
-   * Toggle badge display status with optimistic update.
+   * Equip a badge into a slot.
    *
-   * GATE: not already toggling, badge exists
-   * EXECUTE: optimistic update, API call
-   * REACT: toast success/failure, rollback on error
+   * GATE: badge must be owned; slot must be within limit.
+   * EXECUTE: optimistic update + PUT.
+   * REACT: settle with server response, rollback + toast on failure.
    */
-  async function toggleDisplay(userBadgeId: number): Promise<boolean> {
+  async function equip(slotPosition: number, badgeId: number): Promise<void> {
     // GATE
-    if (store.isTogglingDisplay !== null) return false
-
-    const badge = store.userBadges.items.find(b => b.id === userBadgeId)
-    if (!badge) {
-      store.setIsTogglingDisplay(null)
-      return false
-    }
-
-    // EXECUTE — optimistic update
-    store.setIsTogglingDisplay(userBadgeId)
-    store.updateUserBadgeDisplay(userBadgeId, !badge.is_displayed)
-
-    try {
-      await api<{
-        success: true
-        data: { badge: UserBadge; displayed_count: number; max_display: number }
-        message: string
-      }>(`/user/badges/${userBadgeId}/toggle-display`, { method: 'POST' })
-
-      // REACT — success toast
+    if (slotPosition < 1 || slotPosition > store.badgeSlotLimit) {
       toast.add({
-        title: badge.is_displayed ? 'Badge Displayed' : 'Badge Hidden',
-        color: 'success',
-      })
-
-      return true
-    } catch (err) {
-      // REACT — rollback + error toast
-      store.updateUserBadgeDisplay(userBadgeId, !badge.is_displayed)
-
-      const normalized = normalizeError(err)
-      toast.add({
-        title: 'Update Failed',
-        description: normalized.message,
+        title: 'Invalid slot',
+        description: `Slot ${slotPosition} is outside your limit of ${store.badgeSlotLimit} slots.`,
         color: 'error',
       })
-
-      return false
-    } finally {
-      store.setIsTogglingDisplay(null)
+      return
     }
+    const isOwned = store.userBadges.items.some(ub => ub.badge.id === badgeId)
+    if (!isOwned) {
+      toast.add({ title: 'Badge not owned', description: 'You have not earned this badge.', color: 'error' })
+      return
+    }
+
+    // EXECUTE
+    const snapshot = [...store.equippedBadges]
+    const imageUrl = findBadgeImageUrl(badgeId)
+    const optimistic = buildArrangement(snapshot, { type: 'equip', slotPosition, badgeId, imageUrl })
+    await applyArrangement(snapshot, optimistic)
+  }
+
+  // ========================================
+  // Unequip
+  // ========================================
+
+  /**
+   * Remove a badge from a slot.
+   *
+   * GATE: slot must be occupied.
+   * EXECUTE: optimistic update + PUT.
+   * REACT: settle, rollback + toast on failure.
+   */
+  async function unequip(slotPosition: number): Promise<void> {
+    // GATE
+    const occupied = store.equippedBadges.find(e => e.slot_position === slotPosition)
+    if (!occupied) {
+      return
+    }
+
+    // EXECUTE
+    const snapshot = [...store.equippedBadges]
+    const optimistic = buildArrangement(snapshot, { type: 'unequip', slotPosition })
+    await applyArrangement(snapshot, optimistic)
+  }
+
+  // ========================================
+  // Reorder
+  // ========================================
+
+  /**
+   * Swap two occupied slots.
+   *
+   * GATE: both slots must be occupied.
+   * EXECUTE: optimistic update + PUT.
+   * REACT: settle, rollback + toast on failure.
+   */
+  async function reorder(fromSlot: number, toSlot: number): Promise<void> {
+    // GATE
+    const fromBadge = store.equippedBadges.find(e => e.slot_position === fromSlot)
+    const toBadge = store.equippedBadges.find(e => e.slot_position === toSlot)
+    if (!fromBadge || !toBadge) {
+      return
+    }
+
+    // EXECUTE
+    const snapshot = [...store.equippedBadges]
+    const optimistic = buildArrangement(snapshot, { type: 'reorder', fromSlot, toSlot })
+    await applyArrangement(snapshot, optimistic)
   }
 
   // ========================================
@@ -82,22 +181,10 @@ export function useBadgeActions() {
   /**
    * Handle a real-time badge earned event.
    * Called from the events layer.
-   *
-   * Orchestrates: EXECUTE → REACT
    */
   function onBadgeEarned(userBadge: UserBadge): void {
-    executeBadgeEarned(userBadge)
-    reactBadgeEarned(userBadge)
-  }
-
-  /** EXECUTE — update store state */
-  function executeBadgeEarned(userBadge: UserBadge): void {
     store.addUserBadge(userBadge)
     store.incrementStatsTotal()
-  }
-
-  /** REACT — fire-and-forget notification */
-  function reactBadgeEarned(userBadge: UserBadge): void {
     toast.add({
       title: 'New Badge Earned!',
       description: userBadge.badge.name,
@@ -111,7 +198,9 @@ export function useBadgeActions() {
   // ========================================
 
   return {
-    toggleDisplay,
+    equip,
+    unequip,
+    reorder,
     onBadgeEarned,
   }
 }

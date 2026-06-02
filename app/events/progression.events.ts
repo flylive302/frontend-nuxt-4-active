@@ -25,14 +25,13 @@ export function useProgressionEvents() {
     socket.on('badge.earned', (payload: BadgeEarnedPayload) => {
       onBadgeEarned({
         id: 0, // Temporary ID; real data will be fetched on next store refresh
-        badge_id: payload.badge_id,
-        is_displayed: false,
         earned_at: new Date().toISOString(),
+        source_type: 'reward_claim',
         badge: {
           id: payload.badge_id,
           name: payload.badge_name,
+          description: '',
           image_url: payload.badge_image,
-          category: payload.category,
         },
       } as import('~/types/progression/badge').UserBadge)
       showBadgeEarned(payload)

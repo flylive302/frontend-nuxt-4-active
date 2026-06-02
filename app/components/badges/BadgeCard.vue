@@ -1,122 +1,87 @@
 <!-- ~/components/badges/BadgeCard.vue -->
-<!-- Displays a single badge with optional toggle display functionality -->
+<!-- Displays a single badge entry from the unified catalog grid -->
 <script setup lang="ts">
-import type { Badge, UserBadge } from '~/types/progression/badge'
-import { BADGE_CATEGORY_COLORS, BADGE_RARITY_COLORS } from '~/constants/badges'
+import type { Badge } from '~/types/progression/badge'
 import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
-// Props & Emits
+// Props + Emits
 // ========================================
 
 defineOptions({ name: 'BadgeCard' })
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   badge: Badge
-  userBadge?: UserBadge | null
-  showToggle?: boolean
-  isToggling?: boolean
-}>(), {
-  userBadge: null,
-  showToggle: false,
-  isToggling: false,
-})
+  count: number
+  isLocked: boolean
+  selectable?: boolean
+  selected?: boolean
+}>()
 
 const emit = defineEmits<{
-  (e: 'toggle', userBadgeId: number): void
+  select: [badgeId: number]
 }>()
 
 // ========================================
 // Computed
 // ========================================
 
-const isEarned = computed(() => props.userBadge !== null)
-const isDisplayed = computed(() => props.userBadge?.is_displayed ?? false)
-const _categoryColor = computed(() => BADGE_CATEGORY_COLORS[props.badge.category])
-const rarityColor = computed(() => 
-  props.badge.rarity ? BADGE_RARITY_COLORS[props.badge.rarity] : 'text-gray-400'
-)
-
 const displayImageUrl = computed(() =>
   withImageKitTransform(props.badge.image_url, { w: 128, q: 75 }),
 )
 
-/**
- * Format earned date.
- */
-const earnedDate = computed(() => {
-  if (!props.userBadge?.earned_at) return null
-  const date = new Date(props.userBadge.earned_at)
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-})
-
-// ========================================
-// Handlers
-// ========================================
-
-function handleToggle(): void {
-  if (props.userBadge) {
-    emit('toggle', props.userBadge.id)
+function handleClick() {
+  if (props.selectable && !props.isLocked) {
+    emit('select', props.badge.id)
   }
 }
 </script>
 
 <template>
-  <div 
-    class="relative bg-secondary/5 rounded-lg p-3 text-center inset-shadow-sm inset-shadow-secondary-900"
-    :class="{ 'opacity-80': !isEarned }"
-  >
-    <!-- Display indicator -->
-    <div 
-      v-if="isDisplayed"
-      class="absolute top-2 right-2"
+  <UTooltip :text="badge.description" :delay-duration="300">
+    <div
+      class="relative bg-secondary/5 rounded-lg p-3 text-center inset-shadow-sm inset-shadow-secondary-900 transition-all"
+      :class="{
+        'opacity-80 pointer-events-none': isLocked,
+        'cursor-pointer ring-2 ring-primary-500': selectable && !isLocked,
+        'ring-primary-500 bg-primary-500/10': selected,
+      }"
+      :aria-disabled="isLocked ? 'true' : undefined"
+      @click="handleClick"
     >
-      <icon name="i-lucide-eye" class="size-4 text-green-500" />
+      <!-- Lock overlay -->
+      <div
+        v-if="isLocked"
+        class="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg"
+      >
+        <UIcon name="i-lucide-lock" class="size-8 text-muted" />
+      </div>
+
+      <!-- Selected indicator -->
+      <div
+        v-if="selected"
+        class="absolute top-1.5 left-1.5 size-4 bg-primary-500 rounded-full flex items-center justify-center"
+      >
+        <UIcon name="i-lucide-check" class="size-3 text-white" />
+      </div>
+
+      <!-- Badge Image -->
+      <NuxtImg
+        :src="displayImageUrl"
+        :alt="badge.name"
+        class="size-16 mx-auto mb-2 object-contain"
+      />
+
+      <!-- Badge Name -->
+      <p class="font-semibold text-sm truncate">{{ badge.name }}</p>
+
+      <!-- ×N pill for multiple ownership -->
+      <span
+        v-if="count > 1"
+        class="absolute top-1.5 right-1.5 bg-secondary text-white text-xs font-bold rounded-full px-1.5 py-0.5 leading-none"
+      >
+        ×{{ count }}
+      </span>
     </div>
-
-    <!-- Lock icon for unearned -->
-    <div 
-      v-if="!isEarned"
-      class="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg"
-    >
-      <icon name="i-lucide-lock" class="size-8 text-muted" />
-    </div>
-
-    <!-- Badge Image -->
-    <NuxtImg
-      :src="displayImageUrl"
-      :alt="badge.name"
-      class="size-16 mx-auto mb-2 object-contain"
-    />
-
-    <!-- Badge Name -->
-    <p class="font-semibold text-sm truncate">{{ badge.name }}</p>
-
-    <!-- Rarity -->
-    <p v-if="badge.rarity" class="text-xs capitalize" :class="rarityColor">
-      {{ badge.rarity }}
-    </p>
-
-    <!-- Earned Date -->
-    <p v-if="earnedDate" class="text-xs text-muted mt-1">
-      {{ earnedDate }}
-    </p>
-
-    <!-- Toggle Button -->
-    <UButton
-      v-if="showToggle && isEarned"
-      size="xs"
-      :color="isDisplayed ? 'error' : 'primary'"
-      :variant="isDisplayed ? 'soft' : 'solid'"
-      :loading="isToggling"
-      class="mt-2 w-full justify-center"
-      @click="handleToggle"
-    >
-      {{ isDisplayed ? 'Hide' : 'Display' }}
-    </UButton>
-  </div>
+  </UTooltip>
 </template>

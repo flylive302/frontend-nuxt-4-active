@@ -6,8 +6,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   setupNuxtMocks,
   cleanupNuxtMocks,
-  createMockApi,
 } from '../helpers/nuxtMocks'
+import { buildArrangement } from '~/composables/progression/useBadgeActions'
+import type { EquippedBadge, UserBadge } from '~/types/progression/badge'
 
 // Mock logger
 vi.mock('~/utils/logger', () => ({
@@ -19,150 +20,327 @@ vi.mock('~/utils/logger', () => ({
   }),
 }))
 
-// Mock badges store
+// ========================================
+// Fixtures
+// ========================================
+
+function makeUserBadge(userBadgeId: number, badgeId: number): UserBadge {
+  return {
+    id: userBadgeId,
+    badge: { id: badgeId, name: `Badge ${badgeId}`, description: '', image_url: `https://cdn/b${badgeId}.png` },
+    earned_at: '2024-01-01T00:00:00Z',
+    source_type: 'achievement',
+  }
+}
+
+function makeEquipped(slotPosition: number, badgeId: number): EquippedBadge {
+  return { slot_position: slotPosition, badge_id: badgeId, image_url: `https://cdn/b${badgeId}.png` }
+}
+
+// ========================================
+// Mock Factories
+// ========================================
+
 function createMockBadgesStore(overrides: Record<string, unknown> = {}) {
   return {
-    isTogglingDisplay: null as number | null,
     userBadges: {
       items: [
-        { id: 1, badge_id: 10, is_displayed: false, badge: { id: 10, name: 'Test Badge' } },
-        { id: 2, badge_id: 20, is_displayed: true, badge: { id: 20, name: 'Other Badge' } },
+        makeUserBadge(1, 10),
+        makeUserBadge(2, 20),
       ],
     },
-    stats: { total: 2, by_category: {} },
-    setIsTogglingDisplay: vi.fn((id: number | null) => {
-      badgesStore.isTogglingDisplay = id
-    }),
-    updateUserBadgeDisplay: vi.fn(),
+    catalog: { items: [] },
+    equippedBadges: [] as EquippedBadge[],
+    badgeSlotLimit: 6,
+    stats: { total: 2 },
     addUserBadge: vi.fn(),
     incrementStatsTotal: vi.fn(),
+    setEquippedBadges: vi.fn(),
     ...overrides,
   }
 }
 
-// Mock toast
 function createMockToast() {
+  return { add: vi.fn() }
+}
+
+function createMockApi(resolveWith?: unknown, rejectWith?: Error) {
   return {
-    add: vi.fn(),
+    api: rejectWith
+      ? vi.fn().mockRejectedValue(rejectWith)
+      : vi.fn().mockResolvedValue({ data: resolveWith ?? [] }),
+    normalizeError: vi.fn((e: { message?: string }) => ({
+      message: e?.message ?? 'Unknown error',
+    })),
   }
 }
+
+// ========================================
+// Test State
+// ========================================
 
 let useBadgeActions: () => ReturnType<typeof import('~/composables/progression/useBadgeActions')['useBadgeActions']>
 let badgesStore: ReturnType<typeof createMockBadgesStore>
 let mockToast: ReturnType<typeof createMockToast>
+let mockApiModule: ReturnType<typeof createMockApi>
 
-describe('useBadgeActions', () => {
-  let mockApi: ReturnType<typeof createMockApi>
+beforeEach(async () => {
+  badgesStore = createMockBadgesStore()
+  mockToast = createMockToast()
+  mockApiModule = createMockApi()
 
-  beforeEach(async () => {
-    mockApi = createMockApi()
-    badgesStore = createMockBadgesStore()
-    mockToast = createMockToast()
+  setupNuxtMocks({})
+  ;(globalThis as Record<string, unknown>).useBadgesStore = () => badgesStore
+  ;(globalThis as Record<string, unknown>).useToast = () => mockToast
+  ;(globalThis as Record<string, unknown>).useApi = () => mockApiModule
 
-    setupNuxtMocks({ api: mockApi })
-    ;(globalThis as Record<string, unknown>).useBadgesStore = () => badgesStore
-    ;(globalThis as Record<string, unknown>).useToast = () => mockToast
+  const mod = await import('~/composables/progression/useBadgeActions')
+  useBadgeActions = mod.useBadgeActions
+})
 
-    const mod = await import('~/composables/progression/useBadgeActions')
-    useBadgeActions = mod.useBadgeActions
+afterEach(() => {
+  cleanupNuxtMocks()
+  Reflect.deleteProperty(globalThis, 'useBadgesStore')
+  Reflect.deleteProperty(globalThis, 'useToast')
+  Reflect.deleteProperty(globalThis, 'useApi')
+  vi.restoreAllMocks()
+})
+
+// ========================================
+// buildArrangement (pure helper)
+// ========================================
+
+describe('buildArrangement', () => {
+  it('equip: adds a new badge into an empty slot', () => {
+    const current: EquippedBadge[] = [makeEquipped(1, 10)]
+    const result = buildArrangement(current, { type: 'equip', slotPosition: 2, badgeId: 20, imageUrl: null })
+    expect(result).toHaveLength(2)
+    expect(result.find(e => e.slot_position === 2)?.badge_id).toBe(20)
   })
 
-  afterEach(() => {
-    cleanupNuxtMocks()
-    Reflect.deleteProperty(globalThis, 'useBadgesStore')
-    Reflect.deleteProperty(globalThis, 'useToast')
-    vi.restoreAllMocks()
+  it('equip: replaces an existing badge in the same slot', () => {
+    const current = [makeEquipped(1, 10)]
+    const result = buildArrangement(current, { type: 'equip', slotPosition: 1, badgeId: 20, imageUrl: null })
+    expect(result).toHaveLength(1)
+    expect(result[0]!.badge_id).toBe(20)
   })
 
-  // ========================================
-  // toggleDisplay
-  // ========================================
-
-  describe('toggleDisplay', () => {
-    it('should call API and show success toast', async () => {
-      mockApi.api.mockResolvedValueOnce({ success: true, data: {} })
-
-      const { toggleDisplay } = useBadgeActions()
-      const result = await toggleDisplay(1)
-
-      expect(result).toBe(true)
-      expect(mockApi.api).toHaveBeenCalledWith('/user/badges/1/toggle-display', { method: 'POST' })
-      expect(badgesStore.updateUserBadgeDisplay).toHaveBeenCalledWith(1, true)
-      expect(mockToast.add).toHaveBeenCalledWith(
-        expect.objectContaining({ color: 'success' })
-      )
-    })
-
-    it('should rollback on API error and show error toast', async () => {
-      mockApi.api.mockRejectedValueOnce(new Error('Server error'))
-
-      const { toggleDisplay } = useBadgeActions()
-      const result = await toggleDisplay(1)
-
-      expect(result).toBe(false)
-      // First call: optimistic update, second call: rollback
-      expect(badgesStore.updateUserBadgeDisplay).toHaveBeenCalledTimes(2)
-      expect(mockToast.add).toHaveBeenCalledWith(
-        expect.objectContaining({ color: 'error' })
-      )
-    })
-
-    it('should block concurrent toggles', async () => {
-      badgesStore.isTogglingDisplay = 99
-
-      const { toggleDisplay } = useBadgeActions()
-      const result = await toggleDisplay(1)
-
-      expect(result).toBe(false)
-      expect(mockApi.api).not.toHaveBeenCalled()
-    })
-
-    it('should return false for non-existent badge', async () => {
-      const { toggleDisplay } = useBadgeActions()
-      const result = await toggleDisplay(999)
-
-      expect(result).toBe(false)
-      expect(mockApi.api).not.toHaveBeenCalled()
-    })
-
-    it('should clear toggling state after completion', async () => {
-      mockApi.api.mockResolvedValueOnce({ success: true, data: {} })
-
-      const { toggleDisplay } = useBadgeActions()
-      await toggleDisplay(1)
-
-      expect(badgesStore.setIsTogglingDisplay).toHaveBeenLastCalledWith(null)
-    })
+  it('equip: moves a badge already in another slot to the new position (no duplicates)', () => {
+    const current = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    // Badge 10 is in slot 1; equip badge 10 into slot 3 should remove it from slot 1
+    const result = buildArrangement(current, { type: 'equip', slotPosition: 3, badgeId: 10, imageUrl: null })
+    expect(result.some(e => e.slot_position === 1)).toBe(false)
+    expect(result.find(e => e.slot_position === 3)?.badge_id).toBe(10)
   })
 
-  // ========================================
-  // onBadgeEarned
-  // ========================================
+  it('unequip: removes the badge at the given slot', () => {
+    const current = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    const result = buildArrangement(current, { type: 'unequip', slotPosition: 1 })
+    expect(result).toHaveLength(1)
+    expect(result[0]!.slot_position).toBe(2)
+  })
 
-  describe('onBadgeEarned', () => {
-    it('should add badge to store and increment stats', () => {
-      const newBadge = { id: 3, badge_id: 30, is_displayed: false, badge: { id: 30, name: 'New Badge' } }
+  it('unequip: returns unchanged array when slot is empty', () => {
+    const current = [makeEquipped(2, 20)]
+    const result = buildArrangement(current, { type: 'unequip', slotPosition: 1 })
+    expect(result).toHaveLength(1)
+  })
 
-      const { onBadgeEarned } = useBadgeActions()
-      onBadgeEarned(newBadge as import('~/types/progression/badge').UserBadge)
+  it('reorder: swaps badge_ids between two occupied slots', () => {
+    const current = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    const result = buildArrangement(current, { type: 'reorder', fromSlot: 1, toSlot: 2 })
+    expect(result.find(e => e.slot_position === 1)?.badge_id).toBe(20)
+    expect(result.find(e => e.slot_position === 2)?.badge_id).toBe(10)
+  })
+})
 
-      expect(badgesStore.addUserBadge).toHaveBeenCalledWith(newBadge)
-      expect(badgesStore.incrementStatsTotal).toHaveBeenCalled()
-    })
+// ========================================
+// useBadgeActions — onBadgeEarned
+// ========================================
 
-    it('should show success toast with badge name', () => {
-      const newBadge = { id: 3, badge_id: 30, is_displayed: false, badge: { id: 30, name: 'Gold Star' } }
+describe('onBadgeEarned', () => {
+  it('adds badge to store and increments stats', () => {
+    const badge = makeUserBadge(3, 30)
+    const { onBadgeEarned } = useBadgeActions()
+    onBadgeEarned(badge)
+    expect(badgesStore.addUserBadge).toHaveBeenCalledWith(badge)
+    expect(badgesStore.incrementStatsTotal).toHaveBeenCalled()
+  })
 
-      const { onBadgeEarned } = useBadgeActions()
-      onBadgeEarned(newBadge as import('~/types/progression/badge').UserBadge)
+  it('shows success toast with badge name', () => {
+    const badge = makeUserBadge(3, 30)
+    badge.badge.name = 'Gold Star'
+    const { onBadgeEarned } = useBadgeActions()
+    onBadgeEarned(badge)
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'New Badge Earned!', description: 'Gold Star', color: 'success' }),
+    )
+  })
+})
 
-      expect(mockToast.add).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'New Badge Earned!',
-          description: 'Gold Star',
-          color: 'success',
-        })
-      )
-    })
+// ========================================
+// useBadgeActions — equip
+// ========================================
+
+describe('equip', () => {
+  it('optimistically updates the store, then settles with server response', async () => {
+    const serverResponse = [makeEquipped(1, 10)]
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { equip } = useBadgeActions()
+    await equip(1, 10)
+
+    // Optimistic call first
+    expect(badgesStore.setEquippedBadges).toHaveBeenCalledTimes(2)
+    // Final settle matches server response
+    expect(badgesStore.setEquippedBadges).toHaveBeenLastCalledWith(serverResponse)
+  })
+
+  it('sends PUT /user/equipped-badges with the new arrangement', async () => {
+    const { equip } = useBadgeActions()
+    await equip(2, 10)
+
+    expect(mockApiModule.api).toHaveBeenCalledWith('/user/equipped-badges', expect.objectContaining({
+      method: 'PUT',
+    }))
+    const body = (mockApiModule.api.mock.calls[0] as [string, { body: unknown }])[1]?.body as Array<{ slot_position: number; badge_id: number }>
+    expect(body.find(e => e.slot_position === 2 && e.badge_id === 10)).toBeTruthy()
+  })
+
+  it('rolls back and shows error toast on API failure', async () => {
+    const snapshot = [makeEquipped(1, 20)]
+    badgesStore.equippedBadges = [...snapshot]
+    mockApiModule.api.mockRejectedValue(new Error('Server error'))
+
+    const { equip } = useBadgeActions()
+    await equip(2, 10)
+
+    // Last setEquippedBadges call = rollback to snapshot
+    const lastCall = badgesStore.setEquippedBadges.mock.calls.at(-1) as [EquippedBadge[]]
+    expect(lastCall[0]).toEqual(snapshot)
+
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'error' }),
+    )
+  })
+
+  it('does nothing when badge is not owned', async () => {
+    const { equip } = useBadgeActions()
+    await equip(1, 999) // badge 999 not in userBadges
+
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+    expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+  })
+
+  it('does nothing when slot exceeds badge slot limit', async () => {
+    const { equip } = useBadgeActions()
+    await equip(99, 10) // slot 99 > badgeSlotLimit (6)
+
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+    expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+  })
+
+  it('equipped badge disappears from available list (not in equippedBadges anymore as grid excludes it)', async () => {
+    const serverResponse = [makeEquipped(1, 10)]
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { equip } = useBadgeActions()
+    await equip(1, 10)
+
+    // equippedBadges is updated — assembleBadgeCatalog will exclude badge 10 from the grid
+    const settled = badgesStore.setEquippedBadges.mock.calls.at(-1) as [EquippedBadge[]]
+    expect(settled[0].some(e => e.badge_id === 10)).toBe(true)
+  })
+})
+
+// ========================================
+// useBadgeActions — unequip
+// ========================================
+
+describe('unequip', () => {
+  it('removes the badge from the equipped list and sends PUT', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    const serverResponse = [makeEquipped(2, 20)]
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { unequip } = useBadgeActions()
+    await unequip(1)
+
+    expect(mockApiModule.api).toHaveBeenCalledWith('/user/equipped-badges', expect.objectContaining({ method: 'PUT' }))
+    const settled = badgesStore.setEquippedBadges.mock.calls.at(-1) as [EquippedBadge[]]
+    expect(settled[0]).toEqual(serverResponse)
+  })
+
+  it('unequipped badge reappears in available list (equippedBadges no longer contains it)', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10)]
+    const serverResponse: EquippedBadge[] = []
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { unequip } = useBadgeActions()
+    await unequip(1)
+
+    const settled = badgesStore.setEquippedBadges.mock.calls.at(-1) as [EquippedBadge[]]
+    expect(settled[0].some(e => e.badge_id === 10)).toBe(false)
+  })
+
+  it('rolls back and shows error toast on API failure', async () => {
+    const snapshot = [makeEquipped(1, 10)]
+    badgesStore.equippedBadges = [...snapshot]
+    mockApiModule.api.mockRejectedValue(new Error('Network error'))
+
+    const { unequip } = useBadgeActions()
+    await unequip(1)
+
+    const lastCall = badgesStore.setEquippedBadges.mock.calls.at(-1) as [EquippedBadge[]]
+    expect(lastCall[0]).toEqual(snapshot)
+    expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+  })
+
+  it('does nothing when slot is empty', async () => {
+    badgesStore.equippedBadges = [] // no badges equipped
+    const { unequip } = useBadgeActions()
+    await unequip(1)
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+  })
+})
+
+// ========================================
+// useBadgeActions — reorder
+// ========================================
+
+describe('reorder', () => {
+  it('swaps slot positions and sends PUT before API resolves (optimistic)', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    mockApiModule.api.mockResolvedValue({ data: [makeEquipped(1, 20), makeEquipped(2, 10)] })
+
+    const { reorder } = useBadgeActions()
+    await reorder(1, 2)
+
+    // First setEquippedBadges = optimistic (swapped positions)
+    const optimistic = badgesStore.setEquippedBadges.mock.calls[0] as [EquippedBadge[]]
+    expect(optimistic[0].find(e => e.slot_position === 1)?.badge_id).toBe(20)
+    expect(optimistic[0].find(e => e.slot_position === 2)?.badge_id).toBe(10)
+
+    expect(mockApiModule.api).toHaveBeenCalledWith('/user/equipped-badges', expect.objectContaining({ method: 'PUT' }))
+  })
+
+  it('rolls back on failure', async () => {
+    const snapshot = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    badgesStore.equippedBadges = [...snapshot]
+    mockApiModule.api.mockRejectedValue(new Error('fail'))
+
+    const { reorder } = useBadgeActions()
+    await reorder(1, 2)
+
+    const lastCall = badgesStore.setEquippedBadges.mock.calls.at(-1) as [EquippedBadge[]]
+    expect(lastCall[0]).toEqual(snapshot)
+    expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+  })
+
+  it('does nothing when either slot is empty', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10)] // slot 2 empty
+    const { reorder } = useBadgeActions()
+    await reorder(1, 2)
+    expect(mockApiModule.api).not.toHaveBeenCalled()
   })
 })
