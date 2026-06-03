@@ -5,6 +5,8 @@
  * Backend API: GET /api/v1/users/profile/{signature}
  */
 
+import type { EquippedBadge } from '~/types/progression/badge'
+
 // ============================================
 // CORE TYPES
 // ============================================
@@ -86,6 +88,7 @@ export interface UserProfile {
   gifts_received: ProfileGiftReceived[]
   gifts_next_cursor: string | null
   gifts_has_more: boolean
+  equipped_badges?: EquippedBadge[]
 }
 
 /**

@@ -93,6 +93,12 @@ const charmLevel = computed(() =>
         </div>
       </div>
 
+      <BadgesEquippedBadgeMarquee
+        v-if="participant?.equipped_badges?.length"
+        :equipped-badges="participant.equipped_badges"
+        class="ml-1.5 mt-0.5 max-w-48"
+      />
+
       <div v-if="participant?.vip_level" class="bubble" :style="bubbleStyle">
         <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
       </div>

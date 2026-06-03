@@ -351,7 +351,6 @@ export const EVENT_BANNERS = {
   { banner: string; header: string; decor: string }
 >
 
-
 // ========================================
 // Missions Assets (ImageKit)
 // ========================================
@@ -360,28 +359,14 @@ export const EVENT_BANNERS = {
 
 export const RECHARGE_ACTIVITY = {
   banner: `${IK}/missions/recharge-activity/banner.png`,
+  honerBtn: `${IK}/missions/recharge-activity/honor_btn.png`,
+  btnRules: `${IK}/missions/recharge-activity/btn-rules.png`,
+  pattern: `${IK}/missions/recharge-activity/head_bg.png`,
+  tab: `${IK}/missions/recharge-activity/tab0.png`,
+  tabActive: `${IK}/missions/recharge-activity/tab1.png`,
+  arrowLeft: `${IK}/missions/recharge-activity/time_line1.png`,
+  arrowRight: `${IK}/missions/recharge-activity/time_line0.png`,
+  timeBg: `${IK}/missions/recharge-activity/time_bg.png`,
+  taskBg: `${IK}/missions/recharge-activity/task_bg.png`,
+  topHeader: `${IK}/missions/recharge-activity/top1_header.png`,
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

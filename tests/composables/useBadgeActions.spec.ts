@@ -10,6 +10,19 @@ import {
 import { buildArrangement } from '~/composables/progression/useBadgeActions'
 import type { EquippedBadge, UserBadge } from '~/types/progression/badge'
 
+// Hoist mock socket emit so it's accessible in both vi.mock factory and test assertions
+const mockEmit = vi.hoisted(() => vi.fn())
+
+// Mock useAudioSocket so audioSocketRef appears connected — avoids the circular
+// composable chain (useProfileActions → useAudioSocket → useRealtimeEvents → …)
+// that would overflow the call stack.
+vi.mock('~/composables/room/useAudioSocket', async () => {
+  const { ref } = await import('vue')
+  return {
+    audioSocketRef: ref({ connected: true, emit: mockEmit }),
+  }
+})
+
 // Mock logger
 vi.mock('~/utils/logger', () => ({
   createLogger: () => ({
@@ -88,6 +101,7 @@ beforeEach(async () => {
   badgesStore = createMockBadgesStore()
   mockToast = createMockToast()
   mockApiModule = createMockApi()
+  mockEmit.mockClear()
 
   setupNuxtMocks({})
   ;(globalThis as Record<string, unknown>).useBadgesStore = () => badgesStore
@@ -342,5 +356,76 @@ describe('reorder', () => {
     const { reorder } = useBadgeActions()
     await reorder(1, 2)
     expect(mockApiModule.api).not.toHaveBeenCalled()
+  })
+})
+
+// ========================================
+// emitProfileSync — live propagation (badge-10)
+// ========================================
+
+describe('emitProfileSync on mutation', () => {
+  it('emits equipped_badges with the server-settled array on equip success', async () => {
+    const serverResponse = [makeEquipped(1, 10)]
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { equip } = useBadgeActions()
+    await equip(1, 10)
+
+    expect(mockEmit).toHaveBeenCalledOnce()
+    expect(mockEmit).toHaveBeenCalledWith('user:profileSync', { profile: { equipped_badges: serverResponse } })
+  })
+
+  it('does not emit on equip failure (rollback path)', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 20)]
+    mockApiModule.api.mockRejectedValue(new Error('Server error'))
+
+    const { equip } = useBadgeActions()
+    await equip(2, 10)
+
+    expect(mockEmit).not.toHaveBeenCalled()
+  })
+
+  it('emits equipped_badges with the server-settled array on unequip success', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10)]
+    const serverResponse: EquippedBadge[] = []
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { unequip } = useBadgeActions()
+    await unequip(1)
+
+    expect(mockEmit).toHaveBeenCalledOnce()
+    expect(mockEmit).toHaveBeenCalledWith('user:profileSync', { profile: { equipped_badges: serverResponse } })
+  })
+
+  it('does not emit on unequip failure (rollback path)', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10)]
+    mockApiModule.api.mockRejectedValue(new Error('Network error'))
+
+    const { unequip } = useBadgeActions()
+    await unequip(1)
+
+    expect(mockEmit).not.toHaveBeenCalled()
+  })
+
+  it('emits equipped_badges with the server-settled array on reorder success', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    const serverResponse = [makeEquipped(1, 20), makeEquipped(2, 10)]
+    mockApiModule.api.mockResolvedValue({ data: serverResponse })
+
+    const { reorder } = useBadgeActions()
+    await reorder(1, 2)
+
+    expect(mockEmit).toHaveBeenCalledOnce()
+    expect(mockEmit).toHaveBeenCalledWith('user:profileSync', { profile: { equipped_badges: serverResponse } })
+  })
+
+  it('does not emit on reorder failure (rollback path)', async () => {
+    badgesStore.equippedBadges = [makeEquipped(1, 10), makeEquipped(2, 20)]
+    mockApiModule.api.mockRejectedValue(new Error('fail'))
+
+    const { reorder } = useBadgeActions()
+    await reorder(1, 2)
+
+    expect(mockEmit).not.toHaveBeenCalled()
   })
 })

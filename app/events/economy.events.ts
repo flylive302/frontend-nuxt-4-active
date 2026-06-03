@@ -2,6 +2,7 @@
 // Economy Events
 // ========================================
 
+import { ref } from 'vue'
 import type { Socket } from 'socket.io-client'
 import type {
   BalanceUpdatedPayload,

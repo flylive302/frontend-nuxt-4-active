@@ -18,7 +18,9 @@
         <slot name="badges" />
       </div>
 
-      <h1 class="text-lg font-bold text-center relative z-10 mt-3">
+      <slot name="marquee" />
+
+      <h1 class="text-lg font-bold text-center relative z-10">
         <slot name="name" />
       </h1>
 

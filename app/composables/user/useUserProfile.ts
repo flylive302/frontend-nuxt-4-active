@@ -7,6 +7,7 @@ import type {
   ProfileGiftReceived,
   UserProfileResponse,
 } from '~/types/user/user-profile'
+import type { EquippedBadge } from '~/types/progression/badge'
 import type { LevelInfo } from '~/composables/shared/useLevelLookup'
 import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
 import { createLogger } from '~/utils/logger'
@@ -122,6 +123,11 @@ export function useUserProfile(
    * Charm level number.
    */
   const charmLevel = computed(() => charmLevelInfo.value?.level ?? 0)
+
+  /**
+   * Equipped badges from profile (other user's public profile data).
+   */
+  const equippedBadges = computed<EquippedBadge[]>(() => profile.value?.equipped_badges ?? [])
 
   // ========================================
   // Actions
@@ -266,6 +272,9 @@ export function useUserProfile(
     wealthBadgeSrc,
     charmBadgeSrc,
     levelInfoLoading: readonly(levelInfoLoading),
+
+    // Equipped badges
+    equippedBadges,
 
     // Gifts pagination
     giftsLoading: readonly(giftsLoading),

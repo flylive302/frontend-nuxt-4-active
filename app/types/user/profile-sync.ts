@@ -1,3 +1,5 @@
+import type { EquippedBadge } from '~/types/progression/badge'
+
 /**
  * Profile fields accepted by the user:profileSync socket event.
  * Visual/identity fields plus XP — private balance fields (coins, diamonds) excluded.
@@ -16,4 +18,5 @@ export interface ProfileSyncFields {
   vip_level?: number
   wealth_xp?: string
   charm_xp?: string
+  equipped_badges?: EquippedBadge[]
 }

@@ -31,6 +31,7 @@ export interface MinimalUser {
   gender: string | null
   date_of_birth: string | null
   vip_level: number
+  equipped_badges?: EquippedBadge[]
 }
 
 /**
@@ -122,15 +123,6 @@ export interface LevelConfig {
   image_url: string | null
 }
 
-/**
- * Badge for levels.
- */
-export interface LevelBadge {
-  id: number
-  name: string
-  image_url: string | null
-  category: 'wealth' | 'charm' | 'room' | 'level' | 'special'
-}
 
 // ========================================
 // Income Target Types
@@ -185,20 +177,6 @@ export interface BootstrapRoom {
   owner: MinimalUser
 }
 
-// ========================================
-// User Badges
-// ========================================
-
-/**
- * User's earned/displayed badge.
- */
-export interface UserBadge {
-  id: number
-  badge_id: number
-  badge: LevelBadge
-  earned_at: string
-  is_displayed: boolean
-}
 
 // ========================================
 // Agency Types
@@ -249,38 +227,3 @@ export interface BootstrapProp {
   asset_url: string
 }
 
-// ========================================
-// Bootstrap Response
-// ========================================
-
-/**
- * User data section of bootstrap.
- */
-export interface BootstrapUserData {
-  levels: {
-    wealth: LevelStatus
-    charm: LevelStatus
-  } // Not Required
-  active_income_target: BootstrapIncomeTarget | null
-  room: BootstrapRoom | null
-  badges: UserBadge[]
-  agency: BootstrapAgency | null
-}
-
-/**
- * Gifts section of bootstrap.
- */
-export interface BootstrapGifts {
-  catalog: Gift[]
-  total: number
-}
-
-/**
- * Full bootstrap API response.
- * GET /api/v1/bootstrap
- */
-export interface BootstrapResponse {
-  user_data: BootstrapUserData
-  gifts: BootstrapGifts
-  config: BootstrapConfig
-}

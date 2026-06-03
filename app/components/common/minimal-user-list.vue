@@ -84,6 +84,12 @@ const genderColor = computed(() =>
           <img v-if="user.vip_level" :src="`https://ik.imagekit.io/flylive/vip/${user.vip_level}/badge.png`" class="w-9" alt="" >
           <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4 ml-1" alt="users charm badge" >
         </div>
+
+        <BadgesEquippedBadgeMarquee
+          v-if="user.equipped_badges?.length"
+          :equipped-badges="user.equipped_badges"
+          class="mt-1"
+        />
       </div>
 
       <div v-if="slots.default" class="flex flex-col justify-center min-h-full shrink-0">

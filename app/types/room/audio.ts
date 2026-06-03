@@ -359,6 +359,7 @@ export function userToParticipant(user: MinimalUser, overrides?: Partial<RoomPar
     wealth_xp: user.wealth_xp,
     charm_xp: user.charm_xp,
     vip_level: user.vip_level,
+    equipped_badges: user.equipped_badges ?? [],
     ...overrides,
   };
 }

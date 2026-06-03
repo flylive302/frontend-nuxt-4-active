@@ -22,6 +22,7 @@ definePageMeta({
 
 const authStore = useAuthStore()
 const agencyStore = useAgencyStore()
+const badgesStore = useBadgesStore()
 const { getBadgeFromXp } = useLevelLookup()
 const { fetchUserAgency } = useAgencyMembership()
 const { fetchReceivedInvitations } = useAgencyInvitations()
@@ -104,6 +105,10 @@ const vip = authStore.user?.vip_level;
           <img :src="CURRENT_WEALTH_BADGE" alt="current badge" class="w-7/12" >
           <img :src="CURRENT_CHARM_BADGE" alt="current badge" class="w-5/12" >
         </div>
+      </template>
+
+      <template #marquee>
+        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" class="mx-auto max-w-34" />
       </template>
 
       <template #name>

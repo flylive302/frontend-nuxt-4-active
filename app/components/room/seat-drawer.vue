@@ -324,6 +324,11 @@ const seatUserAge = computed(() =>
             <img v-if="charmLevel.badge" alt="" :src="charmLevel.badge.image_url" class="h-5">
           </div>
 
+          <BadgesEquippedBadgeMarquee
+            :equipped-badges="currentSeat.user.equipped_badges ?? []"
+            class="mt-2 px-6"
+          />
+
         </div>
 
         <!-- Action Buttons -->

@@ -4,6 +4,7 @@
 // Handles mutating badge actions with GATE → EXECUTE → REACT pipeline.
 
 import type { EquippedBadge, UserBadge } from '~/types/progression/badge'
+import { audioSocketRef } from '~/composables/room/useAudioSocket'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[BadgeActions]')
@@ -52,6 +53,13 @@ export function useBadgeActions() {
   const store = useBadgesStore()
   const { api, normalizeError } = useApi()
 
+  function emitProfileSync(fields: import('~/types/user/profile-sync').ProfileSyncFields): void {
+    try {
+      if (!audioSocketRef.value?.connected) return
+      audioSocketRef.value.emit('user:profileSync', { profile: fields })
+    } catch { /* silent — Laravel SyncProfileToMsab provides fallback */ }
+  }
+
   // ========================================
   // Private Helpers
   // ========================================
@@ -78,6 +86,8 @@ export function useBadgeActions() {
         body: toPutBody(optimistic),
       })
       store.setEquippedBadges(response.data)
+      // REACT: propagate final arrangement to all rooms the user is currently in
+      emitProfileSync({ equipped_badges: response.data })
     } catch (err) {
       log.warn('PUT /user/equipped-badges failed — rolling back', err)
       store.setEquippedBadges(snapshot)

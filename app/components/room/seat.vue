@@ -78,7 +78,7 @@ const seatGiftTotal = computed(() => {
 
 <template>
   <div
-    class="flex flex-col items-center h-28 text-center cursor-pointer"
+    class="flex flex-col items-center min-h-28 text-center cursor-pointer"
     :class="{ 'ring-2 ring-secondary bg-secondary/10 animate-pulse': isInviteTarget }"
     :data-user-id="seat?.user?.id ?? undefined"
     @click="openDrawer"
@@ -112,6 +112,12 @@ const seatGiftTotal = computed(() => {
       <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 scale-150" :name="miceWaveAsset" />
 
     </div>
+
+    <BadgesEquippedBadgeMarquee
+      v-if="!isEmpty"
+      :equipped-badges="seat?.user?.equipped_badges ?? []"
+      class="w-full mt-0.5"
+    />
 
     <MarqueeName
       class="w-full"

@@ -69,6 +69,7 @@ const {
   allGifts,
   wealthBadgeSrc,
   charmBadgeSrc,
+  equippedBadges,
   giftsLoading,
   giftsHasMore,
   fetchMoreGifts,
@@ -254,6 +255,10 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
           <img :src="charmBadgeSrc" alt="current badge" class="w-5/12" >
           <img :src="wealthBadgeSrc" alt="current badge" class="w-7/12" >
         </div>
+      </template>
+
+      <template #marquee>
+        <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" class="mx-4 mt-2" />
       </template>
 
       <template #name>
