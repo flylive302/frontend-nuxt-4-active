@@ -6,35 +6,57 @@ const props = defineProps<{
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
-const textRef = ref<HTMLElement | null>(null)
-const overflowOffset = ref(0)
+const trackRef = ref<HTMLElement | null>(null)
+const isOverflowing = ref(false)
 
-const shouldMarquee = computed(() => (props.name?.length ?? 0) > 10)
-
-function measure() {
-  if (!containerRef.value || !textRef.value) return
-  const delta = textRef.value.scrollWidth - containerRef.value.clientWidth
-  overflowOffset.value = delta > 0 ? -delta : 0
+function checkOverflow() {
+  if (!containerRef.value || !trackRef.value) return
+  // Temporarily measure just the single text's natural width
+  isOverflowing.value = trackRef.value.scrollWidth > containerRef.value.clientWidth
 }
 
 onMounted(() => {
-  nextTick(() => requestAnimationFrame(measure))
+  const ro = new ResizeObserver(useDebounceFn(checkOverflow, 80))
+  if (containerRef.value) ro.observe(containerRef.value)
+  if (trackRef.value) ro.observe(trackRef.value)
+  nextTick(() => requestAnimationFrame(checkOverflow))
+  onUnmounted(() => ro.disconnect())
+})
 
-  if (containerRef.value) {
-    const observer = new ResizeObserver(useDebounceFn(measure, 80))
-    observer.observe(containerRef.value)
-    onUnmounted(() => observer.disconnect())
-  }
+watch(() => props.name, async () => {
+  // Reset first so the track collapses to its natural width before we measure.
+  // Without this, a shrinking name still overflows the now-collapsed container
+  // and isOverflowing stays true indefinitely.
+  isOverflowing.value = false
+  await nextTick()
+  requestAnimationFrame(checkOverflow)
 })
 </script>
 
 <template>
   <div ref="containerRef" class="overflow-hidden">
-    <p
-      ref="textRef"
-      class="whitespace-nowrap"
-      :class="[textClass, { 'marquee-text': shouldMarquee }]"
-      :style="shouldMarquee ? { '--marquee-offset': `${overflowOffset}px`, ...(delay ? { animationDelay: delay } : {}) } : {}"
-    >{{ name }}</p>
+    <div
+        ref="trackRef"
+        class="whitespace-nowrap"
+        :class="[{ 'marquee-track': isOverflowing }]"
+        :style="isOverflowing && delay ? { animationDelay: delay } : {}"
+    >
+      <span :class="textClass">{{ name }}</span>
+      <!-- Duplicate for seamless loop, gap via padding -->
+      <span v-if="isOverflowing" :class="textClass" aria-hidden="true" class="pl-12">{{ name }}</span>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.marquee-track {
+  display: inline-flex;
+  width: max-content;
+  animation: marquee-scroll 6s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+</style>

@@ -370,6 +370,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           charm_xp: authStore.user.charm_xp,
           cover_image: authStore.user.cover_image ?? null,
           vip_level: authStore.user.vip_level ?? 0,
+          equipped_badges: authStore.user.equipped_badges,
         }
       );
       participantsStore.addParticipant(participant);

@@ -100,7 +100,7 @@ const headingId = `duel-card-title-${props.type}`
         decoding="async"
     />
 
-    <NuxtLink class="relative bg-info" to="/missions/recharge-activity">
+    <NuxtLink class="relative bg-info" to="/recharge">
       <!-- Header -->
       <header class="relative flex min-h-8 items-center justify-center">
         <NuxtImg

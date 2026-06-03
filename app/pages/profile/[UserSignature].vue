@@ -258,7 +258,7 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       </template>
 
       <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" class="mx-4 mt-2" />
+        <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" class="mx-auto w-28" />
       </template>
 
       <template #name>

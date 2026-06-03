@@ -9,6 +9,8 @@ const props = defineProps<{
 }>();
 
 const seatsStore = useRoomSeatsStore();
+const roomStore = useRoomStore();
+const membershipStore = useRoomMembershipStore();
 const { resolvePropAsset } = usePropLookup();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
@@ -61,12 +63,14 @@ const miceWaveAsset = computed(() => {
   return resolvePropAsset(seat.value?.user?.mice_wave_id) ?? ASSETS.MICE_WAVE_SVGA;
 });
 
-// Display name+
+// Display name
 const displayName = computed(() => {
   if (isEmpty.value) {
     return isLocked.value ? 'Locked' : `${props.seatId}`;
   }
-  return seat.value?.user?.name || 'Unknown';
+  const name = seat.value?.user?.name || 'Unknown';
+  const isOwner = roomStore.currentRoom?.owner_id === seat.value?.user?.id;
+  return isOwner ? `🏠 ${name}` : name;
 });
 
 // Cumulative coin value of gifts received during this session
@@ -113,17 +117,12 @@ const seatGiftTotal = computed(() => {
 
     </div>
 
-    <BadgesEquippedBadgeMarquee
-      v-if="!isEmpty"
-      :equipped-badges="seat?.user?.equipped_badges ?? []"
-      class="w-full mt-0.5"
-    />
-
-    <MarqueeName
-      class="w-full"
-      text-class="text-xs font-semibold text-center"
-      :name="displayName"
-    />
+    <div class="backdrop-blur-xl rounded-xl w-fit max-w-full px-2">
+      <MarqueeName
+          text-class="text-xs font-semibold text-center drop-shadow-lg leading-none"
+          :name="displayName"
+      />
+    </div>
 
     <p v-if="seat?.user" class="text-xs min-h-3 truncate font">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 

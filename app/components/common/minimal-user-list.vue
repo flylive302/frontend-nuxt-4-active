@@ -42,7 +42,7 @@ const genderColor = computed(() =>
 <template>
   <div class="overflow-hidden relative rounded-lg bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 shadow-md shadow-neutral-900">
 
-    <div class="flex grow shadow-lg shadow-primary/10 pb-1">
+    <div class="flex">
       <UserAvatar
         :img="user.avatar"
         animated
@@ -54,7 +54,7 @@ const genderColor = computed(() =>
         }"
       />
 
-      <div class="flex flex-col justify-center min-h-full px-2 flex-1 min-w-0">
+      <div class="flex flex-col justify-center min-h-full px-2 flex-1 min-w-0 py-1">
         <div class="flex items-center gap-1 min-w-0">
           <MarqueeName
             class="flex-1 max-w-24"
@@ -62,8 +62,6 @@ const genderColor = computed(() =>
             :name="user.name"
             :delay="marqueeDelay"
           />
-
-          <ProfileBadge :txt="user.signature" :show-badge="false" class="shrink-0" />
           <UBadge
               :color="genderColor"
               :icon="getGenderInfo(user.gender).icon"
@@ -74,7 +72,8 @@ const genderColor = computed(() =>
             {{ getAge(user.date_of_birth) }}
           </UBadge>
         </div>
-        <div class="flex items-center gap-0.5 mt-1">
+        <div class="flex items-center gap-0.5 ">
+          <ProfileBadge :txt="user.signature" :show-badge="false" class="shrink-0" />
           <UIcon
             v-if="user.country"
             :name="`i-flag-${user.country.toLowerCase().trim()}-4x3`"
@@ -88,7 +87,7 @@ const genderColor = computed(() =>
         <BadgesEquippedBadgeMarquee
           v-if="user.equipped_badges?.length"
           :equipped-badges="user.equipped_badges"
-          class="mt-1"
+          class="max-w-24"
         />
       </div>
 

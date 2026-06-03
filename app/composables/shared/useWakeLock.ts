@@ -36,7 +36,9 @@ export function useWakeLock() {
         isActive.value = false
       })
     } catch (err) {
-      log.warn('Failed to acquire wake lock', err)
+      // NotAllowedError is expected when DevTools is open or the page isn't
+      // the active foreground tab — not an actionable error.
+      log.debug('Failed to acquire wake lock', err)
     }
   }
 

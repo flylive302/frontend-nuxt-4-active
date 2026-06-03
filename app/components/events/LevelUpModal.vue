@@ -57,7 +57,7 @@ const formattedXp = computed(() => {
 
 <template>
   <UModal
-    v-model:open="levelUpModalOpen"
+    :open="levelUpModalOpen"
     :ui="{
       content: 'bg-transparent shadow-none ring-0',
       overlay: 'bg-black/70 backdrop-blur-sm',

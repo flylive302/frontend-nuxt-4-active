@@ -51,7 +51,7 @@ const formattedReward = computed(() => {
 
 <template>
   <UModal
-    v-model:open="incomeTargetModalOpen"
+    :open="incomeTargetModalOpen"
     :ui="{
       content: 'bg-transparent shadow-none border-none focus-outline-none ring-0',
       overlay: 'bg-neutral-950/20 backdrop-blur-xs',

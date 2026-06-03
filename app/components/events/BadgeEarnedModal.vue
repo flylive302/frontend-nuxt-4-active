@@ -48,7 +48,7 @@ const contextDescription = computed(() => {
 
 <template>
   <UModal
-    v-model:open="badgeModalOpen"
+    :open="badgeModalOpen"
     :ui="{
       content: 'bg-transparent ring-0',
     }"

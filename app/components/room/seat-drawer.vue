@@ -286,11 +286,11 @@ const seatUserAge = computed(() =>
           <LazyUserAvatar
             :img="currentSeat.user.avatar ?? undefined"
             :frame-asset-url="resolvePropAsset(currentSeat.user.frame_id) ?? undefined"
-            :animated="true" class="size-32 mt-6"
+            :animated="true" class="size-32"
             @click="() => handleNavigateAway(`/profile/${currentSeat?.user?.signature}`)"
             />
 
-          <div class="flex gap-1 mt-4">
+          <div class="flex gap-1">
             <UIcon
               v-if="seatUserCountry"
               :name="`i-flag-${seatUserCountry.toLowerCase()}-4x3`"
@@ -311,7 +311,7 @@ const seatUserAge = computed(() =>
                 {{ seatUserAge }}
               </UBadge>
           </div>
-          <div class="flex items-center gap-1 mt-2 justify-center">
+          <div class="flex items-center gap-1 justify-center">
 
             <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
             <img
@@ -326,7 +326,7 @@ const seatUserAge = computed(() =>
 
           <BadgesEquippedBadgeMarquee
             :equipped-badges="currentSeat.user.equipped_badges ?? []"
-            class="mt-2 px-6"
+            class=""
           />
 
         </div>

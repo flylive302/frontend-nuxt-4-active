@@ -31,7 +31,7 @@ const gradientTargets: Record<Colors, string> = {
 }
 
 const toGradient = computed(() => gradientTargets[props.color])
-// Use semantic color directly - Nuxt UI components accept semantic colors configured in app.config.ts
+
 const uiColor = computed(() => props.color)
 </script>
 <template>
@@ -39,13 +39,7 @@ const uiColor = computed(() => props.color)
     aria-label="fly-live-alt-pages-header"
     class="fixed w-full z-50 top-0 safe-area-top"
   >
-    <BgGlass
-      frost-blur-radius="blur(4px)"
-      :noise-frequency="0.009"
-      :noise-strength="10"
-      rounded="rounded-none"
-      class="grid grid-cols-8 border-b border-white/50"
-    >
+    <div class="grid grid-cols-8 border-b border-white/50 backdrop-blur-xs" >
       <UButton
         aria-label="back-navigation-link"
         icon="i-lucide-chevron-left"
@@ -94,6 +88,6 @@ const uiColor = computed(() => props.color)
         variant="ghost"
         class="w-full justify-center rounded-none"
       />
-    </BgGlass>
+    </div>
   </header>
 </template>

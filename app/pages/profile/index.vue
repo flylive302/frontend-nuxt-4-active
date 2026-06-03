@@ -108,7 +108,7 @@ const vip = authStore.user?.vip_level;
       </template>
 
       <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" class="mx-auto max-w-34" />
+        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" class="mx-auto max-w-28" />
       </template>
 
       <template #name>
