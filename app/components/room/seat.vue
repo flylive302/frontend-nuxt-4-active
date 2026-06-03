@@ -117,7 +117,7 @@ const seatGiftTotal = computed(() => {
 
     </div>
 
-    <div class="backdrop-blur-xl rounded-xl w-fit max-w-full px-2">
+    <div class="backdrop-blur-xl rounded-xl w-fit max-w-full px-2 bg-neutral-950/30">
       <MarqueeName
           text-class="text-xs font-semibold text-center drop-shadow-lg leading-none"
           :name="displayName"
