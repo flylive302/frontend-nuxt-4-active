@@ -15,7 +15,7 @@ export default defineNuxtConfig({
         inlineStyles: false,
     },
     css: ['~/assets/css/main.css'],
-    modules: ['@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+    modules: ['@sentry/nuxt/module', '@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     pwa: pwaConfig,
     components: [
         { path: '~/components/common', pathPrefix: false },
@@ -141,6 +141,12 @@ export default defineNuxtConfig({
             reverbPort: process.env.NUXT_PUBLIC_REVERB_PORT || '8080',
             reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
             vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+            sentry: {
+                dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
+                environment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || 'production',
+                // CF_PAGES_COMMIT_SHA is set automatically by Cloudflare Pages at build time
+                release: process.env.NUXT_PUBLIC_SENTRY_RELEASE || process.env.CF_PAGES_COMMIT_SHA || '',
+            },
         }
     },
 })
