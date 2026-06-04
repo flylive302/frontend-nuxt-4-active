@@ -4,9 +4,8 @@
  * Progressively preloads all VIP-level animation assets into their
  * respective plugin caches (SVGA plugin for .svga, VAP plugin for .mp4).
  *
- * Reads asset URLs from the centralized ASSETS.VIP constant so
- * each level gets the correct file type — .svga for VIP 1-2,
- * .mp4 for VIP 3-15.
+ * Reads asset URLs from bootstrapStore.vipLevels so the URLs stay in
+ * sync with the backend without a separate constants block.
  *
  * Priority order: active level → adjacent levels → remaining.
  */
@@ -14,7 +13,6 @@ import type { VipLevel } from '~/types/vip/vip-level'
 import type { SvgaPlugin } from '~/types/asset/svga'
 import type { VapPlugin } from '~/types/asset/vap'
 import type { Ref } from 'vue'
-import { ASSETS } from '~/constants/assets'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[VipAssetPreloader]')
@@ -40,8 +38,8 @@ interface UseVipAssetPreloaderReturn {
  * Preload all VIP animation assets into their respective plugin caches.
  *
  * For each VIP level, preloads:
- * - cardAnimated: .svga → SVGA plugin cache, .mp4 → VAP JSON config cache
- * - emblemAnimated: always .svga → SVGA plugin cache
+ * - card_animated_url: .svga → SVGA plugin cache, .mp4 → VAP JSON config cache
+ * - emblem_animated_url: always .svga → SVGA plugin cache
  *
  * @param levels      - Reactive list of VIP levels
  * @param activeIndex - Index of the currently viewed level (priority ordering)
@@ -60,6 +58,7 @@ export function useVipAssetPreloader(
   }
 
   const nuxtApp = useNuxtApp()
+  const bootstrapStore = useBootstrapStore()
   const isPreloading = ref(false)
   const preloadedCount = ref(0)
   const totalCount = ref(0)
@@ -94,26 +93,25 @@ export function useVipAssetPreloader(
 
   /**
    * Get the asset URLs to preload for a given VIP level number.
-   * Reads from ASSETS.VIP to get the correct file type per level.
+   * Reads from bootstrapStore.vipLevels to get the correct URLs per level.
    */
   function getAssetsForLevel(levelNum: number): { url: string, type: 'svga' | 'vap' }[] {
-    const levelAssets = ASSETS.VIP[levelNum as keyof typeof ASSETS.VIP]
-    if (!levelAssets) return []
+    const bootstrapLevel = bootstrapStore.vipLevels.find(l => l.level === levelNum)
+    if (!bootstrapLevel) return []
 
     const assets: { url: string, type: 'svga' | 'vap' }[] = []
 
-    // Card animation — can be .svga or .mp4
-    if (levelAssets.cardAnimated) {
-      if (levelAssets.cardAnimated.endsWith('.svga')) {
-        assets.push({ url: levelAssets.cardAnimated, type: 'svga' })
-      } else if (levelAssets.cardAnimated.endsWith('.mp4')) {
-        assets.push({ url: levelAssets.cardAnimated, type: 'vap' })
+    if (bootstrapLevel.card_animated_url) {
+      const url = bootstrapLevel.card_animated_url
+      if (url.endsWith('.svga')) {
+        assets.push({ url, type: 'svga' })
+      } else if (url.endsWith('.mp4')) {
+        assets.push({ url, type: 'vap' })
       }
     }
 
-    // Emblem animation — always .svga
-    if (levelAssets.emblemAnimated) {
-      assets.push({ url: levelAssets.emblemAnimated, type: 'svga' })
+    if (bootstrapLevel.emblem_animated_url) {
+      assets.push({ url: bootstrapLevel.emblem_animated_url, type: 'svga' })
     }
 
     return assets

@@ -319,7 +319,13 @@ export function useBootstrapAssets(routePath?: string) {
     })
 
     assetDownloader.onComplete(() => {
-      assetStore.setPhase('complete')
+      if (assetStore.failedTotal === 0) {
+        assetStore.setPhase('complete')
+      } else if (assetStore.completedCount === 0) {
+        assetStore.setPhase('error')
+      } else {
+        assetStore.setPhase('partial')
+      }
     })
 
     assetDownloader.onItemResult((url, priority, succeeded) => {
@@ -386,6 +392,25 @@ export function useBootstrapAssets(routePath?: string) {
     assetDownloader.start()
   }
 
+  /**
+   * Re-enqueue only the non-critical assets that exhausted retries, then reset the failure tracking.
+   * Uses the full asset queue to recover original metadata (assetType, scope, priority).
+   */
+  async function retryFailedAssets(): Promise<void> {
+    const failedSet = new Set(assetStore.failedUrls.map(normalizeUrl))
+    if (failedSet.size === 0) return
+
+    assetStore.resetNonCriticalFailures()
+    assetStore.setPhase('downloading')
+
+    const allItems = buildAssetQueue()
+    const retryItems = allItems.filter((item) => failedSet.has(normalizeUrl(item.url)))
+    if (retryItems.length === 0) return
+
+    await assetDownloader.enqueue(retryItems)
+    assetDownloader.start()
+  }
+
   function pause(): void {
     assetDownloader.pause()
   }
@@ -399,6 +424,7 @@ export function useBootstrapAssets(routePath?: string) {
     enqueueAsset,
     invalidateAsset,
     retryFailedCriticals,
+    retryFailedAssets,
     pause,
     resume,
   }

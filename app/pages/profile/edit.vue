@@ -467,63 +467,64 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
 
       <!-- Asset Management Section -->
       <div class="mt-6">
-        <h3 class="text-lg font-semibold text-white mb-3">Asset Management</h3>
-        
-        <div class="rounded-lg bg-neutral-900 p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800">
-                <UIcon 
-                  :name="assetStatusIcon" 
-                  :class="['h-5 w-5', assetStatusIconColor, assetStore.isDownloading ? 'animate-spin' : '']" 
-                />
-              </div>
-              <div>
-                <p class="font-medium text-white">{{ assetStatusTitle }}</p>
-                <p class="text-sm text-neutral-400">
-                  {{ assetStore.completedCount }} / {{ assetStore.totalCount }} assets
-                </p>
-              </div>
-            </div>
-            <UButton 
-              variant="outline" 
-              color="neutral"
-              icon="i-lucide-settings"
-              size="sm"
-              @click="showAssetModal = true"
-            >
-              Manage
-            </UButton>
-          </div>
-          
-          <!-- Progress bar when downloading -->
-          <div v-if="assetStore.isDownloading" class="mt-3">
-            <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
-              <div
-                class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out"
-                :style="{ width: `${assetStore.downloadPercent}%` }"
-              />
-            </div>
-            <p class="mt-1 text-xs text-neutral-500">
-              {{ assetStore.downloadPercent }}% complete
-            </p>
-          </div>
+<!--        <h3 class="text-lg font-semibold text-white mb-3">Asset Management</h3>-->
 
-        </div>
+<!--        <div class="rounded-lg bg-neutral-900 p-4">-->
+<!--          -->
+<!--          <div class="flex items-center justify-between">-->
+<!--            <div class="flex items-center gap-3">-->
+<!--              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800">-->
+<!--                <UIcon-->
+<!--                  :name="assetStatusIcon"-->
+<!--                  :class="['h-5 w-5', assetStatusIconColor, assetStore.isDownloading ? 'animate-spin' : '']"-->
+<!--                />-->
+<!--              </div>-->
+<!--              <div>-->
+<!--                <p class="font-medium text-white">{{ assetStatusTitle }}</p>-->
+<!--                <p class="text-sm text-neutral-400">-->
+<!--                  {{ assetStore.completedCount }} / {{ assetStore.totalCount }} assets-->
+<!--                </p>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--            <UButton-->
+<!--              variant="outline"-->
+<!--              color="neutral"-->
+<!--              icon="i-lucide-settings"-->
+<!--              size="sm"-->
+<!--              @click="showAssetModal = true"-->
+<!--            >-->
+<!--              Manage-->
+<!--            </UButton>-->
+<!--          </div>-->
+
+<!--          &lt;!&ndash; Progress bar when downloading &ndash;&gt;-->
+<!--          <div v-if="assetStore.isDownloading" class="mt-3">-->
+<!--            <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">-->
+<!--              <div-->
+<!--                class="h-full bg-linear-to-r from-primary to-secondary transition-all duration-300 ease-out"-->
+<!--                :style="{ width: `${assetStore.downloadPercent}%` }"-->
+<!--              />-->
+<!--            </div>-->
+<!--            <p class="mt-1 text-xs text-neutral-500">-->
+<!--              {{ assetStore.downloadPercent }}% complete-->
+<!--            </p>-->
+<!--          </div>-->
+
+<!--        </div>-->
         <!-- Blocked Users -->
         <UButton
-          class="w-full justify-center mt-4"
+          class="w-full justify-center"
           icon="i-lucide-ban"
           size="xl"
           variant="subtle"
           color="neutral"
           @click="openBlockList"
         >
-          Blocked Users
+          Blocked Users List
         </UButton>
 
         <UButton
-            class="w-full justify-center mt-2"
+            class="w-full justify-center mt-22"
             icon="i-lucide-power-off"
             size="xl"
             variant="subtle"

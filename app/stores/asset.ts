@@ -17,7 +17,7 @@ export const useAssetStore = defineStore('asset', () => {
   // ========================================
 
   /** Asset download phase */
-  const phase = ref<'idle' | 'downloading' | 'complete' | 'error'>('idle')
+  const phase = ref<'idle' | 'downloading' | 'complete' | 'partial' | 'error'>('idle')
 
   /** Download progress tracking */
   const progress = ref<DownloadProgress | null>(null)
@@ -72,6 +72,9 @@ export const useAssetStore = defineStore('asset', () => {
 
   /** Check if all assets are downloaded */
   const isComplete = computed(() => phase.value === 'complete')
+
+  /** Check if download finished with some failures */
+  const isPartial = computed(() => phase.value === 'partial')
 
   /** Count of cached/completed assets */
   const completedCount = computed(() => progress.value?.completed ?? 0)
@@ -158,6 +161,12 @@ export const useAssetStore = defineStore('asset', () => {
     failedUrls.value = []
   }
 
+  /** Reset non-critical failure tracking when the modal retry is triggered */
+  function resetNonCriticalFailures(): void {
+    failedTotal.value = 0
+    failedUrls.value = []
+  }
+
   /** Reset only critical failure tracking for the retry flow — leaves failedUrls/failedTotal intact */
   function resetCriticalFailures(): void {
     criticalFailed.value = 0
@@ -202,6 +211,7 @@ export const useAssetStore = defineStore('asset', () => {
     // Computed
     isDownloading,
     isComplete,
+    isPartial,
     completedCount,
     totalCount,
     downloadPercent,
@@ -220,6 +230,7 @@ export const useAssetStore = defineStore('asset', () => {
     setHasDegradedAssets,
     setShowDownloadGate,
     resetFailedUrls,
+    resetNonCriticalFailures,
     resetCriticalFailures,
     reset,
   }

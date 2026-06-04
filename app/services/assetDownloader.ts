@@ -345,7 +345,8 @@ function extractHttpStatus(message: string): number | null {
 }
 
 function captureDownloadFailure(item: DownloadQueueItem, error: Error): void {
-  Sentry.captureException(error, {
+  const httpStatus = extractHttpStatus(error.message)
+  const extras = {
     tags: {
       asset_scope: item.scope,
       asset_priority: item.priority,
@@ -357,11 +358,18 @@ function captureDownloadFailure(item: DownloadQueueItem, error: Error): void {
         scope: item.scope,
         priority: item.priority,
         retryCount: item.retryCount,
-        httpStatus: extractHttpStatus(error.message),
+        httpStatus,
         errorMessage: error.message,
       },
     },
-  })
+  }
+  // 5xx = transient CDN/infra failure; report as warning, not an alertable error
+  if (httpStatus !== null && httpStatus >= 500) {
+    Sentry.captureMessage(error.message, { level: 'warning', ...extras })
+  }
+  else {
+    Sentry.captureException(error, extras)
+  }
 }
 
 function handleError(item: DownloadQueueItem, error: Error): void {

@@ -19,7 +19,7 @@ async function handleRetry(): Promise<void> {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-neutral-950 px-8">
+  <div class="fixed inset-0 z-60 flex flex-col items-center justify-center bg-neutral-950 px-8">
     <!-- Ambient background glows -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <div class="bg-primary/15 absolute -top-24 left-1/2 size-72 -translate-x-1/2 rounded-full blur-3xl animate-pulse" />
@@ -39,7 +39,7 @@ async function handleRetry(): Promise<void> {
           <!-- Spinning progress ring -->
           <div
             class="border-primary absolute inset-0 animate-spin rounded-full border-4 border-t-transparent border-r-transparent border-b-transparent"
-            style="animation-duration: 1.2s"
+            style="animation-duration: 0.3s"
           />
           <!-- Center icon -->
           <div class="absolute inset-3 flex items-center justify-center rounded-full bg-neutral-900">

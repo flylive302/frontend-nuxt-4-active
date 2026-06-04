@@ -54,7 +54,7 @@ const statusText = computed(() => {
       <!-- Progress Bar -->
       <div class="h-1 w-full bg-neutral-800">
         <div
-          class="h-full bg-linear-to-r from-primary to-secondary transition-all duration-300 ease-out"
+          class="h-full bg-linear-to-r from-primary to-secondary transition-all duration-100 ease-out"
           :style="{ width: `${percentComplete}%` }"
         />
       </div>

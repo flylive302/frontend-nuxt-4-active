@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
+import { ASSETS, vipUIAssetBase } from '~/constants/assets'
 // ========================================
 // VIP Page
 // ========================================
@@ -44,6 +44,7 @@ const PROP_PRIVILEGE_KEYS = new Set([
 // ========================================
 
 const { currentLevel, isVip, expiresAt, fetchLevels, purchaseVip, giftVip, fetchRechargeProgress, normalizeError } = useVip()
+const bootstrapStore = useBootstrapStore()
 
 // ========================================
 // State
@@ -305,19 +306,25 @@ onUnmounted(() => {
   cleanupCongrats?.()
 })
 
-const url = computed(() => {
-  const level = activeLevel.value?.level;
-  if (!level) return '';
-  return ASSETS.VIP[level as keyof typeof ASSETS.VIP]?.cardAnimated || '';
-})
+const bootstrapVipLevel = computed(() =>
+  activeLevel.value
+    ? (bootstrapStore.vipLevels.find(l => l.level === activeLevel.value!.level) ?? null)
+    : null
+)
 
-const isSvga = computed(() => {
-  return url.value.endsWith('.svga')
-})
+const flagUrl = computed(() =>
+  activeLevel.value ? `${vipUIAssetBase(activeLevel.value.level)}/flag.png` : ''
+)
 
-const isVap = computed(() => {
-  return url.value.endsWith('.mp4')
-})
+const emblemAnimatedUrl = computed(() =>
+  bootstrapVipLevel.value?.emblem_animated_url ?? ''
+)
+
+const url = computed(() => bootstrapVipLevel.value?.card_animated_url ?? '')
+
+const isSvga = computed(() => url.value.endsWith('.svga'))
+
+const isVap = computed(() => url.value.endsWith('.mp4'))
 </script>
 
 <template>
@@ -351,13 +358,13 @@ v-if="isVip"
 
         <NuxtImg :src="ASSETS.VIP_BACKGROUND" :alt="`VIP Background`" class="absolute inset-0 z-0" />
         <NuxtImg
-:src="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.flag" :alt="`VIP Flag`"
+:src="flagUrl" :alt="`VIP Flag`"
           class="relative z-20 mx-auto mt-12 max-w-3/4" />
 
         <div class="relative z-20 mx-auto -mt-52 max-w-36">
           <SvgaPlayer
             :key="`vip-emblem-${activeLevel?.level}`"
-            :name="ASSETS.VIP[activeLevel?.level as keyof typeof ASSETS.VIP]?.emblemAnimated"
+            :name="emblemAnimatedUrl"
           />
         </div>
 

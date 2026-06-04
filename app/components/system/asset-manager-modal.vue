@@ -7,7 +7,7 @@
 // Composables / Stores
 // ========================================
 
-const { startAssetDownload } = useBootstrapAssets()
+const { startAssetDownload, retryFailedAssets } = useBootstrapAssets()
 const assetStore = useAssetStore()
 const bootstrapStore = useBootstrapStore()
 
@@ -44,6 +44,7 @@ const isOpen = computed({
 const statusIcon = computed(() => {
   if (assetStore.isDownloading) return 'i-lucide-loader-2'
   if (assetStore.isComplete) return 'i-lucide-check-circle'
+  if (assetStore.isPartial) return 'i-lucide-alert-circle'
   return 'i-lucide-download'
 })
 
@@ -53,6 +54,7 @@ const statusIcon = computed(() => {
 const statusIconColor = computed(() => {
   if (assetStore.isDownloading) return 'text-primary'
   if (assetStore.isComplete) return 'text-success'
+  if (assetStore.isPartial) return 'text-warning'
   return 'text-neutral-400'
 })
 
@@ -62,6 +64,7 @@ const statusIconColor = computed(() => {
 const statusTitle = computed(() => {
   if (assetStore.isDownloading) return 'Downloading Assets...'
   if (assetStore.isComplete) return 'All Assets Downloaded'
+  if (assetStore.isPartial) return 'Download Partially Complete'
   if (assetStore.phase === 'error') return 'Download Error'
   return 'Asset Status'
 })
@@ -75,6 +78,10 @@ const statusDescription = computed(() => {
   }
   if (assetStore.isComplete) {
     return 'All animation assets are cached and ready. No need for re-downloading.'
+  }
+  if (assetStore.isPartial) {
+    const n = assetStore.failedTotal
+    return `${n} asset${n === 1 ? '' : 's'} failed to download. Tap below to retry.`
   }
   if (assetStore.phase === 'error') {
     return assetStore.error ?? 'An error occurred during download.'
@@ -97,6 +104,11 @@ const showStartButton = computed(() => {
   return assetStore.phase === 'idle' && bootstrapStore.giftCatalog.length > 0
 })
 
+/**
+ * Whether to show the retry failed assets button.
+ */
+const showRetryButton = computed(() => assetStore.failedTotal > 0 && !assetStore.isDownloading)
+
 // ========================================
 // Actions
 // ========================================
@@ -108,6 +120,10 @@ function handleClose(): void {
 function handleStartDownload(): void {
   startAssetDownload()
 }
+
+function handleRetry(): void {
+  retryFailedAssets()
+}
 </script>
 
 <template>
@@ -117,12 +133,12 @@ function handleStartDownload(): void {
         <!-- Header -->
         <div class="flex items-start justify-between mb-4">
           <div class="flex items-center gap-3">
-            <div 
+            <div
               class="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-800"
             >
-              <UIcon 
-                :name="statusIcon" 
-                :class="['h-6 w-6', statusIconColor, assetStore.isDownloading ? 'animate-spin' : '']" 
+              <UIcon
+                :name="statusIcon"
+                :class="['h-6 w-6', statusIconColor, assetStore.isDownloading ? 'animate-spin' : '']"
               />
             </div>
             <div>
@@ -130,7 +146,12 @@ function handleStartDownload(): void {
                 {{ statusTitle }}
               </h3>
               <p class="text-sm text-neutral-400">
-                {{ assetStore.completedCount }} / {{ assetStore.totalCount }} assets
+                <template v-if="assetStore.failedTotal > 0">
+                  {{ assetStore.completedCount }} succeeded / {{ assetStore.failedTotal }} failed / {{ assetStore.totalCount }} total
+                </template>
+                <template v-else>
+                  {{ assetStore.completedCount }} / {{ assetStore.totalCount }} assets
+                </template>
               </p>
             </div>
           </div>
@@ -163,6 +184,16 @@ function handleStartDownload(): void {
 
         <!-- Actions -->
         <div class="flex flex-col gap-2">
+          <UButton
+            v-if="showRetryButton"
+            block
+            color="warning"
+            icon="i-lucide-refresh-cw"
+            @click="handleRetry"
+          >
+            Retry failed assets
+          </UButton>
+
           <UButton
             v-if="showStartButton"
             block

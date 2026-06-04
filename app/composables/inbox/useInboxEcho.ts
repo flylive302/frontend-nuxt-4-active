@@ -11,6 +11,8 @@ export function useInboxEcho() {
   const { $echo } = useNuxtApp()
   const store = useInboxStore()
   const authStore = useAuthStore()
+  const toast = useToast()
+  const { fetchThreads } = useInboxActions()
 
   function subscribe(): void {
     const userId = authStore.user?.id
@@ -34,7 +36,6 @@ export function useInboxEcho() {
         store.bumpThreadUnread(tid, msg.content, msg.sentAt)
         // If thread not in store (e.g. was deleted), refetch thread list
         if (!store.threadById(tid)) {
-          const { fetchThreads } = useInboxActions()
           fetchThreads()
         }
       }
@@ -70,8 +71,6 @@ export function useInboxEcho() {
     }) => {
       store.bumpOfficialUnread()
 
-      // Show a toast notification
-      const toast = useToast()
       toast.add({
         title: 'FlyLive',
         description: payload.content?.substring(0, 80) || 'New official message',
