@@ -6,12 +6,38 @@
 
 import type { AssetManifestItem } from '~/constants/assetManifest'
 import { MANUAL_ASSET_MANIFEST, PAGE_ASSET_MANIFESTS } from '~/constants/assetManifest'
-import type { AssetScope, EnqueueItem, EnqueueOptions, AssetInvalidatePayload } from '~/types/asset/asset'
+import type { AssetScope, AssetPriority, EnqueueItem, EnqueueOptions, AssetInvalidatePayload } from '~/types/asset/asset'
+import { ASSET_CONFIG } from '~/constants/asset'
 import * as assetDownloader from '~/services/assetDownloader'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { resolveVideoUrl } from '~/utils/platform'
+import { createLogger } from '~/utils/logger'
 
+const log = createLogger('[BootstrapAssets]')
+
+const R2_ORIGIN = 'https://assets.flyliveapp.com'
+
+const PROP_TYPE_PRIORITY: Partial<Record<string, AssetPriority>> = {
+  frame: 'critical',
+  entry_animation: 'critical',
+  chat_bubble: 'high',
+  mice_wave: 'high',
+  data_card: 'normal',
+  slides: 'normal',
+}
+
+function isR2Url(url: string): boolean {
+  return url.startsWith(R2_ORIGIN)
+}
+
+function propAssetType(url: string): 'svga' | 'video' {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.svga') ? 'svga' : 'video'
+  } catch {
+    return url.toLowerCase().endsWith('.svga') ? 'svga' : 'video'
+  }
+}
 
 function normalizeUrl(url: string): string {
   try {
@@ -49,6 +75,8 @@ function isHomePath(path: string): boolean {
 export function useBootstrapAssets() {
   const bootstrapStore = useBootstrapStore()
   const assetStore = useAssetStore()
+  const mallStore = useMallStore()
+  const authStore = useAuthStore()
   const route = useRoute()
 
   function getRouteScope(): AssetScope | null {
@@ -108,6 +136,70 @@ export function useBootstrapAssets() {
     return items
   }
 
+  function getVipAnimatedAssets(): AssetManifestItem[] {
+    const items: AssetManifestItem[] = []
+    const levels = bootstrapStore.vipLevels ?? []
+    const ownLevel = authStore.user?.vip_level ?? 0
+
+    for (const level of levels) {
+      const priority = level.level === ownLevel ? 'critical' : 'high'
+
+      if (level.card_animated_url) {
+        items.push({
+          url: level.card_animated_url,
+          assetType: propAssetType(level.card_animated_url),
+          scope: 'vip',
+          priority,
+          groupKey: 'bootstrap-vip',
+        })
+      }
+
+      if (level.emblem_animated_url) {
+        items.push({
+          url: level.emblem_animated_url,
+          assetType: propAssetType(level.emblem_animated_url),
+          scope: 'vip',
+          priority,
+          groupKey: 'bootstrap-vip',
+        })
+      }
+    }
+
+    return items
+  }
+
+  function getFeaturedRoomAssets(): AssetManifestItem[] {
+    const rooms = bootstrapStore.featuredRooms ?? []
+    const items: AssetManifestItem[] = []
+    for (const room of rooms) {
+      if (!room.background) continue
+      items.push({
+        url: room.background,
+        assetType: 'image',
+        scope: 'global',
+        priority: 'low',
+        groupKey: 'featured-rooms',
+      })
+    }
+    return items
+  }
+
+  function getBootstrapPropAssets(): AssetManifestItem[] {
+    const items: AssetManifestItem[] = []
+    for (const prop of Object.values(mallStore.propIndex)) {
+      if (!prop.asset_url) continue
+      if (!isR2Url(prop.asset_url)) continue
+      items.push({
+        url: prop.asset_url,
+        assetType: propAssetType(prop.asset_url),
+        scope: 'mall',
+        priority: PROP_TYPE_PRIORITY[prop.type] ?? 'normal',
+        groupKey: 'bootstrap-props',
+      })
+    }
+    return items
+  }
+
   function buildAssetQueue(options?: { giftBootstrapVideosOnly?: boolean }): EnqueueItem[] {
     const giftVideosOnly = options?.giftBootstrapVideosOnly === true
     const skipGiftVideos = !giftVideosOnly && isHomePath(route.path)
@@ -117,7 +209,10 @@ export function useBootstrapAssets() {
       : [
           ...MANUAL_ASSET_MANIFEST,
           ...getBootstrapAssets({ skipGiftVideos }),
+          ...getBootstrapPropAssets(),
+          ...getVipAnimatedAssets(),
           ...getPageAssets(),
+          ...getFeaturedRoomAssets(),
         ]
 
     const seen = new Set<string>()
@@ -150,6 +245,53 @@ export function useBootstrapAssets() {
     await cacheStorage.initCacheStorage()
     await assetIndex.initAssetIndex()
 
+    if (!options?.giftBootstrapVideosOnly) {
+      const evictStaleAssets = async () => {
+        try {
+          const stale = await assetIndex.getStale(ASSET_CONFIG.STALE_DAYS)
+          for (const entry of stale) {
+            await cacheStorage.deleteAsset(entry.url)
+            await assetIndex.remove(entry.url)
+          }
+        } catch (e) {
+          log.warn('Stale asset eviction failed', e)
+        }
+      }
+
+      // Evict indexed entries whose URLs no longer appear in the current catalog.
+      // Runs after initAssetIndex() but does not block buildAssetQueue() or download start.
+      // Includes all page manifests (not just current route) to avoid churn on navigation.
+      const evictCatalogRemovals = async () => {
+        try {
+          const catalogUrls = new Set([
+            ...MANUAL_ASSET_MANIFEST,
+            ...Object.values(PAGE_ASSET_MANIFESTS).flat(),
+            ...getBootstrapAssets(),
+            ...getBootstrapPropAssets(),
+            ...getVipAnimatedAssets(),
+            ...getFeaturedRoomAssets(),
+          ].map((i) => normalizeUrl(i.url)))
+          const indexed = await assetIndex.getAllByPriority()
+          for (const entry of indexed) {
+            if (!catalogUrls.has(entry.url)) {
+              await cacheStorage.deleteAsset(entry.url)
+              await assetIndex.remove(entry.url)
+            }
+          }
+        } catch (e) {
+          log.warn('Catalog-diff eviction failed', e)
+        }
+      }
+
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => { evictStaleAssets() })
+        requestIdleCallback(() => { evictCatalogRemovals() })
+      } else if (typeof window !== 'undefined') {
+        setTimeout(() => { evictStaleAssets() }, 0)
+        setTimeout(() => { evictCatalogRemovals() }, 0)
+      }
+    }
+
     const items = buildAssetQueue({ giftBootstrapVideosOnly: options?.giftBootstrapVideosOnly })
     if (items.length === 0) {
       if (!options?.giftBootstrapVideosOnly) {
@@ -176,9 +318,19 @@ export function useBootstrapAssets() {
       assetStore.setPhase('complete')
     })
 
+    assetDownloader.onItemResult((url, priority, succeeded) => {
+      if (succeeded) {
+        if (priority === 'critical') assetStore.markCriticalSucceeded()
+      } else {
+        assetStore.markFailed(url)
+        if (priority === 'critical') assetStore.markCriticalFailed(url)
+      }
+    })
+
     assetStore.setPhase('downloading')
 
     await assetDownloader.enqueue(items)
+    assetStore.setCriticalTotal(assetDownloader.getCriticalQueuedCount())
 
     assetDownloader.start()
   }
@@ -210,6 +362,26 @@ export function useBootstrapAssets() {
 
   }
 
+  /**
+   * Re-enqueue only the critical assets that exhausted retries.
+   * Rebuilds their metadata from the current bootstrap data to get the correct
+   * assetType/scope without guessing from the URL. Does NOT touch criticalTotal
+   * (the gate's denominator stays fixed). Resets only the critical failure tracking.
+   */
+  async function retryFailedCriticals(): Promise<void> {
+    const failedSet = new Set(assetStore.criticalFailedUrls.map(normalizeUrl))
+    if (failedSet.size === 0) return
+
+    assetStore.resetCriticalFailures()
+
+    const allItems = buildAssetQueue()
+    const retryItems = allItems.filter((item) => failedSet.has(normalizeUrl(item.url)))
+    if (retryItems.length === 0) return
+
+    await assetDownloader.enqueue(retryItems)
+    assetDownloader.start()
+  }
+
   function pause(): void {
     assetDownloader.pause()
   }
@@ -222,6 +394,7 @@ export function useBootstrapAssets() {
     startAssetDownload,
     enqueueAsset,
     invalidateAsset,
+    retryFailedCriticals,
     pause,
     resume,
   }

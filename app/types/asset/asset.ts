@@ -20,7 +20,7 @@ export type AssetPriority = 'critical' | 'high' | 'normal' | 'low'
  * Logical asset scope/category.
  * Used to group manual/page assets without creating separate pipelines.
  */
-export type AssetScope = 'gift' | 'badge' | 'mall' | 'wallet' | 'global' | 'manual'
+export type AssetScope = 'gift' | 'badge' | 'mall' | 'wallet' | 'global' | 'manual' | 'vip'
 
 /**
  * Download status for queue items.

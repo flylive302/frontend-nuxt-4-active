@@ -21,6 +21,9 @@ export const ASSET_CONFIG = {
   /** Maximum concurrent downloads (HTTP/2 supports 6+ parallel streams) */
   MAX_CONCURRENT: 6,
 
+  /** Maximum concurrent downloads on metered/slow connections (2G, save-data) */
+  MAX_CONCURRENT_METERED: 2,
+
   /** Maximum retry attempts per download */
   MAX_RETRIES: 2,
 

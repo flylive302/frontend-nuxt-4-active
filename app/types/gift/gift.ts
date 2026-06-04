@@ -28,6 +28,7 @@ export interface Gift {
   category: GiftCategory;
   rarity: GiftRarity;
   sort_order: number;
+  is_critical: boolean;
 }
 
 /**

@@ -4,6 +4,7 @@
 
 import type {
   AssetMetadata,
+  AssetPriority,
   DownloadProgress,
   DownloadQueueItem,
   EnqueueItem,
@@ -12,6 +13,7 @@ import type {
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
+import { getNetworkInfo } from '~/services/networkDetector'
 
 
 // ========================================
@@ -37,9 +39,14 @@ let progress: DownloadProgress = {
 /** Subscriptions */
 type ProgressCallback = (progress: DownloadProgress) => void
 type CompleteCallback = () => void
+type ItemResultCallback = (url: string, priority: AssetPriority, succeeded: boolean) => void
 
 const progressCallbacks = new Set<ProgressCallback>()
 const completeCallbacks = new Set<CompleteCallback>()
+const itemResultCallbacks = new Set<ItemResultCallback>()
+
+/** Tracks critical-priority items actually pushed to the queue (post cache-filter) */
+let criticalQueued = 0
 
 /** Flow control */
 let isPaused = false
@@ -95,6 +102,7 @@ export async function enqueue(items: EnqueueItem[]): Promise<void> {
     }
 
     queue.push(queueItem)
+    if (item.priority === 'critical') criticalQueued++
   }
 
   queue.sort((a, b) => {
@@ -162,6 +170,8 @@ export function resetAll(): void {
   }
   progressCallbacks.clear()
   completeCallbacks.clear()
+  itemResultCallbacks.clear()
+  criticalQueued = 0
   isPaused = false
   isProcessing = false
 }
@@ -186,6 +196,14 @@ export function resume(): void {
   void processQueue()
 }
 
+function getEffectiveConcurrency(): number {
+  const { effectiveType, saveData } = getNetworkInfo()
+  if (effectiveType === '2g' || effectiveType === 'slow-2g' || saveData) {
+    return ASSET_CONFIG.MAX_CONCURRENT_METERED
+  }
+  return ASSET_CONFIG.MAX_CONCURRENT
+}
+
 async function processQueue(): Promise<void> {
   if (isPaused) return
 
@@ -195,8 +213,10 @@ async function processQueue(): Promise<void> {
     return
   }
 
+  const maxConcurrent = getEffectiveConcurrency()
+
   while (
-      activeDownloads.size < ASSET_CONFIG.MAX_CONCURRENT &&
+      activeDownloads.size < maxConcurrent &&
       queue.length > 0 &&
       !isPaused
       ) {
@@ -313,6 +333,7 @@ function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {
   if (sizeBytes) {
     progress.bytesDownloaded += sizeBytes
   }
+  notifyItemResult(item.url, item.priority, true)
   notifyProgress()
   void processQueue()
 }
@@ -331,6 +352,7 @@ function handleError(item: DownloadQueueItem, error: Error): void {
   item.status = 'failed'
   item.error = error.message
   progress.failed++
+  notifyItemResult(item.url, item.priority, false)
   notifyProgress()
   void processQueue()
 }
@@ -349,6 +371,12 @@ export function onComplete(callback: CompleteCallback): () => void {
   return () => completeCallbacks.delete(callback)
 }
 
+/** Subscribe to per-item success/failure events (fires only on retry exhaustion for failures). */
+export function onItemResult(callback: ItemResultCallback): () => void {
+  itemResultCallbacks.add(callback)
+  return () => itemResultCallbacks.delete(callback)
+}
+
 function notifyProgress(): void {
   progressCallbacks.forEach((cb) => cb({ ...progress }))
 }
@@ -357,12 +385,21 @@ function notifyComplete(): void {
   completeCallbacks.forEach((cb) => cb())
 }
 
+function notifyItemResult(url: string, priority: AssetPriority, succeeded: boolean): void {
+  itemResultCallbacks.forEach((cb) => cb(url, priority, succeeded))
+}
+
 // ========================================
 // Getters
 // ========================================
 
 export function getProgress(): DownloadProgress {
   return { ...progress }
+}
+
+/** Number of critical-priority items actually pushed to the queue this session (post cache-filter). */
+export function getCriticalQueuedCount(): number {
+  return criticalQueued
 }
 
 export function isDownloading(): boolean {

@@ -58,4 +58,6 @@ export interface UpdateProfilePayload {
   date_of_birth?: string
   country?: string
   is_follow_list_public?: boolean
+  terms_accepted_at?: true
+  privacy_policy_accepted_at?: true
 }

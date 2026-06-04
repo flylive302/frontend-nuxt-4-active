@@ -41,7 +41,7 @@ export function useBootstrapInit() {
    * EXECUTE: Fetch and seed stores
    * REACT: Start asset downloads (via caller)
    */
-  async function init(): Promise<BootstrapConfig | null> {
+  async function init(options?: { freshAuth?: boolean }): Promise<BootstrapConfig | null> {
     // Capture route synchronously before any await — calling useRoute() after an
     // await can land in a middleware execution context and trigger a Nuxt warning.
     const route = useRoute()
@@ -64,7 +64,11 @@ export function useBootstrapInit() {
     // GATE — check freshness
     if (!bootstrapStore.needsRefresh) {
       // Still schedule asset downloads — may have new items since last boot
-      scheduleAssetDownload(route)
+      if (options?.freshAuth) {
+        startAssetDownload()
+      } else {
+        scheduleAssetDownload(route)
+      }
       return null
     }
 
@@ -87,8 +91,13 @@ export function useBootstrapInit() {
       trackBootstrapFailed(bootstrapStore.error ?? 'Unknown error')
     }
 
-    // REACT — defer asset downloads to idle time, never block rendering
-    scheduleAssetDownload(route)
+    // REACT — fresh auth (registration/OAuth): start immediately so the profile wizard's
+    // interaction time is used as free download time. Returning users stay idle-deferred.
+    if (options?.freshAuth) {
+      startAssetDownload()
+    } else {
+      scheduleAssetDownload(route)
+    }
 
     return data
   }

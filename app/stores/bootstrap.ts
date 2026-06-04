@@ -6,7 +6,9 @@
 import { defineStore } from 'pinia'
 import type {
   BootstrapConfig,
+  FeaturedRoom,
   LevelConfig,
+  VipLevel,
 } from '~/types/user/bootstrap'
 import type { Gift } from '~/types/gift/gift'
 import type { Badge } from "~/types/progression/badge";
@@ -34,7 +36,9 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   const roomLevels = ref<LevelConfig[] | null>([]);
   const badges = ref<Badge[] | null>([]);
   const gifts = ref<Gift[] | null>([]);
-  const vapid_public_key = ref<string | null>();
+  const vapid_public_key = ref<string | null>()
+  const vipLevels = ref<VipLevel[]>([])
+  const featuredRooms = ref<FeaturedRoom[]>([]);
 
   /** Gift catalog (accumulates as user scrolls) */
   const giftCatalog = ref<Gift[]>([])
@@ -98,6 +102,13 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   )
 
   /**
+   * VIP levels sorted by level ascending.
+   */
+  const sortedVipLevels = computed(() =>
+    [...vipLevels.value].sort((a, b) => a.level - b.level)
+  )
+
+  /**
    * Persistent set of gift IDs for O(1) deduplication.
    */
   const giftIdSet = computed(() => new Set(giftCatalog.value.map(g => g.id)))
@@ -136,6 +147,8 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     badges.value = newConfig.badges
     gifts.value = newConfig.gifts
     vapid_public_key.value = newConfig.vapid_public_key
+    vipLevels.value = newConfig.vip_levels ?? []
+    featuredRooms.value = newConfig.featured_rooms ?? []
   }
 
   /**
@@ -175,6 +188,8 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     badges.value = null
     gifts.value = null
     vapid_public_key.value = null
+    vipLevels.value = []
+    featuredRooms.value = []
   }
 
   /**
@@ -222,6 +237,8 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     roomLevels,
     badges,
     vapid_public_key,
+    vipLevels,
+    featuredRooms,
     lastBootstrapAt,
 
     // Getters
@@ -232,6 +249,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     sortedWealthLevels,
     sortedCharmLevels,
     sortedRoomLevels,
+    sortedVipLevels,
 
     // Setters
     setPhase,
@@ -256,6 +274,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       'roomLevels',
       'badges',
       'vapid_public_key',
+      'vipLevels',
       'lastBootstrapAt'
     ],
   },

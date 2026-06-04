@@ -72,6 +72,10 @@ export interface BootstrapUser {
   vip_level: number             // 0 = no VIP, 1-8 = VIP level // No need
   vip_expires_at: string | null // ISO 8601 // NO need
 
+  // Consent
+  terms_accepted_at: string | null          // ISO 8601
+  privacy_policy_accepted_at: string | null // ISO 8601
+
   // Profile
   is_profile_complete: boolean
   is_follow_list_public: boolean
@@ -213,6 +217,8 @@ export interface BootstrapConfig {
   gifts: Gift[]
   vapid_public_key: string | null
   props: BootstrapProp[]
+  vip_levels: VipLevel[]
+  featured_rooms: FeaturedRoom[]
 }
 
 /**
@@ -225,5 +231,24 @@ export interface BootstrapProp {
   type: string
   thumbnail_url: string
   asset_url: string
+}
+
+/**
+ * VIP level animated asset URLs from bootstrap config.
+ */
+export interface VipLevel {
+  id: number
+  level: number
+  card_animated_url: string | null
+  emblem_animated_url: string | null
+}
+
+/**
+ * Minimal room shape for background pre-warming.
+ * Seeded from bootstrap; null background is included (frontend skips null URLs).
+ */
+export interface FeaturedRoom {
+  id: number
+  background: string | null
 }
 

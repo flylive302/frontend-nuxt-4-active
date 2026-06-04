@@ -36,17 +36,15 @@ export default defineNuxtPlugin(() => {
     )
   }
 
-  // When a user logs in or registers mid-session, the plugin has already run
-  // with no token. This watcher catches the null → token transition and starts
-  // the asset download so gifts/badges preload during the onboarding flow.
+  // When a user registers or completes OAuth mid-session, the plugin has already run
+  // with no token. This watcher catches the null → token transition, triggers bootstrap
+  // immediately, and lets init()'s REACT step call startAssetDownload() directly so
+  // the profile wizard's 30–60 s of interaction is used as free download time.
   watch(
     () => authStore.token,
     (token, prevToken) => {
       if (token && !prevToken) {
-        const schedule = typeof requestIdleCallback !== 'undefined'
-          ? requestIdleCallback
-          : (cb: () => void) => setTimeout(cb, 100)
-        schedule(() => startAssetDownload())
+        void init({ freshAuth: true })
       }
     },
   )

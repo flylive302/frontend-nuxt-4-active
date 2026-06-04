@@ -9,6 +9,7 @@ import type { Gift } from '~/types/gift/gift';
 defineProps<{
   gifts: Gift[];
   selectedGiftId?: number;
+  selectedGiftReadiness?: 'idle' | 'checking' | 'ready' | 'error';
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +26,7 @@ const emit = defineEmits<{
       :key="gift.id"
       :gift="gift"
       :selected="selectedGiftId === gift.id"
+      :readiness="selectedGiftId === gift.id ? selectedGiftReadiness : undefined"
       @click="emit('select', gift)"
     />
 

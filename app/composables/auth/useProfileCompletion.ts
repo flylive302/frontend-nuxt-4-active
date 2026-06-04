@@ -72,6 +72,9 @@ export function useProfileCompletion() {
   // Missing-field detection (business rules)
   // ========================================
 
+  const needsConsent = computed(() =>
+    authStore.user?.terms_accepted_at == null || authStore.user?.privacy_policy_accepted_at == null
+  )
   const needsGender = computed(() => authStore.user?.gender == null)
   const needsEmail = computed(() => !authStore.user?.email)
   const needsDateOfBirth = computed(() => !authStore.user?.date_of_birth)
@@ -79,7 +82,7 @@ export function useProfileCompletion() {
   const needsAvatar = computed(() => !authStore.user?.avatar)
 
   const hasMissingFields = computed(() =>
-    needsGender.value || needsEmail.value || needsDateOfBirth.value
+    needsConsent.value || needsGender.value || needsEmail.value || needsDateOfBirth.value
   )
 
   // ========================================
@@ -131,6 +134,8 @@ export function useProfileCompletion() {
   // ========================================
 
   interface ProfileCompletionFormState {
+    termsAccepted: boolean
+    privacyAccepted: boolean
     gender: number | undefined
     email: string
     dateOfBirth: DateValue | null
@@ -138,6 +143,8 @@ export function useProfileCompletion() {
   }
 
   const formState = reactive<ProfileCompletionFormState>({
+    termsAccepted: false,
+    privacyAccepted: false,
     gender: undefined,
     email: '',
     dateOfBirth: null,
@@ -249,6 +256,12 @@ export function useProfileCompletion() {
   function buildProfileUpdatePayload(): UpdateProfilePayload {
     const payload: UpdateProfilePayload = {}
 
+    if (needsConsent.value && formState.termsAccepted) {
+      payload.terms_accepted_at = true
+    }
+    if (needsConsent.value && formState.privacyAccepted) {
+      payload.privacy_policy_accepted_at = true
+    }
     if (needsGender.value && formState.gender !== undefined) {
       payload.gender = formState.gender
     }
@@ -317,6 +330,7 @@ export function useProfileCompletion() {
     userSignature: computed(() => authStore.user?.signature ?? ''),
 
     // Missing-field flags
+    needsConsent,
     needsGender,
     needsEmail,
     needsDateOfBirth,

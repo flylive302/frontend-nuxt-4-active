@@ -14,6 +14,7 @@ import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
 import { resolveVideoUrl } from '~/utils/platform'
+import { WORKBOX_CACHES } from '~/constants/asset'
 
 const log = createLogger('[GiftAssetCache]')
 
@@ -206,4 +207,42 @@ export function getCacheStats(): { videoCount: number; pendingCount: number; pre
     pendingCount: videoPending.size,
     preloadedGiftCount: preloadedGiftIds.size,
   }
+}
+
+/**
+ * Check whether a gift's playable asset is confirmed in cache.
+ *
+ * - Fast path: preloadedGiftIds (current session, covers all animation types including svga)
+ * - image: checks thumbnail_url in the Workbox cdn-images cache
+ * - svga: L1 preloadedGiftIds is the only readiness signal — no persistent cache
+ * - video/vap: checks L1 memory cache then cacheStorage (flylive-assets-v1)
+ */
+export async function isGiftAssetCached(
+  gift: { id?: number; asset_type: string; animation_url: string | null; thumbnail_url: string },
+): Promise<boolean> {
+  // L1 fast path: preloaded in this session (synchronous, all animation types)
+  if (gift.id !== undefined && preloadedGiftIds.has(gift.id)) return true
+
+  if (gift.asset_type === 'image') {
+    if (typeof caches === 'undefined') return false
+    try {
+      const cache = await caches.open(WORKBOX_CACHES.CDN_IMAGES)
+      const response = await cache.match(gift.thumbnail_url)
+      return response !== undefined
+    } catch {
+      return false
+    }
+  }
+
+  if (!gift.animation_url) return false
+
+  if (gift.asset_type === 'svga') return false
+
+  const url = resolveVideoUrl(gift.animation_url)
+
+  // L1: memory cache (synchronous — avoids async Cache Storage round-trip)
+  if (videoCache.has(url)) return true
+
+  // L2: persistent Cache Storage
+  return cacheStorage.hasAsset(url)
 }

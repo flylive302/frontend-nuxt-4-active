@@ -13,7 +13,7 @@ const EventsBanners = defineAsyncComponent(() => import('~/components/events/ban
 
 definePageMeta({
   layout: 'home',
-  middleware: 'auth'
+  middleware: ['auth', 'critical-assets'],
 })
 
 const bannerAutoplay = ref<{ delay: number } | undefined>({ delay: BANNER_AUTOPLAY_DELAY_MS })

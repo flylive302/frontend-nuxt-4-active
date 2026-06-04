@@ -34,7 +34,7 @@ vi.mock('~/utils/logger', () => ({
 }))
 
 // Mock dependent services — must use vi.hoisted() since vi.mock is hoisted
-const { mockCacheStorage, mockAssetIndex } = vi.hoisted(() => ({
+const { mockCacheStorage, mockAssetIndex, mockNetworkDetector } = vi.hoisted(() => ({
   mockCacheStorage: {
     hasAsset: vi.fn().mockResolvedValue(false),
     putAsset: vi.fn().mockResolvedValue(undefined),
@@ -46,10 +46,19 @@ const { mockCacheStorage, mockAssetIndex } = vi.hoisted(() => ({
     get: vi.fn().mockResolvedValue(null),
     remove: vi.fn().mockResolvedValue(undefined),
   },
+  mockNetworkDetector: {
+    getNetworkInfo: vi.fn().mockReturnValue({
+      isOnline: true,
+      connectionType: 'unknown',
+      effectiveType: 'unknown',
+      saveData: false,
+    }),
+  },
 }))
 
 vi.mock('~/services/cacheStorage', () => mockCacheStorage)
 vi.mock('~/services/assetIndex', () => mockAssetIndex)
+vi.mock('~/services/networkDetector', () => mockNetworkDetector)
 
 // Mock fetch
 const mockFetch = vi.fn()
@@ -104,6 +113,12 @@ describe('assetDownloader', () => {
     vi.clearAllMocks()
     resetAll()
     setupSuccessfulFetch()
+    mockNetworkDetector.getNetworkInfo.mockReturnValue({
+      isOnline: true,
+      connectionType: 'unknown',
+      effectiveType: 'unknown',
+      saveData: false,
+    })
     // No service worker by default
     Object.defineProperty(navigator, 'serviceWorker', {
       value: { controller: null },
@@ -407,6 +422,143 @@ describe('assetDownloader', () => {
     it('should return correct count after enqueue', async () => {
       await enqueue(sampleItems)
       expect(getQueueLength()).toBe(2)
+    })
+  })
+
+  // ========================================
+  // Adaptive Concurrency
+  // ========================================
+
+  describe('adaptive concurrency', () => {
+    it('should cap concurrent downloads at MAX_CONCURRENT_METERED on 2G', async () => {
+      mockNetworkDetector.getNetworkInfo.mockReturnValue({
+        isOnline: true,
+        connectionType: 'cellular',
+        effectiveType: '2g',
+        saveData: false,
+      })
+
+      let concurrentCount = 0
+      let peakConcurrent = 0
+
+      mockFetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            concurrentCount++
+            peakConcurrent = Math.max(peakConcurrent, concurrentCount)
+            setTimeout(() => {
+              concurrentCount--
+              resolve({
+                ok: true,
+                blob: vi.fn().mockResolvedValue(new Blob(['x'])),
+                headers: { get: vi.fn().mockReturnValue('1') },
+              })
+            }, 30)
+          }),
+      )
+
+      const items: EnqueueItem[] = Array.from({ length: 6 }, (_, i) => ({
+        url: `https://example.com/slow-asset${i}.webm`,
+        assetType: 'video' as const,
+        priority: 'normal' as const,
+        scope: 'global' as const,
+      }))
+
+      await enqueue(items)
+
+      const completeCb = vi.fn()
+      onComplete(completeCb)
+      start()
+
+      await vi.waitFor(() => expect(completeCb).toHaveBeenCalled(), { timeout: 5000 })
+
+      expect(peakConcurrent).toBeGreaterThan(0)
+      expect(peakConcurrent).toBeLessThanOrEqual(2)
+    })
+
+    it('should use full MAX_CONCURRENT on normal connections', async () => {
+      // Default mock returns 'unknown' effectiveType → no cap
+      let concurrentCount = 0
+      let peakConcurrent = 0
+
+      mockFetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            concurrentCount++
+            peakConcurrent = Math.max(peakConcurrent, concurrentCount)
+            setTimeout(() => {
+              concurrentCount--
+              resolve({
+                ok: true,
+                blob: vi.fn().mockResolvedValue(new Blob(['x'])),
+                headers: { get: vi.fn().mockReturnValue('1') },
+              })
+            }, 30)
+          }),
+      )
+
+      const items: EnqueueItem[] = Array.from({ length: 6 }, (_, i) => ({
+        url: `https://example.com/fast-asset${i}.webm`,
+        assetType: 'video' as const,
+        priority: 'normal' as const,
+        scope: 'global' as const,
+      }))
+
+      await enqueue(items)
+
+      const completeCb = vi.fn()
+      onComplete(completeCb)
+      start()
+
+      await vi.waitFor(() => expect(completeCb).toHaveBeenCalled(), { timeout: 5000 })
+
+      expect(peakConcurrent).toBeGreaterThan(2)
+    })
+
+    it('should cap at MAX_CONCURRENT_METERED when saveData is true', async () => {
+      mockNetworkDetector.getNetworkInfo.mockReturnValue({
+        isOnline: true,
+        connectionType: 'cellular',
+        effectiveType: '4g',
+        saveData: true,
+      })
+
+      let concurrentCount = 0
+      let peakConcurrent = 0
+
+      mockFetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            concurrentCount++
+            peakConcurrent = Math.max(peakConcurrent, concurrentCount)
+            setTimeout(() => {
+              concurrentCount--
+              resolve({
+                ok: true,
+                blob: vi.fn().mockResolvedValue(new Blob(['x'])),
+                headers: { get: vi.fn().mockReturnValue('1') },
+              })
+            }, 30)
+          }),
+      )
+
+      const items: EnqueueItem[] = Array.from({ length: 6 }, (_, i) => ({
+        url: `https://example.com/savedata-asset${i}.webm`,
+        assetType: 'video' as const,
+        priority: 'normal' as const,
+        scope: 'global' as const,
+      }))
+
+      await enqueue(items)
+
+      const completeCb = vi.fn()
+      onComplete(completeCb)
+      start()
+
+      await vi.waitFor(() => expect(completeCb).toHaveBeenCalled(), { timeout: 5000 })
+
+      expect(peakConcurrent).toBeGreaterThan(0)
+      expect(peakConcurrent).toBeLessThanOrEqual(2)
     })
   })
 })

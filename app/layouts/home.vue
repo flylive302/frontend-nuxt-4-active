@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const assetStore = useAssetStore()
+const { hasDegradedAssets } = storeToRefs(assetStore)
 </script>
 
 <template>
@@ -10,6 +12,14 @@
     <NavHome />
 
     <div class="h-16"/>
+
+    <div
+      v-if="hasDegradedAssets"
+      class="flex items-center gap-2 bg-yellow-500/10 px-4 py-2.5 text-sm text-yellow-400"
+    >
+      <UIcon name="i-lucide-triangle-alert" class="size-4 shrink-0" />
+      <span>Some assets couldn't load — visuals in rooms may be missing.</span>
+    </div>
 
     <slot />
 

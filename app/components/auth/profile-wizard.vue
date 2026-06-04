@@ -10,7 +10,7 @@ import { CalendarDate } from '@internationalized/date'
 import { GENDER_MALE, GENDER_FEMALE } from '~/composables/auth/useProfileCompletion'
 
 const {
-  needsGender, needsDateOfBirth, needsEmail, needsAvatar,
+  needsConsent, needsGender, needsDateOfBirth, needsEmail, needsAvatar,
   formState, GENDER_OPTIONS,
   avatarUrl, isUploadingAvatar, handleAvatarSelected,
   isSubmitting, generalError, submitWizardData,
@@ -20,7 +20,7 @@ const {
 // ── Step computation ──────────────────────────────
 // Snapshot on mount — prevents steps from vanishing when a field
 // is filled mid-flow (e.g. avatar upload updates the store immediately).
-type StepId = 'gender' | 'dob' | 'email' | 'avatar'
+type StepId = 'consent' | 'gender' | 'dob' | 'email' | 'avatar'
 interface Step { id: StepId; label: string }
 
 const steps = ref<Step[]>([])
@@ -31,6 +31,7 @@ const isLastStep = computed(() => stepIndex.value === steps.value.length - 1)
 
 // ── Step titles ──────────────────────────────
 const stepTitles: Record<StepId, string> = {
+  consent: 'Before we begin',
   gender: 'Your gender?',
   dob: 'When were you born?',
   email: 'What\'s your email?',
@@ -62,6 +63,7 @@ const stepError = ref('')
 const canProceed = computed(() => {
   if (!currentStep.value) return false
   switch (currentStep.value.id) {
+    case 'consent': return formState.termsAccepted && formState.privacyAccepted
     case 'gender': return formState.gender !== undefined
     case 'dob': return !!formState.dateOfBirth
     case 'email': return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)
@@ -122,6 +124,7 @@ async function handleContinue() {
 onMounted(() => {
   // Snapshot which steps are needed (prevents reactive shifts mid-flow)
   const s: Step[] = []
+  if (needsConsent.value) s.push({ id: 'consent', label: 'Agreements' })
   if (needsGender.value) s.push({ id: 'gender', label: 'Gender' })
   if (needsDateOfBirth.value) s.push({ id: 'dob', label: 'Date of Birth' })
   if (needsEmail.value) s.push({ id: 'email', label: 'Email' })
@@ -176,6 +179,38 @@ async function onAvatarFileSelected(file: File) {
 
     <!-- Step content (view-transition target) -->
     <div v-if="currentStep" class="wizard-content flex-1 flex flex-col items-center" style="view-transition-name: wizard-step">
+
+      <!-- ═══ Consent Step ═══ -->
+      <template v-if="currentStep.id === 'consent'">
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.consent }}</h1>
+        <p class="text-sm text-neutral-400 text-center mb-8">Please review and accept our agreements to continue</p>
+
+        <div class="flex flex-col gap-4 w-full max-w-88 mx-auto">
+          <label class="flex items-start gap-3 cursor-pointer p-4 rounded-2xl border border-neutral-700 bg-neutral-900 transition-colors" :class="{ 'border-primary-500 bg-neutral-800': formState.termsAccepted }">
+            <input
+              v-model="formState.termsAccepted"
+              type="checkbox"
+              class="mt-0.5 size-5 accent-primary-500 cursor-pointer flex-shrink-0"
+            >
+            <span class="text-sm text-neutral-300 leading-relaxed">
+              I agree to the
+              <a href="/terms-of-service" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2">Terms of Service</a>
+            </span>
+          </label>
+
+          <label class="flex items-start gap-3 cursor-pointer p-4 rounded-2xl border border-neutral-700 bg-neutral-900 transition-colors" :class="{ 'border-primary-500 bg-neutral-800': formState.privacyAccepted }">
+            <input
+              v-model="formState.privacyAccepted"
+              type="checkbox"
+              class="mt-0.5 size-5 accent-primary-500 cursor-pointer flex-shrink-0"
+            >
+            <span class="text-sm text-neutral-300 leading-relaxed">
+              I agree to the
+              <a href="/privacy-policy" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2">Privacy Policy</a>
+            </span>
+          </label>
+        </div>
+      </template>
 
       <!-- ═══ Gender Step ═══ -->
       <template v-if="currentStep.id === 'gender'">

@@ -16,6 +16,7 @@ import { formatCurrency } from '~/utils/currency';
 import { useGiftData } from "~/composables/gift/useGiftData";
 import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";
+import { useGiftReadiness } from "~/composables/gift/useGiftReadiness";
 import { GIFT_QUANTITY_OPTIONS, COMBO_BUTTON_TIMEOUT_MS } from "~/constants/gift";
 
 // Quantity options for select (mutable array for USelect compatibility)
@@ -28,9 +29,12 @@ const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo } = useGiftSending();
 const { handleCombo } = useGiftPlayback();
+const { readinessState } = useGiftReadiness(computed(() => giftStore.selectedGift));
 
 const { haptic } = useHaptics();
 useGiftRecipientSync();
+
+const isSelectedGiftReady = computed(() => readinessState.value === 'ready');
 
 // Track drawer open state
 const isOpen = ref(false);
@@ -281,7 +285,7 @@ async function doLuckySend(): Promise<void> {
         <!-- Category Tabs with Gift Grid -->
         <RoomGiftCategoryTabs :categories="giftsByCategory">
           <template #content="{ item }">
-            <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id" @select="handleSelectGift" />
+            <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id" :selected-gift-readiness="readinessState" @select="handleSelectGift" />
           </template>
         </RoomGiftCategoryTabs>
 
@@ -339,7 +343,7 @@ async function doLuckySend(): Promise<void> {
                   " />
                 <!-- Send Button -->
                 <UButton
-:disabled="!canSend || isSending" :loading="isSending" size="sm" trailing-icon="i-lucide-send"
+:disabled="!canSend || isSending || !isSelectedGiftReady" :loading="isSending" size="sm" trailing-icon="i-lucide-send"
                   @click="handleSend">
                   Send
                 </UButton>

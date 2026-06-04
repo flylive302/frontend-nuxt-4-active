@@ -321,4 +321,165 @@ describe('giftAssetCache', () => {
       expect(stats.preloadedGiftCount).toBe(0)
     })
   })
+
+  // ========================================
+  // isGiftAssetCached
+  // ========================================
+
+  describe('isGiftAssetCached', () => {
+    let mockCacheMatch: ReturnType<typeof vi.fn>
+    let mockCacheOpen: ReturnType<typeof vi.fn>
+
+    afterEach(() => {
+      // Prevent global.caches from leaking into non-image tests
+      delete (global as Record<string, unknown>).caches
+    })
+
+    function setupImageCache(response: Response | undefined): void {
+      mockCacheMatch = vi.fn().mockResolvedValue(response)
+      mockCacheOpen = vi.fn().mockResolvedValue({ match: mockCacheMatch })
+      ;(global as Record<string, unknown>).caches = { open: mockCacheOpen }
+    }
+
+    it('returns true for video when cacheStorage.hasAsset returns true', async () => {
+      mockCacheStorage.hasAsset.mockResolvedValueOnce(true)
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'video',
+        animation_url: 'https://example.com/gift.webm',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(true)
+      expect(mockCacheStorage.hasAsset).toHaveBeenCalledWith('https://example.com/gift.webm')
+    })
+
+    it('returns false for video when cacheStorage.hasAsset returns false', async () => {
+      mockCacheStorage.hasAsset.mockResolvedValueOnce(false)
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'video',
+        animation_url: 'https://example.com/gift.webm',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(false)
+    })
+
+    it('returns true for svga when preloaded in this session (L1)', async () => {
+      // preloadSvga calls fetch but doesn't inspect the response — resolve is enough
+      mockFetch.mockResolvedValueOnce({})
+
+      await giftAssetCache.preloadGift({
+        id: 42,
+        asset_type: 'svga',
+        animation_url: 'https://example.com/gift.svga',
+      })
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        id: 42,
+        asset_type: 'svga',
+        animation_url: 'https://example.com/gift.svga',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(true)
+      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
+    })
+
+    it('returns false for svga when not yet preloaded', async () => {
+      const result = await giftAssetCache.isGiftAssetCached({
+        id: 999,
+        asset_type: 'svga',
+        animation_url: 'https://example.com/gift.svga',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(false)
+      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
+    })
+
+    it('returns true for vap when cacheStorage.hasAsset returns true', async () => {
+      mockCacheStorage.hasAsset.mockResolvedValueOnce(true)
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'vap',
+        animation_url: 'https://example.com/gift.mp4',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(true)
+      expect(mockCacheStorage.hasAsset).toHaveBeenCalledWith('https://example.com/gift.mp4')
+    })
+
+    it('returns false for non-image type when animation_url is null', async () => {
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'video',
+        animation_url: null,
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(false)
+      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
+    })
+
+    it('returns true for image when thumbnail is in cdn-images cache', async () => {
+      setupImageCache(new Response())
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'image',
+        animation_url: null,
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(true)
+      expect(mockCacheOpen).toHaveBeenCalledWith('cdn-images')
+      expect(mockCacheMatch).toHaveBeenCalledWith('https://cdn.example.com/thumb.jpg')
+      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
+    })
+
+    it('returns false for image when thumbnail is not in cdn-images cache', async () => {
+      setupImageCache(undefined)
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'image',
+        animation_url: null,
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(false)
+    })
+
+    it('returns false for image when caches is unavailable (SSR)', async () => {
+      // caches is not set (deleted in afterEach already, but confirm SSR path)
+      delete (global as Record<string, unknown>).caches
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'image',
+        animation_url: null,
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(false)
+    })
+
+    it('returns true from L1 without hitting L2 (cacheStorage.hasAsset)', async () => {
+      // Prime L1 via preloadVideo
+      const blob = new Blob(['video'])
+      mockCacheStorage.getAsset.mockResolvedValueOnce(null)
+      mockFetch.mockResolvedValueOnce({ ok: true, blob: vi.fn().mockResolvedValue(blob) })
+      await giftAssetCache.preloadVideo('https://example.com/primed.webm')
+
+      mockCacheStorage.hasAsset.mockClear()
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        asset_type: 'video',
+        animation_url: 'https://example.com/primed.webm',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(true)
+      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
+    })
+  })
 })
