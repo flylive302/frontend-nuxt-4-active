@@ -20,5 +20,6 @@ export function propToEntryAnimationGift(prop: BootstrapProp): Gift {
     category: 'normal',
     rarity: 'common',
     sort_order: 0,
+    is_critical: false,
   }
 }

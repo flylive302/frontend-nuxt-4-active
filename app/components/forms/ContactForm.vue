@@ -20,7 +20,7 @@ const CATEGORY_OPTIONS = [
   { label: 'Password Reset', value: 'password_reset' },
 { label: 'Feature Request', value: 'feature_request' },
   { label: 'Other', value: 'other' },
-] as const
+]
 
 const formRef = ref<Form<ContactSupportFormData> | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)

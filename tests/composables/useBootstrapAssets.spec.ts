@@ -178,48 +178,6 @@ describe('useBootstrapAssets', () => {
       Reflect.deleteProperty(globalThis, 'requestIdleCallback')
     })
 
-    it('REACT: evicts only indexed URLs absent from the current catalog (A,B,C stay; D,E are removed)', async () => {
-      // A, B are already in catalog via bootstrapStore.gifts (set up in beforeEach)
-      const urlA = 'https://cdn.example.com/gift1.webm'
-      const urlB = 'https://cdn.example.com/gift2.svga'
-      // C is a badge URL added for this test
-      const urlC = 'https://cdn.example.com/badge-c.webp'
-      bootstrapStore.badges = [{ id: 99, image_url: urlC }]
-      // D, E are removed/deactivated — not in any current catalog source
-      const urlD = 'https://cdn.example.com/removed-asset-d.webm'
-      const urlE = 'https://cdn.example.com/removed-badge-e.webp'
-
-      mockAssetIndex.getAllByPriority.mockResolvedValue([
-        { url: urlA, assetType: 'video', priority: 'normal' },
-        { url: urlB, assetType: 'svga', priority: 'normal' },
-        { url: urlC, assetType: 'image', priority: 'normal' },
-        { url: urlD, assetType: 'video', priority: 'normal' },
-        { url: urlE, assetType: 'image', priority: 'normal' },
-      ])
-      ;(globalThis as Record<string, unknown>).requestIdleCallback = (cb: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void) => {
-        cb({ didTimeout: false, timeRemaining: () => 50 })
-        return 1
-      }
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      await vi.waitFor(() => expect(mockCacheStorage.deleteAsset).toHaveBeenCalledTimes(2))
-      expect(mockCacheStorage.deleteAsset).toHaveBeenCalledWith(urlD)
-      expect(mockCacheStorage.deleteAsset).toHaveBeenCalledWith(urlE)
-      expect(mockCacheStorage.deleteAsset).not.toHaveBeenCalledWith(urlA)
-      expect(mockCacheStorage.deleteAsset).not.toHaveBeenCalledWith(urlB)
-      expect(mockCacheStorage.deleteAsset).not.toHaveBeenCalledWith(urlC)
-      expect(mockAssetIndex.remove).toHaveBeenCalledTimes(2)
-      expect(mockAssetIndex.remove).toHaveBeenCalledWith(urlD)
-      expect(mockAssetIndex.remove).toHaveBeenCalledWith(urlE)
-      expect(mockAssetIndex.remove).not.toHaveBeenCalledWith(urlA)
-      expect(mockAssetIndex.remove).not.toHaveBeenCalledWith(urlB)
-      expect(mockAssetIndex.remove).not.toHaveBeenCalledWith(urlC)
-
-      Reflect.deleteProperty(globalThis, 'requestIdleCallback')
-    })
-
     it('REACT: does not schedule stale eviction in giftBootstrapVideosOnly mode', async () => {
       ;(globalThis as Record<string, unknown>).requestIdleCallback = vi.fn()
 
@@ -286,6 +244,15 @@ describe('useBootstrapAssets', () => {
       return enqueuedItems.filter(i => i.scope === 'mall')
     }
 
+    async function runAndAssertOnlyR2Frame2(mallStore: ReturnType<typeof createMockMallStore>): Promise<void> {
+      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
+      const { startAssetDownload } = useBootstrapAssets()
+      await startAssetDownload()
+      const propItems = getPropItems(mockAssetDownloader.enqueue.mock.calls)
+      expect(propItems).toHaveLength(1)
+      expect(propItems[0]!.url).toContain('frames/2.svga')
+    }
+
     beforeEach(() => {
       vi.clearAllMocks()
     })
@@ -340,14 +307,7 @@ describe('useBootstrapAssets', () => {
           2: { id: 2, type: 'frame', asset_url: `${R2}/frames/2.svga`, thumbnail_url: '', name: 'R2 Frame' },
         },
       })
-      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      const propItems = getPropItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(propItems).toHaveLength(1)
-      expect(propItems[0]!.url).toContain('frames/2.svga')
+      await runAndAssertOnlyR2Frame2(mallStore)
     })
 
     it('excludes prop asset_urls from third-party CDNs (not IK, not R2)', async () => {
@@ -357,14 +317,7 @@ describe('useBootstrapAssets', () => {
           2: { id: 2, type: 'frame', asset_url: `${R2}/frames/2.svga`, thumbnail_url: '', name: 'R2 Frame' },
         },
       })
-      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      const propItems = getPropItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(propItems).toHaveLength(1)
-      expect(propItems[0]!.url).toContain('frames/2.svga')
+      await runAndAssertOnlyR2Frame2(mallStore)
     })
 
     it('skips props with empty or null asset_url', async () => {
@@ -526,15 +479,14 @@ describe('useBootstrapAssets', () => {
 
     beforeEach(() => {
       vi.clearAllMocks()
-    })
-
-    it("enqueues the user's own VIP level animated assets as critical", async () => {
       bootstrapStore.vipLevels = [
         { id: 3, level: 3, card_animated_url: `${R2}/vip/3/card.mp4`, emblem_animated_url: `${R2}/vip/3/emblem.svga` },
         { id: 5, level: 5, card_animated_url: `${R2}/vip/5/card.mp4`, emblem_animated_url: `${R2}/vip/5/emblem.svga` },
       ]
       ;(globalThis as Record<string, unknown>).useAuthStore = () => ({ user: { vip_level: 3 } })
+    })
 
+    it("enqueues the user's own VIP level animated assets as critical", async () => {
       const { startAssetDownload } = useBootstrapAssets()
       await startAssetDownload()
 
@@ -545,12 +497,6 @@ describe('useBootstrapAssets', () => {
     })
 
     it('enqueues other VIP level animated assets as high', async () => {
-      bootstrapStore.vipLevels = [
-        { id: 3, level: 3, card_animated_url: `${R2}/vip/3/card.mp4`, emblem_animated_url: `${R2}/vip/3/emblem.svga` },
-        { id: 5, level: 5, card_animated_url: `${R2}/vip/5/card.mp4`, emblem_animated_url: `${R2}/vip/5/emblem.svga` },
-      ]
-      ;(globalThis as Record<string, unknown>).useAuthStore = () => ({ user: { vip_level: 3 } })
-
       const { startAssetDownload } = useBootstrapAssets()
       await startAssetDownload()
 

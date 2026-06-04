@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
       v-if="thread?.participant.id"
       v-model:open="showReportModal"
       reportable-type="user"
-      :reportable-id="thread.participant.id"
+      :reportable-id="Number(thread.participant.id)"
     />
 
     <!-- Delete chat confirm dialog -->

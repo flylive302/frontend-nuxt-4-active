@@ -25,7 +25,7 @@ export const mockLogger = {
 // ========================================
 
 export function createMockBootstrapStore(overrides: Record<string, unknown> = {}) {
-  const defaults = {
+  const base = {
     config: {
       wealth_levels: [
         { level: 1, name: 'Bronze', required_xp: 0, image_url: 'https://example.com/bronze.webp' },
@@ -58,6 +58,7 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
     ] as { level: number; name: string; required_xp: number; image_url: string | null }[],
     vipLevels: [] as { id: number; level: number; card_animated_url: string | null; emblem_animated_url: string | null }[],
     featuredRooms: [] as { id: number; background: string | null }[],
+    badges: [] as { id: number; image_url: string }[],
     getBadgeById: vi.fn((id: number) => ({
       id,
       name: `Badge ${id}`,
@@ -69,9 +70,10 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
     setPhase: vi.fn(),
     setError: vi.fn(),
     setGifts: vi.fn(),
-    ...overrides,
   }
-  return defaults
+  // Spread overrides separately so TypeScript infers the return type from `base`
+  // (spreading Record<string,unknown> inline widens all named property types to unknown)
+  return { ...base, ...overrides } as typeof base
 }
 
 // ========================================

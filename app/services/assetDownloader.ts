@@ -261,20 +261,23 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
         return
       }
 
-      throw new Error(result.error ?? 'SW download failed')
+      handleError(item, new Error(result.error ?? 'SW download failed'))
+      return
     }
 
     const fetchUrl = rewriteR2UrlForDevFetch(item.url)
     const response = await fetch(fetchUrl)
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      handleError(item, new Error(`HTTP ${response.status}`))
+      return
     }
 
     const blob = await response.blob()
 
     const contentLength = response.headers.get('Content-Length')
     if (contentLength && blob.size !== parseInt(contentLength, 10)) {
-      throw new Error('Size mismatch - download may be corrupted')
+      handleError(item, new Error('Size mismatch - download may be corrupted'))
+      return
     }
 
     await cacheStorage.putAsset(item.url, blob)
@@ -341,7 +344,7 @@ function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {
 
 function extractHttpStatus(message: string): number | null {
   const match = /^HTTP (\d{3})/.exec(message)
-  return match ? parseInt(match[1], 10) : null
+  return match ? parseInt(match[1]!, 10) : null
 }
 
 function captureDownloadFailure(item: DownloadQueueItem, error: Error): void {
