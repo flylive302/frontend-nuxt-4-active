@@ -72,15 +72,19 @@ function isHomePath(path: string): boolean {
   return path === '/' || path === ''
 }
 
-export function useBootstrapAssets() {
+export function useBootstrapAssets(routePath?: string) {
   const bootstrapStore = useBootstrapStore()
   const assetStore = useAssetStore()
   const mallStore = useMallStore()
   const authStore = useAuthStore()
-  const route = useRoute()
+  const route = routePath === undefined ? useRoute() : null
+
+  function resolvedPath(): string {
+    return routePath ?? route!.path
+  }
 
   function getRouteScope(): AssetScope | null {
-    const path = route.path
+    const path = resolvedPath()
     if (path.startsWith('/mall')) return 'mall'
     if (path.startsWith('/wallet')) return 'wallet'
     if (path.startsWith('/badges')) return 'badge'
@@ -202,7 +206,7 @@ export function useBootstrapAssets() {
 
   function buildAssetQueue(options?: { giftBootstrapVideosOnly?: boolean }): EnqueueItem[] {
     const giftVideosOnly = options?.giftBootstrapVideosOnly === true
-    const skipGiftVideos = !giftVideosOnly && isHomePath(route.path)
+    const skipGiftVideos = !giftVideosOnly && isHomePath(resolvedPath())
 
     const allItems = giftVideosOnly
       ? getBootstrapAssets({ giftVideosOnly: true })

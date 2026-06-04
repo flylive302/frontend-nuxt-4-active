@@ -25,12 +25,11 @@ function normalizeCacheKey(url: string): string {
   }
 }
 
-export default defineNuxtRouteMiddleware(async () => {
+export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.server) return
 
   const assetStore = useAssetStore()
-  // Capture composable synchronously before any await to stay in the current Vue context
-  const { startAssetDownload } = useBootstrapAssets()
+  const { startAssetDownload } = useBootstrapAssets(to.path)
 
   // Fast path 1: user accepted degraded experience this session
   if (assetStore.hasDegradedAssets) return
