@@ -34,7 +34,7 @@ vi.mock('~/utils/logger', () => ({
 }))
 
 // Mock dependent services — must use vi.hoisted() since vi.mock is hoisted
-const { mockCacheStorage, mockAssetIndex, mockNetworkDetector } = vi.hoisted(() => ({
+const { mockCacheStorage, mockAssetIndex, mockNetworkDetector, mockSentry } = vi.hoisted(() => ({
   mockCacheStorage: {
     hasAsset: vi.fn().mockResolvedValue(false),
     putAsset: vi.fn().mockResolvedValue(undefined),
@@ -54,11 +54,15 @@ const { mockCacheStorage, mockAssetIndex, mockNetworkDetector } = vi.hoisted(() 
       saveData: false,
     }),
   },
+  mockSentry: {
+    captureException: vi.fn(),
+  },
 }))
 
 vi.mock('~/services/cacheStorage', () => mockCacheStorage)
 vi.mock('~/services/assetIndex', () => mockAssetIndex)
 vi.mock('~/services/networkDetector', () => mockNetworkDetector)
+vi.mock('@sentry/nuxt', () => mockSentry)
 
 // Mock fetch
 const mockFetch = vi.fn()
@@ -389,6 +393,80 @@ describe('assetDownloader', () => {
         },
         { timeout: 10000 }
       )
+    })
+  })
+
+  // ========================================
+  // Sentry Capture
+  // ========================================
+
+  describe('Sentry capture on retry exhaustion', () => {
+    it('captures exactly one Sentry event when retries are exhausted', async () => {
+      setupFailingFetch(404)
+
+      await enqueue([sampleItems[0]!])
+      start()
+
+      await vi.waitFor(
+        () => {
+          expect(getProgress().failed).toBe(1)
+        },
+        { timeout: 10000 }
+      )
+
+      expect(mockSentry.captureException).toHaveBeenCalledTimes(1)
+    })
+
+    it('captures with correct context shape, tags, and parsed httpStatus', async () => {
+      setupFailingFetch(404)
+
+      await enqueue([sampleItems[0]!])
+      start()
+
+      await vi.waitFor(
+        () => {
+          expect(getProgress().failed).toBe(1)
+        },
+        { timeout: 10000 }
+      )
+
+      expect(mockSentry.captureException).toHaveBeenCalledWith(
+        expect.any(Error),
+        {
+          tags: {
+            asset_scope: 'global',
+            asset_priority: 'critical',
+          },
+          contexts: {
+            asset_download: {
+              url: 'https://example.com/asset1.webm',
+              assetType: 'video',
+              scope: 'global',
+              priority: 'critical',
+              retryCount: expect.any(Number),
+              httpStatus: 404,
+              errorMessage: 'HTTP 404',
+            },
+          },
+        }
+      )
+    })
+
+    it('sets httpStatus to null for non-HTTP errors', async () => {
+      mockFetch.mockRejectedValue(new Error('Network failure'))
+
+      await enqueue([sampleItems[0]!])
+      start()
+
+      await vi.waitFor(
+        () => {
+          expect(getProgress().failed).toBe(1)
+        },
+        { timeout: 10000 }
+      )
+
+      const [, captureContext] = mockSentry.captureException.mock.calls[0]!
+      expect(captureContext.contexts.asset_download.httpStatus).toBeNull()
     })
   })
 

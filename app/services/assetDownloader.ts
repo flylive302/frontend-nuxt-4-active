@@ -2,6 +2,7 @@
 // Asset Downloader Service
 // ========================================
 
+import * as Sentry from '@sentry/nuxt'
 import type {
   AssetMetadata,
   AssetPriority,
@@ -338,6 +339,31 @@ function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {
   void processQueue()
 }
 
+function extractHttpStatus(message: string): number | null {
+  const match = /^HTTP (\d{3})/.exec(message)
+  return match ? parseInt(match[1], 10) : null
+}
+
+function captureDownloadFailure(item: DownloadQueueItem, error: Error): void {
+  Sentry.captureException(error, {
+    tags: {
+      asset_scope: item.scope,
+      asset_priority: item.priority,
+    },
+    contexts: {
+      asset_download: {
+        url: item.url,
+        assetType: item.assetType,
+        scope: item.scope,
+        priority: item.priority,
+        retryCount: item.retryCount,
+        httpStatus: extractHttpStatus(error.message),
+        errorMessage: error.message,
+      },
+    },
+  })
+}
+
 function handleError(item: DownloadQueueItem, error: Error): void {
   item.retryCount++
   activeDownloads.delete(item.url)
@@ -352,6 +378,7 @@ function handleError(item: DownloadQueueItem, error: Error): void {
   item.status = 'failed'
   item.error = error.message
   progress.failed++
+  captureDownloadFailure(item, error)
   notifyItemResult(item.url, item.priority, false)
   notifyProgress()
   void processQueue()
