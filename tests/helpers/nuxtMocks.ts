@@ -5,20 +5,9 @@
 // used by composable tests. Each test file should call the relevant
 // setup functions before testing.
 
-import { vi } from 'vitest'
-import { ref, computed, reactive, shallowRef } from 'vue'
-import type { Gift } from '~/types/gift/gift'
-
-// ========================================
-// Mock Logger (shared across all tests)
-// ========================================
-
-export const mockLogger = {
-  debug: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  info: vi.fn(),
-}
+import {vi} from 'vitest'
+import {computed, reactive, ref, shallowRef} from 'vue'
+import type {Gift} from '~/types/gift/gift'
 
 // ========================================
 // Bootstrap Store Mock
@@ -81,7 +70,7 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
 // ========================================
 
 export function createMockLevelsStore(overrides: Record<string, unknown> = {}) {
-  const defaults = {
+  return {
     wealthLevel: {
       current_level: 1,
       level_name: 'Bronze',
@@ -89,8 +78,8 @@ export function createMockLevelsStore(overrides: Record<string, unknown> = {}) {
       progress_percentage: 50,
       xp_remaining: 50,
       xp_for_next_level: 100,
-      badge: { id: 101, name: 'Badge 101', image_url: 'https://example.com/badge_101.webp' },
-      next_level: { level: 2, name: 'Silver', required_xp: 100 },
+      badge: {id: 101, name: 'Badge 101', image_url: 'https://example.com/badge_101.webp'},
+      next_level: {level: 2, name: 'Silver', required_xp: 100},
     },
     charmLevel: {
       current_level: 1,
@@ -99,8 +88,8 @@ export function createMockLevelsStore(overrides: Record<string, unknown> = {}) {
       progress_percentage: 50,
       xp_remaining: 100,
       xp_for_next_level: 200,
-      badge: { id: 201, name: 'Badge 201', image_url: 'https://example.com/badge_201.webp' },
-      next_level: { level: 2, name: 'Super Star', required_xp: 200 },
+      badge: {id: 201, name: 'Badge 201', image_url: 'https://example.com/badge_201.webp'},
+      next_level: {level: 2, name: 'Super Star', required_xp: 200},
     },
     loading: false,
     error: null,
@@ -111,7 +100,6 @@ export function createMockLevelsStore(overrides: Record<string, unknown> = {}) {
     reset: vi.fn(),
     ...overrides,
   }
-  return defaults
 }
 
 // ========================================
@@ -119,7 +107,7 @@ export function createMockLevelsStore(overrides: Record<string, unknown> = {}) {
 // ========================================
 
 export function createMockAssetStore(overrides: Record<string, unknown> = {}) {
-  const defaults = {
+  return {
     phase: 'idle' as 'idle' | 'downloading' | 'complete' | 'error',
     progress: null,
     error: null,
@@ -151,7 +139,6 @@ export function createMockAssetStore(overrides: Record<string, unknown> = {}) {
     reset: vi.fn(),
     ...overrides,
   }
-  return defaults
 }
 
 // ========================================
@@ -159,15 +146,14 @@ export function createMockAssetStore(overrides: Record<string, unknown> = {}) {
 // ========================================
 
 export function createMockAuthStore(overrides: Record<string, unknown> = {}) {
-  const defaults = {
+  return {
     token: 'mock-token',
-    user: { id: 1, name: 'Test User', wealth_xp: '0', charm_xp: '0' },
+    user: {id: 1, name: 'Test User', wealth_xp: '0', charm_xp: '0'},
     setToken: vi.fn(),
     setUser: vi.fn(),
     logout: vi.fn(),
     ...overrides,
   }
-  return defaults
 }
 
 // ========================================

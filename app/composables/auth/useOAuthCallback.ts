@@ -52,12 +52,19 @@ export function useOAuthCallback() {
 
     // The api() interceptor reads authStore.token as a fallback when
     // the cookie isn't available yet, so this works in the same tick.
-    const response = await api<{
-      data: BootstrapUser
-    }>('/auth/user')
+    let userData: BootstrapUser | undefined
+    try {
+      const response = await api<{ data: BootstrapUser }>('/auth/user')
+      userData = response?.data
+    } catch {
+      // Backend rejected the token — clear partial auth state rather than
+      // leaving a bad token in the store.
+      authStore.logout()
+      return { success: false, error: 'Sign-in failed. Please try again.', redirectTo: '/log-in' }
+    }
 
-    if (response?.data) {
-      authStore.setUser(response.data)
+    if (userData) {
+      authStore.setUser(userData)
     }
 
     // REACT — success toast

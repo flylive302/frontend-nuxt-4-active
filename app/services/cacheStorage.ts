@@ -66,15 +66,28 @@ export async function putAsset(url: string, blob: Blob): Promise<void> {
   const cache = await getCache()
   if (!cache) return
 
-  const response = new Response(blob, {
-    headers: {
-      'Content-Type': blob.type,
-      'Content-Length': blob.size.toString(),
-      'X-Cached-At': Date.now().toString(),
-    },
-  })
+  const makeResponse = () =>
+    new Response(blob, {
+      headers: {
+        'Content-Type': blob.type,
+        'Content-Length': blob.size.toString(),
+        'X-Cached-At': Date.now().toString(),
+      },
+    })
 
-  await cache.put(url, response)
+  try {
+    await cache.put(url, makeResponse())
+  } catch (e) {
+    // Browser evicted the cache between open and put (mobile storage pressure).
+    // Reset the stale handle and retry once with a freshly opened cache.
+    if (e instanceof DOMException && e.name === 'NotFoundError') {
+      cachePromise = null
+      const fresh = await getCache()
+      if (fresh) await fresh.put(url, makeResponse())
+    } else {
+      throw e
+    }
+  }
 }
 
 /**
