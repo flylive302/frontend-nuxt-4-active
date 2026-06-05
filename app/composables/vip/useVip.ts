@@ -6,7 +6,6 @@ import type {
   VipStatus,
   VipApiResponse,
   VipPurchaseResult,
-  RechargeProgress,
 } from '~/types/vip/vip-level'
 import { useApi } from '../shared/useApi'
 
@@ -103,15 +102,6 @@ export function useVip() {
     return response.data
   }
 
-  /**
-   * Fetch recharge progress for the current user.
-   * @returns Promise resolving to recharge progress data
-   */
-  async function fetchRechargeProgress(): Promise<RechargeProgress> {
-    const response = await api<VipApiResponse<RechargeProgress>>('/vip/recharge-progress')
-    return response.data
-  }
-
   // ========================================
   // Return
   // ========================================
@@ -125,7 +115,6 @@ export function useVip() {
     fetchStatus,
     purchaseVip,
     giftVip,
-    fetchRechargeProgress,
     normalizeError,
   }
 }

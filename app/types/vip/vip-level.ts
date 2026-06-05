@@ -126,48 +126,6 @@ export interface VipGiftedPayload {
 }
 
 // ========================================
-// Recharge Progress Types
-// ========================================
-
-/**
- * Recharge target within an event.
- */
-export interface RechargeTarget {
-  threshold: number
-  vip_level: number
-  vip_name: string
-  time_window_hours: number
-  claimed: boolean
-}
-
-/**
- * Next unclaimed recharge target.
- */
-export interface RechargeNextTarget {
-  threshold: number
-  remaining: number
-  total_recharged: number
-  vip_level: number
-  vip_name: string
-  time_window_hours: number
-  window_started_at: string
-  window_expires_at: string
-}
-
-/**
- * Recharge progress response.
- * Returned by: GET /api/v1/vip/recharge-progress
- */
-export interface RechargeProgress {
-  has_active_event: boolean
-  event_name: string | null
-  event_ends_at: string | null
-  total_recharged: number
-  targets: RechargeTarget[]
-  next_target: RechargeNextTarget | null
-}
-
-// ========================================
 // Display Helpers
 // ========================================
 

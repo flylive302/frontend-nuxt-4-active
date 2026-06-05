@@ -7,13 +7,10 @@ import { ASSETS, vipUIAssetBase } from '~/constants/assets'
 // purchase, gift, prop previews, recharge progress,
 // and congratulations modal.
 
-import type { VipLevel, VipProp, RechargeProgress } from '~/types/vip/vip-level'
+import type { VipLevel, VipProp } from '~/types/vip/vip-level'
 import type { MinimalUser } from '~/types/user/bootstrap'
 import { VIP_PRIVILEGE_LABELS, VIP_PRIVILEGE_ICONS } from '~/types/vip/vip-level'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
-import { createLogger } from '~/utils/logger'
-
-const log = createLogger('[VipPage]')
 
 // ========================================
 // Page Configuration
@@ -43,7 +40,7 @@ const PROP_PRIVILEGE_KEYS = new Set([
 // Composables
 // ========================================
 
-const { currentLevel, isVip, expiresAt, fetchLevels, purchaseVip, giftVip, fetchRechargeProgress, normalizeError } = useVip()
+const { currentLevel, isVip, expiresAt, fetchLevels, purchaseVip, giftVip, normalizeError } = useVip()
 const bootstrapStore = useBootstrapStore()
 
 // ========================================
@@ -58,7 +55,6 @@ const activeIndex = ref(0)
 const isLoadingLevels = ref(true)
 const isPurchasing = ref(false)
 const isGiftModalOpen = ref(false)
-const rechargeProgress = ref<RechargeProgress | null>(null)
 
 // Preload all VIP animation assets (SVGA + VAP) into plugin caches
 useVipAssetPreloader(levels, activeIndex)
@@ -198,15 +194,6 @@ async function loadLevels() {
   }
 }
 
-async function loadRechargeProgress() {
-  try {
-    rechargeProgress.value = await fetchRechargeProgress()
-  }
-  catch (err) {
-    log.warn('Failed to load recharge progress', err)
-  }
-}
-
 // ========================================
 // Handlers
 // ========================================
@@ -286,7 +273,6 @@ function handleCongratsClose() {
 
 onMounted(() => {
   loadLevels()
-  loadRechargeProgress()
 })
 
 // Listen for VIP congrats events from socket
@@ -298,7 +284,6 @@ onMounted(() => {
     isCongratsOpen.value = true
     // Refresh data
     loadLevels()
-    loadRechargeProgress()
   })
 })
 
@@ -378,10 +363,6 @@ v-if="isVip"
 
         <!-- Main Content -->
         <div class="absolute top-30 z-10 max-h-10/12 pb-46 overflow-y-auto">
-          <!-- Recharge Progress -->
-          <div v-if="rechargeProgress?.has_active_event" class="px-10 pt-3">
-            <VipRechargeProgress :progress="rechargeProgress" :level-color="activeLevel.color" />
-          </div>
           <div class="pt-12 px-14">
             <!-- VIP Props Section -->
             <div v-if="activeLevelProps.length > 0" class="px-3">
