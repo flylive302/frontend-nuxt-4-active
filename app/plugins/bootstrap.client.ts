@@ -13,7 +13,7 @@
  */
 export default defineNuxtPlugin(() => {
   const { init } = useBootstrapInit()
-  const { startAssetDownload } = useBootstrapAssets()
+  const { startAssetDownload, pause, resume } = useBootstrapAssets()
   const authStore = useAuthStore()
 
   init()
@@ -21,6 +21,11 @@ export default defineNuxtPlugin(() => {
   // After first paint / LCP, prefetch bootstrap gift videos (multi-MB .webm) so they do not
   // contend with ImageKit on `/` (see useBootstrapAssets home-path skip + second phase).
   if (import.meta.client) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) pause()
+      else resume()
+    })
+
     window.addEventListener(
       'load',
       () => {

@@ -45,8 +45,15 @@ function openDatabase(): Promise<IDBDatabase> {
     }
 
     request.onsuccess = () => {
-
-      resolve(request.result)
+      const db = request.result
+      db.onversionchange = () => {
+        db.close()
+        dbPromise = null
+      }
+      db.onclose = () => {
+        dbPromise = null
+      }
+      resolve(db)
     }
 
     request.onerror = () => {
@@ -62,8 +69,16 @@ function openDatabase(): Promise<IDBDatabase> {
  */
 async function getStore(mode: IDBTransactionMode): Promise<IDBObjectStore> {
   const db = await openDatabase()
-  const tx = db.transaction(ASSET_CONFIG.IDB_STORE, mode)
-  return tx.objectStore(ASSET_CONFIG.IDB_STORE)
+  try {
+    return db.transaction(ASSET_CONFIG.IDB_STORE, mode).objectStore(ASSET_CONFIG.IDB_STORE)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'InvalidStateError') {
+      dbPromise = null
+      const freshDb = await openDatabase()
+      return freshDb.transaction(ASSET_CONFIG.IDB_STORE, mode).objectStore(ASSET_CONFIG.IDB_STORE)
+    }
+    throw e
+  }
 }
 
 /**
@@ -99,8 +114,12 @@ export async function initAssetIndex(): Promise<void> {
  * Insert or update asset metadata.
  */
 export async function upsert(metadata: AssetMetadata): Promise<void> {
-  const store = await getStore('readwrite')
-  await promisifyRequest(store.put(metadata))
+  try {
+    const store = await getStore('readwrite')
+    await promisifyRequest(store.put(metadata))
+  } catch (e) {
+    log.warn('Failed to upsert asset metadata', e)
+  }
 }
 
 /**
