@@ -1,7 +1,7 @@
 // Mirrors GET /api/v1/missions/recharge/{timeframe}
 // Backend: app/Http/Controllers/Api/V1/Mission/MissionProgressController.php
 
-export type MilestoneState = 'locked' | 'claimable'
+export type MilestoneState = 'locked' | 'claimable' | 'claimed'
 
 export type RewardType = 'prop' | 'badge' | 'vip' | 'coins'
 

@@ -5,7 +5,7 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import type { MissionProgressResponse } from '~/types/mission/recharge'
+import type { MilestoneState, MissionProgressResponse } from '~/types/mission/recharge'
 
 export const useMissionStore = defineStore('mission', () => {
   // ========================================
@@ -32,6 +32,12 @@ export const useMissionStore = defineStore('mission', () => {
     dailyProgress.value = data
   }
 
+  function setMilestoneState(milestoneId: number, state: MilestoneState): void {
+    if (!dailyProgress.value) return
+    const milestone = dailyProgress.value.milestones.find(m => m.id === milestoneId)
+    if (milestone) milestone.state = state
+  }
+
   return {
     isLoading: readonly(isLoading),
     error: readonly(error),
@@ -39,5 +45,6 @@ export const useMissionStore = defineStore('mission', () => {
     setLoading,
     setError,
     setDailyProgress,
+    setMilestoneState,
   }
 })

@@ -11,14 +11,16 @@ import type { ResolvedRewardAsset } from '~/utils/mission/resolveRewardAsset'
 const props = defineProps<{
   milestone: MilestoneProgress
   netVolume: number
+  timeframe: string
 }>()
 
 // ========================================
-// Stores (read-only for display)
+// Stores + actions
 // ========================================
 
 const mallStore = useMallStore()
 const bootstrapStore = useBootstrapStore()
+const { claimMilestone, claimingMilestoneId } = useMissionActions()
 
 // ========================================
 // Modal state
@@ -36,6 +38,18 @@ const progressPercent = computed(() => {
 })
 
 const isClaimable = computed(() => props.milestone.state === 'claimable')
+
+const isClaiming = computed(() => claimingMilestoneId.value === props.milestone.id)
+
+const buttonLabel = computed(() => {
+  if (props.milestone.state === 'claimed') return 'Received'
+  if (props.milestone.state === 'claimable') return isClaiming.value ? 'Claiming...' : 'Claim Now'
+  return 'Not There Yet'
+})
+
+const buttonDisabled = computed(
+  () => props.milestone.state !== 'claimable' || isClaiming.value,
+)
 
 /** Precompute resolved asset metadata for each reward to avoid repeated lookups in template. */
 const rewardEntries = computed(() =>
@@ -156,9 +170,13 @@ function openPreview(reward: MilestoneReward, resolved: ResolvedRewardAsset): vo
           <UButton
             variant="solid"
             size="xl"
+            :disabled="buttonDisabled"
+            :loading="isClaiming"
             class="mx-auto bg-linear-to-br from-tertiary-400 to-tertiary-800 rounded-full"
+            :class="milestone.state === 'claimed' ? 'opacity-60' : ''"
+            @click="claimMilestone(timeframe, milestone.id)"
           >
-            {{ !isClaimable ? 'Not There Yet' : 'Claim Now' }}
+            {{ buttonLabel }}
           </UButton>
         </div>
       </div>

@@ -13,6 +13,7 @@ definePageMeta({ layout: 'recharge', middleware: 'auth' })
 // ========================================
 
 const { fetchDaily } = useRechargeMissionData()
+const { subscribe, unsubscribe } = useMissionEcho()
 const store = useMissionStore()
 
 const resetsAt = computed(() => store.dailyProgress?.resets_at ?? null)
@@ -35,7 +36,12 @@ preload()
 // Lifecycle
 // ========================================
 
-onMounted(fetchDaily)
+onMounted(() => {
+  fetchDaily()
+  subscribe()
+})
+
+onUnmounted(unsubscribe)
 </script>
 
 <template>
@@ -71,6 +77,7 @@ onMounted(fetchDaily)
             :key="milestone.id"
             :milestone="milestone"
             :net-volume="store.dailyProgress.net_volume"
+            timeframe="daily"
           />
         </template>
         <p v-else class="text-center text-white/60 text-sm py-6">
