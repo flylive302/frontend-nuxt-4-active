@@ -14,18 +14,19 @@ function pad(n: number): string {
 
 <template>
   <div class="mt-4 flex items-center justify-center gap-2">
-    <img :src="RECHARGE_ACTIVITY.arrowRight" alt="" class="w-16" aria-hidden="true">
+    <img :src="RECHARGE_ACTIVITY.arrowRight" alt="" class="w-16 -mt-6" aria-hidden="true">
 
     <div class="w-16 relative">
       <img :src="RECHARGE_ACTIVITY.timeBg" alt="" class="w-16" aria-hidden="true">
       <Transition name="count" mode="out-in">
         <p
             :key="hours"
-            class="count-text text-2xl pb-3.5"
+            class="count-text text-2xl pb-9"
         >
           {{ pad(hours) }}
         </p>
       </Transition>
+      <p class="text-white text-center">Hours</p>
     </div>
 
     <div class="w-16 relative">
@@ -33,11 +34,12 @@ function pad(n: number): string {
       <Transition name="count" mode="out-in">
         <p
             :key="minutes"
-            class="count-text text-2xl pb-3.5"
+            class="count-text text-2xl pb-9"
         >
           {{ pad(minutes) }}
         </p>
       </Transition>
+      <p class="text-white text-center">Minutes</p>
     </div>
 
     <div class="w-16 relative">
@@ -45,14 +47,15 @@ function pad(n: number): string {
       <Transition name="count" mode="out-in">
         <p
             :key="seconds"
-            class="count-text text-2xl pb-3.5"
+            class="count-text text-2xl pb-9"
         >
           {{ pad(seconds) }}
         </p>
       </Transition>
+      <p class="text-white text-center">Seconds</p>
     </div>
 
-    <img :src="RECHARGE_ACTIVITY.arrowLeft" alt="" class="w-16" aria-hidden="true">
+    <img :src="RECHARGE_ACTIVITY.arrowLeft" alt="" class="w-16 -mt-6" aria-hidden="true">
   </div>
 </template>
 
