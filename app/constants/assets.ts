@@ -170,5 +170,17 @@ export const RECHARGE_ACTIVITY = {
   arrowRight: `${IK}/missions/recharge-activity/time_line0.png`,
   timeBg: `${IK}/missions/recharge-activity/time_bg.png`,
   taskBg: `${IK}/missions/recharge-activity/task_bg.png`,
+  taskBgLarge: `${IK}/missions/recharge-activity/reward_bg.png`,
   topHeader: `${IK}/missions/recharge-activity/top1_header.png`,
+  top1Fame_monthly: `${IK}/missions/recharge-activity/top1_bg_month.png`,
+  top1Frame_weekly: `${IK}/missions/recharge-activity/top1_bg.png`,
+  rankingListBg: `${IK}/missions/recharge-activity/rank_bg.png`,
+  selfRankBottomBorder: `${IK}/missions/recharge-activity/rank_self.png`,
+  rulesModelBg: `${IK}/missions/recharge-activity/rule_bg.png`,
+  winnersRankRewardsModelBg: `${IK}/missions/recharge-activity/rule_bg.png`,
+  honarWallModelBg: `${IK}/missions/recharge-activity/dialog_honor.png`,
+  honarWallUserDisplayBgTop1: `${IK}/missions/recharge-activity/honor_top1.png`,
+  honarWallUserDisplayBgTop2: `${IK}/missions/recharge-activity/honor_top2.png`,
+  honarWallUserDisplayBgTop3: `${IK}/missions/recharge-activity/honor_top3.png`,
+
 }
