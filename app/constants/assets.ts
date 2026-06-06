@@ -182,5 +182,4 @@ export const RECHARGE_ACTIVITY = {
   honarWallUserDisplayBgTop1: `${IK}/missions/recharge-activity/honor_top1.png`,
   honarWallUserDisplayBgTop2: `${IK}/missions/recharge-activity/honor_top2.png`,
   honarWallUserDisplayBgTop3: `${IK}/missions/recharge-activity/honor_top3.png`,
-
 }

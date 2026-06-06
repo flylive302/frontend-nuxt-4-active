@@ -21,12 +21,12 @@ const items = [
       :items="items"
       class="gap-4 w-36 mx-auto mt-4"
       :ui="{
-            root: 'min-w-full',
-            list: 'rounded-full w-fit',
-            indicator: 'bg-linear-to-b from-tertiary-600 to-tertiary-950 rounded-full',
-            trigger: 'grow',
-            label: 'text-white',
-          }"
+        root: 'min-w-full',
+        list: 'rounded-full w-fit',
+        indicator: 'bg-linear-to-b from-tertiary-600 to-tertiary-950 rounded-full',
+        trigger: 'grow',
+        label: 'text-white',
+      }"
   >
     <template #ranking="{ item }">
       <div class="px-2 relative">

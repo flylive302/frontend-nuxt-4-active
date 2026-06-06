@@ -68,7 +68,7 @@ describe('rederiveMilestoneStates', () => {
   it('does not mutate the input milestones', () => {
     const milestones = [milestone(1, 1_000)]
     rederiveMilestoneStates(milestones, 5_000)
-    expect(milestones[0].state).toBe('locked')
+    expect(milestones[0]?.state).toBe('locked')
   })
 
   it('returns an empty array for empty input', () => {

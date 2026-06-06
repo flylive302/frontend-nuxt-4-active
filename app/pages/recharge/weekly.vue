@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RECHARGE_ACTIVITY} from "~/constants/assets";
+import {ASSETS, RECHARGE_ACTIVITY} from "~/constants/assets";
 import type { TabsItem } from '@nuxt/ui'
 
 definePageMeta({ layout: 'recharge', middleware: 'auth' });
@@ -29,12 +29,25 @@ const items = [
           }"
   >
     <template #ranking="{ item }">
-      <div class="px-2 relative">
+      <div class="relative">
         <div class="w-3/4 mx-auto relative z-10">
           <img :src="RECHARGE_ACTIVITY.topHeader" alt="decoration" class="w-full" >
           <p class="font-bold absolute inset-0 flex items-center justify-center text-md mt-2 text-white">Recharge 10000 Coins</p>
         </div>
-        <img :src="RECHARGE_ACTIVITY.taskBg" alt="decoration" class="w-full -mt-8" >
+        <div class="flex flex-col justify-center items-center relative">
+          <!-- Number 1 Ranker Avatar Frame -->
+          <img :src="RECHARGE_ACTIVITY.top1Fame_monthly" class="w-96 z-10" alt="">
+          <!-- User's Avatar -->
+          <img :src="ASSETS.AVATAR_PLACEHOLDER" class="rounded-full overflow-hidden w-23 absolute mt-11" alt="">
+
+          <div
+              class="h-[16vw] w-[26vw] bg-cover bg-center bg-no-repeat flex justify-center items-center drop-shadow-md absolute right-0 z-20 bottom-0"
+              :style="{ backgroundImage: `url(${RECHARGE_ACTIVITY.btnRules})` }"
+          >
+            <p class="font-bold text-md text-white ml-8 pb-1">Rules</p>
+          </div>
+        </div>
+        <img :src="RECHARGE_ACTIVITY.rankingListBg" alt="decoration" class="w-full" >
       </div>
     </template>
 
