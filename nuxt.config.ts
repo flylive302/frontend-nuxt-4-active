@@ -45,6 +45,7 @@ export default defineNuxtConfig({
             'composables/vap',
             'composables/mall',
             'composables/inbox',
+            'composables/recharge',
         ],
     },
     app: {
