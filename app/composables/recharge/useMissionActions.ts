@@ -30,7 +30,7 @@ export function useMissionActions() {
     // GATE — prevent concurrent claims
     if (claimingMilestoneId.value !== null) return
 
-    const milestone = store.dailyProgress?.milestones.find(m => m.id === milestoneId)
+    const milestone = store.progressFor(timeframe)?.milestones.find(m => m.id === milestoneId)
     if (!milestone || milestone.state !== 'claimable') return
 
     claimingMilestoneId.value = milestoneId
@@ -42,7 +42,7 @@ export function useMissionActions() {
       })
 
       // REACT — optimistic update: flip to claimed immediately
-      store.setMilestoneState(milestoneId, 'claimed')
+      store.setMilestoneState(timeframe, milestoneId, 'claimed')
 
       toast.add({
         title: 'Reward Claimed!',

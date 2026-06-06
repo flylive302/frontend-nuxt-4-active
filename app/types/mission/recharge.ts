@@ -1,5 +1,8 @@
 // Mirrors GET /api/v1/missions/recharge/{timeframe}
 // Backend: app/Http/Controllers/Api/V1/Mission/MissionProgressController.php
+// And GET /api/v1/missions/recharge/{timeframe}/leaderboard
+
+import type { MinimalUser } from '~/types/user/bootstrap'
 
 export type MilestoneState = 'locked' | 'claimable' | 'claimed'
 
@@ -44,4 +47,19 @@ export interface MissionProgressResponse {
   resets_at: string
   config: MissionConfig | null
   milestones: MilestoneProgress[]
+}
+
+export interface LeaderboardEntry {
+  rank: number
+  volume: number
+  user: MinimalUser
+}
+
+export interface LeaderboardResponse {
+  timeframe: string
+  instance_key: string
+  resets_at: string
+  ranking_depth: number
+  entries: LeaderboardEntry[]
+  self: LeaderboardEntry | null
 }

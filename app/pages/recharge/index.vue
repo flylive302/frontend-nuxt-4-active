@@ -12,9 +12,9 @@ definePageMeta({ layout: 'recharge', middleware: 'auth' })
 // Data + State
 // ========================================
 
-const { fetchDaily } = useRechargeMissionData()
-const { subscribe, unsubscribe } = useMissionEcho()
+const { fetchProgress } = useRechargeMissionData()
 const store = useMissionStore()
+const { subscribe, unsubscribe } = useMissionEcho(() => fetchProgress('daily'))
 
 const resetsAt = computed(() => store.dailyProgress?.resets_at ?? null)
 const serverTime = computed(() => store.dailyProgress?.server_time ?? null)
@@ -37,7 +37,7 @@ preload()
 // ========================================
 
 onMounted(() => {
-  fetchDaily()
+  fetchProgress('daily')
   subscribe()
 })
 

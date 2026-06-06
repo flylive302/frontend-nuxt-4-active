@@ -2,10 +2,7 @@
  * Data composable for the Recharge Activity mission.
  *
  * GATE→EXECUTE→REACT: fetches from GET /api/v1/missions/recharge/{timeframe}
- * and writes the result into useMissionStore.
- *
- * Re-derived from the ledger on every call — no stale-while-revalidate,
- * so progress is always authoritative.
+ * and writes the result into useMissionStore, keyed by timeframe.
  */
 
 import type { MissionProgressResponse } from '~/types/mission/recharge'
@@ -27,11 +24,7 @@ export function useRechargeMissionData() {
   // EXECUTE
   // ========================================
 
-  /**
-   * Fetch daily progress for the current user and write it to the store.
-   * Safe to call repeatedly — always fetches fresh data.
-   */
-  async function fetchDaily(): Promise<void> {
+  async function fetchProgress(timeframe: string): Promise<void> {
     // GATE
     if (store.isLoading) return
 
@@ -40,17 +33,21 @@ export function useRechargeMissionData() {
 
     try {
       // EXECUTE
-      const response = await api<ApiEnvelope>('/missions/recharge/daily')
-      store.setDailyProgress(response.data)
+      const response = await api<ApiEnvelope>(`/missions/recharge/${timeframe}`)
+      store.setProgress(timeframe, response.data)
     } catch (err) {
       // REACT (error surface)
       const normalized = normalizeError(err)
       store.setError(normalized.message)
-      log.warn('Failed to fetch daily mission progress', err)
+      log.warn('Failed to fetch mission progress', { timeframe, err })
     } finally {
       store.setLoading(false)
     }
   }
 
-  return { fetchDaily }
+  function fetchDaily(): Promise<void> {
+    return fetchProgress('daily')
+  }
+
+  return { fetchProgress, fetchDaily }
 }
