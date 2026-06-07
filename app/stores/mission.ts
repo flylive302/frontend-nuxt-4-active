@@ -6,7 +6,7 @@
 // ========================================
 
 import { defineStore } from 'pinia'
-import type { MilestoneState, MissionProgressResponse, LeaderboardResponse } from '~/types/mission/recharge'
+import type { MilestoneState, MissionProgressResponse, LeaderboardResponse, HonorWallSection } from '~/types/mission/recharge'
 
 export const useMissionStore = defineStore('mission', () => {
   // ========================================
@@ -17,6 +17,8 @@ export const useMissionStore = defineStore('mission', () => {
   const error = ref<string | null>(null)
   const progressByTimeframe = ref<Record<string, MissionProgressResponse>>({})
   const leaderboardByTimeframe = ref<Record<string, LeaderboardResponse>>({})
+  const finaleSnapshotByTimeframe = ref<Record<string, HonorWallSection>>({})
+  const finaleReadyByTimeframe = ref<Record<string, boolean>>({})
 
   // ========================================
   // Computed
@@ -63,6 +65,19 @@ export const useMissionStore = defineStore('mission', () => {
     if (milestone) milestone.state = state
   }
 
+  function setFinaleReady(timeframe: string, snapshot: HonorWallSection): void {
+    finaleSnapshotByTimeframe.value = { ...finaleSnapshotByTimeframe.value, [timeframe]: snapshot }
+    finaleReadyByTimeframe.value = { ...finaleReadyByTimeframe.value, [timeframe]: true }
+  }
+
+  function isFinaleReadyFor(timeframe: string): boolean {
+    return finaleReadyByTimeframe.value[timeframe] ?? false
+  }
+
+  function finaleSnapshotFor(timeframe: string): HonorWallSection | null {
+    return finaleSnapshotByTimeframe.value[timeframe] ?? null
+  }
+
   return {
     isLoading: readonly(isLoading),
     error: readonly(error),
@@ -75,5 +90,8 @@ export const useMissionStore = defineStore('mission', () => {
     progressFor,
     leaderboardFor,
     setMilestoneState,
+    setFinaleReady,
+    isFinaleReadyFor,
+    finaleSnapshotFor,
   }
 })

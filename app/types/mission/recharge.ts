@@ -63,3 +63,30 @@ export interface LeaderboardResponse {
   entries: LeaderboardEntry[]
   self: LeaderboardEntry | null
 }
+
+// ========================================
+// Honor Wall — previous closed instance Top-3
+// ========================================
+
+export interface HonorWallSection {
+  instance_key: string | null
+  entries: LeaderboardEntry[]
+}
+
+export interface HonorWallData {
+  weekly: HonorWallSection
+  monthly: HonorWallSection
+}
+
+// ========================================
+// Ranking Rewards — configured prize tiers
+// ========================================
+
+export interface RankingRewardItem extends MilestoneReward {
+  readonly rank: number
+}
+
+export interface RankingRewardsData {
+  weekly: RankingRewardItem[]
+  monthly: RankingRewardItem[]
+}
