@@ -14,7 +14,6 @@ import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
 import { resolveVideoUrl } from '~/utils/platform'
-import { WORKBOX_CACHES } from '~/constants/asset'
 
 const log = createLogger('[GiftAssetCache]')
 
@@ -213,7 +212,7 @@ export function getCacheStats(): { videoCount: number; pendingCount: number; pre
  * Check whether a gift's playable asset is confirmed in cache.
  *
  * - Fast path: preloadedGiftIds (current session, covers all animation types including svga)
- * - image: checks thumbnail_url in the Workbox cdn-images cache
+ * - image: always ready — <img> loads natively, no preloading required
  * - svga: L1 preloadedGiftIds is the only readiness signal — no persistent cache
  * - video/vap: checks L1 memory cache then cacheStorage (flylive-assets-v1)
  */
@@ -224,14 +223,10 @@ export async function isGiftAssetCached(
   if (gift.id !== undefined && preloadedGiftIds.has(gift.id)) return true
 
   if (gift.asset_type === 'image') {
-    if (typeof caches === 'undefined') return false
-    try {
-      const cache = await caches.open(WORKBOX_CACHES.CDN_IMAGES)
-      const response = await cache.match(gift.thumbnail_url)
-      return response !== undefined
-    } catch {
-      return false
-    }
+    // Images load natively via <img> — no preloading required.
+    // NuxtImg transforms the URL (adds tr= params), so caches.match(thumbnail_url)
+    // never hits the service worker's cdn-images cache and always returns false.
+    return true
   }
 
   if (!gift.animation_url) return false
