@@ -3,6 +3,8 @@ import { RECHARGE_ACTIVITY} from "~/constants/assets";
 definePageMeta({ middleware: 'auth' });
 
 const route = useRoute()
+
+const honorWallOpen = ref(false)
 </script>
 
 <template>
@@ -21,6 +23,7 @@ const route = useRoute()
       <div
           class="size-[28vw] ml-3 bg-cover bg-center bg-no-repeat flex justify-center items-end drop-shadow-md"
           :style="{ backgroundImage: `url(${RECHARGE_ACTIVITY.honerBtn})` }"
+          @click="honorWallOpen = true"
       >
         <p class="font-bold text-sm text-white pb-6">Honor Wall</p>
       </div>
@@ -54,6 +57,11 @@ const route = useRoute()
 
       <slot></slot>
 
+      <!-- Modals -->
+      <RechargeHonorWallModal
+          :open="honorWallOpen"
+          @close="honorWallOpen = false"
+      />
     </div>
 
   </div>

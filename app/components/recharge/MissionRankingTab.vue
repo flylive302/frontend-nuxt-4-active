@@ -10,7 +10,8 @@
  * one-shot pointerdown listener here (before the finale fires) so the
  * later programmatic play() on reveal is not blocked by autoplay policy.
  */
-import { RECHARGE_ACTIVITY } from '~/constants/assets'
+import {ASSETS, RECHARGE_ACTIVITY} from '~/constants/assets'
+import {formatCurrency} from "~/utils/currency";
 
 const props = defineProps<{
   timeframe: 'weekly' | 'monthly'
@@ -38,53 +39,47 @@ onMounted(() => {
   sound.primeGesture()
 })
 
-// Top-3 entries and the rest (4..N) split
-const top3 = computed(() => leaderboard.value?.entries.slice(0, 3) ?? [])
-const restEntries = computed(() => leaderboard.value?.entries.slice(3) ?? [])
+// Top-1 entry shown in the hero frame; rest listed below
+const top1 = computed(() => leaderboard.value?.entries?.[0] ?? null)
+const restEntries = computed(() => leaderboard.value?.entries.slice(1) ?? [])
 
-// Self: show pinned row only when self exists and isn't in the top list
+// Self: show pinned row only when self exists and isn't in the displayed list
 const self = computed(() => leaderboard.value?.self ?? null)
 const selfInTop = computed(() =>
   self.value !== null
   && (leaderboard.value?.entries ?? []).some(e => e.rank === self.value!.rank),
 )
 
-// ========================================
-// Modal state
-// ========================================
-
-const honorWallOpen = ref(false)
 const rewardsOpen = ref(false)
+
+const top1FrameAsset = computed(() =>
+    props.timeframe === 'monthly'
+        ? RECHARGE_ACTIVITY.top1Fame_monthly
+        : RECHARGE_ACTIVITY.top1Frame_weekly,
+)
 </script>
 
 <template>
   <div class="relative pb-4">
+    <button
+        class="h-13 w-20 bg-cover bg-center bg-no-repeat absolute right-0 top-34 z-50 font-bold text-sm text-white pb-1 text-right"
+        :style="{ backgroundImage: `url(${RECHARGE_ACTIVITY.btnRules})` }"
+          @click="rewardsOpen = true"
+    >
+      Rewards
+    </button>
+    <div v-if="top1" class="relative flex flex-col items-center justify-center">
+      <img :src="top1FrameAsset" class="relative w-98 z-10" alt="">
+      <img :src="top1.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER" class="w-24 absolute mt-11 z-0 rounded-full" alt="avatar">
+    </div>
+    <!-- Empty state -->
+    <p v-if="leaderboard?.entries.length === 0" class="text-center text-white/60 text-sm py-6">
+      No rankings yet — be the first to recharge!
+    </p>
     <!-- Background decoration -->
     <img :src="RECHARGE_ACTIVITY.rankingListBg" alt="" class="w-full" aria-hidden="true">
 
-    <!-- Honor Wall + Rewards quick-access buttons -->
-    <div class="relative -mt-2 px-2 pb-2 flex justify-center gap-3">
-      <UButton
-        icon="i-lucide-trophy"
-        size="sm"
-        variant="outline"
-        class="border-amber-400/50 text-amber-300 font-semibold"
-        @click="honorWallOpen = true"
-      >
-        Hall of Fame
-      </UButton>
-      <UButton
-        icon="i-lucide-gift"
-        size="sm"
-        variant="outline"
-        class="border-amber-400/50 text-amber-300 font-semibold"
-        @click="rewardsOpen = true"
-      >
-        Rewards
-      </UButton>
-    </div>
-
-    <div class="relative px-2 space-y-2">
+    <div class="absolute top-54 px-8 space-y-2 w-full">
       <!-- Loading skeleton -->
       <template v-if="isLoading && !leaderboard">
         <div v-for="i in 5" :key="i" class="flex items-center gap-3 px-3 py-2">
@@ -99,65 +94,48 @@ const rewardsOpen = ref(false)
       <div v-else-if="error && !leaderboard" class="text-center py-6">
         <p class="text-white/60 text-sm">{{ error }}</p>
         <UButton
-          size="sm"
-          class="mt-3 bg-amber-400 text-black font-bold"
-          @click="refresh"
+            size="sm"
+            class="mt-3 bg-amber-400 text-black font-bold"
+            @click="refresh"
         >
           Retry
         </UButton>
       </div>
 
       <template v-else-if="leaderboard">
-        <!-- Podium: top-3 featured -->
-        <RechargeMissionRankingPodium
-          v-if="top3.length > 0"
-          :entries="top3"
-          :timeframe="timeframe"
-        />
-
-        <!-- Empty state -->
-        <p v-if="leaderboard.entries.length === 0" class="text-center text-white/60 text-sm py-6">
-          No rankings yet — be the first to recharge!
-        </p>
-
-        <!-- List: ranks 4..N; keyed by user.id so FLIP (TransitionGroup move)
-             animates position swaps instead of destroying/recreating nodes. -->
         <TransitionGroup
-          v-if="restEntries.length > 0"
-          name="ranking-row"
-          tag="div"
-          class="flex flex-col gap-1 border border-white/20 rounded-xl overflow-hidden backdrop-blur shadow-md"
+            v-if="restEntries.length > 0"
+            name="ranking-row"
+            tag="div"
+            class="h-[88vh] overflow-scroll flex flex-col gap-3"
         >
-          <RechargeMissionRankingRow
-            v-for="entry in restEntries"
-            :key="entry.user.id"
-            :entry="entry"
-          />
+            <MinimalUserList v-for="entry in restEntries" :key="entry.user.id" :user="entry.user">
+              <div class="flex flex-col items-end pr-1 gap-0.5">
+                <span class="text-xs font-semibold text-primary">
+                  {{ formatCurrency(entry.volume) }}
+                </span>
+                <span class="text-[10px] text-white/50">#{{ entry.rank }}</span>
+              </div>
+            </MinimalUserList>
         </TransitionGroup>
 
         <!-- Pinned self-row (only when self is outside the displayed list) -->
         <RechargeMissionRankingSelfRow
-          v-if="self && !selfInTop"
-          :self="self"
-          class="mt-2"
+            v-if="self && !selfInTop"
+            :self="self"
+            class="mt-2"
         />
       </template>
     </div>
 
-    <!-- Modals -->
-    <RechargeHonorWallModal
-      :open="honorWallOpen"
-      :initial-timeframe="timeframe"
-      @close="honorWallOpen = false"
-    />
     <RechargeRankingRewardsModal
       :open="rewardsOpen"
-      :initial-timeframe="timeframe"
+      :initial-timeframe="props.timeframe"
       @close="rewardsOpen = false"
     />
 
     <!-- Finale cinematic overlay — auto-manages open/close via useMissionFinale -->
-    <RechargeMissionFinaleOverlay :timeframe="timeframe" />
+    <RechargeMissionFinaleOverlay :timeframe="props.timeframe" />
   </div>
 </template>
 

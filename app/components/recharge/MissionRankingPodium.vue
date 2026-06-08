@@ -16,12 +16,6 @@ const visualOrder = computed<Array<LeaderboardEntry | null>>(() => {
   return [second ?? null, first ?? null, third ?? null]
 })
 
-const top1FrameAsset = computed(() =>
-  props.timeframe === 'monthly'
-    ? RECHARGE_ACTIVITY.top1Fame_monthly
-    : RECHARGE_ACTIVITY.top1Frame_weekly,
-)
-
 function rankAccent(rank: number): { ring: string; text: string } {
   switch (rank) {
     case 1: return { ring: 'ring-yellow-400', text: 'text-yellow-300' }
@@ -47,15 +41,7 @@ function avatarSize(rank: number): string {
         class="flex flex-col items-center text-center gap-1"
       >
         <!-- Rank 1 gets the decorative background frame -->
-        <div v-if="entry.rank === 1" class="relative flex flex-col items-center">
-          <img :src="top1FrameAsset" class="w-40 z-10" alt="">
-          <UserAvatar
-            :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-            :frame-asset-url="resolvePropAsset(entry.user.frame_id) ?? undefined"
-            animated
-            class="w-20 absolute top-7 z-20"
-          />
-        </div>
+
 
         <!-- Ranks 2 and 3: avatar with ring accent -->
         <div v-else class="relative mb-2">

@@ -46,7 +46,7 @@ onUnmounted(unsubscribe)
 </script>
 
 <template>
-  <div class="px-2">
+  <div>
     <RechargeClock :hours="hours" :minutes="minutes" :seconds="seconds" />
 
     <UTabs
