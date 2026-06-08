@@ -58,7 +58,14 @@ export function useGiftReadiness(selectedGift: Ref<Gift | null>) {
       cleanup()
       generation++
       readinessState.value = 'idle'
-      if (gift) checkAndWatch(gift, generation)
+      if (gift) {
+        // Lucky gifts use fly animation (thumbnail only) — no animation asset to preload
+        if (gift.category === 'lucky') {
+          readinessState.value = 'ready'
+          return
+        }
+        checkAndWatch(gift, generation)
+      }
     },
     { immediate: true },
   )
