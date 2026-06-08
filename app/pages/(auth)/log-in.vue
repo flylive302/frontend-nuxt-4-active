@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import { normalizePhone, usePhoneSchema } from '~/composables/auth/usePhoneSchema'
-import { useCountries } from '~/composables/shared/useCountries'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
 import type { FormSubmitEvent, Form } from '@nuxt/ui'
-import type { LoginPayload } from '~/types/user/auth'
-const FormsCountryPhoneInput = defineAsyncComponent(
-    () => import('~/components/forms/country-phone-input.vue')
-)
 
 definePageMeta({
   layout: 'auth',
@@ -16,7 +10,6 @@ definePageMeta({
   pageTransition: false,
   layoutTransition: false,
 })
-
 
 // SEO — rendered server-side for crawler and Lighthouse SEO score
 useSeoMeta({
@@ -33,58 +26,32 @@ useSeoMeta({
 const ROUTES = {
   HOME: '/',
   SIGNUP: '/sign-up',
-  FORGOT_PASSWORD: '/forgot-password'
+  FORGOT_PASSWORD: '/forgot-password',
 } as const
 
 const { login } = useAuthActions()
-const { countries } = useCountries()
 
 const form = ref<Form<LoginFormState> | null>(null)
-
-const { isSubmitting, generalError, getFieldError, handleSubmit } = useAuthForm({ formRef: form })
-
-const phoneError = computed(() => getFieldError('phone'))
+const { isSubmitting, generalError, handleSubmit } = useAuthForm({ formRef: form })
 
 const state = reactive({
-  countryCode: '',
-  dialCode: '',
-  phone: '',
+  email: '',
   password: '',
   rememberMe: false,
 })
 
-const selectedCountry = computed(() => {
-  const country = countries.value.find(c => c.code === state.countryCode)
-  return country ? { code: country.code, name: country.name } : undefined
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().default(false),
 })
 
-const phoneSchema = usePhoneSchema(selectedCountry)
+type LoginFormState = z.infer<typeof loginSchema>
 
-const loginSchema = computed(() => {
-  const baseSchema = z.object({
-    password: z.string(),
-    rememberMe: z.boolean().default(false),
-  })
-
-  return z.intersection(baseSchema, phoneSchema.value)
-})
-
-type LoginFormState = z.infer<typeof loginSchema.value>
-
-/**
- * Handles login form submission with comprehensive error handling
- */
 async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
+  // login() handles the unverified case by redirecting to /verify-email.
   await handleSubmit(async () => {
-    const { password, dialCode, phone, countryCode } = event.data
-
-    const loginPayload: LoginPayload = {
-      phone: normalizePhone(dialCode, phone),
-      country: countryCode,
-      password
-    }
-
-    await login(loginPayload, ROUTES.HOME)
+    await login({ email: event.data.email, password: event.data.password }, ROUTES.HOME)
   })
 }
 </script>
@@ -112,13 +79,18 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
       class="space-y-3"
       @submit="onSubmit"
     >
-      <FormsCountryPhoneInput
-        v-model:country-code="state.countryCode"
-        v-model:dial-code="state.dialCode"
-        v-model:phone="state.phone"
-        :disabled="isSubmitting"
-        :error="phoneError"
-      />
+      <UFormField label="Email" name="email" required>
+        <UInput
+          v-model="state.email"
+          type="email"
+          autocomplete="email"
+          class="w-full"
+          size="lg"
+          icon="i-lucide-mail"
+          placeholder="you@example.com"
+          :disabled="isSubmitting"
+        />
+      </UFormField>
 
       <UFormField label="Password" name="password" required>
         <FormsPasswordInput

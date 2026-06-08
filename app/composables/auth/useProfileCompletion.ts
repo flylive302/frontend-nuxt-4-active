@@ -10,7 +10,7 @@
 import { z } from 'zod'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm, type UseAuthFormOptions } from '~/composables/auth/useAuthForm'
-import type { Country } from '~/composables/auth/usePhoneSchema'
+import { type Country, isValidE164Phone } from '~/composables/auth/usePhoneSchema'
 import type { UpdateProfilePayload, GenderOption } from '~/types/user/auth'
 
 // ========================================
@@ -79,10 +79,12 @@ export function useProfileCompletion() {
   const needsEmail = computed(() => !authStore.user?.email)
   const needsDateOfBirth = computed(() => !authStore.user?.date_of_birth)
   const needsCountry = computed(() => !authStore.user?.country)
+  const needsPhone = computed(() => !authStore.user?.phone)
   const needsAvatar = computed(() => !authStore.user?.avatar)
 
   const hasMissingFields = computed(() =>
-    needsConsent.value || needsGender.value || needsEmail.value || needsDateOfBirth.value
+    needsConsent.value || needsGender.value || needsEmail.value
+    || needsDateOfBirth.value || needsCountry.value || needsPhone.value
   )
 
   // ========================================
@@ -126,6 +128,13 @@ export function useProfileCompletion() {
       shape.country = z.string().min(2, 'Please select a country')
     }
 
+    if (needsPhone.value) {
+      // Independent E.164 number — validated on its own, not against country.
+      shape.phone = z.string()
+        .min(1, 'Phone number is required')
+        .refine(isValidE164Phone, 'Enter a valid phone number')
+    }
+
     return z.object(shape)
   })
 
@@ -140,6 +149,7 @@ export function useProfileCompletion() {
     email: string
     dateOfBirth: DateValue | null
     country: string
+    phone: string
   }
 
   const formState = reactive<ProfileCompletionFormState>({
@@ -149,6 +159,7 @@ export function useProfileCompletion() {
     email: '',
     dateOfBirth: null,
     country: '',
+    phone: '',
   })
 
   const dateOfBirthModel = ref<CalendarDate | undefined>(undefined)
@@ -221,6 +232,7 @@ export function useProfileCompletion() {
   const genderError = computed(() => getFieldError('gender'))
   const dateOfBirthError = computed(() => getFieldError('dateOfBirth') || getFieldError('date_of_birth'))
   const countryError = computed(() => getFieldError('country'))
+  const phoneError = computed(() => getFieldError('phone'))
 
   // ========================================
   // Avatar Upload
@@ -273,6 +285,9 @@ export function useProfileCompletion() {
     }
     if (needsCountry.value && formState.country) {
       payload.country = formState.country
+    }
+    if (needsPhone.value && formState.phone) {
+      payload.phone = formState.phone
     }
 
     return payload
@@ -335,6 +350,7 @@ export function useProfileCompletion() {
     needsEmail,
     needsDateOfBirth,
     needsCountry,
+    needsPhone,
     needsAvatar,
     hasMissingFields,
 
@@ -364,6 +380,7 @@ export function useProfileCompletion() {
     genderError,
     dateOfBirthError,
     countryError,
+    phoneError,
     generalError,
 
     // Avatar

@@ -17,8 +17,7 @@ const ROUTES = {
 const CATEGORY_OPTIONS = [
   { label: 'Bug Report', value: 'bug_report' },
   { label: 'Account / Login Issue', value: 'account_login' },
-  { label: 'Password Reset', value: 'password_reset' },
-{ label: 'Feature Request', value: 'feature_request' },
+  { label: 'Feature Request', value: 'feature_request' },
   { label: 'Other', value: 'other' },
 ]
 

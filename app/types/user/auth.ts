@@ -35,20 +35,37 @@ export interface AuthResponse {
 }
 
 export interface LoginPayload {
-  phone: string
-  country: string            // ISO 3166-1 alpha-2 (backend field)
-  dial_code?: string         // For display only, not sent to backend
-  password?: string
+  email: string
+  password: string
 }
 
 export interface RegisterPayload {
   name: string
-  email?: string
-  phone: string
-  country: string            // ISO 3166-1 alpha-2 (backend field)
-  dial_code?: string         // For display only
-  password?: string
-  password_confirmation?: string
+  email: string
+  password: string
+  password_confirmation: string
+}
+
+/** Response from POST /auth/register — no token yet, email OTP must be verified first. */
+export interface RegisterResponse {
+  email: string
+  requires_verification: true
+}
+
+export interface VerifyEmailPayload {
+  email: string
+  code: string
+}
+
+export interface ForgotPasswordPayload {
+  email: string
+}
+
+export interface ResetPasswordPayload {
+  email: string
+  code: string
+  password: string
+  password_confirmation: string
 }
 
 export interface UpdateProfilePayload {
@@ -56,6 +73,9 @@ export interface UpdateProfilePayload {
   gender?: number
   email?: string
   date_of_birth?: string
+  // Phone (E.164, carries its own dial code) and country (residence) are
+  // independent — neither constrains the other.
+  phone?: string
   country?: string
   is_follow_list_public?: boolean
   terms_accepted_at?: true

@@ -41,6 +41,24 @@ export function normalizePhone(dialCode: string, phone: string): string {
   return `${dialCode}${phone.replace(/\D/g, '')}`
 }
 
+/**
+ * Validates a full international phone number (E.164, e.g. "+14155551234")
+ * independently of any residence country — the dial code embedded in the
+ * number determines the region.
+ *
+ * Returns `true` while libphonenumber is still loading so it never blocks the
+ * form; the backend re-validates strictly on submit.
+ */
+export function isValidE164Phone(value: string): boolean {
+  if (!value) return false
+  if (!_parsePhone) return true
+  try {
+    return _parsePhone(value)?.isValid() ?? false
+  } catch {
+    return false
+  }
+}
+
 // ========================================
 // Composable
 // ========================================

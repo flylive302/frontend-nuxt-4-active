@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internationalized/date'
 import { useAuthForm } from '~/composables/auth/useAuthForm'
+import { isValidE164Phone } from '~/composables/auth/usePhoneSchema'
 import type { Form } from '@nuxt/ui'
 
 import type {UpdateProfilePayload, GenderOption} from "~/types/user/auth";
@@ -69,6 +70,13 @@ const formSchema = z.object({
           { message: `You must be at least ${MINIMUM_AGE_REQUIREMENT} years old` }
       )
       .optional(),
+  // Phone (E.164) and country (residence) are independent — neither is
+  // validated against the other.
+  country: z.string().optional().or(z.literal('')),
+  phone: z.string()
+    .refine(v => !v || isValidE164Phone(v), 'Enter a valid phone number')
+    .optional()
+    .or(z.literal('')),
 })
 
 type FormSchema = z.infer<typeof formSchema>
@@ -91,6 +99,8 @@ const formState = reactive<Partial<FormSchema>>({
   gender: undefined,
   email: '',
   dateOfBirth: undefined,
+  country: '',
+  phone: '',
 })
 
 const formRef = ref<Form<FormSchema> | null>(null)
@@ -119,6 +129,8 @@ const nameError = computed(() => getFieldError('name'))
 const emailError = computed(() => getFieldError('email'))
 const genderError = computed(() => getFieldError('gender'))
 const dateOfBirthError = computed(() => getFieldError('dateOfBirth') || getFieldError('date_of_birth'))
+const countryError = computed(() => getFieldError('country'))
+const phoneError = computed(() => getFieldError('phone'))
 
 /**
  * Determines the icon to display based on the selected gender option.
@@ -154,36 +166,7 @@ const coverImageUrl = computed<string | null>(() => {
 // Asset Management
 // ========================================
 
-const assetStore = useAssetStore()
 const showAssetModal = ref(false)
-
-/**
- * Icon based on current asset download status.
- */
-const assetStatusIcon = computed(() => {
-  if (assetStore.isDownloading) return 'i-lucide-loader-2'
-  if (assetStore.isComplete) return 'i-lucide-check-circle'
-  return 'i-lucide-download'
-})
-
-/**
- * Icon color based on asset status.
- */
-const assetStatusIconColor = computed(() => {
-  if (assetStore.isDownloading) return 'text-primary'
-  if (assetStore.isComplete) return 'text-success'
-  return 'text-neutral-400'
-})
-
-/**
- * Title text for asset status.
- */
-const assetStatusTitle = computed(() => {
-  if (assetStore.isDownloading) return 'Downloading...'
-  if (assetStore.isComplete) return 'All Downloaded'
-  if (assetStore.phase === 'error') return 'Download Error'
-  return 'Ready to Download'
-})
 
 async function handleAvatarSelected(file: File) {
   try {
@@ -253,6 +236,12 @@ function buildProfileUpdatePayload(validatedFormData: FormSchema): UpdateProfile
   if (validatedFormData.dateOfBirth) {
     payload.date_of_birth = validatedFormData.dateOfBirth.toString()
   }
+  if (validatedFormData.country) {
+    payload.country = validatedFormData.country
+  }
+  if (validatedFormData.phone) {
+    payload.phone = validatedFormData.phone
+  }
 
   return payload
 }
@@ -300,6 +289,14 @@ watch(
         } catch (error) {
           log.warn('Failed to parse date of birth', error)
         }
+      }
+
+      // Initialize country + phone (independent fields)
+      if (user.country && !formState.country) {
+        formState.country = user.country
+      }
+      if (user.phone && !formState.phone) {
+        formState.phone = user.phone
       }
     },
     { immediate: true }
@@ -434,6 +431,11 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
               placeholder="email@example.com"
           />
         </UFormField>
+
+        <!-- Country and phone are independent of each other -->
+        <FormsCountrySelect v-model="formState.country" :error="countryError" />
+
+        <FormsPhoneNumberInput v-model="formState.phone" :error="phoneError" />
 
         <UButton
             :loading="isProcessingSubmit"

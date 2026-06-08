@@ -4,7 +4,15 @@
 // Handles authentication actions: login, register, logout, social redirect, MSAB token refresh.
 // Profile management is in useProfileActions.ts.
 
-import type { AuthResponse, LoginPayload, RegisterPayload } from '~/types/user/auth'
+import type {
+  AuthResponse,
+  ForgotPasswordPayload,
+  LoginPayload,
+  RegisterPayload,
+  RegisterResponse,
+  ResetPasswordPayload,
+  VerifyEmailPayload,
+} from '~/types/user/auth'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Auth]')
@@ -34,7 +42,7 @@ export function useAuthActions() {
   }
 
   const authStore = _authStore
-  const { api, fetchCsrfToken } = _api
+  const { api, fetchCsrfToken, normalizeError } = _api
   const toast = _toast
   const { handlePopupResult } = useOAuthCallback()
 
@@ -49,16 +57,27 @@ export function useAuthActions() {
    * EXECUTE: POST /auth/login → update store
    * REACT:   Show success toast, navigate if redirectTo provided
    */
-  async function login(credentials: LoginPayload, redirectTo?: string): Promise<AuthResponse> {
+  async function login(credentials: LoginPayload, redirectTo?: string): Promise<AuthResponse | null> {
     // SETUP — infrastructure prerequisite, not a validation gate
     await fetchCsrfToken()
 
     // EXECUTE
-    const { data } = await api<{ data: AuthResponse }>('/auth/login', {
-      method: 'POST',
-      body: credentials,
-    })
-
+    let data: AuthResponse
+    try {
+      const res = await api<{ data: AuthResponse }>('/auth/login', {
+        method: 'POST',
+        body: credentials,
+      })
+      data = res.data
+    } catch (err) {
+      // Unverified account: the backend re-sent a fresh OTP. Route to the
+      // verification screen instead of surfacing an error (REACT).
+      if (normalizeError(err).errorCode === 'EMAIL_NOT_VERIFIED') {
+        await navigateTo({ path: '/verify-email', query: { email: credentials.email } })
+        return null
+      }
+      throw err
+    }
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
@@ -75,39 +94,84 @@ export function useAuthActions() {
   }
 
   /**
-   * Registers a new user with the provided payload.
+   * Registers a new user. No token is issued yet — the account is created
+   * unverified and an email OTP is sent. Routes to the verification screen.
    *
    * SETUP:   Fetch CSRF token
-   * EXECUTE: POST /auth/register → update store
-   * REACT:   Show success toast, navigate if redirectTo provided
+   * EXECUTE: POST /auth/register
+   * REACT:   Toast + navigate to /verify-email
    */
-  async function register(payload: RegisterPayload, redirectTo?: string): Promise<AuthResponse> {
-    // SETUP — infrastructure prerequisite, not a validation gate
+  async function register(payload: RegisterPayload): Promise<RegisterResponse> {
+    // SETUP
     await fetchCsrfToken()
 
     // EXECUTE
-    const { data } = await api<{ data: AuthResponse }>('/auth/register', {
+    const { data } = await api<{ data: RegisterResponse }>('/auth/register', {
       method: 'POST',
       body: payload,
     })
 
+    // REACT
+    if (toast) toast.add({ title: 'Check your email for a verification code.', color: 'success' })
+    await navigateTo({ path: '/verify-email', query: { email: data.email } })
+    return data
+  }
+
+  /**
+   * Verifies the email OTP. On success the account is logged in (tokens issued)
+   * and routed into profile completion.
+   *
+   * SETUP:   Fetch CSRF token
+   * EXECUTE: POST /auth/email/verify → update store
+   * REACT:   Toast + navigate
+   */
+  async function verifyEmail(payload: VerifyEmailPayload, redirectTo = '/complete-profile-data'): Promise<AuthResponse> {
+    await fetchCsrfToken()
+
+    const { data } = await api<{ data: AuthResponse }>('/auth/email/verify', {
+      method: 'POST',
+      body: payload,
+    })
 
     authStore.setToken(data.token)
     authStore.setUser(data.user)
     authStore.setMsabToken(data.msab_token)
 
-    // Note: fetchBootstrap is NOT called here because the cookie isn't
-    // immediately available to the API client in the same request cycle.
-    // The bootstrap.client.ts plugin will fetch data after navigation.
-
-    // REACT
-    if (toast) toast.add({ title: 'Account created!', color: 'success' })
-    // Fire-and-forget — non-fatal if push permission denied
+    if (toast) toast.add({ title: 'Email verified!', color: 'success' })
     usePushSubscription().register().catch(() => {})
-    if (redirectTo) {
-      await navigateTo(redirectTo)
-    }
+    await navigateTo(redirectTo)
     return data
+  }
+
+  /**
+   * Resends the email verification OTP. Always resolves — the backend never
+   * reveals whether the email exists.
+   *
+   * EXECUTE: POST /auth/email/resend
+   */
+  async function resendVerificationCode(email: string): Promise<void> {
+    await fetchCsrfToken()
+    await api('/auth/email/resend', { method: 'POST', body: { email } })
+  }
+
+  /**
+   * Requests a password-reset OTP for the given email.
+   *
+   * EXECUTE: POST /auth/password/forgot
+   */
+  async function requestPasswordReset(payload: ForgotPasswordPayload): Promise<void> {
+    await fetchCsrfToken()
+    await api('/auth/password/forgot', { method: 'POST', body: payload })
+  }
+
+  /**
+   * Resets the password using a valid OTP code.
+   *
+   * EXECUTE: POST /auth/password/reset
+   */
+  async function resetPassword(payload: ResetPasswordPayload): Promise<void> {
+    await fetchCsrfToken()
+    await api('/auth/password/reset', { method: 'POST', body: payload })
   }
 
   /**
@@ -221,6 +285,10 @@ export function useAuthActions() {
   return {
     login,
     register,
+    verifyEmail,
+    resendVerificationCode,
+    requestPasswordReset,
+    resetPassword,
     logout,
     refreshMsabToken,
     startSocialLogin,

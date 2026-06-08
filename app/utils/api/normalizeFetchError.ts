@@ -2,6 +2,8 @@ export interface NormalizedError {
   status?: number
   message: string
   fieldErrors?: Record<string, string[]>
+  /** Machine-readable code from the backend `errors.error_code` (e.g. EMAIL_NOT_VERIFIED). */
+  errorCode?: string
   raw?: unknown
 }
 
@@ -51,9 +53,9 @@ export function normalizeFetchError(error: unknown): NormalizedError {
   }
 
   if (status) {
-    const d = data as { message?: string; error?: string } | undefined
+    const d = data as { message?: string; error?: string; errors?: { error_code?: string } } | undefined
     const message: string = d?.message || d?.error || e?.message || 'Request failed.'
-    return { status, message, raw: error }
+    return { status, message, errorCode: d?.errors?.error_code, raw: error }
   }
 
   return { message: 'Network error. Check your connection.', raw: error }

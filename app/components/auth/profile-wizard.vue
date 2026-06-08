@@ -8,10 +8,12 @@ import { ASSETS } from '~/constants/assets'
  */
 import { CalendarDate } from '@internationalized/date'
 import { GENDER_MALE, GENDER_FEMALE } from '~/composables/auth/useProfileCompletion'
+import { isValidE164Phone } from '~/composables/auth/usePhoneSchema'
 
 const {
-  needsConsent, needsGender, needsDateOfBirth, needsEmail, needsAvatar,
+  needsConsent, needsGender, needsDateOfBirth, needsEmail, needsCountry, needsPhone, needsAvatar,
   formState, GENDER_OPTIONS,
+  countryError, phoneError,
   avatarUrl, isUploadingAvatar, handleAvatarSelected,
   isSubmitting, generalError, submitWizardData,
   initCountryDetection,
@@ -20,7 +22,7 @@ const {
 // ── Step computation ──────────────────────────────
 // Snapshot on mount — prevents steps from vanishing when a field
 // is filled mid-flow (e.g. avatar upload updates the store immediately).
-type StepId = 'consent' | 'gender' | 'dob' | 'email' | 'avatar'
+type StepId = 'consent' | 'gender' | 'dob' | 'email' | 'country' | 'phone' | 'avatar'
 interface Step { id: StepId; label: string }
 
 const steps = ref<Step[]>([])
@@ -35,6 +37,8 @@ const stepTitles: Record<StepId, string> = {
   gender: 'Your gender?',
   dob: 'When were you born?',
   email: 'What\'s your email?',
+  country: 'Where are you from?',
+  phone: 'Your phone number',
   avatar: 'Add a profile photo',
 }
 
@@ -67,6 +71,8 @@ const canProceed = computed(() => {
     case 'gender': return formState.gender !== undefined
     case 'dob': return !!formState.dateOfBirth
     case 'email': return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)
+    case 'country': return !!formState.country && formState.country.length >= 2
+    case 'phone': return isValidE164Phone(formState.phone)
     case 'avatar': return true // optional, can skip
     default: return false
   }
@@ -128,6 +134,8 @@ onMounted(() => {
   if (needsGender.value) s.push({ id: 'gender', label: 'Gender' })
   if (needsDateOfBirth.value) s.push({ id: 'dob', label: 'Date of Birth' })
   if (needsEmail.value) s.push({ id: 'email', label: 'Email' })
+  if (needsCountry.value) s.push({ id: 'country', label: 'Country' })
+  if (needsPhone.value) s.push({ id: 'phone', label: 'Phone' })
   if (needsAvatar.value) s.push({ id: 'avatar', label: 'Avatar' })
   steps.value = s
 
@@ -290,6 +298,35 @@ async function onAvatarFileSelected(file: File) {
           autocomplete="email"
           @keyup.enter="handleContinue"
         />
+      </template>
+
+      <!-- ═══ Country Step (residence — independent of phone) ═══ -->
+      <template v-else-if="currentStep.id === 'country'">
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.country }}</h1>
+        <p class="text-sm text-neutral-400 text-center mb-8">Select your country of residence</p>
+
+        <div class="w-full max-w-88 mx-auto">
+          <FormsCountrySelect
+            v-model="formState.country"
+            label=""
+            :error="countryError"
+          />
+        </div>
+      </template>
+
+      <!-- ═══ Phone Step (independent number + own dial code) ═══ -->
+      <template v-else-if="currentStep.id === 'phone'">
+        <h1 class="text-2xl font-bold text-neutral-50 text-center mb-2">{{ stepTitles.phone }}</h1>
+        <p class="text-sm text-neutral-400 text-center mb-8">Choose any dial code and enter your number</p>
+
+        <div class="w-full max-w-88 mx-auto">
+          <FormsPhoneNumberInput
+            v-model="formState.phone"
+            label=""
+            auto-detect
+            :error="phoneError"
+          />
+        </div>
       </template>
 
       <!-- ═══ Avatar Step ═══ -->
