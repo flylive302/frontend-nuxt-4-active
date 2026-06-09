@@ -110,7 +110,7 @@ const seatGiftTotal = computed(() => {
         <UserAvatar
           v-else
           key="empty"
-          :img="roomStore?.currentRoom?.owner?.vip_level > 2 ? `https://ik.imagekit.io/flylive/vip/${roomStore.currentRoom.owner.vip_level}/seat.webp` : undefined"
+          :img="(roomStore?.currentRoom?.owner?.vip_level ?? 0) > 2 ? `https://ik.imagekit.io/flylive/vip/${roomStore.currentRoom!.owner!.vip_level}/seat.webp` : undefined"
           class="relative z-20"
         />
       </Transition>
