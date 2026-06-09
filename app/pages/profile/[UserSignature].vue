@@ -234,7 +234,7 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
       <template #signature-badges>
         <div class="w-full flex justify-center items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <ProfileBadge :show-badge="false" :txt="profileWritable?.signature || undefined" class="w-8/12" />
+          <ProfileBadge :vip="profileWritable?.vip_level" :txt="profileWritable?.signature || undefined" class="w-8/12" />
           <img v-if="profileWritable?.vip_level" :src="`https://ik.imagekit.io/flylive/vip/${profileWritable.vip_level}/badge.png`" class="w-4/12" alt="">
         </div>
       </template>
@@ -295,15 +295,15 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       <div v-if="hasAgency && profileWritable?.agency" class="relative z-50 mt-4">
         <SectionTitle class="mx-8">Agency</SectionTitle>
         <NuxtLink
-            :to="`/agency/${profileWritable.agency.id}`"
-            class="flex rounded-md overflow-hidden gap-2 glowing-border mx-8"
+          :to="`/agency/${profileWritable.agency.id}`"
+          class="flex rounded-md overflow-hidden gap-2 glowing-border mx-8"
         >
           <div class="p-1 w-2/6">
             <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
           </div>
 
           <div class="w-full flex flex-col gap-2 py-1">
-            <p class="text-md font-bold truncate">{{ profileWritable.agency.name }}</p>
+            <p class="text-md font-bold truncate">{{ profileWritable.agency.name }} - ID: {{ profileWritable.agency.id }}</p>
 
             <div class="flex gap-2 items-center">
               <div class="flex pt-1 gap-1 items-center">

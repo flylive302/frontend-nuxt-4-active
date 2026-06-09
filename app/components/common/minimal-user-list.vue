@@ -73,7 +73,7 @@ const genderColor = computed(() =>
           </UBadge>
         </div>
         <div class="flex items-center gap-0.5 ">
-          <ProfileBadge :txt="user.signature" :show-badge="false" class="shrink-0" />
+          <ProfileBadge :txt="user.signature" :vip="user.vip_level" class="shrink-0 max-w-24" />
           <UIcon
             v-if="user.country"
             :name="`i-flag-${user.country.toLowerCase().trim()}-4x3`"

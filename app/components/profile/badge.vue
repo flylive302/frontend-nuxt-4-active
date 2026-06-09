@@ -3,8 +3,10 @@ import { useClipboard } from '@vueuse/core'
 
 const props = withDefaults(defineProps<{
   txt?: string | number
+  vip?: number
 }>(), {
   txt: "UserSignature",
+  vip: 0,
 })
 
 const source = computed(() => String(props.txt))
@@ -31,7 +33,12 @@ async function onCopy() {
         Copied!
       </span>
     </Transition>
-    <p class="font-semibold border-2 bg-primary/40 border-primary rounded-full shadow-md backdrop-blur-md text-xs px-1 truncate cursor-pointer select-none text-center" @click="onCopy()">
+    <div v-if="vip && vip > 11" class="relative flex items-center justify-center">
+      <img :src="`https://ik.imagekit.io/flylive/vip/${vip}/pretty_id.png`" class="min-w-26" alt="">
+      <p class="absolute z-20 top-0 text-xs ml-6 mt-3 font-extrabold">{{txt}}</p>
+    </div>
+
+    <p v-else class="font-semibold border-2 bg-primary/40 border-primary rounded-full shadow-md backdrop-blur-md text-xs px-1 cursor-pointer select-none text-center" @click="onCopy()">
       {{ txt }}
     </p>
   </div>

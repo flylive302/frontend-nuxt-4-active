@@ -219,7 +219,7 @@ const settingsOpen = ref(false);
         <div class="flex items-center justify-between gap-2 pr-1">
           <div>
             <h1 class="text-sm font-bold leading-tight">{{ thisRoom?.name }}</h1>
-            <ProfileBadge :txt="thisRoom?.owner?.signature" :show-badge="false" />
+            <ProfileBadge :txt="thisRoom?.owner?.signature" :vip="thisRoom?.owner?.vip_level" class="max-w-24" />
           </div>  
           <UButton icon="i-lucide-bookmark" variant="subtle" class="shadow-md shadow-primary-950/50" size="sm" />
         </div>

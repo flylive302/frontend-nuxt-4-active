@@ -90,6 +90,12 @@ let lastSelfEntryRoomId: string | null = null;
  */
 let lastSelfSlideRoomId: string | null = null;
 
+/**
+ * Room id the self join chat message was last sent for. Same replay-guard
+ * rationale as lastSelfEntryRoomId. Cleared in leaveRoom().
+ */
+let lastSelfJoinMessageRoomId: string | null = null;
+
 // ============================================
 // Composable
 // ============================================
@@ -424,6 +430,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
           });
         })();
       }
+
+      if (roomId !== lastSelfJoinMessageRoomId) {
+        lastSelfJoinMessageRoomId = roomId;
+        chatActions.sendChatMessage(`${authStore.user.name} have entered the room`);
+      }
     }
 
     // Handle initial room state from server.
@@ -535,6 +546,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     lastSelfEntryRoomId = null;
     // Same rationale for the slide overlay.
     lastSelfSlideRoomId = null;
+    lastSelfJoinMessageRoomId = null;
     slideStore.clearSlides();
 
     // Clear room state

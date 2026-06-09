@@ -30,19 +30,21 @@ const coinsToComplete = computed(() => incomeStore.coinsToComplete)
 /**
  * Format coins for display.
  */
+const COIN_DISPLAY_MULTIPLIER = 3.333333
+
 const earnedDisplay = computed(() => {
   const earned = parseFloat(target.value?.earned_coins ?? '0')
-  return formatCurrency(earned)
+  return formatCurrency(earned * COIN_DISPLAY_MULTIPLIER)
 })
 
 const requiredDisplay = computed(() => {
   const required = parseFloat(target.value?.required_coins ?? '0')
-  return formatCurrency(required )
+  return formatCurrency(required * COIN_DISPLAY_MULTIPLIER)
 })
 
 const coinsToCompleteDisplay = computed(() => {
   const coins = parseFloat(coinsToComplete.value)
-  return formatCurrency(coins)
+  return formatCurrency(coins * COIN_DISPLAY_MULTIPLIER)
 })
 
 const rewardDisplay = computed(() => {

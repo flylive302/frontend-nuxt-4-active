@@ -66,31 +66,29 @@ const charmLevel = computed(() =>
     <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" />
     <div class="min-w-0">
 
-      <div class="flex items-center gap-1">
-        <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg bg-primary-30 ring ring-primary rounded-md">
-          <MarqueeName
-              class="flex-1 max-w-24 mx-auto"
-              text-class="text-sm font-bold leading-none"
-              :name="displayName"
-              delay="0s"
-          />
-          <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
-        </div>
-        <div class="flex items-center">
-          <UIcon
-              :name="`i-flag-${participant?.country.toLowerCase().trim()}-4x3`"
-              class="rounded overflow-hidden h-5 size-6 shadow-lg"
-          />
-          <img
-              v-if="participant?.vip_level"
-              :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
-              class="w-10"
-              alt=""
-          >
-          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge">
+      <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg bg-primary-30 ring ring-primary rounded-md">
+        <MarqueeName
+            class="flex-1 max-w-24 mx-auto"
+            text-class="text-sm font-bold leading-none"
+            :name="displayName"
+            delay="0s"
+        />
+        <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+      </div>
+      <div class="flex items-center mt-1 ml-2">
+        <UIcon
+            :name="`i-flag-${participant?.country.toLowerCase().trim()}-4x3`"
+            class="rounded overflow-hidden h-5 size-6 shadow-lg"
+        />
+        <img
+            v-if="participant?.vip_level"
+            :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
+            class="w-10"
+            alt=""
+        >
+        <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge">
 
-          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge">
-        </div>
+        <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge">
       </div>
 
       <BadgesEquippedBadgeMarquee

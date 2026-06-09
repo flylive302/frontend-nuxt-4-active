@@ -313,7 +313,12 @@ const seatUserAge = computed(() =>
           </div>
           <div class="flex items-center gap-1 justify-center">
 
-            <ProfileBadge v-if="currentSeat.user.signature" :show-badge="false" :txt="currentSeat.user.signature" />
+            <ProfileBadge
+                v-if="currentSeat.user.signature"
+                :vip="currentSeat.user.vip_level"
+                :txt="currentSeat.user.signature"
+                class="max-w-24"
+            />
             <img
                 v-if="currentSeat.user.vip_level"
                 :src="`https://ik.imagekit.io/flylive/vip/${currentSeat.user.vip_level}/badge.png`"

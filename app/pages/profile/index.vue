@@ -84,7 +84,7 @@ const vip = authStore.user?.vip_level;
 
       <template #signature-badges>
         <div class="w-full flex justify-end items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <ProfileBadge :show-badge="false" :txt="authStore?.user?.signature || undefined" class="w-8/12" />
+          <ProfileBadge :vip="authStore?.user?.vip_level" :txt="authStore?.user?.signature || undefined" class="w-8/12" />
           <img v-if="vip" :src="`https://ik.imagekit.io/flylive/vip/${vip}/badge.${vip > 2 ? 'png' : 'webp'}`" class="w-4/12" alt="">
         </div>
       </template>
@@ -116,6 +116,7 @@ const vip = authStore.user?.vip_level;
           class="mx-auto max-w-36"
           text-class="text-lg leading-none font-bold"
           :name="authStore.user?.name || ''"
+          :vip="authStore.user?.vip_level"
         />
       </template>
 

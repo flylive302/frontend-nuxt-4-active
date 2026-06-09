@@ -3,6 +3,7 @@ const props = defineProps<{
   name: string
   delay?: string
   textClass?: string
+  vip?: number
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -31,6 +32,19 @@ watch(() => props.name, async () => {
   await nextTick()
   requestAnimationFrame(checkOverflow)
 })
+
+let colorFullName = '';
+
+if (props.vip && props.vip == 3) { colorFullName = '#6b3293'; }
+if (props.vip && props.vip == 4) { colorFullName = '#ef9d2a'; }
+if (props.vip && props.vip == 5) { colorFullName = '#2d1757'; }
+if (props.vip && props.vip == 6) { colorFullName = '#bd731f'; }
+if (props.vip && props.vip == 7) { colorFullName = '#00bc6f'; }
+if (props.vip && props.vip == 8) { colorFullName = '#098dd9'; }
+if (props.vip && props.vip == 9) { colorFullName = '#cd0e8c'; }
+if (props.vip && props.vip == 10) { colorFullName = '#7e1e07'; }
+if (props.vip && props.vip == 11) { colorFullName = '#43d08a'; }
+if (props.vip && props.vip == 12) { colorFullName = '#468a25'; }
 </script>
 
 <template>
@@ -41,9 +55,22 @@ watch(() => props.name, async () => {
         :class="[{ 'marquee-track': isOverflowing }]"
         :style="isOverflowing && delay ? { animationDelay: delay } : {}"
     >
-      <span :class="textClass">{{ name }}</span>
+      <span
+          :class="textClass"
+          :style="{ color: colorFullName }"
+      >
+        {{ name }}
+      </span>
       <!-- Duplicate for seamless loop, gap via padding -->
-      <span v-if="isOverflowing" :class="textClass" aria-hidden="true" class="pl-12">{{ name }}</span>
+      <span
+          v-if="isOverflowing"
+          :class="textClass"
+          :style="{ color: colorFullName }"
+          aria-hidden="true"
+          class="pl-12"
+      >
+        {{ name }}
+      </span>
     </div>
   </div>
 </template>

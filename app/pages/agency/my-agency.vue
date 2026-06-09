@@ -230,13 +230,18 @@ onMounted(async () => {
 
           <!-- Owner-Only Settings -->
           <template v-if="isOwner">
+            <div class="bg-primary/20 p-3 mt-4 rounded-xl">
+              <h2>Agencies Reseller: {{agencyCoinReseller?.name}}</h2>
+              <h2>ID: {{agencyCoinReseller?.signature}}</h2>
+            </div>
+
             <!-- Coin Reseller -->
-            <EconomyChooseDefaultReseller
-                agency-mode
-                :initial-reseller="agencyCoinReseller"
-                color="primary"
-                class="mt-14"
-            />
+<!--            <EconomyChooseDefaultReseller-->
+<!--                agency-mode-->
+<!--                :initial-reseller="agencyCoinReseller"-->
+<!--                color="primary"-->
+<!--                class="mt-14"-->
+<!--            />-->
 
             <!-- Dissolve Agency -->
             <UButton

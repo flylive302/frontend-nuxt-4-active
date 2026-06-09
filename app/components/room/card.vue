@@ -58,7 +58,7 @@ const roomBackgroundSrc = computed(() => {
   const isCarousel = props.cardLayout === 'carousel'
   const w = isCarousel ? 360 : 320
   const q = isCarousel && !effectiveHighFetchPriority.value ? 68 : 75
-  return withImageKitTransform(props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
+  return withImageKitTransform(props.room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
 })
 
 const roomLogoSrc = computed(() =>
@@ -105,13 +105,13 @@ function handleRoomClick(): void {
       <div class="backdrop-blur-sm shadow-md rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1">
           <img
-              :src="roomLogoSrc"
-              alt="Live"
-              width="24"
-              height="24"
-              class="size-6 object-cover rounded-full ring-2 ring-primary"
-              loading="lazy"
-              decoding="async"
+            :src="props.room.owner.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+            alt="Live"
+            width="24"
+            height="24"
+            class="size-6 object-cover rounded-full ring-2 ring-primary"
+            loading="lazy"
+            decoding="async"
           >
 
           <!-- Text -->

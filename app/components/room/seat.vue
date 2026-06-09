@@ -91,7 +91,14 @@ const seatGiftTotal = computed(() => {
     <div class="relative w-full">
       <Transition name="seat-pop" mode="out-in">
         <!-- Occupied seat: show user avatar with animation -->
-        <UserAvatar v-if="!isEmpty" key="occupied" :animated="true" :frame-asset-url="userFrame" :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER" class="relative z-20" />
+        <UserAvatar
+            v-if="!isEmpty"
+            key="occupied"
+            :animated="true"
+            :frame-asset-url="userFrame"
+            :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
+            class="relative z-20"
+        />
         <!-- Locked empty seat: show lock image -->
         <UserAvatar
           v-else-if="isLocked"
@@ -99,8 +106,13 @@ const seatGiftTotal = computed(() => {
           :img="ASSETS.LOCK_SEAT_IMG"
           class="relative z-20"
         />
-        <!-- Empty seat: show default placeholder -->
-        <UserAvatar v-else key="empty" class="relative z-20" />
+        <!-- Empty seat: VIP seat image if owner VIP > 11, else default -->
+        <UserAvatar
+          v-else
+          key="empty"
+          :img="roomStore?.currentRoom?.owner?.vip_level > 2 ? `https://ik.imagekit.io/flylive/vip/${roomStore.currentRoom.owner.vip_level}/seat.webp` : undefined"
+          class="relative z-20"
+        />
       </Transition>
 
       <!-- Mute indicator -->
