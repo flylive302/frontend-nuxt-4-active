@@ -41,6 +41,24 @@ export const BODY_UNLOCK_DELAY_MS = 1_000;
 export const MAX_CHAT_MESSAGES = 500;
 
 // ============================================
+// Gift Economy
+// ============================================
+
+/**
+ * Fraction of a LUCKY gift's coin value (GCV) actually credited to the receiver.
+ *
+ * The 🪙 "gifts received" total under a seated user's avatar must reflect what
+ * the receiver is really credited, not the full GCV — lucky gifts route most of
+ * their value to the platform / lucky pool, so only this share reaches the
+ * receiver. Other categories credit the full GCV.
+ *
+ * COUPLED to the backend setting `gift.lucky_receiver_percentage` (default
+ * 10.00 → 0.10). If that setting changes, update this constant to match, or the
+ * displayed seat total will diverge from the credited amount.
+ */
+export const LUCKY_RECEIVER_SHARE = 0.1;
+
+// ============================================
 // Debounce Delays
 // ============================================
 

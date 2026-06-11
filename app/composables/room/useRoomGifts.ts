@@ -132,7 +132,8 @@ export function useRoomGifts({
       const addedXp = gift.price * quantity;
       const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
       roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
-      seatsStore.addSeatGiftValue(recipientId, addedXp);
+      // Seat total reflects the receiver's credited share (lucky → 10%), room XP stays full GCV.
+      seatsStore.addSeatGiftValue(recipientId, seatGiftValue(gift, quantity));
     }
 
     // Push to queue for background processing

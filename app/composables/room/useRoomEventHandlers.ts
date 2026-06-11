@@ -342,7 +342,8 @@ export function setupRoomEventHandlers(
     // Accumulate gift coin value for seat display
     const giftForValue = getGiftById(event.giftId);
     if (giftForValue) {
-      seatsStore.addSeatGiftValue(event.recipientId, giftForValue.price * event.quantity);
+      // Seat total reflects the receiver's credited share (lucky → 10%), room XP stays full GCV.
+      seatsStore.addSeatGiftValue(event.recipientId, seatGiftValue(giftForValue, event.quantity));
 
       // Update room XP
       if (roomStore.currentRoom) {
