@@ -46,6 +46,7 @@ export default defineNuxtConfig({
             'composables/mall',
             'composables/inbox',
             'composables/recharge',
+            'composables/slide',
         ],
     },
     app: {

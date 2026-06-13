@@ -12,6 +12,7 @@ import { useAgencyEvents } from './agency.events'
 import { useSystemEvents } from './system.events'
 import { useVipEvents } from './vip.events'
 import { useFollowEvents } from './follow.events'
+import { useSlideEvents } from './slide.events'
 
 /**
  * Registry of all domain-specific socket event handlers.
@@ -33,6 +34,7 @@ export function useAllEventHandlers() {
   const registerSystem = useSystemEvents()
   const registerVip = useVipEvents()
   const registerFollow = useFollowEvents()
+  const registerSlide = useSlideEvents()
 
   return function registerAllEventHandlers(socket: Socket): void {
     registerEconomy(socket)
@@ -44,5 +46,6 @@ export function useAllEventHandlers() {
     registerSystem(socket)
     registerVip(socket)
     registerFollow(socket)
+    registerSlide(socket)
   }
 }

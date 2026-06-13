@@ -136,7 +136,7 @@ const seatGiftTotal = computed(() => {
       />
     </div>
 
-    <p v-if="seat?.user" class="text-xs min-h-3 truncate font">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
+    <p v-if="seat?.user" class="text-xs min-h-3 truncate font backdrop-blur-xl rounded-xl w-fit max-w-full px-1 bg-neutral-950/30 -mt-1">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 
   </div>
 </template>

@@ -13,7 +13,8 @@ export function useProfileRoomActions(
   const { socket, connect, isConnected } = useAudioSocket()
   const toast = useToast()
 
-  const isTracking = ref(false)
+  // Tracking is shared with the slide-overlay click handler via useTrackUser.
+  const { isTracking, trackUserById } = useTrackUser(enterRoomFn)
   const isJoiningRoom = ref(false)
 
   async function ensureSocketConnected(): Promise<boolean> {
@@ -38,89 +39,8 @@ export function useProfileRoomActions(
   }
 
   async function trackUser(): Promise<void> {
-    if (!profile.value?.id || isTracking.value) return
-
-    isTracking.value = true
-
-    try {
-      const connected = await ensureSocketConnected()
-      if (!connected || !socket.value) {
-        toast.add({
-          title: 'Connection failed',
-          description: 'Could not connect to server',
-          color: 'error',
-        })
-        return
-      }
-
-      // createHandler() wraps responses as { success, data?, error? }
-      const response = await new Promise<{
-        success: boolean
-        data?: { roomId: string | null }
-        error?: string
-      }>((resolve, reject) => {
-        const timeoutId = setTimeout(() => reject(new Error('Timeout')), 5000)
-        socket.value!.emit('user:getRoom', { userId: profile.value!.id }, (res: {
-          success: boolean
-          data?: { roomId: string | null }
-          error?: string
-        }) => {
-          clearTimeout(timeoutId)
-          resolve(res)
-        })
-      })
-
-      // GATE: Handle server-side errors (validation failure, internal error)
-      if (!response.success) {
-        toast.add({
-          title: 'Tracking failed',
-          description: response.error === 'INVALID_PAYLOAD'
-            ? 'Invalid request data'
-            : 'Server error while locating user',
-          color: 'error',
-        })
-        return
-      }
-
-      const trackedRoomId = response.data?.roomId
-
-      if (!trackedRoomId) {
-        toast.add({
-          title: 'User not in a room',
-          description: `${profile.value.name ?? 'This user'} is not currently in any room`,
-          color: 'warning',
-          icon: 'i-lucide-user-x',
-        })
-        return
-      }
-
-      if (roomStore.currentRoom && String(roomStore.currentRoom.id) === String(trackedRoomId)) {
-        roomStore.maximizeRoom()
-        navigateTo(`/room/${trackedRoomId}`)
-        return
-      }
-
-      const roomData = await api<{ status: string; data: BootstrapRoom }>(`/rooms/${trackedRoomId}`)
-
-      if (roomData.status !== 'success' || !roomData.data) {
-        toast.add({
-          title: 'Room not found',
-          description: 'The room may have been closed',
-          color: 'error',
-        })
-        return
-      }
-
-      await enterRoomFn(roomData.data)
-    } catch {
-      toast.add({
-        title: 'Tracking failed',
-        description: 'Could not locate user',
-        color: 'error',
-      })
-    } finally {
-      isTracking.value = false
-    }
+    if (!profile.value?.id) return
+    await trackUserById(profile.value.id, profile.value.name)
   }
 
   async function goToRoom(): Promise<void> {
