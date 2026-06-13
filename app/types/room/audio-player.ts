@@ -26,6 +26,29 @@ export interface AudioPlayerState {
 }
 
 // ============================================
+// PLAYLIST QUEUE
+// ============================================
+
+/**
+ * A single queued track in the DJ's session-local Playlist.
+ *
+ * Holds only a cheap `File` handle plus derived metadata — never decoded PCM /
+ * `AudioBuffer`. The playback engine (separate module) owns decoding and bounds
+ * resident PCM to ~1–2 songs; keeping the queue handle-only is what lets it
+ * survive Stop / force-take for free (see ADR 0006 memory model).
+ */
+export interface Track {
+  /** Stable, client-generated unique id (survives reorder/remove). */
+  id: string;
+  /** The DJ's local device file — decoded on demand by the engine, not here. */
+  file: File;
+  /** Display title, derived from the filename (extension stripped). */
+  title: string;
+  /** Duration in seconds, written back by the engine once decoded; `null` until known. */
+  duration: number | null;
+}
+
+// ============================================
 // SOCKET EVENT PAYLOADS
 // ============================================
 

@@ -263,13 +263,24 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   }
 
   /**
-   * Produce an arbitrary MediaStreamTrack (e.g. from the audio player).
-   * Creates producer transport if needed. Stores in musicProducer.
+   * Produce the DJ's music track (the audio playback engine's stable output
+   * track). Creates producer transport if needed. Stores in musicProducer.
    *
-   * @param track - The MediaStreamTrack to produce
-   * @returns The created Producer, or null on failure
+   * Idempotent and produced **exactly once per DJ session**: the engine swaps
+   * only its upstream `AudioBufferSourceNode` on track change, so the output
+   * `MediaStreamTrack` identity is stable. We must NOT close/recreate the
+   * producer on a track boundary (that would cause a signaling storm and an
+   * audible gap). Closing it on Stop / disconnect / `revoked` is handled by
+   * `stopMusicProducer()` / `cleanup()` (and later slices).
+   *
+   * @param track - The engine's stable output MediaStreamTrack
    */
   async function produceTrack(track: MediaStreamTrack): Promise<void> {
+    // Already producing the session's music track — keep it alive across swaps.
+    if (musicProducer.value && !musicProducer.value.closed) {
+      return;
+    }
+
     // Create producer transport if needed
     if (!producerTransport.value) {
       await createProducerTransport();

@@ -40,6 +40,13 @@ export const BODY_UNLOCK_DELAY_MS = 1_000;
 /** Maximum chat messages to keep in memory */
 export const MAX_CHAT_MESSAGES = 500;
 
+/**
+ * Maximum number of tracks the DJ's Playlist queue holds. Adds beyond this are
+ * ignored (the existing queue keeps playing). Bounds the session-local list;
+ * memory is bounded separately by the engine's lazy-decode (ADR 0006).
+ */
+export const PLAYLIST_MAX_TRACKS = 50;
+
 // ============================================
 // Gift Economy
 // ============================================
