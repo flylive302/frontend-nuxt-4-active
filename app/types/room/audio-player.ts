@@ -59,6 +59,13 @@ export interface AudioPlayerPlayPayload {
   duration: number;
 }
 
+/** Client → MSAB: Owner force-takes a live music slot (same shape as play). */
+export interface AudioPlayerTakeoverPayload {
+  roomId: string;
+  title: string;
+  duration: number;
+}
+
 /** Client → MSAB: Stop playing music */
 export interface AudioPlayerStopPayload {
   roomId: string;
@@ -78,6 +85,13 @@ export interface AudioPlayerStateChangedEvent {
   title?: string | null;
   duration?: number;
   position: number;
+}
+
+/** MSAB → displaced DJ (targeted): the owner force-took the music slot. */
+export interface AudioPlayerRevokedEvent {
+  roomId: string;
+  /** The owner who took over. */
+  byUserId: number;
 }
 
 /** Music player state from room:join ack */

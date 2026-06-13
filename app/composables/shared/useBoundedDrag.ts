@@ -6,6 +6,7 @@
  * automatic re-clamping on window resize.
  */
 import { useDraggable, useWindowSize, useElementSize } from '@vueuse/core';
+import type { MaybeRefOrGetter } from 'vue';
 
 // ========================================
 // Types
@@ -14,6 +15,12 @@ import { useDraggable, useWindowSize, useElementSize } from '@vueuse/core';
 interface UseBoundedDragOptions {
   /** Minimum padding from screen edges in px (default: 4) */
   edgePadding?: number;
+  /**
+   * Optional drag handle. When set, only pointer-downs on this element start the
+   * drag — the rest of the element is free for nested gestures (e.g. a sortable
+   * queue list inside a floating player).
+   */
+  handle?: MaybeRefOrGetter<HTMLElement | null | undefined>;
 }
 
 // ========================================
@@ -39,6 +46,7 @@ export function useBoundedDrag(options?: UseBoundedDragOptions) {
   // Setup draggable with clamped movement on all 4 sides
   const { position, isDragging } = useDraggable(dragEl, {
     initialValue: { x: 0, y: 0 },
+    handle: options?.handle,
     onMove: (pos) => {
       pos.x = clamp(pos.x, EDGE_PADDING, winW.value - elW.value - EDGE_PADDING);
       pos.y = clamp(pos.y, EDGE_PADDING, winH.value - elH.value - EDGE_PADDING);

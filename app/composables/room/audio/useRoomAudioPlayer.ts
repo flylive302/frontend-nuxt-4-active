@@ -1,15 +1,21 @@
 /**
- * Room Audio Player Composable
+ * Room Audio Player — thin DJ-session orchestrator.
  *
- * Manages local audio file playback through the existing mediasoup producer transport.
- * Uses Web Audio API to decode audio files and produce MediaStreamTracks
- * that are sent through the same pipeline as microphone audio.
+ * Composes three deep modules and owns nothing they own:
+ *  - {@link PlaylistQueue}             — the ordered Playlist (cheap `File` handles).
+ *  - {@link createAudioPlaybackEngine} — the Web Audio graph + decode/swap.
+ *  - {@link useMediasoupStreaming}     — the stable music producer lifecycle.
  *
- * Architecture:
- * - AudioContext decodes file → AudioBufferSourceNode → GainNode → MediaStreamDestination
- * - The resulting MediaStreamTrack is produced via the existing mediasoup transport
- * - MSAB coordinates mutex (one music player per room) and metadata broadcasting
- * - All playback control (play/pause/seek/stop) happens locally on the client
+ * It contains **no raw Web Audio graph code** (that lives in the engine) and no
+ * queue arithmetic (that lives in the model). Its only job is the
+ * INTENT → GATE → EXECUTE → REACT pipeline that wires a DJ action to those
+ * modules plus the MSAB mutex/metadata socket coordination.
+ *
+ * Headline feature (PRD): a DJ picks multiple files and they **auto-advance** —
+ * the engine's natural-end callback drives `queue.next()` and the engine swaps
+ * the next decoded source onto the **stable output track**, so the mediasoup
+ * `musicProducer` is produced exactly once and listeners never re-consume
+ * (gapless boundary). See ADR 0006 (single-DJ, client-local, ephemeral).
  */
 import type { Ref } from 'vue';
 import type { AudioSocket } from '../useAudioSocket';
@@ -19,9 +25,18 @@ import type {
   AudioPlayerStopPayload,
   AudioPlayerStateUpdatePayload,
   AudioPlayerStateChangedEvent,
+  AudioPlayerRevokedEvent,
+  AudioPlayerTakeoverPayload,
   AudioPlayerResponse,
   MusicPlayerJoinState,
+  Track,
 } from '~/types/room/audio-player';
+import {
+  createAudioPlaybackEngine,
+  AudioPlaybackError,
+  type AudioPlaybackEngine,
+} from '~/services/audioPlaybackEngine';
+import { PlaylistQueue } from '~/utils/playlist-queue';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 
@@ -36,24 +51,30 @@ const playerState = reactive<AudioPlayerState>({
   position: 0,
 });
 
-// Web Audio API state (not reactive — internal only)
-let audioContext: AudioContext | null = null;
-let audioBuffer: AudioBuffer | null = null;
-let sourceNode: AudioBufferSourceNode | null = null;
-let sourceNodeStarted = false; // track whether start() was called — stop() without start() throws InvalidStateError
-let gainNode: GainNode | null = null;
-let destinationNode: MediaStreamAudioDestinationNode | null = null;
+/** Reactive mirror of the (non-reactive) queue model for UI consumption. */
+const queueTracks = ref<Track[]>([]);
+const currentTrackId = ref<string | null>(null);
+
+/**
+ * Whether the DJ's player panel is open. Decoupled from playback `status` so the
+ * panel persists across Stop / end-of-queue (the DJ can replay the kept queue)
+ * and closes only via the explicit ✕ (`closePlayer`), force-take, or leave.
+ */
+const isPlayerOpen = ref(false);
+
+// Composed modules (not reactive — internal only).
+let queue = new PlaylistQueue();
+let engine: AudioPlaybackEngine | null = null;
+
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let stateUpdateInterval: ReturnType<typeof setInterval> | null = null;
-let playbackStartTime = 0;       // AudioContext.currentTime when playback started
-let playbackStartOffset = 0;     // Offset in seconds (for seek)
 
 // ============================================
 // Composable
 // ============================================
 
 /**
- * Room Audio Player — plays local audio files through mediasoup.
+ * Room Audio Player — DJ-session orchestrator.
  *
  * @param socket - Ref to the audio socket connection
  */
@@ -61,10 +82,14 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   const log = createLogger('[AudioPlayer]');
   const emitAsync = createEmitAsync(socket);
 
-  // Cache store refs at init (Vue setup context) — play()/seek() may be called
-  // from socket callbacks or timers outside setup, where useXStore() would throw.
+  // Cache store refs at init (Vue setup context) — handlers may run from socket
+  // callbacks or timers outside setup, where useXStore() would throw.
   const authStore = useAuthStore();
   const roomStore = useRoomStore();
+  const toast = useToast();
+
+  // Stable music producer lifecycle (shared via the session store).
+  const { produceTrack, stopMusicProducer } = useMediasoupStreaming(socket);
 
   // ========================================
   // Computed
@@ -74,28 +99,54 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   const isActive = computed(() => playerState.status === 'playing' || playerState.status === 'paused');
   const isMusicPlayingInRoom = computed(() => playerState.userId !== null && playerState.status !== 'idle' && playerState.status !== 'stopped');
 
+  /**
+   * Show the DJ panel to its owner whenever it is open AND nobody *else* holds
+   * the slot. Driven by an explicit open flag (not playback `status`), so Stop /
+   * end-of-queue keep it visible; a force-take by the owner hides the displaced
+   * DJ's panel because the active player becomes someone else.
+   */
+  const isPlayerVisible = computed(() =>
+    isPlayerOpen.value &&
+    !(isMusicPlayingInRoom.value && playerState.userId !== authStore.user?.id),
+  );
+
+  const currentIndex = computed(() => queueTracks.value.findIndex((t) => t.id === currentTrackId.value));
+  const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < queueTracks.value.length - 1);
+  const hasPrev = computed(() => currentIndex.value > 0);
+
   // ========================================
-  // Internal: Web Audio API helpers
+  // Internal: queue mirror + engine lifecycle
   // ========================================
 
-  function ensureAudioContext(): AudioContext {
-    if (!audioContext || audioContext.state === 'closed') {
-      audioContext = new AudioContext();
-    }
-    return audioContext;
+  /** Push the queue model's state into the reactive mirror after a mutation. */
+  function syncQueue(): void {
+    queueTracks.value = queue.tracks.slice();
+    currentTrackId.value = queue.current?.id ?? null;
   }
 
-  function getCurrentPosition(): number {
-    if (!audioContext || playerState.status !== 'playing') {
-      return playbackStartOffset;
-    }
-    return playbackStartOffset + (audioContext.currentTime - playbackStartTime);
+  /** Lazily build the per-session engine and wire its natural-end callback. */
+  function ensureEngine(): AudioPlaybackEngine {
+    if (engine) return engine;
+    engine = createAudioPlaybackEngine();
+    engine.setOnEnded(() => { void advance(); });
+    return engine;
   }
+
+  /** Decode-prefetch the track after the current one so the boundary is gapless. */
+  function primeNext(): void {
+    if (!engine) return;
+    const next = queueTracks.value[currentIndex.value + 1];
+    if (next) engine.prefetch(next.id, next.file);
+  }
+
+  // ========================================
+  // Internal: position + state relays (REACT)
+  // ========================================
 
   function startPositionTracking(): void {
     stopPositionTracking();
     positionInterval = setInterval(() => {
-      playerState.position = getCurrentPosition();
+      if (engine) playerState.position = engine.getPosition();
     }, 250); // Update UI 4x per second
   }
 
@@ -109,10 +160,10 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   function startStateUpdates(roomId: string): void {
     stopStateUpdates();
     stateUpdateInterval = setInterval(() => {
-      if (!socket.value) return;
+      if (!socket.value || !engine) return;
       socket.value.emit('audioPlayer:stateUpdate', {
         roomId,
-        position: getCurrentPosition(),
+        position: engine.getPosition(),
         isPaused: playerState.status === 'paused',
       } satisfies AudioPlayerStateUpdatePayload);
     }, 2000); // Send state to MSAB every 2s
@@ -126,253 +177,323 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   }
 
   // ========================================
-  // Public: Load an audio file
+  // Internal: per-track start (EXECUTE) + error (REACT)
   // ========================================
 
   /**
-   * Load an audio file from the user's device into the AudioBuffer.
-   * Does NOT start playback — call play() after loading.
+   * Decode + play `track` on the engine, broadcast its metadata to the room,
+   * and update reactive state. Used for the first track and every advance.
    *
-   * @returns Track title (filename) and duration
+   * @param isFirst - the session-opening track; a mutex denial here aborts.
+   * @param force - owner force-take: use `audioPlayer:takeover` (overwrites the
+   *   mutex + revokes the displaced DJ) instead of the contended `play` acquire.
+   * @returns whether the track started.
    */
-  async function loadFile(file: File): Promise<{ title: string; duration: number }> {
+  async function startTrack(
+    roomId: string,
+    track: Track,
+    isFirst: boolean,
+    force = false,
+  ): Promise<boolean> {
     playerState.status = 'loading';
 
-    const ctx = ensureAudioContext();
-    const arrayBuffer = await file.arrayBuffer();
-    audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    let duration: number;
+    try {
+      ({ duration } = await ensureEngine().play(track.id, track.file));
+    } catch (err) {
+      onPlaybackError(err, track);
+      return false;
+    }
+    track.duration = duration;
 
-    const title = file.name.replace(/\.[^.]+$/, ''); // Strip extension
-    const duration = audioBuffer.duration;
+    // MSAB mutex (first track) / now-playing metadata broadcast (every track).
+    // Owner force-take overwrites the slot; a plain play is denied when another
+    // admin already holds it (story 20: the admin retries, no auto-grab).
+    const event = force ? 'audioPlayer:takeover' : 'audioPlayer:play';
+    let res: AudioPlayerResponse;
+    try {
+      res = await emitAsync<AudioPlayerPlayPayload | AudioPlayerTakeoverPayload, AudioPlayerResponse>(
+        event,
+        { roomId, title: track.title, duration },
+      );
+    } catch (err) {
+      // EXECUTE failure (socket timeout / disconnect): surface a clean toast and
+      // bail — never let the rejection bubble up as an unhandled promise. Callers
+      // (`startSession` / `advance`) tear the session down on a `false` return.
+      log.warn('Music socket request failed', err);
+      engine?.stop();
+      playerState.status = 'stopped';
+      toast.add({
+        title: 'Music',
+        description: force
+          ? 'Could not take over playback — the music server did not respond. Please try again.'
+          : 'Could not reach the music server. Please try again.',
+        color: 'error',
+      });
+      return false;
+    }
+    if (isFirst && !res.success) {
+      engine?.stop();
+      playerState.status = 'idle';
+      toast.add({
+        title: 'Music',
+        description: force
+          ? 'Could not take over music playback.'
+          : 'Another admin is currently playing music. Try again when the slot is free.',
+        color: 'warning',
+      });
+      return false;
+    }
 
-
-    // Pre-set title and duration so play() has them
-    playerState.title = title;
+    playerState.status = 'playing';
+    playerState.userId = authStore.user?.id ?? null;
+    playerState.title = track.title;
     playerState.duration = duration;
-    playerState.status = 'idle';
-    return { title, duration };
+    playerState.position = 0;
+
+    syncQueue();
+    primeNext();
+    return true;
+  }
+
+  /** Auto-advance: engine reports natural end → advance the queue or stop. */
+  async function advance(): Promise<void> {
+    const roomId = roomStore.currentRoom?.id?.toString();
+    if (!roomId) return;
+
+    const next = queue.next();
+    if (!next) {
+      stopStreaming(roomId); // end of queue: stop cleanly, keep the queue
+      return;
+    }
+    const ok = await startTrack(roomId, next, false);
+    if (!ok) stopStreaming(roomId);
+  }
+
+  function onPlaybackError(err: unknown, track: Track): void {
+    const message =
+      err instanceof AudioPlaybackError
+        ? err.message
+        : `Could not play "${track.title}". The file may be corrupt or unsupported.`;
+    log.warn('Playback failed', err);
+    toast.add({ title: 'Music Error', description: message, color: 'error' });
   }
 
   // ========================================
-  // Public: Playback Controls
+  // Public: Playlist mutations
   // ========================================
 
   /**
-   * Start playing the loaded audio file through mediasoup.
-   * Acquires the MSAB mutex, builds the Web Audio graph,
-   * and returns the MediaStreamTrack for the producer.
-   *
-   * @param roomId - Current room ID
-   * @returns The MediaStreamTrack to produce via mediasoup, or null on failure
+   * Append the picked files to the Playlist (capped by the model). When a
+   * session is already live the new tracks join without interrupting playback;
+   * the next-track prefetch is refreshed. Returns the tracks actually appended
+   * (fewer than `files` if the cap was hit) so the caller can report drops.
    */
-  async function play(roomId: string): Promise<MediaStreamTrack | null> {
-    if (!audioBuffer) {
-      return null;
+  function addTracks(files: File[]): Track[] {
+    const created = queue.add(files);
+    syncQueue();
+    if (created.length > 0) isPlayerOpen.value = true; // reveal the DJ panel
+    if (isActive.value) primeNext();
+    return created;
+  }
+
+  /**
+   * Reorder the Playlist (drag-to-reorder UI). Pure queue-data change: the
+   * model keeps the same track `current`, so playback is **not** interrupted —
+   * only the upcoming order (and thus the prefetched next track) changes.
+   */
+  function reorderTracks(fromIndex: number, toIndex: number): void {
+    queue.reorder(fromIndex, toIndex);
+    syncQueue();
+    primeNext();
+  }
+
+  /**
+   * Remove a track. Removing the current track skips to the next (and keeps
+   * playing if a session is live); removing the last remaining track stops.
+   */
+  async function removeTrack(id: string, roomId: string): Promise<void> {
+    const wasCurrent = queue.current?.id === id;
+    queue.remove(id);
+    syncQueue();
+
+    if (!wasCurrent) {
+      primeNext();
+      return;
     }
-
-    const title = playerState.title || 'Unknown';
-    const duration = audioBuffer.duration;
-
-    // Acquire MSAB mutex
-    const res = await emitAsync<AudioPlayerPlayPayload, AudioPlayerResponse>(
-      'audioPlayer:play',
-      { roomId, title, duration },
-    );
-
-    if (!res.success) {
-      return null;
+    if (!queue.current) {
+      stopStreaming(roomId); // removed the last track
+      return;
     }
-
-    // Build Web Audio graph
-    const ctx = ensureAudioContext();
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
+    if (isActive.value) {
+      await startTrack(roomId, queue.current, false); // skip to the slid-up track
     }
+  }
 
-    gainNode = ctx.createGain();
-    destinationNode = ctx.createMediaStreamDestination();
-    gainNode.connect(destinationNode);
-    // Also connect to speakers so the sender hears their own music
-    gainNode.connect(ctx.destination);
+  // ========================================
+  // Public: Playback controls
+  // ========================================
 
-    sourceNode = ctx.createBufferSource();
-    sourceNode.buffer = audioBuffer;
-    sourceNode.connect(gainNode);
+  /**
+   * Start the DJ session: produce the engine's stable output track once, then
+   * play the current queue track. Shared by the normal acquire (`play`) and the
+   * owner force-take (`takeover`).
+   *
+   * @returns whether playback started (false if the slot was denied).
+   */
+  async function startSession(roomId: string, force: boolean): Promise<boolean> {
+    if (!queue.current) return false;
 
-    // Handle track ending naturally
-    sourceNode.onended = () => {
-      if (playerState.status === 'playing') {
-        stop(roomId);
-      }
-    };
+    isPlayerOpen.value = true; // keep the panel up even if the slot is denied
+    const outputTrack = ensureEngine().getOutputTrack();
+    await produceTrack(outputTrack);
 
-    // Start playback
-    sourceNode.start(0, playbackStartOffset);
-    sourceNodeStarted = true;
-    playbackStartTime = ctx.currentTime;
-
-    // Update state
-    playerState.status = 'playing';
-    playerState.userId = authStore.user?.id ?? null;
-    playerState.title = title;
-    playerState.duration = duration;
-    playerState.position = playbackStartOffset;
+    const ok = await startTrack(roomId, queue.current, true, force);
+    if (!ok) {
+      stopStreaming(roomId);
+      return false;
+    }
 
     startPositionTracking();
     startStateUpdates(roomId);
-
-
-    // Return the track for the caller to produce via mediasoup
-    return destinationNode.stream.getAudioTracks()[0] ?? null;
+    return true;
   }
 
   /**
-   * Pause playback. Suspends the AudioContext so the producer sends silence.
+   * Acquire a free slot and start playing (or resume from a Stop). Denied when
+   * another DJ already holds the slot — the caller does not auto-grab.
    */
+  function play(roomId: string): Promise<boolean> {
+    return startSession(roomId, false);
+  }
+
+  /**
+   * Owner-only force-take of a live slot: overwrites the mutex, revokes the
+   * displaced DJ (server-side), and starts the owner's queue. The displaced
+   * DJ's queue is preserved on their device for resume.
+   */
+  function takeover(roomId: string): Promise<boolean> {
+    return startSession(roomId, true);
+  }
+
+  /** Manual skip to the next track (no-op at the end of the queue). */
+  async function next(roomId: string): Promise<void> {
+    const track = queue.next();
+    if (track) await startTrack(roomId, track, false);
+  }
+
+  /** Manual skip back (restarts the current track at the start of the queue). */
+  async function prev(roomId: string): Promise<void> {
+    const track = queue.prev();
+    if (track) await startTrack(roomId, track, false);
+  }
+
+  /** Pause playback (engine suspends → producer sends silence). */
   async function pause(): Promise<void> {
-    if (!audioContext || playerState.status !== 'playing') return;
-
-    playbackStartOffset = getCurrentPosition();
-    await audioContext.suspend();
-
+    if (!engine || playerState.status !== 'playing') return;
+    await engine.pause();
     playerState.status = 'paused';
-    playerState.position = playbackStartOffset;
+    playerState.position = engine.getPosition();
     stopPositionTracking();
-
   }
 
-  /**
-   * Resume playback from the paused position.
-   */
+  /** Resume from the paused position. */
   async function resume(): Promise<void> {
-    if (!audioContext || playerState.status !== 'paused') return;
-
-    await audioContext.resume();
-    playbackStartTime = audioContext.currentTime;
-
+    if (!engine || playerState.status !== 'paused') return;
+    await engine.resume();
     playerState.status = 'playing';
     startPositionTracking();
-
   }
 
-  /**
-   * Seek to a specific position (in seconds).
-   * Recreates the source node with the new offset.
-   */
+  /** Seek within the current track (engine swaps the source). */
   function seek(position: number): void {
-    if (!audioContext || !audioBuffer || !gainNode) return;
+    if (!engine) return;
+    engine.seek(position);
+    playerState.position = engine.getPosition();
+  }
 
-    const clampedPos = Math.max(0, Math.min(position, audioBuffer.duration));
-
-    // Stop current source (only call stop() if start() was previously called)
-    if (sourceNode) {
-      sourceNode.onended = null;
-      if (sourceNodeStarted) {
-        try { sourceNode.stop(); } catch { /* already stopped */ }
-      }
-      sourceNode.disconnect();
-      sourceNodeStarted = false;
-    }
-
-    // Create new source at the seek position
-    sourceNode = audioContext.createBufferSource();
-    sourceNode.buffer = audioBuffer;
-    sourceNode.connect(gainNode);
-
-    sourceNode.onended = () => {
-      if (playerState.status === 'playing') {
-        const roomId = roomStore.currentRoom?.id?.toString();
-        if (roomId) stop(roomId);
-      }
-    };
-
-    playbackStartOffset = clampedPos;
-    playerState.position = clampedPos;
-
-    if (playerState.status === 'playing') {
-      sourceNode.start(0, clampedPos);
-      sourceNodeStarted = true;
-      playbackStartTime = audioContext.currentTime;
-    }
-
+  /** Set output volume 0–1. */
+  function setVolume(volume: number): void {
+    engine?.setVolume(volume);
   }
 
   /**
-   * Stop playback entirely. Releases the MSAB mutex.
-   * The caller is responsible for closing/replacing the mediasoup producer track.
-   *
-   * @param roomId - Current room ID
+   * Stop streaming but **preserve the queue** for in-session resume: close the
+   * music producer, tear down the engine, release the MSAB mutex. Also the
+   * clean end-of-queue / remove-last path. The queue clears only on leave.
    */
-  async function stop(roomId: string): Promise<void> {
+  function stopStreaming(roomId: string): void {
     stopPositionTracking();
     stopStateUpdates();
 
-    // Stop and disconnect Web Audio nodes
-    if (sourceNode) {
-      sourceNode.onended = null;
-      if (sourceNodeStarted) {
-        try { sourceNode.stop(); } catch { /* already stopped */ }
-      }
-      sourceNode.disconnect();
-      sourceNode = null;
-      sourceNodeStarted = false;
-    }
-    if (gainNode) {
-      gainNode.disconnect();
-      gainNode = null;
-    }
-    if (destinationNode) {
-      destinationNode = null;
-    }
+    stopMusicProducer();
+    engine?.dispose();
+    engine = null;
 
-    playbackStartOffset = 0;
-    playbackStartTime = 0;
-
-    // Release MSAB mutex
     if (socket.value) {
-      emitAsync<AudioPlayerStopPayload, AudioPlayerResponse>(
-        'audioPlayer:stop',
-        { roomId },
-      ).catch((err) => { log.warn('Failed to emit audioPlayer:stop', err) });
+      emitAsync<AudioPlayerStopPayload, AudioPlayerResponse>('audioPlayer:stop', { roomId })
+        .catch((err) => { log.warn('Failed to emit audioPlayer:stop', err); });
     }
 
-    // Reset state
     playerState.status = 'stopped';
     playerState.userId = null;
     playerState.title = null;
     playerState.duration = 0;
     playerState.position = 0;
-
-    // Close AudioContext to free resources
-    if (audioContext && audioContext.state !== 'closed') {
-      await audioContext.close();
-      audioContext = null;
-    }
-
   }
 
   /**
-   * Set playback volume (0-1). Adjusts the GainNode in the audio graph.
+   * Explicit ✕ dismiss of the DJ panel. Stops playback first if a session is
+   * live (so we never orphan an audible stream), then hides the panel. The queue
+   * is preserved — reopening via the "Play Music" picker resumes it.
    */
-  function setVolume(volume: number): void {
-    if (!gainNode) return;
-    gainNode.gain.value = Math.max(0, Math.min(1, volume));
+  function closePlayer(roomId: string): void {
+    if (isActive.value) stopStreaming(roomId);
+    isPlayerOpen.value = false;
+  }
+
+  /**
+   * The room owner force-took the slot (targeted `audioPlayer:revoked`). Tear
+   * down local production so this DJ is no longer audible — the Room never hears
+   * two tracks — but **preserve the queue** for resume when the slot frees. We
+   * do NOT emit `audioPlayer:stop`: the mutex already belongs to the owner.
+   */
+  function handleRevoked(event: AudioPlayerRevokedEvent): void {
+    stopPositionTracking();
+    stopStateUpdates();
+    stopMusicProducer();
+    engine?.dispose();
+    engine = null;
+
+    isPlayerOpen.value = false; // hide the displaced DJ's panel (queue is kept)
+
+    // Reflect "someone else is now playing" immediately so the DJ-only player
+    // hides without waiting for the owner's stateChanged broadcast to arrive.
+    playerState.status = 'playing';
+    playerState.userId = event.byUserId;
+    playerState.title = null;
+    playerState.duration = 0;
+    playerState.position = 0;
+
+    toast.add({
+      title: 'Music',
+      description: 'The room owner took over music playback. Your playlist is kept — play again when the slot is free.',
+      color: 'info',
+    });
   }
 
   // ========================================
   // Socket Event Listeners
   // ========================================
 
-  /**
-   * Initialize socket listeners for audio player state broadcasts.
-   * Call this after socket connection is established.
-   */
+  /** Listen for other DJs' state broadcasts (passive listeners). */
   function setupListeners(): void {
     if (!socket.value) return;
 
+    socket.value.on('audioPlayer:revoked', handleRevoked);
+
     socket.value.on('audioPlayer:stateChanged', (event: AudioPlayerStateChangedEvent) => {
-      const authStore = useAuthStore();
-      // Don't update local state from own broadcast (we already have local state)
+      // Don't override local state from our own broadcast.
       if (event.userId === authStore.user?.id) return;
 
       switch (event.state) {
@@ -398,18 +519,13 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     });
   }
 
-  /**
-   * Remove socket listeners.
-   */
   function cleanupListeners(): void {
     if (!socket.value) return;
     socket.value.off('audioPlayer:stateChanged');
+    socket.value.off('audioPlayer:revoked', handleRevoked);
   }
 
-  /**
-   * Initialize from room:join ack payload.
-   * If music was already playing when user joined, sync UI state.
-   */
+  /** Sync UI when joining a room where music is already playing. */
   function initFromJoinState(musicPlayer: MusicPlayerJoinState | null): void {
     if (!musicPlayer) return;
 
@@ -418,23 +534,33 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     playerState.title = musicPlayer.title;
     playerState.duration = musicPlayer.duration;
     playerState.position = musicPlayer.position;
-
   }
 
   /**
-   * Full cleanup — stops playback, removes listeners, resets state.
+   * Full cleanup on leave/refresh — stop, drop listeners, clear the queue.
+   * The queue clears here (and only here) because local `File` handles cannot
+   * be re-read across a reload (ADR 0006).
    */
   function cleanup(roomId?: string): void {
-    if (roomId && (playerState.status === 'playing' || playerState.status === 'paused')) {
-      stop(roomId);
+    if (roomId && isActive.value) {
+      stopStreaming(roomId);
+    } else {
+      stopPositionTracking();
+      stopStateUpdates();
+      engine?.dispose();
+      engine = null;
     }
     cleanupListeners();
+
+    queue = new PlaylistQueue();
+    syncQueue();
+    isPlayerOpen.value = false;
+
     playerState.status = 'idle';
     playerState.userId = null;
     playerState.title = null;
     playerState.duration = 0;
     playerState.position = 0;
-    audioBuffer = null;
   }
 
   // ========================================
@@ -443,22 +569,33 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   return {
     // State (reactive)
     playerState: readonly(playerState),
+    queueTracks: readonly(queueTracks),
+    currentTrackId: readonly(currentTrackId),
 
     // Computed
     isPlaying,
     isPaused,
     isActive,
     isMusicPlayingInRoom,
+    isPlayerVisible,
+    hasNext,
+    hasPrev,
 
-    // File loading
-    loadFile,
+    // Playlist mutations
+    addTracks,
+    removeTrack,
+    reorderTracks,
 
-    // Playback controls (return track for producer)
+    // Playback controls
     play,
+    takeover,
+    next,
+    prev,
     pause,
     resume,
     seek,
-    stop,
+    stop: stopStreaming,
+    closePlayer,
     setVolume,
 
     // Socket integration

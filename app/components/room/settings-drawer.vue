@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createLogger } from '~/utils/logger'
 // ========================================
 // Room Settings Drawer
 // ========================================
@@ -27,15 +28,17 @@ const { patchRoom, normalizeError } = useRoomSettingsApi()
 const { createUploadState } = useImageUpload()
 const { socket } = useAudioSocket()
 const toast = useToast()
+const log = createLogger('[RoomSettings]')
 
 // Music player (restricted to canEdit users)
 const {
   playerState: musicPlayerState,
   isMusicPlayingInRoom,
-  loadFile: loadMusicFile,
+  isActive: isMusicActive,
+  addTracks: addMusicTracks,
   play: playMusic,
+  takeover: takeoverMusic,
 } = useRoomAudioPlayer(socket)
-const { produceTrack, stopMusicProducer: _stopMusicProducer } = useMediasoupStreaming(socket)
 
 // ========================================
 // Computed
@@ -87,38 +90,60 @@ const isOwnerOnly = computed(() => isRoomOwner.value)
 
 const showMusicUploader = ref(false)
 const isMusicLoading = ref(false)
+/** Set when the uploader was opened to force-take (owner) vs. normal play. */
+const forceTakeMode = ref(false)
 
 /** True when no music is playing or this user is the current music player. */
 const canPlayMusic = computed(() =>
   !isMusicPlayingInRoom.value || musicPlayerState.userId === authStore.user?.id
 )
 
+/**
+ * The owner can force-take a live slot held by someone else (ADR-0006 hierarchy);
+ * non-owner admins cannot interrupt and must wait for the slot to free.
+ */
+const canForceTakeMusic = computed(() =>
+  isRoomOwner.value && isMusicPlayingInRoom.value && musicPlayerState.userId !== authStore.user?.id
+)
+
 const currentRoomId = computed(() => roomStore.currentRoom?.id?.toString() ?? '')
 
 /**
- * Load the selected audio file and start streaming it to all room participants.
+ * Append the selected audio files to the Playlist. Starts the DJ session if one
+ * is not already live; otherwise the tracks join the queue without interrupting
+ * playback (the orchestrator owns the engine + mediasoup producer lifecycle).
  */
-async function handleMusicFileSelected(file: File): Promise<void> {
+async function handleMusicFilesSelected(files: File[]): Promise<void> {
+  if (!currentRoomId.value) return
   isMusicLoading.value = true
   try {
-    await loadMusicFile(file)
+    const added = addMusicTracks(files)
+    if (added.length === 0) {
+      toast.add({ title: 'Playlist Full', description: 'No more tracks can be added.', color: 'warning' })
+      return
+    }
     showMusicUploader.value = false
-    await handleMusicPlay()
-  } catch {
-    toast.add({ title: 'Music Error', description: 'Failed to load audio file.', color: 'error' })
+    if (forceTakeMode.value) {
+      await takeoverMusic(currentRoomId.value)
+    } else if (!isMusicActive.value) {
+      await playMusic(currentRoomId.value)
+    }
+  } catch (err) {
+    // The orchestrator already surfaces socket failures as toasts; this guards
+    // any remaining throw (e.g. producer transport setup) from bubbling up as an
+    // unhandled rejection.
+    log.warn('Music playback could not start', err)
+    toast.add({ title: 'Music', description: 'Could not start music playback. Please try again.', color: 'error' })
   } finally {
+    forceTakeMode.value = false
     isMusicLoading.value = false
   }
 }
 
-/**
- * Acquire the MSAB music mutex and produce the audio track via mediasoup.
- */
-async function handleMusicPlay(): Promise<void> {
-  if (!currentRoomId.value) return
-  const track = await playMusic(currentRoomId.value)
-  if (!track) return
-  await produceTrack(track)
+/** Open the file picker in normal vs. owner force-take mode. */
+function openMusicPicker(force: boolean): void {
+  forceTakeMode.value = force
+  showMusicUploader.value = true
 }
 
 // ========================================
@@ -503,13 +528,27 @@ onBeforeUnmount(() => {
                 variant="subtle"
                 size="lg"
                 class="w-full justify-center"
-                @click="showMusicUploader = true"
+                @click="openMusicPicker(false)"
               >
                 Play Music
               </UButton>
-              <p v-else class="text-xs text-neutral-400 text-center">
-                Music is currently being played by another user.
-              </p>
+              <template v-else>
+                <p class="text-xs text-neutral-400 text-center">
+                  Music is currently being played by another user.
+                </p>
+                <!-- Owner-only: force-take the live slot (admins cannot interrupt). -->
+                <UButton
+                  v-if="canForceTakeMusic"
+                  icon="i-lucide-replace"
+                  color="warning"
+                  variant="subtle"
+                  size="lg"
+                  class="w-full justify-center mt-2"
+                  @click="openMusicPicker(true)"
+                >
+                  Force Take Over
+                </UButton>
+              </template>
             </div>
 
             <!-- Save Button -->
@@ -530,7 +569,7 @@ onBeforeUnmount(() => {
         <RoomAudioPlayerUploader
           v-model:open="showMusicUploader"
           :is-loading="isMusicLoading"
-          @file-selected="handleMusicFileSelected"
+          @files-selected="handleMusicFilesSelected"
         />
 
         <!-- Membership Actions -->

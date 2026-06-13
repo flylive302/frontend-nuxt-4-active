@@ -17,7 +17,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  fileSelected: [file: File];
+  filesSelected: [files: File[]];
 }>();
 
 // ========================================
@@ -49,40 +49,46 @@ const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 // Handlers
 // ========================================
 
-function validateFile(file: File): boolean {
-  error.value = null;
-
+/** Returns a specific rejection reason for `file`, or `null` when it is valid. */
+function rejectionReason(file: File): string | null {
   if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(mp3|m4a|ogg|webm|wav|aac|flac)$/i)) {
-    error.value = 'Unsupported file type. Please select an audio file.';
-    return false;
+    return `"${file.name}" is not a supported audio file.`;
   }
-
   if (file.size > MAX_SIZE_BYTES) {
-    error.value = `File too large. Maximum size is ${MAX_SIZE_MB}MB.`;
-    return false;
+    return `"${file.name}" is too large (max ${MAX_SIZE_MB}MB).`;
+  }
+  return null;
+}
+
+/** Validate each picked file; emit the valid ones and surface the first reject. */
+function handleFiles(fileList: FileList | null | undefined) {
+  error.value = null;
+  const files = Array.from(fileList ?? []);
+  if (files.length === 0) return;
+
+  const valid: File[] = [];
+  for (const file of files) {
+    const reason = rejectionReason(file);
+    if (reason) {
+      error.value ??= reason;
+    } else {
+      valid.push(file);
+    }
   }
 
-  return true;
+  if (valid.length > 0) emit('filesSelected', valid);
 }
 
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  if (!validateFile(file)) return;
-
-  emit('fileSelected', file);
+  handleFiles(input.files);
+  input.value = ''; // allow re-picking the same file(s)
 }
 
 function handleDrop(event: DragEvent) {
   isDragging.value = false;
   event.preventDefault();
-
-  const file = event.dataTransfer?.files?.[0];
-  if (!file) return;
-  if (!validateFile(file)) return;
-
-  emit('fileSelected', file);
+  handleFiles(event.dataTransfer?.files);
 }
 
 function handleDragOver(event: DragEvent) {
@@ -130,7 +136,7 @@ function openFilePicker() {
             Loading audio...
           </p>
           <p v-else class="text-sm text-neutral-300">
-            Tap to select or drag & drop an audio file
+            Tap to select or drag & drop audio files
           </p>
           <p class="text-xs text-neutral-500 mt-1">
             MP3, M4A, OGG, WAV, FLAC • Max {{ MAX_SIZE_MB }}MB
@@ -147,6 +153,7 @@ function openFilePicker() {
           ref="fileInput"
           type="file"
           accept="audio/*"
+          multiple
           class="hidden"
           @change="handleFileChange"
         >
