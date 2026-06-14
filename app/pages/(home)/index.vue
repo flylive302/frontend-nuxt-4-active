@@ -21,8 +21,6 @@ const roomRef = ref(null)
 const roomSectionInView = ref(true)
 /** Embla snap index — LCP image must match the snapped slide, not always index 0 */
 const roomCarouselSnapIndex = ref(0)
-/** Until Embla has fired `select`, keep the first two slides eager (center-align snap race). */
-const hadRoomCarouselSelectEvent = ref(false)
 const roomCarouselRef = shallowRef<{ emblaApi?: import('vue').Ref<unknown> } | null>(null)
 const roomAutoplayAfterPaint = ref(false)
 
@@ -87,15 +85,6 @@ useIntersectionObserver(roomRef, ([entry]) => {
 
 function onRoomCarouselSelect(index: number): void {
   roomCarouselSnapIndex.value = index
-  hadRoomCarouselSelectEvent.value = true
-}
-
-function roomCardPriorityLcp(_index: number): boolean {
-  // All carousel slides are eager — whichever Embla snaps to must already be loaded.
-  // loading=lazy can never be overridden by JS, so any lazy slide that becomes the LCP
-  // candidate forces a Low-priority fetch. Service worker serves all 5 from cache; no
-  // network cost on repeat visits.
-  return true
 }
 
 function roomCardHighFetchPriority(index: number): boolean {
@@ -123,7 +112,9 @@ watch(
 
 function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
   if (!room) return ''
-  return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 360, q: 75 })
+  // Must match RoomCard's rendered <img> exactly (room.logo, w:360, q:75 for the LCP card)
+  // — preloading any other URL is wasted bytes the browser never reuses.
+  return withImageKitTransform(room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 360, q: 75 })
 }
 
 /** Single high-priority preload — secondary slides stay eager via <img> without competing preloads. */
@@ -208,7 +199,7 @@ onMounted(() => {
                 :room="item"
                 card-layout="carousel"
                 class="h-72 max-w-60 shrink-0"
-                :priority-lcp="roomCardPriorityLcp(index)"
+                :priority-lcp="true"
                 :high-fetch-priority="roomCardHighFetchPriority(index)"
               />
             </div>
@@ -230,7 +221,7 @@ onMounted(() => {
                 :room="item"
                 card-layout="carousel"
                 class="h-72 max-w-60"
-                :priority-lcp="roomCardPriorityLcp(index)"
+                :priority-lcp="true"
                 :high-fetch-priority="roomCardHighFetchPriority(index)"
               />
             </template>
