@@ -370,21 +370,19 @@ export function setupRoomEventHandlers(
         return;
       }
 
-      const current = giftStore.currentPlayback;
-      const isCombo = current && current.gift.id === gift.id && current.senderId === event.senderId;
-
-      if (isCombo) {
-        giftStore.restartCurrentPlayback();
-      } else {
-        giftStore.enqueuePlayback({
-          gift,
-          senderId: event.senderId,
-          senderName: sender?.name ?? 'Unknown',
-          senderAvatar: sender?.avatar ?? undefined,
-          recipientIds: [event.recipientId],
-          quantity: event.quantity,
-        });
-      }
+      // Pass batchId so the queue coalesces this send's per-recipient fan-out
+      // into one playback. Distinct send/combo presses carry distinct batchIds,
+      // so genuine combos still enqueue separately and play one after another —
+      // nothing ever interrupts the gift currently on screen.
+      giftStore.enqueuePlayback({
+        gift,
+        senderId: event.senderId,
+        senderName: sender?.name ?? 'Unknown',
+        senderAvatar: sender?.avatar ?? undefined,
+        recipientIds: [event.recipientId],
+        quantity: event.quantity,
+        batchId: event.batchId,
+      });
     }
   });
 

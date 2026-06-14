@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { LuckyComboContext } from '~/types/gift/gift';
+import type { GiftComboContext } from '~/types/gift/gift';
 
 export const useGiftComboStore = defineStore('giftComboStore', () => {
   // ========================================
@@ -7,8 +7,13 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
   // ========================================
 
   const pendingRefund = ref(0);
-  const lastLuckyContext = ref<LuckyComboContext | null>(null);
+  const lastLuckyContext = ref<GiftComboContext | null>(null);
   const isLuckyComboActive = ref(false);
+  /**
+   * Snapshot of the last normal (non-lucky) send, so a combo press repeats THAT
+   * gift rather than whatever the playback queue happens to show now.
+   */
+  const lastNormalContext = ref<GiftComboContext | null>(null);
 
   // ========================================
   // Setters
@@ -18,7 +23,7 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
     pendingRefund.value = amount;
   }
 
-  function setLuckyContext(ctx: LuckyComboContext): void {
+  function setLuckyContext(ctx: GiftComboContext): void {
     lastLuckyContext.value = ctx;
     isLuckyComboActive.value = true;
   }
@@ -26,6 +31,14 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
   function clearLuckyContext(): void {
     lastLuckyContext.value = null;
     isLuckyComboActive.value = false;
+  }
+
+  function setNormalContext(ctx: GiftComboContext): void {
+    lastNormalContext.value = ctx;
+  }
+
+  function clearNormalContext(): void {
+    lastNormalContext.value = null;
   }
 
   // ========================================
@@ -36,6 +49,7 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
     pendingRefund.value = 0;
     lastLuckyContext.value = null;
     isLuckyComboActive.value = false;
+    lastNormalContext.value = null;
   }
 
   // ========================================
@@ -46,9 +60,12 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
     pendingRefund,
     lastLuckyContext,
     isLuckyComboActive,
+    lastNormalContext,
     setPendingRefund,
     setLuckyContext,
     clearLuckyContext,
+    setNormalContext,
+    clearNormalContext,
     $reset,
   };
 });

@@ -13,14 +13,8 @@ import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 const {
   currentPlayback,
   isPlaying,
-
   isMinimized,
-  videoPlayerRef,
-  svgaPlayerRef,
-  staticDisplayRef,
-  vapPlayerRef,
   handleComplete,
-
   toggleMinimize,
 } = useGiftPlayback();
 
@@ -89,22 +83,22 @@ onMounted(() => {
     <template v-if="currentPlayback">
       <!-- Video Player -->
       <RoomGiftVideoPlayer
-v-if="currentPlayback.gift.asset_type === 'video'" :key="`video-${currentPlayback.id}`" ref="videoPlayerRef" class="w-full"
+v-if="currentPlayback.gift.asset_type === 'video'" :key="`video-${currentPlayback.id}`" class="w-full"
         :src="resolveVideoUrl(currentPlayback.gift.animation_url ?? '')" @ended="handleComplete" />
 
       <!-- SVGA Player -->
       <RoomGiftSvgaPlayer
-v-else-if="currentPlayback.gift.asset_type === 'svga'" :key="`svga-${currentPlayback.id}`" ref="svgaPlayerRef" class="w-full"
+v-else-if="currentPlayback.gift.asset_type === 'svga'" :key="`svga-${currentPlayback.id}`" class="w-full"
         :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete" />
 
       <!-- VAP Player (MP4 + alpha via WebGL) -->
       <VapPlayer
-v-else-if="currentPlayback.gift.asset_type === 'vap'" :key="`vap-${currentPlayback.id}`" ref="vapPlayerRef" class="w-full"
+v-else-if="currentPlayback.gift.asset_type === 'vap'" :key="`vap-${currentPlayback.id}`" class="w-full"
         :name="currentPlayback.gift.animation_url ?? ''" :loop="1" :muted="false" @complete="handleComplete" />
 
       <!-- Static Image -->
       <RoomGiftStaticDisplay
-v-else :key="`static-${currentPlayback.id}`" ref="staticDisplayRef" class="w-full" :src="currentPlayback.gift.thumbnail_url"
+v-else :key="`static-${currentPlayback.id}`" class="w-full" :src="currentPlayback.gift.thumbnail_url"
         @timeout="handleComplete" />
     </template>
   </div>

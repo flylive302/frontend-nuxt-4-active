@@ -23,12 +23,12 @@ import { GIFT_QUANTITY_OPTIONS, COMBO_BUTTON_TIMEOUT_MS } from "~/constants/gift
 const quantityOptions = [...GIFT_QUANTITY_OPTIONS];
 
 const giftStore = useGiftStore();
+const comboStore = useGiftComboStore();
 const authStore = useAuthStore();
 const seatsStore = useRoomSeatsStore();
 const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo } = useGiftSending();
-const { handleCombo } = useGiftPlayback();
 const { readinessState } = useGiftReadiness(computed(() => giftStore.selectedGift));
 
 const { haptic } = useHaptics();
@@ -110,6 +110,10 @@ function exitComboMode() {
   stopComboProgress();
   if (wasLucky) {
     endLuckyCombo();
+  } else {
+    // Drop the normal combo context + streak badge once the combo window ends.
+    comboStore.clearNormalContext();
+    giftStore.resetCombo();
   }
 }
 
@@ -131,9 +135,9 @@ async function handleComboClick() {
       haptic("nudge");
     }
   } else {
-    // Normal gift combo — handleCombo calls combo() and restarts the player
-    await handleCombo(combo);
-    // Reset progress on every attempt (handleCombo already checks success internally)
+    // Normal gift combo — enqueues another full playback behind whatever is on
+    // screen (never interrupts). combo() handles its own GATE checks internally.
+    await combo();
     resetComboProgress();
     haptic("nudge");
   }

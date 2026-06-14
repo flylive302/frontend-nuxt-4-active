@@ -178,9 +178,9 @@ export class SlideQueue {
 
   /**
    * Drop every playing + waiting slide of the given scope, then promote eligible
-   * remaining waiters into any band the removed slides freed. Used on room leave
-   * to clear room-scope banners while app-scope slides (which reach users in no
-   * room) persist. Returns the new playing snapshot.
+   * remaining waiters into any band the removed slides freed. Scope-selective
+   * teardown; the room-leave path uses `clear()` (all scopes) since no slide
+   * outlives a room. Returns the new playing snapshot.
    */
   clearScope(scope: SlideScope, now: number): readonly QueuedSlide[] {
     for (let i = this.waitingItems.length - 1; i >= 0; i--) {

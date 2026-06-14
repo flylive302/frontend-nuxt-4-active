@@ -2,6 +2,7 @@ import type { types as mediasoupTypes } from 'mediasoup-client';
 import type { Socket } from 'socket.io-client';
 import type { MinimalUser } from '../user/bootstrap';
 import type { MusicPlayerJoinState } from './audio-player';
+import type { SlidePlayPayload } from '../slide';
 
 // Re-export mediasoup types for convenience
 export type RtpCapabilities = mediasoupTypes.RtpCapabilities;
@@ -44,6 +45,8 @@ export interface JoinRoomResponse {
   lockedSeats?: number[];
   existingProducers?: { producerId: string; userId: number }[];
   musicPlayer?: MusicPlayerJoinState | null;
+  /** App-scope slides still inside their replay window — shown to this late joiner. */
+  activeAppSlides?: SlidePlayPayload[];
   error?: string;
 }
 
@@ -282,6 +285,12 @@ export interface GiftReceivedEvent {
   giftId: number;
   recipientId: number;
   quantity: number;
+  /**
+   * Groups all per-recipient emits from one send/combo press. Receivers
+   * coalesce events sharing a batchId into a single full-screen playback.
+   * Optional for backward compatibility with un-upgraded MSAB instances.
+   */
+  batchId?: string;
 }
 
 export interface GiftErrorEvent {

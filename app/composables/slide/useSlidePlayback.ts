@@ -16,6 +16,7 @@ import { resolveEntrySlide } from '~/utils/slide-entry-resolver'
  */
 export function useSlidePlayback() {
   const slideStore = useSlideOverlayStore()
+  const roomStore = useRoomStore()
   const { $svga } = useNuxtApp()
   const queue = getSlideQueue()
 
@@ -31,6 +32,12 @@ export function useSlidePlayback() {
 
   /** EXECUTE — admit a server-resolved `slide:play` payload (gift/lucky). */
   function admitPayload(payload: SlidePlayPayload): void {
+    // GATE — app-scope slides play only inside a live room, never in the lobby.
+    // MSAB broadcasts app-scope to every socket; out-of-room clients drop it here
+    // before enqueue/decode (no wasted SVGA preload on mobile). Room-scope slides
+    // are only delivered to room members by MSAB, so they need no gate.
+    if (payload.scope === 'app' && !roomStore.currentRoom) return
+
     admit({ ...payload, senderId: payload.link?.userId ?? null, recipientId: null })
   }
 
@@ -44,10 +51,14 @@ export function useSlidePlayback() {
     admit({ ...payload, senderId: context.userId, recipientId: null })
   }
 
-  /** REACT — drop room-scope slides on room leave; app-scope banners persist. */
-  function clearRoomScoped(): void {
-    slideStore.setPlaying(queue.clearScope('room', Date.now()))
+  /**
+   * REACT — drop every slide on room leave. Both room-scope and app-scope slides
+   * play only inside a room now, so nothing should survive outside one.
+   */
+  function clearAll(): void {
+    queue.clear()
+    slideStore.setPlaying(queue.playing)
   }
 
-  return { admit, admitPayload, playEntrySlide, clearRoomScoped }
+  return { admit, admitPayload, playEntrySlide, clearAll }
 }

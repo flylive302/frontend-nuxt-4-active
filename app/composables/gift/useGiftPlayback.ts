@@ -2,18 +2,12 @@
  * Gift Playback Composable
  *
  * Single source of truth for gift playback orchestration.
- * Manages player refs, playback timeout, combo state, and minimize toggle.
- * Used by playback-modal.vue as a thin presentation component.
+ * Drives the FIFO queue: each item plays to completion (its player is keyed by
+ * playback id, so advancing remounts a fresh animation), then `handleComplete`
+ * pulls the next. Nothing restarts or interrupts the item on screen — sends and
+ * combos only ever append to the queue (see useGiftSending).
  */
 import { GIFT_PLAYBACK_TIMEOUT_MS } from '~/constants/gift'
-
-// ========================================
-// Types
-// ========================================
-
-interface PlaybackController {
-  restart: () => void
-}
 
 // ========================================
 // Composable
@@ -22,15 +16,6 @@ interface PlaybackController {
 export function useGiftPlayback() {
   const giftStore = useGiftStore()
   const authStore = useAuthStore()
-
-  // ========================================
-  // Player Refs
-  // ========================================
-
-  const videoPlayerRef = ref<PlaybackController | null>(null)
-  const svgaPlayerRef = ref<PlaybackController | null>(null)
-  const staticDisplayRef = ref<PlaybackController | null>(null)
-  const vapPlayerRef = ref<PlaybackController | null>(null)
 
   // ========================================
   // State
@@ -57,7 +42,7 @@ export function useGiftPlayback() {
     }
   }
 
-  /** Start the playback timeout — force completes if animation stalls */
+  /** Start the playback timeout — force completes if an animation stalls */
   function startPlaybackTimeout(): void {
     clearPlaybackTimeout()
     playbackTimeoutId = setTimeout(() => {
@@ -69,74 +54,11 @@ export function useGiftPlayback() {
   // Core Methods
   // ========================================
 
-  /** Handle playback completion — advances to next in queue */
+  /** Handle playback completion — advances to the next item in the queue */
   function handleComplete(): void {
     clearPlaybackTimeout()
     giftStore.onPlaybackComplete()
   }
-
-  /**
-   * Restart current animation (for combo mode).
-   * Routes to the correct player based on asset type.
-   */
-  function restartCurrentPlayer(): void {
-    const assetType = currentPlayback.value?.gift.asset_type
-
-    switch (assetType) {
-      case 'video':
-        videoPlayerRef.value?.restart()
-        break
-      case 'svga':
-        svgaPlayerRef.value?.restart()
-        break
-      case 'image':
-        staticDisplayRef.value?.restart()
-        break
-      case 'vap':
-        vapPlayerRef.value?.restart()
-        break
-    }
-  }
-
-  /** Register a player ref for restart control */
-  function registerPlayer(
-    type: 'video' | 'svga' | 'static' | 'vap',
-    controller: PlaybackController | null,
-  ): void {
-    switch (type) {
-      case 'video':
-        videoPlayerRef.value = controller
-        break
-      case 'svga':
-        svgaPlayerRef.value = controller
-        break
-      case 'static':
-        staticDisplayRef.value = controller
-        break
-      case 'vap':
-        vapPlayerRef.value = controller
-        break
-    }
-  }
-
-  // ========================================
-  // Combo Handling
-  // ========================================
-
-  /**
-   * Handle combo button click — deducts coins, emits socket, restarts animation.
-   * Delegates the actual sending to useGiftSending.combo().
-   */
-  async function handleCombo(comboFn: () => Promise<boolean>): Promise<void> {
-    const success = await comboFn()
-
-    if (success) {
-      restartCurrentPlayer()
-      startPlaybackTimeout()
-    }
-  }
-
-
 
   // ========================================
   // Minimize Toggle
@@ -150,24 +72,18 @@ export function useGiftPlayback() {
   // Watchers
   // ========================================
 
-  // Reset state when playback starts/stops
-  watch(isPlaying, (open) => {
-    if (open) {
-      startPlaybackTimeout()
-    }
-    else {
-      clearPlaybackTimeout()
-      isMinimized.value = false
-    }
-  })
-
-  // Watch for combo restarts from other users (timestamp changes)
+  // Arm the stall timeout for each item as it starts; clear when nothing plays.
+  // The id watch re-arms on every queue advance (not just play↔stop) so a fresh
+  // timeout guards each item, not only the first.
   watch(
-    () => currentPlayback.value?.timestamp,
-    (newTimestamp, oldTimestamp) => {
-      if (newTimestamp && oldTimestamp && newTimestamp !== oldTimestamp) {
-        restartCurrentPlayer()
+    () => currentPlayback.value?.id,
+    (id) => {
+      if (id) {
         startPlaybackTimeout()
+      }
+      else {
+        clearPlaybackTimeout()
+        isMinimized.value = false
       }
     },
   )
@@ -187,17 +103,8 @@ export function useGiftPlayback() {
     isSender,
     isMinimized,
 
-    // Player refs (for template binding)
-    videoPlayerRef,
-    svgaPlayerRef,
-    staticDisplayRef,
-    vapPlayerRef,
-
     // Methods
     handleComplete,
-    restartCurrentPlayer,
-    registerPlayer,
-    handleCombo,
     toggleMinimize,
     clearPlaybackTimeout,
   }

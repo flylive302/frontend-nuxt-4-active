@@ -46,12 +46,19 @@ export interface GiftCategoryGroup {
 // ============================================
 
 /** Context for lucky gift combo resending */
-export interface LuckyComboContext {
+/**
+ * Snapshot of a send used to repeat it on a combo press, decoupled from the
+ * playback queue (which drifts to whatever is currently on screen).
+ */
+export interface GiftComboContext {
   readonly gift: Gift;
   readonly senderId: number;
   readonly recipientIds: readonly number[];
   readonly quantity: number;
 }
+
+/** @deprecated Use {@link GiftComboContext} — kept as an alias for existing imports. */
+export type LuckyComboContext = GiftComboContext;
 
 // ============================================
 // PLAYBACK TYPES
@@ -75,6 +82,12 @@ export interface GiftPlaybackItem {
   quantity: number;
   /** Timestamp when queued */
   timestamp: number;
+  /**
+   * Groups all per-recipient gift:received events from one send/combo press.
+   * Set on receiver enqueues so the queue collapses a fan-out into one playback;
+   * omitted on the sender's own enqueue (always unique, never coalesced).
+   */
+  batchId?: string;
 }
 
 // ============================================

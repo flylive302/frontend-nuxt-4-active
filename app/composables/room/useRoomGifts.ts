@@ -18,6 +18,8 @@ export interface QueuedGift {
   giftId: number;
   recipientId: number;
   quantity: number;
+  /** Groups all per-recipient emits from one send/combo press (playback coalescing) */
+  batchId?: string;
 }
 
 // ============================================
@@ -93,7 +95,7 @@ export interface UseRoomGiftsParams {
 
 export interface UseRoomGiftsReturn {
   /** Send a gift to a user (queued for rate limiting) */
-  sendGift: (giftId: number, recipientId: number, quantity?: number) => void;
+  sendGift: (giftId: number, recipientId: number, quantity?: number, batchId?: string) => void;
   /** Send preload signal to recipients */
   prepareGift: (giftId: number, recipientIds: number[]) => void;
 }
@@ -110,7 +112,7 @@ export function useRoomGifts({
    * Send a gift to a user.
    * Pushes to a local queue to be processed with spacing.
    */
-  function sendGift(giftId: number, recipientId: number, quantity: number = 1): void {
+  function sendGift(giftId: number, recipientId: number, quantity: number = 1, batchId?: string): void {
     const roomId = getCurrentRoomId();
     if (!socket.value || !roomId) return;
 
@@ -142,6 +144,7 @@ export function useRoomGifts({
       giftId,
       recipientId,
       quantity,
+      batchId,
     });
 
     // Trigger queue processor

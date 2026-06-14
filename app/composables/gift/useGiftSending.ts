@@ -59,6 +59,20 @@ export function useGiftSending() {
     return ids;
   }
 
+  /**
+   * Unique id grouping all per-recipient emits from ONE send (or ONE combo
+   * press). Receivers coalesce events sharing a batchId into a single
+   * full-screen playback — so a fan-out to N seats plays once, while each
+   * separate combo press (new batchId) plays as its own queued animation.
+   *
+   * Uses the same timestamp+random scheme as the playback-id in the gift store
+   * (NOT crypto.randomUUID, which throws in non-secure contexts like mobile QA
+   * over a LAN IP on plain HTTP). Uniqueness is all that's needed here.
+   */
+  function newBatchId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
   // ========================================
   // Methods
   // ========================================
@@ -102,12 +116,16 @@ export function useGiftSending() {
       // Optimistic coin deduction
       deductCoins(totalCost.value);
 
+      // One batchId for the whole send — every recipient's gift:received carries
+      // it so receivers collapse this fan-out into a single playback.
+      const batchId = newBatchId();
+
       // Emit socket event for each recipient. emitGift (useRoomGifts.sendGift)
       // owns the sender-side optimistic accumulation (room XP + seat gift value)
       // since the sender is excluded from the gift:received broadcast. Do NOT
       // accumulate here too — that double-counts the seat total for the sender.
       for (const recipientId of selectedRecipients) {
-        emitGift(selectedGift.id, recipientId, selectedQuantity);
+        emitGift(selectedGift.id, recipientId, selectedQuantity, batchId);
       }
 
       // Start playback immediately (optimistic)
@@ -130,6 +148,15 @@ export function useGiftSending() {
         // Deactivate lucky combo when switching to non-lucky gift
         endLuckyCombo();
 
+        // Capture this send so the combo button repeats THIS gift, independent
+        // of the playback queue (which advances to other gifts as they play).
+        comboStore.setNormalContext({
+          gift: selectedGift,
+          senderId: authStore.user!.id,
+          recipientIds: [...selectedRecipients],
+          quantity: selectedQuantity,
+        });
+
         const playbackItem = {
           gift: selectedGift,
           senderId: authStore.user!.id,
@@ -143,6 +170,10 @@ export function useGiftSending() {
         // playing and advances when that finishes, exactly like the gifts other
         // users send. Auto-starts via playNext when nothing is playing.
         giftStore.enqueuePlayback(playbackItem);
+
+        // Seed the combo-streak badge (decoupled from playNext now).
+        giftStore.resetCombo();
+        giftStore.incrementCombo();
       }
 
       // Reset selection for next send
@@ -155,27 +186,29 @@ export function useGiftSending() {
   }
 
   /**
-   * Handle combo click - replay current gift and deduct coins again
+   * Handle combo click — re-send the last normal gift and enqueue another full
+   * playback (never interrupts what's on screen).
    * @returns true if combo was successful
    */
   async function combo(): Promise<boolean> {
-    const currentPlayback = giftStore.currentPlayback;
+    // Repeat the last NORMAL send, not whatever the queue is currently showing.
+    const ctx = comboStore.lastNormalContext;
 
-    if (!currentPlayback) {
+    if (!ctx) {
       return false;
     }
 
     // GF-017: Filter against currently seated recipients (direct seat read)
     const seatedIds = getSeatedUserIds();
-    const validRecipients = currentPlayback.recipientIds.filter(id => seatedIds.has(id));
+    const validRecipients = ctx.recipientIds.filter(id => seatedIds.has(id));
     if (validRecipients.length === 0) {
-      giftStore.clearPlayback();
+      comboStore.clearNormalContext();
       return false;
     }
 
-    const comboCost = currentPlayback.gift.price
+    const comboCost = ctx.gift.price
       * validRecipients.length
-      * currentPlayback.quantity;
+      * ctx.quantity;
 
     const coins = Number(authStore.user?.coins ?? 0);
 
@@ -188,16 +221,31 @@ export function useGiftSending() {
       return false;
     }
 
+    // Fresh batchId per press — each combo is its own queued animation, never
+    // interrupting whatever is currently playing.
+    const batchId = newBatchId();
+
     // Emit socket event for each valid (seated) recipient. emitGift owns the
     // sender-side optimistic accumulation (see send()) — don't duplicate it here.
     for (const recipientId of validRecipients) {
-      emitGift(currentPlayback.gift.id, recipientId, currentPlayback.quantity);
+      emitGift(ctx.gift.id, recipientId, ctx.quantity, batchId);
     }
 
     // Deduct coins for combo
     deductCoins(comboCost);
 
-    // Increment combo counter
+    // Enqueue a separate playback so the combo plays in order behind whatever is
+    // already on screen — same FIFO path as send() and other users' gifts.
+    giftStore.enqueuePlayback({
+      gift: ctx.gift,
+      senderId: authStore.user!.id,
+      senderName: authStore.user!.name ?? 'Unknown',
+      senderAvatar: authStore.user!.avatar ?? undefined,
+      recipientIds: [...validRecipients],
+      quantity: ctx.quantity,
+    });
+
+    // Increment combo counter (drawer button streak display)
     giftStore.incrementCombo();
 
     return true;
@@ -272,12 +320,14 @@ export function useGiftSending() {
     () => {
       const seatedIds = getSeatedUserIds();
 
-      // Auto-end regular combo
-      if (giftStore.currentPlayback) {
-        const hasSeatedRecipient = giftStore.currentPlayback.recipientIds
+      // Auto-end regular combo: disable the combo button when its recipients all
+      // leave. Only the combo context is cleared — gifts already on screen / in
+      // the queue still finish playing (the queue is never interrupted).
+      if (comboStore.lastNormalContext) {
+        const hasSeatedRecipient = comboStore.lastNormalContext.recipientIds
           .some(id => seatedIds.has(id));
         if (!hasSeatedRecipient) {
-          giftStore.clearPlayback();
+          comboStore.clearNormalContext();
         }
       }
 

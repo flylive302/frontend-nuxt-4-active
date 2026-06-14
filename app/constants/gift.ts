@@ -20,7 +20,7 @@ export const MAX_PLAYBACK_QUEUE_SIZE = 10000;
 export const GIFT_QUEUE_INTERVAL_MS = 100;
 
 /** Maximum time to wait for a gift animation to complete before force-closing (in milliseconds) */
-export const GIFT_PLAYBACK_TIMEOUT_MS = 15000;
+export const GIFT_PLAYBACK_TIMEOUT_MS = 30000;
 
 /** Default gift category to show when drawer opens */
 export const DEFAULT_GIFT_CATEGORY = 'normal' as const;

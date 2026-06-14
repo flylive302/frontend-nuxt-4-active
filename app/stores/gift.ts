@@ -110,10 +110,30 @@ export const useGiftStore = defineStore('giftStore', () => {
   const isProcessingQueue = ref(false);
 
   /**
-   * Add a gift to the playback queue.
+   * batchIds already admitted to the queue. One send to N seats arrives as N
+   * gift:received events sharing a batchId; we play the first and drop the rest
+   * so a fan-out shows one animation, while separate combo presses (distinct
+   * batchIds) each play. Insertion-ordered with FIFO eviction — fan-out
+   * siblings arrive within ms so are never evicted before they're seen.
+   */
+  const seenBatchIds = new Set<string>();
+  const SEEN_BATCH_IDS_CAP = 500;
+
+  /**
+   * Add a gift to the playback queue. Items carrying a batchId already seen are
+   * coalesced (skipped) so a multi-recipient send plays exactly once.
    * @param item - Gift playback item (without id and timestamp)
    */
   function enqueuePlayback(item: Omit<GiftPlaybackItem, 'id' | 'timestamp'>) {
+    // GATE: coalesce per-recipient fan-out of a single send into one playback.
+    if (item.batchId) {
+      if (seenBatchIds.has(item.batchId)) return;
+      seenBatchIds.add(item.batchId);
+      if (seenBatchIds.size > SEEN_BATCH_IDS_CAP) {
+        seenBatchIds.delete(seenBatchIds.values().next().value!);
+      }
+    }
+
     if (playbackQueue.value.length >= MAX_PLAYBACK_QUEUE_SIZE) {
       // Drop the oldest if queue is full
       playbackQueue.value.shift();
@@ -142,14 +162,12 @@ export const useGiftStore = defineStore('giftStore', () => {
       currentPlayback.value = null;
       isPlaying.value = false;
       isProcessingQueue.value = false;
-      comboCount.value = 0;
       return;
     }
 
     currentPlayback.value = playbackQueue.value.shift()!;
     isPlaying.value = true;
     isProcessingQueue.value = false;
-    comboCount.value = 1;
   }
 
   /**
@@ -167,6 +185,7 @@ export const useGiftStore = defineStore('giftStore', () => {
     playbackQueue.value = [];
     isPlaying.value = false;
     comboCount.value = 0;
+    seenBatchIds.clear();
   }
 
   // ========================================
@@ -185,21 +204,6 @@ export const useGiftStore = defineStore('giftStore', () => {
    */
   function resetCombo() {
     comboCount.value = 0;
-  }
-
-  /**
-   * Restart the current playback (for combo on receiver side).
-   * Instead of enqueuing a new item, this refreshes the current one.
-   */
-  function restartCurrentPlayback() {
-    if (currentPlayback.value) {
-      // Refresh timestamp to trigger reactivity for watchers
-      currentPlayback.value = {
-        ...currentPlayback.value,
-        timestamp: Date.now(),
-      };
-      comboCount.value++;
-    }
   }
 
   // ========================================
@@ -241,6 +245,5 @@ export const useGiftStore = defineStore('giftStore', () => {
     // Combo actions
     incrementCombo,
     resetCombo,
-    restartCurrentPlayback,
   };
 });

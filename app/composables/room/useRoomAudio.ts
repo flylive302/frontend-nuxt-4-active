@@ -127,7 +127,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const log = createLogger('[RoomAudio]');
 
   const { resolveProp, resolvePropAsync } = usePropLookup();
-  const { playEntrySlide, clearRoomScoped } = useSlidePlayback();
+  const { playEntrySlide, admitPayload: admitSlidePayload, clearAll: clearAllSlides } = useSlidePlayback();
   const { ensureLoaded: ensureGiftsLoaded } = useGiftData();
 
   // Media Session (background audio signal)
@@ -501,6 +501,13 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
     audioPlayer.setupListeners();
 
+    // 5. Replay any app-scope slide still playing app-wide, so a late joiner
+    // catches it too. Admission gates on currentRoom (set above) and coalesces
+    // through the same SlideQueue as live `slide:play` events.
+    for (const slide of response.activeAppSlides ?? []) {
+      admitSlidePayload(slide);
+    }
+
     // Signal to OS that active audio is playing (keeps PWA/TWA alive in background)
     const room = roomStore.currentRoom;
     if (room) activateMediaSession(room.name, room.logo ?? null);
@@ -545,9 +552,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Same rationale for the slide overlay.
     lastSelfSlideRoomId = null;
     lastSelfJoinMessageRoomId = null;
-    // Drop room-scope slides (entry banners, room gift slides); app-scope slides
-    // persist across rooms since the overlay layer is global. See ADR 0009.
-    clearRoomScoped();
+    // Drop all slides (entry banners, room + app-scope gift/lucky slides):
+    // every scope plays only inside a room now, so none should outlive the leave.
+    // See ADR 0009.
+    clearAllSlides();
 
     // Clear room state
     audioStore.clearAudioState();
