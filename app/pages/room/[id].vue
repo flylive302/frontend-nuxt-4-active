@@ -259,8 +259,9 @@ onUnmounted(() => {
       <!-- Gift Playback Modal (full-screen, outside content area) -->
       <LazyRoomGiftPlaybackModal />
 
-      <!-- Slide Broadcast Overlay (non-blocking, pointer-events: none) -->
-      <RoomSlideBroadcast />
+      <!-- Entry/gift/lucky slide banners now render through the global
+           SlideOverlayLayer (app shell); the room-scoped RoomSlideBroadcast was
+           retired in the unified-slide-overlay fold-in (ADR 0009). -->
 
       <!-- Lucky Gift Fly Animation (thumbnail: sender → center → receiver) -->
       <LuckyGiftFly />

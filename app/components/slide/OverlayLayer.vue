@@ -5,8 +5,9 @@
  * UI underneath; only a clickable slide captures pointer events (handled in the
  * item). Mounted in the global shell so app-scope slides reach users in no room.
  *
- * Replaces the room-scoped slide-broadcast / lucky announcement paths from
- * slice 2 onward; in slice 1 it coexists with them (gift path only).
+ * The one engine for every triggered overlay — gift, lucky jackpot, and room
+ * entry. The legacy room-scoped slide-broadcast and lucky announcement paths are
+ * retired; entry banners now resolve client-side and queue here too (ADR 0009).
  */
 const {
   activeSlides,

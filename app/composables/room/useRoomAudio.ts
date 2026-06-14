@@ -72,7 +72,6 @@ let _participantsStore: ReturnType<typeof useRoomParticipantsStore> | null = nul
 let _seatsStore: ReturnType<typeof useRoomSeatsStore> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
 let _giftStore: ReturnType<typeof useGiftStore> | null = null;
-let _slideStore: ReturnType<typeof useRoomSlideStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 
 /**
@@ -115,7 +114,6 @@ export function useRoomAudio(): UseRoomAudioReturn {
   if (!_seatsStore) _seatsStore = useRoomSeatsStore();
   if (!_authStore) _authStore = useAuthStore();
   if (!_giftStore) _giftStore = useGiftStore();
-  if (!_slideStore) _slideStore = useRoomSlideStore();
   if (!_toast) _toast = useToast();
 
   // Use cached references
@@ -125,11 +123,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const seatsStore = _seatsStore;
   const authStore = _authStore;
   const giftStore = _giftStore;
-  const slideStore = _slideStore;
   const toast = _toast;
   const log = createLogger('[RoomAudio]');
 
   const { resolveProp, resolvePropAsync } = usePropLookup();
+  const { playEntrySlide, clearRoomScoped } = useSlidePlayback();
   const { ensureLoaded: ensureGiftsLoaded } = useGiftData();
 
   // Media Session (background audio signal)
@@ -408,10 +406,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
         })();
       }
 
-      // Self slide overlay. Same two-path rationale as the entry animation
-      // above — MSAB's room:userJoined is emitted via socket.to(roomId),
-      // excluding the joiner, so we trigger our own slide here. Replay guard
-      // mirrors lastSelfEntryRoomId.
+      // Self entry slide. Same two-path rationale as the entry animation above —
+      // MSAB's room:userJoined is emitted via socket.to(roomId), excluding the
+      // joiner, so we trigger our own slide here. Resolved locally and admitted
+      // into the one slide engine. Replay guard mirrors lastSelfEntryRoomId.
       if (
         authStore.user.slides_id &&
         !roomStore.isMinimized &&
@@ -421,12 +419,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
         const selfUser = authStore.user;
         void (async () => {
           const prop = await resolvePropAsync(selfUser.slides_id);
-          if (!prop) return;
-          void giftAssetCache.preloadSvga(prop.asset_url);
-          slideStore.addSlide({
-            assetUrl: prop.asset_url,
+          if (!prop?.slide) return;
+          playEntrySlide(prop.slide, {
             userId: selfUser.id,
             userName: selfUser.name,
+            userAvatar: selfUser.avatar ?? null,
+            roomName: roomStore.currentRoom?.name ?? '',
           });
         })();
       }
@@ -547,7 +545,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Same rationale for the slide overlay.
     lastSelfSlideRoomId = null;
     lastSelfJoinMessageRoomId = null;
-    slideStore.clearSlides();
+    // Drop room-scope slides (entry banners, room gift slides); app-scope slides
+    // persist across rooms since the overlay layer is global. See ADR 0009.
+    clearRoomScoped();
 
     // Clear room state
     audioStore.clearAudioState();

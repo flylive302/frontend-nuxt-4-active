@@ -76,9 +76,6 @@ export const GIFT_PRELOAD_DEBOUNCE_MS = 300;
 // Slide Overlay
 // ============================================
 
-/** Top offset (px) for the slide overlay within the room view */
-export const SLIDE_TOP_OFFSET_PX = 400;
-
 // ---- SlideQueue overlap engine (tunable, mobile-conservative) ----
 // All back-pressure limits are injected into `SlideQueue` (never hardcoded in
 // the engine) so they can be tuned without touching the pure model. Defaults

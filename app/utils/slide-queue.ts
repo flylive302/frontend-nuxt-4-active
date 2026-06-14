@@ -26,7 +26,7 @@
  *   `coalesceWindowMs` collapses into the existing item with an incremented
  *   `count`, keeping its `instanceId` stable so the SVGA never remounts.
  */
-import type { SlidePlayPayload } from '~/types/slide';
+import type { SlidePlayPayload, SlideScope } from '~/types/slide';
 
 /** Injected, tunable back-pressure limits (defaults live in `constants/room.ts`). */
 export interface SlideQueueConfig {
@@ -174,6 +174,23 @@ export class SlideQueue {
   clear(): void {
     this.playingItems.length = 0;
     this.waitingItems.length = 0;
+  }
+
+  /**
+   * Drop every playing + waiting slide of the given scope, then promote eligible
+   * remaining waiters into any band the removed slides freed. Used on room leave
+   * to clear room-scope banners while app-scope slides (which reach users in no
+   * room) persist. Returns the new playing snapshot.
+   */
+  clearScope(scope: SlideScope, now: number): readonly QueuedSlide[] {
+    for (let i = this.waitingItems.length - 1; i >= 0; i--) {
+      if ((this.waitingItems[i] as QueuedSlide).scope === scope) this.waitingItems.splice(i, 1);
+    }
+    for (let i = this.playingItems.length - 1; i >= 0; i--) {
+      if ((this.playingItems[i] as QueuedSlide).scope === scope) this.playingItems.splice(i, 1);
+    }
+    this.promote(now);
+    return this.playing;
   }
 
   // ---- helpers ----

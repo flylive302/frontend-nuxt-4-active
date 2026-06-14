@@ -3,6 +3,7 @@
 // ========================================
 
 import type { Gift } from '../gift/gift'
+import type { EntrySlideConfig } from '~/types/slide'
 import type {Badge, EquippedBadge} from "~/types/progression/badge";
 
 // ========================================
@@ -231,6 +232,12 @@ export interface BootstrapProp {
   type: string
   thumbnail_url: string
   asset_url: string
+  /**
+   * Entry Slide config for `slides`-type props — present only when the prop is
+   * bound to an entry Slide. Lets the client resolve the room-entry banner
+   * locally on join (unified-slide-overlay). Null/absent for every other prop.
+   */
+  slide?: EntrySlideConfig | null
 }
 
 /**

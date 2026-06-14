@@ -171,4 +171,31 @@ describe('SlideQueue', () => {
       expect(ids(queue.playing)).toEqual(before)
     })
   })
+
+  describe('clearScope (room leave)', () => {
+    it('drops room-scope playing + waiting slides but keeps app-scope ones', () => {
+      // Two disjoint bands playing: one room, one app.
+      queue.enqueue(input({ slideId: 1, scope: 'room', top: 0, height: 100 }), 0)
+      queue.enqueue(input({ slideId: 2, scope: 'app', top: 200, height: 100 }), 0)
+      // A room slide waiting behind the room band.
+      queue.enqueue(input({ slideId: 3, scope: 'room', top: 0, height: 100 }), 0)
+
+      const playing = queue.clearScope('room', 1)
+
+      expect(ids(playing)).toEqual([2])
+      expect(queue.waiting).toHaveLength(0)
+    })
+
+    it('promotes a waiting app slide into a band freed by a cleared room slide', () => {
+      // Room slide plays; a colliding app slide waits behind it.
+      queue.enqueue(input({ slideId: 1, scope: 'room', top: 0, height: 100 }), 0)
+      queue.enqueue(input({ slideId: 2, scope: 'app', top: 0, height: 100 }), 0)
+      expect(ids(queue.waiting)).toEqual([2])
+
+      const playing = queue.clearScope('room', 1)
+
+      expect(ids(playing)).toEqual([2])
+      expect(queue.waiting).toHaveLength(0)
+    })
+  })
 })

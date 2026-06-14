@@ -111,7 +111,7 @@ export function setupRoomEventHandlers(
   const { getGiftById } = useGiftData();
   const { triggerFly } = useLuckyFly();
   const { resolvePropAsync } = usePropLookup();
-  const slideStore = useRoomSlideStore();
+  const { playEntrySlide } = useSlidePlayback();
   const comboStore = useGiftComboStore();
 
   // Room events
@@ -137,17 +137,18 @@ export function setupRoomEventHandlers(
       }
     }
 
-    // Slide overlay — non-blocking SVGA broadcast for the joiner's equipped
-    // slides prop. Runs alongside (not instead of) the entry animation; the
-    // two are independent layers.
+    // Entry slide overlay — the joiner's equipped slides prop, resolved locally
+    // and admitted into the one slide engine (collision-band queue), so
+    // simultaneous joins no longer overlap. Runs alongside (not instead of) the
+    // entry animation; the two are independent layers. See ADR 0009.
     if (event.user.slides_id && !roomStore.isMinimized) {
       const slideProp = await resolvePropAsync(event.user.slides_id);
-      if (slideProp) {
-        void giftAssetCache.preloadSvga(slideProp.asset_url);
-        slideStore.addSlide({
-          assetUrl: slideProp.asset_url,
+      if (slideProp?.slide) {
+        playEntrySlide(slideProp.slide, {
           userId: event.user.id,
           userName: event.user.name,
+          userAvatar: event.user.avatar ?? null,
+          roomName: roomStore.currentRoom?.name ?? '',
         });
       }
     }
