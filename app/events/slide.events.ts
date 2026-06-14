@@ -8,6 +8,7 @@
 import type { Socket } from 'socket.io-client'
 import type { SlidePlayPayload } from '~/types/slide'
 import * as giftAssetCache from '~/services/giftAssetCache'
+import { getSlideQueue } from '~/services/slideQueue'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[SlideEvents]')
@@ -28,8 +29,16 @@ export function useSlideEvents() {
         return
       }
 
-      // EXECUTE — promote to an active on-screen slide.
-      slideStore.addSlide(payload)
+      // EXECUTE — admit into the overlap engine (collision-band bucketing,
+      // priority, coalesce) and mirror its playing set into the store.
+      // recipientId is not on the S1 wire payload yet (resolver supplies it in a
+      // later slice), so coalesce is currently sender-scoped and may merge
+      // distinct recipients within the window. See ADR 0009.
+      const playing = getSlideQueue().enqueue(
+        { ...payload, senderId: payload.link?.userId ?? null, recipientId: null },
+        Date.now(),
+      )
+      slideStore.setPlaying(playing)
 
       // REACT — lazily preload the asset (fire-and-forget); the player also
       // loads on demand, this just warms the cache.

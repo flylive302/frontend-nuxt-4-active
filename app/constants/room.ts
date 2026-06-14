@@ -79,5 +79,31 @@ export const GIFT_PRELOAD_DEBOUNCE_MS = 300;
 /** Top offset (px) for the slide overlay within the room view */
 export const SLIDE_TOP_OFFSET_PX = 400;
 
+// ---- SlideQueue overlap engine (tunable, mobile-conservative) ----
+// All back-pressure limits are injected into `SlideQueue` (never hardcoded in
+// the engine) so they can be tuned without touching the pure model. Defaults
+// favour mobile per the mobile-first priority. See ADR 0009.
+
+/** Freshness TTL (ms): a queued slide that has waited longer is expired and never plays. */
+export const SLIDE_QUEUE_TTL_MS = 8_000;
+
+/** Max queued slides per vertical band; the oldest low-priority item beyond this is dropped. */
+export const SLIDE_QUEUE_PER_BAND_DEPTH = 3;
+
+/** Max slides playing at once on mobile (across all bands). */
+export const SLIDE_QUEUE_GLOBAL_CAP_MOBILE = 3;
+
+/** Max slides playing at once on desktop (across all bands). */
+export const SLIDE_QUEUE_GLOBAL_CAP_DESKTOP = 5;
+
+/** Repeated (slide, sender, recipient) within this window coalesce into one item with a count. */
+export const SLIDE_QUEUE_COALESCE_WINDOW_MS = 2_500;
+
+/** Min viewport width (px) treated as desktop when resolving the global concurrent cap. */
+export const SLIDE_QUEUE_DESKTOP_MIN_WIDTH_PX = 768;
+
+/** How often the overlay composable ticks the queue to expire stale waiters. */
+export const SLIDE_QUEUE_TICK_INTERVAL_MS = 1_000;
+
 
 

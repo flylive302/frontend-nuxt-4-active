@@ -35,4 +35,9 @@ export interface SlidePlayPayload {
 export interface ActiveSlide extends SlidePlayPayload {
   /** Unique per render so concurrent copies of the same slide key + remove cleanly. */
   instanceId: string
+  /**
+   * Combo count: how many coalesced sends this on-screen item represents (1 for
+   * a lone slide). Stays on the same `instanceId` so the SVGA never remounts.
+   */
+  count: number
 }

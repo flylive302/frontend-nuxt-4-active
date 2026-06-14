@@ -1,4 +1,6 @@
 import type { ActiveSlide } from '~/types/slide'
+import { SLIDE_QUEUE_TICK_INTERVAL_MS } from '~/constants/room'
+import { getSlideQueue } from '~/services/slideQueue'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[useSlideOverlay]')
@@ -6,25 +8,38 @@ const log = createLogger('[useSlideOverlay]')
 /**
  * Consumer-facing orchestrator for the global slide overlay layer (GATE →
  * EXECUTE → REACT). The `slide:play` subscription itself lives in
- * `events/slide.events.ts` (the globally-registered REACT registry); this
- * composable owns completion removal and the click-to-track action, and
- * surfaces the room-entry password prompt for the layer to render.
+ * `events/slide.events.ts` (the globally-registered REACT registry, which
+ * enqueues into the shared SlideQueue); this composable owns the TTL tick
+ * cadence and completion advancement of that queue, plus the click-to-track
+ * action, and surfaces the room-entry password prompt for the layer to render.
  *
- * Slice 1 renders slides as they arrive (trivial queue). The collision-band
- * SlideQueue (priority/TTL/concurrency) lands in slice 2.
+ * The collision-band `SlideQueue` is the source of truth for what plays; the
+ * store mirrors its `playing` snapshot for rendering. See ADR 0009.
  */
 export function useSlideOverlay() {
   const slideStore = useSlideOverlayStore()
   const { activeSlides } = storeToRefs(slideStore)
+  const queue = getSlideQueue()
 
   // Own useRoomEntry() instance so its password-prompt state is co-located with
   // the overlay layer that renders the modal.
   const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
   const { trackUserById } = useTrackUser(enterRoom)
 
-  /** REACT — drop the slide once its SVGA finishes. */
+  // Tick the queue so stale waiters expire even when no completion drives it.
+  // Expiry never frees a band, so the playing set (and store) is left untouched.
+  let tickTimer: ReturnType<typeof setInterval> | null = null
+  onMounted(() => {
+    if (!import.meta.client) return
+    tickTimer = setInterval(() => queue.tick(Date.now()), SLIDE_QUEUE_TICK_INTERVAL_MS)
+  })
+  onBeforeUnmount(() => {
+    if (tickTimer) clearInterval(tickTimer)
+  })
+
+  /** REACT — release the band on SVGA completion and mirror the advanced queue. */
   function onComplete(instanceId: string): void {
-    slideStore.removeSlide(instanceId)
+    slideStore.setPlaying(queue.onComplete(instanceId, Date.now()))
   }
 
   /** INTENT/EXECUTE — handle a tap on a clickable slide. */
