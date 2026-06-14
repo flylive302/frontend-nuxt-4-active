@@ -13,6 +13,9 @@ const {
   activeSlides,
   onComplete,
   handleSlideClick,
+  showTrackConfirm,
+  confirmTrack,
+  cancelTrack,
   showPasswordPrompt,
   pendingRoom,
   onPasswordSuccess,
@@ -33,6 +36,12 @@ const {
         @click="handleSlideClick(slide)"
       />
     </div>
+
+    <SlideTrackConfirmModal
+      v-model:open="showTrackConfirm"
+      @confirm="confirmTrack"
+      @cancel="cancelTrack"
+    />
 
     <RoomPasswordPromptModal
       v-if="showPasswordPrompt && pendingRoom"

@@ -2,7 +2,7 @@
 import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
-import { BANNER_AUTOPLAY_DELAY_MS, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
+import { ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { withImageKitTransform } from '~/utils/imagekit'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
 import type { RoomsResponse } from '~/types/room/room'
@@ -16,10 +16,7 @@ definePageMeta({
   middleware: ['auth', 'critical-assets'],
 })
 
-const bannerAutoplay = ref<{ delay: number } | undefined>({ delay: BANNER_AUTOPLAY_DELAY_MS })
-
 // ---- Optimization: Pause Autoplay when off-screen; delay room autoplay until after first paint (LCP)
-const bannerRef = ref(null)
 const roomRef = ref(null)
 const roomSectionInView = ref(true)
 /** Embla snap index — LCP image must match the snapped slide, not always index 0 */
@@ -83,10 +80,6 @@ const fetchRoomsList = async ({ page }: { page: number }) => {
 const infiniteScrollFetcher = async (ctx: { page: number }) => {
   return fetchRoomsList(ctx) as Promise<{ data: { id: string | number }[] }>
 }
-
-useIntersectionObserver(bannerRef, ([entry]) => {
-  bannerAutoplay.value = entry?.isIntersecting ? { delay: BANNER_AUTOPLAY_DELAY_MS } : undefined
-})
 
 useIntersectionObserver(roomRef, ([entry]) => {
   roomSectionInView.value = entry?.isIntersecting ?? false
@@ -170,88 +163,10 @@ onMounted(() => {
   }
 })
 
-// ---- Types
-type CardType = 'cp' | 'country' | 'pretty_id' | 'recharge_tycoon' | 'supreme_recharge'
-interface Banner {
-  type: CardType
-
-  lUserName?: string
-  lFrameName?: string
-  lAvatar?: string
-  lFrameGirth?: number
-  lTop?: number
-
-  rUserName?: string
-  rFrameName?: string
-  rAvatar?: string
-  rFrameGirth?: number
-  rTop?: number
-
-  textClass?: string
-  text?: string
-}
-
-const createBanner = (
-  type: CardType,
-  config: Partial<Omit<Banner, 'type'>> = {}
-): Banner => ({
-  type,
-  lFrameName: '',
-  lAvatar: '',
-  lFrameGirth: 70,
-  lTop: 50,
-  rFrameName: '',
-  rAvatar: '',
-  rFrameGirth: 70,
-  rTop: 50,
-  ...config
-})
-
-const banners: Banner[] = [
-  createBanner('cp', {
-    lUserName: 'Noah',
-    rUserName: 'Luna',
-    textClass: 'pl-5',
-    text: 'Weekly Cp'
-  }),
-  createBanner('country', {
-    lUserName: 'Ali',
-    lFrameName: 'frames/9',
-    rUserName: 'Nora',
-    rFrameName: 'frames/9',
-    textClass: 'text-base',
-    text: 'Country Event'
-  }),
-  createBanner('recharge_tycoon', {
-    lUserName: 'Darkish',
-    lFrameName: 'frames/6',
-    rUserName: 'Hori',
-    rFrameName: 'frames/6',
-    textClass: 'text-sm',
-    text: 'Recharge tycoon'
-  }),
-  createBanner('supreme_recharge', {
-    lUserName: 'Aria',
-    lFrameName: 'frames/12',
-    rUserName: 'Junie',
-    rFrameName: 'frames/12',
-    textClass: 'text-base',
-    text: 'Supreme'
-  }),
-  createBanner('pretty_id', {
-    lUserName: 'Mina',
-    lFrameName: 'frames/16',
-    rUserName: 'Aniya',
-    rFrameName: 'frames/16',
-    textClass: 'text-sm',
-    text: 'Pretty ID 💖'
-  })
-]
 </script>
 
 <template>
   <main>
-
     <!-- Following vs banners depends on auth-specific API — SSR placeholder avoids branch mismatches -->
     <ClientOnly>
       <template #fallback>
@@ -263,46 +178,8 @@ const banners: Banner[] = [
       </template>
       <div>
         <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3" />
-        <div v-else ref="bannerRef">
-          <!-- Embla DOM differs after hydration — SSR markup matches #fallback to avoid console mismatches -->
-          <ClientOnly>
-            <template #fallback>
-              <div class="mt-4 flex gap-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div
-                  v-for="(item, i) in banners"
-                  :key="i"
-                  class="shrink-0 basis-3/4 min-w-0"
-                >
-                  <EventsBanners
-                    v-if="item"
-                    v-bind="item"
-                    :type="item.type"
-                  >
-                    <span :class="item.textClass">{{ item.text }}</span>
-                  </EventsBanners>
-                </div>
-              </div>
-            </template>
-            <UCarousel
-              :autoplay="bannerAutoplay"
-              :items="banners"
-              class-names
-              :ui="{
-                container: 'mt-4',
-                item: 'basis-3/4 transition duration-800 ease-in-out scale-90 [&.is-snapped]:scale-100 squircle'
-              }"
-            >
-              <template #default="{ item }">
-                <EventsBanners
-                  v-if="item"
-                  v-bind="item"
-                  :type="item.type"
-                >
-                  <span :class="item.textClass">{{ item.text }}</span>
-                </EventsBanners>
-              </template>
-            </UCarousel>
-          </ClientOnly>
+        <div v-else class="flex gap-3 overflow-x-auto scrollbar-hide">
+          <EventsBanners />
         </div>
       </div>
     </ClientOnly>
@@ -324,7 +201,7 @@ const banners: Banner[] = [
       <div ref="roomRef">
         <ClientOnly v-if="carouselRooms.length > 0">
           <template #fallback>
-            <div class="mb-6 flex gap-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="mb-6 flex gap-3 overflow-x-auto px-3 scrollbar-hide">
               <RoomCard
                 v-for="(item, index) in carouselRooms"
                 :key="item.id"

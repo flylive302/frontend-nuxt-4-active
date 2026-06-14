@@ -26,6 +26,11 @@ export function useSlideOverlay() {
   const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
   const { trackUserById } = useTrackUser(enterRoom)
 
+  // Track-confirm prompt state, co-located with the layer that renders the
+  // dialog. A tap on a `track` slide opens this; navigation only runs on confirm.
+  const showTrackConfirm = ref(false)
+  const pendingTrackUserId = ref<number | null>(null)
+
   // Tick the queue so stale waiters expire even when no completion drives it.
   // Expiry never frees a band, so the playing set (and store) is left untouched.
   let tickTimer: ReturnType<typeof setInterval> | null = null
@@ -50,7 +55,9 @@ export function useSlideOverlay() {
     if (type === 'none' || userId == null) return
 
     if (type === 'track') {
-      await trackUserById(userId)
+      // GATE — defer navigation behind an explicit confirmation prompt.
+      pendingTrackUserId.value = userId
+      showTrackConfirm.value = true
       return
     }
 
@@ -59,10 +66,28 @@ export function useSlideOverlay() {
     log.debug('Unsupported slide link type for now', type)
   }
 
+  /** EXECUTE — user confirmed; track into the sender's room. */
+  async function confirmTrack(): Promise<void> {
+    const userId = pendingTrackUserId.value
+    showTrackConfirm.value = false
+    pendingTrackUserId.value = null
+    if (userId == null) return
+    await trackUserById(userId)
+  }
+
+  /** INTENT — user dismissed the prompt; drop the pending target. */
+  function cancelTrack(): void {
+    showTrackConfirm.value = false
+    pendingTrackUserId.value = null
+  }
+
   return {
     activeSlides,
     onComplete,
     handleSlideClick,
+    showTrackConfirm,
+    confirmTrack,
+    cancelTrack,
     showPasswordPrompt,
     pendingRoom,
     onPasswordSuccess,

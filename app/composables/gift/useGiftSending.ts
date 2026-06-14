@@ -139,13 +139,10 @@ export function useGiftSending() {
           quantity: selectedQuantity,
         };
 
-        if (giftStore.isPlaying) {
-          // Sender's new gift replaces current playback immediately
-          giftStore.interruptAndPlay(playbackItem);
-        } else {
-          // Nothing playing — enqueue (auto-starts via playNext)
-          giftStore.enqueuePlayback(playbackItem);
-        }
+        // Always enqueue: a new send waits its turn behind whatever is already
+        // playing and advances when that finishes, exactly like the gifts other
+        // users send. Auto-starts via playNext when nothing is playing.
+        giftStore.enqueuePlayback(playbackItem);
       }
 
       // Reset selection for next send

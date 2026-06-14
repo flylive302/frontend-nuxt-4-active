@@ -135,24 +135,6 @@ export const useGiftStore = defineStore('giftStore', () => {
   }
 
   /**
-   * Immediately replace current playback with a new item.
-   * Clears the queue and resets combo. Used when the sender sends
-   * a new gift while one is already playing — sender always sees
-   * their latest gift immediately (no queuing behind other gifts).
-   * @param item - Gift playback item (without id and timestamp)
-   */
-  function interruptAndPlay(item: Omit<GiftPlaybackItem, 'id' | 'timestamp'>) {
-    playbackQueue.value = [];
-    currentPlayback.value = {
-      ...item,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      timestamp: Date.now(),
-    };
-    isPlaying.value = true;
-    comboCount.value = 1;
-  }
-
-  /**
    * Start playing the next item in the queue
    */
   function playNext() {
@@ -252,7 +234,6 @@ export const useGiftStore = defineStore('giftStore', () => {
 
     // Playback actions
     enqueuePlayback,
-    interruptAndPlay,
     playNext,
     onPlaybackComplete,
     clearPlayback,

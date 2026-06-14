@@ -119,38 +119,27 @@ export const vipUIAssetBase = (level: number) =>
 
 /** ~360px max card width on mobile; avoids overserving w-400 vs painted box */
 const BANNER_BG_TR = 'tr=w-360,q-72,c-maintain_ratio,f-auto'
-const BANNER_HDR_TR = 'tr=w-240,q-72,c-maintain_ratio,f-auto'
-const BANNER_DECOR_TR = 'tr=w-96,q-72,c-maintain_ratio,f-auto'
 
 export const EVENT_BANNERS = {
+  recharge: {
+    banner: `${IK}/banners/recharge-tycoon.webp?${BANNER_BG_TR}`,
+    navigateTo: `/recharge`,
+  },
   cp: {
     banner: `${IK}/banners/cp.webp?${BANNER_BG_TR}`,
-    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
-    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
+    navigateTo: '/',
   },
   country: {
     banner: `${IK}/banners/country.webp?${BANNER_BG_TR}`,
-    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
-    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
+    navigateTo: `/`,
   },
   pretty_id: {
     banner: `${IK}/banners/pretty-id.webp?${BANNER_BG_TR}`,
-    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
-    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
-  },
-  recharge_tycoon: {
-    banner: `${IK}/banners/recharge-tycoon.webp?${BANNER_BG_TR}`,
-    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
-    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
-  },
-  supreme_recharge: {
-    banner: `${IK}/banners/supreme-recharge.webp?${BANNER_BG_TR}`,
-    header: `${IK}/banners/cp-header.webp?${BANNER_HDR_TR}`,
-    decor: `${IK}/banners/decor-main-content.webp?${BANNER_DECOR_TR}`,
+    navigateTo: `/`,
   },
 } as const satisfies Record<
   string,
-  { banner: string; header: string; decor: string }
+  { banner: string; navigateTo: string; }
 >
 
 // ========================================
