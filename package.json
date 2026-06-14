@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
     "@capacitor/core": "^8.4.0",
     "@internationalized/date": "^3.9.0",
     "@nuxt/image": "^1.11.0",

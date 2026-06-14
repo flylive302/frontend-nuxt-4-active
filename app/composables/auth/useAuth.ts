@@ -13,6 +13,7 @@ import type {
   ResetPasswordPayload,
   VerifyEmailPayload,
 } from '~/types/user/auth'
+import { Capacitor } from '@capacitor/core'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[Auth]')
@@ -240,6 +241,14 @@ export function useAuthActions() {
    * REACT:   On popup result → store tokens, fetch user, navigate
    */
   async function startSocialLogin(provider: string): Promise<void> {
+    // Native (Capacitor): open the real system browser and let the result come
+    // back via a custom-scheme deep link. The web popup/redirect flow below is
+    // left byte-for-byte unchanged (ADR 0011).
+    if (Capacitor.isNativePlatform()) {
+      await useNativeSocialAuth().launch(provider)
+      return
+    }
+
     try {
       const { data } = await api<{ data: { redirect_url: string } }>(`/auth/social/${provider}/redirect`)
 

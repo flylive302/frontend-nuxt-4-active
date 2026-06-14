@@ -135,9 +135,42 @@ export function useOAuthCallback() {
     return callbackResult
   }
 
+  /**
+   * Exchange a single-use native callback code for the session credentials,
+   * then reuse the validated redirect-flow path (native-flow).
+   *
+   * The session token never travels in the deep-link URL on native — only an
+   * opaque, single-use `code`. We POST it to /auth/social/exchange for the real
+   * credentials, then feed them through `handleCallback` so the credential layer
+   * (token-presence GATE → store → fetch user) is shared verbatim with web.
+   *
+   * `is_new` from the exchange is a real JSON boolean (not the `'true'` string
+   * the URL/popup flows carry) — pass it through directly.
+   *
+   * EXECUTE: POST /auth/social/exchange → handleCallback
+   */
+  async function handleExchangeCode(code: string): Promise<OAuthCallbackResult> {
+    let data: { token: string; msab_token: string | null; is_new: boolean }
+    try {
+      const res = await api<{ data: { token: string; msab_token: string | null; is_new: boolean } }>(
+        '/auth/social/exchange',
+        { method: 'POST', body: { code } },
+      )
+      data = res.data
+    } catch {
+      return { success: false, error: 'Sign-in failed. Please try again.', redirectTo: '/log-in' }
+    }
+
+    return handleCallback({
+      token: data.token,
+      msabToken: data.msab_token ?? undefined,
+      isNew: data.is_new,
+    })
+  }
+
   // ========================================
   // Return
   // ========================================
 
-  return { handleCallback, handlePopupResult }
+  return { handleCallback, handlePopupResult, handleExchangeCode }
 }
