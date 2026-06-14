@@ -66,8 +66,6 @@ const ROOM_EVENT_NAMES = [
   'gift:error',
   'gift:prepare',
   'lucky:result',
-  'lucky:room_announcement',
-  'lucky:app_announcement',
 ] as const;
 
 // ============================================

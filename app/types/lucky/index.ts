@@ -20,30 +20,9 @@ export interface LuckyDrawResult {
   gift_name: string;
 }
 
-/** Payload for `lucky:room_announcement` — room-scoped big win */
-export interface LuckyRoomAnnouncement {
-  user_id: number;
-  user_name: string;
-  user_avatar: string;
-  multiplier: number;
-  coins_won: number;
-  tier_name: string;
-  room_name: string;
-  svga_url: string;
-}
-
-/** Payload for `lucky:app_announcement` — app-wide mega win */
-export interface LuckyAppAnnouncement {
-  user_id: number;
-  user_name: string;
-  user_avatar: string;
-  multiplier: number;
-  coins_won: number;
-  tier_name: string;
-  room_id: number;
-  room_name: string;
-  svga_url: string;
-}
+// Big-win announcements (room/app SVGA) are no longer lucky-specific: they now
+// flow through the unified slide overlay (`slide:play`). See ADR 0009 and
+// docs/issues/unified-slide-overlay/03-lucky-migration.md.
 
 // ============================================
 // Animation State

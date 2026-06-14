@@ -25,15 +25,7 @@ const roomBackgroundDisplaySrc = computed(() =>
 )
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
 
-const {
-  floatingMultipliers,
-  roomAnnouncement,
-  isRoomAnnouncementVisible,
-  dismissRoomAnnouncement,
-  appAnnouncement,
-  isAppAnnouncementVisible,
-  dismissAppAnnouncement,
-} = useLuckyGift();
+const { floatingMultipliers } = useLuckyGift();
 
 
 
@@ -201,20 +193,6 @@ onUnmounted(() => {
         <main class="grid grid-cols-5 gap-x-2">
           <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? 15)" :key="i" :seat-id="i" />
         </main>
-
-        <LuckyRoomAnnouncement
-          v-if="roomAnnouncement"
-          :announcement="roomAnnouncement"
-          :visible="isRoomAnnouncementVisible"
-          @dismiss="dismissRoomAnnouncement"
-        />
-
-        <LuckyAppAnnouncement
-          v-if="appAnnouncement"
-          :announcement="appAnnouncement"
-          :visible="isAppAnnouncementVisible"
-          @dismiss="dismissAppAnnouncement"
-        />
 
         <LazyRoomSeatDrawer />
 
