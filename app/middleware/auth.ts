@@ -1,6 +1,7 @@
 // ========================================
 // Auth Middleware
 // ========================================
+import { Capacitor } from '@capacitor/core'
 
 /**
  * Protects authenticated routes.
@@ -15,6 +16,12 @@ export default defineNuxtRouteMiddleware(async () => {
 
   // Check for token — user data is hydrated by bootstrap plugin
   if (!authStore.token) {
+    // `/welcome` is a web-only marketing page served outside this SPA (hence the
+    // external hard-nav). The native bundle has no such page, so a hard-nav there
+    // 404s — send native users to the in-app login route instead.
+    if (Capacitor.isNativePlatform()) {
+      return navigateTo('/log-in')
+    }
     return navigateTo('/welcome', { external: true })
   }
 

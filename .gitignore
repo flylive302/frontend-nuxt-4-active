@@ -25,6 +25,7 @@ logs
 .env
 .env.*
 !.env.example
+!.env.capacitor.example
 dev-mobile.sh
 
 # Nuxt dev-server host-named build cache (created by `nuxt dev --host`)

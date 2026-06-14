@@ -8,12 +8,17 @@
     "dev": "nuxt dev --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "cap:build": "NITRO_PRESET=static nuxt generate --dotenv .env.capacitor && cap sync android",
+    "cap:android": "cap open android",
+    "cap:sync": "cap sync android",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "test": "vitest run",
     "architecture:check": "./scripts/architecture-check.sh"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
     "@internationalized/date": "^3.9.0",
     "@nuxt/image": "^1.11.0",
     "@nuxt/scripts": "^0.12.2",
@@ -40,6 +45,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
     "@nuxt/eslint": "^1.9.0",
     "@nuxt/test-utils": "^3.19.2",
     "@types/node": "^24.10.2",

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FlyLive</string>
+    <string name="title_activity_main">FlyLive</string>
+    <string name="package_name">com.flylive.app</string>
+    <string name="custom_url_scheme">com.flylive.app</string>
+</resources>
