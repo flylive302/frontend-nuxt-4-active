@@ -10,7 +10,7 @@
  */
 import type { JoinRoomResponse, SelfMutePayload, SelfMuteResponse } from '~/types/room/audio';
 import { userToParticipant } from '~/types/room/audio';
-import type { Ref, ComputedRef } from 'vue';
+import type { Ref, ComputedRef, EffectScope } from 'vue';
 import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, clearGiftQueue, type UseRoomGiftsReturn } from './useRoomGifts';
@@ -22,6 +22,7 @@ import { REGION_ENDPOINTS } from '~/constants/audio';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
+import * as fgsCoordinator from '~/services/foregroundServiceCoordinator';
 
 // ============================================
 // Types
@@ -95,6 +96,38 @@ let lastSelfSlideRoomId: string | null = null;
  */
 let lastSelfJoinMessageRoomId: string | null = null;
 
+/**
+ * Detached effect scope owning the process-wide microphone foreground-service
+ * watch (capacitor-03). It MUST be a `effectScope(true)` (detached), NOT a bare
+ * `watch()` in the composable body: `useRoomAudio()` is first called inside a
+ * room component's `setup()`, so a body-level watcher would bind to that
+ * component's scope and Vue would auto-dispose it on unmount — after which
+ * re-entering a room would never re-arm the mic FGS (silently breaking both
+ * halves of AC #2). A detached scope is ownerless and lives for the app process.
+ * Created once (`fgsScope ??=`); the coordinator is a no-op off Android, so the
+ * always-on watch is harmless on web/iOS.
+ */
+let fgsScope: EffectScope | null = null;
+
+/** Install the singleton producing-watch in a detached scope (idempotent). */
+function ensureFgsWatch(audioStore: ReturnType<typeof useRoomAudioStore>): void {
+  if (fgsScope) return;
+  fgsScope = effectScope(true);
+  fgsScope.run(() => {
+    watch(
+      () => audioStore.audioState.isProducing,
+      () => {
+        // `consuming` carried for policy completeness; only `producing` changes
+        // the service SET this slice (mediaPlayback is capacitor-04).
+        void fgsCoordinator.apply({
+          producing: audioStore.audioState.isProducing,
+          consuming: audioStore.audioState.isConnected,
+        });
+      },
+    );
+  });
+}
+
 // ============================================
 // Composable
 // ============================================
@@ -152,6 +185,16 @@ export function useRoomAudio(): UseRoomAudioReturn {
     producer,
     setVolume: setMediasoupVolume,
   } = useMediasoup(socket);
+
+  // ========================================
+  // Microphone foreground service (capacitor-03)
+  // ========================================
+  // Drive the FGS coordinator off the single source of truth for producing —
+  // `audioState.isProducing` — so it catches EVERY way a Speaker stops producing
+  // (self-leave-seat, server-side seat kick via socket, leaveRoom), not just the
+  // local stopAudio() path. Installed in a detached scope (see ensureFgsWatch)
+  // so it survives component unmount/remount; coordinator is a no-op off Android.
+  ensureFgsWatch(audioStore);
 
   // ========================================
   // Helper: Get current room ID

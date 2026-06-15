@@ -43,6 +43,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Microphone foreground service (capacitor-03): keeps the shell's
+             process (and its WebRTC mic capture) alive while a Speaker/DJ
+             produces with the screen off. Holds the process foreground only —
+             no audio logic of its own. START_NOT_STICKY + onTaskRemoved stop
+             so it never outlives a live producing session. -->
+        <service
+            android:name=".fgs.MicrophoneForegroundService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
@@ -53,4 +63,13 @@
          WebView audio-capture request once RECORD_AUDIO is held at runtime. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Microphone foreground service (capacitor-03). FOREGROUND_SERVICE_MICROPHONE
+         + the matching foregroundServiceType are required on Android 14+ (target
+         SDK 36). POST_NOTIFICATIONS (API 33+) lets the persistent broadcasting
+         notification render — denial does NOT stop the service, only hides the
+         notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>
