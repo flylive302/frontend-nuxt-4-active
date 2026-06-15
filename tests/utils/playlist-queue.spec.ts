@@ -24,8 +24,8 @@ describe('PlaylistQueue', () => {
     it('appends a single file and returns the created track', () => {
       const [track] = queue.add(audioFile('first.mp3'))
 
-      expect(track.title).toBe('first')
-      expect(track.file.name).toBe('first.mp3')
+      expect(track?.title).toBe('first')
+      expect(track?.file.name).toBe('first.mp3')
       expect(queue.tracks).toHaveLength(1)
       expect(queue.current).toBe(track)
     })
@@ -64,8 +64,8 @@ describe('PlaylistQueue', () => {
       const [a] = queue.add(audioFile('My Song.final.mp3'))
       const [b] = queue.add(audioFile('NoExtension'))
 
-      expect(a.title).toBe('My Song.final')
-      expect(b.title).toBe('NoExtension')
+      expect(a?.title).toBe('My Song.final')
+      expect(b?.title).toBe('NoExtension')
     })
   })
 

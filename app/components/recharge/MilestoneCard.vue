@@ -71,7 +71,7 @@ function openPreview(reward: MilestoneReward, resolved: ResolvedRewardAsset): vo
 // ========================================
 // Stretchable card frame (9-slice border-image)
 // ========================================
-// taskBg is a decorative frame (gold rounded top/sides, diamond center, bottom
+// task Bg is a decorative frame (gold rounded top/sides, diamond center, bottom
 // flourishes). Used as a border-image so the card grows/shrinks with the rewards
 // grid instead of being locked to the image's fixed aspect ratio.
 const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
@@ -136,7 +136,7 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
             </template>
 
             <!-- Prop / badge thumbnail: static image -->
-            <template v-else-if="resolved.thumbnailUrl">
+            <template v-else-if="resolved?.thumbnailUrl">
               <button
                 v-if="resolved.assetUrl"
                 class="w-20 sm:w-24 focus:outline-none cursor-pointer"
