@@ -34,10 +34,10 @@ onMounted(() => {
 const formRef = ref<Form<VerifyFormData> | null>(null)
 const { isSubmitting, generalError, handleSubmit } = useAuthForm({ formRef })
 
-const state = reactive<{ code: string[] }>({ code: [] })
+const state = reactive<{ code: number[] }>({ code: [] })
 
 const verifySchema = z.object({
-  code: z.string().regex(/^\d$/, 'Digits only').array().length(OTP_LENGTH, `Enter the ${OTP_LENGTH}-digit code`),
+  code: z.number().int().min(0).max(9).array().length(OTP_LENGTH, `Enter the ${OTP_LENGTH}-digit code`),
 })
 type VerifyFormData = z.infer<typeof verifySchema>
 

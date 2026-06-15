@@ -57,7 +57,9 @@ const previewReward = ref<{ reward: RankingRewardItem; resolved: ResolvedRewardA
 // Derived
 // ========================================
 
-const timeframeRewards = computed<RankingRewardItem[]>(
+// `data` is exposed as a readonly ref; let inference flow the DeepReadonly type
+// rather than annotating a mutable array shape.
+const timeframeRewards = computed(
   () => data.value?.[activeTab.value as 'weekly' | 'monthly'] ?? [],
 )
 

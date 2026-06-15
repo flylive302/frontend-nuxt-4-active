@@ -46,13 +46,13 @@ async function onRequest(event: FormSubmitEvent<RequestFormData>): Promise<void>
 // ── Step 2: enter code + new password ───────────────────────────────────────
 const resetFormRef = ref<Form<ResetFormData> | null>(null)
 const resetForm = useAuthForm({ formRef: resetFormRef })
-const resetState = reactive<{ code: string[]; password: string; password_confirmation: string }>({
+const resetState = reactive<{ code: number[]; password: string; password_confirmation: string }>({
   code: [],
   password: '',
   password_confirmation: '',
 })
 const resetSchema = z.object({
-  code: z.string().regex(/^\d$/, 'Digits only').array().length(OTP_LENGTH, `Enter the ${OTP_LENGTH}-digit code`),
+  code: z.number().int().min(0).max(9).array().length(OTP_LENGTH, `Enter the ${OTP_LENGTH}-digit code`),
   password: z.string()
     .min(8, 'Must be at least 8 characters')
     .regex(/[a-z]/, 'Add a lowercase letter')

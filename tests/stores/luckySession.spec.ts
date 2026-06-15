@@ -20,39 +20,16 @@ describe('useLuckySessionStore', () => {
     expect(store.floatingMultipliers[0]).toEqual({ id: 1, multiplier: 2.5, colorClass: 'lucky-float--great' })
   })
 
-  it('$reset clears floatingMultipliers and all announcement refs', async () => {
+  // Big-win announcements migrated out of this store to the unified slide
+  // overlay (ADR 0009); the store now owns floating multipliers only.
+  it('$reset clears floatingMultipliers', async () => {
     const { useLuckySessionStore } = await import('../../app/stores/luckySession')
     const store = useLuckySessionStore()
 
     store.addFloater({ id: 1, multiplier: 5, colorClass: 'lucky-float--epic' })
-    store.setRoomAnnouncement({
-      user_id: 1,
-      user_name: 'Alice',
-      user_avatar: 'a.png',
-      multiplier: 5,
-      coins_won: 500,
-      tier_name: 'Epic',
-      room_name: 'Room A',
-      svga_url: 'room.svga',
-    })
-    store.setAppAnnouncement({
-      user_id: 2,
-      user_name: 'Bob',
-      user_avatar: 'b.png',
-      multiplier: 50,
-      coins_won: 5000,
-      tier_name: 'Mega',
-      room_id: 99,
-      room_name: 'Room B',
-      svga_url: 'app.svga',
-    })
 
     store.$reset()
 
     expect(store.floatingMultipliers).toHaveLength(0)
-    expect(store.roomAnnouncement).toBeNull()
-    expect(store.isRoomAnnouncementVisible).toBe(false)
-    expect(store.appAnnouncement).toBeNull()
-    expect(store.isAppAnnouncementVisible).toBe(false)
   })
 })

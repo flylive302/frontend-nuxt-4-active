@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import type { HonorWallSection, LeaderboardEntry } from '~/types/mission/recharge'
 import { RECHARGE_ACTIVITY, ASSETS } from '~/constants/assets'
 import { formatCurrency } from '~/utils/currency'
 
@@ -49,12 +48,14 @@ watch(() => props.open, (val) => {
 // Derived
 // ========================================
 
-const section = computed<HonorWallSection | null>(() =>
+// `data` is exposed as a readonly ref, so the derived types are DeepReadonly —
+// let inference flow that through rather than annotating a mutable shape.
+const section = computed(() =>
   data.value ? data.value[activeTab.value as 'weekly' | 'monthly'] : null,
 )
 
 // Visual order: 2 — 1 — 3 (left-to-right, mirrors active podium)
-const visualOrder = computed<Array<LeaderboardEntry | null>>(() => {
+const visualOrder = computed(() => {
   const entries = section.value?.entries ?? []
   const [first, second, third] = entries
   return [second ?? null, first ?? null, third ?? null]
@@ -73,12 +74,12 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
   const period = key.slice(key.indexOf(':') + 1)
   if (timeframe === 'weekly') {
     const m = period.match(/^(\d{4})-W(\d+)$/)
-    return m ? `Week ${parseInt(m[2])}, ${m[1]}` : period
+    return m ? `Week ${parseInt(m[2]!)}, ${m[1]}` : period
   }
   const m = period.match(/^(\d{4})-(\d{2})$/)
   if (m) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return `${months[parseInt(m[2]) - 1] ?? m[2]} ${m[1]}`
+    return `${months[parseInt(m[2]!) - 1] ?? m[2]} ${m[1]}`
   }
   return period
 }
