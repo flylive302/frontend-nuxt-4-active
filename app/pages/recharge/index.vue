@@ -12,7 +12,7 @@ definePageMeta({ layout: 'recharge', middleware: 'auth' })
 // Data + State
 // ========================================
 
-const { fetchProgress } = useRechargeMissionData()
+const { fetchProgress, fetchDaily } = useRechargeMissionData()
 const store = useMissionStore()
 const { subscribe, unsubscribe } = useMissionEcho(() => fetchProgress('daily'))
 
@@ -73,11 +73,11 @@ onUnmounted(unsubscribe)
       <div class="mt-4 space-y-8">
         <template v-if="store.dailyProgress.milestones.length > 0">
           <MilestoneCard
-            v-for="milestone in store.dailyProgress.milestones"
-            :key="milestone.id"
-            :milestone="milestone"
-            :net-volume="store.dailyProgress.net_volume"
-            timeframe="daily"
+              v-for="milestone in store.dailyProgress.milestones"
+              :key="milestone.id"
+              :milestone="milestone"
+              :net-volume="store.dailyProgress.net_volume"
+              timeframe="daily"
           />
         </template>
         <p v-else class="text-center text-white/60 text-sm py-6">
