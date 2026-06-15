@@ -37,6 +37,8 @@ import {
   type AudioPlaybackEngine,
 } from '~/services/audioPlaybackEngine';
 import { PlaylistQueue } from '~/utils/playlist-queue';
+import { monitorPolicy } from '~/utils/local-monitor-policy';
+import { detectAudioRoute, onAudioRouteChange } from '~/services/audioRouteDetector';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 
@@ -69,6 +71,14 @@ let engine: AudioPlaybackEngine | null = null;
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let stateUpdateInterval: ReturnType<typeof setInterval> | null = null;
 
+// ---- Local-monitor policy lifecycle (capacitor-02) ----
+// Teardown handles for the producing-watch + output-route listener that drive
+// recomputeMonitor; and the dedupe latch so the "plug in headphones" hint fires
+// only on the transition INTO the producing-on-speaker state, not every tick.
+let stopProducingWatch: (() => void) | null = null;
+let stopRouteListener: (() => void) | null = null;
+let monitorHintActive = false;
+
 // ============================================
 // Composable
 // ============================================
@@ -86,6 +96,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   // callbacks or timers outside setup, where useXStore() would throw.
   const authStore = useAuthStore();
   const roomStore = useRoomStore();
+  const roomAudioStore = useRoomAudioStore();
   const toast = useToast();
 
   // Stable music producer lifecycle (shared via the session store).
@@ -130,6 +141,42 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     engine = createAudioPlaybackEngine();
     engine.setOnEnded(() => { void advance(); });
     return engine;
+  }
+
+  /**
+   * Apply the Local-monitor policy (capacitor-02): cut the DJ's own loudspeaker
+   * monitor when they are producing voice on a Seat over the speaker, so the
+   * music does not bleed into the open mic and duck the voice. The Listeners'
+   * `musicProducer` is never touched — only the local `gain → destination` edge.
+   *
+   * Re-runs on the three triggers funneled here: track/session start, the DJ's
+   * `isProducing` flips, and an output-route change (headphones plugged/removed).
+   * Best-effort route detection (web `enumerateDevices`); native is a later step.
+   */
+  async function recomputeMonitor(): Promise<void> {
+    if (!engine) return;
+
+    const producing = roomAudioStore.audioState.isProducing;
+    const route = await detectAudioRoute();
+    const decision = monitorPolicy({ producing, route });
+
+    engine.setLocalMonitor(decision.monitorOn);
+
+    if (decision.degraded) {
+      log.info('Local monitor kept on over Bluetooth; mic may drop to mono (A2DP→SCO).');
+    }
+
+    // Hint only on the transition INTO the no-headphones-while-talking state,
+    // and only while a session is active (AC #6 — never spam, never hint idle).
+    const shouldHint = decision.hint === 'plug-in-headphones' && isActive.value;
+    if (shouldHint && !monitorHintActive) {
+      toast.add({
+        title: 'Music',
+        description: 'Plug in headphones to hear your music while talking.',
+        color: 'info',
+      });
+    }
+    monitorHintActive = shouldHint;
   }
 
   /** Decode-prefetch the track after the current one so the boundary is gapless. */
@@ -253,6 +300,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     syncQueue();
     primeNext();
+    void recomputeMonitor(); // REACT: apply Local-monitor policy for this session
     return true;
   }
 
@@ -429,6 +477,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     stopMusicProducer();
     engine?.dispose();
     engine = null;
+    monitorHintActive = false; // session ended → re-hint on the next replay
 
     if (socket.value) {
       emitAsync<AudioPlayerStopPayload, AudioPlayerResponse>('audioPlayer:stop', { roomId })
@@ -464,6 +513,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     stopMusicProducer();
     engine?.dispose();
     engine = null;
+    monitorHintActive = false; // displaced → re-hint if this DJ replays later
 
     isPlayerOpen.value = false; // hide the displaced DJ's panel (queue is kept)
 
@@ -488,6 +538,14 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
   /** Listen for other DJs' state broadcasts (passive listeners). */
   function setupListeners(): void {
+    // Local-monitor policy triggers (capacitor-02). Installed regardless of the
+    // socket, idempotently, so the singleton composable never double-subscribes.
+    stopProducingWatch ??= watch(
+      () => roomAudioStore.audioState.isProducing,
+      () => { void recomputeMonitor(); },
+    );
+    stopRouteListener ??= onAudioRouteChange(() => { void recomputeMonitor(); });
+
     if (!socket.value) return;
 
     socket.value.on('audioPlayer:revoked', handleRevoked);
@@ -520,6 +578,13 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   }
 
   function cleanupListeners(): void {
+    // Tear down the Local-monitor policy triggers (mirror of setupListeners).
+    stopProducingWatch?.();
+    stopProducingWatch = null;
+    stopRouteListener?.();
+    stopRouteListener = null;
+    monitorHintActive = false;
+
     if (!socket.value) return;
     socket.value.off('audioPlayer:stateChanged');
     socket.value.off('audioPlayer:revoked', handleRevoked);

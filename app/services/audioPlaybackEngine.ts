@@ -11,13 +11,21 @@
  *   AudioBufferSourceNode  ──swappable──┐
  *                                        ▼
  *                          GainNode ──> MediaStreamAudioDestinationNode ──> output track
- *                                  └──> AudioContext.destination (DJ hears own music)
+ *                                  └──> AudioContext.destination (DJ's local monitor)
  *
  * The `GainNode → MediaStreamAudioDestinationNode` graph and its output
  * `MediaStreamTrack` are built **once** per session. A track change swaps only
  * the upstream `AudioBufferSourceNode`, so the output track identity never
  * changes — the mediasoup `musicProducer` is produced once and listeners never
  * re-consume, giving a gapless boundary on auto-advance.
+ *
+ * The `GainNode → AudioContext.destination` edge is the DJ's **local monitor**
+ * (the DJ hearing their own music out the loudspeaker). It is toggled at runtime
+ * via `setLocalMonitor` so the orchestrator can cut it when the DJ is producing
+ * voice on a Seat over the loudspeaker — otherwise the music bleeds into the open
+ * mic and echo-cancellation ducks the voice (capacitor-02 / ADR 0006). Toggling
+ * it uses the **targeted** `disconnect(destination)` overload so it never touches
+ * the `GainNode → MediaStreamAudioDestinationNode` edge that feeds Listeners.
  *
  * Memory: a decoded `AudioBuffer` is raw PCM (~80 MB per 3.5-min song), so the
  * engine keeps at most the current + the prefetched-next decoded buffer
@@ -75,6 +83,13 @@ export interface AudioPlaybackEngine {
   seek(position: number): void;
   /** Set output volume 0–1. */
   setVolume(volume: number): void;
+  /**
+   * Connect/disconnect the DJ's **local loudspeaker monitor** (the
+   * `gain → AudioContext.destination` edge). Idempotent. Never affects the
+   * Listeners' `musicProducer` edge. Driven by the Local-monitor policy
+   * (`utils/local-monitor-policy.ts`) — see capacitor-02.
+   */
+  setLocalMonitor(on: boolean): void;
   /** Current playback position in seconds. */
   getPosition(): number;
   /** Duration of the current track in seconds (0 if nothing loaded). */
@@ -106,6 +121,10 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
   let gainNode: GainNode | null = null;
   let destinationNode: MediaStreamAudioDestinationNode | null = null;
   let lastVolume = 1;
+  // Local loudspeaker monitor (gain → ctx.destination). Default ON preserves the
+  // pre-policy behavior; the orchestrator cuts it via setLocalMonitor when a DJ
+  // produces voice on the loudspeaker (capacitor-02). Tracked for idempotency.
+  let monitorConnected = false;
 
   // ---- Swappable source (one per track / seek) ----
   let sourceNode: AudioBufferSourceNode | null = null;
@@ -152,8 +171,11 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
     gain.gain.value = lastVolume;
     const destination = ctx.createMediaStreamDestination();
     gain.connect(destination);
-    // Also route to speakers so the DJ hears their own music.
+    // Local monitor: also route to speakers so the DJ hears their own music.
+    // Default ON (pre-policy behavior); the orchestrator may cut it immediately
+    // via setLocalMonitor for a producing-on-speaker DJ.
     gain.connect(ctx.destination);
+    monitorConnected = true;
 
     audioContext = ctx;
     gainNode = gain;
@@ -323,6 +345,18 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
     }
   }
 
+  function setLocalMonitor(on: boolean): void {
+    if (!audioContext || !gainNode || on === monitorConnected) return;
+    if (on) {
+      gainNode.connect(audioContext.destination);
+    } else {
+      // Targeted overload: drops ONLY the gain → destination (monitor) edge,
+      // never the gain → MediaStreamDestination edge that feeds Listeners.
+      gainNode.disconnect(audioContext.destination);
+    }
+    monitorConnected = on;
+  }
+
   function getPosition(): number {
     if (!audioContext || status !== 'playing') {
       return startOffset;
@@ -358,6 +392,7 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
       gainNode.disconnect();
       gainNode = null;
     }
+    monitorConnected = false;
     destinationNode = null;
     decoded.clear();
     currentId = null;
@@ -383,6 +418,7 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
     resume,
     seek,
     setVolume,
+    setLocalMonitor,
     getPosition,
     getDuration,
     getStatus,
