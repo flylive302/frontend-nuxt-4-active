@@ -12,16 +12,20 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 /**
- * Capacitor bridge for the microphone foreground service (capacitor-03).
+ * Capacitor bridge for the foreground services (capacitor-03 microphone +
+ * capacitor-04 mediaPlayback).
  *
  * The TS coordinator (`services/foregroundServiceCoordinator.ts`) calls:
- *   - start({ service: 'microphone' })  → when a Speaker takes a Seat
- *   - stop({ service: 'microphone' })   → when they stop producing
- *   - ensureNotificationPermission()    → requests POST_NOTIFICATIONS (only)
+ *   - start({ service: 'microphone' })     → when a Speaker takes a Seat
+ *   - start({ service: 'mediaPlayback' })   → when a user enters a room session
+ *   - stop({ service })                     → when that activity ends
+ *   - ensureNotificationPermission()        → requests POST_NOTIFICATIONS (only)
  *
- * This layer never requests RECORD_AUDIO: by the time `producing` flips true the
- * WebView's getUserMedia has already obtained it (D3). And a denied notification
- * permission does NOT block the service — it just suppresses the notification.
+ * A seated Speaker runs BOTH services at once (producing ∧ consuming, capacitor-04
+ * D1). This layer requests no media-capture permission: `microphone` relies on the
+ * WebView's getUserMedia already holding RECORD_AUDIO, and `mediaPlayback` needs no
+ * runtime permission. A denied notification permission does NOT block either
+ * service — it just suppresses the notification.
  */
 @CapacitorPlugin(
     name = "ForegroundService",
@@ -32,33 +36,41 @@ import com.getcapacitor.annotation.PermissionCallback;
 public class ForegroundServicePlugin extends Plugin {
 
     private static final String MICROPHONE = "microphone";
+    private static final String MEDIA_PLAYBACK = "mediaPlayback";
 
     @PluginMethod
     public void start(PluginCall call) {
         String service = call.getString("service", MICROPHONE);
-        if (!MICROPHONE.equals(service)) {
-            call.reject("Unsupported foreground service: " + service);
-            return;
-        }
         try {
-            MicrophoneForegroundService.start(getContext());
+            if (MICROPHONE.equals(service)) {
+                MicrophoneForegroundService.start(getContext());
+            } else if (MEDIA_PLAYBACK.equals(service)) {
+                MediaPlaybackForegroundService.start(getContext());
+            } else {
+                call.reject("Unsupported foreground service: " + service);
+                return;
+            }
             call.resolve();
         } catch (IllegalStateException e) {
-            // Android 14+ throws if a mic FGS is started from the background. The
-            // coordinator only starts on a foreground, user-initiated Seat take,
-            // so this is a guard, not an expected path — surface, don't crash.
-            call.reject("Cannot start microphone service from background", e);
+            // Android 14+ throws if an FGS is started from the background. The
+            // coordinator only starts on foreground, user-initiated actions (Seat
+            // take / room entry), so this is a guard, not an expected path —
+            // surface, don't crash.
+            call.reject("Cannot start " + service + " service from background", e);
         }
     }
 
     @PluginMethod
     public void stop(PluginCall call) {
         String service = call.getString("service", MICROPHONE);
-        if (!MICROPHONE.equals(service)) {
+        if (MICROPHONE.equals(service)) {
+            MicrophoneForegroundService.stop(getContext());
+        } else if (MEDIA_PLAYBACK.equals(service)) {
+            MediaPlaybackForegroundService.stop(getContext());
+        } else {
             call.reject("Unsupported foreground service: " + service);
             return;
         }
-        MicrophoneForegroundService.stop(getContext());
         call.resolve();
     }
 

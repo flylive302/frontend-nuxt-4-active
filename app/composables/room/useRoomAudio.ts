@@ -109,21 +109,37 @@ let lastSelfJoinMessageRoomId: string | null = null;
  */
 let fgsScope: EffectScope | null = null;
 
-/** Install the singleton producing-watch in a detached scope (idempotent). */
-function ensureFgsWatch(audioStore: ReturnType<typeof useRoomAudioStore>): void {
+/** Install the singleton FGS watch in a detached scope (idempotent). */
+function ensureFgsWatch(
+  audioStore: ReturnType<typeof useRoomAudioStore>,
+  roomStore: ReturnType<typeof useRoomStore>,
+): void {
   if (fgsScope) return;
   fgsScope = effectScope(true);
   fgsScope.run(() => {
     watch(
-      () => audioStore.audioState.isProducing,
+      // Two orthogonal drivers (capacitor-04):
+      //   • producing — open mic on a Seat → `microphone` FGS (capacitor-03).
+      //   • consuming — being IN A ROOM SESSION → `mediaPlayback` FGS. Bound to
+      //     `currentRoom` (set on join, cleared only by leaveRoom), NOT
+      //     `isConnected`: the FGS must represent session intent and ride out
+      //     transport reconnects, not flap on every blip and free the OS to
+      //     freeze the process mid-recovery (D2, protects ADR-0002 grace).
+      () => [audioStore.audioState.isProducing, roomStore.currentRoom !== null] as const,
       () => {
-        // `consuming` carried for policy completeness; only `producing` changes
-        // the service SET this slice (mediaPlayback is capacitor-04).
         void fgsCoordinator.apply({
           producing: audioStore.audioState.isProducing,
-          consuming: audioStore.audioState.isConnected,
+          consuming: roomStore.currentRoom !== null,
         });
       },
+      // immediate: `currentRoom` is set in doEnterRoom() BEFORE the room page
+      // mounts and first calls useRoomAudio() (which installs this watch). A
+      // non-immediate watch would miss that already-done null→room transition and
+      // never start the mediaPlayback FGS for a pure Listener. On install it
+      // reconciles against current state: a no-op when not in a room (empty
+      // running set), or starts mediaPlayback when already in one. The detached
+      // scope still drives every later enter/leave reactively.
+      { immediate: true },
     );
   });
 }
@@ -187,14 +203,14 @@ export function useRoomAudio(): UseRoomAudioReturn {
   } = useMediasoup(socket);
 
   // ========================================
-  // Microphone foreground service (capacitor-03)
+  // Foreground services (capacitor-03 mic + capacitor-04 mediaPlayback)
   // ========================================
-  // Drive the FGS coordinator off the single source of truth for producing —
-  // `audioState.isProducing` — so it catches EVERY way a Speaker stops producing
-  // (self-leave-seat, server-side seat kick via socket, leaveRoom), not just the
-  // local stopAudio() path. Installed in a detached scope (see ensureFgsWatch)
-  // so it survives component unmount/remount; coordinator is a no-op off Android.
-  ensureFgsWatch(audioStore);
+  // Drive the FGS coordinator off the two sources of truth: `isProducing` (mic,
+  // catches EVERY way a Speaker stops producing — self-leave-seat, server-side
+  // seat kick, leaveRoom) and `currentRoom` presence (mediaPlayback, the room
+  // session). Installed in a detached scope (see ensureFgsWatch) so it survives
+  // component unmount/remount; coordinator is a no-op off Android.
+  ensureFgsWatch(audioStore, roomStore);
 
   // ========================================
   // Helper: Get current room ID

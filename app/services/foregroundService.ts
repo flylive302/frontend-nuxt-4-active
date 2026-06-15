@@ -3,20 +3,21 @@
 // ========================================
 //
 // Typed wrapper around the custom Android `ForegroundService` Capacitor plugin
-// (capacitor-03). The plugin holds the shell's process in the foreground via a
-// `microphone`-typed Android foreground service so a Speaker keeps producing
-// with the screen off. See `android/app/src/main/java/com/flylive/app/fgs/`.
+// (capacitor-03/04). The plugin holds the shell's process in the foreground via a
+// typed Android foreground service so a Speaker keeps producing (`microphone`) and
+// a Listener keeps hearing (`mediaPlayback`) with the screen off. See
+// `android/app/src/main/java/com/flylive/app/fgs/`.
 //
 // Every method is a NO-OP off Android: on web / iOS / SSR the plugin is absent,
-// so the coordinator that consumes this stays harmlessly inert and the
-// `producing` watch can be installed unconditionally. The only service backed by
-// a native handler this slice is `microphone`; `mediaPlayback` is capacitor-04.
+// so the coordinator that consumes this stays harmlessly inert and the FGS watch
+// can be installed unconditionally. Both `microphone` and `mediaPlayback` are
+// backed by native handlers.
 
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import type { FgsService } from '~/utils/fgs-policy'
 
-/** The native `microphone` service is the only one implemented this slice. */
-type NativeFgsService = Extract<FgsService, 'microphone'>
+/** Both services are backed by a native handler. */
+type NativeFgsService = FgsService
 
 interface ForegroundServicePlugin {
   /** Start the given foreground service (with its persistent notification). */

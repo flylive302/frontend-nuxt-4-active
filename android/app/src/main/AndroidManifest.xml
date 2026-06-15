@@ -53,6 +53,17 @@
             android:name=".fgs.MicrophoneForegroundService"
             android:foregroundServiceType="microphone"
             android:exported="false" />
+
+        <!-- Media-playback foreground service (capacitor-04): keeps the shell's
+             process (and its WebRTC playback) alive while a Listener hears a room
+             with the screen off. Process-survival only — no audio logic. A seated
+             Speaker runs this AND the microphone service at once (union, D1).
+             START_NOT_STICKY + onTaskRemoved stop so it never outlives a live
+             consuming session. -->
+        <service
+            android:name=".fgs.MediaPlaybackForegroundService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
@@ -72,4 +83,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Media-playback foreground service (capacitor-04). Required on Android 14+
+         alongside the matching foregroundServiceType. No runtime permission of its
+         own — it keeps a Listener's WebRTC playback alive with the screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 </manifest>
