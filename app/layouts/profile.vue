@@ -4,7 +4,7 @@
 
 <template>
     <main>
-        <header class="pt-2 px-3 flex justify-between fixed top-0 z-50 w-full">
+        <header class="pt-2 px-3 safe-area-top flex justify-between fixed top-0 z-50 w-full">
             <UButton
                 icon="i-lucide-chevron-left"
                 size="md"

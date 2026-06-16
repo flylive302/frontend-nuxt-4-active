@@ -21,7 +21,7 @@ onMounted(async () => {
 <template>
   <main class="flex flex-col h-dvh overflow-hidden">
     <!-- Header -->
-    <div class="fixed top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 py-3 bg-background/90 backdrop-blur border-b border-muted/20">
+    <div class="fixed top-0 left-0 right-0 z-10 safe-area-top flex items-center gap-3 px-4 py-3 bg-background/90 backdrop-blur border-b border-muted/20">
       <UButton
         icon="i-lucide-arrow-left"
         color="neutral"

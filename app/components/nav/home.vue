@@ -16,7 +16,7 @@ const officialBadge = computed(() => {
 })
 </script>
 <template>
-  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 flex items-center justify-between backdrop-blur-lg border-b border-white/10">
+  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 safe-area-top flex items-center justify-between backdrop-blur-lg border-b border-white/10">
     <!-- Brand -->
     <NuxtImg
         :src="ASSETS.LOGO_MAIN"

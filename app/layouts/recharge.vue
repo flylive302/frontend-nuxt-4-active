@@ -15,7 +15,7 @@ const honorWallOpen = ref(false)
         variant="subtle"
         to="/"
         color="tertiary"
-        class="rounded-lg backdrop-blur-sm text-primary absolute top-2 left-4"
+        class="rounded-lg backdrop-blur-sm text-primary absolute top-[calc(0.5rem_+_env(safe-area-inset-top,0px))] left-4"
     />
     <img :src="RECHARGE_ACTIVITY.banner" alt="recharge activity" class="w-full" />
 

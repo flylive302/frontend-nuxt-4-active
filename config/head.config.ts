@@ -12,14 +12,15 @@ export const headConfig: HeadConfig = {
     htmlAttrs: { class: 'dark', lang: 'en' },
     title: 'FlyLive',
     meta: [
-        { name: 'viewport', content: 'initial-scale=1, viewport-fit=cover, width=device-width' },
         { name: 'theme-color', content: 'black-translucent' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'apple-mobile-web-app-title', content: 'FlyLive' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'description', content: 'FlyLive — live audio rooms, real-time gifting, and social broadcasting. Join thousands of listeners and hosts worldwide.' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' }
+        // Single viewport tag — Unhead dedupes by name (last wins), so `viewport-fit=cover`
+        // MUST live here or `env(safe-area-inset-*)` returns 0 on device (capacitor-05).
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' }
     ],
     link: [
         { rel: 'apple-touch-icon', href: '/pwa-assets/ios/180.png', sizes: '180x180' },

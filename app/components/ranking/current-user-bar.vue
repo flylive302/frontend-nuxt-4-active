@@ -31,7 +31,7 @@ const subline = computed<string | null>(() => {
 <template>
   <div
     class="
-      fixed z-40 top-0 left-0 right-0 px-4 py-2
+      fixed z-40 top-0 left-0 right-0 px-4 py-2 safe-area-top
       backdrop-blur
       flex items-center justify-between w-full
     "

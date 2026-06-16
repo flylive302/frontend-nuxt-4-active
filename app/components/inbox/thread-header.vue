@@ -16,7 +16,7 @@ const router = useRouter()
 </script>
 
 <template>
-  <header class="fixed top-0 inset-x-0 z-40 flex items-center gap-3 px-3 h-14 bg-default/90 backdrop-blur border-b border-muted/20">
+  <header class="fixed top-0 inset-x-0 z-40 safe-area-top box-content flex items-center gap-3 px-3 h-14 bg-default/90 backdrop-blur border-b border-muted/20">
     <UButton
       variant="ghost"
       icon="i-lucide-arrow-left"
