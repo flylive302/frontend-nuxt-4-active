@@ -52,18 +52,19 @@ export const PLAYLIST_MAX_TRACKS = 50;
 // ============================================
 
 /**
- * Fraction of a LUCKY gift's coin value (GCV) actually credited to the receiver.
+ * Split-base fraction of a LUCKY gift's coin value (GCV) — the portion split the
+ * normal way and surfaced in the seat total.
  *
- * The 🪙 "gifts received" total under a seated user's avatar must reflect what
- * the receiver is really credited, not the full GCV — lucky gifts route most of
- * their value to the platform / lucky pool, so only this share reaches the
- * receiver. Other categories credit the full GCV.
+ * The 🪙 "gifts received" total under a seated user's avatar shows the lucky
+ * split base, not the full GCV — lucky gifts route most of their value to the
+ * lucky pool, so only this fraction is split the normal way. Other categories
+ * credit the full GCV.
  *
- * COUPLED to the backend setting `gift.lucky_receiver_percentage` (default
+ * COUPLED to the backend setting `gift.lucky_split_percentage` (default
  * 10.00 → 0.10). If that setting changes, update this constant to match, or the
- * displayed seat total will diverge from the credited amount.
+ * displayed seat total will diverge from the backend split base.
  */
-export const LUCKY_RECEIVER_SHARE = 0.1;
+export const LUCKY_SPLIT_SHARE = 0.1;
 
 // ============================================
 // Debounce Delays
