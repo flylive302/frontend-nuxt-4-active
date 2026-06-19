@@ -1,149 +1,135 @@
 // ========================================
-// Income Types
+// Income Types — agency-XP per-run milestone model
 // ========================================
+// See backend issue 05 "Delivered contract". Numbers are native `agency_xp`
+// (no display multiplier).
+
+/**
+ * Lifecycle of an agency-XP run.
+ */
+export type AgencyRunStatus = 'active' | 'closed' | 'cancelled'
 
 // ========================================
-// Income Target Types
+// Run + Ladder
 // ========================================
 
 /**
- * Status of an income target period.
+ * One tier of a run's snapshotted milestone ladder.
  */
-export type IncomeTargetStatus = 'active' | 'completed' | 'missed' | 'not_started'
-
-/**
- * Single income target with progress tracking.
- */
-export interface IncomeTarget {
-  id: number
-  tier: string // e.g., 'T1', 'T2', 'T3'
-  name: string // e.g., 'Tier 1', 'Tier 2'
-  status: IncomeTargetStatus
-  required_coins: string
-  earned_coins: string
+export interface LadderTier {
+  tier: number
+  required_xp: number
   member_diamond_reward: number
-  start_date: string // ISO 8601
-  end_date: string // ISO 8601
-  progress_percentage: number // 0-100
-  days_remaining: number
-  coins_to_complete: string
+  owner_diamond_reward: number
+  crossed: boolean
+  is_active: boolean
 }
 
 /**
- * Historical income target record.
+ * A single crossed-milestone record (snapshot view).
  */
-export interface IncomeTargetHistory {
-  id: number
-  tier: string
-  name: string
-  status: 'completed' | 'missed'
-  required_coins: string
-  earned_coins: string
+export interface RunMilestone {
+  tier: number
+  required_xp: number
   member_diamond_reward: number
-  diamonds_earned: number | null // null if missed
-  start_date: string
-  end_date: string
-  completed_at?: string // Only if status is 'completed'
+  owner_diamond_reward: number
+  member_reward_claimed: boolean
+  crossed_at: string | null
+}
+
+/**
+ * A member's agency-XP run with its full tier ladder.
+ */
+export interface AgencyRun {
+  id: number
+  status: AgencyRunStatus
+  status_label: string
+  status_color: string
+  accumulated_xp: number
+  current_tier: number
+  band_floor: number | null
+  band_ceiling: number | null
+  progress_percentage: number | null
+  started_at: string
+  ends_at: string
+  refunded_coins: number
+  refunded_at: string | null
+  ladder: LadderTier[]
+  created_at: string
+}
+
+/**
+ * A run snapshot — the run plus its crossed-milestone records (claim state).
+ */
+export interface RunSnapshot extends AgencyRun {
+  milestones: RunMilestone[]
+}
+
+/**
+ * A closed run as a date-range option for the history dropdown.
+ */
+export interface RunOption {
+  run_id: number
+  status: AgencyRunStatus
+  status_label: string
+  started_at: string
+  ends_at: string
+  label: string
 }
 
 // ========================================
-// Income Summary Types
+// Stats summary
 // ========================================
 
 /**
- * Single earning record.
+ * Compact active-run view returned inline with the stats summary.
  */
-export interface RecentEarning {
-  date: string // YYYY-MM-DD
-  date_formatted: string // e.g., "29 December, 2025"
-  amount: string
-  source: 'gift' | 'room_commission' | 'other'
-  count: number // Number of transactions
+export interface CompactRun {
+  run_id: number
+  accumulated_xp: number
+  current_tier: number
+  band_floor: number | null
+  band_ceiling: number | null
+  progress_percentage: number | null
+  ends_at: string
 }
 
 /**
- * Income summary statistics.
+ * Lifetime income summary for the member.
  */
-export interface IncomeSummary {
-  total_earned: string
-  total_this_month: string
-  total_this_week: string
-  total_today: string
-  average_daily: string
-  recent_earnings: RecentEarning[]
-}
-
-// ========================================
-// API Request/Response Types
-// ========================================
-
-/**
- * Parameters for fetching income targets.
- */
-export interface GetIncomeTargetsParams {
-  status?: IncomeTargetStatus
-  per_page?: number
-  cursor?: string
-}
-
-/**
- * Parameters for fetching income history.
- */
-export interface GetIncomeHistoryParams {
-  per_page?: number
-  cursor?: string
-}
-
-/**
- * API response for income stats.
- */
-export interface IncomeStatsResponse {
-  success: true
-  data: IncomeSummary
-}
-
-/**
- * API response for active target.
- */
-export interface ActiveTargetResponse {
-  success: true
-  data: IncomeTarget | null
-}
-
-/**
- * API response for target history.
- */
-export interface IncomeHistoryResponse {
-  success: true
-  data: {
-    targets: IncomeTargetHistory[]
-    pagination: {
-      has_more: boolean
-      next_cursor?: string
-    }
+export interface IncomeStats {
+  summary: {
+    total_diamonds: number
+    completed_runs: number
+    has_active_run: boolean
   }
+  active_run: CompactRun | null
+  total_diamonds_earned: number
+  completed_runs: number
 }
 
 // ========================================
-// Display Helpers
+// Realtime payloads (store mutators consume these)
 // ========================================
 
-/**
- * Colors for income target status.
- */
-export const INCOME_STATUS_COLORS: Record<IncomeTargetStatus, 'info' | 'success' | 'error' | 'neutral'> = {
-  active: 'info',
-  completed: 'success',
-  missed: 'error',
-  not_started: 'neutral',
+export interface XpProgressUpdate {
+  run_id: number
+  accumulated_xp: number
+  current_tier: number
+  progress_percentage: number | null
 }
 
-/**
- * Labels for income target status.
- */
-export const INCOME_STATUS_LABELS: Record<IncomeTargetStatus, string> = {
-  active: 'In Progress',
-  completed: 'Completed',
-  missed: 'Missed',
-  not_started: 'Not Started',
+export interface MilestoneCrossedUpdate {
+  run_id: number
+  current_tier: number
+}
+
+// ========================================
+// Claim
+// ========================================
+
+export interface ClaimResult {
+  claimed_count: number
+  claimed_tiers: number[]
+  diamonds_claimed: number
 }

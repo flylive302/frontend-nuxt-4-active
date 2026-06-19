@@ -2,57 +2,39 @@
 // Income Store
 // ========================================
 // State + computed + setters ONLY — useIncomeActions for API.
+// Agency-XP per-run milestone model (native XP, no multiplier).
 
 import { defineStore } from 'pinia'
 import type {
-  IncomeSummary,
-  IncomeTarget,
-  IncomeTargetHistory,
+  AgencyRun,
+  IncomeStats,
+  RunOption,
+  RunSnapshot,
+  XpProgressUpdate,
+  MilestoneCrossedUpdate,
 } from '~/types/income/income'
 
-interface HistoryState {
-  items: IncomeTargetHistory[]
-  loading: boolean
-  error: string | null
-  hasMore: boolean
-  cursor: string | null
-}
-
 export const useIncomeStore = defineStore('income', () => {
-  const summary = ref<IncomeSummary | null>(null)
-  const activeTarget = ref<IncomeTarget | null>(null)
-  const isLoading = ref(false)
-  const isTargetLoading = ref(false)
+  const stats = ref<IncomeStats | null>(null)
+  const activeRun = ref<AgencyRun | null>(null)
+  const runOptions = ref<RunOption[]>([])
+  const selectedSnapshot = ref<RunSnapshot | null>(null)
+
+  const isStatsLoading = ref(false)
+  const isRunLoading = ref(false)
+  const isHistoryLoading = ref(false)
+  const isSnapshotLoading = ref(false)
+  const isClaiming = ref(false)
   const error = ref<string | null>(null)
   const lastFetchedAt = ref<number | null>(null)
 
   const STALE_TIME = 5 * 60 * 1000
 
-  const history = ref<HistoryState>({
-    items: [],
-    loading: false,
-    error: null,
-    hasMore: true,
-    cursor: null,
-  })
-
-  const hasActiveTarget = computed(() => activeTarget.value !== null)
-  const targetProgress = computed(() => activeTarget.value?.progress_percentage ?? 0)
-  const daysRemaining = computed(() => activeTarget.value?.days_remaining ?? 0)
-
-  const coinsToComplete = computed(() => {
-    if (!activeTarget.value) return '0'
-    const apiValue = activeTarget.value.coins_to_complete
-    if (apiValue && parseFloat(apiValue) > 0) {
-      return apiValue
-    }
-    const required = parseFloat(activeTarget.value.required_coins ?? '0')
-    const earned = parseFloat(activeTarget.value.earned_coins ?? '0')
-    const remaining = Math.max(0, required - earned)
-    return remaining.toFixed(4)
-  })
-
-  const recentEarnings = computed(() => summary.value?.recent_earnings ?? [])
+  const hasActiveRun = computed(() => activeRun.value !== null)
+  const currentTier = computed(() => activeRun.value?.current_tier ?? 0)
+  const progress = computed(() => activeRun.value?.progress_percentage ?? 0)
+  const totalDiamondsEarned = computed(() => stats.value?.total_diamonds_earned ?? 0)
+  const completedRuns = computed(() => stats.value?.completed_runs ?? 0)
 
   const needsRefresh = computed<boolean>(() => {
     if (!lastFetchedAt.value) return true
@@ -60,119 +42,149 @@ export const useIncomeStore = defineStore('income', () => {
   })
 
   function setStatsLoading(v: boolean): void {
-    isLoading.value = v
+    isStatsLoading.value = v
   }
 
-  function setTargetLoading(v: boolean): void {
-    isTargetLoading.value = v
+  function setRunLoading(v: boolean): void {
+    isRunLoading.value = v
+  }
+
+  function setHistoryLoading(v: boolean): void {
+    isHistoryLoading.value = v
+  }
+
+  function setSnapshotLoading(v: boolean): void {
+    isSnapshotLoading.value = v
+  }
+
+  function setClaiming(v: boolean): void {
+    isClaiming.value = v
   }
 
   function setError(msg: string | null): void {
     error.value = msg
   }
 
-  function setSummary(s: IncomeSummary | null): void {
-    summary.value = s
+  function setStats(s: IncomeStats | null): void {
+    stats.value = s
   }
 
-  function setActiveTarget(t: IncomeTarget | null): void {
-    activeTarget.value = t
+  function setActiveRun(r: AgencyRun | null): void {
+    activeRun.value = r
+  }
+
+  function setRunOptions(options: RunOption[]): void {
+    runOptions.value = options
+  }
+
+  function setSelectedSnapshot(snapshot: RunSnapshot | null): void {
+    selectedSnapshot.value = snapshot
   }
 
   function setLastFetchedAt(t: number | null): void {
     lastFetchedAt.value = t
   }
 
-  function resetHistoryPagination(): void {
-    history.value.items = []
-    history.value.cursor = null
-    history.value.hasMore = true
-  }
-
-  function setHistoryLoading(v: boolean): void {
-    history.value.loading = v
-  }
-
-  function setHistoryError(msg: string | null): void {
-    history.value.error = msg
-  }
-
-  function appendHistoryPage(
-    targets: IncomeTargetHistory[],
-    pagination: { has_more: boolean; next_cursor?: string }
-  ): void {
-    history.value.items.push(...targets)
-    history.value.hasMore = pagination.has_more
-    history.value.cursor = pagination.next_cursor ?? null
-  }
-
-  function onTargetCompleted(completedTarget: IncomeTargetHistory): void {
-    activeTarget.value = null
-    history.value.items.unshift(completedTarget)
-  }
-
-  function onIncomeEarned(amount: string): void {
-    if (summary.value) {
-      const current = parseFloat(summary.value.total_today)
-      const added = parseFloat(amount)
-      summary.value.total_today = (current + added).toFixed(4)
+  /**
+   * Realtime — apply a per-gift XP increment to the active run. Only mutates
+   * when the payload's run matches the loaded run; a mismatch (or null run)
+   * means the backend lazily opened a run the client hasn't fetched, so the
+   * caller should refetch instead of writing stale state.
+   */
+  function applyXpProgress(update: XpProgressUpdate): boolean {
+    if (!activeRun.value || activeRun.value.id !== update.run_id) {
+      return false
     }
 
-    if (activeTarget.value) {
-      const earned = parseFloat(activeTarget.value.earned_coins)
-      const added = parseFloat(amount)
-      const required = parseFloat(activeTarget.value.required_coins)
-      const newEarned = earned + added
-      const newProgress = Math.min(100, (newEarned / required) * 100)
+    activeRun.value.accumulated_xp = update.accumulated_xp
+    activeRun.value.current_tier = update.current_tier
+    activeRun.value.progress_percentage = update.progress_percentage
+    syncLadderFlags(update.current_tier)
+    return true
+  }
 
-      activeTarget.value.earned_coins = newEarned.toFixed(4)
-      activeTarget.value.progress_percentage = newProgress
-      activeTarget.value.coins_to_complete = Math.max(0, required - newEarned).toFixed(4)
+  /**
+   * Realtime — mark tiers up to `current_tier` crossed on the active run.
+   */
+  function onMilestoneCrossed(update: MilestoneCrossedUpdate): void {
+    if (!activeRun.value || activeRun.value.id !== update.run_id) {
+      return
     }
+
+    activeRun.value.current_tier = update.current_tier
+    syncLadderFlags(update.current_tier)
+  }
+
+  /**
+   * Mark every milestone of a snapshot as claimed (after a successful claim).
+   */
+  function markSnapshotClaimed(runId: number): void {
+    if (!selectedSnapshot.value || selectedSnapshot.value.id !== runId) {
+      return
+    }
+
+    selectedSnapshot.value.milestones = selectedSnapshot.value.milestones.map((milestone) => ({
+      ...milestone,
+      member_reward_claimed: true,
+    }))
+  }
+
+  function syncLadderFlags(tier: number): void {
+    if (!activeRun.value) return
+
+    activeRun.value.ladder = activeRun.value.ladder.map((rung) => ({
+      ...rung,
+      crossed: rung.tier <= tier,
+      is_active: rung.tier === tier + 1,
+    }))
   }
 
   function reset(): void {
-    summary.value = null
-    activeTarget.value = null
-    isLoading.value = false
-    isTargetLoading.value = false
+    stats.value = null
+    activeRun.value = null
+    runOptions.value = []
+    selectedSnapshot.value = null
+    isStatsLoading.value = false
+    isRunLoading.value = false
+    isHistoryLoading.value = false
+    isSnapshotLoading.value = false
+    isClaiming.value = false
     error.value = null
-    history.value = {
-      items: [],
-      loading: false,
-      error: null,
-      hasMore: true,
-      cursor: null,
-    }
     lastFetchedAt.value = null
   }
 
   return {
-    summary,
-    activeTarget,
-    isLoading,
-    isTargetLoading,
+    stats,
+    activeRun,
+    runOptions,
+    selectedSnapshot,
+    isStatsLoading,
+    isRunLoading,
+    isHistoryLoading,
+    isSnapshotLoading,
+    isClaiming,
     error,
-    history,
     lastFetchedAt,
-    hasActiveTarget,
-    targetProgress,
-    daysRemaining,
-    coinsToComplete,
-    recentEarnings,
+    hasActiveRun,
+    currentTier,
+    progress,
+    totalDiamondsEarned,
+    completedRuns,
     needsRefresh,
     setStatsLoading,
-    setTargetLoading,
-    setError,
-    setSummary,
-    setActiveTarget,
-    setLastFetchedAt,
-    resetHistoryPagination,
+    setRunLoading,
     setHistoryLoading,
-    setHistoryError,
-    appendHistoryPage,
-    onTargetCompleted,
-    onIncomeEarned,
+    setSnapshotLoading,
+    setClaiming,
+    setError,
+    setStats,
+    setActiveRun,
+    setRunOptions,
+    setSelectedSnapshot,
+    setLastFetchedAt,
+    applyXpProgress,
+    onMilestoneCrossed,
+    markSnapshotClaimed,
     reset,
   }
 })

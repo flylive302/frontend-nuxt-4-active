@@ -1,18 +1,19 @@
 // ========================================
 // Member Income Types (for Agency Owners)
 // ========================================
+// Lightweight current-tier view per member (no full ladder).
 
 /**
- * Current target info for an agency member.
+ * Compact current-run view for an agency member.
  */
-export interface MemberIncomeTarget {
-  tier: string
-  required_coins: number
-  earned_coins: number
-  progress_percentage: number
-  coins_to_complete: number
-  days_remaining: number
-  diamond_reward: number
+export interface MemberCurrentRun {
+  run_id: number
+  accumulated_xp: number
+  current_tier: number
+  band_floor: number | null
+  band_ceiling: number | null
+  progress_percentage: number | null
+  ends_at: string
 }
 
 /**
@@ -23,10 +24,8 @@ export interface MemberIncome {
   name: string
   avatar_url: string | null
   joined_at: string
-  current_target: MemberIncomeTarget | null
+  current_run: MemberCurrentRun | null
   total_diamonds_earned: number
-  total_coins_contributed: number
-  completed_targets_count: number
 }
 
 /**

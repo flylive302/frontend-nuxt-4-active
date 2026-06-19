@@ -142,19 +142,46 @@ export interface RoomUserUnblockedPayload {
 }
 
 // ========================================
-// Income Events
+// Income Events (agency-XP per-run milestones)
 // ========================================
 
 /**
- * income_target.completed - Fired when member completes income target.
+ * agency_xp.progress - Per-gift XP increment on the member's active run.
  */
-export interface IncomeTargetCompletedPayload {
-  target_id: number
-  tier: string
-  name: string
-  earned_coins: string
-  member_reward: number
-  owner_reward: number
+export interface AgencyXpProgressPayload {
+  run_id: number
+  accumulated_xp: string
+  current_tier: number
+  progress_percentage: number | null
+}
+
+/**
+ * A single milestone crossed by a gift.
+ */
+export interface CrossedMilestone {
+  tier: number
+  member_diamond_reward: number
+  owner_diamond_reward: number
+}
+
+/**
+ * agency_milestone.crossed - One or more tiers crossed (member's own view).
+ */
+export interface AgencyMilestoneCrossedPayload {
+  run_id: number
+  current_tier: number
+  accumulated_xp: string
+  milestones: CrossedMilestone[]
+}
+
+/**
+ * agency_milestone.member_crossed - A managed member crossed a tier (owner view).
+ */
+export interface AgencyMilestoneMemberCrossedPayload {
+  run_id: number
+  member_id: number
+  current_tier: number
+  milestones: Array<{ tier: number; owner_reward: number }>
 }
 
 // ========================================
@@ -254,9 +281,10 @@ export interface ServerToClientEvents {
   'room.join_request_cancelled': (payload: RoomJoinRequestCancelledPayload) => void
   'room.user_unblocked': (payload: RoomUserUnblockedPayload) => void
 
-  // Income
-  'income_target.completed': (payload: IncomeTargetCompletedPayload) => void
-  'income_target.member_completed': (payload: IncomeTargetCompletedPayload) => void
+  // Income (agency-XP per-run milestones)
+  'agency_xp.progress': (payload: AgencyXpProgressPayload) => void
+  'agency_milestone.crossed': (payload: AgencyMilestoneCrossedPayload) => void
+  'agency_milestone.member_crossed': (payload: AgencyMilestoneMemberCrossedPayload) => void
 
   // Agency
   'agency.invitation': (payload: AgencyInvitationPayload) => void

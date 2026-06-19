@@ -2,7 +2,7 @@
 // Achievement Modals Composable
 // ========================================
 
-import type { BadgeEarnedPayload, UserLevelUpPayload, IncomeTargetCompletedPayload } from '~/types/room/socket-events'
+import type { BadgeEarnedPayload, UserLevelUpPayload } from '~/types/room/socket-events'
 
 // ========================================
 // Types
@@ -24,8 +24,7 @@ export interface LevelUpModalData {
 }
 
 export interface IncomeTargetModalData {
-  targetName: string
-  tier: string
+  tier: number
   memberReward: number
   ownerReward: number
   isOwnerView: boolean
@@ -205,22 +204,15 @@ export function useAchievementModals() {
   }
 
   // ========================================
-  // Income Target Completion Modal
+  // Agency Milestone Crossed Modal
   // ========================================
 
   /**
-   * Show income target completion modal with celebration.
-   * Used for agency income tier completions.
+   * Show the milestone-crossed celebration modal.
+   * Used for agency-XP run milestone crossings (member or owner view).
    * Queues if gift playback is in progress.
    */
-  function showIncomeTargetCompleted(payload: IncomeTargetCompletedPayload, isOwnerView = false): void {
-    const data: IncomeTargetModalData = {
-      targetName: payload.name,
-      tier: payload.tier,
-      memberReward: payload.member_reward,
-      ownerReward: payload.owner_reward,
-      isOwnerView,
-    }
+  function showMilestoneCrossed(data: IncomeTargetModalData): void {
     enqueueModal({ type: 'incomeTarget', data })
   }
 
@@ -254,7 +246,7 @@ export function useAchievementModals() {
     // Income target modal state
     incomeTargetModalOpen: readonly(incomeTargetModalOpen),
     incomeTargetModalData: readonly(incomeTargetModalData),
-    showIncomeTargetCompleted,
+    showMilestoneCrossed,
     closeIncomeTargetModal,
 
     // Queue utilities (exposed for testing)

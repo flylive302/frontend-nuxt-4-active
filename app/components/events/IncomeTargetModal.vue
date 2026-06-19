@@ -22,8 +22,8 @@ const style = computed(() => {
       gradientFrom: 'from-emerald-500',
       gradientTo: 'to-green-300',
       icon: 'i-lucide-crown',
-      title: 'Member Target Complete! 🎉',
-      subtitle: 'Your team member hit their goal',
+      title: 'Milestone Reached! 🎉',
+      subtitle: 'Your team member crossed a tier',
     }
   }
   return {
@@ -32,10 +32,17 @@ const style = computed(() => {
     gradientFrom: 'from-purple-500',
     gradientTo: 'to-violet-300',
     icon: 'i-lucide-target',
-    title: 'Target Complete! 🎯',
+    title: 'Milestone Reached! 🎯',
     subtitle: 'Congratulations!',
   }
 })
+
+/**
+ * Tier label, e.g. "Tier 3".
+ */
+const tierLabel = computed(() =>
+  incomeTargetModalData.value ? `Tier ${incomeTargetModalData.value.tier}` : ''
+)
 
 /**
  * Format reward with thousands separator.
@@ -95,7 +102,7 @@ const formattedReward = computed(() => {
 
             <!-- Tier Badge -->
             <div class="absolute -left-2 top-0 rounded-full bg-amber-500/80 px-3 py-1 text-xs font-bold text-white">
-              {{ incomeTargetModalData.tier }}
+              T{{ incomeTargetModalData.tier }}
             </div>
           </div>
 
@@ -107,13 +114,13 @@ const formattedReward = computed(() => {
             {{ style.title }}
           </h2>
 
-          <!-- Target Name -->
+          <!-- Tier -->
           <p
             id="income-target-modal-description"
             class="mb-2 text-lg font-semibold"
             :class="style.textColor"
           >
-            {{ incomeTargetModalData.targetName }}
+            {{ tierLabel }}
           </p>
 
           <!-- Subtitle -->

@@ -224,7 +224,7 @@ onMounted(async () => {
             <NavProfileItem
                 to="/agency/member-income"
                 icon="i-lucide-dollar-sign"
-                txt="Member Targets"
+                txt="Member Income"
             />
           </template>
 

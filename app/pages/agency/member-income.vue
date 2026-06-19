@@ -44,12 +44,12 @@ const isOwnerOrAdmin = computed(() =>
   agencyStore.isAgencyOwner || agencyStore.isAgencyAdmin
 )
 
-const totalDiamonds = computed(() => 
+const totalDiamonds = computed(() =>
   members.value.reduce((sum, m) => sum + m.total_diamonds_earned, 0)
 )
 
-const totalCoinsContributed = computed(() => 
-  members.value.reduce((sum, m) => sum + m.total_coins_contributed * 3.3333, 0)
+const activeRunsCount = computed(() =>
+  members.value.filter((m) => m.current_run !== null).length
 )
 
 // ========================================
@@ -113,14 +113,14 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt color="primary" back-to="/agency/my-agency">Member Target</NavAlt>
+    <NavAlt color="primary" back-to="/agency/my-agency">Member Income</NavAlt>
 
     <!-- Not Authorized -->
     <div v-if="!isOwnerOrAdmin" class="px-3 py-14 text-center">
       <icon name="i-lucide-lock" class="size-16 text-muted mb-4" />
       <h2 class="text-lg font-semibold mb-2">Access Denied</h2>
       <p class="text-sm text-muted mb-4">
-        Only agency owners and admins can view member targets.
+        Only agency owners and admins can view member income.
       </p>
       <UButton to="/agency/my-agency" color="primary">
         Go to My Agency
@@ -132,7 +132,7 @@ onMounted(async () => {
       <!-- Agency Header -->
       <div class="text-center">
         <h1 class="text-xl font-bold">{{ agencyName || 'Agency' }}</h1>
-        <p class="text-sm text-muted">Member targets overview</p>
+        <p class="text-sm text-muted">Member income overview</p>
       </div>
 
       <!-- Summary Stats -->
@@ -153,16 +153,12 @@ onMounted(async () => {
 
         <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
           <div class="flex items-center justify-center gap-2 mb-1">
-            <NuxtImg 
-              :src="ASSETS.COIN_ICON" 
-              class="w-6" 
-              alt="Coins"
-            />
+            <UIcon name="i-lucide-trending-up" class="size-6 text-tertiary" />
             <p class="text-2xl font-bold text-tertiary">
-              {{ Math.floor(totalCoinsContributed).toLocaleString() }}
+              {{ activeRunsCount.toLocaleString() }}
             </p>
           </div>
-          <p class="text-xs text-white">Total Coins Contributed</p>
+          <p class="text-xs text-white">Members with Active Runs</p>
         </div>
       </div>
 
@@ -215,36 +211,27 @@ onMounted(async () => {
               <p class="text-xs text-muted">Joined {{ formatDate(member.joined_at) }}</p>
             </div>
 
-            <!-- Stats -->
-            <p class="text-sm text-info font-semibold">
-              {{ member.completed_targets_count }} targets achieved
-            </p>
-
           </div>
 
-          <!-- Target Progress -->
-          <div v-if="member.current_target" class="mt-1">
+          <!-- Current Run (lightweight: tier + progress only) -->
+          <div v-if="member.current_run" class="mt-1">
             <div class="flex justify-between text-xs mb-1">
-              <span class="text-white">Target: {{ member.current_target.tier }}</span>
+              <span class="text-white">Tier {{ member.current_run.current_tier }}</span>
               <span class="font-semibold">
-                    {{ member.current_target.progress_percentage.toFixed(0) }}%
-                  </span>
+                {{ Math.round(member.current_run.progress_percentage ?? 0) }}%
+              </span>
             </div>
             <UProgress
-                :model-value="member.current_target.progress_percentage"
+                :model-value="Math.round(member.current_run.progress_percentage ?? 0)"
                 color="primary"
                 size="sm"
             />
             <p class="text-xs text-white mt-1">
-              {{ (member.current_target.earned_coins * 3.333333).toLocaleString() }} /
-              {{ (member.current_target.required_coins * 3.333333).toLocaleString() }} coins
-            </p>
-
-            <p class="text-sm text-info bg-info/10 px-2 py-1 absolute bottom-0 right-0">
-              {{ member.current_target.days_remaining }} days left
+              <UIcon name="i-lucide-zap" class="size-3 inline-block" />
+              {{ formatCurrency(member.current_run.accumulated_xp) }} XP
             </p>
           </div>
-          <p v-else class="text-xs text-white mt-2">No active target</p>
+          <p v-else class="text-xs text-white mt-2">No active run</p>
 
         </div>
 

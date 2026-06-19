@@ -1,11 +1,10 @@
 <!-- ~/components/agency/IncomeTargetProgress.vue -->
-<!-- Displays active income target with progress bar -->
+<!-- Simple active-tier bar for the member's current agency-XP run (native XP). -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { INCOME_STATUS_COLORS, INCOME_STATUS_LABELS } from '~/types/income/income'
 
 // ========================================
-// Props
+// Options
 // ========================================
 
 defineOptions({ name: 'IncomeTargetProgress' })
@@ -20,53 +19,32 @@ const incomeStore = useIncomeStore()
 // Computed
 // ========================================
 
-const target = computed(() => incomeStore.activeTarget)
-const isLoading = computed(() => incomeStore.isTargetLoading)
-const hasTarget = computed(() => incomeStore.hasActiveTarget)
-const progress = computed(() => incomeStore.targetProgress)
-const daysRemaining = computed(() => incomeStore.daysRemaining)
-const coinsToComplete = computed(() => incomeStore.coinsToComplete)
+const run = computed(() => incomeStore.activeRun)
+const isLoading = computed(() => incomeStore.isRunLoading)
+const hasRun = computed(() => incomeStore.hasActiveRun)
+const progress = computed(() => Math.round(run.value?.progress_percentage ?? 0))
 
 /**
- * Format coins for display.
+ * The next, not-yet-crossed tier on the ladder (target of the active band).
  */
-const COIN_DISPLAY_MULTIPLIER = 3.333333
+const nextTier = computed(() => run.value?.ladder.find((rung) => rung.is_active) ?? null)
 
-const earnedDisplay = computed(() => {
-  const earned = parseFloat(target.value?.earned_coins ?? '0')
-  return formatCurrency(earned * COIN_DISPLAY_MULTIPLIER)
+const xpToNextTier = computed(() => {
+  if (!run.value || !nextTier.value) return 0
+  return Math.max(0, nextTier.value.required_xp - run.value.accumulated_xp)
 })
 
-const requiredDisplay = computed(() => {
-  const required = parseFloat(target.value?.required_coins ?? '0')
-  return formatCurrency(required * COIN_DISPLAY_MULTIPLIER)
-})
-
-const coinsToCompleteDisplay = computed(() => {
-  const coins = parseFloat(coinsToComplete.value)
-  return formatCurrency(coins * COIN_DISPLAY_MULTIPLIER)
-})
-
-const rewardDisplay = computed(() => {
-  return target.value?.member_diamond_reward ?? 0
-})
+const isMaxed = computed(() => hasRun.value && nextTier.value === null)
 
 /**
- * Format large numbers with K/M suffix.
+ * Days remaining until the run window closes.
  */
-function formatCurrency(value: number): string {
-  if (value >= 1_000_000) {
-    return (value / 1_000_000).toFixed(1) + 'M'
-  }
-  if (value >= 1_000) {
-    return (value / 1_000).toFixed(1) + 'K'
-  }
-  return value.toFixed(0)
-}
+const daysRemaining = computed(() => {
+  if (!run.value) return 0
+  const ms = new Date(run.value.ends_at).getTime() - Date.now()
+  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)))
+})
 
-/**
- * Progress bar color based on completion.
- */
 const progressColor = computed(() => {
   if (progress.value >= 100) return 'success'
   if (progress.value >= 75) return 'tertiary'
@@ -84,21 +62,23 @@ const progressColor = computed(() => {
       <USkeleton class="h-4 rounded w-1/2 mx-auto" />
     </div>
 
-    <!-- No Active Target -->
-    <div v-else-if="!hasTarget" class="text-center py-4">
+    <!-- No Active Run -->
+    <div v-else-if="!hasRun" class="text-center py-4">
       <Icon name="i-lucide-target" class="size-10 mx-auto text-muted mb-2" />
-      <p class="text-sm text-muted">No active income target</p>
-      <p class="text-xs text-muted mt-1">Income targets are assigned by your agency.</p>
+      <p class="text-sm text-muted">No active run</p>
+      <p class="text-xs text-muted mt-1">Send or receive gifts as an agency member to start one.</p>
     </div>
 
-    <!-- Active Target -->
+    <!-- Active Run -->
     <template v-else>
       <!-- Header -->
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center gap-2">
-          <Icon name="i-lucide-target" class="size-5 text-tertiary" />
-          <UBadge variant="soft" :color="target ? INCOME_STATUS_COLORS[target.status] : 'neutral'" class="font-bold">{{ target ? INCOME_STATUS_LABELS[target.status] : '' }}</UBadge>
-          <UBadge color="tertiary" variant="soft">{{ target?.tier }}</UBadge>
+          <Icon name="i-lucide-trending-up" class="size-5 text-tertiary" />
+          <UBadge variant="soft" :color="(run?.status_color as 'success' | 'info' | 'warning' | 'error' | 'neutral') ?? 'info'" class="font-bold">
+            {{ run?.status_label }}
+          </UBadge>
+          <UBadge color="tertiary" variant="soft">Tier {{ run?.current_tier }}</UBadge>
         </div>
         <UBadge variant="soft" :color="daysRemaining <= 3 ? 'error' : 'info'" class="flex items-center gap-1 text-sm">
           <Icon name="i-lucide-clock" class="size-4 text-info" />
@@ -109,21 +89,23 @@ const progressColor = computed(() => {
       <!-- Stats Row -->
       <div class="grid grid-cols-2 gap-3 text-center">
         <div class="bg-tertiary/10 rounded-md p-2 inset-shadow-sm">
-          <p class="text-xs text-muted">Remaining to Get</p>
-          <p class="text-lg font-bold text-tertiary">{{ coinsToCompleteDisplay }}</p>
+          <p class="text-xs text-muted">{{ isMaxed ? 'Status' : 'XP to Next Tier' }}</p>
+          <p class="text-lg font-bold text-tertiary">
+            {{ isMaxed ? 'Maxed' : formatCurrency(xpToNextTier) }}
+          </p>
         </div>
         <div class="bg-secondary/10 rounded-md p-2 inset-shadow-sm">
-          <p class="text-xs text-muted">Reward</p>
+          <p class="text-xs text-muted">Next Reward</p>
           <p class="text-lg font-bold text-secondary">
             <Icon name="i-lucide-gem" class="size-4 inline-block mr-1" />
-            {{ rewardDisplay }}
+            {{ nextTier?.member_diamond_reward ?? 0 }}
           </p>
         </div>
       </div>
 
       <!-- Progress Bar -->
       <div class="rounded-md bg-muted/40 p-2 mt-3 inset-shadow-sm">
-        <UProgress 
+        <UProgress
           v-model="progress"
           :color="progressColor"
           status
@@ -132,11 +114,10 @@ const progressColor = computed(() => {
           :ui="{ status: 'text-white -mb-1' }"
         />
         <div class="flex justify-between text-sm text-white font-semibold">
-          <span><UIcon name="i-lucide-coins" /> {{ earnedDisplay }} earned</span>
-          <span><UIcon name="i-lucide-coins" /> {{ requiredDisplay }} required</span>
+          <span><UIcon name="i-lucide-zap" /> {{ formatCurrency(run?.accumulated_xp ?? 0) }} XP</span>
+          <span v-if="nextTier"><UIcon name="i-lucide-flag" /> {{ formatCurrency(nextTier.required_xp) }} XP</span>
         </div>
       </div>
-
     </template>
   </div>
 </template>
