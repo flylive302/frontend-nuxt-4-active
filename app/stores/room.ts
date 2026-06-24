@@ -19,6 +19,15 @@ export const useRoomStore = defineStore('roomStore', () => {
   const previousRoute = ref('/');
   const status = ref<StatusType>('idle');
 
+  /**
+   * Persisted snapshot of a minimized room. Distinct from `currentRoom`
+   * (in-memory only) on purpose: it survives a cold start so the mini-player
+   * can offer a "tap to rejoin" affordance, WITHOUT the immediate lifecycle
+   * watcher auto-joining on boot. Restore is always an explicit user tap.
+   * Set on minimize; cleared on maximize / leave / entering a new room.
+   */
+  const minimizedRoom = ref<Room | null>(null);
+
   // ========================================
   // Actions
   // ========================================
@@ -34,12 +43,14 @@ export const useRoomStore = defineStore('roomStore', () => {
   function minimizeRoom() {
     if (currentRoom.value) {
       isMinimized.value = true;
+      minimizedRoom.value = currentRoom.value;
     }
   }
 
   function maximizeRoom() {
     if (currentRoom.value) {
       isMinimized.value = false;
+      minimizedRoom.value = null;
     }
   }
 
@@ -50,6 +61,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     if (fromRoute) previousRoute.value = fromRoute;
     currentRoom.value = room;
     isMinimized.value = false;
+    minimizedRoom.value = null;
   }
 
   /**
@@ -73,6 +85,7 @@ export const useRoomStore = defineStore('roomStore', () => {
   function leaveRoom() {
     currentRoom.value = null;
     isMinimized.value = false;
+    minimizedRoom.value = null;
   }
 
   function updateRoomLevel(level: number, xp: string) {
@@ -96,6 +109,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     currentRoom,
     userRoom,
     isMinimized,
+    minimizedRoom,
     previousRoute,
     status,
 
@@ -112,6 +126,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   };
 }, {
   persist: {
-    pick: ['userRoom', 'previousRoute'],
+    pick: ['userRoom', 'previousRoute', 'minimizedRoom'],
   },
 });

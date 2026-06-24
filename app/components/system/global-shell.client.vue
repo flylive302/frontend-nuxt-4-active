@@ -9,6 +9,17 @@ const { progress, phase, showDownloadGate } = storeToRefs(assetStore)
 
 const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
 
+// Show the mini-player off the room route when either a live room is minimized,
+// or a minimized-room snapshot survived a cold start (tap to rejoin).
+const showMiniPlayer = computed(() =>
+  authStore.isAuthenticated
+  && !route.path.startsWith('/room/')
+  && (
+    (!!roomStore.currentRoom && roomStore.isMinimized)
+    || (!roomStore.currentRoom && !!roomStore.minimizedRoom)
+  ),
+)
+
 useRoomLifecycle()
 
 const { init: initWakeLock } = useWakeLock()
@@ -20,7 +31,7 @@ initMediaSession()
 
 <template>
   <div>
-    <RoomMinimized v-if="authStore.isAuthenticated && roomStore.currentRoom && roomStore.isMinimized && !route.path.startsWith('/room/')" />
+    <RoomMinimized v-if="showMiniPlayer" />
 
     <SystemDownloadScreen v-if="showDownloadGate" />
 

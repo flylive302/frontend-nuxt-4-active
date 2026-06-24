@@ -105,6 +105,33 @@ export function useRoomEntry() {
   }
 
   /**
+   * Return to a room from the mini-player (live session or cold-start snapshot).
+   *
+   * - Live session (already in this room): enterRoom's same-room shortcut just
+   *   maximizes + navigates — seat/audio preserved.
+   * - Cold start (currentRoom was wiped, restoring from the persisted snapshot):
+   *   enterRoom runs a fresh verify + join.
+   *
+   * Caveat: a cold-start restore of a PASSWORD-protected room would hit a 403 and
+   * try to show the password prompt — but that modal isn't mounted at the app
+   * shell, so it'd be a silent no-op. Guide the user to re-enter from the listing
+   * instead. Owners bypass the password check, so they restore normally.
+   */
+  function returnToRoom(room: Room): void {
+    const isColdStart = roomStore.currentRoom?.id !== room.id
+    const isOwner = authStore.user?.id === room.owner_id
+    if (isColdStart && room.is_password_protected && !isOwner) {
+      useToast().add({
+        title: 'Re-enter this room',
+        description: 'Open it again from the room list to enter the password.',
+        color: 'info',
+      })
+      return
+    }
+    enterRoom(room)
+  }
+
+  /**
    * Called when password is successfully verified via the modal.
    * Enters the pending room and clears modal state.
    */
@@ -118,6 +145,8 @@ export function useRoomEntry() {
   return {
     /** Main entry point — use this from all room entry surfaces */
     enterRoom,
+    /** Return to a minimized room from the mini-player (live or cold-start) */
+    returnToRoom,
     /** Whether a password prompt modal should be shown */
     showPasswordPrompt,
     /** The room waiting for password, used as prop for the modal */
