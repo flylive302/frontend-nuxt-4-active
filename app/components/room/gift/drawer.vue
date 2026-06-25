@@ -34,8 +34,6 @@ const { readinessState } = useGiftReadiness(computed(() => giftStore.selectedGif
 const { haptic } = useHaptics();
 useGiftRecipientSync();
 
-const isSelectedGiftReady = computed(() => readinessState.value === 'ready');
-
 // Track drawer open state
 const isOpen = ref(false);
 
@@ -347,7 +345,7 @@ async function doLuckySend(): Promise<void> {
                   " />
                 <!-- Send Button -->
                 <UButton
-:disabled="!canSend || isSending || !isSelectedGiftReady" :loading="isSending" size="sm" trailing-icon="i-lucide-send"
+:disabled="!canSend || isSending" :loading="isSending" size="sm" trailing-icon="i-lucide-send"
                   @click="handleSend">
                   Send
                 </UButton>

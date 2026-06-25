@@ -50,13 +50,15 @@ const { formatGiftPrice } = useGiftData();
       >
         <UIcon name="i-lucide-loader-2" class="animate-spin size-5 text-white" />
       </div>
+      <!-- Preload failed (e.g. asset CDN/CORS) — non-blocking. The gift still
+           sends; playback falls back to the direct asset URL. Show a subtle
+           corner warning rather than a blocking overlay. -->
       <div
         v-else-if="selected && readiness === 'error'"
-        class="absolute inset-0 flex flex-col items-center justify-center rounded bg-black/60 gap-0.5"
-        :title="'Gift unavailable — check your connection'"
+        class="absolute top-0.5 right-0.5 flex items-center justify-center rounded-full bg-amber-500/90 size-4"
+        :title="'Preview not preloaded — gift will still send'"
       >
-        <UIcon name="i-lucide-wifi-off" class="size-4 text-red-400" />
-        <span class="text-[9px] text-red-300 text-center leading-tight px-0.5">Check connection</span>
+        <UIcon name="i-lucide-triangle-alert" class="size-2.5 text-white" />
       </div>
     </div>
     <MarqueeName
