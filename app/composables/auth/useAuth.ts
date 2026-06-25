@@ -192,6 +192,11 @@ export function useAuthActions() {
     } catch (error) {
       log.warn('Logout API call failed, clearing local state anyway', error)
     } finally {
+      // Clear room session state too — otherwise the persisted `minimizedRoom`
+      // snapshot survives logout in localStorage and the mini-player bubble
+      // reappears on the next login (stale "tap to rejoin"). Setting currentRoom
+      // null also drives the lifecycle watcher's audio teardown.
+      useRoomStore().leaveRoom()
       authStore.logout()
       // REACT
       await navigateTo('/log-in')
