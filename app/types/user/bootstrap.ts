@@ -176,6 +176,8 @@ export interface BootstrapRoom {
   is_live: boolean
   /** AWS region hosting this room's MSAB instance (null when not live) */
   hosting_region: string | null
+  /** Laravel-authoritative MSAB WebSocket endpoint the client connects to (realtime-05) */
+  hosting_url: string
   participant_count: number
   max_seats: number
   owner_id: number

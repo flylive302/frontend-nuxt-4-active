@@ -18,7 +18,6 @@ import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
-import { REGION_ENDPOINTS } from '~/constants/audio';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
@@ -331,13 +330,20 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // animation. Owning it at room entry removes that dependency.
     void ensureGiftsLoaded();
 
-    // Connect to the correct regional MSAB endpoint (production only).
-    // In development, always use the local MSAB URL from config to avoid
-    // connecting to production endpoints that reject localhost origins.
-    const isDev = import.meta.dev;
-    const hostingRegion = roomStore.currentRoom?.hosting_region;
-    const regionalUrl = !isDev && hostingRegion ? REGION_ENDPOINTS[hostingRegion] : undefined;
-    await connect(regionalUrl);
+    // Connect to the Laravel-authoritative MSAB endpoint (realtime-05).
+    // In development this resolves to undefined so connect() uses the local
+    // config URL (prod endpoints reject localhost origins).
+    const hostingUrl = roomStore.currentRoom?.hosting_url;
+    if (!import.meta.dev && !hostingUrl) {
+      // hosting_url is Laravel-guaranteed on every room payload; its absence in
+      // prod signals a backend regression. Surface it instead of silently
+      // falling back to the config default endpoint (realtime-05, AC#2).
+      log.error('Missing hosting_url on current room — cannot resolve MSAB endpoint', {
+        roomId,
+      });
+    }
+    const targetUrl = resolveMediaTransportUrl(hostingUrl, import.meta.dev);
+    await connect(targetUrl);
 
     // Wait for connection
     await new Promise<void>((resolve, reject) => {
