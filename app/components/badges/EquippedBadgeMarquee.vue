@@ -52,7 +52,7 @@ watch(sorted, async () => {
           :src="badge.image_url"
           class="size-6 shrink-0"
           alt=""
-      />
+      >
       <!-- Duplicate set for seamless looping — only rendered when marquee is active -->
       <template v-if="isOverflowing">
         <img
@@ -62,7 +62,7 @@ watch(sorted, async () => {
             class="size-6 shrink-0"
             aria-hidden="true"
             alt=""
-        />
+        >
       </template>
     </div>
   </div>

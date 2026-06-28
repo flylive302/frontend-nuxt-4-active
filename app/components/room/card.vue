@@ -61,10 +61,6 @@ const roomBackgroundSrc = computed(() => {
   return withImageKitTransform(props.room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
 })
 
-const roomLogoSrc = computed(() =>
-  withImageKitTransform(props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER, { w: 72, q: 75 }),
-)
-
 /** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 for aspect box + ImageKit requests */
 const roomImageWidth = computed(() => (props.cardLayout === 'carousel' ? 240 : 160))
 const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 224))

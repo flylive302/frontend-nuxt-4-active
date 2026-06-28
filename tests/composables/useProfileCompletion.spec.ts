@@ -136,7 +136,7 @@ describe('buildProfileUpdatePayload consent fields', () => {
   it('includes consent fields when needsConsent and both boxes checked', async () => {
     stubAuthStore(makeUser({ terms_accepted_at: null, privacy_policy_accepted_at: null }))
     const { useProfileCompletion } = await import('../../app/composables/auth/useProfileCompletion')
-    const { formState, submitWizardData } = useProfileCompletion()
+    const { formState } = useProfileCompletion()
 
     formState.termsAccepted = true
     formState.privacyAccepted = true

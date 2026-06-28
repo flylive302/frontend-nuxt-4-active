@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LeaderboardEntry } from '~/types/mission/recharge'
-import { RECHARGE_ACTIVITY, ASSETS } from '~/constants/assets'
+import { ASSETS } from '~/constants/assets'
 import { formatCurrency } from '~/utils/currency'
 
 const props = defineProps<{
@@ -40,11 +40,8 @@ function avatarSize(rank: number): string {
         :to="entry.user.signature ? `/profile/${entry.user.signature}` : ''"
         class="flex flex-col items-center text-center gap-1"
       >
-        <!-- Rank 1 gets the decorative background frame -->
-
-
-        <!-- Ranks 2 and 3: avatar with ring accent -->
-        <div v-else class="relative mb-2">
+        <!-- Avatar with ring accent -->
+        <div class="relative mb-2">
           <UserAvatar
             :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             :frame-asset-url="resolvePropAsset(entry.user.frame_id) ?? undefined"

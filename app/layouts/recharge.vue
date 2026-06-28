@@ -17,7 +17,7 @@ const honorWallOpen = ref(false)
         color="tertiary"
         class="rounded-lg backdrop-blur-sm text-primary absolute top-[calc(0.5rem_+_env(safe-area-inset-top,0px))] left-4"
     />
-    <img :src="RECHARGE_ACTIVITY.banner" alt="recharge activity" class="w-full" />
+    <img :src="RECHARGE_ACTIVITY.banner" alt="recharge activity" class="w-full" >
 
     <div class="flex justify-between items-center -mt-36">
       <div
@@ -55,7 +55,7 @@ const honorWallOpen = ref(false)
         </NuxtLink>
       </div>
 
-      <slot></slot>
+      <slot/>
 
       <!-- Modals -->
       <RechargeHonorWallModal

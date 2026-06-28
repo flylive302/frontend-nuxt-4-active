@@ -9,6 +9,7 @@ import type {
   UserJoinedEvent,
   UserLeftEvent,
   RoomClosedEvent,
+  RoomModeChangedEvent,
   NewProducerEvent,
   ProducerClosedEvent,
   ChatMessageEvent,
@@ -27,6 +28,9 @@ import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/use
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { propToEntryAnimationGift } from '~/utils/prop';
+import { createLogger } from '~/utils/logger';
+
+const log = createLogger('[RoomEvents]');
 
 // ============================================
 // Types
@@ -51,6 +55,7 @@ const ROOM_EVENT_NAMES = [
   'room:userJoined',
   'room:userLeft',
   'room:closed',
+  'room:mode',
   'room:kicked',
   'user:profile_updated',
   'audio:newProducer',
@@ -173,6 +178,20 @@ export function setupRoomEventHandlers(
     roomStore.leaveRoom();
     const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
     navigateTo(target, { replace: true });
+  });
+
+  // Mode flip — MSAB moved the Room between the interactive and broadcast tiers
+  // at the Listener threshold (realtime-08). Telemetry only at this slice: record
+  // the new mode on the room snapshot; no transport change yet (both tiers still
+  // use WebRTC). 09/10 attach real behaviour to this signal.
+  socket.on('room:mode', (event: RoomModeChangedEvent) => {
+    if (event.roomId !== String(roomStore.currentRoom?.id)) return;
+    roomStore.refreshCurrentRoom({ mode: event.mode });
+    log.info('Room mode changed', {
+      mode: event.mode,
+      transition: event.transition,
+      listenerCount: event.listenerCount,
+    });
   });
 
   // Kick — admin/owner removed user from the room

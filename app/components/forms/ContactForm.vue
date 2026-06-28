@@ -207,7 +207,7 @@ function triggerFileInput(): void {
                 :src="att.url"
                 :alt="att.localName"
                 class="size-full object-cover"
-              />
+              >
               <button
                 type="button"
                 class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -262,7 +262,7 @@ function triggerFileInput(): void {
               tabindex="-1"
               aria-hidden="true"
               @change="onFileChange"
-            />
+            >
             <UButton
               v-if="attachments.length < 6"
               type="button"

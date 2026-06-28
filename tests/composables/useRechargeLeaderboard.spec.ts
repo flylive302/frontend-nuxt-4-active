@@ -6,7 +6,7 @@
 //   AC3: mission.finale.ready stops polling and fetches the honor-wall snapshot once
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref, computed, readonly } from 'vue'
+import { ref, computed } from 'vue'
 
 // ========================================
 // Module mocks (hoisted — must precede imports of the SUT)
@@ -90,7 +90,6 @@ function makeEcho() {
 // Setup / teardown
 // ========================================
 
-let useRechargeLeaderboard: typeof import('~/composables/recharge/useRechargeLeaderboard')['useRechargeLeaderboard']
 let missionStore: ReturnType<typeof makeMissionStore>
 let echo: ReturnType<typeof makeEcho>
 
@@ -117,8 +116,6 @@ beforeEach(async () => {
   ;(globalThis as Record<string, unknown>).onUnmounted = vi.fn()
 
   vi.resetModules()
-  const mod = await import('~/composables/recharge/useRechargeLeaderboard')
-  useRechargeLeaderboard = mod.useRechargeLeaderboard
 })
 
 afterEach(() => {

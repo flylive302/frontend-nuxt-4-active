@@ -253,7 +253,7 @@ describe('useContactSupport', () => {
   describe('submit', () => {
     it('includes category and attachments in the API body', async () => {
       const formRef = makeFormRef()
-      const { submit, category, attachments } = useContactSupport(formRef as never, {
+      const { submit, attachments } = useContactSupport(formRef as never, {
         defaultCategory: 'bug_report',
       })
 

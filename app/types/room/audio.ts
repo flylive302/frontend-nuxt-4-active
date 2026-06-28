@@ -69,6 +69,19 @@ export interface RoomClosedEvent {
   timestamp: number;
 }
 
+/**
+ * room:mode — MSAB flipped the Room's audio-delivery tier (realtime-08).
+ * Telemetry only at this slice: the client records the new mode, no transport
+ * change yet.
+ */
+export interface RoomModeChangedEvent {
+  roomId: string;
+  mode: 'interactive' | 'broadcast';
+  transition: 'promote' | 'demote' | null;
+  listenerCount: number;
+  timestamp: number;
+}
+
 // ============================================
 // UNIFIED MEDIA RESPONSE
 // ============================================

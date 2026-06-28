@@ -10,7 +10,6 @@ const props = defineProps<{
 
 const seatsStore = useRoomSeatsStore();
 const roomStore = useRoomStore();
-const membershipStore = useRoomMembershipStore();
 const { resolvePropAsset } = usePropLookup();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed

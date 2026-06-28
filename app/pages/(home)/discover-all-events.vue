@@ -23,7 +23,7 @@ definePageMeta({
             width="360"
             height="120"
             class="h-full w-full rounded-lg"
-        />
+        >
       </NuxtLink>
     </div>
   </main>

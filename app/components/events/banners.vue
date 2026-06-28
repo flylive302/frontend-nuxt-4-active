@@ -25,7 +25,7 @@ const banners = Object.values(EVENT_BANNERS)
           width="360"
           height="120"
           class="h-full w-full rounded-lg"
-      />
+      >
 
       <!--    <NuxtLink class="relative bg-info" to="/recharge">-->
       <!--      &lt;!&ndash; Header &ndash;&gt;-->

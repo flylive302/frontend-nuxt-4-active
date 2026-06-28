@@ -2,5 +2,6 @@
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
-  // Your custom configs here
+  // Ignore generated Capacitor/Android build artifacts
+  { ignores: ['android/**'] },
 )
