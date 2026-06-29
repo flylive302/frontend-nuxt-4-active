@@ -19,6 +19,8 @@ import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
+import { useBroadcastHlsPlayback } from './audio/useBroadcastHlsPlayback';
+import { selectMediaTransport } from '~/utils/mediaTransport';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import * as fgsCoordinator from '~/services/foregroundServiceCoordinator';
@@ -190,7 +192,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     stopAudio: stopMediasoupAudio,
     consumeProducer,
     stopConsumer,
-    recoverPlayback,
+    recoverPlayback: recoverMediasoupPlayback,
     probeAudioHealth,
     cleanup: cleanupMediasoup,
     isDeviceLoaded,
@@ -309,6 +311,45 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
   // Audio player (music playback through mediasoup)
   const audioPlayer = useRoomAudioPlayer(socket);
+
+  // realtime-09: broadcast-tier HLS playback for passive Listeners. When the Room
+  // is in broadcast mode and the local user is NOT a Speaker, play the single CDN
+  // HLS stream instead of N WebRTC consumers, muting the WebRTC tier so only one
+  // is audible. Speakers and interactive rooms stay on WebRTC. Additive + guarded:
+  // it never touches the WebRTC pipeline beyond volume, so the existing audio path
+  // is unaffected when broadcast HLS isn't active.
+  const broadcastHls = useBroadcastHlsPlayback();
+
+  // realtime-09: on mobile/PWA resume, recover BOTH tiers — the WebRTC remote
+  // playback and (if active) the broadcast HLS element (autoplay may have been
+  // suspended in the background).
+  async function recoverPlayback(): Promise<boolean> {
+    const ok = await recoverMediasoupPlayback();
+    await broadcastHls.resume();
+    return ok;
+  }
+
+  watch(
+    () => {
+      const room = roomStore.currentRoom;
+      return [
+        room?.mode ?? 'interactive',
+        isProducing.value,
+        room?.hls_playback_url ?? null,
+      ] as const;
+    },
+    ([mode, isSpeaker, hlsUrl]) => {
+      const transport = selectMediaTransport({ mode, isSpeaker, hlsPlaybackUrl: hlsUrl });
+      if (transport === 'hls' && hlsUrl) {
+        setMediasoupVolume(0);
+        void broadcastHls.start(hlsUrl);
+      } else if (broadcastHls.isActive.value) {
+        broadcastHls.stop();
+        setMediasoupVolume(1);
+      }
+    },
+    { immediate: true },
+  );
 
   // ========================================
   // Room Lifecycle
@@ -608,6 +649,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Cleanup audio player
     audioPlayer.cleanup(targetRoomId ?? undefined);
+
+    // realtime-09: tear down broadcast HLS playback if it was active.
+    broadcastHls.stop();
 
     // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
     // Socket is managed by socket.client.ts plugin, disconnects only on logout

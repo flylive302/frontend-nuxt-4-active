@@ -180,6 +180,12 @@ export interface BootstrapRoom {
    * change — both tiers still use WebRTC).
    */
   mode: 'interactive' | 'broadcast'
+  /**
+   * Broadcast-tier HLS playback URL (realtime-09). Non-null only in broadcast
+   * mode (deterministic `<base>/<roomId>/master.m3u8`); passive Listeners play
+   * this instead of WebRTC. Null in interactive mode / when not provisioned.
+   */
+  hls_playback_url?: string | null
   /** AWS region hosting this room's MSAB instance (null when not live) */
   hosting_region: string | null
   /** Laravel-authoritative MSAB WebSocket endpoint the client connects to (realtime-05) */

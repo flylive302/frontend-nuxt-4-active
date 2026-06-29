@@ -181,12 +181,13 @@ export function setupRoomEventHandlers(
   });
 
   // Mode flip — MSAB moved the Room between the interactive and broadcast tiers
-  // at the Listener threshold (realtime-08). Telemetry only at this slice: record
-  // the new mode on the room snapshot; no transport change yet (both tiers still
-  // use WebRTC). 09/10 attach real behaviour to this signal.
+  // at the Listener threshold (realtime-08/09). Record BOTH the new mode and the
+  // HLS playback URL: useRoomAudio's transport watch keys off both, so carrying
+  // the URL here is what lets a Listener ALREADY in the Room switch to HLS the
+  // instant it flips (the HTTP resource only delivers the URL to new joiners).
   socket.on('room:mode', (event: RoomModeChangedEvent) => {
     if (event.roomId !== String(roomStore.currentRoom?.id)) return;
-    roomStore.refreshCurrentRoom({ mode: event.mode });
+    roomStore.refreshCurrentRoom({ mode: event.mode, hls_playback_url: event.hlsPlaybackUrl });
     log.info('Room mode changed', {
       mode: event.mode,
       transition: event.transition,

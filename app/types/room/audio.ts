@@ -70,15 +70,17 @@ export interface RoomClosedEvent {
 }
 
 /**
- * room:mode — MSAB flipped the Room's audio-delivery tier (realtime-08).
- * Telemetry only at this slice: the client records the new mode, no transport
- * change yet.
+ * room:mode — MSAB flipped the Room's audio-delivery tier (realtime-08/09).
+ * On a flip the client records the new mode AND the broadcast HLS playback URL,
+ * so Listeners already in the Room switch transport immediately (realtime-09).
  */
 export interface RoomModeChangedEvent {
   roomId: string;
   mode: 'interactive' | 'broadcast';
   transition: 'promote' | 'demote' | null;
   listenerCount: number;
+  /** Broadcast HLS playback URL when publishing; null in interactive / not provisioned. */
+  hlsPlaybackUrl: string | null;
   timestamp: number;
 }
 
