@@ -55,8 +55,17 @@ export function useBroadcastHlsPlayback(): UseBroadcastHlsPlaybackReturn {
     if (Hls.isSupported()) {
       hls = new Hls({
         // Short-segment live tuning: stay near the live edge, recover fast.
-        liveSyncDurationCount: 3,
-        lowLatencyMode: true,
+        // We serve full fMP4 segments (no #EXT-X-PART partials — R2 isn't an
+        // LL-HLS origin), so lowLatencyMode is inert and left off; latency is
+        // driven by hold-back × segment duration instead.
+        lowLatencyMode: false,
+        // Sit ~2 segments back from live edge (was 3) — ~1s closer to live.
+        liveSyncDurationCount: 2,
+        // Cap drift; if the player falls further behind, snap forward.
+        liveMaxLatencyDurationCount: 6,
+        // Nudge playback up to 1.5× to catch the live edge after a stall/buffer,
+        // instead of permanently drifting back.
+        maxLiveSyncPlaybackRate: 1.5,
         enableWorker: true,
       }) as unknown as typeof hls;
       hls!.on(Hls.Events.ERROR, (_event: unknown, data: unknown) => {
