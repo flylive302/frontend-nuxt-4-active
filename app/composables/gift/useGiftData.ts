@@ -62,7 +62,7 @@ export function useGiftData() {
         const config = GIFT_CATEGORY_CONFIG[category];
         const categoryGifts = gifts.value
           .filter((g) => g.category === category)
-          .sort((a, b) => a.sort_order - b.sort_order);
+          .sort((a, b) => a.price - b.price || a.sort_order - b.sort_order);
 
         return {
           category,
