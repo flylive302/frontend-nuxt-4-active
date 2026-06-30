@@ -18,6 +18,8 @@ import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";
 import { useGiftReadiness } from "~/composables/gift/useGiftReadiness";
 import { GIFT_QUANTITY_OPTIONS, COMBO_BUTTON_TIMEOUT_MS } from "~/constants/gift";
+import {computed} from "vue";
+import {computeLevelStatus, type LevelComputedStatus} from "~/utils/levels";
 
 // Quantity options for select (mutable array for USelect compatibility)
 const quantityOptions = [...GIFT_QUANTITY_OPTIONS];
@@ -199,6 +201,30 @@ onBeforeUnmount(() => {
   stopComboProgress();
 });
 
+const bootstrapStore = useBootstrapStore();
+
+const userXp = computed(() => authStore.user?.wealth_xp)
+
+const sortedConfigs = computed(() => bootstrapStore.sortedWealthLevels)
+
+const levelStatus = computed<LevelComputedStatus>(() =>
+    computeLevelStatus(userXp.value, sortedConfigs.value)
+)
+const progressValue = computed(() => levelStatus.value.progress_percentage)
+
+const currentLevel = computed(() => levelStatus.value.current_level)
+
+const nextLevel = computed(() =>
+    levelStatus.value.next_level?.level ?? currentLevel.value + 1
+)
+
+const currentXP = computed(() =>
+    levelStatus.value.current_xp.toLocaleString()
+)
+
+const xpRemaining = computed(() =>
+    levelStatus.value.xp_remaining.toLocaleString()
+)
 /**
  * Handle gift selection
  */
@@ -284,6 +310,16 @@ async function doLuckySend(): Promise<void> {
       <div class="p-2">
         <!-- Recipient Selector -->
         <RoomGiftRecipientSelector />
+
+        <div class="flex justify-between items-center">
+          <p class="text-xs font-bold">LvL: {{ currentLevel }}</p>
+          <p class="text-xs font-bold">LvL: {{ nextLevel }}</p>
+        </div>
+        <UProgress :model-value="progressValue" color="secondary" />
+        <div class="flex justify-between items-center">
+          <p class="text-xs font-bold">XP: {{ currentXP }}</p>
+          <p class="text-xs font-bold">Remaining: {{ xpRemaining }}</p>
+        </div>
         <!-- Category Tabs with Gift Grid -->
         <RoomGiftCategoryTabs :categories="giftsByCategory">
           <template #content="{ item }">
