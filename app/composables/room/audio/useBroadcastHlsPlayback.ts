@@ -9,14 +9,50 @@
  * Listener never hears both tiers at once.
  *
  * Robust to the cold-start race: when a Room has just flipped to broadcast the
- * first segments may not be on R2 yet (manifest 404s); hls.js retries, and the
- * ERROR handler restarts loading on a recoverable network/media error rather
- * than giving up. hls.js is dynamically imported so it never enters the SSR
- * bundle; on Safari we fall back to native HLS (`canPlayType`).
+ * manifest doesn't exist on R2 until FFmpeg writes the first segment (~2–4s after
+ * promote, longer if a speaker hasn't taken a seat yet) — so `master.m3u8` 404s.
+ * We make hls.js ride that window NATIVELY via a generous manifest/playlist
+ * `errorRetry` policy (capped exponential backoff) instead of going fatal after
+ * one try and hammering `startLoad()` in a tight loop (the prod symptom: dozens
+ * of "networkError" + `AbortError: play() interrupted by a new load request`).
+ * We also defer `play()` until `MANIFEST_PARSED` — calling it before media is
+ * attached is what the reload kept interrupting. The fatal handler is a
+ * last-resort with backoff + a cap. hls.js is dynamically imported so it never
+ * enters the SSR bundle; on Safari we fall back to native HLS (`canPlayType`).
  */
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[BroadcastHls]');
+
+/**
+ * Cold-start tolerance: how many times hls.js retries a 404'd manifest/playlist
+ * before declaring a fatal error. With 1s→8s capped backoff this rides ~2–3 min
+ * — long enough for a speaker to take a seat and FFmpeg to publish the manifest.
+ */
+export const COLD_START_MAX_RETRY = 30;
+/** Backoff before the last-resort fatal-error reload, so it can't tight-loop. */
+const FATAL_RELOAD_BACKOFF_MS = 3000;
+
+/**
+ * Override a hls.js load policy's `errorRetry` so a cold-start 404 is retried
+ * (capped 1s→8s backoff) instead of going fatal after one try — while preserving
+ * the policy's `timeoutRetry` and timeout fields. Pure; exported for unit tests.
+ */
+export function withColdStartRetry<P extends { default: Record<string, unknown> }>(
+  policy: P,
+): P {
+  return {
+    ...policy,
+    default: {
+      ...policy.default,
+      errorRetry: {
+        maxNumRetry: COLD_START_MAX_RETRY,
+        retryDelayMs: 1000,
+        maxRetryDelayMs: 8000,
+      },
+    },
+  };
+}
 
 export interface UseBroadcastHlsPlaybackReturn {
   /** Attach + play the given HLS playback URL (idempotent for the same URL). */
@@ -35,9 +71,18 @@ export function useBroadcastHlsPlayback(): UseBroadcastHlsPlaybackReturn {
   const isActive = ref(false);
   let audio: HTMLAudioElement | null = null;
   // hls.js instance — typed loosely to keep the dynamic import out of SSR types.
-  let hls: { destroy: () => void; loadSource: (u: string) => void; attachMedia: (e: HTMLMediaElement) => void; startLoad: () => void; on: (ev: string, cb: (e: unknown, d: unknown) => void) => void } | null = null;
+  let hls: {
+    destroy: () => void;
+    loadSource: (u: string) => void;
+    attachMedia: (e: HTMLMediaElement) => void;
+    startLoad: () => void;
+    recoverMediaError: () => void;
+    on: (ev: string, cb: (e: unknown, d: unknown) => void) => void;
+  } | null = null;
   let currentUrl: string | null = null;
   let volume = 1;
+  // Backoff timer for the last-resort fatal reload (cleared on stop/teardown).
+  let fatalReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
   async function start(playbackUrl: string): Promise<void> {
     if (!import.meta.client) return;
@@ -53,6 +98,10 @@ export function useBroadcastHlsPlayback(): UseBroadcastHlsPlaybackReturn {
     const { default: Hls } = await import('hls.js');
 
     if (Hls.isSupported()) {
+      // Cold-start retry policy (withColdStartRetry): ride a 404'd
+      // manifest/playlist via hls.js's own capped-backoff retry instead of going
+      // fatal after one try. This is what makes the broadcast tier survive the
+      // inherent promote→first-segment window without the networkError storm.
       hls = new Hls({
         // Short-segment live tuning: stay near the live edge, recover fast.
         // We serve full fMP4 segments (no #EXT-X-PART partials — R2 isn't an
@@ -67,38 +116,69 @@ export function useBroadcastHlsPlayback(): UseBroadcastHlsPlaybackReturn {
         // instead of permanently drifting back.
         maxLiveSyncPlaybackRate: 1.5,
         enableWorker: true,
+        manifestLoadPolicy: withColdStartRetry(Hls.DefaultConfig.manifestLoadPolicy),
+        playlistLoadPolicy: withColdStartRetry(Hls.DefaultConfig.playlistLoadPolicy),
       }) as unknown as typeof hls;
+      // Defer play() until media actually exists. Calling it right after
+      // attachMedia (before the manifest parses) is what each reload kept
+      // interrupting → AbortError("play() interrupted by a new load request").
+      hls!.on(Hls.Events.MANIFEST_PARSED, () => {
+        void tryPlay();
+      });
       hls!.on(Hls.Events.ERROR, (_event: unknown, data: unknown) => {
         const d = data as { fatal?: boolean; type?: string };
+        // Non-fatal errors (incl. the cold-start 404 retries above) are handled
+        // by hls.js itself — don't intervene, that's what caused the tight loop.
         if (!d?.fatal) return;
-        // Cold-start manifest 404s / transient network blips: keep trying rather
-        // than tearing down — segments appear within a few seconds of promote.
-        if (d.type === 'networkError' || d.type === 'mediaError') {
-          log.warn('Recoverable HLS error — restarting load', { type: d.type });
-          hls?.startLoad();
-        } else {
-          log.error('Fatal HLS error', { type: d.type });
+        if (d.type === 'mediaError') {
+          log.warn('Fatal media error — recovering');
+          hls?.recoverMediaError();
+          return;
         }
+        if (d.type === 'networkError') {
+          // Exhausted the retry policy (manifest still missing after minutes).
+          // Reload ONCE after a backoff — never tight-loop.
+          if (fatalReloadTimer) return;
+          log.warn('Fatal network error — reloading after backoff');
+          fatalReloadTimer = setTimeout(() => {
+            fatalReloadTimer = null;
+            hls?.startLoad();
+          }, FATAL_RELOAD_BACKOFF_MS);
+          return;
+        }
+        log.error('Fatal HLS error', { type: d.type });
       });
       hls!.loadSource(playbackUrl);
       hls!.attachMedia(audio);
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari / iOS: native HLS.
+      // Safari / iOS: native HLS (the element retries the manifest itself).
       audio.src = playbackUrl;
+      void tryPlay();
     } else {
       log.error('HLS is not supported in this browser');
       return;
     }
 
     isActive.value = true;
+    log.info('HLS playback starting', { playbackUrl });
+  }
+
+  /**
+   * Attempt playback; autoplay may be blocked until a user gesture, in which case
+   * `resume()` retries on the next interaction/app-resume. Never throws.
+   */
+  async function tryPlay(): Promise<void> {
+    if (!audio) return;
     await audio.play().catch((err) => {
-      // Autoplay may be blocked until a user gesture; resume() retries later.
       log.warn('HLS autoplay blocked or failed', { err });
     });
-    log.info('HLS playback started', { playbackUrl });
   }
 
   function stop(): void {
+    if (fatalReloadTimer) {
+      clearTimeout(fatalReloadTimer);
+      fatalReloadTimer = null;
+    }
     if (hls) {
       hls.destroy();
       hls = null;
@@ -119,9 +199,7 @@ export function useBroadcastHlsPlayback(): UseBroadcastHlsPlaybackReturn {
   }
 
   async function resume(): Promise<void> {
-    if (audio && isActive.value) {
-      await audio.play().catch((err) => log.warn('HLS resume play failed', { err }));
-    }
+    if (audio && isActive.value) await tryPlay();
   }
 
   return { start, stop, setVolume, isActive: readonly(isActive), resume };
