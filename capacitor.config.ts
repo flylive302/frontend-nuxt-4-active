@@ -25,6 +25,21 @@ const config: CapacitorConfig = {
         SafeArea: {
             initialViewportFitCover: true,
         },
+        // Native launch splash (generated via `npx capacitor-assets generate --android`
+        // from resources/splash.png). Fixed-duration auto-hide — the bundled SPA mounts
+        // fast enough that a manual hide() call isn't needed.
+        // `useDialog: true` is required on Android 12+ (API 31, targetSdk 36 here) — the
+        // OS-level SplashScreen API only shows the launcher icon on a color field otherwise;
+        // the full-screen drawable is rendered as a themed dialog on top of that.
+        SplashScreen: {
+            launchShowDuration: 2000,
+            launchAutoHide: true,
+            backgroundColor: '#ffffff',
+            androidScaleType: 'CENTER_CROP',
+            splashFullScreen: true,
+            splashImmersive: true,
+            useDialog: true,
+        },
     },
 }
 
