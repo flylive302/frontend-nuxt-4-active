@@ -40,9 +40,9 @@ const genderColor = computed(() =>
 </script>
 
 <template>
-  <div class="overflow-hidden relative rounded-lg bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 shadow-md shadow-neutral-900">
-
-    <div class="flex">
+  <div class="relative rounded-lg bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 shadow-md shadow-neutral-900">
+    
+    <div class="flex relative z-10">
       <UserAvatar
         :img="user.avatar"
         animated
