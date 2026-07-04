@@ -1,6 +1,6 @@
 # Capacitor native shell (Android) — build & run
 
-The Nuxt SPA is **bundled** into the APK (no `server.url`). See [ADR 0010](../docs/adr/0010-capacitor-native-shell.md).
+The Nuxt SPA is **bundled** into the APK (no `server.url`). See [ADR 0010](../docs/adr/DECISIONS.md#adr-0010).
 
 ## One-time setup (your machine — needs Android toolchain)
 
