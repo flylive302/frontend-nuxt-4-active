@@ -20,7 +20,7 @@ import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { useBroadcastHlsPlayback } from './audio/useBroadcastHlsPlayback';
-import { selectMediaTransport } from '~/utils/mediaTransport';
+import { selectMediaTransport, planTransportHandoff, type MediaTransport } from '~/utils/mediaTransport';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import * as fgsCoordinator from '~/services/foregroundServiceCoordinator';
@@ -201,6 +201,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     toggleLocalMute: toggleMediasoupMute,
     producer,
     setVolume: setMediasoupVolume,
+    getVolume: getMediasoupVolume,
   } = useMediasoup(socket);
 
   // ========================================
@@ -329,6 +330,21 @@ export function useRoomAudio(): UseRoomAudioReturn {
     return ok;
   }
 
+  // realtime-10: HLS↔WebRTC promotion/demotion handoff.
+  //
+  // `activeTransport` is the tier this client is currently on, tracked
+  // SYNCHRONOUSLY here rather than read back from `broadcastHls.isActive` —
+  // which only flips true AFTER the async `import('hls.js')` inside start().
+  // A promotion (take Seat → isProducing) landing in that import window would,
+  // with the old `else if (broadcastHls.isActive.value)` guard, skip the volume
+  // restore and strand the WebRTC tier at volume 0 → the demoted-then-promoted
+  // Listener goes silent. Edge-triggering off this flag closes that race.
+  //
+  // `webrtcVolume` remembers the Listener's chosen consumer volume across a
+  // broadcast detour so the restore doesn't clobber it back to a hardcoded 1.
+  let activeTransport: MediaTransport = 'webrtc';
+  let webrtcVolume = getMediasoupVolume();
+
   watch(
     () => {
       const room = roomStore.currentRoom;
@@ -340,16 +356,43 @@ export function useRoomAudio(): UseRoomAudioReturn {
     },
     ([mode, isSpeaker, hlsUrl]) => {
       const transport = selectMediaTransport({ mode, isSpeaker, hlsPlaybackUrl: hlsUrl });
-      if (transport === 'hls' && hlsUrl) {
-        setMediasoupVolume(0);
+      const plan = planTransportHandoff(activeTransport, transport, webrtcVolume);
+      if (!plan.changed) return; // already on the target tier → nothing to do
+
+      activeTransport = plan.tier;
+      if (plan.tier === 'hls' && hlsUrl) {
+        // WebRTC → HLS (a Speaker stepping down, or the Room flipping to
+        // broadcast): silence the muted WebRTC consumers and play the single
+        // CDN stream at the same volume. One catch-up jump, no reconnect storm.
+        setMediasoupVolume(plan.webrtcVolume);
+        broadcastHls.setVolume(plan.hlsVolume ?? webrtcVolume);
         void broadcastHls.start(hlsUrl);
-      } else if (broadcastHls.isActive.value) {
+      } else {
+        // HLS → WebRTC (a Listener taking a Seat, or the Room flipping back to
+        // interactive): stop the CDN stream and restore the Listener's chosen
+        // WebRTC volume. Restore is UNCONDITIONAL (not gated on
+        // broadcastHls.isActive) so a switch during the hls.js import can't
+        // leave WebRTC muted.
         broadcastHls.stop();
-        setMediasoupVolume(1);
+        setMediasoupVolume(plan.webrtcVolume);
       }
     },
     { immediate: true },
   );
+
+  /**
+   * Set consumer volume, tier-aware (realtime-10): drives the HLS element while
+   * on the broadcast tier and the WebRTC consumers otherwise, and remembers the
+   * value so a later HLS→WebRTC handoff restores it instead of hardcoding 1.
+   */
+  function setVolume(volume: number): void {
+    webrtcVolume = volume;
+    if (activeTransport === 'hls') {
+      broadcastHls.setVolume(volume);
+    } else {
+      setMediasoupVolume(volume);
+    }
+  }
 
   // ========================================
   // Room Lifecycle
@@ -651,7 +694,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
     audioPlayer.cleanup(targetRoomId ?? undefined);
 
     // realtime-09: tear down broadcast HLS playback if it was active.
+    // realtime-10: reset the tier flag in lockstep so the invariant "HLS
+    // stopped ⟺ activeTransport==='webrtc'" holds — otherwise a rejoin to a
+    // still-broadcast Room would hit the watch's same-transport early-return
+    // and never restart HLS (silent Listener).
     broadcastHls.stop();
+    activeTransport = 'webrtc';
 
     // NOTE: Do NOT disconnect socket - it stays connected for app-wide events
     // Socket is managed by socket.client.ts plugin, disconnects only on logout
@@ -706,8 +754,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     toggleLocalMute,
     isAudioReady,
 
-    // Volume
-    setVolume: setMediasoupVolume,
+    // Volume (tier-aware: HLS while broadcasting, WebRTC otherwise)
+    setVolume,
     recoverPlayback,
     probeAudioHealth,
 

@@ -49,3 +49,47 @@ export function selectMediaTransport(input: {
   }
   return 'webrtc';
 }
+
+/**
+ * The concrete side-effect plan for an HLS↔WebRTC handoff (realtime-10).
+ *
+ * `changed === false` → the client is already on the target tier; do nothing.
+ * Otherwise `tier` is the tier to switch TO, `webrtcVolume` is the volume to
+ * apply to the WebRTC consumers (0 while HLS is audible so only one tier plays;
+ * the Listener's saved volume on the way back), and `hlsVolume` is the volume
+ * for the HLS element on a switch INTO broadcast (undefined otherwise).
+ */
+export interface TransportHandoffPlan {
+  changed: boolean;
+  tier: MediaTransport;
+  webrtcVolume: number;
+  hlsVolume?: number;
+}
+
+/**
+ * Pure reducer for the promotion/demotion handoff (realtime-10). Given the tier
+ * the client is currently on, the tier it should be on, and the Listener's saved
+ * WebRTC volume, decide the mute/restore plan.
+ *
+ * Guards the two bugs the handoff fix targets:
+ *  - **volume clobber:** the WebRTC restore returns `savedVolume`, never a
+ *    hardcoded 1.
+ *  - **spurious churn:** a same-tier re-fire is `changed: false` (no stop/start
+ *    storm), so the caller edge-triggers off `current` rather than reading back
+ *    `hls.js`'s async-lagging `isActive` flag.
+ */
+export function planTransportHandoff(
+  current: MediaTransport,
+  next: MediaTransport,
+  savedVolume: number,
+): TransportHandoffPlan {
+  if (current === next) {
+    return { changed: false, tier: current, webrtcVolume: savedVolume };
+  }
+  if (next === 'hls') {
+    // WebRTC → HLS: silence the WebRTC consumers, play HLS at the saved volume.
+    return { changed: true, tier: 'hls', webrtcVolume: 0, hlsVolume: savedVolume };
+  }
+  // HLS → WebRTC: stop HLS, restore the Listener's chosen WebRTC volume.
+  return { changed: true, tier: 'webrtc', webrtcVolume: savedVolume };
+}
