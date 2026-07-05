@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { createLogger } from '~/utils/logger'
+import { DEFAULT_SEAT_COUNT, MIN_SEAT_COUNT, MAX_SEAT_COUNT, SEAT_COUNT_STEP } from '~/constants/room'
 // ========================================
 // Room Settings Drawer
 // ========================================
@@ -154,7 +155,7 @@ const editName = ref('')
 const editPassword = ref('')
 const editType = ref<'public' | 'private'>('public')
 const editColor = ref('')
-const editMaxSeats = ref(15)
+const editMaxSeats = ref(DEFAULT_SEAT_COUNT)
 const saving = ref(false)
 const showSettingsPassword = ref(false)
 
@@ -198,7 +199,7 @@ watch(open, (isOpen) => {
     editPassword.value = ''
     editType.value = thisRoom.value.is_private ? 'private' : 'public'
     editColor.value = thisRoom.value.primary_color ?? ''
-    editMaxSeats.value = thisRoom.value.max_seats ?? 15
+    editMaxSeats.value = thisRoom.value.max_seats ?? DEFAULT_SEAT_COUNT
     logoPreview.value = thisRoom.value.logo ?? null
     bgPreview.value = thisRoom.value.background ?? null
     logoFile.value = null
@@ -226,10 +227,13 @@ const typeOptions = [
   { label: 'Private', value: 'private' },
 ]
 
-const seatOptions = [5, 10, 15].map((n) => ({
-  label: `${n} seats`,
-  value: n,
-}))
+const seatOptions = Array.from(
+  { length: (MAX_SEAT_COUNT - MIN_SEAT_COUNT) / SEAT_COUNT_STEP + 1 },
+  (_, i) => {
+    const n = MIN_SEAT_COUNT + i * SEAT_COUNT_STEP
+    return { label: `${n} seats`, value: n }
+  },
+)
 
 // ========================================
 // Action Loading

@@ -15,6 +15,55 @@ beforeEach(() => {
 })
 
 // ============================================================
+// realtime-12 — setSeatCount resizes the seat array to per-Room max_seats
+// ============================================================
+describe('roomSeatsStore.setSeatCount', () => {
+  it('grows the seat array so seats beyond the default count exist', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.setSeatCount(20)
+
+    expect(store.seats).toHaveLength(20)
+
+    // A seat added by the grow (index 19) must accept an occupant that
+    // updateSeat's bounds guard would otherwise have dropped at length 15.
+    store.updateSeat(19, 42, false)
+    expect(store.seats[19]?.occupantId).toBe(42)
+  })
+
+  it('shrinks the seat array by slicing the tail', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.setSeatCount(5)
+
+    expect(store.seats).toHaveLength(5)
+  })
+
+  it('preserves existing seat occupancy when growing', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    store.updateSeat(3, 7, true)
+    store.setSeatCount(20)
+
+    expect(store.seats[3]?.occupantId).toBe(7)
+    expect(store.seats[3]?.isMuted).toBe(true)
+  })
+
+  it('is a no-op for a non-positive count', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+
+    const before = store.seats.length
+    store.setSeatCount(0)
+
+    expect(store.seats).toHaveLength(before)
+  })
+})
+
+// ============================================================
 // Slices 8–9 — reconcileSeats (occupantId snapshot format)
 // ============================================================
 describe('roomSeatsStore.reconcileSeats', () => {

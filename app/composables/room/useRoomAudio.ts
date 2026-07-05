@@ -17,7 +17,7 @@ import { useRoomGifts, clearGiftQueue, type UseRoomGiftsReturn } from './useRoom
 import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
-import { CONNECTION_TIMEOUT_MS } from '~/constants/room';
+import { CONNECTION_TIMEOUT_MS, DEFAULT_SEAT_COUNT } from '~/constants/room';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { useBroadcastHlsPlayback } from './audio/useBroadcastHlsPlayback';
 import { selectMediaTransport, planTransportHandoff, type MediaTransport } from '~/utils/mediaTransport';
@@ -480,7 +480,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Join room via socket (send owner ID and seat count so server can configure room)
     const ownerId = roomStore.currentRoom?.owner_id;
-    const seatCount = roomStore.currentRoom?.max_seats ?? 15;
+    const seatCount = roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT;
 
     // undefined
 
@@ -615,6 +615,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
     //    seats from the snapshot, clear seats whose occupant is absent. Resolve
     //    each occupant from participants (placeholder if a seat references a
     //    user the snapshot's participant list didn't carry).
+    // Size the seat array to the room's max_seats BEFORE reconciling, so seats
+    // beyond the default count (e.g. 16–20) exist before the snapshot targets
+    // them (updateSeat's bounds guard would otherwise drop those occupancies).
+    seatsStore.setSeatCount(seatCount);
+
     if (response.seats) {
       const snapshot = response.seats.map((seat) => ({
         seatIndex: seat.seatIndex,

@@ -9,8 +9,21 @@
 // Seat Configuration
 // ============================================
 
-/** Total number of speaker seats in a room */
-export const SEAT_COUNT = 15;
+/**
+ * Default speaker-seat count — the fallback used before a room's authoritative
+ * `max_seats` is known (join snapshot / room.updated). Rooms are per-Room
+ * selectable between MIN_SEAT_COUNT and MAX_SEAT_COUNT (realtime-12).
+ */
+export const DEFAULT_SEAT_COUNT = 15;
+
+/** Minimum per-Room seat count (Laravel-authoritative). */
+export const MIN_SEAT_COUNT = 5;
+
+/** Maximum per-Room seat count (Laravel-authoritative). */
+export const MAX_SEAT_COUNT = 20;
+
+/** Seat counts are selectable in steps of this size (5, 10, 15, 20). */
+export const SEAT_COUNT_STEP = 5;
 
 // ============================================
 // Timeouts

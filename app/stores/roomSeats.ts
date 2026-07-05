@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia';
 import type { Seat, SeatWithUser } from '~/types/room/audio';
 import { useRoomParticipantsStore } from '~/stores/roomParticipants';
-import { SEAT_COUNT } from '~/constants/room';
+import { DEFAULT_SEAT_COUNT } from '~/constants/room';
 
 // ============================================
 // Helpers
 // ============================================
-function createEmptySeats(): Seat[] {
-  return Array.from({ length: SEAT_COUNT }, (_, i) => ({
+function createEmptySeats(count: number = DEFAULT_SEAT_COUNT): Seat[] {
+  return Array.from({ length: count }, (_, i) => ({
     index: i,
     occupantId: null,
     isMuted: false,
@@ -193,6 +193,35 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   }
 
   /**
+   * Resize the seat array to the room's authoritative `max_seats` (realtime-12).
+   *
+   * Called by the join orchestrator (before the snapshot is reconciled) and on
+   * live `room.updated`, so seats beyond the old fixed count (e.g. 16–20) exist
+   * before any `updateSeat` targets them — otherwise the index-bounds guard in
+   * `updateSeat` silently drops those occupancies. Growing appends empty seats;
+   * shrinking slices off the tail. Existing seat state is preserved.
+   */
+  function setSeatCount(count: number): void {
+    if (!Number.isFinite(count) || count < 1) return;
+    const current = seats.value.length;
+    if (count === current) return;
+
+    if (count > current) {
+      for (let i = current; i < count; i++) {
+        seats.value.push({
+          index: i,
+          occupantId: null,
+          isMuted: false,
+          isActive: false,
+          isLocked: false,
+        });
+      }
+    } else {
+      seats.value = seats.value.slice(0, count);
+    }
+  }
+
+  /**
    * Reconcile seats against an authoritative join snapshot.
    *
    * Seats present in the snapshot are applied (upsert); occupied seats whose
@@ -258,6 +287,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     // Cross-store helpers
     syncActiveSpeakers,
     resetSeats,
+    setSeatCount,
     reconcileSeats,
     clearParticipantFromSeat,
     setSeatMutedByUserId,

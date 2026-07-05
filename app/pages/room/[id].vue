@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
+import { DEFAULT_SEAT_COUNT } from '~/constants/room'
 import { withImageKitTransform } from '~/utils/imagekit'
 /**
  * Room Page — Full-screen room UI
@@ -191,7 +192,7 @@ onUnmounted(() => {
 
         <!-- Seats Grid -->
         <main class="grid grid-cols-5 gap-x-2">
-          <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? 15)" :key="i" :seat-id="i" />
+          <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT)" :key="i" :seat-id="i" />
         </main>
 
         <LazyRoomSeatDrawer />

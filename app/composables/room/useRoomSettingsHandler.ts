@@ -30,6 +30,7 @@ const SECURITY_FIELDS = ['type', 'password'] as const
 export function useRoomSettingsHandler() {
   const roomStore = useRoomStore()
   const authStore = useAuthStore()
+  const seatsStore = useRoomSeatsStore()
   const toast = useToast()
 
   /**
@@ -70,6 +71,13 @@ export function useRoomSettingsHandler() {
       owner_id: roomStore.currentRoom.owner_id,
     }
     Object.assign(roomStore.currentRoom, payload.room, preserved)
+
+    // EXECUTE — resize the seat array to a live max_seats change (realtime-12),
+    // so seats added beyond the previous count exist before occupancies target
+    // them. The seats grid re-renders reactively off the same max_seats.
+    if (payload.updated_fields.includes('max_seats')) {
+      seatsStore.setSeatCount(payload.room.max_seats)
+    }
   }
 
   return {
