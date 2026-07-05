@@ -15,6 +15,9 @@ import { ROOM_OP_TIMEOUT_MS } from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
 
+/** Toast id for the reconnect-failed banner, so it can be dismissed once audio recovers. */
+const RECONNECT_FAILED_TOAST_ID = 'audio-reconnect-failed';
+
 // ============================================
 // State
 // ============================================
@@ -38,7 +41,7 @@ export function useRoomLifecycle(): void {
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
   const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, connectionStatus } = useRoomAudio();
-  const { connect: connectSocket, disconnect: disconnectSocket, onReconnect } = useAudioSocket();
+  const { connect: connectSocket, disconnect: disconnectSocket, onReconnect, onReconnectFailed } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
 
@@ -50,6 +53,28 @@ export function useRoomLifecycle(): void {
     disconnectSocket(true);
     await connectSocket();
     await joinRoom(roomId);
+  }
+
+  /**
+   * Attempt a single clean rebuild of the room audio (fresh socket + token +
+   * rejoin), guarded against overlapping joins. Returns whether it succeeded so
+   * callers can decide how to degrade. Used by the reconnect-failed recovery
+   * path (auto-attempt + the manual "Reconnect" affordance).
+   */
+  async function attemptRoomReconnect(roomId: string): Promise<boolean> {
+    if (isJoining.value) return false;
+    isJoining.value = true;
+    try {
+      await withTimeout(rebuildRoomAudio(roomId), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
+      // Audio is back — clear any lingering reconnect-failed banner.
+      toast.remove(RECONNECT_FAILED_TOAST_ID);
+      return true;
+    } catch (err) {
+      log.warn('Room audio reconnect attempt failed', err);
+      return false;
+    } finally {
+      isJoining.value = false;
+    }
   }
 
   // ========================================
@@ -159,10 +184,63 @@ export function useRoomLifecycle(): void {
 
       // Re-join the audio room on MSAB server
       await withTimeout(joinRoom(roomId), ROOM_OP_TIMEOUT_MS, 'joinRoom');
+      // If a prior reconnect-failed banner is still up but the socket has since
+      // self-healed and rejoined in the background, dismiss it — otherwise the
+      // user could tap "Reconnect" and tear down the now-working connection.
+      toast.remove(RECONNECT_FAILED_TOAST_ID);
     } catch (error) {
       log.warn('Failed to re-join room after socket reconnect', error);
     } finally {
       isJoining.value = false;
+    }
+  });
+
+  // ========================================
+  // Reconnect Dead-End Recovery (realtime-13 / M8)
+  // ========================================
+  // Socket.IO exhausted its automatic reconnect attempts. Instead of leaving a
+  // dead socket behind a "please refresh the page" toast, drive one clean
+  // rebuild (fresh socket + token + rejoin). If that also fails, settle into a
+  // defined chat-only state with an actionable "Reconnect" affordance — never a
+  // silent dead-end. Outside a room there is nothing to recover, so just clear
+  // the dead socket to a clean disconnected state.
+  onReconnectFailed(async () => {
+    if (!roomStore.currentRoom) {
+      disconnectSocket(true);
+      return;
+    }
+
+    if (isRecovering.value) return;
+    isRecovering.value = true;
+
+    try {
+      const roomId = String(roomStore.currentRoom.id);
+      const recovered = await attemptRoomReconnect(roomId);
+      if (recovered) return;
+
+      // Rebuild failed too — degrade cleanly to chat-only and hand the user an
+      // explicit retry instead of a dead socket.
+      disconnectSocket(true);
+      toast.add({
+        id: RECONNECT_FAILED_TOAST_ID,
+        title: 'Audio disconnected',
+        description: 'Chat and gifting still work. Tap reconnect to restore audio.',
+        color: 'warning',
+        duration: 0,
+        actions: [
+          {
+            label: 'Reconnect',
+            color: 'primary',
+            onClick: () => {
+              if (roomStore.currentRoom) {
+                void attemptRoomReconnect(String(roomStore.currentRoom.id));
+              }
+            },
+          },
+        ],
+      });
+    } finally {
+      isRecovering.value = false;
     }
   });
 

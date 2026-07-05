@@ -248,6 +248,48 @@ describe('useAudioSocket', () => {
     })
   })
 
+  describe('reconnect_failed handling (realtime-13 / M8)', () => {
+    it('delegates recovery to the registered onReconnectFailed callback without toasting', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect, onReconnectFailed, status } = useAudioSocket()
+      await connect()
+
+      const cb = vi.fn()
+      onReconnectFailed(cb)
+
+      const handler = mockSocket.io.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'reconnect_failed'
+      )?.[1] as (() => void) | undefined
+
+      expect(handler).toBeDefined()
+      handler?.()
+
+      expect(cb).toHaveBeenCalledTimes(1)
+      expect(status.value).toBe('error')
+      expect(mockToast.add).not.toHaveBeenCalled()
+    })
+
+    it('falls back to a toast when no recovery owner is registered', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect, status } = useAudioSocket()
+      await connect()
+
+      const handler = mockSocket.io.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'reconnect_failed'
+      )?.[1] as (() => void) | undefined
+
+      expect(handler).toBeDefined()
+      handler?.()
+
+      expect(status.value).toBe('error')
+      expect(mockToast.add).toHaveBeenCalled()
+    })
+  })
+
   describe('connect(targetUrl) — regional routing', () => {
     it('should connect to the specified URL instead of config URL', async () => {
       mockAuthStore.msabToken = 'valid-token'

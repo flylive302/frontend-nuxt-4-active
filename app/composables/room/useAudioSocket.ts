@@ -26,6 +26,9 @@ export type { AudioSocket } from '~/types/room/audio';
 /** Callback invoked after Socket.IO auto-reconnects */
 type ReconnectCallback = () => void;
 
+/** Callback invoked when Socket.IO exhausts all automatic reconnect attempts */
+type ReconnectFailedCallback = () => void;
+
 export interface UseAudioSocketReturn {
   /** The Socket.IO socket instance */
   socket: Ref<AudioSocket | null>;
@@ -41,6 +44,8 @@ export interface UseAudioSocketReturn {
   isConnected: ComputedRef<boolean>;
   /** Register a callback to fire after Socket.IO auto-reconnects */
   onReconnect: (cb: ReconnectCallback) => void;
+  /** Register a callback to fire when all automatic reconnect attempts are exhausted */
+  onReconnectFailed: (cb: ReconnectFailedCallback) => void;
   /** Recover socket connection after PWA resumes from OS-level suspension */
   recoverFromSuspension: () => Promise<void>;
 }
@@ -67,6 +72,9 @@ let _connectedUrl: string | null = null;
 
 /** Callback to invoke after Socket.IO auto-reconnection */
 let _reconnectCallback: ReconnectCallback | null = null;
+
+/** Callback to invoke when Socket.IO exhausts all automatic reconnect attempts */
+let _reconnectFailedCallback: ReconnectFailedCallback | null = null;
 
 /** Timestamp when the page was last hidden (for PWA suspension detection) */
 let _hiddenSince: number | null = null;
@@ -240,10 +248,25 @@ export function useAudioSocket(): UseAudioSocketReturn {
     });
   }
 
-  /** All reconnection attempts exhausted — surface a clear error instead of failing silently. */
+  /**
+   * All automatic reconnection attempts exhausted.
+   *
+   * Infrastructure surfaces the failure (status + error) and hands off recovery
+   * to the registered callback — useRoomLifecycle owns the clean rebuild
+   * (fresh socket + token + rejoin) and any user-facing retry affordance, so
+   * this file stays transport-only. The fallback toast only fires when no
+   * recovery owner is registered (e.g. outside a room), so the user is never
+   * left in a silent dead-end.
+   */
   function handleReconnectFailed() {
     status.value = 'error';
     error.value = 'Unable to reconnect to audio server';
+
+    if (_reconnectFailedCallback) {
+      _reconnectFailedCallback();
+      return;
+    }
+
     toast.add({
       title: 'Connection lost',
       description: 'Could not reach the audio server. Please refresh the page.',
@@ -421,6 +444,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     _connectedUrl = null;
     if (!preserveReconnectCallback) {
       _reconnectCallback = null;
+      _reconnectFailedCallback = null;
     }
     _hiddenSince = null;
     _authRetryInFlight = false;
@@ -483,6 +507,15 @@ export function useAudioSocket(): UseAudioSocketReturn {
     _reconnectCallback = cb;
   }
 
+  /**
+   * Register a callback to fire when Socket.IO exhausts all automatic reconnect
+   * attempts. Used by useRoomLifecycle to drive a clean rebuild + retry path
+   * instead of dead-ending on a "please refresh" message.
+   */
+  function onReconnectFailed(cb: ReconnectFailedCallback): void {
+    _reconnectFailedCallback = cb;
+  }
+
   return {
     socket,
     status,
@@ -491,6 +524,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     disconnect,
     isConnected,
     onReconnect,
+    onReconnectFailed,
     recoverFromSuspension,
   };
 }
