@@ -121,9 +121,17 @@ export function setupRoomEventHandlers(
 
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
+    // realtime-22: capture presence BEFORE the upsert. A seat-retention reclaim
+    // re-broadcasts room:userJoined to the whole room; clients that HELD the user
+    // through the grace window (their seat + participant were retained) already
+    // have them, so replaying the entry animation/slide would be a spurious FX
+    // burst for a user who never visibly left. Only fire entry FX for a genuinely
+    // new arrival (absent here) — which correctly still fires for late joiners who
+    // joined during the grace window and are seeing the user for the first time.
+    const wasAlreadyPresent = participantsStore.participants.has(event.user.id);
     participantsStore.addParticipant(event.user);
 
-    if (event.user.entry_animation_id && !roomStore.isMinimized) {
+    if (event.user.entry_animation_id && !roomStore.isMinimized && !wasAlreadyPresent) {
       const prop = await resolvePropAsync(event.user.entry_animation_id);
       if (prop) {
         const giftForPlayback = propToEntryAnimationGift(prop);
@@ -146,7 +154,7 @@ export function setupRoomEventHandlers(
     // and admitted into the one slide engine (collision-band queue), so
     // simultaneous joins no longer overlap. Runs alongside (not instead of) the
     // entry animation; the two are independent layers. See ADR 0009.
-    if (event.user.slides_id && !roomStore.isMinimized) {
+    if (event.user.slides_id && !roomStore.isMinimized && !wasAlreadyPresent) {
       const slideProp = await resolvePropAsync(event.user.slides_id);
       if (slideProp?.slide) {
         playEntrySlide(slideProp.slide, {

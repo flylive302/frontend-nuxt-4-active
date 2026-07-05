@@ -45,9 +45,10 @@ export function useRoomLifecycle(): void {
   const { fetchRoomById } = useRoom();
   const toast = useToast();
 
-  // NOTE: there is no auto-resume-on-reconnect. Connection loss is a full leave
-  // (the seat is released server-side on disconnect — no retention), so a
-  // reconnect re-joins as a listener with no seat to restore.
+  // NOTE (realtime-22): a reconnect re-joins via joinRoom, which now re-produces
+  // our mic if MSAB held our seat through the grace window (the snapshot still
+  // lists us as an occupant). A speaker who drops briefly returns to the SAME seat
+  // as a speaker; only a drop past the grace window (or a listener) rejoins seatless.
   async function rebuildRoomAudio(roomId: string): Promise<void> {
     seatsStore.resetSeats();
     disconnectSocket(true);

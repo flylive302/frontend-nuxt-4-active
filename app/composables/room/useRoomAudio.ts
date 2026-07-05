@@ -637,6 +637,27 @@ export function useRoomAudio(): UseRoomAudioReturn {
       });
     }
 
+    // realtime-22: seat retention re-produce. If MSAB held our seat through a
+    // reconnect grace window, the snapshot still lists us as an occupant — but our
+    // mic producer died with the old socket. Re-establish it so we come back as a
+    // speaker, not a silent seat. The pure predicate no-ops on a fresh join (we are
+    // never in our own join snapshot) and when already producing (guards a benign
+    // rejoin from double-producing). Covers every rejoin path — onReconnect,
+    // reconnect-failed rebuild, PWA resume — since they all funnel through joinRoom.
+    if (
+      shouldReproduceOnReclaim(
+        response.seats,
+        authStore.user?.id,
+        audioStore.audioState.isProducing,
+      )
+    ) {
+      try {
+        await startAudio();
+      } catch (err) {
+        log.warn('Failed to re-produce audio after seat reclaim', err);
+      }
+    }
+
     // 3. Consume existing producers (listen to active speakers)
     if (response.existingProducers && response.existingProducers.length > 0) {
       // undefined
