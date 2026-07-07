@@ -11,7 +11,7 @@ const { hasDegradedAssets } = storeToRefs(assetStore)
     </div>
     <NavHome />
 
-    <div class="h-[calc(4rem_+_env(safe-area-inset-top,0px))]"/>
+    <div class="h-[calc(4rem+env(safe-area-inset-top,0))]"/>
 
     <div
       v-if="hasDegradedAssets"

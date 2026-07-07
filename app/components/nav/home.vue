@@ -16,17 +16,14 @@ const officialBadge = computed(() => {
 })
 </script>
 <template>
-  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 safe-area-top flex items-center justify-between backdrop-blur-lg border-b border-white/10">
+  <header class="fixed inset-x-0 top-0 z-50 px-2 pb-1 safe-area-top flex items-center justify-between backdrop-blur-lg border-b border-white/10 safe-area-top">
     <!-- Brand -->
     <NuxtImg
         :src="ASSETS.LOGO_MAIN"
         alt="FlyLive"
-        width="172"
-        height="47"
-        sizes="64px"
         preload
         fetchpriority="high"
-        class="h-10 mt-1 w-auto"
+        class="h-10 min-w-auto mt-1"
     />
 
     <!-- Actions -->
