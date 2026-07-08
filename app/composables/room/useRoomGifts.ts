@@ -131,10 +131,14 @@ export function useRoomGifts({
     const { getGiftById } = useGiftData();
     const gift = getGiftById(giftId);
     if (gift && roomStore.currentRoom) {
-      const addedXp = gift.price * quantity;
+      // Room XP credits the same split base the backend books as `xpBase`
+      // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)), which is
+      // exactly what seatGiftValue returns. Using the full GCV here over-counts
+      // lucky sends and drifts the sender's bar ahead of the receiver's (and the
+      // authoritative value) until a refetch.
+      const addedXp = seatGiftValue(gift, quantity);
       const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
       roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
-      // Seat total reflects the receiver's credited share (lucky → 10%), room XP stays full GCV.
       seatsStore.addSeatGiftValue(recipientId, seatGiftValue(gift, quantity));
     }
 

@@ -85,6 +85,12 @@ let _visibilitySetup = false
 /** Prevents a stale/null token from causing immediate logout — one refresh attempt before giving up */
 let _authRetryInFlight = false;
 
+// Tracks whether the socket has connected at least once since the last full
+// disconnect(). The FIRST connect after boot/login is bootstrap's job to hydrate
+// the user; every RE-connect after that self-heals via useUserSync (see
+// handleConnect). Reset in disconnect() so a fresh login re-defers to bootstrap.
+let _hasConnectedOnce = false;
+
 // ============================================
 // Cached Dependencies (Module-level)
 // ============================================
@@ -97,6 +103,7 @@ let _toast: ReturnType<typeof useToast> | null = null;
 let _apiInstance: ReturnType<typeof useApi> | null = null;
 let _authActions: ReturnType<typeof useAuthActions> | null = null;
 let _realtimeEvents: ReturnType<typeof useRealtimeEvents> | null = null;
+let _userSync: ReturnType<typeof useUserSync> | null = null;
 
 // ============================================
 // Composable
@@ -120,6 +127,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
   if (!_apiInstance) _apiInstance = useApi();
   if (!_authActions) _authActions = useAuthActions();
   if (!_realtimeEvents) _realtimeEvents = useRealtimeEvents();
+  if (!_userSync) _userSync = useUserSync();
 
   const { registerRealtimeEventHandlers } = _realtimeEvents;
 
@@ -162,6 +170,17 @@ export function useAudioSocket(): UseAudioSocketReturn {
     if (socket.value) {
       registerRealtimeEventHandlers(socket.value);
     }
+
+    // Self-heal user-scoped state (balance/profile/badges) on every RE-connect —
+    // auto-reconnect, post-`reconnect_failed` rebuild (a fresh socket lands here,
+    // NOT handleReconnect), and PWA-resume all fire `connect`. The Laravel→MSAB
+    // bridge is at-most-once with no replay, so a fresh fetch is the only way to
+    // reconcile events missed while disconnected. The first connect after
+    // boot/login is skipped — bootstrap already hydrates the user. Fire-and-forget.
+    if (_hasConnectedOnce) {
+      void _userSync!.syncUser();
+    }
+    _hasConnectedOnce = true;
   }
 
   /** Handle disconnection */
@@ -289,7 +308,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
     error.value = null;
     const recovered = socket.value?.recovered === true;
 
-    // Re-register app-wide realtime event handlers on new socket session
+    // Re-register app-wide realtime event handlers on new socket session.
+    // (User re-sync runs in handleConnect, which also fires on every reconnect.)
     if (socket.value) {
       registerRealtimeEventHandlers(socket.value);
     }
@@ -448,6 +468,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }
     _hiddenSince = null;
     _authRetryInFlight = false;
+    // Next connect is a fresh boot/login → bootstrap owns the user hydrate again.
+    _hasConnectedOnce = false;
     // Reset handlers so they can be re-registered on next connection
     resetRealtimeHandlers();
   }

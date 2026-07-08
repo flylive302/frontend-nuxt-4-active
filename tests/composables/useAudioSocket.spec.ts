@@ -84,6 +84,10 @@ vi.stubGlobal('useAuthActions', () => mockAuthActions)
 const mockAuthLifecycle = { handleForceDisconnect: vi.fn() }
 vi.stubGlobal('useAuthLifecycle', () => mockAuthLifecycle)
 
+// Mock useUserSync (handleReconnect re-syncs the user to self-heal missed events)
+const mockUserSync = { syncUser: vi.fn().mockResolvedValue(undefined) }
+vi.stubGlobal('useUserSync', () => mockUserSync)
+
 // ============================================
 // Tests
 // ============================================
@@ -112,6 +116,7 @@ describe('useAudioSocket', () => {
     vi.stubGlobal('useApi', () => mockApi)
     vi.stubGlobal('useAuthActions', () => mockAuthActions)
     vi.stubGlobal('useAuthLifecycle', () => mockAuthLifecycle)
+    vi.stubGlobal('useUserSync', () => mockUserSync)
   })
 
   afterEach(() => {
@@ -287,6 +292,33 @@ describe('useAudioSocket', () => {
 
       expect(status.value).toBe('error')
       expect(mockToast.add).toHaveBeenCalled()
+    })
+  })
+
+  describe('user re-sync on reconnect (self-heal missed events)', () => {
+    it('skips the first connect (bootstrap owns it) but re-fetches on every re-connect', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+      await connect()
+
+      const connectHandler = mockSocket.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'connect'
+      )?.[1] as (() => void) | undefined
+      expect(connectHandler).toBeDefined()
+
+      // First connect after boot: bootstrap already hydrated the user → no sync.
+      connectHandler?.()
+      expect(mockUserSync.syncUser).not.toHaveBeenCalled()
+
+      // Every subsequent (re)connect — auto-reconnect, post-failure rebuild, or
+      // PWA-resume all land on `connect` — self-heals via a fresh fetch.
+      connectHandler?.()
+      expect(mockUserSync.syncUser).toHaveBeenCalledTimes(1)
+
+      connectHandler?.()
+      expect(mockUserSync.syncUser).toHaveBeenCalledTimes(2)
     })
   })
 

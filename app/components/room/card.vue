@@ -58,7 +58,7 @@ const roomBackgroundSrc = computed(() => {
   const isCarousel = props.cardLayout === 'carousel'
   const w = isCarousel ? 360 : 320
   const q = isCarousel && !effectiveHighFetchPriority.value ? 68 : 75
-  return withImageKitTransform(props.room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
+  return withImageKitTransform( props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
 })
 
 /** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 for aspect box + ImageKit requests */
@@ -95,13 +95,20 @@ function handleRoomClick(): void {
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
 
+    <div class="absolute z-10 top-0 inset-x-0 p-1 pr-2 flex justify-end">
+      <div class="w-fit flex items-center justify-end gap-2 backdrop-blur-2xl rounded rounded-tr-2xl px-2 border border-primary/10 shadow-md">
+        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5"  alt="room xp indicator"/>
+        <p class="font-bold text-lg text-white">{{formatXp(props.room.room_xp)}}</p>
+      </div>
+    </div>
+
     <!-- Overlay content -->
     <aside class="absolute inset-0 p-2 flex items-end">
 
-      <div class="backdrop-blur-sm shadow-md rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
+      <div class="backdrop-blur-sm shadow-md border border-primary/10 rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1">
           <img
-            :src="props.room.owner.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+            :src="`${props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER}?tr=w-24,q-60,f-webp`"
             alt="Live"
             width="24"
             height="24"

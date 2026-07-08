@@ -120,12 +120,6 @@ html {
     @apply bg-linear-to-r to-primary/60 rounded-full shadow-lg shadow-primary
 }
 
-/*
- * Safe-area insets (capacitor-05). On native Android the SafeArea plugin keeps
- * `env(safe-area-inset-*)` correct under enforced edge-to-edge (Chromium 140+)
- * or pads the WebView itself (older), so these `env()`-based utilities are
- * correct on web, iOS, and Android alike. `0px` fallback for non-inset contexts.
- */
 .safe-area {
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 20px);

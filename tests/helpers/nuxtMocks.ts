@@ -197,6 +197,16 @@ export function createMockBootstrapAssets() {
 }
 
 // ========================================
+// User Sync Mock
+// ========================================
+
+export function createMockUserSync() {
+  return {
+    syncUser: vi.fn().mockResolvedValue(undefined),
+  }
+}
+
+// ========================================
 // Mall Store Mock
 // ========================================
 
@@ -224,6 +234,7 @@ export function setupNuxtMocks(mocks: {
   api?: ReturnType<typeof createMockApi>
   telemetry?: ReturnType<typeof createMockTelemetry>
   bootstrapAssets?: ReturnType<typeof createMockBootstrapAssets>
+  userSync?: ReturnType<typeof createMockUserSync>
   mallStore?: ReturnType<typeof createMockMallStore>
   route?: Record<string, unknown>
   cookieValue?: string | null
@@ -235,6 +246,7 @@ export function setupNuxtMocks(mocks: {
   const api = mocks.api ?? createMockApi()
   const telemetry = mocks.telemetry ?? createMockTelemetry()
   const bootstrapAssets = mocks.bootstrapAssets ?? createMockBootstrapAssets()
+  const userSync = mocks.userSync ?? createMockUserSync()
   const mallStore = mocks.mallStore ?? createMockMallStore()
   const route = mocks.route ?? { meta: { middleware: [] } }
   const cookieValue = mocks.cookieValue ?? null
@@ -247,6 +259,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).useApi = () => api
   ;(globalThis as Record<string, unknown>).useTelemetry = () => telemetry
   ;(globalThis as Record<string, unknown>).useBootstrapAssets = () => bootstrapAssets
+  ;(globalThis as Record<string, unknown>).useUserSync = () => userSync
   ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useRoute = () => route
   ;(globalThis as Record<string, unknown>).useCookie = () => ref(cookieValue)
@@ -257,7 +270,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).reactive = reactive
   ;(globalThis as Record<string, unknown>).readonly = <T>(value: T) => value
 
-  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets, mallStore }
+  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets, userSync, mallStore }
 }
 
 /**
@@ -267,7 +280,7 @@ export function setupNuxtMocks(mocks: {
 export function cleanupNuxtMocks(): void {
   const keys = [
     'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore',
-    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useMallStore', 'useRoute', 'useCookie',
+    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useUserSync', 'useMallStore', 'useRoute', 'useCookie',
     'ref', 'shallowRef', 'computed', 'reactive', 'readonly', 'useRoomParticipantsStore',
   ] as const
   for (const key of keys) {

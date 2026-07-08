@@ -369,12 +369,15 @@ export function setupRoomEventHandlers(
     // Accumulate gift coin value for seat display
     const giftForValue = getGiftById(event.giftId);
     if (giftForValue) {
-      // Seat total reflects the receiver's credited share (lucky → 10%), room XP stays full GCV.
+      // Seat total and room XP both credit the split base the backend books
+      // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)); seatGiftValue
+      // returns exactly that. Must match the sender's optimistic bump in
+      // useRoomGifts.sendGift or the two clients' room XP drift apart on lucky sends.
       seatsStore.addSeatGiftValue(event.recipientId, seatGiftValue(giftForValue, event.quantity));
 
       // Update room XP
       if (roomStore.currentRoom) {
-        const addedXp = giftForValue.price * event.quantity;
+        const addedXp = seatGiftValue(giftForValue, event.quantity);
         const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
 
         roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();

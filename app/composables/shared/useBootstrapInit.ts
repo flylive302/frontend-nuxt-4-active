@@ -4,7 +4,7 @@
 // Role: Action/Orchestrator — owns the bootstrap fetch pipeline.
 // Pipeline: GATE → EXECUTE → REACT
 
-import type { BootstrapConfig, BootstrapUser } from '~/types/user/bootstrap'
+import type { BootstrapConfig } from '~/types/user/bootstrap'
 import { createLogger } from '~/utils/logger'
 import { scheduleAfterFirstPaint } from '~/utils/schedule-after-first-paint'
 
@@ -29,6 +29,7 @@ export function useBootstrapInit() {
   const mallStore = useMallStore()
   const { trackBootstrapStarted, trackBootstrapCompleted, trackBootstrapFailed } = useTelemetry()
   const { startAssetDownload } = useBootstrapAssets()
+  const { syncUser } = useUserSync()
 
   // ========================================
   // Public API
@@ -57,7 +58,7 @@ export function useBootstrapInit() {
     // PERF: defer past first paint so /auth/user stays off the LCP-critical chain.
     if (authStore.token) {
       scheduleAfterFirstPaint(() => {
-        void refreshUser()
+        void syncUser()
       })
     }
 
@@ -146,24 +147,6 @@ export function useBootstrapInit() {
     }
   }
 
-
-  /**
-   * Re-fetch the authenticated user and seed authStore.
-   * Runs on every boot so a force-kill + reopen never leaves user=null.
-   */
-  async function refreshUser(): Promise<void> {
-    try {
-      const response = await api<{ data: BootstrapUser }>('/auth/user')
-      if (response?.data) {
-        authStore.setUser(response.data)
-        const badgesStore = useBadgesStore()
-        badgesStore.setEquippedBadges(response.data.equipped_badges)
-        badgesStore.setBadgeSlotLimit(response.data.badge_slot_limit)
-      }
-    } catch (e) {
-      log.warn('Failed to refresh user data', e)
-    }
-  }
 
   /**
    * Check if bootstrap fetch is already in progress.

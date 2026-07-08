@@ -165,7 +165,8 @@ export const useAuthStore = defineStore('auth', () => {
   //
   // user → localStorage: durable across restarts without the ~4KB cookie size
   // limit or per-request overhead of shipping the full user object on every
-  // call. refreshUser() re-fetches it on each boot, so a miss self-heals.
+  // call. useUserSync().syncUser() re-fetches it on each boot (and on socket
+  // reconnect), so a miss self-heals.
   //
   // F-69: msabToken stays on per-tab sessionStorage so a logout / user-switch
   // in one tab can't clear another tab's in-use MSAB session. A fresh tab with
