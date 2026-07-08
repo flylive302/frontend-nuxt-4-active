@@ -147,6 +147,10 @@ export default defineNuxtConfig({
             reverbPort: process.env.NUXT_PUBLIC_REVERB_PORT || '8080',
             reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
             vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+            // OTA live-update manifest (capacitor-07). Absolute URL of the static
+            // `manifest.json` on Cloudflare R2. Empty ⇒ the native OTA check no-ops
+            // (web build never reads it). Baked into the bundle at generate time.
+            otaManifestUrl: process.env.NUXT_PUBLIC_OTA_MANIFEST_URL || '',
             sentry: {
                 dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
                 environment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || 'production',

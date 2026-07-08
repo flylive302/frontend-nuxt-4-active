@@ -11,6 +11,7 @@
     "cap:build": "NITRO_PRESET=static nuxt generate --dotenv .env.capacitor && cap sync android",
     "cap:android": "cap open android",
     "cap:sync": "cap sync android",
+    "cap:publish": "node scripts/ota-publish.mjs",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "test": "vitest run",
