@@ -17,6 +17,13 @@ const config: CapacitorConfig = {
     appName: 'FlyLive',
     webDir: '.output/public',
     plugins: {
+        // OTA live updates (capacitor-07). The native plugin MUST ship in the launch
+        // AAB — adding it later would require a second store submission. Manual mode:
+        // `autoUpdate: false` means the app never contacts a Capgo backend; the
+        // R2/manifest/publish orchestration lands post-launch via the plugin's JS API.
+        CapacitorUpdater: {
+            autoUpdate: false,
+        },
         // Edge-to-edge insets (capacitor-05). targetSdk 36 forces edge-to-edge,
         // and `env(safe-area-inset-*)` is unreliable on Android WebView < Chromium 140.
         // This plugin feeds correct system-bar insets to `env()` (newer WebViews) or
@@ -24,6 +31,18 @@ const config: CapacitorConfig = {
         // insets from the first frame since our viewport meta already sets `viewport-fit=cover`.
         SafeArea: {
             initialViewportFitCover: true,
+            // Fallback path (WebView < Chromium 140 pads the WebView natively):
+            // paint the decor behind the bars BLACK to match the dark UI instead
+            // of the default white strip.
+            statusBarStyle: 'DARK',
+            navigationBarStyle: 'DARK',
+        },
+        // Capacitor 8's built-in SystemBars insets handling MUST be off — it attaches
+        // a second window-insets listener that pads the WebView parent (content can
+        // never draw behind the status bar) and conflicts with the SafeArea plugin,
+        // which owns all inset handling here (the plugin hard-warns about this).
+        SystemBars: {
+            insetsHandling: 'disable',
         },
         // Native launch splash (generated via `npx capacitor-assets generate --android`
         // from resources/splash.png). Fixed-duration auto-hide — the bundled SPA mounts

@@ -60,6 +60,10 @@ export default defineNuxtConfig({
         }
     },
     image: {
+        // Capacitor bundle has no server, so default-provider (ipx) URLs like
+        // /_ipx/... 404 inside the APK. .env.capacitor sets NUXT_IMAGE_PROVIDER=none
+        // to pass src through untouched; web builds keep ipx (undefined = default).
+        provider: process.env.NUXT_IMAGE_PROVIDER || undefined,
         imagekit: {
             baseURL: 'https://ik.imagekit.io/flylive'
         },
