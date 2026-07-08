@@ -26,7 +26,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -36,10 +36,12 @@ if (!bundleVersion || !minNativeShellVersion) {
   process.exit(1)
 }
 
-const semver = /^\d+\.\d+\.\d+$/
+// Accept 2- or 3-segment versions: Android `versionName` is often `x.y` (ours is
+// "3.0"), and the gate compares segment-wise (`utils/ota-gate.ts`) so both work.
+const semver = /^\d+\.\d+(\.\d+)?$/
 for (const [name, v] of [['bundleVersion', bundleVersion], ['minNativeShellVersion', minNativeShellVersion]]) {
   if (!semver.test(v)) {
-    console.error(`✗ ${name} must be x.y.z semver, got "${v}"`)
+    console.error(`✗ ${name} must be x.y or x.y.z, got "${v}"`)
     process.exit(1)
   }
 }
@@ -61,9 +63,20 @@ if (!existsSync(join(webDir, 'index.html'))) {
 const zipName = `bundle-${bundleVersion}.zip`
 const zipPath = join(tmpdir(), zipName)
 
-// 1. Zip the bundle (index.html must be at the zip root — hence `cd` into webDir).
+// Preflight: the system `zip` is required (battle-tested; avoids a hand-rolled
+// archiver that could produce a bundle Capgo can't unpack on device).
+try {
+  execFileSync('zip', ['-v'], { stdio: 'ignore' })
+} catch {
+  console.error('✗ `zip` not found — install it once: sudo apt-get install -y zip')
+  process.exit(1)
+}
+
+// 1. Zip the bundle. `index.html` MUST be at the zip root (hence `cd` into webDir);
+//    Capgo also requires NO hidden files/folders in the archive, so exclude dotfiles.
+rmSync(zipPath, { force: true }) // `zip` APPENDS to an existing file — start clean.
 console.log(`→ zipping ${webDir} → ${zipName}`)
-execFileSync('zip', ['-qr', zipPath, '.'], { cwd: webDir, stdio: 'inherit' })
+execFileSync('zip', ['-qr', zipPath, '.', '-x', '.*', '-x', '*/.*'], { cwd: webDir, stdio: 'inherit' })
 
 // 2. Integrity checksum — SHA-256 hex of the zip, verified by Capgo on download.
 const checksum = createHash('sha256').update(readFileSync(zipPath)).digest('hex')
