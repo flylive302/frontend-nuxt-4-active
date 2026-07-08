@@ -423,7 +423,10 @@ describe('giftAssetCache', () => {
       expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
     })
 
-    it('returns true for image when thumbnail is in cdn-images cache', async () => {
+    it('returns true for image without probing the image cache (NuxtImg rewrites the URL)', async () => {
+      // A cdn-images cache is present, but the image branch must NOT consult it:
+      // NuxtImg appends `tr=` params, so caches.match(thumbnail_url) would always
+      // miss. Images load natively via <img>, so they are treated as always-ready.
       setupImageCache(new Response())
 
       const result = await giftAssetCache.isGiftAssetCached({
@@ -433,25 +436,12 @@ describe('giftAssetCache', () => {
       })
 
       expect(result).toBe(true)
-      expect(mockCacheOpen).toHaveBeenCalledWith('cdn-images')
-      expect(mockCacheMatch).toHaveBeenCalledWith('https://cdn.example.com/thumb.jpg')
+      expect(mockCacheOpen).not.toHaveBeenCalled()
       expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
     })
 
-    it('returns false for image when thumbnail is not in cdn-images cache', async () => {
-      setupImageCache(undefined)
-
-      const result = await giftAssetCache.isGiftAssetCached({
-        asset_type: 'image',
-        animation_url: null,
-        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
-      })
-
-      expect(result).toBe(false)
-    })
-
-    it('returns false for image when caches is unavailable (SSR)', async () => {
-      // caches is not set (deleted in afterEach already, but confirm SSR path)
+    it('returns true for image even when caches is unavailable (SSR-safe)', async () => {
+      // The image branch never touches `caches`, so the SSR path (no global) is safe.
       delete (global as Record<string, unknown>).caches
 
       const result = await giftAssetCache.isGiftAssetCached({
@@ -460,7 +450,8 @@ describe('giftAssetCache', () => {
         thumbnail_url: 'https://cdn.example.com/thumb.jpg',
       })
 
-      expect(result).toBe(false)
+      expect(result).toBe(true)
+      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
     })
 
     it('returns true from L1 without hitting L2 (cacheStorage.hasAsset)', async () => {

@@ -29,15 +29,6 @@ const roomAutoplay = computed(() => {
   return { delay: ROOM_AUTOPLAY_DELAY_MS }
 })
 
-// ---- Following Carousel (ranked, Redis-cached)
-const { fetchRankedFollowing } = useFollowingData()
-const { data: rankedFollowing } = useAsyncData(
-  'home-following-ranked',
-  () => fetchRankedFollowing(),
-  // This branch is client-only rendered below; keep non-blocking to reduce home TTFB.
-  { lazy: true }
-)
-
 // ---- Room Logic
 const { fetchRooms } = useRoom()
 
@@ -167,12 +158,7 @@ onMounted(() => {
           aria-hidden="true"
         />
       </template>
-      <div>
-        <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3" />
-        <div v-else class="flex gap-3 overflow-x-auto scrollbar-hide">
-          <EventsBanners />
-        </div>
-      </div>
+      <EventsBanners />
     </ClientOnly>
 
     <!-- Country Filter -->

@@ -21,6 +21,15 @@ onMounted(async () => {
     }
   }
 })
+
+// ---- Following Carousel (ranked, Redis-cached)
+const { fetchRankedFollowing } = useFollowingData()
+const { data: rankedFollowing } = useAsyncData(
+    'home-following-ranked',
+    () => fetchRankedFollowing(),
+    // This branch is client-only rendered below; keep non-blocking to reduce home TTFB.
+    { lazy: true }
+)
 </script>
 
 <template>
@@ -42,6 +51,8 @@ onMounted(async () => {
       </div>
 
       <template v-else>
+        <SectionTitle class="ml-3">Friends</SectionTitle>
+        <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3" />
         <!-- ── DM Threads ────────────────────────────── -->
         <div v-if="store.dmThreads.length > 0" class="divide-y divide-muted/10">
           <NuxtLink
