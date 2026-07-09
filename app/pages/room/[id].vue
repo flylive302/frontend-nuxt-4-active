@@ -162,7 +162,7 @@ onUnmounted(() => {
 
 <template>
   <div 
-    class="absolute inset-0 z-50 p-1 pb-6 safe-area-top max-h-screen max-w-screen overflow-hidden bg-elevated"
+    class="absolute inset-0 z-50 p-1 safe-area-top safe-area-bottom max-h-screen max-w-screen overflow-hidden bg-elevated"
     :style="roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}"
   >
     <template v-if="roomStore.currentRoom">
@@ -191,64 +191,68 @@ onUnmounted(() => {
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->
-        <main class="grid grid-cols-5 gap-x-2">
-          <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT)" :key="i" :seat-id="i" />
-        </main>
+        <div class="scrollbar-hide max-h-[50vh] overflow-scroll scrollbox rounded-xl mb-1">
+          <main class="grid grid-cols-5 gap-x-2">
+            <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT)" :key="i" :seat-id="i" />
+          </main>
+        </div>
 
         <LazyRoomSeatDrawer />
 
         <!-- Bottom Section: Chat + Controls -->
-        <div class="flex grow gap-1 mt-1 min-h-0 pl-2 safe-area-bottom">
+        <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
           <!-- Chat Panel -->
-          <div class="size-full flex flex-col bg-linear-to-b to-primary/20 scrollbar-hide p-2 rounded-xl">
+          <div class="size-full flex flex-col">
             <RoomChatPanel />
+
+            <div class="flex gap-3 py-2 mb-2">
+              <!-- Volume Control with Popover -->
+              <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
+                <UButton
+                    :icon="volumeIcon"
+                    size="md"
+                    variant="subtle"
+                    class="backdrop-blur-lg"
+                    @click.right.prevent="toggleMute"
+                />
+
+                <template #content>
+                  <div class="flex flex-col items-center gap-2 py-2 w-8">
+                    <USlider
+                        :model-value="isMuted ? 0 : volume"
+                        :min="0"
+                        :max="1"
+                        :step="0.05"
+                        orientation="vertical"
+                        class="h-24"
+                        @update:model-value="onVolumeChange"
+                    />
+                    <UButton
+                        :icon="volumeIcon"
+                        size="xs"
+                        variant="ghost"
+                        @click="toggleMute"
+                    />
+                  </div>
+                </template>
+              </UPopover>
+
+              <!-- Mic Mute/Unmute - only show when producing audio -->
+              <UButton
+                  v-if="isProducing"
+                  size="md"
+                  :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
+                  :variant="isLocalMuted ? 'solid' : 'subtle'"
+                  :color="isLocalMuted ? 'error' : 'primary'"
+                  class="backdrop-blur-lg"
+                  @click="() => { toggleLocalMute() }"
+              />
+              <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
+            </div>
           </div>
 
           <!-- Side Controls & Gifting -->
-          <div class="flex flex-col items-center gap-3 justify-end">
-
-            <!-- Volume Control with Popover -->
-            <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
-              <UButton
-                :icon="volumeIcon"
-                size="md"
-                variant="subtle"
-                class="backdrop-blur-lg"
-                @click.right.prevent="toggleMute"
-              />
-
-              <template #content>
-                <div class="flex flex-col items-center gap-2 py-2 w-8">
-                  <USlider
-                    :model-value="isMuted ? 0 : volume"
-                    :min="0"
-                    :max="1"
-                    :step="0.05"
-                    orientation="vertical"
-                    class="h-24"
-                    @update:model-value="onVolumeChange"
-                  />
-                  <UButton
-                    :icon="volumeIcon"
-                    size="xs"
-                    variant="ghost"
-                    @click="toggleMute"
-                  />
-                </div>
-              </template>
-            </UPopover>
-
-            <!-- Mic Mute/Unmute - only show when producing audio -->
-            <UButton
-              v-if="isProducing"
-              size="md"
-              :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
-              :variant="isLocalMuted ? 'solid' : 'subtle'"
-              :color="isLocalMuted ? 'error' : 'primary'"
-              class="backdrop-blur-lg"
-              @click="() => { toggleLocalMute() }"
-            />
-            <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
+          <div class="flex flex-col items-center gap-3 justify-end pb-3">
 
             <LazyRoomGiftDrawer />
           </div>

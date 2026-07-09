@@ -151,7 +151,7 @@ const settingsOpen = ref(false);
   <header class="flex justify-between items-center">
 
     <!-- Left Section -->
-    <div class="rounded-md flex items-center bg-primary/10 gap-1 backdrop-blur-xl">
+    <div class="rounded-md flex items-center bg-primary/10 gap-1 backdrop-blur-xl shadow-xl shadow-primary/10">
       <!-- Level Drawer -->
       <UDrawer
           title="Room Information Drawer"
@@ -215,14 +215,9 @@ const settingsOpen = ref(false);
         </template>
       </UDrawer>
 
-      <div>
-        <div class="flex items-center justify-between gap-2 pr-1">
-          <div>
-            <h1 class="text-sm font-bold leading-tight">{{ thisRoom?.name }}</h1>
-            <ProfileBadge :txt="thisRoom?.owner?.signature" :vip="thisRoom?.owner?.vip_level" class="max-w-24" />
-          </div>  
-          <UButton icon="i-lucide-bookmark" variant="subtle" class="shadow-md shadow-primary-950/50" size="sm" />
-        </div>
+      <div class="pr-2">
+        <h1 class="text-sm font-bold leading-tight">{{ thisRoom?.name }}</h1>
+        <ProfileBadge :txt="thisRoom?.owner?.signature" :vip="thisRoom?.owner?.vip_level" class="max-w-24" />
       </div>
     </div>
 

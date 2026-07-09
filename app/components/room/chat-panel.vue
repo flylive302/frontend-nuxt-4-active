@@ -55,14 +55,14 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="grow overflow-hidden flex flex-col h-full">
+  <div class="grow overflow-hidden flex flex-col h-full bg-linear-to-b to-primary/20 p-2 rounded-xl shadow-md">
     <!-- Messages Container -->
     <DynamicScroller
       ref="scrollerRef"
       :items="audioStore.messages"
       :min-item-size="48"
       key-field="id"
-      class="flex-1 overflow-y-auto py-10"
+      class="flex-1 overflow-y-auto py-10 scrollbar-hide"
     >
       <template #default="{ item, index, active }">
         <DynamicScrollerItem
