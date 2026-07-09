@@ -36,6 +36,12 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   const activeSeat = ref<number | null>(null);
   const inviteModeSeat = ref<number | null>(null);
 
+  // Profile-only drawer: opens the seat drawer in view-only mode for an
+  // arbitrary participant (e.g. tapping an avatar in chat), showing just the
+  // profile card + visit-profile, with no seat/social actions. Mutually
+  // exclusive with `activeSeat` — only one is ever non-null (see openSeat/openProfile).
+  const profileUserId = ref<number | null>(null);
+
   // ========================================
   // Self-retake staleness window (F-24)
   // ========================================
@@ -195,6 +201,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   }
 
   function openSeat(seatIndex: number): void {
+    profileUserId.value = null; // clear the other (mutually exclusive) mode
     activeSeat.value = null;
     nextTick(() => {
       activeSeat.value = seatIndex;
@@ -203,6 +210,19 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
 
   function closeSeat(): void {
     activeSeat.value = null;
+  }
+
+  /** Open the drawer in view-only profile mode for `userId` (no seat actions). */
+  function openProfile(userId: number): void {
+    activeSeat.value = null; // clear the other (mutually exclusive) mode
+    profileUserId.value = null;
+    nextTick(() => {
+      profileUserId.value = userId;
+    });
+  }
+
+  function closeProfile(): void {
+    profileUserId.value = null;
   }
 
   // ========================================
@@ -315,10 +335,13 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     // Seat UI
     activeSeat,
     inviteModeSeat,
+    profileUserId,
     startInviteMode,
     cancelInviteMode,
     openSeat,
     closeSeat,
+    openProfile,
+    closeProfile,
 
     // Cross-store helpers
     syncActiveSpeakers,

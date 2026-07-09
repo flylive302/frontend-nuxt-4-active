@@ -10,6 +10,7 @@ const log = createLogger('[SeatDrawer]')
 const { getLevelFromXp } = useLevelLookup()
 const roomStore = useRoomStore()
 const seatsStore = useRoomSeatsStore()
+const participantsStore = useRoomParticipantsStore()
 const authStore = useAuthStore()
 const giftStore = useGiftStore()
 const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
@@ -24,10 +25,25 @@ const showMicDialog = ref(false)
 // Separate drawer open state from activeSeat (keep seat selected when drawer closes)
 const isOpen = ref(false)
 
-// Watch activeSeat to open drawer when seat is clicked
-watch(() => seatsStore.activeSeat, (newSeat) => {
-  isOpen.value = newSeat !== null
-})
+// The drawer serves two mutually-exclusive modes: seat management (activeSeat)
+// and view-only profile (profileUserId, e.g. tapping an avatar in chat). Open
+// when either is set.
+watch(
+  () => seatsStore.activeSeat !== null || seatsStore.profileUserId !== null,
+  (shouldOpen) => {
+    isOpen.value = shouldOpen
+  },
+)
+
+// Profile-only mode: no seat/social actions, just the profile card + visit-profile.
+const isProfileMode = computed(() => seatsStore.profileUserId !== null)
+
+// The participant being viewed in profile mode (null if they've left the room).
+const profileUser = computed(() =>
+  seatsStore.profileUserId !== null
+    ? (participantsStore.participants.get(seatsStore.profileUserId) ?? null)
+    : null,
+)
 
 // activeSeat is the 0-indexed seat index, or null when no seat is selected
 const seatIndex = computed(() => seatsStore.activeSeat)
@@ -35,6 +51,12 @@ const seatIndex = computed(() => seatsStore.activeSeat)
 // Get current seat data (null when no seat is selected)
 const currentSeat = computed(() =>
   seatIndex.value !== null ? seatsStore.seatsWithUsers[seatIndex.value] : null
+)
+
+// The user whose profile card is shown — the participant in profile mode,
+// otherwise the seat occupant. One template serves both modes.
+const displayUser = computed(() =>
+  isProfileMode.value ? profileUser.value : (currentSeat.value?.user ?? null),
 )
 
 // Check if the current user occupies this seat
@@ -233,32 +255,38 @@ async function handleNavigateAway(path: string) {
   await navigateTo(path)
 }
 
+/** Visit the shown user's profile (avatar tap) — works in both modes. */
+function handleVisitProfile() {
+  const signature = displayUser.value?.signature
+  if (!signature) return
+  handleNavigateAway(`/profile/${signature}`)
+}
+
 /** Current user can manage members (owner or admin) */
 const canManageMembers = computed(() => {
   // Owner can always manage
   if (isRoomOwner.value) return true
   // Admin members can also manage
-  if (myMembership.value?.role === 'admin') return true
-  return false
+  return myMembership.value?.role === 'admin';
 })
 
 /**
  * Get wealth level info from user's XP.
  */
 const wealthLevel = computed(() =>
-    getLevelFromXp(currentSeat.value?.user?.wealth_xp ?? '0', 'wealth')
+    getLevelFromXp(displayUser.value?.wealth_xp ?? '0', 'wealth')
 )
 
 /**
  * Get charm level info from user's XP.
  */
 const charmLevel = computed(() =>
-    getLevelFromXp(currentSeat.value?.user?.charm_xp ?? '0', 'charm')
+    getLevelFromXp(displayUser.value?.charm_xp ?? '0', 'charm')
 )
 
 // Data card background asset — only shown when user has a data_card_id equipped
 const dataCardAsset = computed(() =>
-  resolvePropAsset(currentSeat.value?.user?.data_card_id) ?? null
+  resolvePropAsset(displayUser.value?.data_card_id) ?? null
 )
 
 const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
@@ -266,9 +294,9 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 // For own seat: read directly from auth store so the value is always fresh.
 // For other seats: use whatever the participant map has (country is not PII-stripped).
 const seatUserCountry = computed(() => {
-  if (!currentSeat.value?.user) return null
-  if (isCurrentUserSeat.value) return authStore.user?.country?.trim() || currentSeat.value.user.country?.trim() || null
-  return currentSeat.value.user.country?.trim() || null
+  if (!displayUser.value) return null
+  if (isCurrentUserSeat.value) return authStore.user?.country?.trim() || displayUser.value.country?.trim() || null
+  return displayUser.value.country?.trim() || null
 })
 
 // Age is only available for the authenticated user's own seat — date_of_birth is
@@ -300,13 +328,13 @@ const seatUserAge = computed(() =>
       <div v-if="dataCardAsset" class="absolute z-0 overflow-hidden">
         <SvgaPlayer
             v-if="!isVap"
-            :key="`data-card-svga-${currentSeat?.user?.data_card_id}`"
+            :key="`data-card-svga-${displayUser?.data_card_id}`"
             :name="dataCardAsset"
             class="pointer-events-none -mt-28"
         />
         <VapPlayer
             v-else
-            :key="`data-card-vap-${currentSeat?.user?.data_card_id}`"
+            :key="`data-card-vap-${displayUser?.data_card_id}`"
             :name="dataCardAsset"
             class="pointer-events-none -mt-28"
         />
@@ -314,12 +342,12 @@ const seatUserAge = computed(() =>
       
       <div class="relative z-10 px-3" :class="dataCardAsset ? 'mt-32' : 'my-8'">
 
-        <div v-if="currentSeat?.user" class="flex flex-col justify-center items-center relative z-10">
+        <div v-if="displayUser" class="flex flex-col justify-center items-center relative z-10">
           <LazyUserAvatar
-            :img="currentSeat.user.avatar ?? undefined"
-            :frame-asset-url="resolvePropAsset(currentSeat.user.frame_id) ?? undefined"
+            :img="displayUser.avatar ?? undefined"
+            :frame-asset-url="resolvePropAsset(displayUser.frame_id) ?? undefined"
             :animated="true" class="size-32"
-            @click="() => handleNavigateAway(`/profile/${currentSeat?.user?.signature}`)"
+            @click="handleVisitProfile"
             />
 
           <div class="flex gap-1">
@@ -331,12 +359,12 @@ const seatUserAge = computed(() =>
             <MarqueeName
                 class="flex-1 max-w-36 mx-auto"
                 text-class="text-xl font-bold leading-none"
-                :name="currentSeat.user.name"
+                :name="displayUser.name"
                 delay="0s"
             />
               <UBadge
                   color="secondary"
-                  :icon="getGenderInfo(currentSeat.user.gender).icon"
+                  :icon="getGenderInfo(displayUser.gender).icon"
                   size="sm"
                   class="w-fit text-white p-1"
               >
@@ -346,14 +374,14 @@ const seatUserAge = computed(() =>
           <div class="flex items-center gap-1 justify-center">
 
             <ProfileBadge
-                v-if="currentSeat.user.signature"
-                :vip="currentSeat.user.vip_level"
-                :txt="currentSeat.user.signature"
+                v-if="displayUser.signature"
+                :vip="displayUser.vip_level"
+                :txt="displayUser.signature"
                 class="max-w-24"
             />
             <img
-                v-if="currentSeat.user.vip_level"
-                :src="`https://ik.imagekit.io/flylive/vip/${currentSeat.user.vip_level}/badge.png`"
+                v-if="displayUser.vip_level"
+                :src="`https://ik.imagekit.io/flylive/vip/${displayUser.vip_level}/badge.png`"
                 class="w-14"
                 alt=""
             >
@@ -362,14 +390,14 @@ const seatUserAge = computed(() =>
           </div>
 
           <BadgesEquippedBadgeMarquee
-            :equipped-badges="currentSeat.user.equipped_badges ?? []"
+            :equipped-badges="displayUser.equipped_badges ?? []"
             class=""
           />
 
         </div>
 
-        <!-- Action Buttons -->
-        <div class="mt-6 max-w-24 mx-auto">
+        <!-- Action Buttons — seat/social actions are hidden in view-only profile mode -->
+        <div v-if="!isProfileMode" class="mt-6 max-w-24 mx-auto">
           <div class="flex justify-center items-center gap-2 ">
             <div class="flex gap-2">
               <!-- Take Seat button — only when seat is empty and unlocked -->

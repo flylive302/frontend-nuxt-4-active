@@ -51,6 +51,15 @@ const formattedTime = computed(() => {
   return `${Math.floor(seconds / 86400)}d`;
 });
 
+const seatsStore = useRoomSeatsStore();
+
+// Open the view-only profile drawer for this message's author. No-op when the
+// author has left the room (no live participant to build the card from).
+function handleAvatarClick() {
+  if (!participant.value) return;
+  seatsStore.openProfile(props.message.userId);
+}
+
 const wealthLevel = computed(() =>
     getLevelFromXp(participant?.value?.wealth_xp, 'wealth')
 )
@@ -63,7 +72,7 @@ const charmLevel = computed(() =>
 <template>
   <div class="flex py-3">
     <!-- Avatar -->
-    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" />
+    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" @click="handleAvatarClick" />
     <div class="min-w-0">
 
       <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg bg-primary-30 ring ring-primary rounded-md">

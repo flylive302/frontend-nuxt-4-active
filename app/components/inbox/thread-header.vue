@@ -33,7 +33,7 @@ const router = useRouter()
       >
         <UIcon name="i-lucide-shield-check" class="size-5 text-primary" />
       </div>
-      <UserAvatar v-else :img="avatar" :frame-asset-url="frame ?? undefined" class="size-9" />
+      <UserAvatar v-else :img="avatar" :frame-asset-url="frame ?? undefined" animated class="size-12" />
     </div>
 
     <!-- Name + Signature + Gender -->
@@ -51,7 +51,7 @@ const router = useRouter()
           class="size-3.5 text-pink-400 shrink-0"
         />
       </div>
-      <span v-if="signature" class="text-xs text-muted truncate block">ID: {{ signature }}</span>
+      <ProfileBadge v-if="signature" :txt="signature" />
     </div>
 
     <!-- Actions menu -->

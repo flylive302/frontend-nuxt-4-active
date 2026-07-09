@@ -97,7 +97,7 @@ function handleRoomClick(): void {
 
     <div class="absolute z-10 top-0 inset-x-0 p-1 pr-2 flex justify-end">
       <div class="w-fit flex items-center justify-end gap-2 backdrop-blur-2xl rounded rounded-tr-2xl px-2 border border-primary/10 shadow-md">
-        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5"  alt="room xp indicator"/>
+        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5" alt="room xp indicator">
         <p class="font-bold text-lg text-white">{{formatXp(props.room.room_xp)}}</p>
       </div>
     </div>

@@ -25,7 +25,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     const url = action.notification.data?.url
     if (typeof url !== 'string' || url === '') return
 
-    nuxtApp.runWithContext(() => navigateTo(url)).catch((err) => {
+    nuxtApp.runWithContext(() => navigateTo(url)).catch((err: unknown) => {
       log.warn('Failed to navigate from push tap', err)
     })
   })

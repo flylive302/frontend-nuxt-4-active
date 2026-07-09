@@ -7,7 +7,6 @@ import { withImageKitTransform } from '~/utils/imagekit'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
 import type { RoomsResponse } from '~/types/room/room'
 
-const HomeFollowingCarousel = defineAsyncComponent(() => import('~/components/home/following-carousel.vue'))
 const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
 const EventsBanners = defineAsyncComponent(() => import('~/components/events/banners.vue'))
 
