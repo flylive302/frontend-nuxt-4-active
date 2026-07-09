@@ -1,6 +1,7 @@
 /// <reference types="@capacitor-community/safe-area" />
 
 import type { CapacitorConfig } from '@capacitor/cli'
+import { SystemBarsStyle } from '@capacitor-community/safe-area'
 
 /**
  * Capacitor native-shell config (ADR 0010).
@@ -34,8 +35,8 @@ const config: CapacitorConfig = {
             // Fallback path (WebView < Chromium 140 pads the WebView natively):
             // paint the decor behind the bars BLACK to match the dark UI instead
             // of the default white strip.
-            statusBarStyle: 'DARK',
-            navigationBarStyle: 'DARK',
+            statusBarStyle: SystemBarsStyle.Dark,
+            navigationBarStyle: SystemBarsStyle.Dark,
         },
         // Capacitor 8's built-in SystemBars insets handling MUST be off — it attaches
         // a second window-insets listener that pads the WebView parent (content can

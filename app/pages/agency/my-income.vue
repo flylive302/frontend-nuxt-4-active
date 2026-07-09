@@ -19,7 +19,7 @@ definePageMeta({
 // State
 // ========================================
 
-const selectedOption = ref<RunOption | null>(null)
+const selectedOption = ref<RunOption | undefined>(undefined)
 
 // ========================================
 // Composables
@@ -44,7 +44,7 @@ const hasClaimable = computed(
 // Handlers
 // ========================================
 
-function onSelectRun(option: RunOption | null): void {
+function onSelectRun(option: RunOption | undefined): void {
   if (option) fetchSnapshot(option.run_id)
   else incomeStore.setSelectedSnapshot(null)
 }
