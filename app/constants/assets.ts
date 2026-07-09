@@ -14,6 +14,13 @@ const R2 = 'https://assets.flyliveapp.com'
 /** ImageKit — UI images with auto-transform (WebP/AVIF, resize) */
 const IK = 'https://ik.imagekit.io/flylive'
 
+/**
+ * Seat reaction assets (ADR 0015): `${REACTION_ASSET_BASE}/${code}/lottie.json`
+ * and `.../512.webp`, mirrored by `scripts/reactions-mirror.mjs`.
+ * Fallback: swap to Google's CDN → 'https://fonts.gstatic.com/s/e/notoemoji/latest'
+ */
+export const REACTION_ASSET_BASE = `${IK}/emojis`
+
 // ========================================
 // Static Assets
 // ========================================

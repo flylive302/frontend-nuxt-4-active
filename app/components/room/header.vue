@@ -228,7 +228,7 @@ const settingsOpen = ref(false);
         v-if="canManageMembers"
         icon="i-lucide-users"
         size="xl"
-        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-xs"
+        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
         variant="soft"
         @click="showMembersPanel = true"
       />
@@ -236,7 +236,7 @@ const settingsOpen = ref(false);
       <UButton
         icon="i-lucide-share-2"
         size="xl"
-        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-xs"
+        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
         variant="soft"
       />
 
@@ -249,7 +249,7 @@ const settingsOpen = ref(false);
         <UButton
           icon="i-lucide-x"
           size="xl"
-          class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-xs"
+          class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
           variant="soft"
           @click="openLeaveDrawer"
         />

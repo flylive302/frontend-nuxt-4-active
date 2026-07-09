@@ -390,3 +390,145 @@ describe('roomSeatsStore.setSeatMutedByUserId — side effects', () => {
     expect(participants.participants.get(5)?.name).toBe('User5')
   })
 })
+
+// ============================================================
+// Seat Reactions — activeReactions set/clear (ADR 0015 slice 01)
+// ============================================================
+describe('roomSeatsStore.activeReactions', () => {
+  it('sets a reaction for a userId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.setReaction(7, '1f602')
+
+    expect(seats.activeReactions.get(7)?.code).toBe('1f602')
+    expect(typeof seats.activeReactions.get(7)?.startedAt).toBe('number')
+  })
+
+  it('replaces (does not queue) a reaction already playing for that userId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.setReaction(7, '1f602')
+    seats.setReaction(7, '1f923')
+
+    expect(seats.activeReactions.get(7)?.code).toBe('1f923')
+    expect(seats.activeReactions.size).toBe(1)
+  })
+
+  it('clears a reaction for a userId', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.setReaction(7, '1f602')
+    seats.clearReaction(7)
+
+    expect(seats.activeReactions.has(7)).toBe(false)
+  })
+
+  it("clearSeat also clears the vacated occupant's reaction", async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+
+    seats.clearSeat(0)
+
+    expect(seats.activeReactions.has(7)).toBe(false)
+  })
+
+  it('clearParticipantFromSeat also clears the reaction', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+
+    seats.clearParticipantFromSeat(7)
+
+    expect(seats.activeReactions.has(7)).toBe(false)
+  })
+
+  it('replace bumps startedAt so a Vue :key on code+startedAt remounts', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.setReaction(7, '1f602')
+    const first = seats.activeReactions.get(7)?.startedAt
+    // Re-send the SAME code — must still count as a replace (new startedAt),
+    // not a no-op, since a rapid double-send of the same reaction must restart.
+    vi.spyOn(Date, 'now').mockReturnValueOnce((first ?? 0) + 50)
+    seats.setReaction(7, '1f602')
+
+    expect(seats.activeReactions.get(7)?.startedAt).not.toBe(first)
+  })
+
+  it('resetSeats clears all active reactions', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+    seats.updateSeat(1, 8, false)
+    seats.setReaction(8, '1f923')
+
+    seats.resetSeats()
+
+    expect(seats.activeReactions.size).toBe(0)
+  })
+
+  it('reconcileSeats clears the reaction of an occupant absent from the snapshot', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+
+    seats.reconcileSeats([]) // occupant 7 gone from the snapshot
+
+    expect(seats.activeReactions.has(7)).toBe(false)
+  })
+
+  it('seat:locked force-clear path (clearSeat on a locked occupied seat) clears the reaction', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+
+    // Mirrors useRoomEventHandlers' seat:locked handler: lock, then clearSeat
+    // the occupant it just kicked.
+    seats.setSeatLocked(0, true)
+    seats.clearSeat(0)
+
+    expect(seats.activeReactions.has(7)).toBe(false)
+  })
+
+  it('updateSeat reassigning a seat to a DIFFERENT occupant clears the vacated occupant reaction', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+
+    // Seat 0 handed to occupant 8 directly (e.g. reconcileSeats replacing the
+    // same seatIndex with a new occupant) — no intervening `seat:cleared`.
+    seats.updateSeat(0, 8, false)
+
+    expect(seats.activeReactions.has(7)).toBe(false)
+    expect(seats.seats[0]?.occupantId).toBe(8)
+  })
+
+  it('updateSeat re-affirming the SAME occupant on their own seat leaves their reaction untouched', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 7, false)
+    seats.setReaction(7, '1f602')
+
+    seats.updateSeat(0, 7, true) // e.g. a mute-state refresh for the same occupant
+
+    expect(seats.activeReactions.has(7)).toBe(true)
+  })
+})

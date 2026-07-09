@@ -12,6 +12,7 @@
     "cap:android": "cap open android",
     "cap:sync": "cap sync android",
     "cap:publish": "node --env-file-if-exists=.env.ota scripts/ota-publish.mjs",
+    "reactions:mirror": "node --env-file-if-exists=.env.reactions scripts/reactions-mirror.mjs",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "test": "vitest run",
@@ -29,6 +30,7 @@
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-updater": "^8.50.2",
     "@internationalized/date": "^3.9.0",
+    "@lottiefiles/dotlottie-web": "^0.77.0",
     "@nuxt/image": "^1.11.0",
     "@nuxt/scripts": "^0.12.2",
     "@nuxt/ui": "^4.0.1",
@@ -62,6 +64,7 @@
     "@types/node": "^24.10.2",
     "@vite-pwa/nuxt": "^1.1.0",
     "eslint": "^9.37.0",
+    "imagekit": "^6.0.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

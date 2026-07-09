@@ -241,12 +241,24 @@ export interface SeatUpdatedEvent {
 export interface SeatClearedEvent {
   seatIndex: number;
   userId?: number;
+  /**
+   * "grace" = MSAB's delayed retention-sweep release (realtime-22), NOT an
+   * explicit leave/kick. Only grace clears may be swallowed by the
+   * self-retake guard (F-24).
+   */
+  reason?: 'grace';
 }
 
 export interface SeatUserMutedEvent {
   userId: number;
   isMuted: boolean;
   selfMuted?: boolean;
+}
+
+/** Broadcast for `seat:reaction` (ADR 0015) — includes the sender. */
+export interface SeatReactionEvent {
+  userId: number;
+  code: string;
 }
 
 export interface SeatLockedEvent {

@@ -212,7 +212,7 @@ onUnmounted(() => {
                     :icon="volumeIcon"
                     size="md"
                     variant="subtle"
-                    class="backdrop-blur-lg"
+                    class="backdrop-blur-lg text-primary"
                     @click.right.prevent="toggleMute"
                 />
 
@@ -224,13 +224,14 @@ onUnmounted(() => {
                         :max="1"
                         :step="0.05"
                         orientation="vertical"
-                        class="h-24"
+                        class="h-24 text-primary"
                         @update:model-value="onVolumeChange"
                     />
                     <UButton
                         :icon="volumeIcon"
                         size="xs"
                         variant="ghost"
+                        class="text-primary"
                         @click="toggleMute"
                     />
                   </div>
@@ -244,10 +245,13 @@ onUnmounted(() => {
                   :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
                   :variant="isLocalMuted ? 'solid' : 'subtle'"
                   :color="isLocalMuted ? 'error' : 'primary'"
-                  class="backdrop-blur-lg"
+                  class="backdrop-blur-lg text-primary"
                   @click="() => { toggleLocalMute() }"
               />
-              <UButton v-else icon="i-lucide-mic" size="md" variant="soft" disabled />
+              <UButton v-else icon="i-lucide-mic" size="md" class="text-primary" variant="soft" disabled />
+
+              <!-- Reaction Drawer trigger (ADR 0015) -->
+              <LazyRoomReactionDrawer />
             </div>
           </div>
 

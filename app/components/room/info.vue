@@ -172,7 +172,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
     <UDrawer v-model:open="isOpenLeft" direction="left" title="Room Activity" description="View daily, weekly, and monthly room activity rankings.">
       <UButton
         variant="subtle" icon="i-lucide-coins" size="xs"
-        class="cursor-pointer shadow-md backdrop-blur-xs font-bold"
+        class="cursor-pointer shadow-md backdrop-blur-xs font-bold text-primary"
         @click="($event.currentTarget as HTMLElement)?.blur()"
       >
         {{formatCurrency(roomXp)}}
@@ -187,6 +187,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                 variant="ghost"
                 icon="i-lucide-refresh-cw"
                 size="xs"
+                class="text-primary"
                 :loading="leaderboardRefreshing"
                 :disabled="leaderboardLoading"
                 @click="refreshLeaderboard"
@@ -280,7 +281,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
     <UDrawer v-model:open="isOpenRight" direction="right" title="Users in Room" description="View a list of all current participants in the room.">
       <UButton
         variant="subtle" icon="i-lucide-users-round" size="xs"
-        class="cursor-pointer shadow-md backdrop-blur-xs font-bold"
+        class="cursor-pointer shadow-md backdrop-blur-xs font-bold text-primary"
         @click="($event.currentTarget as HTMLElement)?.blur()"
       >
         {{ participantCount }}

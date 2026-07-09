@@ -22,6 +22,7 @@ import type {
   SeatUserMutedEvent,
   SeatLockedEvent,
   SeatInviteReceivedEvent,
+  SeatReactionEvent,
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
@@ -66,6 +67,7 @@ const ROOM_EVENT_NAMES = [
   'seat:userMuted',
   'seat:locked',
   'seat:invite:received',
+  'seat:reaction',
   'chat:message',
   'gift:received',
   'gift:error',
@@ -282,12 +284,14 @@ export function setupRoomEventHandlers(
       return;
     }
 
-    // Self-retake guard (F-24). MSAB's in-process seat-grace timer (F-6) can
-    // fire a `seat:cleared` ~15s after a brief disconnect, EVEN IF the same
-    // user reconnected within ~1s and retook their own seat. The previous
-    // guard above only handles "someone else took the seat" — this branch
-    // catches "the same user retook their own seat within the grace window".
-    if (event.userId !== undefined) {
+    // Self-retake guard (F-24). MSAB's retention sweep (realtime-22) can fire
+    // a DELAYED `seat:cleared` after a brief disconnect, EVEN IF the same
+    // user reconnected and retook their own seat within the grace window.
+    // Gated on reason === 'grace': explicit leave/kick clears are never
+    // tagged, so a user who takes a seat and legitimately leaves within 10s
+    // still clears everywhere (the untagged guard used to swallow that and
+    // leave a ghost occupant on other clients).
+    if (event.reason === 'grace' && event.userId !== undefined) {
       const recent = seatsStore.getRecentClaim(event.seatIndex);
       if (recent && recent.userId === event.userId && Date.now() - recent.at < 10_000) {
         return;
@@ -324,6 +328,11 @@ export function setupRoomEventHandlers(
         seatsStore.clearSeat(event.seatIndex);
       }
     }
+  });
+
+  // Seat Reactions (ADR 0015) — store setter only, no business logic here
+  socket.on('seat:reaction', (event: SeatReactionEvent) => {
+    seatsStore.setReaction(event.userId, event.code);
   });
 
   // Invite events

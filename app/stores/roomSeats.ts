@@ -46,6 +46,14 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   const seatLastClaimedAt = new Map<number, { userId: number; at: number }>();
 
   // ========================================
+  // Seat Reactions (ephemeral, ADR 0015)
+  // ========================================
+  // Keyed by userId — the sender's own broadcast (incl. sender) is the
+  // source of truth for who's reacting; deep vacate-path clearing (leave,
+  // removal, disconnect beyond `clearSeat`) is covered in a later slice.
+  const activeReactions = ref<Map<number, { code: string; startedAt: number }>>(new Map());
+
+  // ========================================
   // Participants store (for seatsWithUsers join)
   // ========================================
   const participantsStore = useRoomParticipantsStore();
@@ -92,6 +100,21 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     }
 
     const currentSeat = seats.value[seatIndex];
+
+    // Reassignment guard (04 — lifecycle hardening): if this seat is being
+    // handed to a DIFFERENT occupant without an intervening `clearSeat` (e.g.
+    // reconcileSeats replacing an occupant seatIndex-for-seatIndex), the
+    // vacated occupant's reaction must still be cleared here — otherwise a
+    // freshly-occupied seat can carry over the previous occupant's stale
+    // animation under the old userId key.
+    if (
+      currentSeat?.occupantId !== null &&
+      currentSeat?.occupantId !== undefined &&
+      currentSeat.occupantId !== occupantId
+    ) {
+      clearReaction(currentSeat.occupantId);
+    }
+
     seats.value[seatIndex] = {
       index: seatIndex,
       occupantId,
@@ -119,6 +142,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
 
     if (seat?.occupantId !== null && seat?.occupantId !== undefined) {
       seatGiftTotals.value.delete(seat.occupantId);
+      clearReaction(seat.occupantId);
     }
 
     seats.value[seatIndex] = {
@@ -128,6 +152,16 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
       isActive: false,
       isLocked: seat?.isLocked ?? false,
     };
+  }
+
+  /** Replace whatever reaction is currently playing on `userId`'s Seat (no queue). */
+  function setReaction(userId: number, code: string): void {
+    activeReactions.value.set(userId, { code, startedAt: Date.now() });
+  }
+
+  /** Clear `userId`'s active reaction (playback finished, or seat vacated). */
+  function clearReaction(userId: number): void {
+    activeReactions.value.delete(userId);
   }
 
   function setSeatLocked(seatIndex: number, isLocked: boolean): void {
@@ -189,6 +223,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   function resetSeats(): void {
     seatGiftTotals.value.clear();
     seatLastClaimedAt.clear();
+    activeReactions.value.clear();
     seats.value = createEmptySeats();
   }
 
@@ -250,6 +285,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   /** Clear a participant from their seat (on leave/disconnect). */
   function clearParticipantFromSeat(userId: number): void {
     seatGiftTotals.value.delete(userId);
+    clearReaction(userId);
     const seat = seats.value.find((s) => s.occupantId === userId);
     if (seat) {
       seat.occupantId = null;
@@ -291,5 +327,10 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     reconcileSeats,
     clearParticipantFromSeat,
     setSeatMutedByUserId,
+
+    // Seat reactions
+    activeReactions,
+    setReaction,
+    clearReaction,
   };
 });

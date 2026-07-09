@@ -77,6 +77,18 @@ const seatGiftTotal = computed(() => {
   if (!seat.value?.user) return 0;
   return seatsStore.seatGiftTotals.get(seat.value.user.id) ?? 0;
 });
+
+// Seat Reaction currently playing for this seat's occupant (ADR 0015)
+const activeReaction = computed(() => {
+  const userId = seat.value?.user?.id;
+  if (userId === undefined) return undefined;
+  return seatsStore.activeReactions.get(userId);
+});
+
+function clearActiveReaction(): void {
+  const userId = seat.value?.user?.id;
+  if (userId !== undefined) seatsStore.clearReaction(userId);
+}
 </script>
 
 <template>
@@ -89,9 +101,17 @@ const seatGiftTotal = computed(() => {
     <!-- Avatar with audio indicators -->
     <div class="relative w-full">
       <Transition name="seat-pop" mode="out-in">
+        <!-- Occupied seat with an active Seat Reaction: swap in the player (ADR 0015) -->
+        <RoomReactionSeatPlayer
+          v-if="!isEmpty && activeReaction"
+          :key="`reacting-${activeReaction!.code}-${activeReaction!.startedAt}`"
+          :code="activeReaction!.code"
+          class="relative z-20 aspect-square"
+          @done="clearActiveReaction"
+        />
         <!-- Occupied seat: show user avatar with animation -->
         <UserAvatar
-            v-if="!isEmpty"
+            v-else-if="!isEmpty"
             key="occupied"
             :animated="true"
             :frame-asset-url="userFrame"
