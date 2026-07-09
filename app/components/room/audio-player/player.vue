@@ -194,7 +194,7 @@ function handleVolumeChange(vol: number): void {
     v-if="isPlayerVisible"
     ref="dragEl"
     :style="`left: ${position.x}px; top: ${position.y}px;`"
-    class="fixed z-50 w-[17rem] max-w-[calc(100vw-1.5rem)]"
+    class="fixed z-50 w-68 max-w-[calc(100vw-1.5rem)]"
   >
     <div class="flex flex-col gap-2 px-3 py-2.5 rounded-2xl bg-neutral-900/90 backdrop-blur-xl shadow-xl ring-1 ring-white/10">
 

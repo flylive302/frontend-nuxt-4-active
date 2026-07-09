@@ -198,7 +198,7 @@ onUnmounted(() => {
         <LazyRoomSeatDrawer />
 
         <!-- Bottom Section: Chat + Controls -->
-        <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
+        <div class="flex grow gap-1 mt-1 min-h-0 pl-2 safe-area-bottom">
           <!-- Chat Panel -->
           <div class="size-full flex flex-col bg-linear-to-b to-primary/20 scrollbar-hide p-2 rounded-xl">
             <RoomChatPanel />

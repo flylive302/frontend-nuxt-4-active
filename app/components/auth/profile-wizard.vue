@@ -19,7 +19,21 @@ const {
   initCountryDetection,
 } = useProfileCompletion()
 
-const { requestMicAccess } = useMicPermission()
+const { hasGrantedMic, requestMicAccess } = useMicPermission()
+
+// Microphone permission, requested inline on the consent step (INTENT only).
+const micState = ref<'idle' | 'granted' | 'denied'>('idle')
+const micGranted = computed(() => micState.value === 'granted')
+const micStatusText = computed(() =>
+  micState.value === 'granted' ? "You're all set to speak in rooms"
+    : micState.value === 'denied' ? 'Blocked — enable it in your device settings'
+      : 'So you can speak in audio rooms'
+)
+
+async function handleAllowMic() {
+  const result = await requestMicAccess()
+  micState.value = result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'idle'
+}
 
 // ── Step computation ──────────────────────────────
 // Snapshot on mount — prevents steps from vanishing when a field
@@ -121,13 +135,6 @@ async function handleContinue() {
   }
   stepError.value = ''
 
-  // Accepting the agreements is a user gesture — request the mic permission
-  // upfront (best-effort) so audio rooms just work later without a prompt at
-  // seat time. Fire-and-forget: a denial simply falls back to the seat flow.
-  if (currentStep.value?.id === 'consent') {
-    void requestMicAccess()
-  }
-
   if (isLastStep.value) {
     await submitWizardData()
   } else {
@@ -147,6 +154,9 @@ onMounted(() => {
   if (needsPhone.value) s.push({ id: 'phone', label: 'Phone' })
   if (needsAvatar.value) s.push({ id: 'avatar', label: 'Avatar' })
   steps.value = s
+
+  // Reflect an existing device grant so returning users see it already enabled.
+  if (hasGrantedMic()) micState.value = 'granted'
 
   initCountryDetection()
 })
@@ -226,6 +236,24 @@ async function onAvatarFileSelected(file: File) {
               <a href="/privacy-policy" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2">Privacy Policy</a>
             </span>
           </label>
+
+          <!-- Microphone permission — request inline so audio rooms work later without a seat-time prompt -->
+          <button
+            type="button"
+            class="flex items-center gap-3 p-4 rounded-2xl border text-left transition-colors disabled:cursor-default"
+            :class="micGranted ? 'border-primary-500 bg-neutral-800' : 'border-neutral-700 bg-neutral-900'"
+            :disabled="micGranted"
+            @click="handleAllowMic"
+          >
+            <div class="flex items-center justify-center size-9 rounded-full bg-primary/10 border border-primary/20 flex-shrink-0">
+              <UIcon :name="micGranted ? 'i-lucide-check' : 'i-lucide-mic'" class="size-5 text-primary" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-neutral-200 font-medium">{{ micGranted ? 'Microphone enabled' : 'Allow microphone' }}</p>
+              <p class="text-xs text-neutral-400 leading-relaxed">{{ micStatusText }}</p>
+            </div>
+            <span v-if="!micGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Allow</span>
+          </button>
         </div>
       </template>
 

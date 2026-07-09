@@ -34,7 +34,7 @@ export const ASSETS = {
   DEFAULT_TRANSACTION_THUMB: `${IK}/badges/charm/1.webp`,
 
   // ── ImageKit CDN — UI Images ──
-  GIFT_DRAWER_ICON: `${IK}/placeholders/gift-icon.png`,
+  GIFT_DRAWER_ICON: `${IK}/placeholders/gift-icon.webp`,
   DEFAULT_SEAT_IMG: `${IK}/placeholders/seat.webp`,
   LOCK_SEAT_IMG: `${IK}/placeholders/seat-locked.webp`,
   ROOM_CARD_TOP: `${IK}/placeholders/coin-icon.webp`,
