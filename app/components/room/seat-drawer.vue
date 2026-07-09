@@ -15,6 +15,8 @@ const giftStore = useGiftStore()
 const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
 const { myMembership } = useRoomMembers()
 const { resolvePropAsset } = usePropLookup()
+const { hasGrantedMic, markMicGranted, probeMicState, requestMicAccess } = useMicPermission()
+const toast = useToast()
 
 const isLoading = ref(false)
 const showMicDialog = ref(false)
@@ -72,22 +74,46 @@ async function handleTakeSeat() {
   // and the browser's native permission prompt aren't visually blocked.
   isOpen.value = false
 
-  // Check mic permission state — show rationale dialog before the browser prompt fires
-  try {
-    const result = await navigator.permissions.query({ name: 'microphone' as PermissionName })
-    if (result.state === 'prompt') {
-      showMicDialog.value = true
-      return
-    }
-  } catch {
-    // permissions API not supported — proceed directly
+  // GATE: mic permission. Once granted on this device we NEVER show the
+  // rationale again — getUserMedia is silent when the grant already exists, so
+  // we take the seat directly. This avoids the dialog reappearing on every
+  // take/switch (the Permissions API keeps reporting 'prompt' in the WebView).
+  if (hasGrantedMic()) {
+    await doTakeSeat()
+    return
   }
 
-  await doTakeSeat()
+  const state = await probeMicState()
+  if (state === 'granted') {
+    await doTakeSeat()
+    return
+  }
+  if (state === 'denied') {
+    notifyMicBlocked()
+    return
+  }
+
+  // 'prompt' or 'unknown' → explain before the native prompt fires.
+  showMicDialog.value = true
 }
 
 async function handleMicPermissionConfirmed() {
+  const result = await requestMicAccess()
+  if (result === 'denied') {
+    notifyMicBlocked()
+    return
+  }
+  // 'granted' (flag now set) or 'unavailable' (best-effort) → proceed; the
+  // seat's own getUserMedia is the final arbiter.
   await doTakeSeat()
+}
+
+function notifyMicBlocked() {
+  toast.add({
+    title: 'Microphone blocked',
+    description: 'Enable microphone access for FlyLive in your device settings to speak on a seat.',
+    color: 'warning',
+  })
 }
 
 async function doTakeSeat() {
@@ -98,10 +124,16 @@ async function doTakeSeat() {
     const success = await takeSeat(seatIndex.value)
     if (success) {
       await startAudio()
+      // startAudio's getUserMedia succeeded → the grant is real and persistent.
+      markMicGranted()
       seatsStore.closeSeat()
     }
   } catch (error) {
-    log.warn('Failed to take seat', error)
+    if (error instanceof DOMException && error.name === 'NotAllowedError') {
+      notifyMicBlocked()
+    } else {
+      log.warn('Failed to take seat', error)
+    }
     seatsStore.closeSeat()
   } finally {
     isLoading.value = false

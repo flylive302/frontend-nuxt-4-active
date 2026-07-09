@@ -19,6 +19,8 @@ const {
   initCountryDetection,
 } = useProfileCompletion()
 
+const { requestMicAccess } = useMicPermission()
+
 // ── Step computation ──────────────────────────────
 // Snapshot on mount — prevents steps from vanishing when a field
 // is filled mid-flow (e.g. avatar upload updates the store immediately).
@@ -118,6 +120,13 @@ async function handleContinue() {
     return
   }
   stepError.value = ''
+
+  // Accepting the agreements is a user gesture — request the mic permission
+  // upfront (best-effort) so audio rooms just work later without a prompt at
+  // seat time. Fire-and-forget: a denial simply falls back to the seat flow.
+  if (currentStep.value?.id === 'consent') {
+    void requestMicAccess()
+  }
 
   if (isLastStep.value) {
     await submitWizardData()
