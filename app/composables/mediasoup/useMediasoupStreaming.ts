@@ -137,7 +137,20 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     const trackForProducer = wireMicThroughAudioContext(stream);
 
-    producer.value = await producerTransport.value!.produce({ track: trackForProducer });
+    // Voice mic: mono at a capped 64k target. Without these options the
+    // router's stereo-forced Opus config encodes the mono mic as uncapped
+    // stereo — roughly half the bits go to a phantom second channel and BWE
+    // picks an arbitrary rate ("weak audio", 2026-07-10 audio review). FEC on
+    // for loss resilience; DTX stays off (it froze the HLS broadcast mix).
+    producer.value = await producerTransport.value!.produce({
+      track: trackForProducer,
+      codecOptions: {
+        opusStereo: false,
+        opusFec: true,
+        opusDtx: false,
+        opusMaxAverageBitrate: 64000,
+      },
+    });
 
     producer.value.on('transportclose', () => {
       producer.value = null;
@@ -290,7 +303,18 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    musicProducer.value = await producerTransport.value.produce({ track });
+    // Music (DJ) producer: true stereo source, higher cap than the voice mic.
+    // 128k stereo Opus is transparent for music; server maxIncomingBitrate
+    // (192k) leaves headroom for FEC/overhead.
+    musicProducer.value = await producerTransport.value.produce({
+      track,
+      codecOptions: {
+        opusStereo: true,
+        opusFec: true,
+        opusDtx: false,
+        opusMaxAverageBitrate: 128000,
+      },
+    });
 
     musicProducer.value.on('transportclose', () => {
       musicProducer.value = null;
