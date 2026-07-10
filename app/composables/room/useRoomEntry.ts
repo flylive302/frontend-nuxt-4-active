@@ -23,10 +23,13 @@ export function useRoomEntry() {
   const authStore = useAuthStore()
   const { api } = useApi()
   const { fetchRoomById } = useRoom()
+  const { beginRoomExpand, clearRoomExpand } = useRoomExpandTransition()
   const route = useRoute()
 
   const showPasswordPrompt = ref(false)
   const pendingRoom = ref<Room | null>(null)
+  /** Card background URL held across the password prompt so the morph still has its seed. */
+  const pendingSeedSrc = ref('')
   const entering = ref(false)
 
   // ========================================
@@ -46,20 +49,20 @@ export function useRoomEntry() {
    * data may be stale (e.g., owner just added a password but the card
    * still shows is_password_protected=false).
    */
-  async function enterRoom(room: Room): Promise<void> {
+  async function enterRoom(room: Room, cardSeedSrc = ''): Promise<void> {
     if (entering.value) return
 
     // Same-room shortcut — if already in this room, just navigate back
     // without any leave/rejoin cycle. Preserves seat, owner status, and audio.
     if (roomStore.currentRoom?.id === room.id) {
       roomStore.maximizeRoom()
-      navigateTo(`/room/${room.id}`)
+      await doEnterRoom(room, cardSeedSrc, { rejoin: false })
       return
     }
 
     // Owner bypass — owners always enter their own room
     if (authStore.user?.id === room.owner_id) {
-      doEnterRoom(room)
+      await doEnterRoom(room, cardSeedSrc)
       return
     }
 
@@ -68,14 +71,17 @@ export function useRoomEntry() {
     try {
       await api(`/rooms/${room.id}/join`, { method: 'POST', body: {} })
       // Access granted (room is public or has no password)
-      doEnterRoom(room)
+      await doEnterRoom(room, cardSeedSrc)
     } catch (error: unknown) {
       const err = error as Record<string, unknown>
       const response = err?.response as Record<string, unknown> | undefined
       const status = (response?.status as number | undefined) ?? err?.statusCode ?? err?.status
+      // No navigation follows, so the card must not keep the shared element name.
+      clearRoomExpand()
       if (status === 403) {
         // Password required → show prompt
         pendingRoom.value = room
+        pendingSeedSrc.value = cardSeedSrc
         showPasswordPrompt.value = true
       } else {
         const toast = useToast()
@@ -89,10 +95,20 @@ export function useRoomEntry() {
   /**
    * Navigate to the room page after all checks pass.
    * Handles room switching (leaves current room first).
+   *
+   * The shared element name must be granted before `navigateTo`, since the
+   * router starts capturing snapshots as soon as navigation resolves.
    */
-  function doEnterRoom(room: Room): void {
+  async function doEnterRoom(room: Room, cardSeedSrc = '', { rejoin = true } = {}): Promise<void> {
     // Capture the current route before navigating — used for back-navigation on leave/minimize
     const fromRoute = route.fullPath
+
+    await beginRoomExpand(room.id, cardSeedSrc)
+
+    if (!rejoin) {
+      navigateTo(`/room/${room.id}`)
+      return
+    }
 
     // Leave current room if switching (lifecycle watcher handles audio cleanup)
     if (roomStore.currentRoom) {
@@ -137,8 +153,9 @@ export function useRoomEntry() {
    */
   function onPasswordSuccess(): void {
     if (pendingRoom.value) {
-      doEnterRoom(pendingRoom.value)
+      void doEnterRoom(pendingRoom.value, pendingSeedSrc.value)
       pendingRoom.value = null
+      pendingSeedSrc.value = ''
     }
   }
 

@@ -30,3 +30,22 @@ export function withImageKitTransform(url: string | null | undefined, opts: Imag
   parsed.searchParams.set('tr', `w-${opts.w},q-${q},c-maintain_ratio,f-auto`)
   return parsed.toString()
 }
+
+export type RoomCardLayout = 'carousel' | 'grid'
+
+/**
+ * Room card background URL. Single source of truth: the rendered <img> and the
+ * LCP <link rel=preload> must produce byte-identical URLs or the preload is discarded.
+ * Carousel ~240px CSS width — w=360 (~1.5x) balances DPR vs Lighthouse oversize; grid ~160 — w=320.
+ */
+export function roomBackgroundImageSrc(
+  background: string | null | undefined,
+  layout: RoomCardLayout,
+  highFetchPriority: boolean,
+): string {
+  const isCarousel = layout === 'carousel'
+  return withImageKitTransform(background, {
+    w: isCarousel ? 360 : 320,
+    q: isCarousel && !highFetchPriority ? 80 : 85,
+  })
+}

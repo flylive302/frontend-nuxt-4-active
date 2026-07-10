@@ -75,6 +75,7 @@
     --gradient-tertiary-soft: color-mix(in srgb, var(--gradient-tertiary) 85%, transparent);
     --gradient-info-soft: color-mix(in srgb, var(--gradient-info) 80%, transparent);
 }
+
 html,
 body {
     padding: 0;
@@ -106,6 +107,211 @@ html {
 .page-leave-to {
     opacity: 0;
     transform: translateX(-2.5rem);
+}
+
+/* ============================================
+   View Transitions — the room card expands into the room page
+   The card and the room page root share `view-transition-name: room-card`, so
+   the browser interpolates one box into the other (and back again on leave).
+   Geometry is the UA's; we only tune duration, cropping, and the cross-fade.
+   Direction comes from the room-transition middleware on <html>.
+   ============================================ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TUNING PANEL — every value the room⇄card transition reads. Edit here only;
+   the rules below just consume these. All are safe to change live in devtools.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+    /* ── Expand / shrink morph (card ⇄ room) ── */
+    --room-morph-enter-duration: 600ms;
+    /* card → full-screen expand time */
+    --room-morph-leave-duration: 400ms;
+    /* room → card shrink-back time */
+    --room-morph-easing: cubic-bezier(0.33, 1, 0.68, 1);
+    /* the box's size/position ease (both directions) */
+
+    /* ▶ INITIAL SHRINK ◀ how small the card dips before expanding.
+       1 = no dip · lower = deeper pull-in · 0.6 ≈ shrinks to 60% of card size. */
+    --room-morph-dip: 0.5;
+    --room-morph-dip-easing: cubic-bezier(0.5, 0, 0.3, 1);
+    /* ease of the dip→expand rebound */
+    /* ▶ DIP SPEED ◀ how long the shrink-and-return takes, on its OWN clock
+       (independent of the expand duration). Longer = slower, calmer dip.
+       Raise this if the dip feels fast/jittery. */
+    --room-morph-dip-duration: 900ms;
+
+    /* Corner radius carried through the morph, squared off only at full screen.
+       Matches the card's rounded-3xl (1.5rem). Raise for rounder mid-morph. */
+    --room-morph-radius: 1rem;
+
+    /* How the surrounding page fades to black as the card grows. Ease-in keeps
+       it lit longer; push the last control point up to dim even later. */
+    --room-morph-dim-easing: cubic-bezier(0.7, 0, 0.9, 0.25);
+
+    /* ── Loading pulse (only while a slow join is pending) ── */
+    --room-pulse-scale: 0.49;
+    /* how small the card breathes while loading (lower = deeper) */
+    --room-pulse-duration: 1020ms;
+    /* one full breath */
+    --room-pulse-easing: cubic-bezier(0.45, 0, 0.55, 1);
+
+    /* ── Room chrome fade-in (hides staggered panel mounts) ── */
+    --room-content-fade-duration: 300ms;
+    --room-content-fade-delay: 150ms;
+    /* wait for the morph before revealing UI */
+    --room-content-fade-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Per-direction duration is selected here so the rules below stay direction-agnostic. */
+:root[data-room-transition="enter"] {
+    --room-morph-duration: var(--room-morph-enter-duration);
+}
+
+:root[data-room-transition="leave"] {
+    --room-morph-duration: var(--room-morph-leave-duration);
+}
+
+::view-transition-group(room-card) {
+    animation-duration: var(--room-morph-duration, 440ms);
+    animation-timing-function: var(--room-morph-easing);
+}
+
+::view-transition-old(room-card),
+::view-transition-new(room-card) {
+    /* Snapshots default to `object-fit: contain`, which letterboxes the card's
+       portrait box into the full-screen one. `cover` crops instead, so the
+       background photo holds its framing for the whole morph. */
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    overflow: clip;
+    animation-duration: var(--room-morph-duration, 440ms);
+    animation-timing-function: var(--room-morph-easing);
+}
+
+/* Rounded corners are held for the whole morph and only squared off at the very
+   end (full screen). The image-pair wraps both snapshots and carries no UA
+   animation of its own, so clipping + animating radius here is safe — doing it
+   on the group would replace the UA's geometry animation and break the morph. */
+::view-transition-image-pair(room-card) {
+    overflow: clip;
+    border-radius: var(--room-morph-radius);
+    /* `scale` (the independent transform property) composes with the group's
+       geometry morph instead of replacing it — so the dip rides on top of the
+       UA's size animation. Origin centred so it pulls toward the middle. */
+    transform-origin: center;
+}
+
+/* Enter: the box dips to --room-morph-dip early, then expands out. Radius is
+   held until the last beat and squared off at full screen. */
+:root[data-room-transition="enter"]::view-transition-image-pair(room-card) {
+    /* Two independent animations on one element: the scale dip (springy) and the
+       radius straighten (linear) — separate properties, so they compose. Keeping
+       radius on its own linear clock is what makes the corners round off evenly
+       across the whole expand instead of snapping square at the end. */
+    animation:
+        room-card-expand var(--room-morph-dip-duration, 520ms) var(--room-morph-dip-easing) both,
+        room-card-radius-in var(--room-morph-duration, 440ms) linear both;
+}
+
+:root[data-room-transition="leave"]::view-transition-image-pair(room-card) {
+    animation: room-card-round var(--room-morph-duration, 340ms) linear both;
+}
+
+@keyframes room-card-expand {
+    0% {
+        scale: 1;
+    }
+
+    /* the initial shrink — bottoms out at the midpoint of the dip's own clock */
+    50% {
+        scale: var(--room-morph-dip);
+    }
+
+    /* eased symmetrically back to full size (the group keeps expanding underneath) */
+    100% {
+        scale: 1;
+    }
+}
+
+/* Corners straighten evenly across the whole expand: card radius → 0. */
+@keyframes room-card-radius-in {
+    from {
+        border-radius: var(--room-morph-radius);
+    }
+
+    to {
+        border-radius: 0;
+    }
+}
+
+@keyframes room-card-round {
+    from {
+        border-radius: 0;
+    }
+
+    to {
+        border-radius: var(--room-morph-radius);
+    }
+}
+
+/* The page underneath cross-fades on the same clock. `ease-in` keeps it lit
+   through most of the expansion and only dims near the end, so the surroundings
+   don't fall to black before the growing card has covered them. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: var(--room-morph-duration, 440ms);
+    animation-timing-function: var(--room-morph-dim-easing);
+}
+
+/* Tapped-card loading pulse — runs only while the join round-trip is pending,
+   so a slow verify reads as "working" rather than an unresponsive tap. The
+   spring easing gives the breathe a little life; it hands off to the expand
+   morph the moment `entering` clears. */
+@keyframes room-card-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(var(--room-pulse-scale));
+    }
+}
+
+.room-card-loading {
+    animation: room-card-pulse var(--room-pulse-duration) var(--room-pulse-easing) infinite;
+    /* Keep the pulse on its own layer so it never repaints the grid around it. */
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .room-card-loading {
+        animation: none;
+    }
+}
+
+/* Room chrome mounts in stages (chat, seats, lazy drawers). Fading it in as one
+   layer hides the individual pop-ins that otherwise jitter over the background. */
+.room-content {
+    animation: room-content-settle var(--room-content-fade-duration) var(--room-content-fade-delay) var(--room-content-fade-easing) both;
+}
+
+@keyframes room-content-settle {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .room-content {
+        animation: none;
+    }
 }
 
 
@@ -146,7 +352,9 @@ html {
 }
 
 @keyframes glow-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .glowing-border {
@@ -192,9 +400,12 @@ html {
 }
 
 @keyframes zoom {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.1);
     }

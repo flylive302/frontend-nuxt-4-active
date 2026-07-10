@@ -3,7 +3,7 @@ import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
-import { withImageKitTransform } from '~/utils/imagekit'
+import { roomBackgroundImageSrc } from '~/utils/imagekit'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
 import type { RoomsResponse } from '~/types/room/room'
 
@@ -13,6 +13,11 @@ const EventsBanners = defineAsyncComponent(() => import('~/components/events/ban
 definePageMeta({
   layout: 'home',
   middleware: ['auth', 'critical-assets'],
+  // Opts this page into the native view transition (room card ⇄ room background).
+  // `pageTransition: false` keeps Vue from swapping the DOM out-in, which would
+  // leave the incoming snapshot empty; other routes keep the global slide.
+  viewTransition: true,
+  pageTransition: false,
 })
 
 // ---- Optimization: Pause Autoplay when off-screen; delay room autoplay until after first paint (LCP)
@@ -34,7 +39,7 @@ const { fetchRooms } = useRoom()
 // Default to "All" — shows rooms from every country
 const selectedCountry = ref<string>('')
 
-const { data: roomsResponse, status: roomsStatus } = useAsyncData(
+const { data: roomsResponse, status: roomsStatus, refresh: refreshRooms } = useAsyncData(
   'home-rooms',
   async () => {
     const params: Record<string, string | number> = { page: 1 }
@@ -44,6 +49,13 @@ const { data: roomsResponse, status: roomsStatus } = useAsyncData(
   {
     watch: [selectedCountry],
     lazy: false,
+    // Returning home (e.g. leaving a room) must paint the previous rooms
+    // immediately — a refetch would flash the skeleton behind the closing
+    // reveal. Only the first mount reuses the payload; a country change
+    // (`cause: 'watch'`) always refetches. Freshness comes from the silent
+    // refresh below, which keeps `status` at 'success'.
+    getCachedData: (key, nuxtApp, ctx) =>
+      ctx.cause === 'initial' ? nuxtApp.payload.data[key] ?? nuxtApp.static.data[key] : undefined,
   }
 )
 
@@ -102,10 +114,9 @@ watch(
 
 function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
   if (!room) return ''
-  // Must match RoomCard's rendered <img> exactly (room.background, w:360, q:75 — index 0
-  // is always highFetchPriority, so it never downgrades to q:68) — preloading any other
-  // URL is wasted bytes the browser never reuses.
-  return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 360, q: 75 })
+  // Index 0 is always highFetchPriority — same helper RoomCard uses, so the URL is
+  // byte-identical; any drift makes the browser discard the preload.
+  return roomBackgroundImageSrc(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, 'carousel', true)
 }
 
 /** Single high-priority preload — secondary slides stay eager via <img> without competing preloads. */
@@ -133,6 +144,10 @@ useHead(() => {
 
 // Preload room page chunk after idle so first paint / LCP stay unblocked
 onMounted(() => {
+  // Cached rooms painted instantly above; pull fresh participant counts behind
+  // them. `status` stays 'success', so the skeleton never returns.
+  if (roomsResponse.value) void refreshRooms()
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       roomAutoplayAfterPaint.value = true
@@ -167,8 +182,9 @@ onMounted(() => {
     <!-- Country Filter -->
     <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />
 
-    <!-- Room Section: Skeleton while loading, content when ready -->
-    <template v-if="roomsStatus === 'pending'">
+    <!-- Room Section: skeleton only on a cold load — a background refresh keeps
+         the already-painted rooms on screen rather than flashing placeholders -->
+    <template v-if="roomsStatus === 'pending' && !roomsResponse">
       <div class="flex gap-3 overflow-hidden mb-6 px-3">
         <div v-for="i in 3" :key="i" class="shrink-0 w-2/3 h-72 rounded-2xl bg-white/5 animate-pulse" />
       </div>

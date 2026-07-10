@@ -47,6 +47,16 @@ export const ROOM_OP_TIMEOUT_MS = 30_000;
 export const BODY_UNLOCK_DELAY_MS = 1_000;
 
 // ============================================
+// Background Image
+// ============================================
+
+/** Rendered width requested from ImageKit for the full-screen room background. */
+export const ROOM_BACKGROUND_WIDTH = 960;
+
+/** Compression quality for the full-screen room background. */
+export const ROOM_BACKGROUND_QUALITY = 75;
+
+// ============================================
 // Limits
 // ============================================
 

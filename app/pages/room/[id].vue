@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
 import { DEFAULT_SEAT_COUNT } from '~/constants/room'
-import { withImageKitTransform } from '~/utils/imagekit'
 /**
  * Room Page — Full-screen room UI
  *
@@ -13,17 +11,17 @@ import auth from '~/middleware/auth';
 
 definePageMeta({
   layout: false,
-  middleware: auth
+  middleware: auth,
+  // Circular reveal out of the tapped room card (keyframes in main.css). The Vue
+  // page transition would swap the DOM out-in and starve the snapshot capture.
+  viewTransition: true,
+  pageTransition: false,
 });
 
 const roomStore = useRoomStore();
 
-const roomBackgroundDisplaySrc = computed(() =>
-  withImageKitTransform(
-    roomStore.currentRoom?.background ?? ASSETS.ROOM_BG_PLACEHOLDER,
-    { w: 960, q: 75 },
-  ),
-)
+const { roomExpandStyle } = useRoomExpandTransition();
+const { src: roomBackgroundDisplaySrc } = useRoomBackground(() => roomStore.currentRoom?.background);
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
 
 const { floatingMultipliers } = useLuckyGift();
@@ -161,24 +159,28 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div 
+  <!-- `roomExpandStyle` names this element as the room card's counterpart: the
+       card's box is interpolated into this one on entry, and back out on leave. -->
+  <div
     class="absolute inset-0 z-50 p-1 safe-area-top safe-area-bottom max-h-screen max-w-screen overflow-hidden bg-elevated"
-    :style="roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}"
+    :style="[roomExpandStyle, roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}]"
   >
     <template v-if="roomStore.currentRoom">
-      <!-- Background Image (prefer background field, fallback to logo) -->
+      <!-- Background Image — first frame of the reveal, seeded from the card's cached bitmap -->
       <div class="absolute inset-0 z-0 tint-500">
-        <NuxtImg
+        <img
           :src="roomBackgroundDisplaySrc"
-          sizes="100vw"
+          alt=""
           class="bg-fixed object-cover size-full"
-          format="webp"
           loading="eager"
-        />
+          fetchpriority="high"
+          decoding="async"
+        >
       </div>
 
-      <!-- Content -->
-      <div class="relative z-10 h-full flex flex-col mt-2">
+      <!-- Content — settles in over the background so lazily-mounted panels
+           (drawers, chat, seats) never snap into place on top of it. -->
+      <div class="room-content relative z-10 h-full flex flex-col mt-2">
 
         <!-- Lucky Gift Animations -->
         <LuckyMultiplierFloat :floaters="floatingMultipliers" />

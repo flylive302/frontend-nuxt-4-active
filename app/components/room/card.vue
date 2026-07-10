@@ -9,7 +9,7 @@
 
 import type { Room } from '~/types/room/room'
 import { ASSETS } from '~/constants/assets'
-import { withImageKitTransform } from '~/utils/imagekit'
+import { roomBackgroundImageSrc } from '~/utils/imagekit'
 
 defineOptions({
   inheritAttrs: false
@@ -36,7 +36,8 @@ const props = withDefaults(defineProps<{
 // Dependencies
 // ========================================
 
-const { enterRoom, showPasswordPrompt, pendingRoom, entering: _entering, onPasswordSuccess } = useRoomEntry()
+const { enterRoom, showPasswordPrompt, pendingRoom, entering, onPasswordSuccess } = useRoomEntry()
+const { roomExpandStyleForRoom } = useRoomExpandTransition()
 
 // ========================================
 // Computed
@@ -53,13 +54,13 @@ const badgeDisplay = computed(() => {
 })
 
 
-/** Carousel ~240px CSS width — w=360 (~1.5x) balances DPR vs Lighthouse oversize; grid ~160 — w=320 */
-const roomBackgroundSrc = computed(() => {
-  const isCarousel = props.cardLayout === 'carousel'
-  const w = isCarousel ? 360 : 320
-  const q = isCarousel && !effectiveHighFetchPriority.value ? 80 : 85
-  return withImageKitTransform( props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
-})
+const roomBackgroundSrc = computed(() =>
+  roomBackgroundImageSrc(
+    props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER,
+    props.cardLayout,
+    effectiveHighFetchPriority.value,
+  ),
+)
 
 /** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 for aspect box + ImageKit requests */
 const roomImageWidth = computed(() => (props.cardLayout === 'carousel' ? 240 : 160))
@@ -71,15 +72,26 @@ const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 
 
 /**
  * Handle room card click.
- * Delegates to useRoomEntry for password-protected room handling.
+ * Delegates to useRoomEntry for password-protected room handling. The URL this
+ * card already painted becomes the room page's first frame, so the card expands
+ * into a real background rather than an empty box.
  */
 function handleRoomClick(): void {
-  enterRoom(props.room)
+  void enterRoom(props.room, roomBackgroundSrc.value)
 }
 </script>
 
 <template>
-  <article v-bind="$attrs" class="relative rounded-3xl squircle overflow-hidden" @click="handleRoomClick">
+  <!-- While the join round-trip is in flight (`entering`), the card pulses in
+       place so the tap reads as "loading" instead of dead. The pulse stops the
+       instant navigation resolves, handing straight off to the expand morph. -->
+  <article
+    v-bind="$attrs"
+    class="relative rounded-3xl squircle overflow-hidden"
+    :class="{ 'room-card-loading': entering }"
+    :style="roomExpandStyleForRoom(props.room.id)"
+    @click="handleRoomClick"
+  >
     <figure class="h-full w-full">
       <img
         :src="roomBackgroundSrc"

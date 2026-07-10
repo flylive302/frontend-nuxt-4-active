@@ -49,9 +49,17 @@ export default defineNuxtConfig({
             'composables/slide',
         ],
     },
+    // Native View Transitions API. Off by default so only the routes that define
+    // a shared element opt in via `definePageMeta({ viewTransition: true })`;
+    // Nuxt no-ops where `document.startViewTransition` is missing (old WebViews)
+    // and where the user prefers reduced motion.
+    experimental: {
+        viewTransition: true,
+    },
     app: {
         head: headConfig,
-        pageTransition: { name: 'page', mode: 'out-in' }
+        pageTransition: { name: 'page', mode: 'out-in' },
+        viewTransition: false,
     },
     ui: {
         colorMode: false,
