@@ -57,7 +57,7 @@ const badgeDisplay = computed(() => {
 const roomBackgroundSrc = computed(() => {
   const isCarousel = props.cardLayout === 'carousel'
   const w = isCarousel ? 360 : 320
-  const q = isCarousel && !effectiveHighFetchPriority.value ? 68 : 75
+  const q = isCarousel && !effectiveHighFetchPriority.value ? 80 : 85
   return withImageKitTransform( props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w, q })
 })
 

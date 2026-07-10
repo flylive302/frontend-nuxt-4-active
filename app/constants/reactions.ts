@@ -1,7 +1,7 @@
 /**
  * Seat Reaction Constants (ADR 0015 / seat-reactions)
  */
-import { REACTION_ASSET_BASE } from './assets';
+import { REACTION_ASSET_BASE, REACTION_ASSET_FALLBACK_BASE } from './assets';
 
 /**
  * Minimum time a Seat Reaction's animation must remain visible, in
@@ -33,7 +33,23 @@ export function getReactionLottieUrl(code: string): string {
   return `${REACTION_ASSET_BASE}/${code}/lottie.json`;
 }
 
-/** Build the static WebP thumbnail URL for a reaction code (drawer grid). */
+/**
+ * Build the static thumbnail URL for a reaction code (drawer grid).
+ *
+ * `emoji.svg` — NOT `512.webp`. Noto's 512.webp is an *animated* WebP
+ * (~370KB, and no CDN transform can strip its frames), so using it here made
+ * the grid decode and play hundreds of animations while scrolling.
+ */
 export function getReactionThumbnailUrl(code: string): string {
-  return `${REACTION_ASSET_BASE}/${code}/512.webp`;
+  return `${REACTION_ASSET_BASE}/${code}/emoji.svg`;
+}
+
+/**
+ * Google Noto hotlink for a thumbnail — the fallback the card retries once
+ * with if the ImageKit mirror 404s (i.e. `reactions-mirror.mjs --upload` has
+ * not yet mirrored `emoji.svg`, or ImageKit refuses SVG delivery). Keeps the
+ * drawer usable rather than blank if assets and bundle deploy out of order.
+ */
+export function getReactionThumbnailFallbackUrl(code: string): string {
+  return `${REACTION_ASSET_FALLBACK_BASE}/${code}/emoji.svg`;
 }

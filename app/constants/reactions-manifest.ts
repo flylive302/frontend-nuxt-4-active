@@ -2,12 +2,12 @@
 // Re-run `node scripts/reactions-mirror.mjs` to regenerate (see script header).
 // Source: https://googlefonts.github.io/noto-emoji-animation/data/api.json
 // Catalog last-modified: Fri, 24 Apr 2026 17:51:05 GMT
-// Generated: 2026-07-09T12:15:50.458Z — 609 entries, Noto catalog order.
+// Generated: 2026-07-10T12:42:47.229Z — 609 entries, Noto catalog order.
 // Filter: base emojis only — skin-tone variants (1f3fb–1f3ff modifiers) dropped.
 
 /** One entry per Noto animated emoji. Asset URLs are built from
  *  REACTION_ASSET_BASE (app/constants/assets.ts): `${base}/${code}/lottie.json`
- *  and `${base}/${code}/512.webp`. */
+ *  and `${base}/${code}/emoji.svg`. */
 export interface ReactionManifestEntry {
   /** Lowercase hex codepoint(s); multi-codepoint joined by "_" (e.g. "1faf4_1f3fe"). */
   readonly code: string

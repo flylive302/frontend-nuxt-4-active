@@ -36,7 +36,7 @@ async function handleRetry(): Promise<void> {
     <!-- Logo -->
     <div class="mb-8">
       <NuxtImg
-        :src="ASSETS.LOGO_ICON"
+        :src="ASSETS.LOGO_XL"
         alt="FlyLive"
         class="h-24 w-24 animate-pulse"
         width="96"

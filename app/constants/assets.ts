@@ -16,10 +16,13 @@ const IK = 'https://ik.imagekit.io/flylive'
 
 /**
  * Seat reaction assets (ADR 0015): `${REACTION_ASSET_BASE}/${code}/lottie.json`
- * and `.../512.webp`, mirrored by `scripts/reactions-mirror.mjs`.
+ * and `.../emoji.svg`, mirrored by `scripts/reactions-mirror.mjs`.
  * Fallback: swap to Google's CDN → 'https://fonts.gstatic.com/s/e/notoemoji/latest'
  */
 export const REACTION_ASSET_BASE = `${IK}/emojis`
+
+/** Google's Noto CDN — origin of the mirror, and the drawer thumbnail's retry target. */
+export const REACTION_ASSET_FALLBACK_BASE = 'https://fonts.gstatic.com/s/e/notoemoji/latest'
 
 // ========================================
 // Static Assets
@@ -29,8 +32,6 @@ export const ASSETS = {
 
   // ── Logos (self-hosted, critical path) ──
   LOGO_MAIN: '/logos/flylive-logo-wide.png',
-  LOGO_TEXT: '/logos/logo-text.png',
-  LOGO_ICON: '/logos/icon.png',
   LOGO_XL: '/logos/logo-full.png',
 
   // ── R2 CDN — Binary / Animations ──

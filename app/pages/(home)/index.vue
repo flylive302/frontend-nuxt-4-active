@@ -102,9 +102,10 @@ watch(
 
 function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
   if (!room) return ''
-  // Must match RoomCard's rendered <img> exactly (room.logo, w:360, q:75 for the LCP card)
-  // — preloading any other URL is wasted bytes the browser never reuses.
-  return withImageKitTransform(room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 360, q: 75 })
+  // Must match RoomCard's rendered <img> exactly (room.background, w:360, q:75 — index 0
+  // is always highFetchPriority, so it never downgrades to q:68) — preloading any other
+  // URL is wasted bytes the browser never reuses.
+  return withImageKitTransform(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, { w: 360, q: 75 })
 }
 
 /** Single high-priority preload — secondary slides stay eager via <img> without competing preloads. */
@@ -117,12 +118,15 @@ useHead(() => {
   const hrefs = lcpRoomPreloadHrefs.value
   if (!hrefs.length) return {}
   return {
+    // `key` dedupes across head re-evaluations (carousel data settling would
+    // otherwise append a fresh <link> each time). No `imagesizes`: it is only
+    // honoured beside `imagesrcset`, and RoomCard's <img> carries no srcset.
     link: hrefs.map((href) => ({
+      key: 'room-lcp-preload',
       rel: 'preload',
       as: 'image',
       href,
       fetchpriority: 'high' as const,
-      imagesizes: 'min(72vw, 240px)',
     })),
   }
 })

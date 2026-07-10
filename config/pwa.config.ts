@@ -13,8 +13,6 @@ export const pwaConfig: ModuleOptions = {
         'favicon.ico',
         'pwa-assets/android/launchericon-192x192.png',
         'pwa-assets/android/launchericon-512x512.png',
-        'pwa-assets/ios/180.png',
-        'pwa-assets/ios/splash/*.png',
     ],
     manifest: {
         name: 'FlyLive',

@@ -173,7 +173,7 @@ const settingsOpen = ref(false);
                   icon="i-lucide-settings"
                   size="md"
                   variant="subtle"
-                  @click="settingsOpen = true"
+                  @click="() => { settingsOpen = true }"
               >
                 Room Settings
               </UButton>
@@ -230,7 +230,7 @@ const settingsOpen = ref(false);
         size="xl"
         class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
         variant="soft"
-        @click="showMembersPanel = true"
+        @click="() => { showMembersPanel = true }"
       />
 
       <UButton
