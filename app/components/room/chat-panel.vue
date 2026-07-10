@@ -55,7 +55,7 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="grow overflow-hidden flex flex-col h-full bg-linear-to-b to-primary/20 p-2 rounded-xl shadow-md">
+  <div class="grow overflow-hidden flex flex-col h-full bg-linear-to-b from-primary/10 to-primary/20 p-2 rounded-xl shadow-md">
     <!-- Messages Container -->
     <DynamicScroller
       ref="scrollerRef"

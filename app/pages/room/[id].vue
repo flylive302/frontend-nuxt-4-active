@@ -193,7 +193,7 @@ onUnmounted(() => {
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->
-        <div class="scrollbar-hide max-h-[50vh] overflow-scroll scrollbox rounded-xl mb-1">
+        <div class="scrollbar-hide max-h-[45vh] min-h-[45vh] overflow-scroll scrollbox rounded-xl mb-1">
           <main class="grid grid-cols-5 gap-x-2">
             <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT)" :key="i" :seat-id="i" />
           </main>
@@ -247,7 +247,8 @@ onUnmounted(() => {
                   :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
                   :variant="isLocalMuted ? 'solid' : 'subtle'"
                   :color="isLocalMuted ? 'error' : 'primary'"
-                  class="backdrop-blur-lg text-primary"
+                  :class="isLocalMuted ? 'text-white' : 'text-primary'"
+                  class="backdrop-blur-lg"
                   @click="() => { toggleLocalMute() }"
               />
               <UButton v-else icon="i-lucide-mic" size="md" class="text-primary" variant="soft" disabled />

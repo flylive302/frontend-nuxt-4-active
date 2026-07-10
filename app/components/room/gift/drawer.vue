@@ -308,18 +308,14 @@ async function doLuckySend(): Promise<void> {
     <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gifts" width="60px" class="cursor-pointer" >
     <template #content>
       <div class="p-2">
+        <div class="flex justify-between items-center">
+          <p class="text-xs font-bold">LvL: {{ currentLevel }} XP: {{ currentXP }}</p>
+          <p class="text-xs font-bold">XP: {{ xpRemaining }} for LvL: {{ nextLevel }}</p>
+        </div>
+        <UProgress :model-value="progressValue" color="secondary" class="mb-2" />
         <!-- Recipient Selector -->
         <RoomGiftRecipientSelector />
 
-        <div class="flex justify-between items-center">
-          <p class="text-xs font-bold">LvL: {{ currentLevel }}</p>
-          <p class="text-xs font-bold">LvL: {{ nextLevel }}</p>
-        </div>
-        <UProgress :model-value="progressValue" color="secondary" />
-        <div class="flex justify-between items-center">
-          <p class="text-xs font-bold">XP: {{ currentXP }}</p>
-          <p class="text-xs font-bold">Remaining: {{ xpRemaining }}</p>
-        </div>
         <!-- Category Tabs with Gift Grid -->
         <RoomGiftCategoryTabs :categories="giftsByCategory">
           <template #content="{ item }">
@@ -328,7 +324,7 @@ async function doLuckySend(): Promise<void> {
         </RoomGiftCategoryTabs>
 
         <!-- Send Controls -->
-        <div class="flex items-center justify-between pt-1 border-t border-muted">
+        <div class="flex items-center justify-between pt-1 border-t border-muted safe-area-bottom">
           <!-- Coin Balance -->
           <div class="flex items-center">
             <UButton

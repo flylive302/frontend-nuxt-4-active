@@ -25,9 +25,23 @@ import { evaluateOtaUpdate, type OtaSwapBundle } from '~/utils/ota-gate'
  *
  * All native calls are guarded by `isNativePlatform()`; on the web build every
  * function is a no-op.
+ *
+ * ── instant apply (opt-in via toast) ────────────────────────────────────────
+ * Once a bundle is staged, `pendingUpdate` is set so the UI can offer a
+ * "Restart now" toast. `applyPendingUpdate()` calls Capgo `set()`, which swaps
+ * the bundle and reloads the WebView immediately — user-consented, so dropping
+ * a live-audio session is acceptable. Dismissing keeps the apply-on-kill path.
  */
+export interface OtaPendingUpdate {
+  id: string
+  version: string
+}
+
 export function useOtaUpdate() {
   const log = createLogger('[OTA]')
+
+  // Shared across all callers (plugin stages it, toast consumes it).
+  const pendingUpdate = useState<OtaPendingUpdate | null>('ota-pending-update', () => null)
 
   /**
    * Confirm to the native layer that JS booted, cancelling the auto-rollback timer.
@@ -93,6 +107,9 @@ export function useOtaUpdate() {
       const pending = await CapacitorUpdater.getNextBundle()
       if (pending && pending.version === verdict.bundle.version) {
         log.debug('bundle already staged', pending.version)
+        // Still surface the toast — a warm re-boot (no kill) re-runs this check
+        // while the staged bundle sits unapplied.
+        pendingUpdate.value = { id: pending.id, version: pending.version }
         return
       }
     } catch (error) {
@@ -128,8 +145,33 @@ export function useOtaUpdate() {
     }
 
     // ── REACT ─────────────────────────────────────────────────────────────
-    log.info(`staged bundle ${downloaded.version} — applies on next app restart`)
+    pendingUpdate.value = { id: downloaded.id, version: downloaded.version }
+    log.info(`staged bundle ${downloaded.version} — applies on next app restart or via toast`)
   }
 
-  return { notifyReady, runOtaCheck }
+  /**
+   * INTENT (user tapped "Restart now" on the toast) → apply the staged bundle
+   * immediately. Capgo `set()` swaps and reloads the WebView in-place — no app
+   * kill required. On failure the kill-staged fallback remains intact.
+   */
+  async function applyPendingUpdate(): Promise<void> {
+    // ── GATE ──────────────────────────────────────────────────────────────
+    if (!Capacitor.isNativePlatform()) return
+    const pending = pendingUpdate.value
+    if (!pending) return
+
+    // ── EXECUTE ───────────────────────────────────────────────────────────
+    try {
+      await CapacitorUpdater.set({ id: pending.id })
+      // Unreachable on success — set() reloads the WebView.
+    } catch (error) {
+      // ── REACT (failure) ──────────────────────────────────────────────────
+      // Bundle stays staged for next kill+relaunch; hide the toast so the user
+      // isn't stuck tapping a broken button.
+      pendingUpdate.value = null
+      log.error('instant apply failed — update still lands on next restart', error)
+    }
+  }
+
+  return { notifyReady, runOtaCheck, applyPendingUpdate, pendingUpdate: readonly(pendingUpdate) }
 }

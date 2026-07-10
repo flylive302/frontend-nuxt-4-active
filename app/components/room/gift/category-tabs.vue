@@ -19,7 +19,7 @@ defineProps<{
     :items="categories"
     class="w-full"
     :ui="{
-      list: 'max-w-full overflow-x-auto overflow-y-hidden scrollbar-thin',
+      list: 'max-w-full overflow-x-auto overflow-y-hidden scrollbar-hide',
       indicator: 'bottom-1',
       trigger: 'min-w-fit whitespace-nowrap',
     }"

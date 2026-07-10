@@ -46,6 +46,8 @@ initMediaSession()
 
     <SystemUpdateAvailableToast />
 
+    <SystemOtaUpdateToast />
+
     <EventsBadgeEarnedModal />
     <EventsLevelUpModal />
     <EventsIncomeTargetModal />

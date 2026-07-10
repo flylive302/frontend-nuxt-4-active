@@ -130,16 +130,6 @@ html {
     --room-morph-easing: cubic-bezier(0.33, 1, 0.68, 1);
     /* the box's size/position ease (both directions) */
 
-    /* ▶ INITIAL SHRINK ◀ how small the card dips before expanding.
-       1 = no dip · lower = deeper pull-in · 0.6 ≈ shrinks to 60% of card size. */
-    --room-morph-dip: 0.5;
-    --room-morph-dip-easing: cubic-bezier(0.5, 0, 0.3, 1);
-    /* ease of the dip→expand rebound */
-    /* ▶ DIP SPEED ◀ how long the shrink-and-return takes, on its OWN clock
-       (independent of the expand duration). Longer = slower, calmer dip.
-       Raise this if the dip feels fast/jittery. */
-    --room-morph-dip-duration: 900ms;
-
     /* Corner radius carried through the morph, squared off only at full screen.
        Matches the card's rounded-3xl (1.5rem). Raise for rounder mid-morph. */
     --room-morph-radius: 1rem;
@@ -202,36 +192,16 @@ html {
     transform-origin: center;
 }
 
-/* Enter: the box dips to --room-morph-dip early, then expands out. Radius is
-   held until the last beat and squared off at full screen. */
+/* Enter: the card grows straight from its box to full screen on the UA's
+   geometry morph (no scale dip). Radius straightens on its own linear clock so
+   the corners round off evenly across the whole expand instead of snapping
+   square at the end. */
 :root[data-room-transition="enter"]::view-transition-image-pair(room-card) {
-    /* Two independent animations on one element: the scale dip (springy) and the
-       radius straighten (linear) — separate properties, so they compose. Keeping
-       radius on its own linear clock is what makes the corners round off evenly
-       across the whole expand instead of snapping square at the end. */
-    animation:
-        room-card-expand var(--room-morph-dip-duration, 520ms) var(--room-morph-dip-easing) both,
-        room-card-radius-in var(--room-morph-duration, 440ms) linear both;
+    animation: room-card-radius-in var(--room-morph-duration, 440ms) linear both;
 }
 
 :root[data-room-transition="leave"]::view-transition-image-pair(room-card) {
     animation: room-card-round var(--room-morph-duration, 340ms) linear both;
-}
-
-@keyframes room-card-expand {
-    0% {
-        scale: 1;
-    }
-
-    /* the initial shrink — bottoms out at the midpoint of the dip's own clock */
-    50% {
-        scale: var(--room-morph-dip);
-    }
-
-    /* eased symmetrically back to full size (the group keeps expanding underneath) */
-    100% {
-        scale: 1;
-    }
 }
 
 /* Corners straighten evenly across the whole expand: card radius → 0. */
