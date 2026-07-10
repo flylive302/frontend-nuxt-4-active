@@ -3,6 +3,7 @@ import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
+import { ASSETS } from '~/constants/assets'
 import type { LeaderboardPeriod, LeaderboardEntry } from '~/types/progression/leaderboard'
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
@@ -171,11 +172,12 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
     <!-- Left Drawer: Room Activity -->
     <UDrawer v-model:open="isOpenLeft" direction="left" title="Room Activity" description="View daily, weekly, and monthly room activity rankings.">
       <UButton
-        variant="subtle" icon="i-lucide-coins" size="xs"
-        class="cursor-pointer shadow-md backdrop-blur-xs font-bold text-primary"
+        variant="subtle" size="xs"
+        class="cursor-pointer shadow-md backdrop-blur-lg font-bold text-md leading-none text-primary"
         @click="($event.currentTarget as HTMLElement)?.blur()"
       >
-        {{formatCurrency(roomXp)}}
+      <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-4" alt="room xp indicator">
+      {{formatXp(roomXp)}}
       </UButton>
 
       <template #content>
@@ -281,7 +283,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
     <UDrawer v-model:open="isOpenRight" direction="right" title="Users in Room" description="View a list of all current participants in the room.">
       <UButton
         variant="subtle" icon="i-lucide-users-round" size="xs"
-        class="cursor-pointer shadow-md backdrop-blur-xs font-bold text-primary"
+        class="cursor-pointer shadow-md backdrop-blur-xs font-bold text-primary text-md leading-none"
         @click="($event.currentTarget as HTMLElement)?.blur()"
       >
         {{ participantCount }}
