@@ -117,7 +117,7 @@ const profileAvatarImg = computed(() =>
       </UButton>
       <NuxtLink to="/profile" aria-label="Profile" class="justify-self-end">
         <UserAvatar
-            class="w-13"
+            class="w-13 profile-avatar-anchor"
             :animated="true"
             defer-frame-animation
             :frame-asset-url="profileFrameAssetUrl"

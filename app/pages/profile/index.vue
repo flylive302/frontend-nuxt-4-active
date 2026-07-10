@@ -14,6 +14,11 @@ import MarqueeName from "~/components/common/marquee-name.vue";
 definePageMeta({
   layout: 'profile',
   middleware: 'auth',
+  // Slide-in from home with the footer avatar morphing into the header avatar
+  // (keyframes in main.css, direction from profile-transition.global.ts). Vue's
+  // page transition would swap the DOM out-in and starve the snapshot capture.
+  viewTransition: true,
+  pageTransition: false,
 })
 
 // ========================================
@@ -95,7 +100,7 @@ const vip = authStore.user?.vip_level;
             :animated="true"
             :frame-asset-url="resolvePropAsset(authStore?.user?.frame_id) ?? undefined"
             :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-            class="w-full"
+            class="w-full profile-avatar-anchor"
           />
         </NuxtLink>
       </template>
