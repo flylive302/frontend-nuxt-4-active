@@ -7,8 +7,6 @@ definePageMeta({
   layout: 'auth',
   middleware: 'guest',
   authHeading: 'Reset your password',
-  pageTransition: false,
-  layoutTransition: false,
 })
 
 useThemeColor('#000002')

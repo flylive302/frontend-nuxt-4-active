@@ -13,11 +13,9 @@ const EventsBanners = defineAsyncComponent(() => import('~/components/events/ban
 definePageMeta({
   layout: 'home',
   middleware: ['auth', 'critical-assets'],
-  // Opts this page into the native view transition (room card ⇄ room background).
-  // `pageTransition: false` keeps Vue from swapping the DOM out-in, which would
-  // leave the incoming snapshot empty; other routes keep the global slide.
-  viewTransition: true,
-  pageTransition: false,
+  // Transitions are global (nuxt.config `app.viewTransition: true`): every nav is
+  // a View Transition. The home⇄room card morph and home⇄profile avatar morph are
+  // activated per-nav by the room/profile transition middleware — see main.css.
 })
 
 // ---- Optimization: Pause Autoplay when off-screen; delay room autoplay until after first paint (LCP)

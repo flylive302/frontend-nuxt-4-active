@@ -49,17 +49,31 @@ export default defineNuxtConfig({
             'composables/slide',
         ],
     },
-    // Native View Transitions API. Off by default so only the routes that define
-    // a shared element opt in via `definePageMeta({ viewTransition: true })`;
-    // Nuxt no-ops where `document.startViewTransition` is missing (old WebViews)
-    // and where the user prefers reduced motion.
+    // Native View Transitions API drives ALL page/layout animation (one system,
+    // no dual-mount). `app.viewTransition: true` below makes every navigation a
+    // VT by default; the directional slide + shared-element morphs are gated on
+    // <html> attributes in main.css. Nuxt no-ops the whole thing where
+    // `document.startViewTransition` is missing (WebViews < Chrome 111 / Safari
+    // < 18 / Firefox < 129 → instant swap, still functional) and under reduced
+    // motion.
     experimental: {
         viewTransition: true,
     },
     app: {
         head: headConfig,
-        pageTransition: { name: 'page', mode: 'out-in' },
-        viewTransition: false,
+        // Vue's page/layout transitions are OFF: they keep the old view mounted
+        // during a swap, which collides with the View Transition snapshot (dual
+        // `view-transition-name` → abort) and can't be both wrapped (for a slide
+        // exit) and unwrapped (for a clean morph) on the same page. All animation
+        // now runs through the native VT below instead.
+        pageTransition: false,
+        layoutTransition: false,
+        // Every navigation is a View Transition. Directional root slide + the
+        // room-card / profile-avatar morphs are all expressed as CSS on the VT
+        // pseudo-elements (main.css), gated on <html data-nav|data-room-transition
+        // |data-profile-avatar> set by the nav-direction plugin + transition
+        // middleware. Pages need no per-route `viewTransition` meta.
+        viewTransition: true,
     },
     ui: {
         colorMode: false,

@@ -2,8 +2,6 @@
 definePageMeta({
   layout: 'auth',
   authHeading: 'Contact Support We reply in 24h',
-  pageTransition: false,
-  layoutTransition: false,
 })
 
 useSeoMeta({

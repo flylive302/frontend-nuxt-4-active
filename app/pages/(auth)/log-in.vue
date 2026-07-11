@@ -7,8 +7,6 @@ definePageMeta({
   layout: 'auth',
   middleware: 'guest',
   authHeading: 'Login To Your Flylive Account',
-  pageTransition: false,
-  layoutTransition: false,
 })
 
 // SEO — rendered server-side for crawler and Lighthouse SEO score

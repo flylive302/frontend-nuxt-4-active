@@ -7,8 +7,6 @@ definePageMeta({
   layout: 'auth',
   middleware: 'guest',
   authHeading: 'Verify your email',
-  pageTransition: false,
-  layoutTransition: false,
 })
 
 useThemeColor('#000002')

@@ -205,7 +205,7 @@ async function onAvatarFileSelected(file: File) {
     />
 
     <!-- Step content (view-transition target) -->
-    <div v-if="currentStep" class="wizard-content flex-1 flex flex-col items-center" style="view-transition-name: wizard-step">
+    <div v-if="currentStep" class="wizard-content flex-1 flex flex-col items-center">
 
       <!-- ═══ Consent Step ═══ -->
       <template v-if="currentStep.id === 'consent'">
@@ -544,6 +544,15 @@ async function onAvatarFileSelected(file: File) {
 
 <!-- View Transition pseudo-elements are document-level — cannot be scoped -->
 <style>
+/* Own the shared name ONLY while the wizard is actively stepping (data-wizard-dir
+   is set by transitionStep just for the duration of its own startViewTransition).
+   Every navigation is a global View Transition now (nuxt.config), so gating the
+   name here keeps route navs in/out of this page from lifting the wizard content
+   out of the root slide — off-step it slides with the page like any other view. */
+:root[data-wizard-dir] .wizard-content {
+  view-transition-name: wizard-step;
+}
+
 ::view-transition-old(wizard-step) {
   animation: vt-slide-out-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

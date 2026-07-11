@@ -94,19 +94,109 @@ html {
     background: transparent;
 }
 
-.page-enter-active,
-.page-leave-active {
-    transition: transform 0.1s ease, opacity 0.1s ease;
+/* ============================================
+   Directional root slide — the default transition for EVERY navigation.
+
+   Every navigation is a native View Transition (nuxt.config `app.viewTransition:
+   true`). The API snapshots the old + new page roots as pseudo-elements; we slide
+   them past each other. A page's own fixed chrome (e.g. NavAlt) is part of the
+   root snapshot, so it slides as one unit. `body { overflow-x: hidden }` clips
+   the off-screen view.
+
+   Direction comes from <html data-nav> (plugins/nav-direction.client.ts):
+     forward (drill-in / new history entry) → new root slides in from the right
+     back    (back button / lower history)  → old root slides off to the right
+
+   Two morphs opt out / ride along (further down): the room-card morph SUPPRESSES
+   this slide (it owns the root pseudos, cross-fading the surroundings to black) —
+   hence the `:not([data-room-transition])` guard here; the home⇄profile avatar
+   morph rides ON TOP of this slide (no guard needed). Nuxt no-ops the whole VT —
+   and therefore this slide — where `document.startViewTransition` is missing
+   (instant swap) or under reduced motion, so no manual reduced-motion rule is
+   needed. */
+:root {
+    --page-slide-duration: 400ms;
+    /* how long the slide takes */
+    --page-slide-easing: cubic-bezier(0.33, 1, 0.68, 1);
+    /* easeOutCubic — quick out, gentle settle */
+    --page-under-drift: 22%;
+    /* how far the underneath page drifts. Keep well under 100% so it always
+       overlaps the top page — no gap / no black. */
+    --page-under-dim: 0.82;
+    /* lowest opacity of the underneath page. Keep near 1 — it must stay opaque
+       enough that no black shows through. Root snapshots are opaque (they carry
+       the page's rendered background), so no explicit backdrop is needed. */
 }
 
-.page-enter-from {
-    opacity: 0;
-    transform: translateX(2.5rem);
+/* FORWARD — incoming root slides in from the right, on top (UA paints `new`
+   above `old` by default); the outgoing root drifts left and dims underneath. */
+:root[data-nav="forward"]:not([data-room-transition])::view-transition-new(root) {
+    animation: root-slide-in var(--page-slide-duration) var(--page-slide-easing) both;
 }
 
-.page-leave-to {
-    opacity: 0;
-    transform: translateX(-2.5rem);
+:root[data-nav="forward"]:not([data-room-transition])::view-transition-old(root) {
+    animation: root-slide-recede var(--page-slide-duration) var(--page-slide-easing) both;
+}
+
+/* BACK — outgoing root slides off to the right, on top; incoming eases in from
+   the left underneath. z-index overrides the UA default (which paints new above
+   old) so the receding page stays on top as it clears. */
+:root[data-nav="back"]:not([data-room-transition])::view-transition-old(root) {
+    z-index: 2;
+    animation: root-slide-out var(--page-slide-duration) var(--page-slide-easing) both;
+}
+
+:root[data-nav="back"]:not([data-room-transition])::view-transition-new(root) {
+    z-index: 1;
+    animation: root-slide-return var(--page-slide-duration) var(--page-slide-easing) both;
+}
+
+/* Incoming page sweeps in from the right edge to fully cover. */
+@keyframes root-slide-in {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Underlying page eases left + dims a little, never past --page-under-dim so it
+   stays opaque under the incoming page. */
+@keyframes root-slide-recede {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(calc(-1 * var(--page-under-drift)));
+        opacity: var(--page-under-dim);
+    }
+}
+
+/* Leave = reverse of enter. */
+@keyframes root-slide-out {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes root-slide-return {
+    from {
+        transform: translateX(calc(-1 * var(--page-under-drift)));
+        opacity: var(--page-under-dim);
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* ============================================
@@ -123,31 +213,31 @@ html {
    ───────────────────────────────────────────────────────────────────────── */
 :root {
     /* ── Expand / shrink morph (card ⇄ room) ── */
-    --room-morph-enter-duration: 600ms;
+    --room-morph-enter-duration: 300ms;
     /* card → full-screen expand time */
-    --room-morph-leave-duration: 400ms;
+    --room-morph-leave-duration: 200ms;
     /* room → card shrink-back time */
     --room-morph-easing: cubic-bezier(0.33, 1, 0.68, 1);
     /* the box's size/position ease (both directions) */
 
     /* Corner radius carried through the morph, squared off only at full screen.
        Matches the card's rounded-3xl (1.5rem). Raise for rounder mid-morph. */
-    --room-morph-radius: 1rem;
+    --room-morph-radius: 0rem;
 
     /* How the surrounding page fades to black as the card grows. Ease-in keeps
        it lit longer; push the last control point up to dim even later. */
     --room-morph-dim-easing: cubic-bezier(0.7, 0, 0.9, 0.25);
 
     /* ── Loading pulse (only while a slow join is pending) ── */
-    --room-pulse-scale: 0.49;
+    --room-pulse-scale: 0.7;
     /* how small the card breathes while loading (lower = deeper) */
-    --room-pulse-duration: 1020ms;
+    --room-pulse-duration: 250ms;
     /* one full breath */
     --room-pulse-easing: cubic-bezier(0.45, 0, 0.55, 1);
 
     /* ── Room chrome fade-in (hides staggered panel mounts) ── */
     --room-content-fade-duration: 300ms;
-    --room-content-fade-delay: 150ms;
+    --room-content-fade-delay: 350ms;
     /* wait for the morph before revealing UI */
     --room-content-fade-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -288,31 +378,19 @@ html {
 
 
 /* ============================================
-   View Transitions — home ⇄ profile
-   The profile page slides in from the right over the (still-opaque) home page,
-   while the footer avatar and the profile header avatar share
-   `view-transition-name: profile-avatar`, so the small footer avatar flies up
-   and grows into the header avatar (and reverses on the way back).
-   Direction + which avatar owns the name come from profile-transition.global.ts.
+   View Transitions — home ⇄ profile avatar morph
+   The page itself slides via the generic directional root slide (top of file);
+   this block adds ONLY the shared-element morph: the footer avatar and the
+   profile header avatar share `view-transition-name: profile-avatar`, so the
+   small footer avatar flies up and grows into the header avatar (and reverses on
+   the way back). Which navs carry the morph comes from profile-transition.global.ts.
    ============================================ */
 
 /* ─────────────────────────────────────────────────────────────────────────
-   TUNING PANEL — home⇄profile transition. Edit here only.
+   TUNING PANEL — avatar morph only. The page slide reuses the shared
+   --page-slide-* / --page-under-* vars (top of file); these are avatar-specific.
    ───────────────────────────────────────────────────────────────────────── */
 :root {
-    /* ── Page slide (profile ⇄ home) ── */
-    --profile-slide-duration: 400ms;
-    /* how long the page slide takes, both directions */
-    --profile-slide-easing: cubic-bezier(0.33, 1, 0.68, 1);
-    /* easeOutCubic — quick out, gentle settle */
-    /* ▶ UNDER-PAGE DRIFT ◀ how far the page underneath slides while the top one
-       moves the full width. Keep well under 100% so it always overlaps (no gap
-       / no black). 0 = static underlay · higher = more parallax depth. */
-    --profile-under-drift: 22%;
-    /* ▶ UNDER-PAGE DIM ◀ lowest opacity of the underlying page mid-slide.
-       Keep near 1 — it must stay opaque enough that no black shows through. */
-    --profile-under-dim: 0.82;
-
     /* ── Avatar morph (footer ⇄ header) ── */
     --profile-avatar-duration: 460ms;
     /* a touch longer than the slide so the avatar lands after the page settles */
@@ -335,83 +413,15 @@ html {
     animation-timing-function: var(--profile-avatar-easing);
 }
 
-/* Own the shared name only while a home⇄profile transition is live (the middleware
-   sets the attribute before capture). Off-transition the avatars carry no name,
-   so this never touches the home→room transition. Exactly one anchor exists per
-   page — footer avatar on home, header avatar on profile. */
-:root[data-profile-transition] .profile-avatar-anchor {
+/* Own the shared name only while a home⇄profile morph is live (marker set by
+   profile-transition.global.ts). Gating on `data-profile-avatar` keeps the name
+   off every other navigation — including /profile → /profile/{signature} (whose
+   destination renders a skeleton first, so its header avatar is absent at
+   snapshot time; naming the source avatar would strand it as a mid-screen ghost)
+   and home → room. Exactly one anchor exists per page — footer avatar on home,
+   header avatar on profile — so the old and new snapshots each name exactly one. */
+:root[data-profile-avatar] .profile-avatar-anchor {
     view-transition-name: profile-avatar;
-}
-
-/* ENTER — profile slides in from the right; home drifts left underneath, staying
-   opaque so nothing black shows in the gap it would otherwise leave. */
-:root[data-profile-transition="enter"]::view-transition-new(root) {
-    animation: profile-page-in var(--profile-slide-duration) var(--profile-slide-easing) both;
-}
-
-:root[data-profile-transition="enter"]::view-transition-old(root) {
-    animation: profile-page-recede var(--profile-slide-duration) var(--profile-slide-easing) both;
-}
-
-/* LEAVE — profile slides back out to the right, on top, revealing home which
-   drifts in from the left. `z-index` puts the outgoing profile above the
-   incoming home (the UA otherwise paints `new` on top). */
-:root[data-profile-transition="leave"]::view-transition-old(root) {
-    z-index: 2;
-    animation: profile-page-out var(--profile-slide-duration) var(--profile-slide-easing) both;
-}
-
-:root[data-profile-transition="leave"]::view-transition-new(root) {
-    z-index: 1;
-    animation: profile-page-return var(--profile-slide-duration) var(--profile-slide-easing) both;
-}
-
-/* Incoming page sweeps in from the right edge to fully cover. */
-@keyframes profile-page-in {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
-    }
-}
-
-/* Underlying page eases left + dims a little, never past --profile-under-dim so
-   it stays opaque under the incoming page. */
-@keyframes profile-page-recede {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-
-    to {
-        transform: translateX(calc(-1 * var(--profile-under-drift)));
-        opacity: var(--profile-under-dim);
-    }
-}
-
-/* Leave = reverse of enter. */
-@keyframes profile-page-out {
-    from {
-        transform: translateX(0);
-    }
-
-    to {
-        transform: translateX(100%);
-    }
-}
-
-@keyframes profile-page-return {
-    from {
-        transform: translateX(calc(-1 * var(--profile-under-drift)));
-        opacity: var(--profile-under-dim);
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
 }
 
 
@@ -532,4 +542,36 @@ html {
 
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
+}
+
+/*
+ * Copy protection — block text selection, iOS long-press callout, and image
+ * drag/save across the whole app (web + Capacitor WebView). The JS side that
+ * blocks copy/cut/contextmenu events lives in plugins/copy-protection.client.ts.
+ */
+html {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+img,
+svg,
+video {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    pointer-events: auto;
+}
+
+/* Keep editable fields usable — cursor placement / editing still works. */
+input,
+textarea,
+[contenteditable="true"],
+[contenteditable=""] {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    user-select: text;
 }

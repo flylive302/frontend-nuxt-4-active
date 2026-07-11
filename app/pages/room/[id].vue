@@ -12,10 +12,9 @@ import auth from '~/middleware/auth';
 definePageMeta({
   layout: false,
   middleware: auth,
-  // Circular reveal out of the tapped room card (keyframes in main.css). The Vue
-  // page transition would swap the DOM out-in and starve the snapshot capture.
-  viewTransition: true,
-  pageTransition: false,
+  // Transitions are global (nuxt.config `app.viewTransition: true`). The room-card
+  // morph is activated per-nav by room-transition.global.ts, which also suppresses
+  // the generic root slide for this nav — see main.css.
 });
 
 const roomStore = useRoomStore();

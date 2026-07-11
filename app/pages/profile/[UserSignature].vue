@@ -16,6 +16,9 @@ import MarqueeName from "~/components/common/marquee-name.vue";
 definePageMeta({
   layout: 'profile',
   middleware: 'auth',
+  // Transitions are global (nuxt.config `app.viewTransition: true`): slides in/out
+  // via the generic directional root slide (no avatar morph on this pair, since the
+  // signature page skeletons before its header avatar mounts) — see main.css.
 })
 
 // ========================================

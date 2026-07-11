@@ -28,6 +28,9 @@ const GlobalShell = defineAsyncComponent(() => import('~/components/system/globa
   <UApp>
     <NuxtRouteAnnouncer />
     <NuxtLoadingIndicator />
+    <!-- All page/layout animation runs through the native View Transition API
+         (main.css), which snapshots old + new roots — no grid-stack wrappers
+         needed for overlap. -->
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

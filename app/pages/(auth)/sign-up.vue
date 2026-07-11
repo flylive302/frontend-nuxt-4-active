@@ -7,8 +7,6 @@ definePageMeta({
   layout: 'auth',
   middleware: 'guest',
   authHeading: 'Create a new FlyLive account',
-  pageTransition: false,
-  layoutTransition: false,
 })
 
 useThemeColor('#000002')

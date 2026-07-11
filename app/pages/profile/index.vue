@@ -14,11 +14,9 @@ import MarqueeName from "~/components/common/marquee-name.vue";
 definePageMeta({
   layout: 'profile',
   middleware: 'auth',
-  // Slide-in from home with the footer avatar morphing into the header avatar
-  // (keyframes in main.css, direction from profile-transition.global.ts). Vue's
-  // page transition would swap the DOM out-in and starve the snapshot capture.
-  viewTransition: true,
-  pageTransition: false,
+  // Transitions are global (nuxt.config `app.viewTransition: true`). The home⇄
+  // profile footer-avatar morph is activated per-nav by profile-transition.global.ts
+  // (rides on top of the generic directional root slide) — see main.css.
 })
 
 // ========================================
