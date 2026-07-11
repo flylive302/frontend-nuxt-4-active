@@ -266,7 +266,11 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
     }
 
     const fetchUrl = rewriteR2UrlForDevFetch(item.url)
-    const response = await fetch(fetchUrl)
+    // Abortable fetch — without it a stalled connection holds this queue
+    // slot forever and the download gate hangs one short of completion.
+    const response = await fetch(fetchUrl, {
+      signal: AbortSignal.timeout(ASSET_CONFIG.DOWNLOAD_TIMEOUT_MS),
+    })
     if (!response.ok) {
       handleError(item, new Error(`HTTP ${response.status}`))
       return
@@ -311,7 +315,7 @@ function downloadViaSW(
     const timeout = setTimeout(() => {
       navigator.serviceWorker.removeEventListener('message', handler)
       resolve({ success: false, error: 'SW download timeout' })
-    }, 30_000)
+    }, ASSET_CONFIG.DOWNLOAD_TIMEOUT_MS)
 
     function handler(event: MessageEvent) {
       if (event.data?.type === 'ASSET_DOWNLOAD_RESULT' && event.data.url === url) {

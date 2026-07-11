@@ -30,6 +30,14 @@ export const ASSET_CONFIG = {
   /** Delay between retries (ms) */
   RETRY_DELAY_MS: 1000,
 
+  /**
+   * Per-attempt download timeout (ms). Generous on purpose: the largest
+   * bootstrap assets are ~5–7 MB and must survive slow mobile links. The SW
+   * dedupes in-flight fetches, so a timed-out attempt's retry resumes waiting
+   * on the same download rather than restarting it.
+   */
+  DOWNLOAD_TIMEOUT_MS: 120_000,
+
   /** Number of top gifts considered critical */
   CRITICAL_COUNT: 30,
 

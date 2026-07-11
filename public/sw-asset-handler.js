@@ -24,6 +24,15 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+/**
+ * In-flight downloads keyed by `cacheName|url`.
+ * A client that timed out and retries the same URL attaches to the ongoing
+ * fetch instead of restarting it from zero — critical for multi-MB assets on
+ * slow links, where restarting on every 30s client retry meant the download
+ * could never finish inside any single attempt window.
+ */
+const inflightDownloads = new Map()
+
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'ASSET_DOWNLOAD') {
     const { url, cacheName } = event.data
@@ -32,66 +41,73 @@ self.addEventListener('message', (event) => {
 })
 
 /**
- * Download and cache an asset, then report result back to the client.
+ * Download and cache an asset (deduped), then report result back to the client.
  */
 async function handleAssetDownload(url, cacheName, client) {
-  try {
-    // Check if already cached
-    const cache = await caches.open(cacheName)
-    const existing = await cache.match(url)
-    if (existing) {
-      const blob = await existing.blob()
-      client?.postMessage({
-        type: 'ASSET_DOWNLOAD_RESULT',
-        url,
-        success: true,
-        sizeBytes: blob.size,
-        cached: true,
-      })
-      return
-    }
-
-    // Fetch the asset
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    // Clone response for cache (response body can only be consumed once)
-    const responseClone = response.clone()
-    const blob = await response.blob()
-
-    // Validate size
-    const contentLength = responseClone.headers.get('Content-Length')
-    if (contentLength && blob.size !== parseInt(contentLength, 10)) {
-      throw new Error('Size mismatch - download may be corrupted')
-    }
-
-    // Store in cache with metadata headers
-    const cacheResponse = new Response(blob, {
-      headers: {
-        'Content-Type': blob.type,
-        'Content-Length': blob.size.toString(),
-        'X-Cached-At': Date.now().toString(),
-      },
+  const key = `${cacheName}|${url}`
+  let pending = inflightDownloads.get(key)
+  if (!pending) {
+    pending = downloadAndCache(url, cacheName).finally(() => {
+      inflightDownloads.delete(key)
     })
-    await cache.put(url, cacheResponse)
+    inflightDownloads.set(key, pending)
+  }
 
-    // Report success
+  try {
+    const sizeBytes = await pending
     client?.postMessage({
       type: 'ASSET_DOWNLOAD_RESULT',
       url,
       success: true,
-      sizeBytes: blob.size,
-      cached: false,
+      sizeBytes,
     })
   } catch (error) {
-    // Report failure
     client?.postMessage({
       type: 'ASSET_DOWNLOAD_RESULT',
       url,
       success: false,
-      error: error.message || 'Unknown error',
+      error: (error && error.message) || 'Unknown error',
     })
   }
+}
+
+/**
+ * Fetch + cache one asset. Resolves with the byte size.
+ */
+async function downloadAndCache(url, cacheName) {
+  // Check if already cached
+  const cache = await caches.open(cacheName)
+  const existing = await cache.match(url)
+  if (existing) {
+    const blob = await existing.blob()
+    return blob.size
+  }
+
+  // Fetch the asset
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+
+  // Clone response for cache (response body can only be consumed once)
+  const responseClone = response.clone()
+  const blob = await response.blob()
+
+  // Validate size
+  const contentLength = responseClone.headers.get('Content-Length')
+  if (contentLength && blob.size !== parseInt(contentLength, 10)) {
+    throw new Error('Size mismatch - download may be corrupted')
+  }
+
+  // Store in cache with metadata headers
+  const cacheResponse = new Response(blob, {
+    headers: {
+      'Content-Type': blob.type,
+      'Content-Length': blob.size.toString(),
+      'X-Cached-At': Date.now().toString(),
+    },
+  })
+  await cache.put(url, cacheResponse)
+
+  return blob.size
 }

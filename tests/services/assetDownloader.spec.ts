@@ -337,7 +337,7 @@ describe('assetDownloader', () => {
         expect(mockCacheStorage.putAsset).toHaveBeenCalled()
       })
 
-      expect(mockFetch).toHaveBeenCalledWith('https://example.com/asset1.webm')
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/asset1.webm', expect.objectContaining({ signal: expect.any(AbortSignal) }))
       expect(mockAssetIndex.upsert).toHaveBeenCalled()
     })
 

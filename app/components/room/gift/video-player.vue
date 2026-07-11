@@ -146,7 +146,7 @@ defineExpose({ restart });
     :src="resolvedSrc"
     :poster="poster"
     :class="[
-      'w-full h-auto object-contain transition-opacity duration-150',
+      'min-w-screen object-contain transition-opacity duration-150',
       isRevealed ? 'opacity-100' : 'opacity-0',
     ]"
     preload="auto"
