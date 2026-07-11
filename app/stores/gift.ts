@@ -6,7 +6,7 @@
  */
 import { defineStore } from 'pinia';
 import type { Gift, GiftPlaybackItem } from '~/types/gift/gift';
-import { MAX_PLAYBACK_QUEUE_SIZE } from '~/constants/gift';
+import { MAX_PLAYBACK_QUEUE_SIZE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
 import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 
 export const useGiftStore = defineStore('giftStore', () => {
@@ -134,6 +134,19 @@ export const useGiftStore = defineStore('giftStore', () => {
       }
     }
 
+    // Coalesce a run of identical (gift, sender) items into one entry playing
+    // ×N — a 77-combo burst becomes one queue slot instead of 77.
+    const last = playbackQueue.value[playbackQueue.value.length - 1];
+    if (
+      last &&
+      last.gift.id === item.gift.id &&
+      last.senderId === item.senderId &&
+      (last.repeats ?? 1) < MAX_PLAYBACK_REPEATS
+    ) {
+      last.repeats = (last.repeats ?? 1) + 1;
+      return;
+    }
+
     if (playbackQueue.value.length >= MAX_PLAYBACK_QUEUE_SIZE) {
       // Drop the oldest if queue is full
       playbackQueue.value.shift();
@@ -171,9 +184,21 @@ export const useGiftStore = defineStore('giftStore', () => {
   }
 
   /**
-   * Called when current playback completes
+   * Called when current playback completes.
+   * A coalesced item with repeats left replays under a fresh id (the player is
+   * keyed by id, so this remounts and plays again — cheap now that resolved
+   * URLs hit the L1 blob cache) before the queue advances.
    */
   function onPlaybackComplete() {
+    const current = currentPlayback.value;
+    if (current && (current.repeats ?? 1) > 1) {
+      currentPlayback.value = {
+        ...current,
+        repeats: (current.repeats ?? 1) - 1,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      };
+      return;
+    }
     playNext();
   }
 

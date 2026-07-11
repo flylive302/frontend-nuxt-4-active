@@ -14,6 +14,7 @@ import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
 import { resolveVideoUrl } from '~/utils/platform'
+import { VIDEO_CACHE_MAX_ENTRIES } from '~/constants/gift'
 
 const log = createLogger('[GiftAssetCache]')
 
@@ -21,8 +22,34 @@ const log = createLogger('[GiftAssetCache]')
 // Module-level Singleton Caches
 // ========================================
 
-/** Video Blob URL cache: animation_url -> Blob URL */
+/**
+ * Video Blob URL cache: animation_url -> Blob URL.
+ * LRU-bounded: Map insertion order is recency (touched on every hit);
+ * the oldest entry is evicted and its blob URL revoked once the cap is hit.
+ * The currently playing URL was just read, so it is never the eviction victim.
+ */
 const videoCache = new Map<string, string>()
+
+/** Store a blob URL, evicting (and revoking) the least-recently-used beyond the cap. */
+function videoCacheSet(url: string, blobUrl: string): void {
+  videoCache.delete(url)
+  videoCache.set(url, blobUrl)
+  while (videoCache.size > VIDEO_CACHE_MAX_ENTRIES) {
+    const [oldestUrl, oldestBlobUrl] = videoCache.entries().next().value!
+    videoCache.delete(oldestUrl)
+    URL.revokeObjectURL(oldestBlobUrl)
+  }
+}
+
+/** Read a blob URL, refreshing its recency. */
+function videoCacheGet(url: string): string | undefined {
+  const blobUrl = videoCache.get(url)
+  if (blobUrl !== undefined) {
+    videoCache.delete(url)
+    videoCache.set(url, blobUrl)
+  }
+  return blobUrl
+}
 
 /** Video loading promises to prevent duplicate fetches */
 const videoPending = new Map<string, Promise<string>>()
@@ -51,8 +78,9 @@ export async function preloadVideo(rawUrl: string): Promise<string> {
   const url = resolveVideoUrl(rawUrl)
 
   // L1: Memory cache (hot)
-  if (videoCache.has(url)) {
-    return videoCache.get(url)!
+  const hot = videoCacheGet(url)
+  if (hot !== undefined) {
+    return hot
   }
 
   // Already loading
@@ -66,7 +94,7 @@ export async function preloadVideo(rawUrl: string): Promise<string> {
       // L2: Cache Storage (persistent)
       const cachedUrl = await cacheStorage.getAsset(url)
       if (cachedUrl) {
-        videoCache.set(url, cachedUrl)
+        videoCacheSet(url, cachedUrl)
         await assetIndex.updateLastAccessed(url)
         return cachedUrl
       }
@@ -82,7 +110,7 @@ export async function preloadVideo(rawUrl: string): Promise<string> {
 
       // Store in L1 (Memory) for speed
       const blobUrl = URL.createObjectURL(blob)
-      videoCache.set(url, blobUrl)
+      videoCacheSet(url, blobUrl)
 
       return blobUrl
     } finally {
@@ -161,14 +189,15 @@ export async function preloadGift(
  */
 export async function getCachedVideoUrl(url: string): Promise<string> {
   // L1: Memory
-  if (videoCache.has(url)) {
-    return videoCache.get(url)!
+  const hot = videoCacheGet(url)
+  if (hot !== undefined) {
+    return hot
   }
 
   // L2: Cache Storage
   const cachedUrl = await cacheStorage.getAsset(url)
   if (cachedUrl) {
-    videoCache.set(url, cachedUrl) // Promote to L1
+    videoCacheSet(url, cachedUrl) // Promote to L1
     return cachedUrl
   }
 
@@ -180,7 +209,18 @@ export async function getCachedVideoUrl(url: string): Promise<string> {
  * Synchronous version - only checks L1 memory cache.
  */
 export function getCachedVideoUrlSync(url: string): string {
-  return videoCache.get(url) ?? url
+  return videoCacheGet(url) ?? url
+}
+
+/**
+ * Revoke every cached blob URL and empty the L1 cache (e.g. on room leave).
+ * L2 Cache Storage persists, so subsequent plays re-mint cheaply from disk.
+ */
+export function clearVideoCache(): void {
+  for (const blobUrl of videoCache.values()) {
+    URL.revokeObjectURL(blobUrl)
+  }
+  videoCache.clear()
 }
 
 /**

@@ -31,6 +31,25 @@ export function withImageKitTransform(url: string | null | undefined, opts: Imag
   return parsed.toString()
 }
 
+/**
+ * Gift thumbnail URL — the single shared variant for every gift-thumb surface
+ * (drawer card, lucky fly, playback poster, profile history). One variant per
+ * gift means one cached copy serves all surfaces. NuxtImg's width/format props
+ * are no-ops for absolute CDN URLs (no `domains` config), so the `tr` param
+ * here is what actually resizes.
+ */
+export function giftThumbnailSrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 256, q: 75 })
+}
+
+/**
+ * Fullscreen static-gift display — larger variant, only fetched when an
+ * image-type gift actually plays.
+ */
+export function giftStaticDisplaySrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 512, q: 80 })
+}
+
 export type RoomCardLayout = 'carousel' | 'grid'
 
 /**

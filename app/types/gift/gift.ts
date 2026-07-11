@@ -83,6 +83,12 @@ export interface GiftPlaybackItem {
   /** Timestamp when queued */
   timestamp: number;
   /**
+   * Times this item still has to play (≥1). Consecutive identical
+   * (gift, sender) enqueues coalesce into one queue entry with repeats+1
+   * instead of stacking duplicates; playback replays until it reaches 1.
+   */
+  repeats?: number;
+  /**
    * Groups all per-recipient gift:received events from one send/combo press.
    * Set on receiver enqueues so the queue collapses a fan-out into one playback;
    * omitted on the sender's own enqueue (always unique, never coalesced).

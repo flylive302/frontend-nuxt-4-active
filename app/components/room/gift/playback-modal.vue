@@ -7,6 +7,7 @@
  * All business logic lives in useGiftPlayback composable.
  */
 import { resolveVideoUrl } from '~/utils/platform';
+import { giftThumbnailSrc } from '~/utils/imagekit';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 
 
@@ -85,7 +86,7 @@ onMounted(() => {
       <RoomGiftVideoPlayer
 v-if="currentPlayback.gift.asset_type === 'video'" :key="`video-${currentPlayback.id}`" class="w-full"
         :src="resolveVideoUrl(currentPlayback.gift.animation_url ?? '')"
-        :poster="currentPlayback.gift.thumbnail_url" @ended="handleComplete" />
+        :poster="giftThumbnailSrc(currentPlayback.gift.thumbnail_url)" @ended="handleComplete" />
 
       <!-- SVGA Player -->
       <RoomGiftSvgaPlayer

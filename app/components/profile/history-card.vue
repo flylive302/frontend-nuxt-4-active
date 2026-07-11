@@ -2,7 +2,7 @@
 import { ASSETS } from '~/constants/assets'
 import type { GiftRarity } from '~/types/user/user-profile'
 import { GIFT_RARITY_CONFIG } from '~/types/user/user-profile'
-import { withImageKitTransform } from '~/utils/imagekit'
+import { giftThumbnailSrc } from '~/utils/imagekit'
 
 // ========================================
 // Props
@@ -54,7 +54,7 @@ const formattedQuantity = computed(() => {
 })
 
 const displayBadgeSrc = computed(() =>
-  withImageKitTransform(props.badgeSrc, { w: 256, q: 75 }),
+  giftThumbnailSrc(props.badgeSrc),
 )
 </script>
 

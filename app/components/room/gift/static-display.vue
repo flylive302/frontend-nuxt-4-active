@@ -5,6 +5,7 @@
  * Displays static image gifts for a configurable duration.
  */
 import { STATIC_DISPLAY_DURATION_MS } from '~/constants/gift';
+import { giftStaticDisplaySrc } from '~/utils/imagekit';
 
 const props = withDefaults(
   defineProps<{
@@ -57,6 +58,6 @@ defineExpose({ restart });
 
 <template>
   <div class="w-full h-full flex items-center justify-center">
-    <NuxtImg :src="src" class="max-w-full max-h-full object-contain" format="webp" loading="eager" />
+    <NuxtImg :src="giftStaticDisplaySrc(src)" class="max-w-full max-h-full object-contain" format="webp" loading="eager" />
   </div>
 </template>

@@ -11,6 +11,7 @@ import {
   LUCKY_FLY_DURATION_MS,
   LUCKY_FLY_THUMBNAIL_SIZE,
 } from "~/constants/gift";
+import { giftThumbnailSrc } from "~/utils/imagekit";
 
 const { flyItems, removeFlyItem } = useLuckyFly();
 
@@ -88,7 +89,7 @@ function animateFlyItem(el: Element | null, item: LuckyFlyItem): void {
     class="lucky-fly-item"
   >
     <img
-      :src="item.thumbnailUrl"
+      :src="giftThumbnailSrc(item.thumbnailUrl)"
       :width="LUCKY_FLY_THUMBNAIL_SIZE"
       :height="LUCKY_FLY_THUMBNAIL_SIZE"
       class="size-full object-contain drop-shadow-lg"

@@ -7,6 +7,7 @@
 import type { Gift } from '~/types/gift/gift';
 import { useGiftData } from '~/composables/gift/useGiftData';
 import MarqueeName from "~/components/common/marquee-name.vue";
+import { giftThumbnailSrc } from '~/utils/imagekit';
 
 withDefaults(
   defineProps<{
@@ -34,7 +35,7 @@ const { formatGiftPrice } = useGiftData();
   >
     <div class="relative p-1 w-full">
       <NuxtImg
-        :src="gift.thumbnail_url"
+        :src="giftThumbnailSrc(gift.thumbnail_url)"
         :alt="gift.label ?? gift.name"
         class="w-full aspect-square object-contain"
         :width="128"

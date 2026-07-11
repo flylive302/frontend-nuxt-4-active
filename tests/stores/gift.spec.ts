@@ -140,7 +140,7 @@ describe('useGiftStore playback queue', () => {
     expect(store.playbackQueue).toHaveLength(0) // siblings dropped, just 1 plays
   })
 
-  it('distinct batchIds (separate combo presses) each enqueue', async () => {
+  it('distinct batchIds (separate combo presses) coalesce into one ×N queue entry', async () => {
     const { useGiftStore } = await import('../../app/stores/gift')
     const store = useGiftStore()
 
@@ -148,8 +148,43 @@ describe('useGiftStore playback queue', () => {
     store.enqueuePlayback({ ...playback(1, 10), batchId: 'press-2' })
     store.enqueuePlayback({ ...playback(1, 10), batchId: 'press-3' })
 
-    // First plays, the other two presses wait their turn — serial, not merged
+    // First plays; the two waiting identical presses merge into one entry ×2
     expect(store.currentPlayback?.gift.id).toBe(1)
+    expect(store.playbackQueue).toHaveLength(1)
+    expect(store.playbackQueue[0]?.repeats).toBe(2)
+  })
+
+  it('replays a coalesced item under a fresh id until repeats are exhausted', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback(playback(1, 10))
+    store.enqueuePlayback(playback(1, 10)) // queued
+    store.enqueuePlayback(playback(1, 10)) // coalesced onto the queued entry
+
+    store.onPlaybackComplete() // advance to the coalesced entry (repeats 2)
+    const firstPassId = store.currentPlayback?.id
+    expect(store.currentPlayback?.repeats).toBe(2)
+
+    store.onPlaybackComplete() // replay 1 — same item, fresh id remounts player
+    expect(store.currentPlayback?.repeats).toBe(1)
+    expect(store.currentPlayback?.id).not.toBe(firstPassId)
+    expect(store.currentPlayback?.gift.id).toBe(1)
+
+    store.onPlaybackComplete() // exhausted → queue empty → stop
+    expect(store.currentPlayback).toBeNull()
+    expect(store.isPlaying).toBe(false)
+  })
+
+  it('does not coalesce different gifts or different senders', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback(playback(1, 10))
+    store.enqueuePlayback(playback(2, 10)) // different gift
+    store.enqueuePlayback(playback(2, 11)) // same gift, different sender
+
     expect(store.playbackQueue).toHaveLength(2)
+    expect(store.playbackQueue.map(i => i.repeats ?? 1)).toEqual([1, 1])
   })
 })

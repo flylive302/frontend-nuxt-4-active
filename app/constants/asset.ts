@@ -41,7 +41,6 @@ export const ASSET_CONFIG = {
  * Cache names used by Workbox (match nuxt.config.ts).
  */
 export const WORKBOX_CACHES = {
-  GIFT_VIDEOS: 'gift-videos',
   SVGA_CACHE: 'svga-cache',   // SVGA animations (.svga)
   CDN_IMAGES: 'cdn-images',
   API_CACHE: 'api-cache',
@@ -54,4 +53,5 @@ export const DEPRECATED_CACHE_NAMES: string[] = [
   // Add old cache names here when upgrading versions
   // e.g., 'flylive-assets-v0'
   'fly-assets-v1', // orphan bucket the old SW asset handler wrote to
+  'gift-videos', // retired Workbox rule — videos live in flylive-assets-v1 now
 ]

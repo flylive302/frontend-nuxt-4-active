@@ -53,15 +53,10 @@ export const pwaConfig: ModuleOptions = {
         // LT-1: Include custom asset download handler in generated SW
         importScripts: ['/sw-env.js', '/sw-asset-handler.js'],
         runtimeCaching: [
-            // R2 CDN Assets – Gift videos (30 days)
-            {
-                urlPattern: /(?:assets\.flyliveapp\.com|\/room)\/.*\.(webm|mov)$/i,
-                handler: 'CacheFirst',
-                options: {
-                    cacheName: 'gift-videos',
-                    expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }
-                }
-            },
+            // NOTE: no rule for gift videos (.webm/.mov) — they are persisted in
+            // 'flylive-assets-v1' by the bootstrap downloader + giftAssetCache and
+            // played from blob URLs. A CacheFirst rule here only duplicated every
+            // multi-MB WebM into a second bucket (and served range requests badly).
             // R2 CDN Assets – SVGA animations (30 days)
             {
                 urlPattern: /(?:assets\.flyliveapp\.com)\/.*\.svga$/i,
@@ -71,13 +66,15 @@ export const pwaConfig: ModuleOptions = {
                     expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }
                 }
             },
-            // CDN Images – Stale While Revalidate (7 days)
+            // CDN Images – CacheFirst (7 days). ImageKit URLs are immutable per
+            // transform variant; SWR fired a revalidation request per image per
+            // drawer remount, which swamped mobile radio for zero benefit.
             {
                 urlPattern: /^https:\/\/ik\.imagekit\.io/,
-                handler: 'StaleWhileRevalidate',
+                handler: 'CacheFirst',
                 options: {
                     cacheName: 'cdn-images',
-                    expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 }
+                    expiration: { maxEntries: 500, maxAgeSeconds: 7 * 24 * 60 * 60 }
                 }
             },
             // API – Network First (1 hour cache fallback)

@@ -716,6 +716,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // Stop any playing gift animation and flush playback queue
     giftStore.clearPlayback();
 
+    // Free in-memory gift blob URLs (L2 Cache Storage persists for re-entry)
+    giftAssetCache.clearVideoCache();
+
     // Cleanup audio player
     audioPlayer.cleanup(targetRoomId ?? undefined);
 
