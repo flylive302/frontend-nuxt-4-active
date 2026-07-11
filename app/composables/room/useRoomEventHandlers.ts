@@ -19,6 +19,7 @@ import type {
   ActiveSpeakerEvent,
   SeatUpdatedEvent,
   SeatClearedEvent,
+  SeatEvictedEvent,
   SeatUserMutedEvent,
   SeatLockedEvent,
   SeatInviteReceivedEvent,
@@ -65,6 +66,7 @@ const ROOM_EVENT_NAMES = [
   'speaker:active',
   'seat:updated',
   'seat:cleared',
+  'seat:evicted',
   'seat:userMuted',
   'seat:locked',
   'seat:invite:received',
@@ -303,7 +305,10 @@ export function setupRoomEventHandlers(
 
     seatsStore.clearSeat(event.seatIndex);
 
-    if (wasCurrentUserSeated) {
+    // room-seat-caps/02: shrink evictions carry their own teardown + toast via
+    // the targeted `seat:evicted` handler below — skip the generic message
+    // here so the displaced user doesn't see two toasts.
+    if (wasCurrentUserSeated && event.reason !== 'shrink') {
       stopAudio();
       toast.add({
         title: 'Removed from seat',
@@ -311,6 +316,19 @@ export function setupRoomEventHandlers(
         color: 'warning',
       });
     }
+  });
+
+  // room-seat-caps/02: Seat Eviction (shrink) — targeted, only the displaced
+  // user receives this. Local speaker-state teardown mirrors the seat:cleared
+  // own-seat path (stopAudio); the room-wide seat:cleared (reason: "shrink")
+  // already cleared the seat in the store for everyone, including this user.
+  socket.on('seat:evicted', (_event: SeatEvictedEvent) => {
+    stopAudio();
+    toast.add({
+      title: 'Seat count reduced',
+      description: "The room seat count was reduced — you've been moved to the audience",
+      color: 'warning',
+    });
   });
 
   socket.on('seat:userMuted', (event: SeatUserMutedEvent) => {

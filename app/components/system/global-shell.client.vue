@@ -51,6 +51,7 @@ initMediaSession()
     <EventsBadgeEarnedModal />
     <EventsLevelUpModal />
     <EventsIncomeTargetModal />
+    <EventsSeatCapUnlockedModal />
 
     <SlideOverlayLayer />
   </div>

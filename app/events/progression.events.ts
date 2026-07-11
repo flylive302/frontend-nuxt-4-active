@@ -5,6 +5,7 @@
 import type { Socket } from 'socket.io-client'
 import type {
   BadgeEarnedPayload,
+  RoomSeatCapUnlockedPayload,
   UserLevelUpPayload,
   UserProgressionPayload,
 } from '~/types/room/socket-events'
@@ -16,7 +17,7 @@ import type {
  */
 export function useProgressionEvents() {
   const { onBadgeEarned } = useBadgeActions()
-  const { showBadgeEarned, showLevelUp } = useAchievementModals()
+  const { showBadgeEarned, showLevelUp, showSeatCapUnlocked } = useAchievementModals()
   const { handleLevelUp } = useLevelActions()
 
   return function registerProgressionEvents(socket: Socket): void {
@@ -52,6 +53,12 @@ export function useProgressionEvents() {
         handleLevelUp(levelUp)
         showLevelUp(levelUp)
       }
+    })
+
+    // room.seat_cap_unlocked: room-seat-caps — server targets the room owner's
+    // sockets only when a room level-up crosses a Seat Unlock Ladder entry.
+    socket.on('room.seat_cap_unlocked', (payload: RoomSeatCapUnlockedPayload) => {
+      showSeatCapUnlocked(payload)
     })
   }
 }

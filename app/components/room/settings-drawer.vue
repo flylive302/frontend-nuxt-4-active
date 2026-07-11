@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { createLogger } from '~/utils/logger'
-import { DEFAULT_SEAT_COUNT, MIN_SEAT_COUNT, MAX_SEAT_COUNT, SEAT_COUNT_STEP } from '~/constants/room'
+import { DEFAULT_SEAT_COUNT } from '~/constants/room'
+import type { SeatPickerOption } from '~/composables/room/useSeatPickerOptions'
 // ========================================
 // Room Settings Drawer
 // ========================================
@@ -218,13 +219,7 @@ const typeOptions = [
   { label: 'Private', value: 'private' },
 ]
 
-const seatOptions = Array.from(
-  { length: (MAX_SEAT_COUNT - MIN_SEAT_COUNT) / SEAT_COUNT_STEP + 1 },
-  (_, i) => {
-    const n = MIN_SEAT_COUNT + i * SEAT_COUNT_STEP
-    return { label: `${n} seats`, value: n }
-  },
-)
+const { seatOptions } = useSeatPickerOptions(thisRoom)
 
 // ========================================
 // Handlers — Room Settings
@@ -420,9 +415,18 @@ onBeforeUnmount(() => {
               <USelect v-model="editType" :items="typeOptions" value-key="value" size="lg" class="w-full" />
             </UFormField>
 
-            <!-- Max Seats -->
+            <!-- Max Seats (progression-aware — tiers above the room's seat_cap render locked) -->
             <UFormField label="Max Seats">
-              <USelect v-model="editMaxSeats" :items="seatOptions" value-key="value" size="lg" class="w-full" />
+              <USelect v-model="editMaxSeats" :items="seatOptions" value-key="value" size="lg" class="w-full">
+                <template #item-label="{ item }">
+                  <div class="flex items-center justify-between w-full gap-2">
+                    <span>{{ (item as SeatPickerOption).label }}</span>
+                    <span v-if="(item as SeatPickerOption).unlockLabel" class="text-xs text-neutral-400">
+                      {{ (item as SeatPickerOption).unlockLabel }}
+                    </span>
+                  </div>
+                </template>
+              </USelect>
             </UFormField>
 
             <!-- Password (Owner Only) -->

@@ -194,8 +194,25 @@ export interface BootstrapRoom {
   hosting_url: string
   participant_count: number
   max_seats: number
+  /**
+   * Resolved seat cap for this room's current level (room-seat-caps PRD).
+   * The Seat picker in the settings drawer may only PATCH `max_seats` up to
+   * this value; the server 422s any attempt above it regardless.
+   */
+  seat_cap: number
+  /**
+   * Seat Unlock Ladder — level→cap steps used to label locked picker tiers
+   * ("Unlocks at room level N"). Ascending by level; may be empty.
+   */
+  seat_ladder: SeatLadderLevel[]
   owner_id: number
   owner: MinimalUser
+}
+
+/** One step of the Seat Unlock Ladder (room-seat-caps PRD). */
+export interface SeatLadderLevel {
+  level: number
+  cap: number
 }
 
 

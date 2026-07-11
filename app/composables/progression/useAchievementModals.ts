@@ -2,7 +2,7 @@
 // Achievement Modals Composable
 // ========================================
 
-import type { BadgeEarnedPayload, UserLevelUpPayload } from '~/types/room/socket-events'
+import type { BadgeEarnedPayload, RoomSeatCapUnlockedPayload, UserLevelUpPayload } from '~/types/room/socket-events'
 
 // ========================================
 // Types
@@ -30,10 +30,18 @@ export interface IncomeTargetModalData {
   isOwnerView: boolean
 }
 
+export interface SeatCapUnlockModalData {
+  roomId: number
+  roomName: string
+  newLevel: number
+  seatCap: number
+}
+
 type PendingModal =
   | { type: 'badge'; data: BadgeModalData }
   | { type: 'levelUp'; data: LevelUpModalData }
   | { type: 'incomeTarget'; data: IncomeTargetModalData }
+  | { type: 'seatCapUnlock'; data: SeatCapUnlockModalData }
 
 // ========================================
 // State (module-level singleton)
@@ -53,6 +61,9 @@ const levelUpModalData = ref<LevelUpModalData | null>(null)
 
 const incomeTargetModalOpen = ref(false)
 const incomeTargetModalData = ref<IncomeTargetModalData | null>(null)
+
+const seatCapUnlockModalOpen = ref(false)
+const seatCapUnlockModalData = ref<SeatCapUnlockModalData | null>(null)
 
 // Queue for modals waiting to be shown
 const pendingModals = ref<PendingModal[]>([])
@@ -90,7 +101,7 @@ export function useAchievementModals() {
    * Check if any achievement modal is currently open.
    */
   function isAnyModalOpen(): boolean {
-    return badgeModalOpen.value || levelUpModalOpen.value || incomeTargetModalOpen.value
+    return badgeModalOpen.value || levelUpModalOpen.value || incomeTargetModalOpen.value || seatCapUnlockModalOpen.value
   }
 
   /**
@@ -122,6 +133,10 @@ export function useAchievementModals() {
       case 'incomeTarget':
         incomeTargetModalData.value = modal.data
         incomeTargetModalOpen.value = true
+        break
+      case 'seatCapUnlock':
+        seatCapUnlockModalData.value = modal.data
+        seatCapUnlockModalOpen.value = true
         break
     }
   }
@@ -227,6 +242,35 @@ export function useAchievementModals() {
   }
 
   // ========================================
+  // Seat Cap Unlock Modal (room-seat-caps)
+  // ========================================
+
+  /**
+   * Show the seat-cap unlock congratulations modal (room owner only —
+   * the `room.seat_cap_unlocked` relay is already owner-targeted server-side).
+   * Queues if gift playback is in progress.
+   */
+  function showSeatCapUnlocked(payload: RoomSeatCapUnlockedPayload): void {
+    const data: SeatCapUnlockModalData = {
+      roomId: payload.room_id,
+      roomName: payload.room_name,
+      newLevel: payload.new_level,
+      seatCap: payload.seat_cap,
+    }
+    enqueueModal({ type: 'seatCapUnlock', data })
+  }
+
+  function closeSeatCapUnlockModal(): void {
+    seatCapUnlockModalOpen.value = false
+    // Clear data after animation completes
+    setTimeout(() => {
+      seatCapUnlockModalData.value = null
+      // Process queue after modal closes
+      processQueue()
+    }, 300)
+  }
+
+  // ========================================
   // Return
   // ========================================
 
@@ -248,6 +292,12 @@ export function useAchievementModals() {
     incomeTargetModalData: readonly(incomeTargetModalData),
     showMilestoneCrossed,
     closeIncomeTargetModal,
+
+    // Seat cap unlock modal state
+    seatCapUnlockModalOpen: readonly(seatCapUnlockModalOpen),
+    seatCapUnlockModalData: readonly(seatCapUnlockModalData),
+    showSeatCapUnlocked,
+    closeSeatCapUnlockModal,
 
     // Queue utilities (exposed for testing)
     pendingModals: readonly(pendingModals),

@@ -245,8 +245,25 @@ export interface SeatClearedEvent {
    * "grace" = MSAB's delayed retention-sweep release (realtime-22), NOT an
    * explicit leave/kick. Only grace clears may be swallowed by the
    * self-retake guard (F-24).
+   *
+   * "shrink" = room-seat-caps/02 shrink eviction. The evicted user also
+   * receives a targeted `seat:evicted` with the dedicated toast/teardown, so
+   * the generic own-seat "Removed from seat" handling here must yield to it
+   * instead of double-firing.
    */
-  reason?: 'grace';
+  reason?: 'grace' | 'shrink';
+}
+
+/**
+ * Targeted `seat:evicted` (room-seat-caps/02) — sent ONLY to the displaced
+ * user's own room-scoped sockets when a live shrink removes their seat.
+ * The room-wide `seat:cleared` (reason: "shrink") already reached everyone
+ * else; this event exists purely to drive this user's dedicated toast.
+ */
+export interface SeatEvictedEvent {
+  roomId: string;
+  seatIndex: number;
+  newSeatCount: number;
 }
 
 export interface SeatUserMutedEvent {

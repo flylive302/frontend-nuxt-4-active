@@ -91,6 +91,17 @@ export interface RoomLevelUpPayload {
 }
 
 /**
+ * room.seat_cap_unlocked - Fired to the room owner only when a room level-up
+ * crosses one or more Seat Unlock Ladder entries (highest cap only).
+ */
+export interface RoomSeatCapUnlockedPayload {
+  room_id: number
+  room_name: string
+  new_level: number
+  seat_cap: number
+}
+
+/**
  * room.participant_count - Fired when room participant count changes.
  */
 export interface RoomParticipantCountPayload {
@@ -275,6 +286,7 @@ export interface ServerToClientEvents {
 
   // Room
   'room.level_up': (payload: RoomLevelUpPayload) => void
+  'room.seat_cap_unlocked': (payload: RoomSeatCapUnlockedPayload) => void
   'room.participant_count': (payload: RoomParticipantCountPayload) => void
   'room.updated': (payload: RoomUpdatedPayload) => void
   'room.invitation_cancelled': (payload: RoomInvitationCancelledPayload) => void

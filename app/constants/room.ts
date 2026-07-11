@@ -19,10 +19,10 @@ export const DEFAULT_SEAT_COUNT = 15;
 /** Minimum per-Room seat count (Laravel-authoritative). */
 export const MIN_SEAT_COUNT = 5;
 
-/** Maximum per-Room seat count (Laravel-authoritative). */
-export const MAX_SEAT_COUNT = 20;
+/** Maximum per-Room seat count (Laravel-authoritative; room-seat-caps Seat Unlock Ladder tops out at level 10). */
+export const MAX_SEAT_COUNT = 30;
 
-/** Seat counts are selectable in steps of this size (5, 10, 15, 20). */
+/** Seat counts are selectable in steps of this size (5, 10, 15, ..., 30). */
 export const SEAT_COUNT_STEP = 5;
 
 // ============================================

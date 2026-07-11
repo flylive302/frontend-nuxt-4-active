@@ -223,6 +223,95 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
 })
 
 // ============================================================
+// room-seat-caps/02 — Seat Eviction (shrink)
+// ============================================================
+describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
+    vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
+    vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
+    vi.stubGlobal('useGiftComboStore', () => ({ pendingRefund: 0 }))
+    vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
+    vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+  })
+
+  async function setupEviction() {
+    const { setupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const { useAuthStore } = await import('../../app/stores/auth')
+    const { useRoomStore } = await import('../../app/stores/room')
+
+    const seatsStore = useRoomSeatsStore()
+    const authStore = useAuthStore()
+    authStore.user = { id: 7 } as never
+    vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
+    vi.stubGlobal('useRoomParticipantsStore', () => useRoomParticipantsStore())
+    vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useRoomStore', () => useRoomStore())
+
+    const socket = createMockSocket()
+    const toast = { add: vi.fn() }
+    vi.stubGlobal('useToast', () => toast)
+    const actions = {
+      leaveRoom: vi.fn(),
+      stopAudio: vi.fn(),
+      consumeProducer: vi.fn(),
+      stopConsumer: vi.fn(),
+      acceptInvite: vi.fn(),
+      declineInvite: vi.fn(),
+      startAudio: vi.fn(),
+    }
+    setupRoomEventHandlers(socket as never, actions, toast as unknown as ReturnType<typeof useToast>)
+    return { socket, seatsStore, actions, toast }
+  }
+
+  it('registers a seat:evicted listener', async () => {
+    const { socket } = await setupEviction()
+    expect(socket.handlers.get('seat:evicted')).toBeDefined()
+  })
+
+  it('seat:evicted tears down local speaker state (stopAudio) and shows the exact reduction toast', async () => {
+    const { socket, actions, toast } = await setupEviction()
+
+    socket.handlers.get('seat:evicted')?.({ roomId: '1', seatIndex: 12, newSeatCount: 10 })
+
+    expect(actions.stopAudio).toHaveBeenCalledTimes(1)
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "The room seat count was reduced — you've been moved to the audience",
+      }),
+    )
+  })
+
+  it("a seat:cleared with reason:'shrink' clears the store but skips the generic own-seat toast/teardown (dedicated seat:evicted owns it)", async () => {
+    const { socket, seatsStore, actions, toast } = await setupEviction()
+    seatsStore.updateSeat(3, 7, false)
+
+    socket.handlers.get('seat:cleared')?.({ seatIndex: 3, userId: 7, reason: 'shrink' })
+
+    expect(seatsStore.seats[3]?.occupantId).toBeNull()
+    expect(actions.stopAudio).not.toHaveBeenCalled()
+    expect(toast.add).not.toHaveBeenCalled()
+  })
+
+  it("a seat:cleared WITHOUT reason:'shrink' still shows the generic own-seat toast (regression guard)", async () => {
+    const { socket, seatsStore, actions, toast } = await setupEviction()
+    seatsStore.updateSeat(3, 7, false)
+
+    socket.handlers.get('seat:cleared')?.({ seatIndex: 3, userId: 7 })
+
+    expect(seatsStore.seats[3]?.occupantId).toBeNull()
+    expect(actions.stopAudio).toHaveBeenCalledTimes(1)
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Removed from seat' }),
+    )
+  })
+})
+
+// ============================================================
 // daily-room-xp 03 — gift:received optimistic daily_xp bump
 // ============================================================
 describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
