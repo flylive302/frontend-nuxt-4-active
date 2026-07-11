@@ -502,7 +502,7 @@ onBeforeUnmount(() => {
                       :icon="showSettingsPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                       :aria-label="showSettingsPassword ? 'Hide password' : 'Show password'"
                       :padded="false"
-                      @click="showSettingsPassword = !showSettingsPassword"
+                      @click="() => {showSettingsPassword = !showSettingsPassword}"
                     />
                   </template>
                 </UInput>
@@ -614,7 +614,7 @@ onBeforeUnmount(() => {
           <p class="text-sm text-muted text-center">You are the room owner.</p>
         </template>
 
-        <UButton color="neutral" variant="subtle" icon="i-lucide-x" class="justify-center mt-4" @click="open = false">
+        <UButton color="neutral" variant="subtle" icon="i-lucide-x" class="justify-center mt-4" @click="() => {open = false}">
           Close
         </UButton>
       </div>

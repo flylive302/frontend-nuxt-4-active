@@ -28,7 +28,8 @@ export default defineAppConfig({
         },
         drawer: {
             slots: {
-                content: 'bg-neutral-950'
+                content: 'bg-neutral-950',
+                container: 'safe-area-top safe-area-bottom'
             },
             compoundVariants: [
                 {
