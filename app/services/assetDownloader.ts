@@ -326,7 +326,7 @@ function downloadViaSW(
     }
 
     navigator.serviceWorker.addEventListener('message', handler)
-    sw.postMessage({ type: 'ASSET_DOWNLOAD', url })
+    sw.postMessage({ type: 'ASSET_DOWNLOAD', url, cacheName: ASSET_CONFIG.CACHE_NAME })
   })
 }
 

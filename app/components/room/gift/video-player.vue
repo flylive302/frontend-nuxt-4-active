@@ -3,16 +3,23 @@
  * Gift Video Player
  *
  * Plays video gift assets with proper ended event handling.
- * Uses cached Blob URLs from preloader for instant playback.
+ * The <video> element is only mounted once the playback URL is fully
+ * resolved (L1 blob / L2 Cache Storage / network) — `src` sits directly
+ * on the element so the resolved URL is what actually loads.
+ * Element stays invisible until the first frame is decoded
+ * (requestVideoFrameCallback, fallback `loadeddata`) so the WebView
+ * never shows its gray media placeholder.
  * NO loop attribute - video plays once and emits 'ended'.
- * Uses programmatic play() with AbortError handling to prevent
- * console errors when the component is destroyed mid-play.
+ * Autoplay: unmuted play() first; on NotAllowedError retry muted;
+ * on second failure emit 'ended' immediately so the queue never hangs.
  */
 import * as giftAssetCache from '~/services/giftAssetCache';
 
 
 const props = defineProps<{
   src: string;
+  /** Gift thumbnail shown while the video buffers (belt-and-braces with the opacity gate) */
+  poster?: string;
 }>();
 
 const emit = defineEmits<{
@@ -25,62 +32,76 @@ const videoRef = ref<HTMLVideoElement | null>(null);
 /** Guard flag — prevents play/error callbacks after component unmount */
 let isDestroyed = false;
 
-// Reactive video source - starts with sync cache lookup, updates after preload
+/** Final playback URL — the <video> is not rendered until this is set */
 const resolvedSrc = ref<string | null>(null);
 
-/**
- * Get the video source - use cached Blob URL if available, else original URL
- */
-const videoSrc = computed(() => resolvedSrc.value ?? props.src);
+/** Flips true once the first frame is decoded — reveals the element */
+const isRevealed = ref(false);
 
-/**
- * Auto-detect MIME type from URL extension
- */
-const videoType = computed(() => {
-  const url = props.src.toLowerCase();
-  if (url.includes('.webm')) return 'video/webm';
-  if (url.includes('.mp4')) return 'video/mp4';
-  if (url.includes('.mov')) return 'video/quicktime';
-  if (url.includes('.ogg')) return 'video/ogg';
-  // Default fallback
-  return 'video/webm';
-});
+// Resolve the URL before the element exists: sync L1 first (instant for
+// preloaded gifts), otherwise async L2/network via the asset cache.
+const syncUrl = giftAssetCache.getCachedVideoUrlSync(props.src);
+if (syncUrl !== props.src) {
+  resolvedSrc.value = syncUrl;
+} else {
+  giftAssetCache.preloadVideo(props.src)
+    .then((url) => {
+      if (!isDestroyed) resolvedSrc.value = url;
+    })
+    .catch(() => {
+      if (!isDestroyed) resolvedSrc.value = props.src;
+    });
+}
 
 /**
  * Safely call play() on the video element.
- * Catches AbortError which fires when the element is removed from DOM mid-play
- * (e.g. when `:key` changes force a component recreation).
+ * - AbortError (element removed mid-play, e.g. :key remount) is suppressed.
+ * - NotAllowedError (autoplay policy) retries muted, mirroring the VAP player.
+ * - Any other failure — or a failed muted retry — emits 'ended' immediately
+ *   so a stuck item never blocks the serial playback queue.
  */
 function safePlay(): void {
-  if (isDestroyed || !videoRef.value) return;
+  const video = videoRef.value;
+  if (isDestroyed || !video) return;
 
-  videoRef.value.play().catch((err: unknown) => {
-    // AbortError is expected when element is removed from DOM — suppress it
+  video.play().catch((err: unknown) => {
+    if (isDestroyed) return;
     if (err instanceof DOMException && err.name === 'AbortError') return;
+
+    if (err instanceof DOMException && err.name === 'NotAllowedError' && !video.muted) {
+      video.muted = true;
+      video.play().catch(() => {
+        if (!isDestroyed) emit('ended');
+      });
+      return;
+    }
+
+    emit('ended');
   });
 }
 
-// On mount, try to get from cache or preload, then play
-onMounted(async () => {
-  // First try sync L1 cache
-  const syncUrl = giftAssetCache.getCachedVideoUrlSync(props.src);
-  if (syncUrl !== props.src) {
-    resolvedSrc.value = syncUrl;
+// Once the <video> mounts (v-if on resolvedSrc), gate reveal on the first
+// decoded frame and start playback.
+watch(videoRef, (video) => {
+  if (!video || isDestroyed) return;
+
+  const rvfc = video as unknown as {
+    requestVideoFrameCallback?: (cb: () => void) => number;
+  };
+  if (typeof rvfc.requestVideoFrameCallback === 'function') {
+    rvfc.requestVideoFrameCallback(() => {
+      if (!isDestroyed) isRevealed.value = true;
+    });
   } else {
-    // If not in L1, preload async (L2 cache / network)
-    try {
-      const url = await giftAssetCache.preloadVideo(props.src);
-      if (isDestroyed) return;
-      resolvedSrc.value = url;
-    } catch {
-      if (isDestroyed) return;
-      // Use original URL as fallback
-      resolvedSrc.value = props.src;
-    }
+    video.addEventListener(
+      'loadeddata',
+      () => {
+        if (!isDestroyed) isRevealed.value = true;
+      },
+      { once: true },
+    );
   }
 
-  // Wait for Vue to apply the resolved src to the DOM, then play
-  await nextTick();
   safePlay();
 });
 
@@ -120,13 +141,19 @@ defineExpose({ restart });
 
 <template>
   <video
+    v-if="resolvedSrc"
     ref="videoRef"
-    class="w-full h-auto object-contain"
+    :src="resolvedSrc"
+    :poster="poster"
+    :class="[
+      'w-full h-auto object-contain transition-opacity duration-150',
+      isRevealed ? 'opacity-100' : 'opacity-0',
+    ]"
     preload="auto"
     playsinline
+    disablepictureinpicture
+    controlslist="nodownload noplaybackrate"
     @ended="emit('ended')"
     @error="handleError"
-  >
-    <source :src="videoSrc" :type="videoType">
-  </video>
+  />
 </template>

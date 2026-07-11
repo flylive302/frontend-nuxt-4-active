@@ -53,4 +53,5 @@ export const WORKBOX_CACHES = {
 export const DEPRECATED_CACHE_NAMES: string[] = [
   // Add old cache names here when upgrading versions
   // e.g., 'flylive-assets-v0'
+  'fly-assets-v1', // orphan bucket the old SW asset handler wrote to
 ]
