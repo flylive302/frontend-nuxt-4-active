@@ -337,6 +337,51 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   }
 
   /**
+   * True when the mic producing pipeline can no longer carry audio and only a
+   * full rebuild (`restartAudio`) will fix it: producer/transport closed or
+   * ICE-dead, or the OS killed/muted the raw `getUserMedia` track while the
+   * producer's AudioContext destination track still looks "live" (the long-mute
+   * failure mode — re-enabling the track would feed silence).
+   */
+  function isMicPipelineDead(): boolean {
+    if (!producer.value || producer.value.closed) return true;
+    if (producer.value.track?.readyState === 'ended') return true;
+
+    const transport = producerTransport.value;
+    if (!transport || transport.closed) return true;
+    const state = transport.connectionState;
+    if (state === 'failed' || state === 'disconnected' || state === 'closed') return true;
+
+    if (_micRawTrack && (_micRawTrack.muted || _micRawTrack.readyState === 'ended')) return true;
+    if (_micAudioContext && _micAudioContext.state === 'closed') return true;
+
+    return false;
+  }
+
+  /**
+   * Tear down and rebuild the whole mic producing path: producer, AudioContext
+   * graph, raw mic, and — when it is dead — the producer transport itself.
+   * Equivalent to leaving and retaking the seat, without touching the seat.
+   */
+  async function restartAudio(): Promise<void> {
+    stopAudio();
+
+    const transport = producerTransport.value;
+    if (
+      transport
+      && (transport.closed
+        || transport.connectionState === 'failed'
+        || transport.connectionState === 'disconnected'
+        || transport.connectionState === 'closed')
+    ) {
+      transport.close();
+      producerTransport.value = null;
+    }
+
+    await startAudio();
+  }
+
+  /**
    * Toggle local microphone mute (pauses/resumes the track, not the producer).
    * This mutes locally - other users won't hear audio until unmuted.
    */
@@ -670,6 +715,8 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     currentVolume,
     startAudio,
     stopAudio,
+    restartAudio,
+    isMicPipelineDead,
     produceTrack,
     stopMusicProducer,
     toggleLocalMute,

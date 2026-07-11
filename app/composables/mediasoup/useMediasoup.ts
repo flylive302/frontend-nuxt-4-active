@@ -64,6 +64,8 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     isLocalMuted: streamingComposable.isLocalMuted,
     startAudio: streamingComposable.startAudio,
     stopAudio: streamingComposable.stopAudio,
+    restartAudio: streamingComposable.restartAudio,
+    isMicPipelineDead: streamingComposable.isMicPipelineDead,
     toggleLocalMute: streamingComposable.toggleLocalMute,
     consumeProducer: streamingComposable.consumeProducer,
     stopConsumer: streamingComposable.stopConsumer,

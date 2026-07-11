@@ -190,6 +190,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
     createTransports,
     startAudio: startMediasoupAudio,
     stopAudio: stopMediasoupAudio,
+    restartAudio: restartMediasoupAudio,
+    isMicPipelineDead,
     consumeProducer,
     stopConsumer,
     recoverPlayback: recoverMediasoupPlayback,
@@ -262,24 +264,56 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * allowing the server to pause the producer and stop processing empty RTP packets.
    */
   function toggleLocalMute(): boolean {
-    const isMuted = toggleMediasoupMute();
-    const roomId = getCurrentRoomId();
-    const producerId = producer.value?.id;
-
-    if (roomId && producerId) {
-      const event = isMuted ? 'audio:selfMute' : 'audio:selfUnmute';
-      emitAsync<SelfMutePayload, SelfMuteResponse>(event, { roomId, producerId })
-        .then((res) => {
-          if (!res.success) {
-            log.warn('Server rejected mute toggle')
-          }
-        })
-        .catch((err) => {
-          log.warn('Failed to emit mute toggle to server', err)
-        });
+    // GATE: unmuting into a dead mic pipeline (transport ICE-dead, producer
+    // closed by a reconnect, OS released the mic during a long mute) cannot be
+    // fixed by re-enabling the track — the user would look unmuted but stay
+    // silent until they leave + retake the seat. Rebuild the pipeline instead.
+    if (isLocalMuted.value && isMicPipelineDead()) {
+      void recoverUnmute();
+      return false;
     }
 
+    const isMuted = toggleMediasoupMute();
+    emitMuteState(isMuted);
     return isMuted;
+  }
+
+  /**
+   * Unmute recovery: full mic pipeline rebuild (same effect as leave + retake
+   * seat). The fresh producer starts unpaused server-side; the selfUnmute emit
+   * carries the NEW producer id so the room's mute UI flips for everyone.
+   */
+  async function recoverUnmute(): Promise<void> {
+    try {
+      await restartMediasoupAudio();
+      audioStore.setProducing(true);
+      emitMuteState(false);
+    } catch (err) {
+      log.warn('Failed to rebuild mic pipeline on unmute', err);
+      toast.add({
+        title: 'Could not unmute',
+        description: 'Please leave the seat and take it again.',
+        color: 'error',
+      });
+    }
+  }
+
+  /** Notify the server of the local mute state so it can pause/resume the producer. */
+  function emitMuteState(isMuted: boolean): void {
+    const roomId = getCurrentRoomId();
+    const producerId = producer.value?.id;
+    if (!roomId || !producerId) return;
+
+    const event = isMuted ? 'audio:selfMute' : 'audio:selfUnmute';
+    emitAsync<SelfMutePayload, SelfMuteResponse>(event, { roomId, producerId })
+      .then((res) => {
+        if (!res.success) {
+          log.warn('Server rejected mute toggle')
+        }
+      })
+      .catch((err) => {
+        log.warn('Failed to emit mute toggle to server', err)
+      });
   }
 
   // ========================================
@@ -645,10 +679,15 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // rejoin from double-producing). Covers every rejoin path — onReconnect,
     // reconnect-failed rebuild, PWA resume — since they all funnel through joinRoom.
     if (
+      // Guard with the LIVE mediasoup state, not the store flag: the store's
+      // isProducing is only cleared by an explicit stopAudio, so it stays
+      // stale-true when the producer dies with the old transport on reconnect
+      // — which skipped the re-produce and left a silent seat (the
+      // long-mute audio-loss bug). The computed reflects the actual producer.
       shouldReproduceOnReclaim(
         response.seats,
         authStore.user?.id,
-        audioStore.audioState.isProducing,
+        isProducing.value,
       )
     ) {
       try {
