@@ -149,10 +149,11 @@ function slotImageUrl(imageUrl: string | null | undefined): string {
           @click="emit('slotClick', i + 1)"
         >
           <template v-if="slot">
-            <NuxtImg
-              :src="slotImageUrl(slot.image_url)"
+            <BadgeVisual
+              :image-url="slotImageUrl(slot.image_url)"
+              :asset-url="slot.asset_url"
               :alt="`Slot ${i + 1}`"
-              class="size-14 object-contain"
+              img-class="size-14 object-contain"
             />
             <span class="absolute bottom-1 right-1.5 text-[9px] font-bold text-muted leading-none">{{ i + 1 }}</span>
           </template>

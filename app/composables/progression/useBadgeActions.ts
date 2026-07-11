@@ -127,6 +127,10 @@ export function useBadgeActions() {
       toast.add({ title: 'Badge not owned', description: 'You have not earned this badge.', color: 'error' })
       return
     }
+    if (!store.isUserBadgeValid(badgeId)) {
+      toast.add({ title: 'Badge expired', description: 'This badge has expired and can no longer be equipped.', color: 'error' })
+      return
+    }
 
     // EXECUTE
     const snapshot = [...store.equippedBadges]

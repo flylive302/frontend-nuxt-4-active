@@ -76,12 +76,31 @@ export const useBadgesStore = defineStore('badges', () => {
     return Date.now() - lastFetchedAt.value > STALE_TIME
   })
 
+  /** User badges with status === 'active' (excludes fully-expired badges). */
+  const validUserBadges = computed<UserBadge[]>(() =>
+    userBadges.value.items.filter(b => b.status === 'active'),
+  )
+
+  /** Sum of active_count across all valid (status === 'active') user badges. */
+  const totalActiveBadgeCount = computed<number>(() =>
+    validUserBadges.value.reduce((sum, b) => sum + b.active_count, 0),
+  )
+
   // ========================================
   // Pure Lookups
   // ========================================
 
   function hasUserBadge(badgeId: number): boolean {
     return userBadges.value.items.some(b => b.badge.id === badgeId)
+  }
+
+  /** Owned AND currently active (not expired). Used by equip GATE. */
+  function isUserBadgeValid(badgeId: number): boolean {
+    return userBadges.value.items.some(b => b.badge.id === badgeId && b.status === 'active')
+  }
+
+  function getActiveCount(badgeId: number): number {
+    return userBadges.value.items.find(b => b.badge.id === badgeId)?.active_count ?? 0
   }
 
   // ========================================
@@ -198,9 +217,13 @@ export const useBadgesStore = defineStore('badges', () => {
 
     // Computed
     needsRefresh,
+    validUserBadges,
+    totalActiveBadgeCount,
 
     // Pure lookups
     hasUserBadge,
+    isUserBadgeValid,
+    getActiveCount,
 
     // Catalog setters
     setCatalog,

@@ -37,12 +37,16 @@ vi.mock('~/utils/logger', () => ({
 // Fixtures
 // ========================================
 
-function makeUserBadge(userBadgeId: number, badgeId: number): UserBadge {
+function makeUserBadge(userBadgeId: number, badgeId: number, status: 'active' | 'expired' = 'active'): UserBadge {
   return {
     id: userBadgeId,
     badge: { id: badgeId, name: `Badge ${badgeId}`, description: '', image_url: `https://cdn/b${badgeId}.png` },
     earned_at: '2024-01-01T00:00:00Z',
     source_type: 'achievement',
+    status,
+    active_count: status === 'active' ? 1 : 0,
+    expires_at: null,
+    days_remaining: null,
   }
 }
 
@@ -55,12 +59,13 @@ function makeEquipped(slotPosition: number, badgeId: number): EquippedBadge {
 // ========================================
 
 function createMockBadgesStore(overrides: Record<string, unknown> = {}) {
+  const userBadgesItems = [
+    makeUserBadge(1, 10),
+    makeUserBadge(2, 20),
+  ]
   return {
     userBadges: {
-      items: [
-        makeUserBadge(1, 10),
-        makeUserBadge(2, 20),
-      ],
+      items: userBadgesItems,
     },
     catalog: { items: [] },
     equippedBadges: [] as EquippedBadge[],
@@ -69,6 +74,8 @@ function createMockBadgesStore(overrides: Record<string, unknown> = {}) {
     addUserBadge: vi.fn(),
     incrementStatsTotal: vi.fn(),
     setEquippedBadges: vi.fn(),
+    isUserBadgeValid: (badgeId: number) =>
+      userBadgesItems.some(ub => ub.badge.id === badgeId && ub.status === 'active'),
     ...overrides,
   }
 }
@@ -252,6 +259,22 @@ describe('equip', () => {
 
     expect(mockApiModule.api).not.toHaveBeenCalled()
     expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+  })
+
+  it('GATE: rejects equipping an expired badge with a toast before any API call', async () => {
+    badgesStore = createMockBadgesStore({
+      userBadges: { items: [makeUserBadge(1, 10, 'expired'), makeUserBadge(2, 20)] },
+      isUserBadgeValid: (badgeId: number) => badgeId === 20,
+    });
+    (globalThis as Record<string, unknown>).useBadgesStore = () => badgesStore
+
+    const { equip } = useBadgeActions()
+    await equip(1, 10)
+
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+    expect(mockToast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Badge expired', color: 'error' }),
+    )
   })
 
   it('equipped badge disappears from available list (not in equippedBadges anymore as grid excludes it)', async () => {

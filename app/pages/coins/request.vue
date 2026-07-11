@@ -55,14 +55,10 @@ watch(lastCoinRequestUpdate, () => {
       <template #second-link-text>Diamonds</template>
     </NavAlt>
 
-    <NuxtImg
-      :src="ASSETS.HERO_TERTIARY"
-      format="webp"
-      densities="x1 x2"
-      sizes="320px"
-      width="100%"
+    <img
+      :src="ASSETS.HERO_TERTIARY" width="412" alt=""
       class="min-w-full object-cover rounded-b-4xl shadow-2xl shadow-tertiary/70 animate-[zoom_60s_ease-in-out_infinite]"
-    />
+    >
 
     <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-4xl -mt-34 relative">
 

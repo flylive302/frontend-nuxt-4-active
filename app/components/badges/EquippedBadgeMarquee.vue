@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { EquippedBadge } from '~/types/progression/badge'
 
-type SlottedBadge = { slot_position: number; badge_id: number; image_url: string }
+type SlottedBadge = {
+  slot_position: number
+  badge_id: number
+  image_url: string
+  asset_url?: string | null
+}
 
 const props = defineProps<{
   equippedBadges: EquippedBadge[]
@@ -46,23 +51,25 @@ watch(sorted, async () => {
         class="flex items-center gap-1"
         :class="{ 'marquee-track': isOverflowing }"
     >
-      <img
+      <BadgeVisual
           v-for="badge in sorted"
           :key="`a-${badge.badge_id}`"
-          :src="badge.image_url"
-          class="size-6 shrink-0"
+          :image-url="badge.image_url"
+          :asset-url="badge.asset_url"
+          img-class="size-6 shrink-0"
           alt=""
-      >
+      />
       <!-- Duplicate set for seamless looping — only rendered when marquee is active -->
       <template v-if="isOverflowing">
-        <img
+        <BadgeVisual
             v-for="badge in sorted"
             :key="`b-${badge.badge_id}`"
-            :src="badge.image_url"
-            class="size-6 shrink-0"
+            :image-url="badge.image_url"
+            :asset-url="badge.asset_url"
+            img-class="size-6 shrink-0"
             aria-hidden="true"
             alt=""
-        >
+        />
       </template>
     </div>
   </div>

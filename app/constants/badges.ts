@@ -48,3 +48,13 @@ export const BADGE_RARITY_COLORS: Record<string, string> = {
   epic: 'text-purple-500',
   legendary: 'text-amber-500',
 }
+
+/**
+ * Days-remaining threshold at/below which the expiry label switches to warning color.
+ */
+export const BADGE_EXPIRY_WARNING_DAYS = 3
+
+/**
+ * Intersection ratio threshold for mounting/unmounting the animated badge layer.
+ */
+export const BADGE_VISUAL_INTERSECTION_THRESHOLD = 0.1

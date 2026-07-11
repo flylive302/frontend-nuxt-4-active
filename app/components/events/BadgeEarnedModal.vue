@@ -7,9 +7,21 @@
 
 const { badgeModalOpen, badgeModalData, closeBadgeModal } = useAchievementModals()
 
+const badgesStore = useBadgesStore()
+
 // ========================================
 // Computed
 // ========================================
+
+/**
+ * Animated asset for the earned badge, resolved from the catalog (the socket
+ * payload carries no asset_url). Null when the badge has no animated version.
+ */
+const earnedBadgeAssetUrl = computed<string | null>(() => {
+  const badgeId = badgeModalData.value?.badgeId
+  if (!badgeId) return null
+  return badgesStore.catalog.items.find(b => b.id === badgeId)?.asset_url ?? null
+})
 
 /**
  * Category-specific styling.
@@ -86,12 +98,12 @@ const contextDescription = computed(() => {
               class="mx-auto flex h-24 w-24 items-center justify-center rounded-full ring-4 ring-white/10"
               :class="categoryStyle.bgColor"
             >
-              <NuxtImg
+              <BadgeVisual
                 v-if="badgeModalData.badgeImage"
-                :src="badgeModalData.badgeImage"
+                :image-url="badgeModalData.badgeImage"
+                :asset-url="earnedBadgeAssetUrl"
                 :alt="badgeModalData.badgeName"
-                class="h-16 w-16 object-contain drop-shadow-lg"
-                loading="eager"
+                img-class="h-16 w-16 object-contain drop-shadow-lg"
               />
               <UIcon
                 v-else

@@ -10,12 +10,22 @@ function makeBadge(id: number): Badge {
   return { id, name: `Badge ${id}`, description: `Desc ${id}`, image_url: `https://cdn/badge-${id}.png` }
 }
 
-function makeUserBadge(id: number, badgeId: number, earnedAt: string): UserBadge {
+function makeUserBadge(
+  id: number,
+  badgeId: number,
+  earnedAt: string,
+  overrides: Partial<Pick<UserBadge, 'status' | 'active_count' | 'expires_at' | 'days_remaining'>> = {},
+): UserBadge {
   return {
     id,
     badge: makeBadge(badgeId),
     earned_at: earnedAt,
     source_type: 'achievement',
+    status: 'active',
+    active_count: 1,
+    expires_at: null,
+    days_remaining: null,
+    ...overrides,
   }
 }
 
@@ -139,5 +149,79 @@ describe('assembleBadgeCatalog', () => {
     const ids = result.map(e => e.badge.id)
     // badge 99 earned more recently, should appear first in earned section
     expect(ids.indexOf(99)).toBeLessThan(ids.indexOf(1))
+  })
+})
+
+// ========================================
+// status / activeCount / expiresAt / daysRemaining (issue 03)
+// ========================================
+
+describe('assembleBadgeCatalog — expiry fields', () => {
+  it('propagates active status, active_count, expires_at and days_remaining for a time-limited badge', () => {
+    const catalog = [makeBadge(1)]
+    const userBadges = [makeUserBadge(10, 1, '2024-01-01T00:00:00Z', {
+      status: 'active',
+      active_count: 2,
+      expires_at: '2024-02-01T00:00:00Z',
+      days_remaining: 5,
+    })]
+    const result = assembleBadgeCatalog(catalog, userBadges, [])
+
+    expect(result[0]!.status).toBe('active')
+    expect(result[0]!.activeCount).toBe(2)
+    expect(result[0]!.expiresAt).toBe('2024-02-01T00:00:00Z')
+    expect(result[0]!.daysRemaining).toBe(5)
+  })
+
+  it('permanent badge: status active, expiresAt/daysRemaining null', () => {
+    const catalog = [makeBadge(1)]
+    const userBadges = [makeUserBadge(10, 1, '2024-01-01T00:00:00Z', {
+      status: 'active',
+      active_count: 1,
+      expires_at: null,
+      days_remaining: null,
+    })]
+    const result = assembleBadgeCatalog(catalog, userBadges, [])
+
+    expect(result[0]!.status).toBe('active')
+    expect(result[0]!.expiresAt).toBeNull()
+    expect(result[0]!.daysRemaining).toBeNull()
+  })
+
+  it('expired badge: status expired, activeCount 0, no expiry fields', () => {
+    const catalog = [makeBadge(1)]
+    const userBadges = [makeUserBadge(10, 1, '2024-01-01T00:00:00Z', {
+      status: 'expired',
+      active_count: 0,
+      expires_at: null,
+      days_remaining: null,
+    })]
+    const result = assembleBadgeCatalog(catalog, userBadges, [])
+
+    expect(result[0]!.status).toBe('expired')
+    expect(result[0]!.activeCount).toBe(0)
+    expect(result[0]!.daysRemaining).toBeNull()
+  })
+
+  it('locked badges have null status/activeCount 0/null expiry fields', () => {
+    const catalog = [makeBadge(1)]
+    const result = assembleBadgeCatalog(catalog, [], [])
+
+    expect(result[0]!.status).toBeNull()
+    expect(result[0]!.activeCount).toBe(0)
+    expect(result[0]!.expiresAt).toBeNull()
+    expect(result[0]!.daysRemaining).toBeNull()
+  })
+
+  it('picks the soonest-expiring active entry when multiple grant rows are merged', () => {
+    const catalog = [makeBadge(5)]
+    const userBadges = [
+      makeUserBadge(1, 5, '2024-01-01T00:00:00Z', { status: 'active', active_count: 1, expires_at: '2024-03-01T00:00:00Z', days_remaining: 20 }),
+      makeUserBadge(2, 5, '2024-01-02T00:00:00Z', { status: 'active', active_count: 1, expires_at: '2024-01-10T00:00:00Z', days_remaining: 3 }),
+    ]
+    const result = assembleBadgeCatalog(catalog, userBadges, [])
+
+    expect(result[0]!.daysRemaining).toBe(3)
+    expect(result[0]!.activeCount).toBe(2)
   })
 })
