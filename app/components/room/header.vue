@@ -9,7 +9,6 @@ import { ASSETS } from '~/constants/assets';
 
 const roomStore = useRoomStore();
 const bootstrapStore = useBootstrapStore();
-const { isRoomOwner } = useRoomPermissions();
 const { leaveRoom } = useRoomAudio();
 const { resolvePropAsset } = usePropLookup();
 
@@ -107,22 +106,6 @@ const levelStatus = computed(() => {
 });
 
 // ========================================
-// Membership (for Members Button)
-// ========================================
-
-const { myMembership, fetchMyMembership } = useRoomMembers();
-
-onMounted(() => fetchMyMembership());
-
-/** Whether current user can manage members (owner or admin) */
-const canManageMembers = computed(() => {
-  if (isRoomOwner.value) return true;
-  const membership = myMembership.value;
-  if (membership?.room_id === thisRoom.value?.id && membership?.role === 'admin') return true;
-  return false;
-});
-
-// ========================================
 // Handlers
 // ========================================
 
@@ -139,11 +122,6 @@ const openLeaveDrawer = (event: Event) => {
   // Prefetch the route we'll navigate to on minimize
   preloadRouteComponents(roomStore.previousRoute ?? '/');
 };
-
-// ========================================
-// Settings Drawer State
-// ========================================
-const settingsOpen = ref(false);
 </script>
 
 <template>
@@ -167,16 +145,6 @@ const settingsOpen = ref(false);
           <div class="px-3">
             <div class="flex justify-between items-baseline w-full py-2">
               <SectionTitle>Room Details</SectionTitle>
-
-              <!-- Room Settings (cog icon, above volume) -->
-              <UButton
-                  icon="i-lucide-settings"
-                  size="md"
-                  variant="subtle"
-                  @click="() => { settingsOpen = true }"
-              >
-                Room Settings
-              </UButton>
             </div>
 
 
@@ -223,9 +191,8 @@ const settingsOpen = ref(false);
 
     <!-- Right Section -->
     <div class="flex items-center ml-auto gap-2">
-      <!-- Members Button (Owner/Admin only) -->
+      <!-- Membership / Members Button -->
       <UButton
-        v-if="canManageMembers"
         icon="i-lucide-users"
         size="xl"
         class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
@@ -288,9 +255,7 @@ const settingsOpen = ref(false);
       </UDrawer>
     </div>
   </header>
-  <!-- Settings Drawer (inside root to avoid aria-hidden issues) -->
-  <LazyRoomSettingsDrawer v-model:open="settingsOpen" />
-  <!-- Members Panel (Owner/Admin only) -->
-  <RoomMembersPanel v-if="canManageMembers" v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));" />
+  <!-- Membership / Members Panel -->
+  <RoomMembersPanel v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));" />
 
 </template>

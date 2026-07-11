@@ -22,9 +22,9 @@ const open = defineModel<boolean>('open', { default: false })
 
 const roomStore = useRoomStore()
 const authStore = useAuthStore()
-const { requestToJoin, cancelJoinRequest, fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
-const { acceptInvitation, declineInvitation, receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
-const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers()
+const { fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
+const { receivedInvitations, fetchReceivedInvitations } = useRoomInvitations()
+const { myMembership, fetchMyMembership } = useRoomMembers()
 const { patchRoom, normalizeError } = useRoomSettingsApi()
 const { createUploadState } = useImageUpload()
 const { socket } = useAudioSocket()
@@ -65,15 +65,6 @@ const membershipState = computed(() => {
   )
   if (pendingInvite) return 'has_invitation'
   return 'none'
-})
-
-const pendingInvitationId = computed(() => {
-  if (!thisRoom.value) return undefined
-  const roomId = thisRoom.value.id
-  const pendingInvite = receivedInvitations.value.items.find(
-    (inv) => inv && (inv.room_id === roomId || inv.room?.id === roomId) && inv.status === 'pending'
-  )
-  return pendingInvite?.id
 })
 
 /** Whether current user can edit room settings (owner or admin) */
@@ -236,12 +227,6 @@ const seatOptions = Array.from(
 )
 
 // ========================================
-// Action Loading
-// ========================================
-
-const actionLoading = ref(false)
-
-// ========================================
 // Handlers — Room Settings
 // ========================================
 
@@ -334,49 +319,6 @@ async function handleRemovePassword(): Promise<void> {
     toast.add({ title: 'Error', description: normalized.message, color: 'error' })
   } finally {
     saving.value = false
-  }
-}
-
-// ========================================
-// Handlers — Membership Actions
-// ========================================
-
-async function handleRequestToJoin() {
-  if (!thisRoom.value) return
-  actionLoading.value = true
-  await requestToJoin(thisRoom.value.id)
-  actionLoading.value = false
-}
-
-async function handleCancelRequest() {
-  if (!thisRoom.value) return
-  actionLoading.value = true
-  await cancelJoinRequest(thisRoom.value.id)
-  actionLoading.value = false
-}
-
-async function handleAcceptInvitation() {
-  if (!pendingInvitationId.value) return
-  actionLoading.value = true
-  await acceptInvitation(pendingInvitationId.value)
-  actionLoading.value = false
-  open.value = false
-}
-
-async function handleDeclineInvitation() {
-  if (!pendingInvitationId.value) return
-  actionLoading.value = true
-  await declineInvitation(pendingInvitationId.value)
-  actionLoading.value = false
-}
-
-async function handleLeaveRoom() {
-  if (!thisRoom.value?.id) return
-  actionLoading.value = true
-  const success = await leaveRoomMembership(thisRoom.value.id)
-  actionLoading.value = false
-  if (success) {
-    open.value = false
   }
 }
 
@@ -575,44 +517,6 @@ onBeforeUnmount(() => {
           :is-loading="isMusicLoading"
           @files-selected="handleMusicFilesSelected"
         />
-
-        <!-- Membership Actions -->
-        <SectionTitle>Membership</SectionTitle>
-
-        <template v-if="membershipState === 'none'">
-          <UButton color="info" icon="i-lucide-user-plus" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleRequestToJoin">
-            Request to Join
-          </UButton>
-        </template>
-
-        <template v-else-if="membershipState === 'pending_request'">
-          <p class="text-sm text-muted text-center">Your request is awaiting approval.</p>
-          <UButton icon="i-lucide-x" color="warning" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleCancelRequest">
-            Cancel Request
-          </UButton>
-        </template>
-
-        <template v-else-if="membershipState === 'has_invitation'">
-          <p class="text-sm text-muted text-center mb-2">The room owner has invited you to join.</p>
-          <div class="flex gap-2">
-            <UButton icon="i-lucide-check" color="success" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleAcceptInvitation">
-              Accept
-            </UButton>
-            <UButton icon="i-lucide-x" color="error" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleDeclineInvitation">
-              Decline
-            </UButton>
-          </div>
-        </template>
-
-        <template v-else-if="membershipState === 'member' || membershipState === 'admin'">
-          <UButton icon="i-lucide-log-out" color="error" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleLeaveRoom">
-            Leave Room
-          </UButton>
-        </template>
-
-        <template v-else-if="membershipState === 'owner'">
-          <p class="text-sm text-muted text-center">You are the room owner.</p>
-        </template>
 
         <UButton color="neutral" variant="subtle" icon="i-lucide-x" class="justify-center mt-4" @click="() => {open = false}">
           Close

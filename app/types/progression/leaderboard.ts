@@ -39,5 +39,6 @@ export interface GiftLeaderboardResponse {
     period: LeaderboardPeriod
     room_id: number
     leaderboard: LeaderboardEntry[]
+    period_total_xp: string
   }
 }

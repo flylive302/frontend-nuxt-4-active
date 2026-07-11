@@ -9,6 +9,20 @@ import type {
   GiftLeaderboardResponse,
 } from '~/types/progression/leaderboard'
 
+// ========================================
+// Module-Level State
+// ========================================
+
+/**
+ * Shared active-tab period total for the Room Activity drawer. Module-level
+ * (mirrors useRoomGifts's giftQueue pattern) rather than per-instance: the
+ * drawer's leaderboard composable seeds it on fetch/refresh, while gift
+ * send/receive bumps (useRoomGifts / useRoomEventHandlers) land on it via
+ * `bumpPeriodTotalXp` regardless of which composable instance is mounted.
+ * Single active room drawer at a time, so one shared value is correct —
+ * mirrors the room store's single-`currentRoom` shape.
+ */
+const periodTotalXp = ref<string>('0')
 
 // ========================================
 // Composable
@@ -97,6 +111,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
       if (requestId !== currentRequestId) return
 
       entries.value = response.data.leaderboard
+      periodTotalXp.value = response.data.period_total_xp
       error.value = null
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -148,6 +163,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     refreshing.value = false
     error.value = null
     hasFetched.value = false
+    periodTotalXp.value = '0'
   }
 
   // ========================================
@@ -173,6 +189,7 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     refreshing,
     error,
     hasFetched,
+    periodTotalXp,
 
     // Actions
     fetch,
@@ -180,4 +197,16 @@ export function useRoomGiftLeaderboard(roomId: number | (() => number)) {
     setPeriod,
     reset,
   }
+}
+
+/**
+ * Optimistic bump of the drawer's period-total XP, mirroring
+ * `roomStore.bumpDailyXp`. Called by useRoomGifts.sendGift and
+ * useRoomEventHandlers's gift:received handler alongside the daily-XP bump —
+ * a gift landing now counts toward every period (daily ⊂ weekly ⊂ monthly ⊂
+ * all-time), so this applies unconditionally, with no tab check.
+ */
+export function bumpPeriodTotalXp(amount: number): void {
+  const currentTotal = parseFloat(periodTotalXp.value || '0')
+  periodTotalXp.value = (currentTotal + amount).toString()
 }

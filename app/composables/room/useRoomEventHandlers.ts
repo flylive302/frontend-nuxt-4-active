@@ -25,6 +25,7 @@ import type {
   SeatReactionEvent,
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
+import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
@@ -390,6 +391,12 @@ export function setupRoomEventHandlers(
         const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
 
         roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
+        // Daily XP (prd-daily-room-xp.md) mirrors the same amount as the
+        // sender's optimistic bump in useRoomGifts.sendGift.
+        roomStore.bumpDailyXp(addedXp);
+        // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
+        // landing now counts toward every period, so this applies unconditionally.
+        bumpPeriodTotalXp(addedXp);
       }
     }
 

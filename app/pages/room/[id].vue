@@ -78,6 +78,7 @@ const savedVolume = typeof localStorage !== 'undefined'
 const volume = ref(savedVolume);
 const isMuted = ref(false);
 const volumePopoverOpen = ref(false);
+const settingsOpen = ref(false);
 const lastNonZeroVolume = ref(savedVolume > 0 ? savedVolume : 0.8);
 
 /**
@@ -254,6 +255,15 @@ onUnmounted(() => {
 
               <!-- Reaction Drawer trigger (ADR 0015) -->
               <LazyRoomReactionDrawer />
+
+              <!-- Room Settings Button -->
+              <UButton
+                  icon="i-lucide-settings"
+                  size="md"
+                  variant="subtle"
+                  class="backdrop-blur-lg text-primary"
+                  @click="() => { settingsOpen = true }"
+              />
             </div>
           </div>
 
@@ -266,6 +276,9 @@ onUnmounted(() => {
         </div>
 
       </div>
+
+      <!-- Settings Drawer -->
+      <LazyRoomSettingsDrawer v-model:open="settingsOpen" />
 
       <!-- Gift Playback Modal (full-screen, outside content area) -->
       <LazyRoomGiftPlaybackModal />

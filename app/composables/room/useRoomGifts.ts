@@ -7,6 +7,7 @@
 import { ref, type Ref } from 'vue';
 import { GIFT_QUEUE_INTERVAL_MS } from '../../constants/gift';
 import type { AudioSocket } from './useAudioSocket';
+import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
 
 // ============================================
 // Types
@@ -139,6 +140,12 @@ export function useRoomGifts({
       const addedXp = seatGiftValue(gift, quantity);
       const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
       roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
+      // Daily XP (prd-daily-room-xp.md) mirrors the same amount, bumped via the
+      // store setter — it also drives the in-room XP button, not the level bar.
+      roomStore.bumpDailyXp(addedXp);
+      // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
+      // landing now counts toward every period, so this applies unconditionally.
+      bumpPeriodTotalXp(addedXp);
       seatsStore.addSeatGiftValue(recipientId, seatGiftValue(gift, quantity));
     }
 

@@ -39,7 +39,18 @@ const {
   fetchJoinRequests,
   approveJoinRequest,
   rejectJoinRequest,
+  requestToJoin,
+  cancelJoinRequest,
+  fetchMyJoinRequests,
+  myJoinRequests,
 } = useRoomJoinRequests();
+const {
+  acceptInvitation,
+  declineInvitation,
+  receivedInvitations,
+  fetchReceivedInvitations,
+} = useRoomInvitations();
+const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers();
 const {
   blockedUsers,
   loading: blockedLoading,
@@ -75,11 +86,72 @@ const tabs = computed(() => [
 ]);
 
 /** Can current user manage members (owner or admin) */
-const { myMembership } = useRoomMembers()
 const canManageMembers = computed(() => {
   if (isRoomOwner.value) return true
   return myMembership.value?.role === 'admin'
 });
+
+/** Membership state for current user (drives the non-manager action block) */
+const membershipState = computed(() => {
+  const roomId = props.roomId;
+  if (isRoomOwner.value) return 'owner';
+  if (myMembership.value && myMembership.value.room_id === roomId) {
+    return myMembership.value.role === 'admin' ? 'admin' : 'member';
+  }
+  const pendingRequest = myJoinRequests.value.items.find(
+    (r) => r && (r.room_id === roomId || r.room?.id === roomId) && r.status === 'pending'
+  );
+  if (pendingRequest) return 'pending_request';
+  const pendingInvite = receivedInvitations.value.items.find(
+    (inv) => inv && (inv.room_id === roomId || inv.room?.id === roomId) && inv.status === 'pending'
+  );
+  if (pendingInvite) return 'has_invitation';
+  return 'none';
+});
+
+const pendingInvitationId = computed(() => {
+  const roomId = props.roomId;
+  const pendingInvite = receivedInvitations.value.items.find(
+    (inv) => inv && (inv.room_id === roomId || inv.room?.id === roomId) && inv.status === 'pending'
+  );
+  return pendingInvite?.id;
+});
+
+const actionLoading = ref(false);
+
+async function handleRequestToJoin() {
+  actionLoading.value = true;
+  await requestToJoin(props.roomId);
+  actionLoading.value = false;
+}
+
+async function handleCancelRequest() {
+  actionLoading.value = true;
+  await cancelJoinRequest(props.roomId);
+  actionLoading.value = false;
+}
+
+async function handleAcceptInvitation() {
+  if (!pendingInvitationId.value) return;
+  actionLoading.value = true;
+  await acceptInvitation(pendingInvitationId.value);
+  actionLoading.value = false;
+  open.value = false;
+}
+
+async function handleDeclineInvitation() {
+  if (!pendingInvitationId.value) return;
+  actionLoading.value = true;
+  await declineInvitation(pendingInvitationId.value);
+  actionLoading.value = false;
+}
+
+async function handleLeaveRoom() {
+  actionLoading.value = true;
+  const success = await leaveRoomMembership(props.roomId);
+  actionLoading.value = false;
+  if (success) open.value = false;
+}
 
 // ========================================
 // Watchers
@@ -90,9 +162,16 @@ watch(
   ([isOpen, roomId]) => {
     if (isOpen && roomId) {
       // Fetch data when drawer opens
-      fetchMembers(roomId, {}, true);
-      fetchJoinRequests(roomId, true);
-      fetchBlockedUsers(roomId);
+      if (canManageMembers.value) {
+        fetchMembers(roomId, {}, true);
+        fetchJoinRequests(roomId, true);
+        fetchBlockedUsers(roomId);
+      } else {
+        // Non-managers: fetch state needed for the membership action block
+        fetchMyMembership();
+        fetchMyJoinRequests();
+        fetchReceivedInvitations(true);
+      }
     }
   },
   { immediate: true },
@@ -266,8 +345,8 @@ function getMemberActions(member: RoomMember) {
   >
     <template #content>
       <div class="px-3 mt-3 pb-4">
-        <!-- Tabs -->
-        <div class="flex gap-2 mb-4">
+        <!-- Tabs (owner/admin only) -->
+        <div v-if="canManageMembers" class="flex gap-2 mb-4">
           <UButton
             v-for="tab in tabs"
             :key="tab.value"
@@ -282,7 +361,7 @@ function getMemberActions(member: RoomMember) {
         </div>
 
         <!-- Members Tab -->
-        <div v-if="activeTab === 'members'" class="space-y-2">
+        <div v-if="canManageMembers && activeTab === 'members'" class="space-y-2">
           <!-- Invite User Button (owner/admin only) -->
           <UButton
             v-if="canManageMembers"
@@ -350,7 +429,7 @@ function getMemberActions(member: RoomMember) {
         </div>
 
         <!-- Requests Tab -->
-        <div v-if="activeTab === 'requests'" class="space-y-3">
+        <div v-if="canManageMembers && activeTab === 'requests'" class="space-y-3">
           <div v-if="joinRequests.loading" class="flex justify-center py-8">
             <UIcon name="i-lucide-loader-2" class="animate-spin size-8" />
           </div>
@@ -399,7 +478,7 @@ function getMemberActions(member: RoomMember) {
         </div>
 
         <!-- Blocked Tab -->
-        <div v-if="activeTab === 'blocked'" class="space-y-2">
+        <div v-if="canManageMembers && activeTab === 'blocked'" class="space-y-2">
           <div v-if="blockedLoading" class="flex justify-center py-8">
             <UIcon name="i-lucide-loader-2" class="animate-spin size-8" />
           </div>
@@ -437,6 +516,40 @@ function getMemberActions(member: RoomMember) {
             </UButton>
           </div>
         </div>
+
+        <!-- Membership Actions (non-manager users) -->
+        <template v-if="!canManageMembers">
+          <template v-if="membershipState === 'none'">
+            <UButton color="info" icon="i-lucide-user-plus" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleRequestToJoin">
+              Request to Join
+            </UButton>
+          </template>
+
+          <template v-else-if="membershipState === 'pending_request'">
+            <p class="text-sm text-muted text-center mb-2">Your request is awaiting approval.</p>
+            <UButton icon="i-lucide-x" color="warning" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleCancelRequest">
+              Cancel Request
+            </UButton>
+          </template>
+
+          <template v-else-if="membershipState === 'has_invitation'">
+            <p class="text-sm text-muted text-center mb-2">The room owner has invited you to join.</p>
+            <div class="flex gap-2">
+              <UButton icon="i-lucide-check" color="success" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleAcceptInvitation">
+                Accept
+              </UButton>
+              <UButton icon="i-lucide-x" color="error" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleDeclineInvitation">
+                Decline
+              </UButton>
+            </div>
+          </template>
+
+          <template v-else-if="membershipState === 'member'">
+            <UButton icon="i-lucide-log-out" color="error" variant="subtle" size="xl" class="w-full justify-center" :loading="actionLoading" @click="handleLeaveRoom">
+              Leave Room
+            </UButton>
+          </template>
+        </template>
 
         <!-- Close Button -->
         <UButton

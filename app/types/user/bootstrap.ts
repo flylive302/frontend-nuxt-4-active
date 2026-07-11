@@ -171,6 +171,8 @@ export interface BootstrapRoom {
   is_password_protected: boolean
   country: string
   room_xp: string
+  /** Live daily room XP (resets at midnight; see prd-daily-room-xp.md). */
+  daily_xp: string
   current_level: number
   sort_order: number
   is_live: boolean

@@ -228,12 +228,12 @@ html {
        it lit longer; push the last control point up to dim even later. */
     --room-morph-dim-easing: cubic-bezier(0.7, 0, 0.9, 0.25);
 
-    /* ── Loading pulse (only while a slow join is pending) ── */
-    --room-pulse-scale: 0.7;
-    /* how small the card breathes while loading (lower = deeper) */
+    /* ── Loading shrink (only while a slow join is pending) ── */
+    --room-pulse-scale: 0.9;
+    /* how small the card shrinks to while loading (lower = smaller) */
     --room-pulse-duration: 250ms;
-    /* one full breath */
-    --room-pulse-easing: cubic-bezier(0.45, 0, 0.55, 1);
+    /* one smooth shrink */
+    --room-pulse-easing: cubic-bezier(0.33, 1, 0.68, 1);
 
     /* ── Room chrome fade-in (hides staggered panel mounts) ── */
     --room-content-fade-duration: 300ms;
@@ -330,21 +330,21 @@ html {
    so a slow verify reads as "working" rather than an unresponsive tap. The
    spring easing gives the breathe a little life; it hands off to the expand
    morph the moment `entering` clears. */
-@keyframes room-card-pulse {
-
-    0%,
-    100% {
+@keyframes room-card-shrink {
+    from {
         transform: scale(1);
     }
 
-    50% {
+    to {
         transform: scale(var(--room-pulse-scale));
     }
 }
 
 .room-card-loading {
-    animation: room-card-pulse var(--room-pulse-duration) var(--room-pulse-easing) infinite;
-    /* Keep the pulse on its own layer so it never repaints the grid around it. */
+    /* One smooth shrink, then hold — hands straight off to the expand morph the
+       instant navigation resolves. No breathing/pulsing. */
+    animation: room-card-shrink var(--room-pulse-duration) var(--room-pulse-easing) forwards;
+    /* Keep the shrink on its own layer so it never repaints the grid around it. */
     will-change: transform;
 }
 

@@ -10,10 +10,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
+import { seatGiftValue } from '../../app/utils/gift'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('nextTick', nextTick)
+// seatGiftValue is a Nuxt auto-import in the handler file under test; stub
+// the global with the real implementation for the daily-XP-bump suite below.
+vi.stubGlobal('seatGiftValue', seatGiftValue)
 // authStore's persist config calls this at store-definition time
 vi.stubGlobal('piniaPluginPersistedstate', {
   cookies: () => ({}),
@@ -215,5 +219,99 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
     vi.restoreAllMocks()
 
     expect(seatsStore.seats[3]?.occupantId).toBeNull()
+  })
+})
+
+// ============================================================
+// daily-room-xp 03 — gift:received optimistic daily_xp bump
+// ============================================================
+describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
+    vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
+    vi.stubGlobal('useGiftComboStore', () => ({ pendingRefund: 0 }))
+    vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
+    vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+    vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
+  })
+
+  async function setupGiftReceived(gift: { category: string; price: number } | null) {
+    const { setupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const { useAuthStore } = await import('../../app/stores/auth')
+    const { useRoomStore } = await import('../../app/stores/room')
+
+    const seatsStore = useRoomSeatsStore()
+    const participantsStore = useRoomParticipantsStore()
+    const authStore = useAuthStore()
+    const roomStore = useRoomStore()
+    roomStore.setCurrentRoom({ id: 1, room_xp: '500', daily_xp: '100' } as never)
+
+    vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
+    vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
+    vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useRoomStore', () => roomStore)
+    vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(gift) }))
+
+    const socket = createMockSocket()
+    const toast = { add: vi.fn() } as unknown as ReturnType<typeof useToast>
+    const actions = {
+      leaveRoom: vi.fn(),
+      stopAudio: vi.fn(),
+      consumeProducer: vi.fn(),
+      stopConsumer: vi.fn(),
+      acceptInvite: vi.fn(),
+      declineInvite: vi.fn(),
+      startAudio: vi.fn(),
+    }
+    setupRoomEventHandlers(socket as never, actions, toast)
+    return { socket, roomStore }
+  }
+
+  it('bumps daily_xp by the seat-gift-value amount for a normal gift', async () => {
+    const { socket, roomStore } = await setupGiftReceived({ category: 'normal', price: 50 })
+
+    socket.handlers.get('gift:received')?.({
+      senderId: 2,
+      recipientId: 3,
+      giftId: 9,
+      quantity: 1,
+    })
+
+    // Normal gift: seatGiftValue = full GCV = 50.
+    expect(roomStore.currentRoom?.daily_xp).toBe('150')
+    // Lifetime room_xp bumps by the same amount, unaffected by this change.
+    expect(roomStore.currentRoom?.room_xp).toBe('550')
+  })
+
+  it('bumps daily_xp by the split-base amount for a lucky gift, matching room_xp', async () => {
+    const { socket, roomStore } = await setupGiftReceived({ category: 'lucky', price: 100 })
+
+    socket.handlers.get('gift:received')?.({
+      senderId: 2,
+      recipientId: 3,
+      giftId: 9,
+      quantity: 1,
+    })
+
+    // Lucky gift: seatGiftValue = split base = floor(100 * 0.10) = 10.
+    expect(roomStore.currentRoom?.daily_xp).toBe('110')
+    expect(roomStore.currentRoom?.room_xp).toBe('510')
+  })
+
+  it('does not bump daily_xp when the gift cannot be resolved', async () => {
+    const { socket, roomStore } = await setupGiftReceived(null)
+
+    socket.handlers.get('gift:received')?.({
+      senderId: 2,
+      recipientId: 3,
+      giftId: 9,
+      quantity: 1,
+    })
+
+    expect(roomStore.currentRoom?.daily_xp).toBe('100')
   })
 })

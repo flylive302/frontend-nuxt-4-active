@@ -38,6 +38,7 @@ const {
   refreshing: leaderboardRefreshing,
   error: leaderboardError,
   hasFetched,
+  periodTotalXp,
   fetch: fetchLeaderboard,
   refresh: refreshLeaderboard,
   setPeriod,
@@ -146,7 +147,9 @@ async function handleInvite(userId: number) {
   }
 }
 
-const roomXp = computed(() => roomStore.currentRoom?.room_xp)
+// Outer XP button shows live *daily* XP (prd-daily-room-xp.md), distinct from
+// the lifetime room_xp used by the level progress bar / level-up flow.
+const dailyXp = computed(() => roomStore.currentRoom?.daily_xp)
 
 /**
  * Get rank badge color based on position.
@@ -176,8 +179,8 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
         class="cursor-pointer shadow-md backdrop-blur-lg font-bold text-md leading-none text-primary"
         @click="($event.currentTarget as HTMLElement)?.blur()"
       >
-      <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-4" alt="room xp indicator">
-      {{formatXp(roomXp)}}
+        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-4" alt="room xp indicator">
+        {{formatXp(dailyXp)}}
       </UButton>
 
       <template #content>
@@ -195,10 +198,12 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                 @click="refreshLeaderboard"
               />
               <UButton
-                variant="soft" icon="i-lucide-coins" size="xs"
+                variant="soft"
+                size="xs"
                 class="cursor-pointer text-primary shadow-md backdrop-blur-xs font-bold"
               >
-                {{ formatCurrency(roomXp) }}
+                <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-4" alt="room xp indicator">
+                {{formatXp(periodTotalXp)}}
               </UButton>
             </div>
           </div>

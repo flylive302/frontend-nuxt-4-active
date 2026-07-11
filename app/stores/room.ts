@@ -95,6 +95,19 @@ export const useRoomStore = defineStore('roomStore', () => {
     }
   }
 
+  /**
+   * Optimistic bump of live daily XP (mirrors the room_xp bump technique used
+   * by useRoomGifts.sendGift / useRoomEventHandlers's gift:received handler).
+   * Corrects on next authoritative sync (rejoin/refetch/drawer refresh) —
+   * no local midnight-rollover handling needed here.
+   */
+  function bumpDailyXp(amount: number) {
+    if (currentRoom.value) {
+      const currentXp = parseFloat(currentRoom.value.daily_xp || '0');
+      currentRoom.value.daily_xp = (currentXp + amount).toString();
+    }
+  }
+
   function updateParticipantCount(count: number) {
     if (currentRoom.value) {
       currentRoom.value.participant_count = count;
@@ -122,6 +135,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     setUserRoom,
     leaveRoom,
     updateRoomLevel,
+    bumpDailyXp,
     updateParticipantCount,
   };
 }, {

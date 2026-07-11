@@ -105,8 +105,13 @@ export function useRoomEntry() {
 
     await beginRoomExpand(room.id, cardSeedSrc)
 
+    // Await navigation so the caller's `entering=false` (which drops the loading
+    // shrink) only runs AFTER the view transition has captured the card snapshot.
+    // Otherwise the card un-shrinks to scale(1) a frame before capture and the
+    // morph starts from full size — the grow-back jitter. Awaiting keeps the card
+    // held at its shrunk state, so it grows straight from shrunk → fullscreen.
     if (!rejoin) {
-      navigateTo(`/room/${room.id}`)
+      await navigateTo(`/room/${room.id}`)
       return
     }
 
@@ -116,7 +121,7 @@ export function useRoomEntry() {
     }
 
     roomStore.setCurrentRoom(room, fromRoute)
-    navigateTo(`/room/${room.id}`)
+    await navigateTo(`/room/${room.id}`)
     void fetchRoomById(room.id)
   }
 
