@@ -89,7 +89,7 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
     <!-- Stretchable task card: taskBg as a 9-slice border-image so the frame grows
          with the rewards grid (1, 2, or 4+ rewards) instead of a fixed-aspect image. -->
     <div class="task-card w-full -mt-6" :style="taskCardStyle">
-      <div class="flex items-center justify-center gap-2 mb-3 px-1">
+      <div class="flex items-center justify-center gap-2 mb-3 px-8">
         <!-- Progress bar -->
         <div class="h-4 w-full rounded-full bg-tertiary/30 overflow-hidden">
           <div

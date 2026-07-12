@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
+import type { ProfileImageType } from '~/composables/auth/useProfileImageUpload'
 // ========================================
 // Imports & Types
 // ========================================
@@ -52,6 +53,30 @@ const dataCardAsset = computed(() =>
 const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
 const vip = authStore.user?.vip_level;
+
+// ========================================
+// Image Preview (cover / avatar)
+// ========================================
+
+const imagePreviewType = ref<ProfileImageType>('avatar')
+const imagePreviewOpen = ref(false)
+const { isUploading, progress, uploadProfileImage } = useProfileImageUpload()
+
+// Reactive so the preview refreshes in place after a successful upload
+const imagePreviewSrc = computed<string>(() =>
+  imagePreviewType.value === 'avatar'
+    ? authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER
+    : authStore.user?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER
+)
+
+function openImagePreview(type: ProfileImageType): void {
+  imagePreviewType.value = type
+  imagePreviewOpen.value = true
+}
+
+async function handlePreviewFileSelected(file: File): Promise<void> {
+  await uploadProfileImage(imagePreviewType.value, file)
+}
 </script>
 
 <template>
@@ -64,7 +89,8 @@ const vip = authStore.user?.vip_level;
           densities="x1 x2"
           sizes="320px"
           width="100%"
-          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite]"
+          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
+          @click="openImagePreview('cover')"
         />
       </template>
 
@@ -93,14 +119,14 @@ const vip = authStore.user?.vip_level;
       </template>
 
       <template #avatar>
-        <NuxtLink :to="{ path: '/profile/' + authStore.user?.signature }" class="mt-[-12vw] w-9/12">
+        <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
           <UserAvatar
             :animated="true"
             :frame-asset-url="resolvePropAsset(authStore?.user?.frame_id) ?? undefined"
             :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-full profile-avatar-anchor"
           />
-        </NuxtLink>
+        </div>
       </template>
 
       <template #badges>
@@ -115,12 +141,14 @@ const vip = authStore.user?.vip_level;
       </template>
 
       <template #name>
-        <MarqueeName
-          class="mx-auto max-w-36"
-          text-class="text-lg leading-none font-bold"
-          :name="authStore.user?.name || ''"
-          :vip="authStore.user?.vip_level"
-        />
+        <NuxtLink :to="`/profile/${authStore.user?.signature}`">
+          <MarqueeName
+              class="mx-auto max-w-36"
+              text-class="text-lg leading-none font-bold"
+              :name="authStore.user?.name || ''"
+              :vip="authStore.user?.vip_level"
+          />
+        </NuxtLink>
       </template>
 
       <template #stats>
@@ -173,5 +201,17 @@ const vip = authStore.user?.vip_level;
       <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/create" icon="i-lucide-plus-circle" txt="Create Agency" />
 
     </div>
+
+    <!-- Cover / Avatar Image Preview -->
+    <ImagePreviewModal
+      :src="imagePreviewSrc"
+      :open="imagePreviewOpen"
+      :variant="imagePreviewType"
+      editable
+      :uploading="isUploading"
+      :progress="progress"
+      @close="imagePreviewOpen = false"
+      @file-selected="handlePreviewFileSelected"
+    />
   </div>
 </template>

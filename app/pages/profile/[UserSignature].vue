@@ -6,6 +6,7 @@ import { ASSETS } from '~/constants/assets'
 
 import { useInfiniteScroll } from '@vueuse/core'
 import type { UserProfile, PropPreviewItem } from '~/types/user/user-profile'
+import type { ProfileImageType } from '~/composables/auth/useProfileImageUpload'
 import {computed} from "vue";
 import MarqueeName from "~/components/common/marquee-name.vue";
 
@@ -168,6 +169,38 @@ function openPreview(item: PropPreviewItem): void {
 }
 
 // ========================================
+// Image Preview (cover / avatar)
+// ========================================
+
+const imagePreviewType = ref<ProfileImageType>('avatar')
+const imagePreviewOpen = ref(false)
+const { isUploading, progress, uploadProfileImage } = useProfileImageUpload()
+
+// Reactive so the preview refreshes in place after a successful upload
+const imagePreviewSrc = computed<string>(() =>
+  imagePreviewType.value === 'avatar'
+    ? profileWritable.value?.avatar ?? ASSETS.AVATAR_PLACEHOLDER
+    : profileWritable.value?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER
+)
+
+function openImagePreview(type: ProfileImageType): void {
+  imagePreviewType.value = type
+  imagePreviewOpen.value = true
+}
+
+async function handlePreviewFileSelected(file: File): Promise<void> {
+  const ok = await uploadProfileImage(imagePreviewType.value, file)
+  // Sync the local writable profile copy with the freshly stored URL
+  if (ok && profileWritable.value && authStore.user) {
+    profileWritable.value = {
+      ...profileWritable.value,
+      avatar: authStore.user.avatar,
+      cover_image: authStore.user.cover_image,
+    }
+  }
+}
+
+// ========================================
 // Infinite Scroll for Active Tab
 // ========================================
 
@@ -259,7 +292,8 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
           densities="x1 x2"
           sizes="320px"
           width="100%"
-          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite]"
+          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
+          @click="openImagePreview('cover')"
         />
       </template>
 
@@ -288,7 +322,7 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       </template>
 
       <template #avatar>
-        <div class="mt-[-12vw] w-9/12">
+        <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
           <UserAvatar
             :animated="true"
             :frame-asset-url="resolvePropAsset(profileWritable?.frame_id) ?? undefined"
@@ -562,6 +596,18 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
         />
       </div>
     </footer>
+
+    <!-- Cover / Avatar Image Preview -->
+    <ImagePreviewModal
+      :src="imagePreviewSrc"
+      :open="imagePreviewOpen"
+      :variant="imagePreviewType"
+      :editable="isOwnProfile"
+      :uploading="isUploading"
+      :progress="progress"
+      @close="imagePreviewOpen = false"
+      @file-selected="handlePreviewFileSelected"
+    />
 
     <!-- Prop / Gift Preview Modal -->
     <PropPreviewModal

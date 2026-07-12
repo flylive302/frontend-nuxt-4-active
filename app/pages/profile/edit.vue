@@ -106,7 +106,7 @@ const formState = reactive<Partial<FormSchema>>({
 const formRef = ref<Form<FormSchema> | null>(null)
 
 const authStore = useAuthStore()
-const { updateProfile, uploadAvatar, uploadCoverImage } = useProfileActions()
+const { updateProfile } = useProfileActions()
 const { logout } = useAuthActions()
 const showDeleteModal = ref(false)
 const isFollowListPublic = ref(authStore.user?.is_follow_list_public ?? true)
@@ -142,69 +142,13 @@ const selectedGenderIcon = computed<string>(() => {
   return matchedOption?.icon ?? ICON_DEFAULT_GENDER
 })
 
-const isUploadingAvatar = ref(false)
-const avatarProgress = ref(-1)
-const isUploadingCoverImage = ref(false)
-const coverProgress = ref(-1)
 const toast = useToast()
-
-/**
- * User's avatar URL (BootstrapUser.avatar is now a string directly).
- */
-const avatarUrl = computed<string | null>(() => {
-  return authStore.user?.avatar ?? null
-})
-
-/**
- * User's cover image URL.
- */
-const coverImageUrl = computed<string | null>(() => {
-  return authStore.user?.cover_image ?? null
-})
 
 // ========================================
 // Asset Management
 // ========================================
 
 const showAssetModal = ref(false)
-
-async function handleAvatarSelected(file: File) {
-  try {
-    isUploadingAvatar.value = true
-    avatarProgress.value = 0
-    await uploadAvatar(file, (percent) => {
-      avatarProgress.value = percent
-    })
-  } catch {
-    toast.add({
-      title: 'Upload Failed',
-      description: 'Failed to upload avatar. Please try again.',
-      color: 'error',
-    })
-  } finally {
-    isUploadingAvatar.value = false
-    avatarProgress.value = -1
-  }
-}
-
-async function handleCoverImageSelected(file: File) {
-  try {
-    isUploadingCoverImage.value = true
-    coverProgress.value = 0
-    await uploadCoverImage(file, (percent) => {
-      coverProgress.value = percent
-    })
-  } catch {
-    toast.add({
-      title: 'Upload Failed',
-      description: 'Failed to upload cover image. Please try again.',
-      color: 'error',
-    })
-  } finally {
-    isUploadingCoverImage.value = false
-    coverProgress.value = -1
-  }
-}
 
 /**
  * Handles form submission by validating data, preparing the API payload,
@@ -352,36 +296,6 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
           class="mb-4"
           icon="i-lucide-alert-circle"
       />
-      
-      <!-- Avatar Upload (circular) -->
-      <div class="mb-2">
-        <FileUpload
-            :current-image="avatarUrl"
-            :loading="isUploadingAvatar"
-            :progress="avatarProgress"
-            crop
-            @file-selected="handleAvatarSelected"
-        />
-        <p class="text-lg text-center font-semibold mt-2">Upload Profile Picture</p>
-      </div>
-
-      <!-- Cover Image Upload (rectangular, 45:32 crop) -->
-      <div class="mb-6">
-        <FileUpload
-            :current-image="coverImageUrl"
-            :loading="isUploadingCoverImage"
-            :progress="coverProgress"
-            crop
-            :aspect-ratio="45 / 32"
-            shape="rounded"
-            container-class="w-full aspect-[45/32]"
-            icon="i-lucide-image"
-            label="Upload cover image"
-            :max-size="5"
-            @file-selected="handleCoverImageSelected"
-        />
-        <p class="text-lg text-center font-semibold mt-2">Upload Cover Image</p>
-      </div>
 
       <UForm ref="formRef" :schema="formSchema" :state="(formState as Partial<FormSchema>)" class="space-y-3" @submit="handleFormSubmit">
         <UFormField label="Name" name="name" :error="nameError">

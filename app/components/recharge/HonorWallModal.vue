@@ -88,7 +88,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
 <template>
   <UModal
     :open="open"
-    :ui="{ overlay: 'bg-black/80 backdrop-blur-sm' }"
+    :ui="{ overlay: 'bg-transparent backdrop-blur-sm' }"
     @update:open="(val) => !val && emit('close')"
   >
     <template #content>
@@ -102,7 +102,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
         >
 
         <!-- Overlay content -->
-        <div class="absolute inset-0 flex flex-col px-4 pt-12 pb-4">
+        <div class="absolute inset-0 flex flex-col px-4 pt-15 pb-4">
           <!-- Close button -->
           <UButton
             icon="i-lucide-x"

@@ -4,6 +4,7 @@
 // ========================================
 import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
+import { buildCroppedFile, isValidMimeType } from '~/utils/image-file'
 
 // Async-load stencils so the vue-advanced-cropper chunk doesn't get pulled
 // into bundles that import this component (e.g., auth routes via auto-imports).
@@ -167,81 +168,9 @@ function validateAndProcessFile(file: File) {
   }
 }
 
-/**
- * Validates a file's MIME type against an accept string.
- * Supports wildcards like 'image/*' and comma-separated values like 'image/png,image/jpeg'
- */
-function isValidMimeType(fileType: string, accept: string): boolean {
-  const acceptedTypes = accept.split(',').map(t => t.trim())
-  
-  return acceptedTypes.some(acceptType => {
-    if (acceptType === '*/*') return true
-    if (acceptType.endsWith('/*')) {
-      // Wildcard match: 'image/*' should match 'image/png'
-      const category = acceptType.replace('/*', '')
-      return fileType.startsWith(`${category}/`)
-    }
-    // Exact match
-    return fileType === acceptType
-  })
-}
-
-/**
- * Maps MIME types to their corresponding file extensions
- */
-function getExtensionFromMimeType(mimeType: string): string | null {
-  const mimeToExtension: Record<string, string> = {
-    'image/jpeg': '.jpg',
-    'image/jpg': '.jpg',
-    'image/png': '.png',
-    'image/webp': '.webp',
-    'image/gif': '.gif',
-    'image/bmp': '.bmp',
-    'image/svg+xml': '.svg',
-    'image/tiff': '.tiff',
-    'image/x-icon': '.ico',
-  }
-  return mimeToExtension[mimeType.toLowerCase()] || null
-}
-
-/**
- * Sanitizes a filename by removing or replacing invalid characters
- */
-function sanitizeFilename(filename: string): string {
-  // Remove invalid characters for filenames (Windows/Unix compatible)
-  // eslint-disable-next-line no-control-regex
-  return filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim()
-}
-
-/**
- * Updates a filename's extension based on the new MIME type
- */
-function updateFilenameExtension(originalName: string, newExtension: string): string {
-  // Remove existing extension if present
-  const lastDotIndex = originalName.lastIndexOf('.')
-  const nameWithoutExt = lastDotIndex > 0 
-    ? originalName.substring(0, lastDotIndex)
-    : originalName
-  
-  // Append new extension
-  return sanitizeFilename(nameWithoutExt) + newExtension
-}
-
 function handleCropConfirm(blob: Blob) {
   if (selectedFile.value) {
-    // Derive the correct extension from the output format
-    const extension = getExtensionFromMimeType(props.outputFormat)
-    
-    // Update filename with correct extension, or fall back to original if MIME is unknown
-    const updatedFilename = extension
-      ? updateFilenameExtension(selectedFile.value.name, extension)
-      : selectedFile.value.name
-    
-    const croppedFile = new File([blob], updatedFilename, {
-      type: props.outputFormat,
-      lastModified: Date.now(),
-    })
-    emit('file-selected', croppedFile)
+    emit('file-selected', buildCroppedFile(blob, selectedFile.value.name, props.outputFormat))
   }
 }
 
