@@ -36,6 +36,17 @@ export interface MinimalUser {
 }
 
 /**
+ * Visitor of a user's profile — a MinimalUser plus visit metadata.
+ * Returned by: GET /users/me/visitors
+ */
+export interface VisitorUser extends MinimalUser {
+  /** ISO 8601 timestamp of the most recent visit. */
+  last_visited_at: string
+  /** Distinct days visited (deduped daily), not raw view count. */
+  visit_count: number
+}
+
+/**
  * Bootstrap user - authenticated user from bootstrap.
  * Returned by: GET /bootstrap, POST /auth/login, POST /auth/register, GET /auth/user
  */
@@ -82,6 +93,8 @@ export interface BootstrapUser {
   is_follow_list_public: boolean
   followers_count: number
   following_count: number
+  /** Distinct-day visitor count to this user's own profile (self-only). */
+  profile_visits?: number
 
   // Block status (auth-time checks)
   is_blocked: boolean

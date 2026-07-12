@@ -67,6 +67,43 @@ export function getAgeFormatted(
 }
 
 /**
+ * Compact "ago" relative time for profile visitor rows.
+ * - Same day  → "Just now", "5m ago", "3h ago"
+ * - Yesterday → "Yesterday"
+ * - Older     → "Jul 10" or "Jul 10, 2025"
+ */
+export function formatVisitTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+
+  const isSameCalendarDay = date.getDate() === now.getDate()
+    && date.getMonth() === now.getMonth()
+    && date.getFullYear() === now.getFullYear()
+
+  if (isSameCalendarDay) {
+    const diffMinutes = Math.floor(diffMs / 60_000)
+    if (diffMinutes < 1) return 'Just now'
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    return `${Math.floor(diffMs / 3_600_000)}h ago`
+  }
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const isYesterday = date.getDate() === yesterday.getDate()
+    && date.getMonth() === yesterday.getMonth()
+    && date.getFullYear() === yesterday.getFullYear()
+
+  if (isYesterday) return 'Yesterday'
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  })
+}
+
+/**
  * WhatsApp-style relative time for chat threads and messages.
  * - Same day  → "14:23"
  * - Yesterday → "Yesterday"

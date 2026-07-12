@@ -253,6 +253,13 @@ const { isToggling, statusLoaded, isSelf, buttonIcon, toggleFollow, buttonLabel 
   computed(() => currentSeat.value?.user?.id ?? null)
 )
 
+function handleChatButton() {
+  const userId = currentSeat.value?.user?.id
+  if (!userId) return
+  isOpen.value = false
+  seatsStore.openChat(userId)
+}
+
 function handleGiftButton() {
   const userId = currentSeat.value?.user?.id
   if (!userId) return
@@ -503,7 +510,7 @@ const seatUserAge = computed(() =>
                 size="xl"
                 variant="outline"
                 icon="i-lucide-message-circle-more"
-                @click="handleNavigateAway(`/inbox?start=${currentSeat?.user?.id}`)"
+                @click="handleChatButton"
             >
               Chat
             </UButton>

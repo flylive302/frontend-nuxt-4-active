@@ -159,6 +159,7 @@ async function handlePreviewFileSelected(file: File): Promise<void> {
               :charm-xp="authStore.user?.charm_xp ?? '0'"
               :followers="String(authStore.user?.followers_count ?? 0)"
               :following="String(authStore.user?.following_count ?? 0)"
+              :visits="String(authStore.user?.profile_visits ?? 0)"
               :user-id="authStore.user?.id ?? null"
               :is-follow-list-public="true"
               :is-own-profile="true"

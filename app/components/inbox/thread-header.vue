@@ -1,28 +1,34 @@
 <script setup lang="ts">
-defineProps<{
-  name: string
-  avatar?: string | null
-  frame?: string | null
-  signature?: string | null
-  gender?: number | null
-  isSystem?: boolean
-}>()
+withDefaults(
+  defineProps<{
+    name: string
+    avatar?: string | null
+    frame?: string | null
+    signature?: string | null
+    gender?: number | null
+    isSystem?: boolean
+    /** Full page pins the header with `position: fixed`; a drawer contains it in-flow instead. */
+    fixed?: boolean
+  }>(),
+  { fixed: true },
+)
 
 defineEmits<{
-  (e: 'block' | 'deleteChat' | 'report'): void
+  (e: 'block' | 'deleteChat' | 'report' | 'back'): void
 }>()
-
-const router = useRouter()
 </script>
 
 <template>
-  <header class="fixed top-0 inset-x-0 z-40 safe-area-top box-content flex items-center gap-3 px-3 h-14 bg-default/90 backdrop-blur border-b border-muted/20">
+  <header
+    class="top-0 inset-x-0 z-40 safe-area-top box-content flex items-center gap-3 px-3 h-14 bg-default/90 backdrop-blur border-b border-muted/20"
+    :class="fixed ? 'fixed' : 'relative shrink-0'"
+  >
     <UButton
       variant="ghost"
       icon="i-lucide-arrow-left"
       size="sm"
       class="-ml-1"
-      @click="router.back()"
+      @click="$emit('back')"
     />
 
     <!-- Avatar / Icon -->

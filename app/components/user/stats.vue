@@ -38,6 +38,12 @@ const followingLink = computed(() => {
   if (!isClickable.value || !props.userId) return undefined
   return `/profile/follows?user=${props.userId}&tab=following`
 })
+
+/** Viewers are private — only the owner can open their own visitors tab. */
+const visitsLink = computed(() => {
+  if (!props.isOwnProfile || !props.userId) return undefined
+  return `/profile/follows?user=${props.userId}&tab=viewers`
+})
 </script>
 
 <template>
@@ -56,7 +62,15 @@ const followingLink = computed(() => {
       {{ formatCurrency(following) }} <br> Following
     </p>
 
-    <p> {{ formatCurrency(visits) }} <br> Visits </p>
+    <!-- Visits Stat -->
+    <NuxtLink
+      v-if="visitsLink"
+      :to="visitsLink"
+      class="hover:text-primary transition-colors"
+    >
+      {{ formatCurrency(visits) }} <br> Visits
+    </NuxtLink>
+    <p v-else> {{ formatCurrency(visits) }} <br> Visits </p>
 
     <!-- Followers Stat -->
     <NuxtLink

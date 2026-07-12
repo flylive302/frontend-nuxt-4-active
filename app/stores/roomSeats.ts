@@ -42,6 +42,11 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   // exclusive with `activeSeat` — only one is ever non-null (see openSeat/openProfile).
   const profileUserId = ref<number | null>(null);
 
+  // In-room chat drawer target — the userId whose DM thread is shown in
+  // RoomChatDrawer. Independent of activeSeat/profileUserId (chat drawer
+  // layers on top rather than replacing the seat drawer's own content).
+  const chatDrawerUserId = ref<number | null>(null);
+
   // ========================================
   // Self-retake staleness window (F-24)
   // ========================================
@@ -225,6 +230,15 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     profileUserId.value = null;
   }
 
+  /** Open the in-room chat drawer for `userId`'s DM thread. */
+  function openChat(userId: number): void {
+    chatDrawerUserId.value = userId;
+  }
+
+  function closeChat(): void {
+    chatDrawerUserId.value = null;
+  }
+
   // ========================================
   // Cross-Store Helpers (called by roomAudio)
   // ========================================
@@ -336,12 +350,15 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     activeSeat,
     inviteModeSeat,
     profileUserId,
+    chatDrawerUserId,
     startInviteMode,
     cancelInviteMode,
     openSeat,
     closeSeat,
     openProfile,
     closeProfile,
+    openChat,
+    closeChat,
 
     // Cross-store helpers
     syncActiveSpeakers,

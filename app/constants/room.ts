@@ -39,6 +39,16 @@ export const ROOM_THEME_COLORS = [
   { label: 'Blue', value: '#2563eb' },
   { label: 'Violet', value: '#7c3aed' },
   { label: 'Pink', value: '#db2777' },
+  { label: 'Neon Green', value: '#22c55e' },
+  { label: 'Hot Magenta', value: '#e11de1' },
+  { label: 'Sunset Coral', value: '#ff6b6b' },
+  { label: 'Lavender', value: '#a78bfa' },
+  { label: 'Turquoise', value: '#14b8a6' },
+  { label: 'Electric Lime', value: '#a3e635' },
+  { label: 'Sky', value: '#38bdf8' },
+  { label: 'Fuchsia', value: '#d946ef' },
+  { label: 'Black', value: '#000000' },
+  { label: 'White', value: '#ffffff' },
 ] as const;
 
 // ============================================
