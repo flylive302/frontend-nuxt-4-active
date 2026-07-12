@@ -593,6 +593,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
             senderAvatar: selfUser.avatar ?? undefined,
             recipientIds: [],
             quantity: 1,
+            isEntryAnimation: true,
           });
         })();
       }

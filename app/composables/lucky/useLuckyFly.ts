@@ -8,6 +8,7 @@
  * Module-level state enables concurrent fly animations without conflicts.
  */
 import { LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
+import { useFxPreferencesStore } from '~/stores/fxPreferences';
 
 // ========================================
 // Types
@@ -114,6 +115,10 @@ export function useLuckyFly() {
    * @param recipientId - User ID of the recipient (end position)
    */
   function triggerFly(thumbnailUrl: string, senderId: number, recipientId: number): void {
+    // GATE: Gift Mute preference suppresses the fly visual on this device only —
+    // the lucky send/win itself (balances, session state) is already booked.
+    if (useFxPreferencesStore().muteGiftAnimations) return;
+
     const item: LuckyFlyItem = {
       id: generateFlyId(),
       thumbnailUrl,

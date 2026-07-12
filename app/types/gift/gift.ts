@@ -96,6 +96,11 @@ export interface GiftPlaybackItem {
    * omitted on the sender's own enqueue (always unique, never coalesced).
    */
   batchId?: string;
+  /**
+   * Marks an entry-animation playback (equipped entry prop played on room
+   * join) so the Entry Mute preference can drop it without affecting gifts.
+   */
+  isEntryAnimation?: boolean;
 }
 
 // ============================================

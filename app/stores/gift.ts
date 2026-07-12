@@ -5,6 +5,7 @@
  * Side-effects (preload watch/debounce) have been extracted to useGiftPreload composable (SRP).
  */
 import { defineStore } from 'pinia';
+import { useFxPreferencesStore } from '~/stores/fxPreferences';
 import type { Gift, GiftPlaybackItem } from '~/types/gift/gift';
 import { MAX_PLAYBACK_QUEUE_SIZE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
 import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
@@ -125,6 +126,15 @@ export const useGiftStore = defineStore('giftStore', () => {
    * @param item - Gift playback item (without id and timestamp)
    */
   function enqueuePlayback(item: Omit<GiftPlaybackItem, 'id' | 'timestamp'>) {
+    // GATE: per-device FX mute preferences. This is the single choke point every
+    // producer funnels through (gift:received, own sends, combos, entry
+    // animations), so gating here — a pure state read, not a cross-store action
+    // call — keeps future enqueue sites from having to remember the check.
+    // Balances/XP/transactions are booked by callers BEFORE enqueueing, so a
+    // dropped item only skips the visual.
+    const fxPrefs = useFxPreferencesStore();
+    if (item.isEntryAnimation ? fxPrefs.muteEntryAnimations : fxPrefs.muteGiftAnimations) return;
+
     // GATE: coalesce per-recipient fan-out of a single send into one playback.
     if (item.batchId) {
       if (seenBatchIds.has(item.batchId)) return;

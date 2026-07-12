@@ -150,6 +150,7 @@ export function setupRoomEventHandlers(
           senderAvatar: event.user.avatar ?? undefined,
           recipientIds: [],
           quantity: 1,
+          isEntryAnimation: true,
         });
       }
     }

@@ -9,6 +9,7 @@
 // - Privacy   → RoomSettingsPrivacyDrawer (owner only)
 // - Block List→ RoomBlockListDrawer (owner/admin)
 // - Music     → RoomAudioPlayerUploader (owner/admin; force-take owner only)
+// - Gift Mute / Entry Mute → in-place per-device FX toggles (everyone)
 // ========================================
 
 // ========================================
@@ -27,6 +28,7 @@ const showBlockList = ref(false)
 // ========================================
 
 const roomStore = useRoomStore()
+const fxPrefs = useFxPreferencesStore()
 const { socket } = useAudioSocket()
 const { canEdit, isRoomOwner, refresh } = useRoomMembershipState(
   () => roomStore.currentRoom?.id ?? null
@@ -136,6 +138,46 @@ onMounted(() => {
             />
             <span class="text-xs text-neutral-200">
               {{ canForceTakeMusic ? 'Take Over' : isMusicLocked ? 'In Use' : 'Music' }}
+            </span>
+          </button>
+
+          <!-- Gift Mute (everyone; in-place toggle, highlighted when active) -->
+          <button
+            type="button"
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
+            :class="fxPrefs.muteGiftAnimations
+              ? 'bg-primary/20 ring-2 ring-primary'
+              : 'bg-neutral-800 hover:bg-neutral-700'"
+            :aria-pressed="fxPrefs.muteGiftAnimations"
+            @click="fxPrefs.toggleGiftMute"
+          >
+            <UIcon
+              name="i-lucide-gift"
+              class="size-7"
+              :class="fxPrefs.muteGiftAnimations ? 'text-primary' : 'text-neutral-400'"
+            />
+            <span class="text-xs" :class="fxPrefs.muteGiftAnimations ? 'text-primary' : 'text-neutral-200'">
+              {{ fxPrefs.muteGiftAnimations ? 'Gifts Muted' : 'Gift Mute' }}
+            </span>
+          </button>
+
+          <!-- Entry Mute (everyone; in-place toggle, highlighted when active) -->
+          <button
+            type="button"
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
+            :class="fxPrefs.muteEntryAnimations
+              ? 'bg-primary/20 ring-2 ring-primary'
+              : 'bg-neutral-800 hover:bg-neutral-700'"
+            :aria-pressed="fxPrefs.muteEntryAnimations"
+            @click="fxPrefs.toggleEntryMute"
+          >
+            <UIcon
+              name="i-lucide-door-closed"
+              class="size-7"
+              :class="fxPrefs.muteEntryAnimations ? 'text-primary' : 'text-neutral-400'"
+            />
+            <span class="text-xs" :class="fxPrefs.muteEntryAnimations ? 'text-primary' : 'text-neutral-200'">
+              {{ fxPrefs.muteEntryAnimations ? 'Entries Muted' : 'Entry Mute' }}
             </span>
           </button>
         </div>
