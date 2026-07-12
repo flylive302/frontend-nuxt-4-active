@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "286769122290",
+    "project_id": "flylive-97159",
+    "storage_bucket": "flylive-97159.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:286769122290:android:594af631f4995c0b3bf96b",
+        "android_client_info": {
+          "package_name": "com.flylive.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQNsMd7BCPtVVl2b7V3az2hXNKGq34zQI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
