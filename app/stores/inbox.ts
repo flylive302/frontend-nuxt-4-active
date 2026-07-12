@@ -11,6 +11,7 @@ export const useInboxStore = defineStore('inbox', () => {
   // ── Thread sections ──────────────────────────────────
   const officialUnreadCount = ref(0)
   const dmThreads = ref<Thread[]>([])
+  const dmNextCursor = ref<string | null>(null)
   const requestThreads = ref<Thread[]>([])
   const threadsLoaded = ref(false)
   const threadsLoading = ref(false)
@@ -50,11 +51,22 @@ export const useInboxStore = defineStore('inbox', () => {
     messagesLoading.value = v
   }
 
-  function setThreads(officialUnread: number, dm: Thread[], requests: Thread[]): void {
+  function setThreads(officialUnread: number, dm: Thread[], requests: Thread[], dmCursor: string | null = null): void {
     officialUnreadCount.value = officialUnread
     dmThreads.value = dm
+    dmNextCursor.value = dmCursor
     requestThreads.value = requests
     threadsLoaded.value = true
+  }
+
+  function appendDmThreads(threads: Thread[], dmCursor: string | null): void {
+    const existingIds = new Set(dmThreads.value.map(t => String(t.id)))
+    dmThreads.value = [...dmThreads.value, ...threads.filter(t => !existingIds.has(String(t.id)))]
+    dmNextCursor.value = dmCursor
+  }
+
+  function setDmNextCursor(cursor: string | null): void {
+    dmNextCursor.value = cursor
   }
 
   function upsertThread(thread: Thread): void {
@@ -166,6 +178,7 @@ export const useInboxStore = defineStore('inbox', () => {
   function $reset(): void {
     officialUnreadCount.value = 0
     dmThreads.value = []
+    dmNextCursor.value = null
     requestThreads.value = []
     threadsLoaded.value = false
     threadsLoading.value = false
@@ -179,6 +192,7 @@ export const useInboxStore = defineStore('inbox', () => {
   return {
     officialUnreadCount,
     dmThreads,
+    dmNextCursor,
     requestThreads,
     threadsLoaded,
     threadsLoading,
@@ -193,6 +207,8 @@ export const useInboxStore = defineStore('inbox', () => {
     setThreadsLoading,
     setMessagesLoading,
     setThreads,
+    appendDmThreads,
+    setDmNextCursor,
     upsertThread,
     removeThread,
     setMessages,

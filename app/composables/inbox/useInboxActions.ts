@@ -21,10 +21,31 @@ export function useInboxActions() {
     store.setThreadsLoading(true)
     try {
       const res = await api<ThreadsResponse>('/inbox/threads')
-      store.setThreads(res.data.official_unread, res.data.dm, res.data.requests)
+      store.setThreads(res.data.official_unread, res.data.dm.data, res.data.requests, res.data.dm.next_cursor)
     }
     catch (err) {
       log.warn('Failed to fetch inbox threads', err)
+      const { message } = normalizeError(err)
+      toast.add({ title: message, color: 'error' })
+    }
+    finally {
+      store.setThreadsLoading(false)
+    }
+  }
+
+  // ── Load next page of DM threads (cursor pagination) ──
+  async function loadMoreThreads(): Promise<void> {
+    if (!store.dmNextCursor || store.threadsLoading) return
+
+    store.setThreadsLoading(true)
+    try {
+      const res = await api<ThreadsResponse>('/inbox/threads', {
+        params: { cursor: store.dmNextCursor },
+      })
+      store.appendDmThreads(res.data.dm.data, res.data.dm.next_cursor)
+    }
+    catch (err) {
+      log.warn('Failed to load more inbox threads', err)
       const { message } = normalizeError(err)
       toast.add({ title: message, color: 'error' })
     }
@@ -141,5 +162,5 @@ export function useInboxActions() {
     }
   }
 
-  return { fetchThreads, startThread, loadMessages, loadOlderMessages, sendMessage, markRead }
+  return { fetchThreads, loadMoreThreads, startThread, loadMessages, loadOlderMessages, sendMessage, markRead }
 }

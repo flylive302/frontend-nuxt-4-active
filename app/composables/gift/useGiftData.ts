@@ -52,7 +52,13 @@ export function useGiftData() {
   // ========================================
 
   /**
-   * Group gifts by category for tab display
+   * Sendable gifts only (excludes gifts explicitly marked sendable === false).
+   * Missing/undefined `sendable` is treated as sendable (backward compat).
+   */
+  const sendableGifts = computed<Gift[]>(() => gifts.value.filter((g) => g.sendable !== false));
+
+  /**
+   * Group gifts by category for tab display (drawer / sending UI — sendable only)
    */
   const giftsByCategory = computed<GiftCategoryGroup[]>(() => {
     const categories = Object.keys(GIFT_CATEGORY_CONFIG) as GiftCategory[];
@@ -60,7 +66,7 @@ export function useGiftData() {
     return categories
       .map((category) => {
         const config = GIFT_CATEGORY_CONFIG[category];
-        const categoryGifts = gifts.value
+        const categoryGifts = sendableGifts.value
           .filter((g) => g.category === category)
           .sort((a, b) => a.price - b.price || a.sort_order - b.sort_order);
 
@@ -136,6 +142,7 @@ export function useGiftData() {
   // ========================================
   return {
     gifts,
+    sendableGifts,
     giftsByCategory,
     isLoading,
     isInitialized,

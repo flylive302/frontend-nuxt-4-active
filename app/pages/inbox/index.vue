@@ -3,11 +3,10 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 
 // ── Composables ───────────────────────────────────────
 const store = useInboxStore()
-const { fetchThreads } = useInboxActions()
+const { fetchThreads, loadMoreThreads, startThread } = useInboxActions()
 
 // ── Init: navigate to /inbox?start=userId for Chat button ─
 const route = useRoute()
-const { startThread } = useInboxActions()
 
 onMounted(async () => {
   if (!store.threadsLoaded) await fetchThreads()
@@ -62,6 +61,18 @@ const { data: rankedFollowing } = useAsyncData(
           >
             <InboxThreadItem :thread="thread" />
           </NuxtLink>
+        </div>
+
+        <!-- ── Load more DM threads ─────────────────────── -->
+        <div v-if="store.dmNextCursor" class="flex justify-center py-3">
+          <UButton
+            variant="ghost"
+            size="sm"
+            :loading="store.threadsLoading"
+            @click="loadMoreThreads"
+          >
+            Load more
+          </UButton>
         </div>
 
         <!-- ── Requests ───────────────────────────────── -->

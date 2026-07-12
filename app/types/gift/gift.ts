@@ -29,6 +29,8 @@ export interface Gift {
   rarity: GiftRarity;
   sort_order: number;
   is_critical: boolean;
+  /** Whether this gift can currently be sent by the user. Missing/undefined = sendable (backward compat). */
+  sendable?: boolean;
 }
 
 /**

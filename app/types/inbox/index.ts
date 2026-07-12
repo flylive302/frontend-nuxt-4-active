@@ -49,7 +49,10 @@ export interface OfficialMessage {
 export interface ThreadsResponse {
   data: {
     official_unread: number
-    dm: Thread[]
+    dm: {
+      data: Thread[]
+      next_cursor: string | null
+    }
     requests: Thread[]
   }
 }
