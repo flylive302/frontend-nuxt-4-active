@@ -44,7 +44,6 @@ const {
   requestToJoin,
   cancelJoinRequest,
   fetchMyJoinRequests,
-  myJoinRequests,
 } = useRoomJoinRequests();
 const {
   acceptInvitation,
@@ -52,7 +51,7 @@ const {
   receivedInvitations,
   fetchReceivedInvitations,
 } = useRoomInvitations();
-const { myMembership, fetchMyMembership, leaveRoomMembership } = useRoomMembers();
+const { fetchMyMembership, leaveRoomMembership } = useRoomMembers();
 const {
   blockedUsers,
   loading: blockedLoading,
@@ -61,7 +60,6 @@ const {
   blockUser,
 } = useRoomBlocking();
 const { updateMemberRole } = useRoomMemberActions();
-const { isRoomOwner } = useRoomPermissions();
 
 // ========================================
 // Computed
@@ -87,29 +85,10 @@ const tabs = computed(() => [
   },
 ]);
 
-/** Can current user manage members (owner or admin) */
-const canManageMembers = computed(() => {
-  if (isRoomOwner.value) return true
-  return myMembership.value?.role === 'admin'
-});
-
-/** Membership state for current user (drives the non-manager action block) */
-const membershipState = computed(() => {
-  const roomId = props.roomId;
-  if (isRoomOwner.value) return 'owner';
-  if (myMembership.value && myMembership.value.room_id === roomId) {
-    return myMembership.value.role === 'admin' ? 'admin' : 'member';
-  }
-  const pendingRequest = myJoinRequests.value.items.find(
-    (r) => r && (r.room_id === roomId || r.room?.id === roomId) && r.status === 'pending'
-  );
-  if (pendingRequest) return 'pending_request';
-  const pendingInvite = receivedInvitations.value.items.find(
-    (inv) => inv && (inv.room_id === roomId || inv.room?.id === roomId) && inv.status === 'pending'
-  );
-  if (pendingInvite) return 'has_invitation';
-  return 'none';
-});
+/** Membership state + manage rights (shared derivation — see useRoomMembershipState) */
+const { membershipState, canEdit: canManageMembers } = useRoomMembershipState(
+  () => props.roomId
+);
 
 const pendingInvitationId = computed(() => {
   const roomId = props.roomId;

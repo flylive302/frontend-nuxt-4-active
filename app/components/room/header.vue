@@ -17,7 +17,6 @@ const { resolvePropAsset } = usePropLookup();
 // ========================================
 
 const open = ref(false);
-const showMembersPanel = ref(false);
 
 // ========================================
 // Computed - Room Data
@@ -191,15 +190,6 @@ const openLeaveDrawer = (event: Event) => {
 
     <!-- Right Section -->
     <div class="flex items-center ml-auto gap-2">
-      <!-- Membership / Members Button -->
-      <UButton
-        icon="i-lucide-users"
-        size="xl"
-        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
-        variant="soft"
-        @click="() => { showMembersPanel = true }"
-      />
-
       <UButton
         icon="i-lucide-share-2"
         size="xl"
@@ -255,7 +245,5 @@ const openLeaveDrawer = (event: Event) => {
       </UDrawer>
     </div>
   </header>
-  <!-- Membership / Members Panel -->
-  <RoomMembersPanel v-model:open="showMembersPanel" :room-id="thisRoom?.id ?? 0" style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));" />
 
 </template>

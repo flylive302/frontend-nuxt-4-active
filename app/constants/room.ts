@@ -26,6 +26,22 @@ export const MAX_SEAT_COUNT = 30;
 export const SEAT_COUNT_STEP = 5;
 
 // ============================================
+// Room Theme
+// ============================================
+
+/** Selectable room theme colors (Room Settings → Theme). */
+export const ROOM_THEME_COLORS = [
+  { label: 'Rose', value: '#e11d48' },
+  { label: 'Orange', value: '#ea580c' },
+  { label: 'Amber', value: '#d97706' },
+  { label: 'Emerald', value: '#059669' },
+  { label: 'Cyan', value: '#0891b2' },
+  { label: 'Blue', value: '#2563eb' },
+  { label: 'Violet', value: '#7c3aed' },
+  { label: 'Pink', value: '#db2777' },
+] as const;
+
+// ============================================
 // Timeouts
 // ============================================
 
