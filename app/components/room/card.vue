@@ -79,6 +79,12 @@ const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 
 function handleRoomClick(): void {
   void enterRoom(props.room, roomBackgroundSrc.value)
 }
+
+/** Map country code → flag icon class */
+const getFlagIcon = (code: string): string => {
+  const flagCode = code === 'uk' ? 'gb' : code.toLowerCase()
+  return `i-flag-${flagCode}-4x3`
+}
 </script>
 
 <template>
@@ -107,7 +113,14 @@ function handleRoomClick(): void {
       <figcaption class="sr-only">{{ props.room.name }}</figcaption>
     </figure>
 
-    <div class="absolute z-10 top-0 inset-x-0 p-1 pr-2 flex justify-end">
+    <div class="absolute z-10 top-0 inset-x-0 p-1 pr-2 gap-2 flex justify-end">
+      <!-- Password lock indicator (top-right) -->
+      <div v-if="props.room.is_password_protected" class="bg-primary size-8 flex-middle rounded-md shadow-lg">
+        <UIcon name="i-lucide-lock" class="size-4 text-white drop-shadow-lg" />
+      </div>
+
+      <UIcon :name="getFlagIcon(props.room.country)" class="size-6 rounded-md drop-shadow-lg" />
+
       <div class="w-fit flex items-center justify-end gap-2 backdrop-blur-2xl rounded rounded-tr-2xl px-2 border border-primary/10 shadow-md">
         <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5" alt="room xp indicator">
         <p class="font-bold text-lg text-white">{{formatXp(props.room.daily_xp)}}</p>
@@ -147,11 +160,6 @@ function handleRoomClick(): void {
       </div>
 
     </aside>
-
-    <!-- Password lock indicator (top-right) -->
-    <div v-if="props.room.is_password_protected" class="absolute top-0 right-0 bg-primary size-8 flex-middle rounded-bl-lg shadow-lg">
-      <UIcon name="i-lucide-lock" class="size-4 text-white drop-shadow-lg" />
-    </div>
 
   </article>
 

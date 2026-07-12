@@ -11,7 +11,7 @@ import auth from '~/middleware/auth';
 
 definePageMeta({
   layout: false,
-  middleware: auth,
+  middleware: [auth, 'room-block'],
   // Transitions are global (nuxt.config `app.viewTransition: true`). The room-card
   // morph is activated per-nav by room-transition.global.ts, which also suppresses
   // the generic root slide for this nav — see main.css.

@@ -11,6 +11,7 @@
 import { useDocumentVisibility, useEventListener } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
 import { withTimeout } from '~/utils/with-timeout';
+import { RoomBlockedError } from '~/utils/socket/socketErrorMessages';
 import { ROOM_OP_TIMEOUT_MS } from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
@@ -86,7 +87,10 @@ export function useRoomLifecycle(): void {
     async (newRoom, oldRoom) => {
       // Case 1: Room Closed
       if (oldRoom && !newRoom) {
-        leaveRoom();
+        // Pass the explicit ID — currentRoom is already null here, so a bare
+        // leaveRoom() can't resolve the room and never emits room:leave,
+        // leaving the seat occupied server-side for everyone else.
+        leaveRoom(String(oldRoom.id));
         return;
       }
 
@@ -110,12 +114,23 @@ export function useRoomLifecycle(): void {
         } catch (error) {
           log.warn('Room join failed', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          toast.add({
-            title: 'Audio connection failed',
-            description: errorMessage || 'Chat and gifting will still work.',
-            color: 'warning',
-          });
-          // Don't close room - let user stay with chat-only mode
+          if (error instanceof RoomBlockedError) {
+            // Blocked users (ADR 0017) may not be in the room at all — this
+            // path catches entries that bypassed the HTTP gate (direct URL,
+            // back button). Eject instead of degrading to chat-only.
+            toast.add({ title: 'Cannot Enter the Room', description: errorMessage, color: 'error' });
+            leaveRoom(String(newRoom.id));
+            roomStore.leaveRoom();
+            const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+            void navigateTo(target, { replace: true });
+          } else {
+            toast.add({
+              title: 'Audio connection failed',
+              description: errorMessage || 'Chat and gifting will still work.',
+              color: 'warning',
+            });
+            // Don't close room - let user stay with chat-only mode
+          }
         } finally {
           isJoining.value = false;
         }

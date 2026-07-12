@@ -85,7 +85,7 @@ export function useRoomEntry() {
         // Blocked (ADR 0017) — distinct from password-required, so it must
         // not open the password prompt.
         const toast = useToast()
-        toast.add({ title: resolveHttpBlockedMessage(data?.meta?.remaining_seconds), color: 'error' })
+        toast.add({ title: 'Cannot Enter the Room', description: resolveHttpBlockedMessage(data?.meta?.remaining_seconds), color: 'error' })
       } else if (status === 403) {
         // Password required → show prompt
         pendingRoom.value = room

@@ -24,7 +24,7 @@ import { selectMediaTransport, planTransportHandoff, type MediaTransport } from 
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import * as fgsCoordinator from '~/services/foregroundServiceCoordinator';
-import { resolveSocketErrorMessage } from '~/utils/socket/socketErrorMessages';
+import { resolveSocketErrorMessage, isRoomBlockedSocketError, RoomBlockedError } from '~/utils/socket/socketErrorMessages';
 
 // ============================================
 // Types
@@ -525,12 +525,14 @@ export function useRoomAudio(): UseRoomAudioReturn {
     );
 
     if (response.error || !response.rtpCapabilities) {
-      throw new Error(
-        resolveSocketErrorMessage(response.error, 'Failed to join room', {
-          permanent: response.permanent,
-          remaining_seconds: response.remaining_seconds,
-        }),
-      );
+      const message = resolveSocketErrorMessage(response.error, 'Failed to join room', {
+        permanent: response.permanent,
+        remaining_seconds: response.remaining_seconds,
+      });
+      if (isRoomBlockedSocketError(response.error)) {
+        throw new RoomBlockedError(message);
+      }
+      throw new Error(message);
     }
 
     // Load mediasoup device

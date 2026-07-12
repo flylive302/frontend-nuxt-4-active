@@ -54,6 +54,13 @@ export function isRoomBlockedSocketError(error: string | undefined | null): bool
 }
 
 /**
+ * Thrown when the MSAB socket join gate rejects a blocked user, so callers
+ * up the stack (room lifecycle) can distinguish "you may not enter" from a
+ * transient audio failure and eject instead of falling back to chat-only.
+ */
+export class RoomBlockedError extends Error {}
+
+/**
  * Same "blocked for another X" wording, for the HTTP join gate's
  * `meta.remaining_seconds` shape (`number | 'permanent'`) — see
  * `VerifyRoomPasswordAction::rejectIfBlocked`.
