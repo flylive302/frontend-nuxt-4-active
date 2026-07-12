@@ -2,6 +2,7 @@ import type { types as mediasoupTypes } from 'mediasoup-client';
 import type {
   AudioConsumeResponse,
   ConsumerResumeResponse,
+  ProducerSource,
 } from '~/types/room/audio';
 import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
@@ -78,7 +79,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
   // Reactive session state lives in the store
   const session = useMediasoupSessionStore();
-  const { producer, musicProducer, consumers, isLocalMuted, currentVolume, audioElements, consumerProducerByUserId } = storeToRefs(session);
+  const { producer, musicProducer, consumers, isLocalMuted, currentVolume, audioElements, consumerProducerByKey } = storeToRefs(session);
 
   // ========================================
   // Computed Properties
@@ -150,6 +151,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
         opusDtx: false,
         opusMaxAverageBitrate: 64000,
       },
+      appData: { source: 'mic' },
     });
 
     producer.value.on('transportclose', () => {
@@ -314,6 +316,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
         opusDtx: false,
         opusMaxAverageBitrate: 128000,
       },
+      appData: { source: 'music' },
     });
 
     musicProducer.value.on('transportclose', () => {
@@ -404,8 +407,16 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    *
    * @param producerId - ID of the remote producer to consume
    * @param roomId - Room ID for the consume request
+   * @param producerUserId - owning user id, used for the per-source displacement key
+   * @param source - producer purpose tag; a producer announced without one
+   *   (pre-feature server/peer) is treated as `'mic'` (compat)
    */
-  async function consumeProducer(producerId: string, roomId: string, producerUserId?: number): Promise<void> {
+  async function consumeProducer(
+    producerId: string,
+    roomId: string,
+    producerUserId?: number,
+    source: ProducerSource = 'mic',
+  ): Promise<void> {
     if (!device.value?.loaded || !consumerTransport.value) {
       return;
     }
@@ -415,8 +426,12 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    if (producerUserId !== undefined) {
-      const existingProducerId = consumerProducerByUserId.value.get(producerUserId);
+    // Composite key: a user's mic and music producers are tracked
+    // independently, so a fresh mic producer only displaces the stale mic
+    // consumer (never touches that user's music consumer), and vice versa.
+    const trackingKey = producerUserId !== undefined ? `${producerUserId}:${source}` : undefined;
+    if (trackingKey !== undefined) {
+      const existingProducerId = consumerProducerByKey.value.get(trackingKey);
       if (existingProducerId && existingProducerId !== producerId) {
         stopConsumer(existingProducerId);
       }
@@ -446,8 +461,8 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     });
 
     session.addConsumer(producerId, consumer);
-    if (producerUserId !== undefined) {
-      consumerProducerByUserId.value.set(producerUserId, producerId);
+    if (trackingKey !== undefined) {
+      consumerProducerByKey.value.set(trackingKey, producerId);
     }
 
     // Resume the consumer (consumers start paused)
@@ -498,9 +513,9 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     consumer.on('transportclose', () => {
       session.removeConsumer(producerId);
-      for (const [userId, trackedProducerId] of consumerProducerByUserId.value) {
+      for (const [key, trackedProducerId] of consumerProducerByKey.value) {
         if (trackedProducerId === producerId) {
-          consumerProducerByUserId.value.delete(userId);
+          consumerProducerByKey.value.delete(key);
         }
       }
       const closedAudio = audioElements.value.get(producerId);
@@ -526,9 +541,9 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       session.removeConsumer(producerId);
     }
 
-    for (const [userId, trackedProducerId] of consumerProducerByUserId.value) {
+    for (const [key, trackedProducerId] of consumerProducerByKey.value) {
       if (trackedProducerId === producerId) {
-        consumerProducerByUserId.value.delete(userId);
+        consumerProducerByKey.value.delete(key);
       }
     }
 

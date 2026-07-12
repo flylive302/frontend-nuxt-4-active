@@ -4,6 +4,7 @@ import type {
   TransportCreateResponse,
   TransportConnectResponse,
   AudioProduceResponse,
+  ProducerSource,
 } from '~/types/room/audio';
 import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
@@ -208,15 +209,24 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     producerTransport.value.on(
       'produce',
       (
-        { kind, rtpParameters }: { kind: mediasoupTypes.MediaKind; rtpParameters: mediasoupTypes.RtpParameters },
+        { kind, rtpParameters, appData }: {
+          kind: mediasoupTypes.MediaKind;
+          rtpParameters: mediasoupTypes.RtpParameters;
+          appData: mediasoupTypes.AppData & { source?: ProducerSource };
+        },
         callback: (params: { id: string }) => void,
         errback: (error: Error) => void
       ) => {
+        // Compat: a produce() call made without an explicit appData.source
+        // (should not happen post-slice-01, but defends pre-feature callers)
+        // is treated as the mic source.
+        const source: ProducerSource = appData?.source ?? 'mic';
         emitAsync<object, AudioProduceResponse>('audio:produce', {
           roomId: currentRoomId.value,
           transportId: producerTransport.value!.id,
           kind,
           rtpParameters,
+          source,
         })
           .then((response) => {
             if (!response.success || !response.data) {

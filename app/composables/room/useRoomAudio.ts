@@ -711,7 +711,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
       // undefined
       for (const producer of response.existingProducers) {
         try {
-          await consumeProducer(producer.producerId, roomId, producer.userId);
+          // Compat: a catch-up entry without `source` (pre-feature server) is
+          // treated as `mic`.
+          await consumeProducer(producer.producerId, roomId, producer.userId, producer.source ?? 'mic');
         } catch (err) {
           log.warn('Failed to consume producer', err)
         }

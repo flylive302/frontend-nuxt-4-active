@@ -38,6 +38,7 @@ const {
   isPlaying,
   removeTrack,
   reorderTracks,
+  playTrack,
 } = useRoomAudioPlayer(socket);
 
 // ========================================
@@ -148,6 +149,11 @@ async function handleRemove(id: string): Promise<void> {
   if (currentRoomId.value) await removeTrack(id, currentRoomId.value);
 }
 
+/** Tap a queue row: play (or switch to) that track and re-open the deck. */
+async function handleRowTap(id: string): Promise<void> {
+  if (currentRoomId.value) await playTrack(currentRoomId.value, id);
+}
+
 /**
  * A queue row was dragged to a new position. Delegate the reorder to the model,
  * then re-sync the local mirror so SortableJS's DOM shift doesn't diverge from
@@ -254,12 +260,16 @@ function handleReorder(event: DraggableEvent): void {
               <div
                 v-for="track in reorderModel"
                 :key="track.id"
-                class="flex items-center gap-2 pl-1.5 pr-1 py-1.5 rounded-xl transition-colors"
+                class="flex items-center gap-2 pl-1.5 pr-1 py-1.5 rounded-xl transition-colors cursor-pointer"
                 :class="track.id === currentTrackId ? 'bg-primary/15 ring-1 ring-primary/30' : 'bg-white/5 hover:bg-white/10'"
+                role="button"
+                :aria-label="`Play ${track.title}`"
+                @click="handleRowTap(track.id)"
               >
                 <UIcon
                   name="i-lucide-grip-vertical"
                   class="queue-drag-handle shrink-0 text-base cursor-grab touch-none text-neutral-500 py-1.5"
+                  @click.stop
                 />
                 <!-- Now-playing rows get the spinning vinyl -->
                 <img
@@ -288,7 +298,7 @@ function handleReorder(event: DraggableEvent): void {
                   color="neutral"
                   class="rounded-full shrink-0"
                   :aria-label="`Remove ${track.title}`"
-                  @click="handleRemove(track.id)"
+                  @click.stop="handleRemove(track.id)"
                 />
               </div>
             </VueDraggable>

@@ -16,8 +16,7 @@
  *
  * The DJ / music-playing capability does NOT enter this decision: music only
  * plays inside a Room where `consuming` is already true, so it adds no service
- * the Listener role didn't already demand. (DJ matters for the Local-monitor
- * policy — `utils/local-monitor-policy.ts` — not here.)
+ * the Listener role didn't already demand.
  *
  * No Android, no Capacitor, no Vue, no sockets — just the decision table and a
  * pure set-diff, so both functions are fully unit-testable. The impure executor

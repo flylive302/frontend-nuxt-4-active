@@ -20,12 +20,9 @@
  * re-consume, giving a gapless boundary on auto-advance.
  *
  * The `GainNode → AudioContext.destination` edge is the DJ's **local monitor**
- * (the DJ hearing their own music out the loudspeaker). It is toggled at runtime
- * via `setLocalMonitor` so the orchestrator can cut it when the DJ is producing
- * voice on a Seat over the loudspeaker — otherwise the music bleeds into the open
- * mic and echo-cancellation ducks the voice (capacitor-02 / ADR 0006). Toggling
- * it uses the **targeted** `disconnect(destination)` overload so it never touches
- * the `GainNode → MediaStreamAudioDestinationNode` edge that feeds Listeners.
+ * (the DJ hearing their own music out the loudspeaker). It is **permanently
+ * connected** (ADR 0018) — the DJ always hears their own music, on loudspeaker,
+ * headphones, or Bluetooth; the engine never decides for them.
  *
  * Memory: a decoded `AudioBuffer` is raw PCM (~80 MB per 3.5-min song), so the
  * engine keeps at most the current + the prefetched-next decoded buffer
@@ -84,12 +81,18 @@ export interface AudioPlaybackEngine {
   /** Set output volume 0–1. */
   setVolume(volume: number): void;
   /**
-   * Connect/disconnect the DJ's **local loudspeaker monitor** (the
-   * `gain → AudioContext.destination` edge). Idempotent. Never affects the
-   * Listeners' `musicProducer` edge. Driven by the Local-monitor policy
-   * (`utils/local-monitor-policy.ts`) — see capacitor-02.
+   * Talk-over duck (ADR 0018): ramp the master gain to `fraction` of the
+   * current slider volume over `rampMs`, on the audio thread. Repeated calls
+   * (rapid re-hold) simply re-anchor the ramp from the current live value —
+   * they do not stack multiplicatively.
    */
-  setLocalMonitor(on: boolean): void;
+  duck(fraction: number, rampMs: number): void;
+  /**
+   * Release a duck: ramp the master gain back to the slider volume (whatever
+   * it is now — a `setVolume` call during the duck updates the restore
+   * target) over `rampMs`. Safe to call when not ducked (no-op).
+   */
+  releaseDuck(rampMs: number): void;
   /** Current playback position in seconds. */
   getPosition(): number;
   /** Duration of the current track in seconds (0 if nothing loaded). */
@@ -121,10 +124,10 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
   let gainNode: GainNode | null = null;
   let destinationNode: MediaStreamAudioDestinationNode | null = null;
   let lastVolume = 1;
-  // Local loudspeaker monitor (gain → ctx.destination). Default ON preserves the
-  // pre-policy behavior; the orchestrator cuts it via setLocalMonitor when a DJ
-  // produces voice on the loudspeaker (capacitor-02). Tracked for idempotency.
-  let monitorConnected = false;
+
+  // ---- Talk-over duck (ADR 0018): multiplier over lastVolume, never persisted ----
+  let isDucked = false;
+  let duckFraction = 1;
 
   // ---- Swappable source (one per track / seek) ----
   let sourceNode: AudioBufferSourceNode | null = null;
@@ -172,10 +175,8 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
     const destination = ctx.createMediaStreamDestination();
     gain.connect(destination);
     // Local monitor: also route to speakers so the DJ hears their own music.
-    // Default ON (pre-policy behavior); the orchestrator may cut it immediately
-    // via setLocalMonitor for a producing-on-speaker DJ.
+    // Permanently connected (ADR 0018) — the DJ always hears their own music.
     gain.connect(ctx.destination);
-    monitorConnected = true;
 
     audioContext = ctx;
     gainNode = gain;
@@ -272,6 +273,8 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
 
     const buffer = await decode(id, file);
 
+    forceReleaseDuck(); // track change never carries a duck across the boundary
+
     teardownSource();
     sourceNode = createSource(buffer);
     sourceNode.start(0, 0);
@@ -340,21 +343,52 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
 
   function setVolume(volume: number): void {
     lastVolume = Math.max(0, Math.min(1, volume));
-    if (gainNode) {
+    if (!gainNode) return;
+    if (isDucked) {
+      // Mid-duck slider move: re-anchor the live (ducked) value to the new
+      // slider × fraction so the eventual release lands on the new slider
+      // value (story 13) without an audible jump right now.
+      const now = audioContext?.currentTime ?? 0;
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setValueAtTime(lastVolume * duckFraction, now);
+    } else {
       gainNode.gain.value = lastVolume;
     }
   }
 
-  function setLocalMonitor(on: boolean): void {
-    if (!audioContext || !gainNode || on === monitorConnected) return;
-    if (on) {
-      gainNode.connect(audioContext.destination);
-    } else {
-      // Targeted overload: drops ONLY the gain → destination (monitor) edge,
-      // never the gain → MediaStreamDestination edge that feeds Listeners.
-      gainNode.disconnect(audioContext.destination);
-    }
-    monitorConnected = on;
+  /** Ramp the master gain from its current live value to `target` over `rampMs`, on the audio thread. */
+  function rampGainTo(target: number, rampMs: number): void {
+    if (!audioContext || !gainNode) return;
+    const now = audioContext.currentTime;
+    const current = gainNode.gain.value;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(current, now);
+    gainNode.gain.linearRampToValueAtTime(Math.max(0, Math.min(1, target)), now + rampMs / 1000);
+  }
+
+  function duck(fraction: number, rampMs: number): void {
+    if (!gainNode) return;
+    duckFraction = Math.max(0, Math.min(1, fraction));
+    isDucked = true;
+    rampGainTo(lastVolume * duckFraction, rampMs);
+  }
+
+  function releaseDuck(rampMs: number): void {
+    if (!gainNode) return;
+    isDucked = false;
+    rampGainTo(lastVolume, rampMs);
+  }
+
+  /**
+   * Instant, unconditional restore — used on track change / stop / dispose so
+   * the music is never left stuck quiet regardless of duck state.
+   */
+  function forceReleaseDuck(): void {
+    isDucked = false;
+    if (!audioContext || !gainNode) return;
+    const now = audioContext.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(lastVolume, now);
   }
 
   function getPosition(): number {
@@ -377,6 +411,7 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
   }
 
   function stop(): void {
+    forceReleaseDuck();
     teardownSource();
     currentId = null;
     currentDuration = 0;
@@ -387,12 +422,12 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
   }
 
   function dispose(): void {
+    forceReleaseDuck();
     teardownSource();
     if (gainNode) {
       gainNode.disconnect();
       gainNode = null;
     }
-    monitorConnected = false;
     destinationNode = null;
     decoded.clear();
     currentId = null;
@@ -418,7 +453,8 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
     resume,
     seek,
     setVolume,
-    setLocalMonitor,
+    duck,
+    releaseDuck,
     getPosition,
     getDuration,
     getStatus,

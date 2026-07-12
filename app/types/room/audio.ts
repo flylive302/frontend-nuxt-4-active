@@ -43,7 +43,7 @@ export interface JoinRoomResponse {
   participants?: RoomParticipant[];
   seats?: { seatIndex: number; userId: number; isMuted: boolean }[];
   lockedSeats?: number[];
-  existingProducers?: { producerId: string; userId: number }[];
+  existingProducers?: { producerId: string; userId: number; source?: ProducerSource }[];
   musicPlayer?: MusicPlayerJoinState | null;
   /** App-scope slides still inside their replay window — shown to this late joiner. */
   activeAppSlides?: SlidePlayPayload[];
@@ -136,11 +136,15 @@ export interface TransportConnectResponse {
 // AUDIO EVENTS
 // ============================================
 
+/** Producer purpose tag. Missing/undefined on the wire is treated as `'mic'` (compat). */
+export type ProducerSource = 'mic' | 'music';
+
 export interface AudioProducePayload {
   roomId: string;
   transportId: string;
   kind: 'audio';
   rtpParameters: RtpParameters;
+  source: ProducerSource;
 }
 
 export interface AudioProduceData {
@@ -179,6 +183,8 @@ export interface NewProducerEvent {
   producerId: string;
   userId: number;
   kind: 'audio';
+  /** Absent on pre-feature servers/peers — treat as `'mic'` (compat). */
+  source?: ProducerSource;
 }
 
 export interface ProducerClosedEvent {

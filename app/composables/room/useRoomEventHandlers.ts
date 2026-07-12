@@ -12,6 +12,7 @@ import type {
   RoomModeChangedEvent,
   NewProducerEvent,
   ProducerClosedEvent,
+  ProducerSource,
   ChatMessageEvent,
   GiftReceivedEvent,
   GiftErrorEvent,
@@ -42,7 +43,7 @@ const log = createLogger('[RoomEvents]');
 export interface RoomActions {
   leaveRoom: () => void;
   stopAudio: () => void;
-  consumeProducer: (producerId: string, roomId: string, producerUserId?: number) => Promise<void>;
+  consumeProducer: (producerId: string, roomId: string, producerUserId?: number, source?: ProducerSource) => Promise<void>;
   stopConsumer: (producerId: string) => void;
   acceptInvite: () => Promise<boolean>;
   declineInvite: () => Promise<boolean>;
@@ -261,9 +262,10 @@ export function setupRoomEventHandlers(
 
   // Audio events
   socket.on('audio:newProducer', async (event: NewProducerEvent) => {
-    // undefined
+    // Compat: a producer announced without `source` (pre-feature server/peer)
+    // is treated as `mic`.
     if (roomStore.currentRoom) {
-      await consumeProducer(event.producerId, roomStore.currentRoom.id.toString(), event.userId);
+      await consumeProducer(event.producerId, roomStore.currentRoom.id.toString(), event.userId, event.source ?? 'mic');
     }
   });
 

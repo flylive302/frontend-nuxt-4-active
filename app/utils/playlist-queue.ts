@@ -155,6 +155,18 @@ export class PlaylistQueue {
   }
 
   /**
+   * Jump directly to the track with `id` (drawer tap-to-play), without
+   * reordering the queue. Returns the track, or `null` when `id` is not in the
+   * queue (leaves `current` unchanged).
+   */
+  select(id: string): Track | null {
+    const at = this.items.findIndex((t) => t.id === id);
+    if (at === -1) return null;
+    this.index = at;
+    return this.current;
+  }
+
+  /**
    * Advance to and return the next track, or `null` at the end (leaving
    * `current` unchanged).
    */

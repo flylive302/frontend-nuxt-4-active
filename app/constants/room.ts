@@ -96,6 +96,25 @@ export const MAX_CHAT_MESSAGES = 500;
  */
 export const PLAYLIST_MAX_TRACKS = 50;
 
+/**
+ * Talk-over duck (ADR 0018): holding the player vinyl ramps the music gain
+ * down to this fraction of its current effective volume, for the Room and
+ * the DJ's own monitor alike (one gain feeds both edges).
+ */
+export const AUDIO_DUCK_FRACTION = 0.2;
+
+/** Gain ramp duration (ms) when the duck engages (hold-start). */
+export const AUDIO_DUCK_RAMP_DOWN_MS = 150;
+
+/** Gain ramp duration (ms) when the duck releases (hold-end), restoring volume. */
+export const AUDIO_DUCK_RAMP_UP_MS = 400;
+
+/**
+ * Pointer-hold duration (ms) past which a press on the player vinyl is a
+ * `hold` (duck) rather than a `tap` (expand). See `useHoldGesture`.
+ */
+export const HOLD_GESTURE_THRESHOLD_MS = 250;
+
 // ============================================
 // Gift Economy
 // ============================================

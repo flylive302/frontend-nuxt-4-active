@@ -205,6 +205,41 @@ describe('PlaylistQueue', () => {
     })
   })
 
+  describe('select (drawer tap-to-play)', () => {
+    it('jumps current to the track with the given id without reordering', () => {
+      queue.add([audioFile('a.mp3'), audioFile('b.mp3'), audioFile('c.mp3')])
+      const [, trackB] = queue.tracks
+
+      const selected = queue.select(trackB!.id)
+
+      expect(selected!.title).toBe('b')
+      expect(queue.current!.title).toBe('b')
+      expect(titles(queue)).toEqual(['a', 'b', 'c']) // order untouched
+    })
+
+    it('jumping to the already-current track is a no-op that returns it', () => {
+      queue.add([audioFile('a.mp3'), audioFile('b.mp3')])
+
+      const selected = queue.select(queue.current!.id)
+
+      expect(selected!.title).toBe('a')
+      expect(queue.current!.title).toBe('a')
+    })
+
+    it('returns null and leaves current unchanged for an unknown id', () => {
+      queue.add([audioFile('a.mp3'), audioFile('b.mp3')])
+
+      const result = queue.select('does-not-exist')
+
+      expect(result).toBeNull()
+      expect(queue.current!.title).toBe('a')
+    })
+
+    it('returns null on an empty queue', () => {
+      expect(queue.select('anything')).toBeNull()
+    })
+  })
+
   describe('empty-queue behaviour', () => {
     it('is safe and well-defined with no tracks', () => {
       expect(queue.current).toBeNull()

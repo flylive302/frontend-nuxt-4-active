@@ -24,7 +24,7 @@ describe('useMediasoupSessionStore', () => {
     expect(store.musicProducer).toBeNull()
     expect(store.consumers.size).toBe(0)
     expect(store.audioElements.size).toBe(0)
-    expect(store.consumerProducerByUserId.size).toBe(0)
+    expect(store.consumerProducerByKey.size).toBe(0)
     expect(store.isLocalMuted).toBe(false)
     expect(store.currentVolume).toBe(1)
   })
@@ -97,14 +97,14 @@ describe('useMediasoupSessionStore', () => {
       expect(store.consumers.size).toBe(0)
     })
 
-    it('clears consumerProducerByUserId map', async () => {
+    it('clears consumerProducerByKey map', async () => {
       const { useMediasoupSessionStore } = await import('../../app/stores/mediasoupSession')
       const store = useMediasoupSessionStore()
 
-      store.consumerProducerByUserId.set(42, 'producer-1')
+      store.consumerProducerByKey.set('42:mic', 'producer-1')
       store.$reset()
 
-      expect(store.consumerProducerByUserId.size).toBe(0)
+      expect(store.consumerProducerByKey.size).toBe(0)
     })
 
     it('resets producer and musicProducer to null', async () => {

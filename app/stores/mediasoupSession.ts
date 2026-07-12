@@ -11,7 +11,9 @@ export const useMediasoupSessionStore = defineStore('mediasoupSession', () => {
   const isLocalMuted = ref(false);
   const currentVolume = ref(1);
   const audioElements = ref<Map<string, HTMLAudioElement>>(new Map());
-  const consumerProducerByUserId = ref<Map<number, string>>(new Map());
+  // Keyed by `${userId}:${source}` (e.g. "42:mic") so a user's mic and music
+  // producers are tracked independently — see docs/issues/dj-talk-over/01.
+  const consumerProducerByKey = ref<Map<string, string>>(new Map());
 
   function addConsumer(producerId: string, consumer: Consumer): void {
     consumers.value.set(producerId, consumer);
@@ -33,7 +35,7 @@ export const useMediasoupSessionStore = defineStore('mediasoupSession', () => {
     });
     audioElements.value.clear();
     consumers.value.clear();
-    consumerProducerByUserId.value.clear();
+    consumerProducerByKey.value.clear();
     producer.value = null;
     musicProducer.value = null;
     isLocalMuted.value = false;
@@ -47,7 +49,7 @@ export const useMediasoupSessionStore = defineStore('mediasoupSession', () => {
     isLocalMuted,
     currentVolume,
     audioElements,
-    consumerProducerByUserId,
+    consumerProducerByKey,
     addConsumer,
     removeConsumer,
     setVolume,

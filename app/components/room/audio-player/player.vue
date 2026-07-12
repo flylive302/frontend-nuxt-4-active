@@ -13,10 +13,17 @@
  * to any screen edge docks it as a single vinyl disc; tapping the disc expands
  * it back. The queue lives in the Music drawer (RoomAudioPlayerUploader),
  * opened from the playlist button.
+ *
+ * Talk-over duck (ADR 0018): holding the vinyl (either state) ducks the music
+ * for the Room and the DJ's own monitor together; releasing restores it. Tap
+ * vs. hold is disambiguated by `useHoldGesture`, a pure pointer state machine —
+ * on the minimized disc, tap expands; on the vinyl generally, tap is
+ * otherwise a no-op.
  */
 import type { Track } from '~/types/room/audio-player';
 import { ASSETS } from '~/constants/assets';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
+import { useHoldGesture } from '~/composables/useHoldGesture';
 import { useRoomAudioPlayer } from '~/composables/room/audio/useRoomAudioPlayer';
 import { useRoomMusicLaunch } from '~/composables/room/audio/useRoomMusicLaunch';
 
@@ -59,6 +66,8 @@ const {
   next,
   prev,
   setVolume,
+  duckStart,
+  duckEnd,
 } = useRoomAudioPlayer(socket);
 
 // Widget-owned instance of the Music drawer (queue + add tracks). The queue
@@ -109,13 +118,29 @@ watch(isDragging, (dragging) => {
 
   const moved = Math.hypot(position.value.x - dragStart.x, position.value.y - dragStart.y);
 
+  // A real drag (past TAP_SLOP) re-docks; a stationary release is left to the
+  // hold gesture below to classify as a tap (expand) vs. a hold (duck).
   if (isMinimized.value) {
-    if (moved < TAP_SLOP) expand();
-    else snapToNearestEdge();
+    if (moved >= TAP_SLOP) snapToNearestEdge();
     return;
   }
 
   if (moved >= TAP_SLOP && isNearEdge()) minimize();
+});
+
+// ========================================
+// Talk-over duck (ADR 0018): hold the vinyl to duck, tap (minimized) to expand
+// ========================================
+
+/** Minimized: tap expands. Expanded: tap on the vinyl is a no-op. */
+function handleVinylTap(): void {
+  if (isMinimized.value) expand();
+}
+
+const vinylGesture = useHoldGesture({
+  onTap: handleVinylTap,
+  onHoldStart: duckStart,
+  onHoldEnd: duckEnd,
 });
 
 /** Whether any side of the card sits within the dock threshold of the viewport. */
@@ -273,6 +298,10 @@ function handleVolumeChange(vol: number): void {
       :style="`width: ${DISC_SIZE}px; height: ${DISC_SIZE}px;`"
       role="button"
       aria-label="Expand music player"
+      @pointerdown="vinylGesture.onPointerDown"
+      @pointerup="vinylGesture.onPointerUp"
+      @pointercancel="vinylGesture.onPointerCancel"
+      @pointerleave="vinylGesture.onPointerLeave"
     >
       <img
         :src="ASSETS.MUSIC_PLAYER"
@@ -310,11 +339,15 @@ function handleVolumeChange(vol: number): void {
         style="background: radial-gradient(120% 140% at 0% 50%, var(--room-theme, var(--ui-primary)) 0%, transparent 55%);"
       />
 
-      <!-- Vinyl + progress ring (also the drag handle) -->
+      <!-- Vinyl + progress ring (also the drag handle; hold to duck, tap is a no-op) -->
       <div
         ref="dragHandle"
         class="relative shrink-0 size-16 touch-none select-none"
         :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
+        @pointerdown="vinylGesture.onPointerDown"
+        @pointerup="vinylGesture.onPointerUp"
+        @pointercancel="vinylGesture.onPointerCancel"
+        @pointerleave="vinylGesture.onPointerLeave"
       >
         <img
           :src="ASSETS.MUSIC_PLAYER"
