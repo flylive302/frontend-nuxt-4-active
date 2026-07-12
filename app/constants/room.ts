@@ -97,6 +97,26 @@ export const LUCKY_SPLIT_SHARE = 0.1;
 export const GIFT_PRELOAD_DEBOUNCE_MS = 300;
 
 // ============================================
+// Room Blocks (kick duration)
+// ============================================
+
+/**
+ * Canonical block/kick durations, mirroring the backend `BlockDuration` enum
+ * (ADR 0017). Every kick MUST carry one of these — there is no duration-less
+ * kick. Order matches the duration popup's display order.
+ */
+export const BLOCK_DURATIONS = [
+  { value: '15m', label: '15 minutes' },
+  { value: '30m', label: '30 minutes' },
+  { value: '1h', label: '1 hour' },
+  { value: '8h', label: '8 hours' },
+  { value: '24h', label: '24 hours' },
+  { value: 'permanent', label: 'Block permanently' },
+] as const satisfies ReadonlyArray<{ value: string; label: string }>;
+
+export type BlockDurationValue = (typeof BLOCK_DURATIONS)[number]['value'];
+
+// ============================================
 // Slide Overlay
 // ============================================
 

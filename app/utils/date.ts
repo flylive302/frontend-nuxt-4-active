@@ -97,3 +97,25 @@ export function formatRelativeTime(dateString: string): string {
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   })
 }
+
+/**
+ * Format the remaining time of a room block as human-readable text.
+ *
+ * @param bannedUntil - ISO 8601 expiry, or null for a permanent block
+ * @returns "Permanent", "Expired", or e.g. "2h 15m left" / "3d 4h left" / "5m left"
+ */
+export function formatBlockRemaining(bannedUntil: string | null): string {
+  if (!bannedUntil) return 'Permanent'
+
+  const diffMs = new Date(bannedUntil).getTime() - Date.now()
+  if (!Number.isFinite(diffMs) || diffMs <= 0) return 'Expired'
+
+  const totalMinutes = Math.ceil(diffMs / 60_000)
+  const days = Math.floor(totalMinutes / 1_440)
+  const hours = Math.floor((totalMinutes % 1_440) / 60)
+  const minutes = totalMinutes % 60
+
+  if (days > 0) return `${days}d ${hours}h left`
+  if (hours > 0) return `${hours}h ${minutes}m left`
+  return `${minutes}m left`
+}

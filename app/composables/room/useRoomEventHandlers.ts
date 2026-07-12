@@ -59,7 +59,6 @@ const ROOM_EVENT_NAMES = [
   'room:userLeft',
   'room:closed',
   'room:mode',
-  'room:kicked',
   'user:profile_updated',
   'audio:newProducer',
   'audio:producerClosed',
@@ -208,14 +207,21 @@ export function setupRoomEventHandlers(
     });
   });
 
-  // Kick — admin/owner removed user from the room
-  socket.on('room:kicked', (_event: { roomId: string; reason: string }) => {
-    toast.add({
-      title: 'Kicked from room',
-      description: 'You have been removed from the room by an admin.',
-      color: 'error',
-      icon: 'i-lucide-log-out',
-    });
+  // Block/kick (unified, ADR 0017) — admin/owner blocked+removed the current
+  // user from the room. Toast + membership-store cleanup is handled by
+  // room-membership.events.ts (room.member_removed, registered once globally);
+  // this listener owns the ejection side-effects (leave room, navigate away)
+  // that require RoomActions. NOT added to ROOM_EVENT_NAMES/cleanupRoomEventHandlers
+  // — that array does a blanket socket.off(eventName) which would also strip the
+  // global membership listener sharing this event name. Instead we off/on our own
+  // named handler each setup call to avoid accumulating duplicate listeners.
+  socket.off('room.member_removed', handleMemberRemovedEjection);
+  socket.on('room.member_removed', handleMemberRemovedEjection);
+
+  function handleMemberRemovedEjection(event: { room_id: number; user_id: number }): void {
+    if (authStore.user?.id !== event.user_id) return;
+    if (String(event.room_id) !== roomStore.currentRoom?.id?.toString()) return;
+
     leaveRoom();
     // Clear currentRoom (see room:closed) — otherwise a kicked user returning to
     // the SAME room never re-joins (currentRoom unchanged → Watcher 1 no-ops),
@@ -224,7 +230,7 @@ export function setupRoomEventHandlers(
     roomStore.leaveRoom();
     const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
     navigateTo(target, { replace: true });
-  });
+  }
 
   // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change.
   // Private balance fields (coins, diamonds) are stripped — they are not stored in

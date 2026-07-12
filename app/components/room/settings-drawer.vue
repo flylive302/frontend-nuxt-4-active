@@ -82,6 +82,8 @@ const isOwnerOnly = computed(() => isRoomOwner.value)
 // ========================================
 
 const showMusicUploader = ref(false)
+/** Block List sub-drawer (owner/admin only entry point). */
+const showBlockList = ref(false)
 const isMusicLoading = ref(false)
 /** Set when the uploader was opened to force-take (owner) vs. normal play. */
 const forceTakeMode = ref(false)
@@ -469,6 +471,20 @@ onBeforeUnmount(() => {
               </UButton>
             </template>
 
+            <!-- Blocked Users (Owner / Admin only) -->
+            <div class="border-t border-neutral-700 pt-3">
+              <UButton
+                icon="i-lucide-ban"
+                color="neutral"
+                variant="subtle"
+                size="lg"
+                class="w-full justify-center"
+                @click="showBlockList = true"
+              >
+                Blocked Users
+              </UButton>
+            </div>
+
             <!-- Play Music (Owner / Admin only) -->
             <div class="border-t border-neutral-700 pt-3">
               <UButton
@@ -514,6 +530,13 @@ onBeforeUnmount(() => {
             </UButton>
           </div>
         </template>
+
+        <!-- Block List Drawer (triggered from Blocked Users button) -->
+        <RoomBlockListDrawer
+          v-if="thisRoom && canEdit"
+          v-model:open="showBlockList"
+          :room-id="thisRoom.id"
+        />
 
         <!-- Audio File Picker (triggered from Play Music button) -->
         <RoomAudioPlayerUploader

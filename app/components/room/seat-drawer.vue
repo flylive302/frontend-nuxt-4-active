@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
+import { useRoomBlocking } from '~/composables/room/useRoomBlocking'
 import { createLogger } from '~/utils/logger'
 import MarqueeName from "~/components/common/marquee-name.vue";
+import KickDurationPopover from '~/components/room/kick-duration-popover.vue'
 import { ASSETS } from '~/constants/assets'
+import type { BlockDurationValue } from '~/constants/room'
 
 const log = createLogger('[SeatDrawer]')
 
@@ -13,7 +16,8 @@ const seatsStore = useRoomSeatsStore()
 const participantsStore = useRoomParticipantsStore()
 const authStore = useAuthStore()
 const giftStore = useGiftStore()
-const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, kickUser, isAudioReady } = useRoomAudio()
+const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, isAudioReady } = useRoomAudio()
+const { blockUser } = useRoomBlocking()
 const { myMembership } = useRoomMembers()
 const { resolvePropAsset } = usePropLookup()
 const { hasGrantedMic, markMicGranted, probeMicState, requestMicAccess } = useMicPermission()
@@ -21,6 +25,7 @@ const toast = useToast()
 
 const isLoading = ref(false)
 const showMicDialog = ref(false)
+const isKickPopoverOpen = ref(false)
 
 // Separate drawer open state from activeSeat (keep seat selected when drawer closes)
 const isOpen = ref(false)
@@ -219,15 +224,21 @@ async function handleToggleLock() {
 }
 
 /**
- * Handle kicking a user from the room (admin/owner only)
+ * Handle kicking a user from the room (admin/owner only).
+ *
+ * Unified kick path (ADR 0017): kicking IS blocking with a duration. There is
+ * no duration-less kick — selecting a duration in the popover is the only
+ * INTENT that reaches this handler. Ejection (seat clear, force-removal,
+ * feedback) happens via the Laravel→MSAB member-removed fanout, not a
+ * direct socket emit.
  */
-async function handleKickUser() {
+async function handleKickUser(duration: BlockDurationValue) {
   const userId = currentSeat.value?.user?.id
   if (!userId) return
 
   isLoading.value = true
   try {
-    const success = await kickUser(userId)
+    const success = await blockUser(roomStore.currentRoom!.id, { user_id: userId, duration })
     if (success) {
       seatsStore.closeSeat()
     }
@@ -456,14 +467,18 @@ const seatUserAge = computed(() =>
               />
 
               <!-- Kick User from Room - Admin/Owner only, when seat is occupied by another user -->
-              <UButton
+              <KickDurationPopover
                   v-if="!isSeatEmpty && !isCurrentUserSeat"
-                  class="rounded-xl text-white"
-                  size="xl" variant="solid" square color="error"
-                  :loading="isLoading"
-                  icon="i-lucide-log-out"
-                  @click="handleKickUser"
-              />
+                  v-model:open="isKickPopoverOpen"
+                  @select="handleKickUser"
+              >
+                <UButton
+                    class="rounded-xl text-white"
+                    size="xl" variant="solid" square color="error"
+                    :loading="isLoading"
+                    icon="i-lucide-log-out"
+                />
+              </KickDurationPopover>
             </div>
           </div>
 

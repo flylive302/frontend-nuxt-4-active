@@ -8,6 +8,7 @@
 // ========================================
 
 import type { BootstrapRoom as Room } from '~/types/user/bootstrap'
+import { resolveHttpBlockedMessage } from '~/utils/socket/socketErrorMessages'
 
 /**
  * Composable for unified room entry with password protection.
@@ -76,9 +77,16 @@ export function useRoomEntry() {
       const err = error as Record<string, unknown>
       const response = err?.response as Record<string, unknown> | undefined
       const status = (response?.status as number | undefined) ?? err?.statusCode ?? err?.status
+      const data = response?._data as { meta?: { error_code?: string; remaining_seconds?: number | 'permanent' } } | undefined
+      const errorCode = data?.meta?.error_code
       // No navigation follows, so the card must not keep the shared element name.
       clearRoomExpand()
-      if (status === 403) {
+      if (status === 403 && errorCode === 'user_blocked') {
+        // Blocked (ADR 0017) — distinct from password-required, so it must
+        // not open the password prompt.
+        const toast = useToast()
+        toast.add({ title: resolveHttpBlockedMessage(data?.meta?.remaining_seconds), color: 'error' })
+      } else if (status === 403) {
         // Password required → show prompt
         pendingRoom.value = room
         pendingSeedSrc.value = cardSeedSrc

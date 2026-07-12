@@ -9,6 +9,8 @@
 
 import type { RoomParticipant } from '~/types/room/audio'
 import type { BlockUserRequest } from '~/types/room/room'
+import type { BlockDurationValue } from '~/constants/room'
+import KickDurationPopover from '~/components/room/kick-duration-popover.vue'
 
 // ========================================
 // Props
@@ -106,76 +108,47 @@ const canDemote = computed(() => {
 const adminActions = computed(() => {
   if (!showAdminActions.value) return []
 
-  const items = []
+  // Role management section (owner only). Kick/block is a separate
+  // KickDurationPopover-triggered button (unified kick path, ADR 0017) —
+  // not a dropdown item, since it always requires a duration choice.
+  if (!isRoomOwner.value) return []
 
-  // Role management section (owner only)
-  if (isRoomOwner.value) {
-    const roleItems = []
-    if (canPromote.value) {
-      roleItems.push({
-        label: 'Promote to Admin',
-        icon: 'i-lucide-shield-plus',
-        click: handlePromote,
-      })
-    }
-    if (canDemote.value) {
-      roleItems.push({
-        label: 'Demote to Member',
-        icon: 'i-lucide-shield-minus',
-        click: handleDemote,
-      })
-    }
-    if (roleItems.length > 0) {
-      items.push(roleItems)
-    }
+  const roleItems = []
+  if (canPromote.value) {
+    roleItems.push({
+      label: 'Promote to Admin',
+      icon: 'i-lucide-shield-plus',
+      click: handlePromote,
+    })
+  }
+  if (canDemote.value) {
+    roleItems.push({
+      label: 'Demote to Member',
+      icon: 'i-lucide-shield-minus',
+      click: handleDemote,
+    })
   }
 
-  // Remove from room (owner + admin) — uses block API with no duration
-  items.push([
-    {
-      label: 'Remove from Room',
-      icon: 'i-lucide-user-minus',
-      color: 'warning' as const,
-      click: () => handleBlock('permanent'),
-    },
-  ])
-
-  // Timed bans (owner only)
-  if (isRoomOwner.value) {
-    items.push([
-      {
-        label: 'Temp Ban 2 hours',
-        icon: 'i-lucide-clock',
-        click: () => handleBlock('2h'),
-      },
-      {
-        label: 'Temp Ban 24 hours',
-        icon: 'i-lucide-clock',
-        click: () => handleBlock('24h'),
-      },
-      {
-        label: 'Temp Ban 7 days',
-        icon: 'i-lucide-clock',
-        click: () => handleBlock('7d'),
-      },
-    ])
-  }
-
-  return items
+  return roleItems.length > 0 ? [roleItems] : []
 })
 
 // ========================================
 // Handlers
 // ========================================
 
-async function handleBlock(duration: '2h' | '24h' | '7d' | 'permanent') {
+/**
+ * Kick (= block with a duration) the participant. Unified kick path (ADR
+ * 0017): there is no duration-less kick — every call carries one of the six
+ * canonical BlockDuration values selected from the duration popover.
+ */
+async function handleKick(duration: BlockDurationValue) {
   if (!props.participant) return
 
   loading.value = true
   try {
     const request: BlockUserRequest = {
       user_id: props.participant.id,
-      duration: duration === 'permanent' ? undefined : duration,
+      duration,
     }
     const success = await blockUser(props.roomId, request)
     if (success) {
@@ -284,9 +257,25 @@ async function handleDemote() {
           View Full Profile
         </UButton>
 
-        <!-- Admin Actions Dropdown -->
-        <UDropdownMenu
+        <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick -->
+        <KickDurationPopover
           v-if="showAdminActions"
+          @select="handleKick"
+        >
+          <UButton
+            icon="i-lucide-log-out"
+            color="error"
+            variant="soft"
+            class="w-full justify-center"
+            :loading="loading"
+          >
+            Kick from Room
+          </UButton>
+        </KickDurationPopover>
+
+        <!-- Admin Actions Dropdown (role management) -->
+        <UDropdownMenu
+          v-if="showAdminActions && adminActions.length > 0"
           :items="adminActions"
         >
           <UButton

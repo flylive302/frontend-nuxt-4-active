@@ -225,12 +225,8 @@ export interface RoomLevelProgressResponse {
  */
 export interface RoomBlock {
   id: number
-  user: {
-    id: number
-    name: string
-    avatar: string | null
-    signature: string | null
-  }
+  /** Blocked user's minimal profile (backend MinimalUserResource shape). */
+  user: MinimalUser
   reason: string | null
   banned_until: string | null // ISO 8601 or null for permanent
   is_permanent: boolean
@@ -243,7 +239,7 @@ export interface RoomBlock {
 export interface BlockUserRequest {
   user_id: number
   reason?: string
-  duration?: '2h' | '24h' | '7d' | 'permanent'
+  duration: '15m' | '30m' | '1h' | '8h' | '24h' | 'permanent'
 }
 
 /**

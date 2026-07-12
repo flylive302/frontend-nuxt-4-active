@@ -9,6 +9,8 @@
 // - Blocked: Blocked users list
 
 import type { RoomMember, RoomJoinRequest } from "~/types/room/room";
+import type { BlockDurationValue } from "~/constants/room";
+import KickDurationPopover from "~/components/room/kick-duration-popover.vue";
 
 
 // ========================================
@@ -194,7 +196,13 @@ async function handleUnblock(userId: number) {
 }
 
 // Admin actions with optimistic updates
-async function handleRemoveMember(member: RoomMember) {
+/**
+ * Kick (= block with a duration) a member from the room. Unified kick path
+ * (ADR 0017): there is no duration-less kick, so every call must carry one
+ * of the six canonical BlockDuration values selected from the duration
+ * popover anchored above the kick action.
+ */
+async function handleKickMember(member: RoomMember, duration: BlockDurationValue) {
   const userId = member.user_id ?? member.user?.id;
 
   if (!userId) return;
@@ -204,26 +212,7 @@ async function handleRemoveMember(member: RoomMember) {
   const originalMembers = [...membershipStore.members.items];
   membershipStore.members.items = membershipStore.members.items.filter(m => m.user_id !== userId);
 
-  const success = await blockUser(props.roomId, { user_id: userId });
-  if (!success) {
-    // Revert on error
-    membershipStore.members.items = originalMembers;
-  } else {
-    fetchBlockedUsers(props.roomId);
-  }
-}
-
-async function handleBlockMember(member: RoomMember) {
-  const userId = member.user_id ?? member.user?.id;
-
-  if (!userId) return;
-
-  // Optimistic: remove from list immediately
-  const membershipStore = useRoomMembershipStore();
-  const originalMembers = [...membershipStore.members.items];
-  membershipStore.members.items = membershipStore.members.items.filter(m => m.user_id !== userId);
-
-  const success = await blockUser(props.roomId, { user_id: userId });
+  const success = await blockUser(props.roomId, { user_id: userId, duration });
   if (!success) {
     // Revert on error
     membershipStore.members.items = originalMembers;
@@ -272,22 +261,10 @@ async function handleDemoteMember(member: RoomMember) {
   }
 }
 
-async function handleTempBan(
-  member: RoomMember,
-  duration: "2h" | "24h" | "7d",
-) {
-  const userId = member.user_id ?? member.user?.id;
-
-  if (!userId) return;
-  const success = await blockUser(props.roomId, { user_id: userId, duration });
-  if (success) {
-    fetchMembers(props.roomId, {}, true);
-    fetchBlockedUsers(props.roomId);
-  }
-}
-
 /**
- * Generate dropdown menu items for a member.
+ * Generate dropdown menu items for a member. Kick/block is handled by the
+ * separate KickDurationPopover trigger (unified kick path, ADR 0017) — not a
+ * dropdown item, since it requires a duration choice, not a single select.
  */
 function getMemberActions(member: RoomMember) {
   return [
@@ -303,35 +280,6 @@ function getMemberActions(member: RoomMember) {
             icon: "i-lucide-arrow-up",
             onSelect: () => handlePromoteMember(member),
           },
-    ],
-    [
-      {
-        label: "Remove from Room",
-        icon: "i-lucide-user-x",
-        onSelect: () => handleRemoveMember(member),
-      },
-    ],
-    [
-      {
-        label: "Block (Permanent)",
-        icon: "i-lucide-ban",
-        onSelect: () => handleBlockMember(member),
-      },
-      {
-        label: "Temp Ban 2 Hours",
-        icon: "i-lucide-clock",
-        onSelect: () => handleTempBan(member, "2h"),
-      },
-      {
-        label: "Temp Ban 24 Hours",
-        icon: "i-lucide-clock",
-        onSelect: () => handleTempBan(member, "24h"),
-      },
-      {
-        label: "Temp Ban 7 Days",
-        icon: "i-lucide-calendar",
-        onSelect: () => handleTempBan(member, "7d"),
-      },
     ],
   ];
 }
@@ -410,6 +358,20 @@ function getMemberActions(member: RoomMember) {
             >
               Admin
             </UBadge>
+
+            <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick -->
+            <KickDurationPopover
+              v-if="canManageMembers && member.role !== 'owner'"
+              @select="(duration: BlockDurationValue) => handleKickMember(member, duration)"
+            >
+              <UButton
+                icon="i-lucide-log-out"
+                color="error"
+                variant="ghost"
+                size="xs"
+                @click.stop
+              />
+            </KickDurationPopover>
 
             <!-- Admin Actions Dropdown (not for owner, only if current user can manage) -->
             <UDropdownMenu

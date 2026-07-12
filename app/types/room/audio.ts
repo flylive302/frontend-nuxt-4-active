@@ -48,6 +48,10 @@ export interface JoinRoomResponse {
   /** App-scope slides still inside their replay window — shown to this late joiner. */
   activeAppSlides?: SlidePlayPayload[];
   error?: string;
+  /** Present when `error === 'room_blocked'` (ADR 0017 / room-blocks 03). */
+  permanent?: boolean;
+  /** Seconds remaining on the block, or null when `permanent` is true. */
+  remaining_seconds?: number | null;
 }
 
 export interface LeaveRoomPayload {
