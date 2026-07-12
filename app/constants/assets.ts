@@ -30,6 +30,8 @@ export const REACTION_ASSET_FALLBACK_BASE = 'https://fonts.gstatic.com/s/e/notoe
 
 export const ASSETS = {
 
+  // ── GIF Animation for the Music Player ──
+  MUSIC_PLAYER: `${IK}/placeholders/music-player.gif`,
   // ── Logos (self-hosted, critical path) ──
   LOGO_MAIN: '/logos/flylive-logo-wide.png',
   LOGO_XL: '/logos/logo-full.png',
