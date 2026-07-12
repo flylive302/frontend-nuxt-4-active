@@ -324,7 +324,7 @@ async function doLuckySend(): Promise<void> {
         </RoomGiftCategoryTabs>
 
         <!-- Send Controls -->
-        <div class="flex items-center justify-between pt-1 border-t border-muted safe-area-bottom">
+        <div class="flex items-center justify-between pt-1 border-t border-muted">
           <!-- Coin Balance -->
           <div class="flex items-center">
             <UButton

@@ -27,9 +27,11 @@ export default defineAppConfig({
             compoundVariants: compoundButtonVariants
         },
         drawer: {
+            // Safe-area padding lives on `content` (not `container`): drawers that
+            // override the #content slot bypass the container div entirely, so
+            // classes there silently vanish. `content` classes always apply.
             slots: {
-                content: 'bg-neutral-950',
-                container: 'safe-area-top safe-area-bottom'
+                content: 'bg-neutral-950'
             },
             compoundVariants: [
                 {
@@ -38,7 +40,44 @@ export default defineAppConfig({
                         'left'
                     ],
                     class: {
-                        content: 'min-w-[96%]',
+                        content: 'min-w-[96%] safe-area-top safe-area-bottom',
+                    }
+                },
+                {
+                    direction: 'bottom',
+                    class: {
+                        content: 'safe-area-bottom',
+                    }
+                },
+                {
+                    direction: 'top',
+                    class: {
+                        content: 'safe-area-top',
+                    }
+                }
+            ]
+        },
+        slideover: {
+            compoundVariants: [
+                {
+                    side: [
+                        'right',
+                        'left'
+                    ],
+                    class: {
+                        content: 'safe-area-top safe-area-bottom',
+                    }
+                },
+                {
+                    side: 'bottom',
+                    class: {
+                        content: 'safe-area-bottom',
+                    }
+                },
+                {
+                    side: 'top',
+                    class: {
+                        content: 'safe-area-top',
                     }
                 }
             ]

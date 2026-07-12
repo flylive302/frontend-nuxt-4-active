@@ -86,7 +86,7 @@ watch(isOpen, (open) => {
     />
 
     <template #content>
-      <div class="flex flex-col gap-2 p-2 safe-area-bottom">
+      <div class="flex flex-col gap-2 p-2">
         <UInput
           v-model="query"
           icon="i-lucide-search"

@@ -333,7 +333,7 @@ const seatUserAge = computed(() =>
   <UDrawer
     v-model:open="isOpen" 
     title="Seat Options" 
-    :class="dataCardAsset ? 'min-h-9/12 safe-area-bottom' : ''"
+    :class="dataCardAsset ? 'min-h-9/12' : ''"
     description="Manage seat actions like joining, leaving, muting, or locking."
     :ui="{
       content: 'bg-transparent backdrop-blur-xs ring-0',
