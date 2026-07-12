@@ -40,6 +40,29 @@ export interface ProfileGiftReceived {
 }
 
 /**
+ * Owned prop (entry animation / frame) for public profile tabs.
+ */
+export interface ProfilePropItem {
+  id: number
+  prop_id: number
+  type: string
+  name: string
+  thumbnail_url: string | null
+  asset_url: string | null
+}
+
+/**
+ * Minimal shape required by the shared prop preview modal.
+ * Gifts satisfy it too (thumbnail-only preview).
+ */
+export interface PropPreviewItem {
+  name: string
+  type?: string
+  asset_url?: string | null
+  thumbnail_url?: string | null
+}
+
+/**
  * Gender values used in the API.
  * 1=Male, 2=Female, 3=Non-binary, 4=Not specified
  */

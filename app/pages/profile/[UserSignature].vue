@@ -5,7 +5,7 @@ import { ASSETS } from '~/constants/assets'
 // ========================================
 
 import { useInfiniteScroll } from '@vueuse/core'
-import type { UserProfile } from '~/types/user/user-profile'
+import type { UserProfile, PropPreviewItem } from '~/types/user/user-profile'
 import {computed} from "vue";
 import MarqueeName from "~/components/common/marquee-name.vue";
 
@@ -30,16 +30,25 @@ const TAB_ITEMS = [
     label: 'Gifts',
     icon: 'i-lucide-gift',
     slot: 'gifts',
+    value: 'gifts',
   },
   {
     label: 'Entries',
     icon: 'i-lucide-door-open',
     slot: 'entries',
+    value: 'entries',
   },
   {
     label: 'Frames',
     icon: 'i-lucide-frame',
     slot: 'frames',
+    value: 'frames',
+  },
+  {
+    label: 'Badges',
+    icon: 'i-lucide-award',
+    slot: 'badges',
+    value: 'badges',
   },
 ]
 
@@ -57,6 +66,7 @@ const authStore = useAuthStore()
 const signature = computed(() => route.params.UserSignature as string)
 const giftsContainerRef = ref<HTMLElement | null>(null)
 const followAnimating = ref(false)
+const activeTab = ref('gifts')
 
 // ========================================
 // User Profile Composable
@@ -131,14 +141,49 @@ async function handleFollowClick(): Promise<void> {
 }
 
 // ========================================
-// Infinite Scroll for Gifts
+// Profile Props (Entries / Frames tabs)
+// ========================================
+
+const entriesProps = useProfileProps(signature, 'entry_animation')
+const framesProps = useProfileProps(signature, 'frame')
+const profileBadges = useProfileBadges(signature)
+
+// Lazy-load each tab's first page on activation
+watch(activeTab, (tab) => {
+  if (tab === 'entries') entriesProps.ensureLoaded()
+  if (tab === 'frames') framesProps.ensureLoaded()
+  if (tab === 'badges') profileBadges.ensureLoaded()
+})
+
+// ========================================
+// Prop / Gift Preview Modal
+// ========================================
+
+const previewItem = ref<PropPreviewItem | null>(null)
+const previewOpen = ref(false)
+
+function openPreview(item: PropPreviewItem): void {
+  previewItem.value = item
+  previewOpen.value = true
+}
+
+// ========================================
+// Infinite Scroll for Active Tab
 // ========================================
 
 useInfiniteScroll(
   giftsContainerRef,
   async () => {
-    if (giftsHasMore.value && !giftsLoading.value) {
-      await fetchMoreGifts()
+    if (activeTab.value === 'gifts') {
+      if (giftsHasMore.value && !giftsLoading.value) {
+        await fetchMoreGifts()
+      }
+      return
+    }
+
+    const source = activeTab.value === 'entries' ? entriesProps : framesProps
+    if (source.loaded.value && source.hasMore.value && !source.loading.value) {
+      await source.fetchMore()
     }
   },
   { distance: 200 }
@@ -333,7 +378,7 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       <div ref="giftsContainerRef" class="mb-12 mt-4 relative z-30">
         <SectionTitle class="mx-8">History</SectionTitle>
 
-        <UTabs class="w-full px-8" variant="link" :items="TAB_ITEMS" :ui="{label: 'text-white'}">
+        <UTabs v-model="activeTab" class="w-full px-8" variant="link" :items="TAB_ITEMS" :ui="{label: 'text-white'}">
           <!-- Gifts Tab -->
           <template #gifts>
             <!-- Empty State -->
@@ -351,6 +396,8 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
                   :item-name="gift.label"
                   :quantity="gift.total_quantity_received"
                   :rarity="gift.rarity"
+                  class="cursor-pointer"
+                  @click="openPreview({ name: gift.label, thumbnail_url: gift.thumbnail_url })"
               />
             </div>
 
@@ -365,19 +412,81 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
             </div>
           </template>
 
-          <!-- Entries Tab (Placeholder) -->
+          <!-- Entries Tab -->
           <template #entries>
-            <div class="py-8 text-center text-muted">
+            <!-- Empty State -->
+            <div v-if="entriesProps.items.value.length === 0 && !entriesProps.loading.value" class="py-8 text-center text-muted">
               <Icon name="i-lucide-door-open" class="size-10 mx-auto mb-2 opacity-50" />
-              <p>Room entries coming soon</p>
+              <p>No entries yet</p>
+            </div>
+
+            <!-- Entries Grid -->
+            <div v-else class="grid grid-cols-4 gap-2 mt-4">
+              <ProfileHistoryCard
+                  v-for="entry in entriesProps.items.value"
+                  :key="`entry-${entry.id}`"
+                  :badge-src="entry.thumbnail_url ?? undefined"
+                  :item-name="entry.name"
+                  class="cursor-pointer"
+                  @click="openPreview(entry)"
+              />
+            </div>
+
+            <!-- Loading More Indicator -->
+            <div v-if="entriesProps.loading.value" class="py-4 text-center">
+              <UButton loading variant="ghost" disabled>Loading more...</UButton>
             </div>
           </template>
 
-          <!-- Frames Tab (Placeholder) -->
+          <!-- Frames Tab -->
           <template #frames>
-            <div class="py-8 text-center text-muted">
+            <!-- Empty State -->
+            <div v-if="framesProps.items.value.length === 0 && !framesProps.loading.value" class="py-8 text-center text-muted">
               <Icon name="i-lucide-frame" class="size-10 mx-auto mb-2 opacity-50" />
-              <p>Frames coming soon</p>
+              <p>No frames yet</p>
+            </div>
+
+            <!-- Frames Grid -->
+            <div v-else class="grid grid-cols-4 gap-2 mt-4">
+              <ProfileHistoryCard
+                  v-for="frame in framesProps.items.value"
+                  :key="`frame-${frame.id}`"
+                  :badge-src="frame.thumbnail_url ?? undefined"
+                  :item-name="frame.name"
+                  class="cursor-pointer"
+                  @click="openPreview(frame)"
+              />
+            </div>
+
+            <!-- Loading More Indicator -->
+            <div v-if="framesProps.loading.value" class="py-4 text-center">
+              <UButton loading variant="ghost" disabled>Loading more...</UButton>
+            </div>
+          </template>
+
+          <!-- Badges Tab -->
+          <template #badges>
+            <!-- Empty State -->
+            <div v-if="profileBadges.items.value.length === 0 && !profileBadges.loading.value" class="py-8 text-center text-muted">
+              <Icon name="i-lucide-award" class="size-10 mx-auto mb-2 opacity-50" />
+              <p>No badges yet</p>
+            </div>
+
+            <!-- Badges Grid -->
+            <div v-else class="grid grid-cols-4 gap-2 mt-4">
+              <ProfileHistoryCard
+                  v-for="badge in profileBadges.items.value"
+                  :key="`badge-${badge.id}`"
+                  :badge-src="badge.image_url"
+                  :item-name="badge.name"
+                  class="cursor-pointer"
+                  @click="openPreview({ name: badge.name, asset_url: badge.asset_url, thumbnail_url: badge.image_url })"
+              />
+            </div>
+
+            <!-- Loading Indicator -->
+            <div v-if="profileBadges.loading.value" class="py-4 text-center">
+              <UButton loading variant="ghost" disabled>Loading...</UButton>
             </div>
           </template>
         </UTabs>
@@ -453,6 +562,13 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
         />
       </div>
     </footer>
+
+    <!-- Prop / Gift Preview Modal -->
+    <PropPreviewModal
+      :item="previewItem"
+      :open="previewOpen"
+      @close="previewOpen = false"
+    />
 
     <!-- Report User Modal -->
     <ReportModal
