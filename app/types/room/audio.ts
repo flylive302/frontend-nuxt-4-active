@@ -254,8 +254,12 @@ export interface SeatClearedEvent {
    * receives a targeted `seat:evicted` with the dedicated toast/teardown, so
    * the generic own-seat "Removed from seat" handling here must yield to it
    * instead of double-firing.
+   *
+   * "removed" = owner/admin forced removal (seat:remove). The ONLY reason
+   * that shows the "Removed from seat" toast — voluntary leave is untagged
+   * and stays silent.
    */
-  reason?: 'grace' | 'shrink';
+  reason?: 'grace' | 'shrink' | 'removed';
 }
 
 /**

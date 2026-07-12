@@ -412,7 +412,17 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
       <div ref="giftsContainerRef" class="mb-12 mt-4 relative z-30">
         <SectionTitle class="mx-8">History</SectionTitle>
 
-        <UTabs v-model="activeTab" class="w-full px-8" variant="link" :items="TAB_ITEMS" :ui="{label: 'text-white'}">
+        <UTabs
+            v-model="activeTab"
+            class="w-full px-8"
+            variant="link"
+            :items="TAB_ITEMS"
+            :ui="{
+              label: 'text-white',
+              list: 'overflow-x-scroll min-h-fit overflow-y-hidden',
+              trigger: 'min-w-fit mr-2 data-[state=active]:bg-primary/10 rounded-none inset-shadow-sm'
+            }"
+        >
           <!-- Gifts Tab -->
           <template #gifts>
             <!-- Empty State -->

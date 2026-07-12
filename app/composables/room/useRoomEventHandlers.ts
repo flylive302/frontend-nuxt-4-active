@@ -317,11 +317,17 @@ export function setupRoomEventHandlers(
     // here so the displaced user doesn't see two toasts.
     if (wasCurrentUserSeated && event.reason !== 'shrink') {
       stopAudio();
-      toast.add({
-        title: 'Removed from seat',
-        description: 'You have been removed from your seat',
-        color: 'warning',
-      });
+
+      // Only a forced removal (owner/admin `seat:remove`, tagged "removed" by
+      // MSAB) warrants a toast — voluntary self-leave and grace sweeps stay
+      // silent.
+      if (event.reason === 'removed') {
+        toast.add({
+          title: 'Removed from seat',
+          description: 'You have been removed from your seat',
+          color: 'warning',
+        });
+      }
     }
   });
 

@@ -297,7 +297,20 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
     expect(toast.add).not.toHaveBeenCalled()
   })
 
-  it("a seat:cleared WITHOUT reason:'shrink' still shows the generic own-seat toast (regression guard)", async () => {
+  it("a seat:cleared with reason:'removed' (owner/admin kick) shows the removed-from-seat toast", async () => {
+    const { socket, seatsStore, actions, toast } = await setupEviction()
+    seatsStore.updateSeat(3, 7, false)
+
+    socket.handlers.get('seat:cleared')?.({ seatIndex: 3, userId: 7, reason: 'removed' })
+
+    expect(seatsStore.seats[3]?.occupantId).toBeNull()
+    expect(actions.stopAudio).toHaveBeenCalledTimes(1)
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Removed from seat' }),
+    )
+  })
+
+  it("an untagged seat:cleared (voluntary self-leave) tears down audio but stays toast-silent", async () => {
     const { socket, seatsStore, actions, toast } = await setupEviction()
     seatsStore.updateSeat(3, 7, false)
 
@@ -305,9 +318,7 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
 
     expect(seatsStore.seats[3]?.occupantId).toBeNull()
     expect(actions.stopAudio).toHaveBeenCalledTimes(1)
-    expect(toast.add).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Removed from seat' }),
-    )
+    expect(toast.add).not.toHaveBeenCalled()
   })
 })
 
