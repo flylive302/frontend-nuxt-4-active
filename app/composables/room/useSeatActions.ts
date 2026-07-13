@@ -185,6 +185,11 @@ export function useSeatActions({
       userId,
     });
 
+    if (response.error) {
+      toast.add({ title: 'Cannot mute user', description: response.error, color: 'error' });
+      return false;
+    }
+
     return response.success ?? false;
   }
 
@@ -199,6 +204,11 @@ export function useSeatActions({
       roomId,
       userId,
     });
+
+    if (response.error) {
+      toast.add({ title: 'Cannot unmute user', description: response.error, color: 'error' });
+      return false;
+    }
 
     return response.success ?? false;
   }

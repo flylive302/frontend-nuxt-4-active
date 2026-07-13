@@ -33,8 +33,16 @@ import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import { createLogger } from '~/utils/logger';
+import { SPEAKER_ACTIVE_TTL_MS } from '~/constants/room';
 
 const log = createLogger('[RoomEvents]');
+
+/**
+ * Decay timer for speaking indicators. MSAB never emits an "all silent"
+ * event, so the last `speaker:active` set would stick forever without this.
+ * Module-level because there is a single audio socket per app.
+ */
+let speakerDecayTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ============================================
 // Types
@@ -90,6 +98,11 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
 
   for (const eventName of ROOM_EVENT_NAMES) {
     socket.off(eventName);
+  }
+
+  if (speakerDecayTimer) {
+    clearTimeout(speakerDecayTimer);
+    speakerDecayTimer = null;
   }
 
   cleanupLuckyEventHandlers(socket);
@@ -280,6 +293,14 @@ export function setupRoomEventHandlers(
 
     audioStore.setActiveSpeakers(ids);
     seatsStore.syncActiveSpeakers(ids);
+
+    // Decay: clear indicators if no fresh speaker:active arrives in time.
+    if (speakerDecayTimer) clearTimeout(speakerDecayTimer);
+    speakerDecayTimer = setTimeout(() => {
+      speakerDecayTimer = null;
+      audioStore.setActiveSpeakers([]);
+      seatsStore.syncActiveSpeakers([]);
+    }, SPEAKER_ACTIVE_TTL_MS);
   });
 
   socket.on('seat:updated', (event: SeatUpdatedEvent) => {

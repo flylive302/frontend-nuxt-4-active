@@ -265,6 +265,9 @@ onUnmounted(() => {
                   class="backdrop-blur-lg text-primary"
                   @click="() => { settingsOpen = true }"
               />
+
+              <!-- Users Inbox Model View -->
+              <LazyRoomInboxDrawer />
             </div>
           </div>
 

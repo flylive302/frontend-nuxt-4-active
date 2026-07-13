@@ -115,6 +115,15 @@ export const AUDIO_DUCK_RAMP_UP_MS = 400;
  */
 export const HOLD_GESTURE_THRESHOLD_MS = 250;
 
+/**
+ * Active-speaker decay TTL (ms). MSAB only emits `speaker:active` while
+ * someone is talking (mediasoup's ActiveSpeakerObserver has no silence
+ * event), so the client clears the speaking indicators locally this long
+ * after the last event. Fresh events keep resetting the timer, so it never
+ * fires during continuous speech.
+ */
+export const SPEAKER_ACTIVE_TTL_MS = 2_000;
+
 // ============================================
 // Gift Economy
 // ============================================

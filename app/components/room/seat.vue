@@ -144,7 +144,9 @@ function clearActiveReaction(): void {
       </Transition>
 
       <!-- Speaking indicator -->
-      <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 scale-150" :name="miceWaveAsset" />
+      <Transition name="seat-fade">
+        <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 scale-150" :name="miceWaveAsset" />
+      </Transition>
 
     </div>
 
