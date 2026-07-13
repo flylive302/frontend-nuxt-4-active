@@ -5,7 +5,7 @@
 // Full-screen modal celebrating VIP achievement.
 // Shows VIP badge animation and unlocked props.
 
-import type { VipProp } from '~/types/vip/vip-level'
+import type { VipBadge, VipProp } from '~/types/vip/vip-level'
 import { vipAssetBase } from '~/constants/assets'
 
 // ========================================
@@ -14,13 +14,19 @@ import { vipAssetBase } from '~/constants/assets'
 
 defineOptions({ name: 'VipCongratsModal' })
 
-const props = defineProps<{
-  open: boolean
-  vipLevel: number
-  vipName: string
-  vipColor: string
-  vipProps: VipProp[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    vipLevel: number
+    vipName: string
+    vipColor: string
+    vipProps: VipProp[]
+    vipBadges?: VipBadge[]
+  }>(),
+  {
+    vipBadges: () => [],
+  },
+)
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -115,6 +121,40 @@ function handleClose(): void {
               </div>
               <span class="text-xs text-white/80 text-center leading-tight font-medium">
                 {{ vipProp.name }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unlocked Badges (cumulative across all levels up to this one) -->
+        <div
+          v-if="vipBadges.length > 0"
+          class="relative z-10 w-full max-w-sm mt-4"
+        >
+          <p class="text-center text-sm font-medium text-white/70 mb-3">
+            Your VIP Badges
+          </p>
+          <div class="grid grid-cols-3 gap-3">
+            <div
+              v-for="vipBadge in vipBadges"
+              :key="vipBadge.id"
+              class="flex flex-col items-center gap-1.5"
+            >
+              <div class="w-full aspect-square rounded-lg bg-white/10 overflow-hidden flex items-center justify-center p-1">
+                <img
+                  v-if="vipBadge.icon_url"
+                  :src="vipBadge.icon_url"
+                  :alt="vipBadge.name"
+                  class="w-full h-full object-contain"
+                >
+                <UIcon
+                  v-else
+                  name="i-heroicons-shield-check"
+                  class="size-8 text-white/40"
+                />
+              </div>
+              <span class="text-xs text-white/80 text-center leading-tight font-medium">
+                {{ vipBadge.name }}
               </span>
             </div>
           </div>

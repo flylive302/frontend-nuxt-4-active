@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // ========================================
-// VIP Prop Preview Modal
+// VIP Prop/Badge Preview Modal
 // ========================================
-// View-only modal for previewing VIP props with SVGA animation.
+// View-only modal for previewing VIP props and badges with animation.
 
-import type { VipProp } from '~/types/vip/vip-level'
+import type { VipPreviewItem } from '~/types/vip/vip-level'
 
 // ========================================
 // Props & Emits
@@ -13,7 +13,7 @@ import type { VipProp } from '~/types/vip/vip-level'
 defineOptions({ name: 'VipPropPreviewModal' })
 
 const props = defineProps<{
-  prop: VipProp | null
+  item: VipPreviewItem | null
   open: boolean
 }>()
 
@@ -34,7 +34,35 @@ const authStore = useAuthStore()
 /**
  * Whether this is a frame type prop.
  */
-const isFrame = computed(() => props.prop?.type === 'frame')
+const isFrame = computed(() => props.item?.kind === 'prop' && props.item.data.type === 'frame')
+
+/**
+ * Display name for the current preview item.
+ */
+const itemName = computed(() => props.item?.data.name ?? '')
+
+/**
+ * Animated asset URL — prop's `asset_url` or badge's `animated_url`.
+ */
+const animatedUrl = computed(() => {
+  if (!props.item) return null
+  return props.item.kind === 'prop' ? props.item.data.asset_url : props.item.data.animated_url
+})
+
+/**
+ * Static thumbnail — prop's `thumbnail_url` or badge's `icon_url`.
+ */
+const thumbnailUrl = computed(() => {
+  if (!props.item) return null
+  return props.item.kind === 'prop' ? props.item.data.thumbnail_url : props.item.data.icon_url
+})
+
+/**
+ * Footer label depending on item kind.
+ */
+const exclusiveLabel = computed(() =>
+  props.item?.kind === 'badge' ? 'VIP Exclusive Badge' : 'VIP Exclusive Prop',
+)
 
 // ========================================
 // Handlers
@@ -54,11 +82,11 @@ function handleClose(): void {
     @update:open="(val) => !val && handleClose()"
   >
     <template #content>
-      <UCard v-if="prop" class="bg-surface">
+      <UCard v-if="item" class="bg-surface">
         <!-- Header -->
         <template #header>
           <div class="flex items-center justify-between">
-            <span class="text-lg font-bold">{{ prop.name }}</span>
+            <span class="text-lg font-bold">{{ itemName }}</span>
             <UButton
               icon="i-lucide-x"
               color="neutral"
@@ -76,29 +104,29 @@ function handleClose(): void {
             <template v-if="isFrame">
               <UserAvatar
                 :animated="true"
-                :frame-name="prop.name"
-                :frame-asset-url="prop.asset_url ?? undefined"
+                :frame-name="itemName"
+                :frame-asset-url="animatedUrl ?? undefined"
                 :img="authStore?.user?.avatar ?? undefined"
               />
             </template>
 
             <!-- Animated / static asset (svga · vap · video · image) -->
-            <template v-else-if="prop.asset_url">
+            <template v-else-if="animatedUrl">
               <div class="bg-accented rounded-xl overflow-hidden flex items-center justify-center max-h-100">
                 <AssetPlayer
                   class="relative min-w-full z-10"
-                  :src="prop.asset_url"
-                  :thumbnail-src="prop.thumbnail_url ?? undefined"
+                  :src="animatedUrl"
+                  :thumbnail-src="thumbnailUrl ?? undefined"
                   :muted="false"
                 />
               </div>
             </template>
 
             <!-- Thumbnail-only fallback -->
-            <template v-else-if="prop.thumbnail_url">
+            <template v-else-if="thumbnailUrl">
               <img
-                :src="prop.thumbnail_url"
-                :alt="prop.name"
+                :src="thumbnailUrl"
+                :alt="itemName"
                 class="w-full h-auto object-contain rounded-xl"
               >
             </template>
@@ -116,7 +144,7 @@ function handleClose(): void {
         <template #footer>
           <div class="flex items-center justify-center gap-2 text-amber-400 text-sm">
             <UIcon name="i-heroicons-shield-check-solid" class="size-4" />
-            <span class="font-medium">VIP Exclusive Prop</span>
+            <span class="font-medium">{{ exclusiveLabel }}</span>
           </div>
         </template>
       </UCard>

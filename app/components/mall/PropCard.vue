@@ -75,6 +75,7 @@ function handleClick(): void {
         :alt="prop.name"
         class="w-full h-full object-cover"
         loading="lazy"
+        referrerpolicy="no-referrer"
       >
       <div v-else class="w-full h-full flex items-center justify-center">
         <icon :name="icon" class="size-12" :class="iconColor" />

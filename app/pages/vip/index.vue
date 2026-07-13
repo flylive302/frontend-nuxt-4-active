@@ -7,10 +7,11 @@ import { ASSETS, vipUIAssetBase } from '~/constants/assets'
 // purchase, gift, prop previews, recharge progress,
 // and congratulations modal.
 
-import type { VipLevel, VipProp } from '~/types/vip/vip-level'
+import type { VipLevel, VipPreviewItem, VipProp, VipTileItem } from '~/types/vip/vip-level'
 import type { MinimalUser } from '~/types/user/bootstrap'
 import { VIP_PRIVILEGE_LABELS, VIP_PRIVILEGE_ICONS } from '~/types/vip/vip-level'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
+import { collectCumulativeBadges } from '~/utils/vip-badges'
 
 // ========================================
 // Page Configuration
@@ -59,8 +60,8 @@ const isGiftModalOpen = ref(false)
 // Preload all VIP animation assets (SVGA + VAP) into plugin caches
 useVipAssetPreloader(levels, activeIndex)
 
-// Prop preview modal
-const selectedProp = ref<VipProp | null>(null)
+// Prop/badge preview modal
+const selectedPreviewItem = ref<VipPreviewItem | null>(null)
 const isPropPreviewOpen = ref(false)
 
 // Congratulations modal
@@ -147,6 +148,20 @@ const activeLevelProps = computed(() =>
 )
 
 /**
+ * Badges granted by the active level (API already scopes these to the level's own badges).
+ */
+const activeLevelBadges = computed(() => activeLevel.value?.badges ?? [])
+
+/**
+ * Merged prop + badge tiles rendered together in the "VIP Props" grid.
+ * Badges are not props — this is purely a display-level merge.
+ */
+const activeLevelTiles = computed<VipTileItem[]>(() => [
+  ...activeLevelProps.value.map((prop): VipTileItem => ({ kind: 'prop', data: prop })),
+  ...activeLevelBadges.value.map((badge): VipTileItem => ({ kind: 'badge', data: badge })),
+])
+
+/**
  * Privileges that are NOT prop-based (shown as icon grid).
  */
 const nonPropPrivileges = computed(() =>
@@ -155,6 +170,8 @@ const nonPropPrivileges = computed(() =>
 
 /**
  * VIP level data for the congrats modal.
+ * Badges are collected CUMULATIVELY across all levels up to and including the
+ * purchased level (purchasing a tier grants every lower tier's badges too).
  */
 const congratsLevelData = computed(() => {
   const level = levels.value.find(l => l.level === congratsLevel.value)
@@ -162,6 +179,7 @@ const congratsLevelData = computed(() => {
     name: level?.name ?? `VIP ${congratsLevel.value}`,
     color: level?.color ?? '#1a1a2e',
     props: level?.props ?? [],
+    badges: collectCumulativeBadges(levels.value, congratsLevel.value),
   }
 })
 
@@ -254,13 +272,18 @@ async function handleGiftConfirm(recipient: MinimalUser) {
 }
 
 function handlePropPreview(prop: VipProp) {
-  selectedProp.value = prop
+  selectedPreviewItem.value = { kind: 'prop', data: prop }
+  isPropPreviewOpen.value = true
+}
+
+function handleTilePreview(tile: VipTileItem) {
+  selectedPreviewItem.value = tile
   isPropPreviewOpen.value = true
 }
 
 function handlePropPreviewClose() {
   isPropPreviewOpen.value = false
-  selectedProp.value = null
+  selectedPreviewItem.value = null
 }
 
 function handleCongratsClose() {
@@ -330,21 +353,20 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
 
         <!-- User VIP Status Banner -->
         <div
-v-if="isVip"
-          class="absolute w-7/8 ml-7 mt-12 z-50 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm">
-          <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-tertiary" />
-          <span class="text-sm font-medium text-white">
-            VIP {{ currentLevel }}
-          </span>
-          <span v-if="formattedExpiry" class="ml-auto text-xs font-bold text-white bg-tertiary px-2 rounded-full">
-            Expires {{ formattedExpiry }}
-          </span>
+            v-if="isVip"
+            class="absolute w-7/8 ml-7 mt-12 z-50 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm"
+        >
+            <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-tertiary" />
+            <span class="text-sm font-medium text-white">
+              VIP {{ currentLevel }}
+            </span>
+            <span v-if="formattedExpiry" class="ml-auto text-xs font-bold text-white bg-tertiary px-2 rounded-full">
+              Expires {{ formattedExpiry }}
+            </span>
         </div>
 
         <NuxtImg :src="ASSETS.VIP_BACKGROUND" :alt="`VIP Background`" class="absolute inset-0 z-0" />
-        <NuxtImg
-:src="flagUrl" :alt="`VIP Flag`"
-          class="relative z-20 mx-auto mt-12 max-w-3/4" />
+        <NuxtImg :src="flagUrl" :alt="`VIP Flag`" class="relative z-20 mx-auto mt-12 max-w-3/4" />
 
         <div class="relative z-20 mx-auto -mt-52 max-w-36">
           <SvgaPlayer
@@ -364,8 +386,8 @@ v-if="isVip"
         <!-- Main Content -->
         <div class="absolute top-30 z-10 max-h-10/12 pb-46 overflow-y-auto">
           <div class="pt-12 px-14">
-            <!-- VIP Props Section -->
-            <div v-if="activeLevelProps.length > 0" class="px-3">
+            <!-- VIP Props Section (props + badges rendered as identical tiles) -->
+            <div v-if="activeLevelTiles.length > 0" class="px-3">
               <h3 class="text-xl font-bold text-white mb-2 uppercase tracking-wide text-center">VIP Props</h3>
 
               <!-- Entry Animation (full-width above grid) -->
@@ -383,9 +405,11 @@ v-if="isVip"
 
               <div class="grid grid-cols-3 gap-2">
                 <div
-v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}`"
-                     class="flex flex-col items-center justify-center gap-2 cursor-pointer"
-                     @click="handlePropPreview(prop)">
+                    v-for="tile in activeLevelTiles"
+                    :key="`vip-tile-${activeLevel.level}-${tile.kind}-${tile.data.id}`"
+                    class="flex flex-col items-center justify-center gap-2 cursor-pointer"
+                    @click="handleTilePreview(tile)"
+                >
                   <div
                       class="
                         flex items-center justify-center aspect-square w-full
@@ -395,12 +419,15 @@ v-for="prop in activeLevelProps" :key="`vip-prop-${activeLevel.level}-${prop.id}
                       :style="privilegeBoxStyle"
                   >
                     <img
-v-if="prop.thumbnail_url" :src="prop.thumbnail_url" :alt="prop.name"
-                         class="w-full h-full object-contain">
+                        v-if="tile.kind === 'prop' ? tile.data.thumbnail_url : tile.data.icon_url"
+                        :src="tile.kind === 'prop' ? tile.data.thumbnail_url! : tile.data.icon_url!"
+                        :alt="tile.data.name"
+                        class="w-full h-full object-contain"
+                    >
                     <UIcon v-else name="i-heroicons-gift" class="h-12 text-white/90" />
                   </div>
                   <p class="text-sm font-bold text-center leading-tight truncate w-24">
-                    {{ prop.name }}
+                    {{ tile.data.name }}
                   </p>
                 </div>
               </div>
@@ -437,13 +464,14 @@ class="flex aspect-square w-full items-center justify-center rounded-md transiti
 v-if="activeLevel" v-model:open="isGiftModalOpen" :level-name="`VIP ${activeLevel.level}`"
       :price="activeLevel.price" @confirm="handleGiftConfirm" />
 
-    <!-- VIP Prop Preview Modal -->
-    <VipPropPreviewModal :prop="selectedProp" :open="isPropPreviewOpen" @close="handlePropPreviewClose" />
+    <!-- VIP Prop/Badge Preview Modal -->
+    <VipPropPreviewModal :item="selectedPreviewItem" :open="isPropPreviewOpen" @close="handlePropPreviewClose" />
 
     <!-- VIP Congratulations Modal -->
     <VipCongratsModal
 :open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
-      :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props" @close="handleCongratsClose" />
+      :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props"
+      :vip-badges="congratsLevelData.badges" @close="handleCongratsClose" />
 
     <!-- Footer Controls -->
     <footer aria-label="VIP Level Selection" class="fixed inset-x-0 bottom-0 pb-2 z-50 backdrop-blur-lg">

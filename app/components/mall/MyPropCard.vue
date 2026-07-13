@@ -93,6 +93,7 @@ function handleSelect(): void {
         :alt="userProp.name"
         class="p-2 w-full h-full object-cover"
         loading="lazy"
+        referrerpolicy="no-referrer"
       >
       <div v-else class="w-full h-full flex items-center justify-center">
         <icon :name="icon" class="size-10" :class="iconColor" />

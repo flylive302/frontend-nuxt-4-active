@@ -42,6 +42,7 @@ export interface VipLevel {
   discount_percentage: number
   privileges: VipPrivilege[]
   props: VipProp[]
+  badges: VipBadge[]
   is_active: boolean
 }
 
@@ -55,6 +56,35 @@ export interface VipProp {
   thumbnail_url: string | null
   asset_url: string | null
 }
+
+/**
+ * Badge granted with a VIP level (scoped to that level only).
+ */
+export interface VipBadge {
+  id: number
+  name: string
+  icon_url: string | null
+  animated_url: string | null
+}
+
+// ========================================
+// Display Tile Types
+// ========================================
+
+/**
+ * Discriminated union for rendering props and badges as identical tiles
+ * in the same grid (VIP Props section) without conflating their shapes.
+ */
+export type VipTileItem =
+  | { kind: 'prop', data: VipProp }
+  | { kind: 'badge', data: VipBadge }
+
+/**
+ * Discriminated union accepted by the prop/badge preview modal.
+ */
+export type VipPreviewItem =
+  | { kind: 'prop', data: VipProp }
+  | { kind: 'badge', data: VipBadge }
 
 // ========================================
 // VIP Status Types

@@ -52,12 +52,14 @@ const iconColor = computed(() => PROP_TYPE_COLORS[props.type])
         :src="thumbnailUrl"
         :alt="name"
         class="w-full h-auto object-contain rounded-xl"
+        referrerpolicy="no-referrer"
       >
       <img
         v-if="assetUrl"
         :src="assetUrl"
         :alt="name"
         class="w-full h-auto object-contain rounded-xl"
+        referrerpolicy="no-referrer"
       >
     </div>
   </template>
