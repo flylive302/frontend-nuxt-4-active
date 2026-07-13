@@ -65,8 +65,11 @@ defineExpose({ show })
     <template #body>
       <div class="space-y-4">
         <p class="text-sm text-neutral-400 leading-relaxed">
-          Lucky Draw prizes are determined randomly from the tiers below. Spending virtual coins does not guarantee any particular outcome.
-          <span class="text-white font-medium">No real-world currency or prizes are involved.</span>
+          Every lucky gift you send enters one random draw: it either wins a coin prize of
+          <span class="text-white font-medium">2× your gift value or more</span>, or it wins nothing — most draws win nothing.
+          Prizes are paid from a shared prize pool funded by lucky gifts; the biggest multipliers only become available while
+          the pool is large enough to pay them, and some have daily win limits. Spending virtual coins does not guarantee any
+          particular outcome. <span class="text-white font-medium">No real-world currency or prizes are involved.</span>
         </p>
 
         <div v-if="isLoading" class="py-4 flex justify-center">

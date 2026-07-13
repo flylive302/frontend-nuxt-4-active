@@ -50,7 +50,8 @@ function getColorClass(multiplier: number): string {
   if (multiplier >= 10) return 'lucky-float--epic';
   if (multiplier >= 2) return 'lucky-float--great';
   if (multiplier >= 1) return 'lucky-float--good';
-  return 'lucky-float--tiny';
+  if (multiplier > 0) return 'lucky-float--tiny';
+  return 'lucky-float--bust';
 }
 
 /**

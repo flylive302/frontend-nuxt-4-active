@@ -6,8 +6,16 @@
 // in slice 2; slice 1 only needs the text-canvas rendering constants.
 
 /** Canvas size for a text placeholder rendered into a slide's SVGA. */
-export const SLIDE_TEXT_CANVAS_WIDTH = 400
-export const SLIDE_TEXT_CANVAS_HEIGHT = 80
+export const SLIDE_TEXT_CANVAS_WIDTH = 300
+export const SLIDE_TEXT_CANVAS_HEIGHT = 100
 
-/** Font used when drawing slide text onto the canvas. */
-export const SLIDE_TEXT_FONT = 'bold 32px Inter, sans-serif'
+/** Font family/weight used when drawing slide text onto the canvas. */
+export const SLIDE_TEXT_FONT_FAMILY = 'Inter, sans-serif'
+export const SLIDE_TEXT_FONT_WEIGHT = 'bold'
+
+/** Auto-fit bounds: shrink from max toward min, then wrap onto extra lines. */
+export const SLIDE_TEXT_MAX_FONT_SIZE = 32
+export const SLIDE_TEXT_MIN_FONT_SIZE = 22
+export const SLIDE_TEXT_MAX_LINES = 2
+export const SLIDE_TEXT_LINE_HEIGHT = 1
+export const SLIDE_TEXT_PADDING_X = 12

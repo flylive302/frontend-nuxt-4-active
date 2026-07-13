@@ -400,10 +400,10 @@ const seatUserAge = computed(() =>
             <img
                 v-if="displayUser.vip_level"
                 :src="`https://ik.imagekit.io/flylive/vip/${displayUser.vip_level}/badge.png`"
-                class="w-14"
+                class="h-6.5 -mb-1"
                 alt=""
             >
-            <img v-if="wealthLevel.badge" alt="" :src="wealthLevel.badge.image_url" class="h-8">
+            <img v-if="wealthLevel.badge" alt="" :src="wealthLevel.badge.image_url" class="h-7">
             <img v-if="charmLevel.badge" alt="" :src="charmLevel.badge.image_url" class="h-5">
           </div>
 

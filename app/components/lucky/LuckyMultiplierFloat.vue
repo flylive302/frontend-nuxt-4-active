@@ -40,7 +40,7 @@ defineProps<{
 <style scoped>
 .lucky-float-container {
   position: absolute;
-  bottom: 30%;
+  bottom: 60%;
   left: 0;
   width: 200px;
   height: 200px;
@@ -66,6 +66,14 @@ defineProps<{
 }
 
 /* Tier color classes */
+.lucky-float--bust {
+  color: rgb(255 255 255);
+  font-weight: 800;
+  font-size: 1.3rem;
+  text-shadow: none;
+  animation: floatUpBust 3s ease-out forwards;
+}
+
 .lucky-float--tiny {
   color: white;
   background: var(--color-tiny);
@@ -78,24 +86,37 @@ defineProps<{
 }
 
 .lucky-float--great {
-  color: #4299e1;
-  font-size: 1.5rem;
+  color: #4ade80;
+  font-size: 1.7rem;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
 }
 
 .lucky-float--epic {
   color: #ed8936;
-  font-size: 1.8rem;
-  text-shadow: 0 0 12px rgba(237, 137, 54, 0.6);
+  font-size: 2rem;
+  text-shadow: 0 0 16px rgba(237, 137, 54, 0.7), 0 0 32px rgba(237, 137, 54, 0.35);
 }
 
 .lucky-float--jackpot {
   color: #f56565;
-  font-size: 2.2rem;
+  font-size: 2.4rem;
   text-shadow: 0 0 20px rgba(245, 101, 101, 0.8), 0 0 40px rgba(245, 101, 101, 0.4);
 }
 
 .lucky-float-multiplier {
   display: inline-block;
+}
+
+/* Bust float: small, subdued, fades quickly without the pop-scale */
+@keyframes floatUpBust {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(var(--x-offset, 0)) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-70px) translateX(var(--x-offset, 0)) scale(0.8);
+  }
 }
 
 /* Float-up animation */

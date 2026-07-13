@@ -9,8 +9,15 @@ import type { ActiveSlide } from '~/types/slide'
 import {
   SLIDE_TEXT_CANVAS_WIDTH,
   SLIDE_TEXT_CANVAS_HEIGHT,
-  SLIDE_TEXT_FONT,
+  SLIDE_TEXT_FONT_FAMILY,
+  SLIDE_TEXT_FONT_WEIGHT,
+  SLIDE_TEXT_MAX_FONT_SIZE,
+  SLIDE_TEXT_MIN_FONT_SIZE,
+  SLIDE_TEXT_MAX_LINES,
+  SLIDE_TEXT_LINE_HEIGHT,
+  SLIDE_TEXT_PADDING_X,
 } from '~/constants/slide'
+import { fitSlideText } from '~/utils/slide-text-fit'
 
 const props = defineProps<{ slide: ActiveSlide }>()
 const emit = defineEmits<{ complete: []; click: [] }>()
@@ -22,7 +29,8 @@ const ready = ref(false)
 const clickable = computed(() => props.slide.link.type !== 'none')
 
 // Render `texts` to canvases (dynamicElements). Canvas dimensions must match the
-// placeholder layer dimensions baked into the .svga file by the designer.
+// placeholder layer dimensions baked into the .svga file by the designer, so
+// long text is fitted (shrink, then wrap) inside the fixed box instead.
 function buildTextElements(): Record<string, HTMLCanvasElement> | undefined {
   const out: Record<string, HTMLCanvasElement> = {}
   for (const [key, text] of Object.entries(props.slide.texts ?? {})) {
@@ -32,14 +40,39 @@ function buildTextElements(): Record<string, HTMLCanvasElement> | undefined {
     c.height = SLIDE_TEXT_CANVAS_HEIGHT
     const ctx = c.getContext('2d')
     if (!ctx) continue
-    ctx.font = SLIDE_TEXT_FONT
+
+    const fit = fitSlideText(
+      text,
+      {
+        maxWidth: c.width - SLIDE_TEXT_PADDING_X * 2,
+        maxHeight: c.height,
+        maxFontSize: SLIDE_TEXT_MAX_FONT_SIZE,
+        minFontSize: SLIDE_TEXT_MIN_FONT_SIZE,
+        maxLines: SLIDE_TEXT_MAX_LINES,
+        lineHeight: SLIDE_TEXT_LINE_HEIGHT,
+      },
+      (t, size) => {
+        ctx.font = slideFont(size)
+        return ctx.measureText(t).width
+      },
+    )
+
+    ctx.font = slideFont(fit.fontSize)
     ctx.fillStyle = '#ffffff'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(text, c.width / 2, c.height / 2)
+    const lineStep = fit.fontSize * SLIDE_TEXT_LINE_HEIGHT
+    const firstY = c.height / 2 - ((fit.lines.length - 1) * lineStep) / 2
+    fit.lines.forEach((line, i) => {
+      ctx.fillText(line, c.width / 2, firstY + i * lineStep)
+    })
     out[key] = c
   }
   return Object.keys(out).length ? out : undefined
+}
+
+function slideFont(size: number): string {
+  return `${SLIDE_TEXT_FONT_WEIGHT} ${size}px ${SLIDE_TEXT_FONT_FAMILY}`
 }
 
 // Load each replaceElements URL into an HTMLImageElement. A broken image is
@@ -87,7 +120,7 @@ onMounted(async () => {
       :replace-elements="images"
       :dynamic-elements="textElements"
       :height="`${slide.height}px`"
-      width="auto"
+      class="w-auto"
       @complete="emit('complete')"
     />
   </div>
@@ -95,7 +128,7 @@ onMounted(async () => {
 
 <style scoped>
 .slide-overlay-item {
-  width: min(90vw, 480px);
+  width: 100%;
   height: auto;
   pointer-events: none;
 }
