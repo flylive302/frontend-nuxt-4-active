@@ -32,6 +32,7 @@ const { fetchUserAgency } = useAgencyMembership()
 const { fetchReceivedInvitations } = useAgencyInvitations()
 const { fetchMyJoinRequests } = useAgencyJoinRequests()
 const { resolvePropAsset } = usePropLookup()
+const { syncUser } = useUserSync()
 
 const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(authStore.user?.wealth_xp, 'wealth'))
 const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_xp, 'charm'))
@@ -44,6 +45,11 @@ onMounted(() => {
   fetchUserAgency()
   fetchReceivedInvitations()
   fetchMyJoinRequests()
+  // profile_visits has no realtime event and is only server-known (incremented
+  // when others view us). Re-sync the auth user so the stats reflect visits that
+  // landed since bootstrap. Fire-and-forget: the stale value renders instantly
+  // and snaps to fresh when this resolves (also self-heals balance/xp/badges).
+  void syncUser()
 })
 
 const dataCardAsset = computed(() =>

@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { EVENT_BANNERS } from '~/constants/assets'
-
 defineOptions({ name: 'EventBanners' })
 
-const banners = Object.values(EVENT_BANNERS)
+const { banners } = useEventBanners()
 </script>
 
 <template>

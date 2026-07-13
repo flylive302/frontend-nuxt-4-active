@@ -91,7 +91,16 @@ const {
 
 // Writable copy for optimistic count updates by useFollow
 const profileWritable = ref<UserProfile | null>(readonlyProfile.value as UserProfile | null)
-watch(readonlyProfile, (v) => { profileWritable.value = v ? { ...v, gifts_received: [...v.gifts_received] } as UserProfile : null })
+watch(readonlyProfile, (v) => {
+  profileWritable.value = v ? { ...v, gifts_received: [...v.gifts_received] } as UserProfile : null
+  // Zero-query freshness for the index page: when this IS our own profile, the
+  // fetch above already carries the current server-side profile_visits. Push it
+  // into the auth store so /profile reflects it instantly on back-navigation
+  // (profile_visits has no realtime event of its own).
+  if (v && v.id === authStore.user?.id) {
+    authStore.patchProfile({ profile_visits: v.profile_visits })
+  }
+})
 
 // ========================================
 // Follow Composable

@@ -92,6 +92,12 @@ function initFromModel(): void {
   }
 }
 
+// The E.164 value can arrive asynchronously (edit flow hydrates formState
+// after mount). Re-split whenever it appears and we haven't parsed it yet.
+watch(model, () => {
+  if (!dialCountry.value && model.value) initFromModel()
+})
+
 onMounted(async () => {
   await ensureLoaded()
   initFromModel()

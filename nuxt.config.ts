@@ -47,6 +47,7 @@ export default defineNuxtConfig({
             'composables/inbox',
             'composables/recharge',
             'composables/slide',
+            'composables/events',
         ],
     },
     // Native View Transitions API drives ALL page/layout animation (one system,

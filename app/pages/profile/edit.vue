@@ -202,14 +202,23 @@ watch(
         formState.name = user.name
       }
 
-      // Initialize gender if empty
-      // BootstrapUser.gender is 'male' | 'female' | null, form uses numeric IDs
-      if (user.gender !== null && formState.gender === undefined) {
+      // Initialize gender if empty.
+      // Backend casts gender to an integer (1=male … 4=prefer-not), but older
+      // payloads may still send 'male' | 'female' strings — handle both.
+      if (user.gender !== null && user.gender !== undefined && formState.gender === undefined) {
         const GENDER_STRING_TO_NUMBER: Record<string, number> = {
           'male': GENDER_MALE,
           'female': GENDER_FEMALE,
         }
-        formState.gender = GENDER_STRING_TO_NUMBER[user.gender] ?? undefined
+        const numericGender = typeof user.gender === 'number'
+          ? user.gender
+          : (GENDER_STRING_TO_NUMBER[user.gender] ?? undefined)
+        formState.gender = numericGender
+      }
+
+      // Initialize email if empty
+      if (user.email && !formState.email) {
+        formState.email = user.email
       }
 
       // Initialize dateOfBirth if empty
@@ -326,7 +335,8 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
                 variant="outline"
                 icon="i-lucide-calendar"
                 size="lg"
-                class="justify-start text-dimmed" block
+                class="justify-start" block
+                :class="formState.dateOfBirth ? 'text-highlighted' : 'text-dimmed'"
             >
               {{ formState.dateOfBirth ? formState.dateOfBirth.toString() : 'Select date of birth' }}
             </UButton>

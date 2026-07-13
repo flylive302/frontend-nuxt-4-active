@@ -70,7 +70,7 @@ export interface BootstrapUser {
   email: string | null
 
   // Demographics
-  gender: string | null
+  gender: number | string | null   // backend casts to integer (1–4); legacy payloads may send 'male'|'female'
   date_of_birth: string | null  // YYYY-MM-DD
 
   // Economy

@@ -128,33 +128,7 @@ export const vipUIAssetBase = (level: number) =>
 // ========================================
 
 /** ~360px max card width on mobile; avoids overserving w-400 vs painted box */
-const BANNER_BG_TR = 'tr=w-360,q-95,c-maintain_ratio,f-auto'
-
-export const EVENT_BANNERS = {
-  recharge: {
-    banner: `${IK}/banners/recharge-activity.webp?${BANNER_BG_TR}`,
-    navigateTo: `/recharge`,
-  },
-  cp: {
-    banner: `${IK}/banners/cp-event.webp?${BANNER_BG_TR}`,
-    navigateTo: '/',
-  },
-  country: {
-    banner: `${IK}/banners/country.webp?${BANNER_BG_TR}`,
-    navigateTo: `/`,
-  },
-  recharge_tycoon: {
-    banner: `${IK}/banners/recharge-tycoon.webp?${BANNER_BG_TR}`,
-    navigateTo: `/`,
-  },
-  pretty_id: {
-    banner: `${IK}/banners/pretty-id-event.webp?${BANNER_BG_TR}`,
-    navigateTo: `/`,
-  },
-} as const satisfies Record<
-  string,
-  { banner: string; navigateTo: string; }
->
+export const BANNER_BG_TR = 'tr=w-360,q-95,c-maintain_ratio,f-auto'
 
 // ========================================
 // Missions Assets (ImageKit)
