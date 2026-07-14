@@ -8,6 +8,7 @@
 // - Requests: Pending join requests (with badge)
 // - Blocked: Blocked users list
 
+import { useInfiniteScroll } from "@vueuse/core";
 import type { RoomMember, RoomJoinRequest } from "~/types/room/room";
 import type { BlockDurationValue } from "~/constants/room";
 import KickDurationPopover from "~/components/room/kick-duration-popover.vue";
@@ -29,12 +30,23 @@ const open = defineModel<boolean>("open", { default: false });
 const activeTab = ref("members");
 
 const showInviteModal = ref(false);
+const membersListRef = ref<HTMLElement | null>(null);
 
 // ========================================
 // Composables
 // ========================================
 
 const { members, loading: membersLoading, fetchMembers } = useRoomMembers();
+
+// Load next page as the members list scrolls near its end
+// (fetchMembers gates on hasMore/loading internally).
+useInfiniteScroll(
+  membersListRef,
+  async () => {
+    if (open.value && props.roomId) await fetchMembers(props.roomId);
+  },
+  { distance: 200 },
+);
 const {
   joinRequests,
   pendingRequestCount,
@@ -301,7 +313,7 @@ function getMemberActions(member: RoomMember) {
             Invite User
           </UButton>
           <RoomInviteUserModal v-model:open="showInviteModal" :room-id="props.roomId" />
-          <div v-if="membersLoading" class="flex justify-center py-8">
+          <div v-if="membersLoading && members.items.length === 0" class="flex justify-center py-8">
             <UIcon name="i-lucide-loader-2" class="animate-spin size-8" />
           </div>
           <div
@@ -310,9 +322,9 @@ function getMemberActions(member: RoomMember) {
           >
             No members yet
           </div>
+          <div v-else ref="membersListRef" class="space-y-2 max-h-[55vh] overflow-y-auto">
           <div
             v-for="member in members.items"
-            v-else
             :key="member.id"
             class="flex items-center gap-3 p-2 rounded-lg bg-elevated/30 hover:bg-elevated/50 transition"
           >
@@ -366,6 +378,10 @@ function getMemberActions(member: RoomMember) {
                 @click.stop
               />
             </UDropdownMenu>
+          </div>
+          <div v-if="membersLoading" class="flex justify-center py-3">
+            <UIcon name="i-lucide-loader-2" class="animate-spin size-5" />
+          </div>
           </div>
         </div>
 

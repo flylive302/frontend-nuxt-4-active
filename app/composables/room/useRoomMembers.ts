@@ -78,14 +78,15 @@ export function useRoomMembers() {
       if (params.role) queryParams.role = params.role
       if (store.members.cursor) queryParams.cursor = store.members.cursor
 
-      // Laravel Resource::collection returns { data: RoomMember[] }
       const response = await api<{
         data: RoomMember[]
+        meta: { next_cursor: string | null, has_more: boolean }
       }>(`/rooms/${roomId}/members`, { params: queryParams })
 
       const members = Array.isArray(response.data) ? response.data : []
       store.members.items = reset ? members : [...store.members.items, ...members]
-      store.members.hasMore = false // No cursor pagination on this endpoint
+      store.members.cursor = response.meta?.next_cursor ?? null
+      store.members.hasMore = response.meta?.has_more ?? false
     } catch (err) {
       const normalized = normalizeError(err)
       store.members.error = normalized.message
