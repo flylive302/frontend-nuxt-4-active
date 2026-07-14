@@ -240,6 +240,18 @@ export interface SeatMutePayload {
 export interface SeatResponse {
   success?: boolean;
   error?: string;
+  /**
+   * Present on a SEAT_TAKEN rejection: the authoritative occupant of the
+   * contested seat, so a client whose local view wrongly shows it empty can
+   * repair itself in place (there is no periodic seat resync). `user` is null
+   * while the occupant is inside the reconnect grace window.
+   */
+  occupant?: {
+    seatIndex: number;
+    userId: number;
+    isMuted: boolean;
+    user: RoomParticipant | null;
+  } | null;
 }
 
 export interface SeatUpdatedEvent {
@@ -265,7 +277,7 @@ export interface SeatClearedEvent {
    * that shows the "Removed from seat" toast — voluntary leave is untagged
    * and stays silent.
    */
-  reason?: 'grace' | 'shrink' | 'removed';
+  reason?: 'shrink' | 'removed';
 }
 
 /**

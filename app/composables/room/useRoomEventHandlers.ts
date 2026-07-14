@@ -317,20 +317,6 @@ export function setupRoomEventHandlers(
       return;
     }
 
-    // Self-retake guard (F-24). MSAB's retention sweep (realtime-22) can fire
-    // a DELAYED `seat:cleared` after a brief disconnect, EVEN IF the same
-    // user reconnected and retook their own seat within the grace window.
-    // Gated on reason === 'grace': explicit leave/kick clears are never
-    // tagged, so a user who takes a seat and legitimately leaves within 10s
-    // still clears everywhere (the untagged guard used to swallow that and
-    // leave a ghost occupant on other clients).
-    if (event.reason === 'grace' && event.userId !== undefined) {
-      const recent = seatsStore.getRecentClaim(event.seatIndex);
-      if (recent && recent.userId === event.userId && Date.now() - recent.at < 10_000) {
-        return;
-      }
-    }
-
     const wasCurrentUserSeated = seat?.occupantId === authStore.user?.id;
 
     seatsStore.clearSeat(event.seatIndex);

@@ -79,6 +79,17 @@ export function useSeatActions({
     });
 
     if (response.error) {
+      // Self-heal: a SEAT_TAKEN rejection on a seat we rendered empty means our
+      // local view desynced (missed seat:updated / spurious clear). Apply the
+      // authoritative occupant carried on the rejection so the seat re-fills
+      // instead of staying wrongly empty until the next full rejoin.
+      if (response.occupant) {
+        const { seatIndex: occupiedIndex, userId, isMuted, user } = response.occupant;
+        if (user && !participantsStore.participants.get(userId)) {
+          participantsStore.addParticipant(user);
+        }
+        seatsStore.updateSeat(occupiedIndex, userId, isMuted);
+      }
       toast.add({ title: 'Cannot take seat', description: response.error, color: 'error' });
       return false;
     }

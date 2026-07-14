@@ -12,7 +12,11 @@ import { useDocumentVisibility, useEventListener } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
 import { withTimeout } from '~/utils/with-timeout';
 import { RoomBlockedError } from '~/utils/socket/socketErrorMessages';
-import { ROOM_OP_TIMEOUT_MS } from '~/constants/room';
+import {
+  ROOM_OP_TIMEOUT_MS,
+  AUDIO_REBUILD_RETRY_BASE_MS,
+  AUDIO_REBUILD_RETRY_MAX_MS,
+} from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
 
@@ -28,6 +32,10 @@ const isJoining = ref(false);
 
 /** Track recovery in progress to prevent overlapping recovery attempts */
 const isRecovering = ref(false);
+
+/** Pending auto-retry of a failed rebuild (single timer, exponential backoff). */
+let rebuildRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let rebuildRetryAttempt = 0;
 
 // ============================================
 // Composable
@@ -68,8 +76,10 @@ export function useRoomLifecycle(): void {
     isJoining.value = true;
     try {
       await withTimeout(rebuildRoomAudio(roomId), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
-      // Audio is back — clear any lingering reconnect-failed banner.
+      // Audio is back — clear any lingering reconnect-failed banner and stop
+      // any pending auto-retry.
       toast.remove(RECONNECT_FAILED_TOAST_ID);
+      cancelRebuildRetry();
       return true;
     } catch (err) {
       log.warn('Room audio reconnect attempt failed', err);
@@ -77,6 +87,39 @@ export function useRoomLifecycle(): void {
     } finally {
       isJoining.value = false;
     }
+  }
+
+  function cancelRebuildRetry(): void {
+    if (rebuildRetryTimer) {
+      clearTimeout(rebuildRetryTimer);
+      rebuildRetryTimer = null;
+    }
+    rebuildRetryAttempt = 0;
+  }
+
+  /**
+   * Auto-retry a failed rebuild with exponential backoff until it succeeds or
+   * the user leaves/switches rooms. Every failed rebuild path funnels here so
+   * a transient failure (network still down on tab resume, MSAB mid-deploy)
+   * self-heals instead of dead-ending on a "Reconnecting..." toast.
+   */
+  function scheduleRebuildRetry(roomId: string): void {
+    if (rebuildRetryTimer) return; // one pending retry at a time
+    const delay = Math.min(
+      AUDIO_REBUILD_RETRY_BASE_MS * 2 ** rebuildRetryAttempt,
+      AUDIO_REBUILD_RETRY_MAX_MS,
+    );
+    rebuildRetryAttempt++;
+    log.info(`Scheduling room audio rebuild retry in ${delay}ms (attempt ${rebuildRetryAttempt})`);
+    rebuildRetryTimer = setTimeout(async () => {
+      rebuildRetryTimer = null;
+      if (!roomStore.currentRoom || String(roomStore.currentRoom.id) !== roomId) {
+        cancelRebuildRetry();
+        return;
+      }
+      const recovered = await attemptRoomReconnect(roomId);
+      if (!recovered) scheduleRebuildRetry(roomId);
+    }, delay);
   }
 
   // ========================================
@@ -87,6 +130,7 @@ export function useRoomLifecycle(): void {
     async (newRoom, oldRoom) => {
       // Case 1: Room Closed
       if (oldRoom && !newRoom) {
+        cancelRebuildRetry();
         // Pass the explicit ID — currentRoom is already null here, so a bare
         // leaveRoom() can't resolve the room and never emits room:leave,
         // leaving the seat occupied server-side for everyone else.
@@ -96,6 +140,7 @@ export function useRoomLifecycle(): void {
 
       // Case 2: Room Changed (switched rooms)
       if (oldRoom && newRoom && oldRoom.id !== newRoom.id) {
+        cancelRebuildRetry();
         // No await needed (F-72): leaveRoom's mediasoup teardown is synchronous,
         // so the old room is fully torn down before the fall-through joinRoom
         // runs; and the MSAB join handler re-leaves any prior room before
@@ -165,6 +210,7 @@ export function useRoomLifecycle(): void {
               description: 'Audio may take a moment to restore.',
               color: 'warning',
             });
+            scheduleRebuildRetry(String(roomStore.currentRoom.id));
           } finally {
             isJoining.value = false;
           }
@@ -206,6 +252,7 @@ export function useRoomLifecycle(): void {
       toast.remove(RECONNECT_FAILED_TOAST_ID);
     } catch (error) {
       log.warn('Failed to re-join room after socket reconnect', error);
+      scheduleRebuildRetry(roomId);
     } finally {
       isJoining.value = false;
     }
@@ -234,9 +281,10 @@ export function useRoomLifecycle(): void {
       const recovered = await attemptRoomReconnect(roomId);
       if (recovered) return;
 
-      // Rebuild failed too — degrade cleanly to chat-only and hand the user an
-      // explicit retry instead of a dead socket.
+      // Rebuild failed too — degrade cleanly to chat-only with an explicit
+      // retry affordance, while backoff keeps retrying in the background.
       disconnectSocket(true);
+      scheduleRebuildRetry(roomId);
       toast.add({
         id: RECONNECT_FAILED_TOAST_ID,
         title: 'Audio disconnected',
@@ -306,6 +354,7 @@ export function useRoomLifecycle(): void {
           description: 'Audio may take a moment to restore.',
           color: 'warning',
         });
+        scheduleRebuildRetry(String(roomStore.currentRoom.id));
       } finally {
         isJoining.value = false;
       }

@@ -3,8 +3,8 @@ import { Capacitor } from '@capacitor/core'
 /**
  * Native BFF shim (Capacitor only).
  *
- * The bundled native app has no Nitro server, so the two relative `/api/*` BFF
- * routes (`detect-country`, `rooms`) cannot resolve at runtime. This plugin
+ * The bundled native app has no Nitro server, so the relative `/api/*` BFF
+ * routes (`detect-country`, `rooms`, `banners`) cannot resolve at runtime. This plugin
  * repoints them to remote equivalents WITHOUT touching any composable/page
  * (Architecture: call sites stay unchanged).
  *
@@ -14,6 +14,7 @@ import { Capacitor } from '@capacitor/core'
  * `onRequest` is not reliably honoured.
  *
  *  - `/api/rooms`          → `${apiBase}/rooms`            (params passed through)
+ *  - `/api/banners`        → `${apiBase}/event-banners`    (shape-identical passthrough)
  *  - `/api/detect-country` → geojs.io (device IP) + shape remap `{country}`→`{country_code}`
  *
  * On the web build this plugin no-ops; the Nitro routes serve as before.
@@ -28,6 +29,9 @@ export default defineNuxtPlugin(() => {
         if (typeof request === 'string') {
             if (request === '/api/rooms') {
                 return original(`${apiBase}/rooms`, options)
+            }
+            if (request === '/api/banners') {
+                return original(`${apiBase}/event-banners`, options)
             }
             if (request === '/api/detect-country') {
                 return original<{ country: string | null }>('https://get.geojs.io/v1/ip/country.json', { timeout: 3000 })

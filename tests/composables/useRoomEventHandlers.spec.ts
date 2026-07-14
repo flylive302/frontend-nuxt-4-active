@@ -198,27 +198,15 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
     expect(seatsStore.seats[3]?.occupantId).toBeNull()
   })
 
-  it("a reason:'grace' sweep clear IS swallowed when the same user re-claimed the seat within the window", async () => {
+  it('a stale clear for a DIFFERENT user than the current occupant is ignored', async () => {
     const { socket, seatsStore } = await setupCleared()
-    seatsStore.updateSeat(3, 7, false)
+    // Seat 3 was reused by user 9 after user 7 left; a delayed clear for 7
+    // must not evict 9.
+    seatsStore.updateSeat(3, 9, false)
 
-    socket.handlers.get('seat:cleared')?.({ seatIndex: 3, userId: 7, reason: 'grace' })
+    socket.handlers.get('seat:cleared')?.({ seatIndex: 3, userId: 7 })
 
-    // The delayed retention-sweep release must not evict a self-retaken seat.
-    expect(seatsStore.seats[3]?.occupantId).toBe(7)
-  })
-
-  it("a reason:'grace' clear applies normally when there is no recent re-claim", async () => {
-    const { socket, seatsStore } = await setupCleared()
-    seatsStore.updateSeat(3, 7, false)
-    // Age the claim past the 10s window.
-    const realNow = Date.now
-    vi.spyOn(Date, 'now').mockImplementation(() => realNow() + 11_000)
-
-    socket.handlers.get('seat:cleared')?.({ seatIndex: 3, userId: 7, reason: 'grace' })
-    vi.restoreAllMocks()
-
-    expect(seatsStore.seats[3]?.occupantId).toBeNull()
+    expect(seatsStore.seats[3]?.occupantId).toBe(9)
   })
 })
 

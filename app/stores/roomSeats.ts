@@ -48,15 +48,6 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   const chatDrawerUserId = ref<number | null>(null);
 
   // ========================================
-  // Self-retake staleness window (F-24)
-  // ========================================
-  // Records when each seat was last claimed by which user. The `seat:cleared`
-  // handler uses this to drop delayed grace-clear events from MSAB that arrive
-  // AFTER the same user has retaken their own seat (the post-resume race that
-  // triggered the rapid "Removed from seat" flicker on User B).
-  const seatLastClaimedAt = new Map<number, { userId: number; at: number }>();
-
-  // ========================================
   // Seat Reactions (ephemeral, ADR 0015)
   // ========================================
   // Keyed by userId — the sender's own broadcast (incl. sender) is the
@@ -133,18 +124,6 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
       isActive: currentSeat?.isActive ?? false,
       isLocked: currentSeat?.isLocked ?? false,
     };
-
-    if (occupantId !== null) {
-      seatLastClaimedAt.set(seatIndex, { userId: occupantId, at: Date.now() });
-    }
-  }
-
-  /**
-   * Return the most recent claim recorded for `seatIndex`, if any.
-   * Used by the `seat:cleared` handler to drop stale grace-clear events.
-   */
-  function getRecentClaim(seatIndex: number): { userId: number; at: number } | undefined {
-    return seatLastClaimedAt.get(seatIndex);
   }
 
   function clearSeat(seatIndex: number): void {
@@ -256,7 +235,6 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   /** Reset all seats and gift totals. */
   function resetSeats(): void {
     seatGiftTotals.value.clear();
-    seatLastClaimedAt.clear();
     activeReactions.value.clear();
     seats.value = createEmptySeats();
   }
@@ -340,7 +318,6 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     updateSeat,
     clearSeat,
     setSeatLocked,
-    getRecentClaim,
 
     // Seat gift totals
     seatGiftTotals,

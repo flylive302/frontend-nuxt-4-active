@@ -69,6 +69,16 @@ export const CONNECTION_TIMEOUT_MS = 10_000;
  */
 export const ROOM_OP_TIMEOUT_MS = 30_000;
 
+/**
+ * Exponential backoff for automatic room-audio rebuild retries after a failed
+ * reconnect/rebuild (base doubles per attempt, capped). Retries continue until
+ * the rebuild succeeds or the user leaves the room — a transient failure (e.g.
+ * network still down when the tab resumed) must never become a permanent
+ * chat-only dead-end.
+ */
+export const AUDIO_REBUILD_RETRY_BASE_MS = 2_000;
+export const AUDIO_REBUILD_RETRY_MAX_MS = 30_000;
+
 /** Body scroll unlock delay in milliseconds */
 export const BODY_UNLOCK_DELAY_MS = 1_000;
 
