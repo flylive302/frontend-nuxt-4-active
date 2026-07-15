@@ -18,11 +18,12 @@
  *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY  R2 API token
  *
  * Usage:
- *   node scripts/ota-publish.mjs <bundleVersion> <minNativeShellVersion>
- *   # bundleVersion       — semver of THIS web bundle, e.g. 1.4.0
- *   # minNativeShellVersion — lowest native versionName that may run it, e.g. 1.0.0
- *     (bump this only when the bundle needs a native capability shipped in a newer
- *      store release — otherwise keep it at the current floor so all shells swap.)
+ *   node scripts/ota-publish.mjs [bundleVersion] [minNativeShellVersion]
+ *   # bundleVersion       — semver of THIS web bundle, e.g. 1.4.0. Omit (or pass
+ *     `auto`) to fetch the live manifest and bump its patch (3.1.3 → 3.1.4).
+ *   # minNativeShellVersion — lowest native versionName that may run it, e.g. 1.0.0.
+ *     Omit to keep the live manifest's current floor. Bump only when the bundle
+ *     needs a native capability shipped in a newer store release.
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -30,10 +31,45 @@ import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const [bundleVersion, minNativeShellVersion] = process.argv.slice(2)
-if (!bundleVersion || !minNativeShellVersion) {
-  console.error('usage: node scripts/ota-publish.mjs <bundleVersion> <minNativeShellVersion>')
+let [bundleVersion, minNativeShellVersion] = process.argv.slice(2)
+
+const endpoint = process.env.R2_ENDPOINT
+const bucket = process.env.R2_BUCKET
+const publicBase = process.env.OTA_PUBLIC_BASE_URL
+if (!endpoint || !bucket || !publicBase) {
+  console.error('✗ set R2_ENDPOINT, R2_BUCKET and OTA_PUBLIC_BASE_URL')
   process.exit(1)
+}
+
+// Auto mode: derive both values from the live manifest so nobody has to remember
+// the next version. Publish-time only — the app never sees this logic.
+if (!bundleVersion || bundleVersion === 'auto' || !minNativeShellVersion) {
+  const manifestUrl = `${publicBase.replace(/\/$/, '')}/manifest.json?ts=${Date.now()}`
+  let live
+  try {
+    const res = await fetch(manifestUrl)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    live = await res.json()
+  } catch (err) {
+    console.error(`✗ auto-version: could not fetch live manifest (${manifestUrl}): ${err.message}`)
+    console.error('  pass explicit versions instead: node scripts/ota-publish.mjs <bundleVersion> <minNativeShellVersion>')
+    process.exit(1)
+  }
+  if (!bundleVersion || bundleVersion === 'auto') {
+    const parts = String(live.bundleVersion).split('.').map(Number)
+    if (parts.some(Number.isNaN)) {
+      console.error(`✗ auto-version: live bundleVersion "${live.bundleVersion}" is not semver`)
+      process.exit(1)
+    }
+    while (parts.length < 3) parts.push(0) // "3.1" → 3.1.0 before bumping
+    parts[2] += 1
+    bundleVersion = parts.join('.')
+    console.log(`→ auto bundleVersion: ${live.bundleVersion} → ${bundleVersion}`)
+  }
+  if (!minNativeShellVersion) {
+    minNativeShellVersion = String(live.minNativeShellVersion)
+    console.log(`→ keeping minNativeShellVersion floor: ${minNativeShellVersion}`)
+  }
 }
 
 // Accept 2- or 3-segment versions: Android `versionName` is often `x.y` (ours is
@@ -44,14 +80,6 @@ for (const [name, v] of [['bundleVersion', bundleVersion], ['minNativeShellVersi
     console.error(`✗ ${name} must be x.y or x.y.z, got "${v}"`)
     process.exit(1)
   }
-}
-
-const endpoint = process.env.R2_ENDPOINT
-const bucket = process.env.R2_BUCKET
-const publicBase = process.env.OTA_PUBLIC_BASE_URL
-if (!endpoint || !bucket || !publicBase) {
-  console.error('✗ set R2_ENDPOINT, R2_BUCKET and OTA_PUBLIC_BASE_URL')
-  process.exit(1)
 }
 
 const webDir = '.output/public'
