@@ -19,8 +19,10 @@ export type AssetPriority = 'critical' | 'high' | 'normal' | 'low'
 /**
  * Logical asset scope/category.
  * Used to group manual/page assets without creating separate pipelines.
+ * 'runtime' = cached ad-hoc at play time (SVGA read-through), not part of any
+ * bootstrap manifest — exempt from catalog-diff eviction, staleness only.
  */
-export type AssetScope = 'gift' | 'badge' | 'mall' | 'wallet' | 'global' | 'manual' | 'vip'
+export type AssetScope = 'gift' | 'badge' | 'mall' | 'wallet' | 'global' | 'manual' | 'vip' | 'runtime'
 
 /**
  * Download status for queue items.

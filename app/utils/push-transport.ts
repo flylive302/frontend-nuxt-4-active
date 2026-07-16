@@ -2,9 +2,10 @@
  * Push-transport resolver — pure, framework-agnostic.
  *
  * Maps the running platform to the push **transport** the app must register on
- * (ADR 0013). The web build subscribes via the browser Push API (Web Push); the
- * Capacitor shell registers an FCM token. `apns` is reserved for the future iOS
- * phase so callers and storage need no reshaping when it lands.
+ * (ADR 0013). The Capacitor shell registers an FCM token; `webpush` is retired
+ * (PWA layer removed, ADR 0020) so the web platform resolves to a transport the
+ * subscriber treats as a no-op. `apns` is reserved for the future iOS phase so
+ * callers and storage need no reshaping when it lands.
  *
  * No Capacitor, no Vue, no sockets — just the decision so it is fully
  * unit-testable. The impure registration paths live in

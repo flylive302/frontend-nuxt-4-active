@@ -15,6 +15,7 @@ import { ASSET_CONFIG } from '~/constants/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { getNetworkInfo } from '~/services/networkDetector'
+import { normalizeAssetUrl, rewriteR2UrlForDevFetch } from '~/utils/asset-url'
 
 
 // ========================================
@@ -53,25 +54,7 @@ let criticalQueued = 0
 let isPaused = false
 let isProcessing = false
 
-const R2_ORIGIN = 'https://assets.flyliveapp.com'
-
-/** In Vite dev, load R2 through same-origin `/__r2` proxy (see `nuxt.config` vite.server.proxy). */
-function rewriteR2UrlForDevFetch(url: string): string {
-  if (!import.meta.dev || typeof window === 'undefined') return url
-  if (!url.startsWith(R2_ORIGIN)) return url
-  return `/__r2${url.slice(R2_ORIGIN.length)}`
-}
-
-function normalizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
-    parsed.hash = ''
-    parsed.searchParams.sort()
-    return parsed.toString()
-  } catch {
-    return url.trim()
-  }
-}
+const normalizeUrl = normalizeAssetUrl
 
 // ========================================
 // Queue Management
@@ -238,33 +221,6 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
   notifyProgress()
 
   try {
-    const sw = navigator?.serviceWorker?.controller
-    if (sw) {
-      const result = await downloadViaSW(sw, item.url)
-
-      if (result.success) {
-        const metadata: AssetMetadata = {
-          url: item.url,
-          assetType: item.assetType,
-          priority: item.priority,
-          scope: item.scope,
-          groupKey: item.groupKey,
-          sizeBytes: result.sizeBytes ?? 0,
-          giftId: item.giftId,
-          badgeId: item.badgeId,
-          downloadedAt: Date.now(),
-          lastAccessedAt: Date.now(),
-          retryCount: item.retryCount,
-        }
-        await assetIndex.upsert(metadata)
-        handleSuccess(item, result.sizeBytes)
-        return
-      }
-
-      handleError(item, new Error(result.error ?? 'SW download failed'))
-      return
-    }
-
     const fetchUrl = rewriteR2UrlForDevFetch(item.url)
     // Abortable fetch — without it a stalled connection holds this queue
     // slot forever and the download gate hangs one short of completion.
@@ -305,33 +261,6 @@ async function downloadItem(item: DownloadQueueItem): Promise<void> {
   } catch (e) {
     handleError(item, e as Error)
   }
-}
-
-function downloadViaSW(
-    sw: ServiceWorker,
-    url: string,
-): Promise<{ success: boolean; sizeBytes?: number; error?: string }> {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener('message', handler)
-      resolve({ success: false, error: 'SW download timeout' })
-    }, ASSET_CONFIG.DOWNLOAD_TIMEOUT_MS)
-
-    function handler(event: MessageEvent) {
-      if (event.data?.type === 'ASSET_DOWNLOAD_RESULT' && event.data.url === url) {
-        clearTimeout(timeout)
-        navigator.serviceWorker.removeEventListener('message', handler)
-        resolve({
-          success: event.data.success,
-          sizeBytes: event.data.sizeBytes,
-          error: event.data.error,
-        })
-      }
-    }
-
-    navigator.serviceWorker.addEventListener('message', handler)
-    sw.postMessage({ type: 'ASSET_DOWNLOAD', url, cacheName: ASSET_CONFIG.CACHE_NAME })
-  })
 }
 
 function handleSuccess(item: DownloadQueueItem, sizeBytes?: number): void {

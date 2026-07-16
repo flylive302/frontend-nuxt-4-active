@@ -12,6 +12,7 @@ import * as assetDownloader from '~/services/assetDownloader'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { resolveVideoUrl } from '~/utils/platform'
+import { normalizeAssetUrl } from '~/utils/asset-url'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[BootstrapAssets]')
@@ -39,16 +40,7 @@ function propAssetType(url: string): 'svga' | 'video' {
   }
 }
 
-function normalizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
-    parsed.hash = ''
-    parsed.searchParams.sort()
-    return parsed.toString()
-  } catch {
-    return url.trim()
-  }
-}
+const normalizeUrl = normalizeAssetUrl
 
 function toEnqueueItem(item: AssetManifestItem): EnqueueItem {
   return {
@@ -277,6 +269,10 @@ export function useBootstrapAssets(routePath?: string) {
           ].map((i) => normalizeUrl(i.url)))
           const indexed = await assetIndex.getAllByPriority()
           for (const entry of indexed) {
+            // 'runtime' entries (ad-hoc SVGA read-through: other users' frames,
+            // badges, entry slides) never appear in any manifest — staleness
+            // eviction covers them instead.
+            if (entry.scope === 'runtime') continue
             if (!catalogUrls.has(entry.url)) {
               await cacheStorage.deleteAsset(entry.url)
               await assetIndex.remove(entry.url)

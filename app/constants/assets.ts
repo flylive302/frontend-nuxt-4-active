@@ -89,6 +89,16 @@ export const ASSETS = {
 } as const
 
 // ========================================
+// Avatar Frame Visibility (capacitor-performance issue 02)
+// ========================================
+
+/** IntersectionObserver rootMargin for deferred avatar-frame animation (pre-warm before entering viewport). */
+export const DEFERRED_VISIBILITY_ROOT_MARGIN = '100px'
+
+/** IntersectionObserver threshold for deferred avatar-frame animation. */
+export const DEFERRED_VISIBILITY_THRESHOLD = 0.01
+
+// ========================================
 // Dynamic URL Builders
 // ========================================
 

@@ -14,6 +14,7 @@ import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
 import { createLogger } from '~/utils/logger'
 import { resolveVideoUrl } from '~/utils/platform'
+import { normalizeAssetUrl } from '~/utils/asset-url'
 import { VIDEO_CACHE_MAX_ENTRIES } from '~/constants/gift'
 
 const log = createLogger('[GiftAssetCache]')
@@ -253,8 +254,8 @@ export function getCacheStats(): { videoCount: number; pendingCount: number; pre
  *
  * - Fast path: preloadedGiftIds (current session, covers all animation types including svga)
  * - image: always ready — <img> loads natively, no preloading required
- * - svga: L1 preloadedGiftIds is the only readiness signal — no persistent cache
- * - video/vap: checks L1 memory cache then cacheStorage (flylive-assets-v1)
+ * - svga/video/vap: checks L1 memory cache then cacheStorage (flylive-assets-v1);
+ *   svga persists there via the svgaAssetCache read-through
  */
 export async function isGiftAssetCached(
   gift: { id?: number; asset_type: string; animation_url: string | null; thumbnail_url: string },
@@ -263,15 +264,15 @@ export async function isGiftAssetCached(
   if (gift.id !== undefined && preloadedGiftIds.has(gift.id)) return true
 
   if (gift.asset_type === 'image') {
-    // Images load natively via <img> — no preloading required.
-    // NuxtImg transforms the URL (adds tr= params), so caches.match(thumbnail_url)
-    // never hits the service worker's cdn-images cache and always returns false.
+    // Images load natively via <img> (browser HTTP cache) — no preloading required.
     return true
   }
 
   if (!gift.animation_url) return false
 
-  if (gift.asset_type === 'svga') return false
+  if (gift.asset_type === 'svga') {
+    return cacheStorage.hasAsset(normalizeAssetUrl(gift.animation_url))
+  }
 
   const url = resolveVideoUrl(gift.animation_url)
 

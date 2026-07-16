@@ -9,8 +9,15 @@
  * concurrently overwrites the worker.onmessage handler, causing earlier loads to
  * hang forever. All loads are therefore serialized through a queue chain.
  *
+ * Persistence: URLs resolve through the app-owned asset cache first
+ * (services/svgaAssetCache — 'flylive-assets-v1' read-through), so frames /
+ * VIP effects / entry slides / badges replay across sessions without
+ * re-downloading. The parser sees a blob URL on cache hits.
+ *
  * @see https://github.com/svga/SVGAPlayer-Web-Lite
  */
+import { resolveSvgaSource, evictSvga } from '~/services/svgaAssetCache'
+
 export default defineNuxtPlugin({
     name: 'svga-player',
     // Don't block app init on the svga library or its WebWorker. Auth/login
@@ -41,7 +48,20 @@ export default defineNuxtPlugin({
             if (!cache.has(url)) {
                 const loadPromise = loadChain.then(async () => {
                     await ensureSvga();
-                    return _parser.load(url);
+                    const source = await resolveSvgaSource(url);
+                    try {
+                        return await _parser.load(source.src);
+                    } catch (e) {
+                        // Cached bytes failed to parse — drop the entry and
+                        // retry straight from the network before giving up.
+                        if (source.src !== url) {
+                            void evictSvga(url);
+                            return _parser.load(url);
+                        }
+                        throw e;
+                    } finally {
+                        source.revoke();
+                    }
                 });
                 loadChain = loadPromise.then(() => {}, () => {});
                 cache.set(url, loadPromise);

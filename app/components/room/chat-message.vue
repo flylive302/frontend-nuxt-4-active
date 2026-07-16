@@ -72,7 +72,7 @@ const charmLevel = computed(() =>
 <template>
   <div class="flex py-3">
     <!-- Avatar -->
-    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :animated="true" class="shrink-0 size-12" @click="handleAvatarClick" />
+    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
     <div class="min-w-0">
 
       <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg bg-primary-30 ring ring-primary rounded-md">

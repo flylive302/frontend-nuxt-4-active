@@ -1,7 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { defineNuxtConfig } from 'nuxt/config'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { pwaConfig } from './config/pwa.config'
 import { headConfig } from './config/head.config'
 
 const bundleAnalyze = process.env.NUXT_ANALYZE === 'true' || process.env.ANALYZE === 'true'
@@ -15,8 +14,7 @@ export default defineNuxtConfig({
         inlineStyles: false,
     },
     css: ['~/assets/css/main.css'],
-    modules: ['@sentry/nuxt/module', '@vite-pwa/nuxt', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
-    pwa: pwaConfig,
+    modules: ['@sentry/nuxt/module', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     components: [
         { path: '~/components/common', pathPrefix: false },
         '~/components',
@@ -152,6 +150,8 @@ export default defineNuxtConfig({
         cloudflare: {
             pages: {
                 routes: {
+                    // /sw.js is the self-destructing service worker (public/sw.js)
+                    // that unregisters the retired PWA layer — must be served static.
                     exclude: ['/sw.js', '/workbox-*']
                 }
             }
@@ -169,7 +169,6 @@ export default defineNuxtConfig({
             reverbHost: process.env.NUXT_PUBLIC_REVERB_HOST || 'localhost',
             reverbPort: process.env.NUXT_PUBLIC_REVERB_PORT || '8080',
             reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
-            vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '',
             // OTA live-update manifest (capacitor-07). Absolute URL of the static
             // `manifest.json` on Cloudflare R2. Empty ⇒ the native OTA check no-ops
             // (web build never reads it). Baked into the bundle at generate time.

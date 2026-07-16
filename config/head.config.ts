@@ -2,7 +2,7 @@
  * App head configuration (meta tags, links)
  *
  * Extracted from nuxt.config.ts to keep the main config lean.
- * The manifest <link> is intentionally absent — @vite-pwa/nuxt injects it automatically.
+ * No web-app manifest — the PWA layer was removed entirely (ADR 0020).
  */
 import type { NuxtConfig } from 'nuxt/schema'
 

@@ -114,6 +114,7 @@ function clearActiveReaction(): void {
             v-else-if="!isEmpty"
             key="occupied"
             :animated="true"
+            :defer-frame-animation="true"
             :frame-asset-url="userFrame"
             :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
             class="relative z-20"

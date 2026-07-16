@@ -32,9 +32,7 @@ export const ASSET_CONFIG = {
 
   /**
    * Per-attempt download timeout (ms). Generous on purpose: the largest
-   * bootstrap assets are ~5–7 MB and must survive slow mobile links. The SW
-   * dedupes in-flight fetches, so a timed-out attempt's retry resumes waiting
-   * on the same download rather than restarting it.
+   * bootstrap assets are ~5–7 MB and must survive slow mobile links.
    */
   DOWNLOAD_TIMEOUT_MS: 120_000,
 
@@ -46,20 +44,16 @@ export const ASSET_CONFIG = {
 } as const
 
 /**
- * Cache names used by Workbox (match nuxt.config.ts).
- */
-export const WORKBOX_CACHES = {
-  SVGA_CACHE: 'svga-cache',   // SVGA animations (.svga)
-  CDN_IMAGES: 'cdn-images',
-  API_CACHE: 'api-cache',
-} as const
-
-/**
  * Old cache versions to clean up on init.
+ * The self-destructing /sw.js also deletes every non-app bucket on activate;
+ * this list is belt-and-braces for clients whose SW update never fires.
  */
 export const DEPRECATED_CACHE_NAMES: string[] = [
   // Add old cache names here when upgrading versions
   // e.g., 'flylive-assets-v0'
   'fly-assets-v1', // orphan bucket the old SW asset handler wrote to
   'gift-videos', // retired Workbox rule — videos live in flylive-assets-v1 now
+  'svga-cache', // retired Workbox rule — SVGAs are read-through flylive-assets-v1 now (ADR 0020)
+  'cdn-images', // retired Workbox rule — images fall back to browser HTTP caching
+  'api-cache', // retired Workbox rule — API responses are never cached
 ]

@@ -11,76 +11,32 @@ const log = createLogger('[PushSubscription]')
  * Registers or refreshes this device's push registration with the backend.
  *
  * Single entry point regardless of platform (ADR 0013): the transport resolver
- * picks Web Push (browser) or FCM (Capacitor shell), and `register()` runs the
- * matching path. Call once after the user authenticates. Safe to call multiple
- * times. Permission denial / missing capability is a graceful no-op.
+ * picks the delivery rail. Only FCM (Capacitor shell) is live — Web Push was
+ * dropped with the PWA layer (ADR 0020), so the web path is a graceful no-op.
+ * Call once after the user authenticates. Safe to call multiple times.
+ * Permission denial / missing capability is a graceful no-op.
  */
 export function usePushSubscription() {
   const { api } = useApi()
-  const config = useRuntimeConfig()
 
   async function register(): Promise<void> {
-    if (!import.meta.client) return
+    if (import.meta.server) return
 
-    if (resolvePushTransport(Capacitor.isNativePlatform() ? 'native' : 'web') === 'fcm') {
-      await registerNativePush()
+    if (resolvePushTransport(Capacitor.isNativePlatform() ? 'native' : 'web') !== 'fcm') {
       return
     }
 
-    await registerWebPush()
+    await registerNativePush()
   }
 
   async function unregister(): Promise<void> {
-    if (!import.meta.client) return
+    if (import.meta.server) return
 
-    if (Capacitor.isNativePlatform()) {
-      await unregisterNativePush()
+    if (!Capacitor.isNativePlatform()) {
       return
     }
 
-    await unregisterWebPush()
-  }
-
-  // EXECUTE — Web Push (browser): subscribe via PushManager, store endpoint + keys.
-  async function registerWebPush(): Promise<void> {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      return
-    }
-
-    const vapidKey = config.public.vapidPublicKey
-    if (!vapidKey) {
-      return
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.ready
-
-      let subscription = await registration.pushManager.getSubscription()
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        })
-      }
-
-      const json = subscription.toJSON()
-
-      await api('/push/subscriptions', {
-        method: 'POST',
-        body: {
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: json.keys?.p256dh ?? '',
-            auth: json.keys?.auth ?? '',
-          },
-          encoding: 'aesgcm',
-        },
-      })
-    }
-    catch (err) {
-      log.warn('Failed to register push subscription', err)
-    }
+    await unregisterNativePush()
   }
 
   // EXECUTE — Native (FCM): request permission, register, store the device token.
@@ -107,24 +63,6 @@ export function usePushSubscription() {
     }
     catch (err) {
       log.warn('Failed to register native push token', err)
-    }
-  }
-
-  // EXECUTE — Web Push teardown.
-  async function unregisterWebPush(): Promise<void> {
-    try {
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-      if (!subscription) return
-
-      await api('/push/subscriptions', {
-        method: 'DELETE',
-        body: { endpoint: subscription.endpoint },
-      })
-      await subscription.unsubscribe()
-    }
-    catch (err) {
-      log.warn('Failed to unregister push subscription', err)
     }
   }
 
@@ -176,15 +114,4 @@ function awaitRegistrationToken(): Promise<string> {
 
     PushNotifications.register().catch(reject)
   })
-}
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = atob(base64)
-  const output = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; i++) {
-    output[i] = rawData.charCodeAt(i)
-  }
-  return output
 }

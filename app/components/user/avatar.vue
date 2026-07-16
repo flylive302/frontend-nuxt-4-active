@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 // ========================================
 // Constants
@@ -18,20 +17,31 @@ const props = withDefaults(defineProps<{
   img?: string | undefined | null
   animated?: boolean
   /**
-   * When true with `animated`, SVGA frame loads only after the avatar enters
-   * the viewport (or near it). Cuts main-thread decode work for off-screen carousels.
+   * When true with `animated`, the SVGA frame player mounts only while the
+   * avatar is on-screen (or near it) and unmounts — pausing the canvas loop
+   * — the moment it scrolls out. Parsed SVGA entity stays cached in the svga
+   * plugin, so remount on re-entry is cheap.
    */
   deferFrameAnimation?: boolean
+  /**
+   * Render the frame as a static still (first SVGA frame, rendered once per
+   * unique frame URL and cached) instead of an animated SvgaPlayer instance.
+   * For high-count, low-visual-value contexts like chat messages. Takes
+   * precedence over `animated`.
+   */
+  staticFrame?: boolean
 }>(), {
   frameName: '',
   frameAssetUrl: ASSETS.DEFAULT_FRAME,
   img: undefined,
   animated: false,
   deferFrameAnimation: false,
+  staticFrame: false,
 });
 
 const rootRef = ref<HTMLElement | null>(null)
-const svgaAllowed = ref(!props.deferFrameAnimation)
+
+const { isVisible: svgaAllowed } = useDeferredVisibility(rootRef, () => props.deferFrameAnimation)
 
 // Track load errors so we can fall back to AVATAR_PLACEHOLDER.
 // Reset on every src change so a seat user-swap retries the new URL.
@@ -44,16 +54,6 @@ const resolvedImgSrc = computed(() => {
 })
 
 function onImgError() { hasImgError.value = true }
-
-useIntersectionObserver(
-  rootRef,
-  ([entry]) => {
-    if (entry?.isIntersecting) {
-      svgaAllowed.value = true
-    }
-  },
-  { rootMargin: '100px', threshold: 0.01 },
-)
 
 // ========================================
 // Computed
@@ -105,6 +105,9 @@ const frameConfig = computed(() => {
   // No frame data at all
   return null
 })
+
+const staticFrameUrl = computed(() => (props.staticFrame ? frameConfig.value?.name : undefined))
+const { stillUrl } = useAvatarStillFrame(staticFrameUrl)
 </script>
 
 <template>
@@ -117,9 +120,19 @@ const frameConfig = computed(() => {
         referrerpolicy="no-referrer"
         @error="onImgError"
       >
-      <!-- Frame layer (on top) -->
+      <!-- Frame layer (on top): static still (chat) or animated SvgaPlayer (seats) -->
+      <!-- w-full h-auto mirrors SvgaPlayer's canvas sizing (width 100%, height auto)
+           so the still occupies the identical box; without it the data-URL image
+           renders at its natural SVGA viewBox size and overflows small avatars. -->
+      <img
+        v-if="props.staticFrame && frameConfig?.name && stillUrl"
+        class="absolute w-full h-auto"
+        :src="stillUrl"
+        :style="frameConfig.style"
+        alt=""
+      >
       <SvgaPlayer
-        v-if="props.animated && frameConfig?.name && svgaAllowed"
+        v-else-if="props.animated && !props.staticFrame && frameConfig?.name && svgaAllowed"
         class="absolute" height="auto"
         :name="frameConfig.name"
         :style="frameConfig.style"

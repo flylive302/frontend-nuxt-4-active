@@ -387,7 +387,9 @@ describe('giftAssetCache', () => {
       expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
     })
 
-    it('returns false for svga when not yet preloaded', async () => {
+    it('falls back to persistent cache for svga when not preloaded this session', async () => {
+      mockCacheStorage.hasAsset.mockResolvedValue(false)
+
       const result = await giftAssetCache.isGiftAssetCached({
         id: 999,
         asset_type: 'svga',
@@ -396,7 +398,20 @@ describe('giftAssetCache', () => {
       })
 
       expect(result).toBe(false)
-      expect(mockCacheStorage.hasAsset).not.toHaveBeenCalled()
+      expect(mockCacheStorage.hasAsset).toHaveBeenCalledWith('https://example.com/gift.svga')
+    })
+
+    it('returns true for svga persisted by the read-through cache (second session)', async () => {
+      mockCacheStorage.hasAsset.mockResolvedValue(true)
+
+      const result = await giftAssetCache.isGiftAssetCached({
+        id: 999,
+        asset_type: 'svga',
+        animation_url: 'https://example.com/gift.svga',
+        thumbnail_url: 'https://cdn.example.com/thumb.jpg',
+      })
+
+      expect(result).toBe(true)
     })
 
     it('returns true for vap when cacheStorage.hasAsset returns true', async () => {

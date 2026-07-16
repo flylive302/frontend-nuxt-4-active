@@ -216,6 +216,111 @@ describe('roomSeatsStore.seatsWithUsers — reactivity', () => {
 })
 
 // ============================================================
+// capacitor-performance 03 — identity-stable seatsWithUsers
+// ============================================================
+describe('roomSeatsStore.seatsWithUsers — identity stability', () => {
+  it('keeps unchanged seats reference-equal across a speaker-activity tick', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(1))
+    participants.addParticipant(makeParticipant(2))
+    seats.updateSeat(0, 1, false)
+    seats.updateSeat(1, 2, false)
+
+    const before = [...seats.seatsWithUsers]
+
+    // Seat 0's occupant starts speaking; seat 1 and all empty seats unchanged.
+    seats.syncActiveSpeakers([1])
+    const after = seats.seatsWithUsers
+
+    expect(after[0]).not.toBe(before[0])
+    expect(after[0]?.isActive).toBe(true)
+    for (let i = 1; i < before.length; i++) {
+      expect(after[i]).toBe(before[i])
+    }
+  })
+
+  it('keeps every seat reference-equal when a tick changes nothing', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(1))
+    seats.updateSeat(0, 1, false)
+    seats.syncActiveSpeakers([1])
+
+    const before = [...seats.seatsWithUsers]
+    // Same speaker set again — no seat data changes.
+    seats.syncActiveSpeakers([1])
+    const after = seats.seatsWithUsers
+
+    for (let i = 0; i < before.length; i++) {
+      expect(after[i]).toBe(before[i])
+    }
+  })
+
+  it('produces a new reference with correct data for a changed seat', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(1))
+    participants.addParticipant(makeParticipant(2))
+    seats.updateSeat(0, 1, false)
+
+    const before = [...seats.seatsWithUsers]
+
+    seats.updateSeat(0, 2, true)
+    const after = seats.seatsWithUsers
+
+    expect(after[0]).not.toBe(before[0])
+    expect(after[0]?.occupantId).toBe(2)
+    expect(after[0]?.isMuted).toBe(true)
+    expect(after[0]?.user?.id).toBe(2)
+  })
+
+  it('invalidates a seat when its occupant object is replaced in the participants map', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const seats = useRoomSeatsStore()
+    const participants = useRoomParticipantsStore()
+
+    participants.addParticipant(makeParticipant(1, { name: 'Alice' }))
+    seats.updateSeat(0, 1, false)
+    const before = [...seats.seatsWithUsers]
+
+    // removeParticipant + addParticipant mints a NEW user object for id 1.
+    participants.removeParticipant(1)
+    participants.addParticipant(makeParticipant(1, { name: 'Alice2' }))
+    const after = seats.seatsWithUsers
+
+    expect(after[0]).not.toBe(before[0])
+    expect(after[0]?.user?.name).toBe('Alice2')
+  })
+
+  it('survives resize + reset without leaking stale memo entries', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const seats = useRoomSeatsStore()
+
+    seats.updateSeat(0, 1, false)
+    void seats.seatsWithUsers // prime the memo at 15 entries
+
+    seats.setSeatCount(5)
+    expect(seats.seatsWithUsers).toHaveLength(5)
+
+    seats.resetSeats() // restores the default seat count
+    const after = seats.seatsWithUsers
+    expect(after).toHaveLength(15)
+    expect(after.every((s) => s.occupantId === null && s.user === null)).toBe(true)
+  })
+})
+
+// ============================================================
 // Slice 2 — single-occupancy invariant
 // ============================================================
 describe('roomSeatsStore.updateSeat — single-occupancy', () => {

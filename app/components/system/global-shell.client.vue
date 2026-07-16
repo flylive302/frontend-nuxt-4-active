@@ -42,10 +42,6 @@ initMediaSession()
 
     <SystemStoragePermissionBanner />
 
-    <SystemPwaInstallPrompt />
-
-    <SystemUpdateAvailableToast />
-
     <SystemOtaUpdateToast />
 
     <EventsBadgeEarnedModal />

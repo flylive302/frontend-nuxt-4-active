@@ -65,15 +65,37 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   // ========================================
   const speakersCount = computed(() => seats.value.filter((s) => s.occupantId !== null).length);
 
-  const seatsWithUsers = computed<SeatWithUser[]>(() =>
-    seats.value.map((seat) => ({
-      ...seat,
-      user:
+  // Identity-stable derived seats: a seat whose fields and user reference did
+  // not change keeps the SAME object across recomputes, so `speaker:active`
+  // ticks (several per second) only re-render the seats that actually changed
+  // instead of all of them. Same rationale as the in-place upsert in
+  // roomParticipants.reconcileParticipants. The memo array is plain module
+  // state, not a ref — it only feeds the comparison on the next recompute.
+  let seatsWithUsersMemo: SeatWithUser[] = [];
+
+  const seatsWithUsers = computed<SeatWithUser[]>(() => {
+    const next = seats.value.map((seat, i) => {
+      const user =
         seat.occupantId !== null
           ? (participantsStore.participants.get(seat.occupantId) ?? null)
-          : null,
-    })),
-  );
+          : null;
+      const prev = seatsWithUsersMemo[i];
+      if (
+        prev &&
+        prev.user === user &&
+        prev.index === seat.index &&
+        prev.occupantId === seat.occupantId &&
+        prev.isMuted === seat.isMuted &&
+        prev.isActive === seat.isActive &&
+        prev.isLocked === seat.isLocked
+      ) {
+        return prev;
+      }
+      return { ...seat, user };
+    });
+    seatsWithUsersMemo = next;
+    return next;
+  });
 
   const speakerIds = computed<Set<number>>(() => {
     const ids = new Set<number>();
