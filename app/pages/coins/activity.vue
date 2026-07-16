@@ -3,7 +3,20 @@
 // Imports
 // ========================================
 
+import type { Component } from 'vue'
+import { defineAsyncComponent } from 'vue'
 import { FILTER_TABS } from '~/constants/economy/transactionConstants'
+
+// Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
+// doesn't get linked as render-blocking CSS on routes that don't reach this
+// page (mirrors app/components/room/chat-panel.vue).
+const DynamicScroller = defineAsyncComponent(async () => {
+  if (import.meta.client) await import('vue-virtual-scroller/dist/vue-virtual-scroller.css')
+  return (await import('vue-virtual-scroller')).DynamicScroller as unknown as Component
+})
+const DynamicScrollerItem = defineAsyncComponent(async () =>
+  (await import('vue-virtual-scroller')).DynamicScrollerItem as unknown as Component,
+)
 
 // ========================================
 // Page Configuration
@@ -13,6 +26,12 @@ definePageMeta({
   layout: 'alt',
   middleware: 'auth',
 })
+
+// ========================================
+// Constants
+// ========================================
+
+const ACTIVITY_ITEM_MIN_SIZE = 56
 
 // ========================================
 // Store & Composables
@@ -37,6 +56,8 @@ const hasMore = computed(() => transactionStore.transactions.hasMore)
 const error = computed(() => transactionStore.transactions.error)
 const isEmpty = computed(() => transactionStore.isEmpty)
 const currentFilter = computed(() => transactionStore.currentFilter)
+
+const { items: activityItems, toggleDate } = useTransactionActivityList(transactionsByDate)
 
 // ========================================
 // SSR Data Loading
@@ -89,7 +110,7 @@ if (import.meta.client) {
 <template>
   <main>
     <NavAlt back-to="/coins/request">Activity History</NavAlt>
-    <div class="h-9 safe-area-top" />
+    <div class="pt-9 safe-area-top" />
 
     <!-- Filter Tabs -->
     <div class="flex overflow-x-auto border-b-2 mb-1 border-black shadow-xl shadow-primary-950/50">
@@ -132,23 +153,27 @@ if (import.meta.client) {
 
     <!-- Transaction List -->
     <template v-else>
-      <UCollapsible
-        v-for="day in transactionsByDate"
-        :key="day.date"
-        :default-open="true"
+      <DynamicScroller
+        :items="activityItems"
+        :min-item-size="ACTIVITY_ITEM_MIN_SIZE"
+        key-field="key"
+        page-mode
       >
-        <div class="mb-2 flex items-center justify-between px-3">
-          <SectionTitle>{{ day.date_formatted }}</SectionTitle>
-          <icon name="i-lucide-chevron-down" />
-        </div>
-        <template #content>
-          <EconomyTransactionItem
-            v-for="transaction in day.transactions"
-            :key="transaction.id"
-            :transaction="transaction"
-          />
+        <template #default="{ item, index, active }">
+          <DynamicScrollerItem
+            :item="item"
+            :active="active"
+            :data-index="index"
+            :size-dependencies="[item.type]"
+          >
+            <div v-if="item.type === 'header'" class="mb-2 flex items-center justify-between px-3 cursor-pointer" @click="toggleDate(item.date)">
+              <SectionTitle>{{ item.dateFormatted }}</SectionTitle>
+              <icon name="i-lucide-chevron-down" :class="{ 'rotate-180': item.collapsed }" class="transition-transform" />
+            </div>
+            <EconomyTransactionItem v-else :transaction="item.transaction" />
+          </DynamicScrollerItem>
         </template>
-      </UCollapsible>
+      </DynamicScroller>
 
       <!-- Loading More -->
       <div v-if="isLoading" class="py-4 text-center">

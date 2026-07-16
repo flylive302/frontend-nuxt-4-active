@@ -8,9 +8,17 @@ type SlottedBadge = {
   asset_url?: string | null
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   equippedBadges: EquippedBadge[]
-}>()
+  /**
+   * Pause the scrolling animation (e.g. while the header is scrolled out of
+   * view). Purely visual — `animation-play-state`, no layout/appearance
+   * change while paused/resumed.
+   */
+  paused?: boolean
+}>(), {
+  paused: false,
+})
 
 const containerRef = ref<HTMLElement | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
@@ -50,6 +58,7 @@ watch(sorted, async () => {
         ref="trackRef"
         class="flex items-center gap-1"
         :class="{ 'marquee-track': isOverflowing }"
+        :style="{ animationPlayState: paused ? 'paused' : 'running' }"
     >
       <BadgeVisual
           v-for="badge in sorted"

@@ -79,6 +79,17 @@ export const ROOM_OP_TIMEOUT_MS = 30_000;
 export const AUDIO_REBUILD_RETRY_BASE_MS = 2_000;
 export const AUDIO_REBUILD_RETRY_MAX_MS = 30_000;
 
+// ============================================
+// Chat
+// ============================================
+
+/**
+ * Distance (px) from the bottom of the chat scroller within which the view
+ * counts as "pinned" — sticky auto-scroll stays engaged while inside this
+ * threshold and re-engages once the user scrolls back within it.
+ */
+export const CHAT_STICKY_BOTTOM_THRESHOLD_PX = 80;
+
 /** Body scroll unlock delay in milliseconds */
 export const BODY_UNLOCK_DELAY_MS = 1_000;
 

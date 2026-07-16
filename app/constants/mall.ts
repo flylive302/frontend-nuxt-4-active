@@ -68,3 +68,11 @@ export const PROP_TYPE_ORDER: PropType[] = [
  * Used by the mall store to determine when to refetch.
  */
 export const MALL_STALE_TIME = 5 * 60 * 1000
+
+/**
+ * Decorative mall background video (capacitor-performance issue 08): how long
+ * after the last scroll event to wait before resuming playback. Keeps the
+ * video paused for the duration of an active scroll gesture without flapping
+ * play/pause on every frame.
+ */
+export const VIDEO_MOTION_SCROLL_IDLE_MS = 400

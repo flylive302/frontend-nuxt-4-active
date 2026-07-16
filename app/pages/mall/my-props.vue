@@ -38,6 +38,13 @@ const {
 const currentUserProps = computed(() => mallStore.userProps.items)
 
 // ========================================
+// Decorative bg video motion pause (capacitor-performance issue 08)
+// ========================================
+
+const bgVideoRef = ref<HTMLVideoElement | null>(null)
+useVideoMotionPause(bgVideoRef, () => !!mallStore.selectedUserProp)
+
+// ========================================
 // Lifecycle
 // ========================================
 
@@ -63,7 +70,7 @@ async function handleUnequip(userPropId: number): Promise<void> {
       <template #second-link-text>My Props</template>
     </NavAlt>
 
-    <video class="w-full mt-12" autoplay muted loop playsinline>
+    <video ref="bgVideoRef" class="w-full mt-12" autoplay muted loop playsinline>
       <source :src="ASSETS.MALL_BG_VIDEO" type="video/mp4" >
     </video>
 
