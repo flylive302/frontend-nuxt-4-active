@@ -89,7 +89,7 @@ if (import.meta.client) {
 <template>
   <main>
     <NavAlt back-to="/coins/request">Activity History</NavAlt>
-    <div class="h-9" />
+    <div class="h-9 safe-area-top" />
 
     <!-- Filter Tabs -->
     <div class="flex overflow-x-auto border-b-2 mb-1 border-black shadow-xl shadow-primary-950/50">
