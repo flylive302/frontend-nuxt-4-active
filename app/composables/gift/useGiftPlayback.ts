@@ -34,6 +34,12 @@ export function useGiftPlayback() {
 
   let playbackTimeoutId: ReturnType<typeof setTimeout> | null = null
 
+  /** Timestamp of the last timeout (re-)arm — throttles heartbeat re-arms */
+  let lastArmedAt = 0
+
+  /** Minimum gap between heartbeat re-arms — players emit progress up to ~30×/s */
+  const REARM_THROTTLE_MS = 1000
+
   /** Clear the playback timeout */
   function clearPlaybackTimeout(): void {
     if (playbackTimeoutId) {
@@ -42,12 +48,25 @@ export function useGiftPlayback() {
     }
   }
 
-  /** Start the playback timeout — force completes if an animation stalls */
+  /** Start the stall timeout — force completes if playback stops making progress */
   function startPlaybackTimeout(): void {
     clearPlaybackTimeout()
+    lastArmedAt = Date.now()
     playbackTimeoutId = setTimeout(() => {
       handleComplete()
     }, GIFT_PLAYBACK_TIMEOUT_MS)
+  }
+
+  /**
+   * Playback heartbeat — players emit `progress` while frames advance.
+   * Re-arms the stall timeout so a healthy animation of any duration is
+   * never cut off; the timer only fires after GIFT_PLAYBACK_TIMEOUT_MS
+   * of genuine silence (never started, or froze mid-play).
+   */
+  function handleProgress(): void {
+    if (!playbackTimeoutId) return
+    if (Date.now() - lastArmedAt < REARM_THROTTLE_MS) return
+    startPlaybackTimeout()
   }
 
   // ========================================
@@ -105,6 +124,7 @@ export function useGiftPlayback() {
 
     // Methods
     handleComplete,
+    handleProgress,
     toggleMinimize,
     clearPlaybackTimeout,
   }

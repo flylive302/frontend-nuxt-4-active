@@ -25,9 +25,10 @@ export const VIDEO_CACHE_MAX_ENTRIES = 20;
 /** Minimum interval between outgoing gift socket messages (in milliseconds) */
 export const GIFT_QUEUE_INTERVAL_MS = 100;
 
-/** Maximum time to wait for a gift animation to complete before force-closing (in milliseconds).
- * Error paths advance the queue instantly (player emits `ended` on failure); this
- * only catches silent stalls, so it can be tight. */
+/** Stall window for gift playback (in milliseconds): force-advances the queue only
+ * after this long with NO `progress` heartbeat from the active player. Healthy
+ * playback of any duration re-arms the timer, so long animations are never cut off.
+ * Error paths advance the queue instantly (player emits `ended` on failure). */
 export const GIFT_PLAYBACK_TIMEOUT_MS = 8000;
 
 /** Default gift category to show when drawer opens */

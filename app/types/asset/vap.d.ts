@@ -77,6 +77,9 @@ export interface VapPlayer {
 
   /** Called when playback is stopped manually */
   onStop?: () => void
+
+  /** Called on each rendered frame — playback heartbeat */
+  onProcess?: () => void
 }
 
 // ========================================

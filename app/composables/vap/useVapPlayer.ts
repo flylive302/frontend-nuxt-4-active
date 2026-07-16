@@ -23,6 +23,8 @@ export interface UseVapPlayerOptions {
   muted?: Ref<boolean>
   /** Called when all loops complete */
   onComplete?: () => void
+  /** Called on each rendered frame — playback heartbeat */
+  onProcess?: () => void
 }
 
 export function useVapPlayer(
@@ -100,6 +102,11 @@ export function useVapPlayer(
 
       player.value.onStop = () => {
         isPlaying.value = false
+      }
+
+      player.value.onProcess = () => {
+        if (currentPlaybackId !== playbackId) return
+        options.onProcess?.()
       }
 
       if (options.autoplay?.value !== false) {

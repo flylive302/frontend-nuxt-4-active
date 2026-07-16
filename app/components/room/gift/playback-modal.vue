@@ -16,6 +16,7 @@ const {
   isPlaying,
   isMinimized,
   handleComplete,
+  handleProgress,
   toggleMinimize,
 } = useGiftPlayback();
 
@@ -86,17 +87,20 @@ onMounted(() => {
       <RoomGiftVideoPlayer
 v-if="currentPlayback.gift.asset_type === 'video'" :key="`video-${currentPlayback.id}`" class="w-full"
         :src="resolveVideoUrl(currentPlayback.gift.animation_url ?? '')"
-        :poster="giftThumbnailSrc(currentPlayback.gift.thumbnail_url)" @ended="handleComplete" />
+        :poster="giftThumbnailSrc(currentPlayback.gift.thumbnail_url)" @ended="handleComplete"
+        @progress="handleProgress" />
 
       <!-- SVGA Player -->
       <RoomGiftSvgaPlayer
 v-else-if="currentPlayback.gift.asset_type === 'svga'" :key="`svga-${currentPlayback.id}`" class="w-full"
-        :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete" />
+        :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete"
+        @progress="handleProgress" />
 
       <!-- VAP Player (MP4 + alpha via WebGL) -->
       <VapPlayer
 v-else-if="currentPlayback.gift.asset_type === 'vap'" :key="`vap-${currentPlayback.id}`" class="w-full"
-        :name="currentPlayback.gift.animation_url ?? ''" :loop="1" :muted="false" @complete="handleComplete" />
+        :name="currentPlayback.gift.animation_url ?? ''" :loop="1" :muted="false" @complete="handleComplete"
+        @progress="handleProgress" />
 
       <!-- Static Image -->
       <RoomGiftStaticDisplay

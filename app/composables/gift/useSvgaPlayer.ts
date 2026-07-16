@@ -15,6 +15,8 @@ export interface UseSvgaPlayerOptions {
   loop?: Ref<number>;
   autoplay?: Ref<boolean>;
   onComplete?: () => void;
+  /** Called on each rendered frame — playback heartbeat */
+  onProcess?: () => void;
   replaceElements?: Record<string, HTMLImageElement>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
 }
@@ -103,6 +105,11 @@ export function useSvgaPlayer(
 
       player.value.onStop = () => {
         isPlaying.value = false;
+      };
+
+      player.value.onProcess = () => {
+        if (currentPlaybackId !== playbackId) return;
+        options.onProcess?.();
       };
 
       if (options.autoplay?.value !== false) {

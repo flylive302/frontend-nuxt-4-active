@@ -36,6 +36,8 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   complete: []
+  /** Heartbeat while playback advances — feeds the queue's stall detector */
+  progress: []
 }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -47,6 +49,9 @@ const { reload, restart, isPlaying } = useVapPlayer(canvas, {
   muted: toRef(props, 'muted'),
   onComplete: () => {
     emit('complete')
+  },
+  onProcess: () => {
+    emit('progress')
   },
 })
 

@@ -439,6 +439,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
       onStart: undefined,
       onEnd: undefined,
       onStop: undefined,
+      onProcess: undefined,
 
       start() {
         if (destroyed) return
@@ -530,6 +531,7 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
     function onFrame() {
       if (destroyed) return
       drawCurrentFrame()
+      player.onProcess?.()
       scheduleFrame()
     }
 

@@ -25,6 +25,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   ended: [];
   error: [error: Event];
+  /** Heartbeat while playback advances — feeds the queue's stall detector */
+  progress: [];
 }>();
 
 const videoRef = ref<HTMLVideoElement | null>(null);
@@ -155,5 +157,6 @@ defineExpose({ restart });
     controlslist="nodownload noplaybackrate"
     @ended="emit('ended')"
     @error="handleError"
+    @timeupdate="emit('progress')"
   />
 </template>

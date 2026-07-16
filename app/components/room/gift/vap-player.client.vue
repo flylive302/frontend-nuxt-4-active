@@ -11,6 +11,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   complete: []
+  /** Heartbeat while playback advances — feeds the queue's stall detector */
+  progress: []
 }>()
 
 const vapRef = ref<{ restart: () => void; isPlaying: boolean } | null>(null)
@@ -32,5 +34,6 @@ defineExpose({ restart, isPlaying })
     :muted="true"
     class="w-full h-full"
     @complete="emit('complete')"
+    @progress="emit('progress')"
   />
 </template>

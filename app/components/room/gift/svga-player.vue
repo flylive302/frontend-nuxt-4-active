@@ -20,6 +20,8 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   complete: [];
+  /** Heartbeat while playback advances — feeds the queue's stall detector */
+  progress: [];
 }>();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -30,6 +32,9 @@ const { restart, isPlaying } = useSvgaPlayer(canvas, {
   autoplay: toRef(props, 'autoplay'),
   onComplete: () => {
     emit('complete');
+  },
+  onProcess: () => {
+    emit('progress');
   },
 });
 
