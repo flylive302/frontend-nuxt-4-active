@@ -250,14 +250,6 @@ const dataCardAsset = computed(() =>
 
 const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
-// ========================================
-// Header motion pause (capacitor-performance issue 08)
-// ========================================
-// Cover zoom + marquees pause via animation-play-state, and the data-card
-// player defers mount, while the header is scrolled out of view.
-
-const headerRef = ref<HTMLElement | null>(null)
-const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 </script>
 
 <template>
@@ -302,7 +294,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     </div>
 
     <!-- Profile Content -->
-    <div v-else-if="hasProfile" ref="headerRef">
+    <div v-else-if="hasProfile">
     <ProfileHeader>
       <template #cover>
         <NuxtImg
@@ -312,13 +304,12 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           sizes="320px"
           width="100%"
           class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
-          :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
           @click="openImagePreview('cover')"
         />
       </template>
 
       <template #card>
-        <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
+        <div v-if="dataCardAsset" class="absolute z-0 overflow-hidden -mt-26">
           <SvgaPlayer
               v-if="!isVap"
               :key="`data-card-svga-${profileWritable?.data_card_id}`"
@@ -360,7 +351,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       </template>
 
       <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" :paused="!headerVisible" class="mx-auto w-28" />
+        <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" class="mx-auto w-28" />
       </template>
 
       <template #name>
@@ -369,7 +360,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
             text-class="text-lg leading-none font-bold"
             :name="profileWritable?.name || ''"
             delay="0.5s"
-            :paused="!headerVisible"
+           
         />
       </template>
 

@@ -84,19 +84,10 @@ async function handlePreviewFileSelected(file: File): Promise<void> {
   await uploadProfileImage(imagePreviewType.value, file)
 }
 
-// ========================================
-// Header motion pause (capacitor-performance issue 08)
-// ========================================
-// Cover zoom + marquees pause via animation-play-state, and the data-card
-// player defers mount, while the header is scrolled out of view.
-
-const headerRef = ref<HTMLElement | null>(null)
-const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 </script>
 
 <template>
   <div>
-    <div ref="headerRef">
     <ProfileHeader>
       <template #cover>
         <NuxtImg
@@ -106,13 +97,12 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           sizes="320px"
           width="100%"
           class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
-          :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
           @click="openImagePreview('cover')"
         />
       </template>
 
       <template #card>
-        <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
+        <div v-if="dataCardAsset" class="absolute z-0 overflow-hidden -mt-26">
           <SvgaPlayer
               v-if="!isVap"
               :key="`data-card-svga-${authStore?.user?.data_card_id}`"
@@ -155,7 +145,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       </template>
 
       <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" :paused="!headerVisible" class="mx-auto max-w-28" />
+        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" class="mx-auto max-w-28" />
       </template>
 
       <template #name>
@@ -165,7 +155,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
               text-class="text-lg leading-none font-bold"
               :name="authStore.user?.name || ''"
               :vip="authStore.user?.vip_level"
-              :paused="!headerVisible"
+             
           />
         </NuxtLink>
       </template>
@@ -186,7 +176,6 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         </div>
       </template>
     </ProfileHeader>
-    </div>
 
     <div class="pb-24 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
       <SectionTitle>Cp RelationShips</SectionTitle>
