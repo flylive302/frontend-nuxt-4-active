@@ -232,7 +232,7 @@ function getUploadStatusColor(status: string): string {
 
 <template>
   <main>
-    <NavAlt back-to="/agency/list">Create New Agency</NavAlt>
+    <NavAlt spacer back-to="/agency/list">Create New Agency</NavAlt>
 
     <div class="px-3 py-14 space-y-6">
       <!-- Upload Progress Banner -->

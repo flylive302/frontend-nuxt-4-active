@@ -79,7 +79,7 @@ const hasActiveFilters = computed(() => {
 
 <template>
   <main>
-    <NavAlt back-to="/profile">All Agencies</NavAlt>
+    <NavAlt spacer back-to="/profile">All Agencies</NavAlt>
     
     <div class="px-3 pt-14 pb-24">
       <!-- Search & Filter Section -->

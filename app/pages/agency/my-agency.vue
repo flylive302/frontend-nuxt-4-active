@@ -112,7 +112,7 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt back-to="/profile">My Agency</NavAlt>
+    <NavAlt spacer back-to="/profile">My Agency</NavAlt>
 
     <!-- Loading State -->
     <div v-if="loading" class="pt-14 px-3 space-y-2">

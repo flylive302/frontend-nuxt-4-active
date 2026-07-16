@@ -20,7 +20,7 @@ const allDmThreads = computed(() => [...inboxStore.dmThreads, ...inboxStore.requ
 
 <template>
   <main>
-    <NavAlt back-to="/">
+    <NavAlt spacer back-to="/">
       Messages
     </NavAlt>
 

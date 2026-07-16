@@ -101,8 +101,8 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt back-to="/profile">Rewards</NavAlt>
-    <div class="h-10" />
+    <NavAlt spacer back-to="/profile">Rewards</NavAlt>
+    <div class="h-12" />
 
     <!-- Stats Summary -->
     <div v-if="stats" class="px-3 mb-4">

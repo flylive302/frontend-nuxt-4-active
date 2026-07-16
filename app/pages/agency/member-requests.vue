@@ -85,7 +85,7 @@ onMounted(() => {
 
 <template>
   <main>
-    <NavAlt back-to="/agency/my-agency">Join Requests</NavAlt>
+    <NavAlt spacer back-to="/agency/my-agency">Join Requests</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
       <!-- Loading State -->

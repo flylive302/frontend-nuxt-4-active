@@ -77,7 +77,7 @@ onMounted(() => {
 
 <template>
   <main>
-    <NavAlt back-to="/agency/my-agency">Sent Invitations</NavAlt>
+    <NavAlt spacer back-to="/agency/my-agency">Sent Invitations</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
 

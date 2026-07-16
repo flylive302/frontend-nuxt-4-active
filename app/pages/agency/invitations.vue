@@ -62,7 +62,7 @@ onMounted(() => {
 
 <template>
   <main>
-    <NavAlt back-to="/profile">Agency Invitations</NavAlt>
+    <NavAlt spacer back-to="/profile">Agency Invitations</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
       <!-- Loading State -->

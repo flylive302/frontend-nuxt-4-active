@@ -92,7 +92,7 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt back-to="/agency/my-agency">Agency Members</NavAlt>
+    <NavAlt spacer back-to="/agency/my-agency">Agency Members</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
       <!-- Loading State -->

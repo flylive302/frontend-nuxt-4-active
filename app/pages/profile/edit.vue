@@ -293,7 +293,7 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
 
 <template>
   <main>
-    <NavAlt back-to="/profile">Edit Profile</NavAlt>
+    <NavAlt spacer back-to="/profile">Edit Profile</NavAlt>
     <div class="h-20" />
     <div class="px-4">
       <UAlert

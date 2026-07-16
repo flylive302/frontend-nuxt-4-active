@@ -137,7 +137,7 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt color="secondary" back-to="/profile">Badges</NavAlt>
+    <NavAlt spacer color="secondary" back-to="/profile">Badges</NavAlt>
 
     <div class="px-3 mt-14 mb-32 overflow-hidden">
       <!-- Equip Slots Row (DnD handled inside via ClientOnly + VueDraggable) -->

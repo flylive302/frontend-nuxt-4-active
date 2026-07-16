@@ -33,7 +33,7 @@ const { data: rankedFollowing } = useAsyncData(
 
 <template>
   <main class="safe-area-bottom safe-area-top">
-    <NavAlt back-to="/">
+    <NavAlt spacer back-to="/">
       Messages
     </NavAlt>
 

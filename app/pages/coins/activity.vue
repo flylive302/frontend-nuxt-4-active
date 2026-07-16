@@ -114,9 +114,9 @@ if (import.meta.client) {
 
 <template>
   <main>
-    <NavAlt back-to="/coins/request">Activity History</NavAlt>
-    <!-- NavAlt is fixed at ~h-11 (+ safe-area inset) — h-12 clears it fully. -->
-    <div class="h-12 safe-area-top" />
+    <NavAlt spacer back-to="/coins/request">Activity History</NavAlt>
+    <!-- NavAlt bar is ~h-11 (its `spacer` covers the safe-area inset) — h-12 clears it fully. -->
+    <div class="h-12" />
 
     <!-- Filter Tabs -->
     <div class="flex overflow-x-auto border-b-2 mb-1 border-black shadow-xl shadow-primary-950/50">

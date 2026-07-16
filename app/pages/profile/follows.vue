@@ -117,7 +117,7 @@ function visitLabel(count: number): string {
 
 <template>
   <main>
-    <NavAlt :back-to="isOwnProfile ? '/profile' : '/'">
+    <NavAlt spacer :back-to="isOwnProfile ? '/profile' : '/'">
       {{ isOwnProfile ? 'My Follows' : 'Follows' }}
     </NavAlt>
 

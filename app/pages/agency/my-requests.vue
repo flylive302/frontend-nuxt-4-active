@@ -63,7 +63,7 @@ const processedRequests = computed(() =>
 
 <template>
   <main>
-    <NavAlt back-to="/profile">My Join Requests</NavAlt>
+    <NavAlt spacer back-to="/profile">My Join Requests</NavAlt>
 
     <div class="px-3 pt-14 pb-24">
       <!-- Loading State -->

@@ -113,7 +113,7 @@ onMounted(async () => {
 
 <template>
   <main>
-    <NavAlt color="primary" back-to="/agency/my-agency">Member Income</NavAlt>
+    <NavAlt spacer color="primary" back-to="/agency/my-agency">Member Income</NavAlt>
 
     <!-- Not Authorized -->
     <div v-if="!isOwnerOrAdmin" class="px-3 py-14 text-center">

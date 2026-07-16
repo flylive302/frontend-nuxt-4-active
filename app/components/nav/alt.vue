@@ -10,6 +10,15 @@ const props = withDefaults(defineProps<{
   firstLink?: string | undefined,
   secondLink?: string | undefined,
   linked?: boolean,
+  /**
+   * Render an in-flow spacer matching the device safe-area inset (status bar).
+   * The header is `fixed` and padded down by `safe-area-top` on native, but
+   * page content isn't — so `pt-14`-style page offsets that clear the bar on
+   * web slide under it on Capacitor. Zero-height on web (inset = 0), so
+   * opting in never changes the web layout. Leave off for pages that
+   * intentionally underlay content (heroes, bg videos).
+   */
+  spacer?: boolean,
 }>(), {
   color: 'primary',
   backTo: '/',
@@ -17,6 +26,7 @@ const props = withDefaults(defineProps<{
   firstLink: '/coins/request',
   secondLink: '/coins/exchange',
   linked: false,
+  spacer: false,
 })
 const route = useRoute()
 
@@ -90,4 +100,5 @@ const uiColor = computed(() => props.color)
       />
     </div>
   </header>
+  <div v-if="props.spacer" class="safe-area-top" aria-hidden="true" />
 </template>
