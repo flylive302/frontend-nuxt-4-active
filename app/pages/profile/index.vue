@@ -130,6 +130,7 @@ async function handlePreviewFileSelected(file: File): Promise<void> {
             :animated="true"
             :frame-asset-url="resolvePropAsset(authStore?.user?.frame_id) ?? undefined"
             :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+            :img-width="PROFILE_HEADER_AVATAR_WIDTH"
             class="w-full profile-avatar-anchor"
           />
         </div>

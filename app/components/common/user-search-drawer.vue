@@ -3,7 +3,7 @@
 // User Search Drawer
 // ========================================
 //
-// Reusable drawer component for searching users by name, ID, or signature.
+// Reusable drawer component for searching users by signature.
 // Renders results using MinimalUserList and exposes scoped slots for custom actions.
 // ========================================
 
@@ -18,7 +18,7 @@ withDefaults(defineProps<{
   description?: string
 }>(), {
   title: 'Search Users',
-  description: 'Search by name, ID, or signature.',
+  description: 'Search by signature.',
 })
 
 // ========================================
@@ -89,7 +89,7 @@ watch(open, (isOpen) => {
         <UInput
           v-model="searchQuery"
           icon="i-lucide-search"
-          placeholder="Search by name or signature..."
+          placeholder="Search by signature..."
           size="lg"
           class="mb-4 w-full"
           :loading="loading"

@@ -57,6 +57,7 @@ type CommandGroup = {
   id: string
   label: string
   items: CommandItem[]
+  ignoreFilter: boolean
 }
 
 // ========================================
@@ -77,7 +78,8 @@ const paletteGroups = computed<CommandGroup[]>(() => [
   {
     id: 'users',
     label: searchTerm.value ? `Users matching "${searchTerm.value}"` : 'Recent Users',
-    items: commandItems.value
+    items: commandItems.value,
+    ignoreFilter: true
   }
 ])
 
@@ -122,7 +124,7 @@ function handleConfirm() {
   <UDrawer
     v-model:open="isOpen"
     title="Invite User"
-    description="Search by ID, Name, or @Signature"
+    description="Search by @Signature"
   >
     <template #content>
       <!-- Search Mode -->

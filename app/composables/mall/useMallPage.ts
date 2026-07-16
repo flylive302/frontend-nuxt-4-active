@@ -7,8 +7,11 @@
  *
  * Pages call these methods; this composable handles the GATE → EXECUTE flow.
  */
-import { PROP_TYPE_LABELS } from '~/constants/mall'
+import { PROP_TYPE_LABELS, PROP_TYPE_ORDER } from '~/constants/mall'
+import { createLogger } from '~/utils/logger'
 import type { Prop, PropType, UserProp } from '~/types/mall/prop'
+
+const log = createLogger('[MallPage]')
 
 export function useMallPage() {
   // ========================================
@@ -50,22 +53,30 @@ export function useMallPage() {
    * Initialize the catalog page.
    *
    * GATE:    none (always runs on mount)
-   * EXECUTE: reset → fetchTypes → set first type → fetchCatalog
+   * EXECUTE: predict first tab → fetch types + type-filtered catalog in parallel
    * REACT:   none (pure data)
+   *
+   * Types and catalog used to be fetched in series (await fetchTypes() → set
+   * first type → await fetchCatalog()), doubling the round-trip before any
+   * content painted. The backend's /props/types always returns every
+   * PropType (PropCatalogService::getTypeCounts maps PropType::cases(),
+   * count 0 when a type has no props), and `orderedTypes` just re-orders
+   * that full set by the static PROP_TYPE_ORDER — so orderedTypes[0] is
+   * deterministically PROP_TYPE_ORDER[0] without waiting on the network.
+   * We predict it, apply it as the filter up front, and fire both requests
+   * together. fetchTypes/fetchCatalog each swallow their own errors
+   * internally, so one failing never blanks the other's rendered section.
    */
   async function initializeCatalog(): Promise<void> {
-    // Reset currentType to ensure fresh state on navigation
-    mallStore.setCurrentType(undefined)
+    const predictedType = PROP_TYPE_ORDER[0]
+    mallStore.setCurrentType(predictedType)
 
-    // Fetch types first to populate tabs
-    await fetchTypes()
+    await Promise.all([
+      fetchTypes(),
+      fetchCatalog({}, true),
+    ])
 
-    // Set initial type to first available type after types are loaded
-    const firstType = mallStore.orderedTypes[0]?.type ?? undefined
-    mallStore.setCurrentType(firstType)
-
-    // Now fetch catalog with correct type filter
-    await fetchCatalog({}, true)
+    reconcileFirstType(predictedType)
   }
 
   // ========================================
@@ -76,25 +87,40 @@ export function useMallPage() {
    * Initialize the my-props page.
    *
    * GATE:    none (always runs on mount)
-   * EXECUTE: reset → fetchTypes → set first type → fetchUserProps + fetchEquipped
+   * EXECUTE: predict first tab → fetch types + type-filtered user props + equipped, all in parallel
    * REACT:   none (pure data)
+   *
+   * Same rationale as initializeCatalog: predict the first tab
+   * (PROP_TYPE_ORDER[0], guaranteed present because /props/types always
+   * returns every PropType), apply it up front, and fire all three
+   * requests together instead of waiting on types first. Each fetch
+   * handles its own errors, so one failing never blanks the others.
    */
   async function initializeUserProps(): Promise<void> {
-    // Reset currentType to ensure fresh state on navigation
-    mallStore.setCurrentType(undefined)
+    const predictedType = PROP_TYPE_ORDER[0]
+    mallStore.setCurrentType(predictedType)
 
-    // Fetch types first, then set initial type before fetching user props
-    await fetchTypes()
-
-    // Set initial type to first available type after types are loaded
-    const firstType = mallStore.orderedTypes[0]?.type ?? undefined
-    mallStore.setCurrentType(firstType)
-
-    // Now fetch user props and equipped with correct type filter
     await Promise.all([
+      fetchTypes(),
       fetchUserProps({}, true),
       fetchEquipped(),
     ])
+
+    reconcileFirstType(predictedType)
+  }
+
+  /**
+   * Reconcile the predicted first tab with the types response that just
+   * landed. In practice this is a no-op — see initializeCatalog's comment
+   * on why orderedTypes[0] is deterministic — kept only as a defensive
+   * guard in case that backend invariant ever changes.
+   */
+  function reconcileFirstType(predictedType: PropType | undefined): void {
+    const actualFirstType = mallStore.orderedTypes[0]?.type
+    if (actualFirstType && actualFirstType !== predictedType) {
+      log.warn('Predicted mall tab mismatched API response; correcting', { predictedType, actualFirstType })
+      mallStore.setCurrentType(actualFirstType)
+    }
   }
 
   // ========================================

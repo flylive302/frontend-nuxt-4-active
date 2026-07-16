@@ -7,7 +7,6 @@ import { ASSETS } from '~/constants/assets'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { ref, reactive, computed, onMounted } from 'vue'
-import type { ExchangeInfo } from '~/types/economy/exchange'
 import { formatCurrency } from '~/utils/currency'
 
 // ========================================
@@ -24,34 +23,16 @@ definePageMeta({
 // ========================================
 
 const authStore = useAuthStore()
-const agencyStore = useAgencyStore()
-const { fetchExchangeInfo: loadExchangeInfo, submitExchange: postExchange, normalizeError } = useDiamondExchangeApi()
+const { submitExchange: postExchange, normalizeError } = useDiamondExchangeApi()
 const toast = useToast()
-const { fetchUserAgency } = useAgencyMembership()
+const { exchangeInfo, isLoading, open } = useDiamondExchangePage()
 
 // ========================================
-// Access Control
+// Access Control + Data Load
 // ========================================
 
-onMounted(async () => {
-  // Ensure agency context is loaded
-  if (!agencyStore.isAgencyMember) {
-    await fetchUserAgency()
-  }
-
-  // Redirect non-agency members
-  if (!agencyStore.isAgencyMember) {
-    toast.add({
-      title: 'Access Denied',
-      description: 'Only agency members can convert diamonds to coins.',
-      color: 'error',
-    })
-    await navigateTo('/profile')
-    return
-  }
-
-  // Fetch exchange info (balance updates via socket 'balance.updated')
-  await fetchExchangeInfo()
+onMounted(() => {
+  open()
 })
 
 // ========================================
@@ -75,8 +56,6 @@ const state = reactive<Partial<Schema>>({
 // State
 // ========================================
 
-const exchangeInfo = ref<ExchangeInfo | null>(null)
-const isLoading = ref(true)
 const isSubmitting = ref(false)
 
 // ========================================
@@ -141,26 +120,6 @@ const canExchange = computed(() => {
 // ========================================
 
 /**
- * Fetch exchange info from API.
- */
-async function fetchExchangeInfo(): Promise<void> {
-  isLoading.value = true
-
-  try {
-    exchangeInfo.value = await loadExchangeInfo()
-  } catch (err) {
-    const normalized = normalizeError(err)
-    toast.add({
-      title: 'Failed to load exchange info',
-      description: normalized.message,
-      color: 'error',
-    })
-  } finally {
-    isLoading.value = false
-  }
-}
-
-/**
  * Submit conversion request.
  */
 async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
@@ -223,6 +182,14 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
 
     <!-- Convert Diamonds Section (Agency Members Only) -->
     <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-t-4xl -mt-34 relative">
+      <!-- Loading: mask the concurrent agency-check + exchange-info fetch -->
+      <template v-if="isLoading">
+        <USkeleton class="h-14 w-full rounded-lg" />
+        <USkeleton class="h-8 w-full mt-4" />
+        <USkeleton class="h-24 w-full mt-4" />
+      </template>
+
+      <template v-else>
       <div class="glowing-border rounded-lg">
         <div class="flex justify-between items-baseline mx-3">
           <h1 class="text-xl font-bold">
@@ -344,6 +311,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
           Convert
         </UButton>
       </UForm>
+      </template>
     </section>
   </main>
 </template>

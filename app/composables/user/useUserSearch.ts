@@ -47,7 +47,7 @@ export function useUserSearch() {
   // ========================================
 
   /**
-   * Search for users by ID, Name, or Signature.
+   * Search for users by Signature.
    * @param query - The search query term
    * @param reset - Whether to reset the list (default: true for new search)
    */

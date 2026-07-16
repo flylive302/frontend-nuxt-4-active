@@ -50,6 +50,43 @@ export function giftStaticDisplaySrc(url: string | null | undefined): string {
   return withImageKitTransform(url, { w: 512, q: 80 })
 }
 
+/** Default avatar variant width — see `avatarImageSrc` for the sizing rationale. */
+const AVATAR_DEFAULT_WIDTH = 256
+
+/**
+ * Profile-header avatar variant — the one surface rendered far above the
+ * common cluster (`pages/profile/index.vue`, ~250–320px CSS → ~2x DPR).
+ */
+export const PROFILE_HEADER_AVATAR_WIDTH = 512
+/** Default avatar variant quality. */
+const AVATAR_DEFAULT_QUALITY = 75
+
+/**
+ * Avatar URL — the single shared variant for nearly every avatar surface
+ * (room seats × up to 15, chat message history, member/participant lists,
+ * inbox thread rows, ranking podiums). One variant per user avatar means one
+ * cached copy serves virtually all of these, mirroring `giftThumbnailSrc`'s
+ * design.
+ *
+ * Sized at 256px (~2x DPR) against the largest COMMON rendered CSS size
+ * across call sites, roughly 96–128px (e.g. `room/seat-drawer.vue`
+ * `size-32`, `room/participant-profile-modal.vue` `size-24`) — the far more
+ * numerous small surfaces (seats, chat, member lists: 40–64px) simply
+ * downscale from the same cached copy instead of each fetching their own.
+ *
+ * A few surfaces render dramatically larger than that cluster — notably the
+ * profile-header avatar (`pages/profile/index.vue`, `w-9/12` of viewport,
+ * ~250–320px CSS). Pass `opts.w` (and optionally `opts.q`) to request a
+ * bigger variant for just that context instead of inflating the shared
+ * default for every other surface.
+ */
+export function avatarImageSrc(url: string | null | undefined, opts?: Partial<ImageKitTransformOpts>): string {
+  return withImageKitTransform(url, {
+    w: opts?.w ?? AVATAR_DEFAULT_WIDTH,
+    q: opts?.q ?? AVATAR_DEFAULT_QUALITY,
+  })
+}
+
 export type RoomCardLayout = 'carousel' | 'grid'
 
 /**

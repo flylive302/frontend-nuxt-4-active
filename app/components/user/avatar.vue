@@ -30,6 +30,12 @@ const props = withDefaults(defineProps<{
    * precedence over `animated`.
    */
   staticFrame?: boolean
+  /**
+   * ImageKit variant width override for surfaces rendered dramatically larger
+   * than the shared 256px default (e.g. the profile-header avatar). Leave
+   * unset everywhere else so all small surfaces share one cached variant.
+   */
+  imgWidth?: number
 }>(), {
   frameName: '',
   frameAssetUrl: ASSETS.DEFAULT_FRAME,
@@ -37,6 +43,7 @@ const props = withDefaults(defineProps<{
   animated: false,
   deferFrameAnimation: false,
   staticFrame: false,
+  imgWidth: undefined,
 });
 
 const rootRef = ref<HTMLElement | null>(null)
@@ -49,8 +56,8 @@ const hasImgError = ref(false)
 watch(() => props.img, () => { hasImgError.value = false })
 
 const resolvedImgSrc = computed(() => {
-  if (hasImgError.value) return ASSETS.AVATAR_PLACEHOLDER  // occupied + failed → person silhouette
-  return props.img ?? ASSETS.DEFAULT_SEAT_IMG               // no img → red chair (empty seat)
+  if (hasImgError.value) return avatarImageSrc(ASSETS.AVATAR_PLACEHOLDER)  // occupied + failed → person silhouette
+  return avatarImageSrc(props.img ?? ASSETS.DEFAULT_SEAT_IMG, props.imgWidth ? { w: props.imgWidth } : undefined) // no img → red chair (empty seat)
 })
 
 function onImgError() { hasImgError.value = true }
@@ -118,6 +125,8 @@ const { stillUrl } = useAvatarStillFrame(staticFrameUrl)
         :src="resolvedImgSrc"
         alt="avatar"
         referrerpolicy="no-referrer"
+        loading="lazy"
+        decoding="async"
         @error="onImgError"
       >
       <!-- Frame layer (on top): static still (chat) or animated SvgaPlayer (seats) -->
