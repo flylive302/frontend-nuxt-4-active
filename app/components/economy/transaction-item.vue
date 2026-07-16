@@ -17,6 +17,12 @@ const props = defineProps<{
   transaction: Transaction
 }>()
 
+const emit = defineEmits<{
+  /** Fired when the expand/collapse transition settles at its final height —
+   * virtualized parents (DynamicScroller) re-measure the row on this. */
+  resized: []
+}>()
+
 // ========================================
 // State
 // ========================================
@@ -151,6 +157,33 @@ function toggleExpand() {
     isExpanded.value = !isExpanded.value
   }
 }
+
+// ========================================
+// Expand transition hooks (height animation + resize notification)
+// ========================================
+
+function onExpandEnter(el: Element) {
+  const html = el as HTMLElement
+  html.style.height = '0'
+  void html.offsetHeight
+  html.style.height = `${html.scrollHeight}px`
+}
+
+function onExpandAfterEnter(el: Element) {
+  (el as HTMLElement).style.height = 'auto'
+  emit('resized')
+}
+
+function onExpandLeave(el: Element) {
+  const html = el as HTMLElement
+  html.style.height = `${html.scrollHeight}px`
+  void html.offsetHeight
+  html.style.height = '0'
+}
+
+function onExpandAfterLeave() {
+  emit('resized')
+}
 </script>
 
 <template>
@@ -208,9 +241,10 @@ function toggleExpand() {
     <!-- Expandable Details -->
     <Transition
       name="expand"
-      @enter="(el: Element) => { const html = el as HTMLElement; html.style.height = '0'; html.offsetHeight; html.style.height = html.scrollHeight + 'px' }"
-      @after-enter="(el: Element) => { (el as HTMLElement).style.height = 'auto' }"
-      @leave="(el: Element) => { const html = el as HTMLElement; html.style.height = html.scrollHeight + 'px'; html.offsetHeight; html.style.height = '0' }"
+      @enter="onExpandEnter"
+      @after-enter="onExpandAfterEnter"
+      @leave="onExpandLeave"
+      @after-leave="onExpandAfterLeave"
     >
       <div
         v-if="isExpanded && hasDetails"

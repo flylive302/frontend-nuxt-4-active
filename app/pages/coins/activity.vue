@@ -59,6 +59,11 @@ const currentFilter = computed(() => transactionStore.currentFilter)
 
 const { items: activityItems, toggleDate } = useTransactionActivityList(transactionsByDate)
 
+// Bumped when a transaction row finishes its expand/collapse transition —
+// DynamicScrollerItem re-measures visible rows via size-dependencies, so a
+// collapsed row can't keep its cached expanded height (ghost gap).
+const resizeTick = ref(0)
+
 // ========================================
 // SSR Data Loading
 // ========================================
@@ -110,7 +115,8 @@ if (import.meta.client) {
 <template>
   <main>
     <NavAlt back-to="/coins/request">Activity History</NavAlt>
-    <div class="pt-9 safe-area-top" />
+    <!-- NavAlt is fixed at ~h-11 (+ safe-area inset) — h-12 clears it fully. -->
+    <div class="h-12 safe-area-top" />
 
     <!-- Filter Tabs -->
     <div class="flex overflow-x-auto border-b-2 mb-1 border-black shadow-xl shadow-primary-950/50">
@@ -164,13 +170,13 @@ if (import.meta.client) {
             :item="item"
             :active="active"
             :data-index="index"
-            :size-dependencies="[item.type]"
+            :size-dependencies="[item.type, resizeTick]"
           >
             <div v-if="item.type === 'header'" class="mb-2 flex items-center justify-between px-3 cursor-pointer" @click="toggleDate(item.date)">
               <SectionTitle>{{ item.dateFormatted }}</SectionTitle>
               <icon name="i-lucide-chevron-down" :class="{ 'rotate-180': item.collapsed }" class="transition-transform" />
             </div>
-            <EconomyTransactionItem v-else :transaction="item.transaction" />
+            <EconomyTransactionItem v-else :transaction="item.transaction" @resized="resizeTick++" />
           </DynamicScrollerItem>
         </template>
       </DynamicScroller>
