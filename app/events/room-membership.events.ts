@@ -89,7 +89,33 @@ export function useRoomMembershipEvents() {
       }
 
       if (authStore.user?.id === payload.user_id) {
-        const dedupeKey = `${payload.user_id}:${payload.new_role}`
+        // Patch own membership when the event targets the room being viewed.
+        // Gate on roomStore.currentRoom (set at join time), NOT
+        // membershipStore.isCurrentRoom — that is only set once the members
+        // panel has fetched — and myMembership may never have been fetched at
+        // all, so neither can be relied on for the viewer's own permission
+        // derivation (canEdit et al.). The event arrives on the user's
+        // personal channel for ANY room they belong to; without the room
+        // match, a promotion elsewhere would clobber the viewed room's state.
+        if (roomStore.currentRoom?.id === payload.room_id) {
+          const mine = membershipStore.myMembership
+          if (mine && mine.room_id === payload.room_id) {
+            membershipStore.setMyMembership({ ...mine, role: payload.new_role as RoomMember['role'] })
+          } else {
+            membershipStore.setMyMembership({
+              id: 0,
+              room_id: payload.room_id,
+              user_id: payload.user_id,
+              role: payload.new_role,
+              status: 'active',
+              created_at: new Date().toISOString(),
+              joined_at: new Date().toISOString(),
+              user: null,
+            } as unknown as RoomMember)
+          }
+        }
+
+        const dedupeKey = `${payload.room_id}:${payload.user_id}:${payload.new_role}`
         if (dedupeKey === lastRoleChangeKey) return
         lastRoleChangeKey = dedupeKey
         setTimeout(() => { lastRoleChangeKey = '' }, 2000)
@@ -209,6 +235,20 @@ export function useRoomMembershipEvents() {
         title: 'Invitation Withdrawn',
         description: `Your invitation to ${payload.room_name} was withdrawn`,
         color: 'warning',
+      })
+    })
+
+    // ── invitation_declined (inviter-side notification) ────────────
+    socket.on('room.invitation_declined', (payload: {
+      room_id: number
+      room_name: string
+      invitation_id: number
+    }) => {
+      membershipStore.removeSentInvitation(payload.invitation_id)
+      toast.add({
+        title: 'Invitation Declined',
+        description: `Your invitation to join ${payload.room_name} was declined`,
+        color: 'neutral',
       })
     })
 

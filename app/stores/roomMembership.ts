@@ -171,6 +171,11 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     }
   }
 
+  /** Drop a sent invitation by invitation id (e.g. after the invitee declines it). */
+  function removeSentInvitation(invitationId: number): void {
+    sentInvitations.value.items = sentInvitations.value.items.filter(i => i.id !== invitationId)
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -208,5 +213,6 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     addOwnerJoinRequest,
     removeReceivedInvitation,
     addReceivedInvitation,
+    removeSentInvitation,
   }
 })

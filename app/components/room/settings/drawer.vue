@@ -67,6 +67,13 @@ function handleMusicClick(): void {
 onMounted(() => {
   refresh()
 })
+
+// Drawer stays mounted across the room session; re-fetch on every open so
+// membership-derived buttons self-heal after missed realtime events
+// (at-most-once bridge).
+watch(open, (isOpen) => {
+  if (isOpen) refresh()
+})
 </script>
 
 <template>
