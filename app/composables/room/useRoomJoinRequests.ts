@@ -11,6 +11,10 @@ const log = createLogger('[useRoomJoinRequests]')
  * Composable for managing room join requests.
  * Handles user requests and admin approval/rejection.
  */
+// Module-scoped so in-flight state is shared across every call site (owner
+// panel may be mounted more than once) rather than reset per-instance.
+const pendingActionRequestIds = ref(new Set<number>())
+
 export function useRoomJoinRequests() {
   const store = useRoomMembershipStore()
   const { api, normalizeError } = useApi()
@@ -23,6 +27,11 @@ export function useRoomJoinRequests() {
   const joinRequests = computed(() => store.joinRequests)
   const myJoinRequests = computed(() => store.myJoinRequests)
   const pendingRequestCount = computed(() => store.pendingRequestCount)
+
+  /** True while an approve/reject call for this request is in flight. */
+  function isRequestActionPending(requestId: number): boolean {
+    return pendingActionRequestIds.value.has(requestId)
+  }
 
   // ========================================
   // User Actions
@@ -121,6 +130,10 @@ export function useRoomJoinRequests() {
    * Approve join request.
    */
   async function approveJoinRequest(requestId: number): Promise<boolean> {
+    // GATE — already in flight, ignore the re-tap.
+    if (pendingActionRequestIds.value.has(requestId)) return false
+    pendingActionRequestIds.value.add(requestId)
+
     try {
       await api(`/user/room/join-requests/${requestId}/approve`, { method: 'POST' })
       store.joinRequests.items = store.joinRequests.items.filter(r => r.id !== requestId)
@@ -130,6 +143,9 @@ export function useRoomJoinRequests() {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
       return false
+    } finally {
+      // Re-enable on failure (and no-op on success since the item is gone).
+      pendingActionRequestIds.value.delete(requestId)
     }
   }
 
@@ -137,6 +153,10 @@ export function useRoomJoinRequests() {
    * Reject join request.
    */
   async function rejectJoinRequest(requestId: number): Promise<boolean> {
+    // GATE — already in flight, ignore the re-tap.
+    if (pendingActionRequestIds.value.has(requestId)) return false
+    pendingActionRequestIds.value.add(requestId)
+
     try {
       await api(`/user/room/join-requests/${requestId}/reject`, { method: 'POST' })
       store.joinRequests.items = store.joinRequests.items.filter(r => r.id !== requestId)
@@ -146,6 +166,8 @@ export function useRoomJoinRequests() {
       const normalized = normalizeError(err)
       toast.add({ title: 'Error', description: normalized.message, color: 'error' })
       return false
+    } finally {
+      pendingActionRequestIds.value.delete(requestId)
     }
   }
 
@@ -158,6 +180,7 @@ export function useRoomJoinRequests() {
     joinRequests,
     myJoinRequests,
     pendingRequestCount,
+    isRequestActionPending,
 
     // User Actions
     requestToJoin,

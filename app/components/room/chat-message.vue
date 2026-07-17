@@ -9,10 +9,13 @@
  */
 import type { ChatMessageEvent } from '~/types/room/audio';
 import MarqueeName from "~/components/common/marquee-name.vue";
+import { CHAT_MESSAGE_TYPE_SYSTEM } from '~/constants/room';
 
 const props = defineProps<{
   message: ChatMessageEvent;
 }>();
+
+const isSystemMessage = computed(() => props.message.type === CHAT_MESSAGE_TYPE_SYSTEM);
 
 const { getLevelFromXp } = useLevelLookup()
 
@@ -70,7 +73,11 @@ const charmLevel = computed(() =>
 </script>
 
 <template>
-  <div class="flex py-3">
+  <!-- System bubble (membership events, etc): muted, centered, no avatar/identity. -->
+  <div v-if="isSystemMessage" class="flex justify-center py-2">
+    <p class="text-xs text-muted italic text-center">{{ message.content }}</p>
+  </div>
+  <div v-else class="flex py-3">
     <!-- Avatar -->
     <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
     <div class="min-w-0">

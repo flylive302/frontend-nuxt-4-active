@@ -7,6 +7,8 @@
 
 import type { Socket } from 'socket.io-client'
 import type { RoomMember, RoomJoinRequest, RoomInvitation } from '~/types/room/room'
+import type { ChatMessageEvent } from '~/types/room/audio'
+import { CHAT_MESSAGE_TYPE_SYSTEM } from '~/constants/room'
 
 
 interface MinimalUser {
@@ -23,7 +25,26 @@ export function useRoomMembershipEvents() {
   const authStore = useAuthStore()
   const roomStore = useRoomStore()
   const membershipStore = useRoomMembershipStore()
+  const audioStore = useRoomAudioStore()
+  const participantsStore = useRoomParticipantsStore()
   const toast = useToast()
+
+  // Appends a locally-synthesized system chat bubble (no round-trip through
+  // chat:message — every client in the room independently synthesizes the
+  // same bubble off the membership broadcast it already receives). Gated on
+  // isCurrentRoom so it only lands in the chat the viewer is actually
+  // looking at, matching the addMember gate above it.
+  function appendSystemChatMessage(roomId: number, userId: number, content: string): void {
+    if (!membershipStore.isCurrentRoom(roomId)) return
+    const message: ChatMessageEvent = {
+      id: `system-${roomId}-${userId}-${Date.now()}`,
+      userId,
+      content,
+      type: CHAT_MESSAGE_TYPE_SYSTEM,
+      timestamp: Date.now(),
+    }
+    audioStore.addMessage(message)
+  }
 
   return function registerRoomMembershipEvents(socket: Socket): void {
     // ── member.joined ─────────────────────────────────────────────
@@ -41,6 +62,7 @@ export function useRoomMembershipEvents() {
         } as unknown as RoomMember
         membershipStore.addMember(member)
       }
+      appendSystemChatMessage(payload.room_id, payload.user_id, `${payload.user.name} joined the members`)
       toast.add({
         title: 'New Member',
         description: `${payload.user.name} joined the room`,
@@ -86,6 +108,13 @@ export function useRoomMembershipEvents() {
     }) => {
       if (membershipStore.isCurrentRoom(payload.room_id)) {
         membershipStore.updateMemberRole(payload.user_id, payload.new_role as RoomMember['role'])
+
+        // Bubble only for a positive outcome (promotion to admin) — demotions
+        // get no bubble per spec.
+        if (payload.new_role === 'admin' && payload.previous_role !== 'admin') {
+          const name = participantsStore.participants.get(payload.user_id)?.name ?? 'A member'
+          appendSystemChatMessage(payload.room_id, payload.user_id, `${name} is now an admin`)
+        }
       }
 
       if (authStore.user?.id === payload.user_id) {

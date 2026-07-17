@@ -110,6 +110,9 @@ export const ROOM_BACKGROUND_QUALITY = 75;
 /** Maximum chat messages to keep in memory */
 export const MAX_CHAT_MESSAGES = 500;
 
+/** Chat message type for locally-synthesized system bubbles (membership events, etc). */
+export const CHAT_MESSAGE_TYPE_SYSTEM = 'system';
+
 /**
  * Maximum number of tracks the DJ's Playlist queue holds. Adds beyond this are
  * ignored (the existing queue keeps playing). Bounds the session-local list;

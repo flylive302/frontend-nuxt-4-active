@@ -11,7 +11,7 @@ import type { RoomJoinRequest } from "~/types/room/room";
 // Composables
 // ========================================
 
-const { joinRequests, approveJoinRequest, rejectJoinRequest } = useRoomJoinRequests();
+const { joinRequests, approveJoinRequest, rejectJoinRequest, isRequestActionPending } = useRoomJoinRequests();
 
 // ========================================
 // Handlers
@@ -54,6 +54,8 @@ async function handleReject(request: RoomJoinRequest) {
               color="success"
               variant="soft"
               class="flex-1 justify-center rounded-none"
+              :disabled="isRequestActionPending(request.id)"
+              :loading="isRequestActionPending(request.id)"
               @click="handleApprove(request)"
             >
               Approve
@@ -62,6 +64,8 @@ async function handleReject(request: RoomJoinRequest) {
               variant="soft"
               color="error"
               class="flex-1 justify-center rounded-none"
+              :disabled="isRequestActionPending(request.id)"
+              :loading="isRequestActionPending(request.id)"
               @click="handleReject(request)"
             >
               Reject
