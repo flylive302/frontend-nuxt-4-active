@@ -4,10 +4,17 @@ const props = withDefaults(defineProps<{
   delay?: string
   textClass?: string
   vip?: number
+  /**
+   * Pause the scrolling animation (e.g. while the header is scrolled out of
+   * view). Purely visual — `animation-play-state`, no layout/appearance
+   * change while paused/resumed.
+   */
+  paused?: boolean
 }>(), {
   delay: undefined,
   textClass: undefined,
   vip: undefined,
+  paused: false,
 })
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -57,7 +64,10 @@ if (props.vip && props.vip == 12) { colorFullName = '#468a25'; }
         ref="trackRef"
         class="whitespace-nowrap"
         :class="[{ 'marquee-track': isOverflowing }]"
-        :style="isOverflowing && delay ? { animationDelay: delay } : undefined"
+        :style="{
+          ...(isOverflowing && delay ? { animationDelay: delay } : {}),
+          animationPlayState: paused ? 'paused' : 'running',
+        }"
     >
       <span
           :class="textClass"

@@ -11,6 +11,7 @@ const props = defineProps<{
 const seatsStore = useRoomSeatsStore();
 const roomStore = useRoomStore();
 const { resolvePropAsset } = usePropLookup();
+const { isFrameAnimationAllowed } = useFrameAnimationBudget();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
 const seatIndex = computed(() => props.seatId - 1);
@@ -56,6 +57,10 @@ const userFrame = computed(() => {
   }
   return resolvePropAsset(seat.value?.user?.frame_id) ?? undefined;
 });
+
+// Frame animation budget (room-battery-perf/02): over-budget seats render the
+// cached still-frame instead of a live SVGA loop.
+const frameAnimationAllowed = computed(() => isFrameAnimationAllowed(seatIndex.value));
 
 // Mice wave asset — custom if equipped, default otherwise
 const miceWaveAsset = computed(() => {
@@ -115,6 +120,7 @@ function clearActiveReaction(): void {
             key="occupied"
             :animated="true"
             :defer-frame-animation="true"
+            :static-frame="!frameAnimationAllowed"
             :frame-asset-url="userFrame"
             :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
             class="relative z-20"

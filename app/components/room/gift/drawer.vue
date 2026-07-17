@@ -33,7 +33,6 @@ const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo } = useGiftSending();
 const { readinessState } = useGiftReadiness(computed(() => giftStore.selectedGift));
 
-const { haptic } = useHaptics();
 useGiftRecipientSync();
 
 // Track drawer open state
@@ -132,14 +131,12 @@ async function handleComboClick() {
     const success = await luckyCombo();
     if (success) {
       resetComboProgress();
-      haptic("nudge");
     }
   } else {
     // Normal gift combo — enqueues another full playback behind whatever is on
     // screen (never interrupts). combo() handles its own GATE checks internally.
     await combo();
     resetComboProgress();
-    haptic("nudge");
   }
 }
 
@@ -152,8 +149,17 @@ onMounted(() => {
   ensureLoaded();
 });
 
+// Room-covered signal (room-battery-perf/03): pause seat/frame animation
+// behind the drawer while it's open. Auto-released on unmount.
+const { cover, uncover } = useRoomCovered();
+
 // Auto-select all recipients when drawer opens
 watch(isOpen, (open) => {
+  if (open) {
+    cover();
+  } else {
+    uncover();
+  }
   if (open && eligibleRecipients.value.length > 0) {
     selectAllRecipients();
   }
@@ -230,7 +236,6 @@ const xpRemaining = computed(() =>
  */
 function handleSelectGift(gift: Gift) {
   giftStore.selectGift(gift);
-  haptic("nudge");
 }
 
 /**
@@ -244,7 +249,6 @@ async function handleSend() {
   }
   const success = await send();
   if (success) {
-    haptic("success");
     enterComboMode('normal');
   }
 }
@@ -282,7 +286,6 @@ function onOddsDismissed(): void {
 async function doLuckySend(): Promise<void> {
   const success = await send()
   if (success) {
-    haptic('success')
     enterComboMode('lucky')
   }
 }

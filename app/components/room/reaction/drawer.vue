@@ -21,7 +21,6 @@ const isOpen = defineModel<boolean>('open', { default: false });
 
 const { query, sections, categories, isSearching, searchResults } = useReactionCatalog();
 const { sendReaction, isSelfSeated, isSelfReactionPlaying } = useSeatReactions();
-const { haptic } = useHaptics();
 
 const activeCategory = ref<string | null>(null);
 
@@ -49,11 +48,19 @@ function handleSelectCategory(category: string): void {
 
 function handleSelectReaction(code: string): void {
   sendReaction(code);
-  haptic('nudge');
   isOpen.value = false;
 }
 
+// Room-covered signal (room-battery-perf/03): pause seat/frame animation
+// behind the drawer while it's open. Auto-released on unmount.
+const { cover, uncover } = useRoomCovered();
+
 watch(isOpen, (open) => {
+  if (open) {
+    cover();
+  } else {
+    uncover();
+  }
   if (!open) {
     query.value = '';
     activeCategory.value = null;

@@ -36,6 +36,9 @@ const { restart, isPlaying } = useSvgaPlayer(canvas, {
   onProcess: () => {
     emit('progress');
   },
+  // One-shot playback whose `complete` gates the gift queue — must never be
+  // frozen by the global motion-pause (room-battery-perf/03).
+  motionPause: false,
 });
 
 // Expose restart method for combo mode

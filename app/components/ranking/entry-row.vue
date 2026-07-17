@@ -72,7 +72,7 @@ const rankBadgeClass = computed<string>(() => {
 
     <UserAvatar
         :animated="true"
-        :frame-asset-url="resolvePropAsset(entry.user?.frame_id) ?? ASSETS.DEFAULT_FRAME"
+        :frame-asset-url="resolvePropAsset(entry.user?.frame_id)"
         :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
         frame-name="top-120-16-0-0"
         class="w-12"

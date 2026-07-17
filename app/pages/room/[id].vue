@@ -171,7 +171,7 @@ onUnmounted(() => {
         <img
           :src="roomBackgroundDisplaySrc"
           alt=""
-          class="bg-fixed object-cover size-full animate-[zoom_60s_ease-in-out_infinite]"
+          class="bg-fixed object-cover size-full"
           loading="eager"
           fetchpriority="high"
           decoding="async"

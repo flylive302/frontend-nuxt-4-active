@@ -38,7 +38,7 @@ const props = withDefaults(defineProps<{
   imgWidth?: number
 }>(), {
   frameName: '',
-  frameAssetUrl: ASSETS.DEFAULT_FRAME,
+  frameAssetUrl: undefined,
   img: undefined,
   animated: false,
   deferFrameAnimation: false,

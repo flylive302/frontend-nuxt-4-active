@@ -37,7 +37,6 @@ export const ASSETS = {
   LOGO_XL: '/logos/logo-full.png',
 
   // ── R2 CDN — Binary / Animations ──
-  DEFAULT_FRAME: `${R2}/frames/10.svga`,
   MICE_WAVE_SVGA: `${R2}/vip/1/mice-wave.svga`,
   DEFAULT_WEALTH_BADGE: `${IK}/badges/wealth/1.webp`,
   DEFAULT_CHARM_BADGE: `${IK}/badges/charm/1.webp`,

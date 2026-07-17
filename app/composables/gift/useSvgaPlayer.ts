@@ -7,6 +7,7 @@
 import type { Ref } from 'vue';
 import type { SvgaPlayer, SvgaPlugin } from '@/types/asset/svga';
 import { createLogger } from '~/utils/logger';
+import * as motionPauseRegistry from '~/services/motionPauseRegistry';
 
 const log = createLogger('[SvgaPlayer]');
 
@@ -19,6 +20,13 @@ export interface UseSvgaPlayerOptions {
   onProcess?: () => void;
   replaceElements?: Record<string, HTMLImageElement>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
+  /**
+   * Participate in the global motion-pause registry (room-battery-perf/03).
+   * Default true. Set false for one-shot players whose `complete` event gates
+   * downstream flow (e.g. the gift playback queue) — freezing those mid-play
+   * would stall the queue rather than save meaningful work.
+   */
+  motionPause?: boolean;
 }
 
 export function useSvgaPlayer(
@@ -114,6 +122,13 @@ export function useSvgaPlayer(
 
       if (options.autoplay?.value !== false) {
         player.value.start();
+        // room-battery-perf/03: a player loaded while the app is already
+        // paused (backgrounded/covered) must not start animating — the
+        // registry's inherited pause() fired before this player existed.
+        if (participatesInMotionPause && motionPauseRegistry.isPaused()) {
+          player.value.pause();
+          pausedByRegistry = true;
+        }
       }
     } catch (error) {
       log.warn('Failed to load SVGA animation', error);
@@ -152,6 +167,29 @@ export function useSvgaPlayer(
     isPlaying.value = false;
   }
 
+  // room-battery-perf/03: register with the global motion-pause registry so
+  // backgrounding/covering the room halts this canvas loop. Resume only
+  // touches players THIS registrant paused — a player that finished or was
+  // stopped while backgrounded must not be restarted by resume().
+  let pausedByRegistry = false;
+  const participatesInMotionPause = options.motionPause !== false;
+  const registryId = participatesInMotionPause
+    ? motionPauseRegistry.register({
+        pause: () => {
+          if (player.value && isPlaying.value) {
+            player.value.pause();
+            pausedByRegistry = true;
+          }
+        },
+        resume: () => {
+          if (player.value && pausedByRegistry) {
+            player.value.resume();
+          }
+          pausedByRegistry = false;
+        },
+      })
+    : null;
+
   // Watch for option changes and reload
   watch(
     [options.name, options.loop ?? ref(), options.autoplay ?? ref()],
@@ -164,6 +202,7 @@ export function useSvgaPlayer(
   // Cleanup on unmount
   onBeforeUnmount(() => {
     isDestroyed = true;
+    if (registryId !== null) motionPauseRegistry.unregister(registryId);
     player.value?.destroy();
     player.value = null;
   });

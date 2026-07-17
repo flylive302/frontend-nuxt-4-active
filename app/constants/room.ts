@@ -25,6 +25,13 @@ export const MAX_SEAT_COUNT = 30;
 /** Seat counts are selectable in steps of this size (5, 10, 15, ..., 30). */
 export const SEAT_COUNT_STEP = 5;
 
+/**
+ * Max seats allowed to run a LIVE animated avatar-frame concurrently
+ * (room-battery-perf/02). Active speakers get priority; seats over budget
+ * render the cached still-frame instead.
+ */
+export const FRAME_ANIMATION_BUDGET = 15;
+
 // ============================================
 // Room Theme
 // ============================================
