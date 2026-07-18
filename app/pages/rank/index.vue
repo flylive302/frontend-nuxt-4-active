@@ -80,11 +80,11 @@ useHead({
 </script>
 
 <template>
-  <main class="relative m-0 p-0 min-h-screen overflow-hidden">
+  <main class="m-0 p-0 max-h-screen scrollbar-hide">
     <NuxtImg
         :src="rankingBgUrl(category)"
         alt="Leaderboard Background"
-        class="w-full absolute top-0 z-0 mask-b-from-70% mask-b-to-90% animate-[zoom_50s_ease-in-out_infinite]"
+        class="w-full absolute top-0 z-0 mask-b-from-70% mask-b-to-90%"
     />
 
     <RankingCurrentUserBar
@@ -145,6 +145,5 @@ useHead({
         />
       </div>
     </footer>
-
   </main>
 </template>
