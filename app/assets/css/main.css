@@ -575,3 +575,15 @@ textarea,
     -webkit-user-select: text;
     user-select: text;
 }
+
+/*
+ * Explicit exemption for copyable content (e.g. DM message bubble text),
+ * WhatsApp-style. Opt-in only — everything else stays protected. The JS
+ * side's allow-check in plugins/copy-protection.client.ts must be kept in
+ * sync with this selector.
+ */
+.allow-copy {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    user-select: text;
+}

@@ -4,7 +4,26 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 // ── Composables ───────────────────────────────────────
 const store = useInboxStore()
 const { fetchThreads, loadMoreThreads, startThread } = useInboxActions()
-const { stop: stopPresence } = useDmPresence()
+const presenceStore = usePresenceStore()
+
+// ---- Following Carousel (ranked, Redis-cached)
+const { fetchRankedFollowing } = useFollowingData()
+const { data: rankedFollowing } = useAsyncData(
+    'home-following-ranked',
+    () => fetchRankedFollowing(),
+    // This branch is client-only rendered below; keep non-blocking to reduce home TTFB.
+    { lazy: true }
+)
+
+// Candidate ids for the following strip must stay presence-subscribed so
+// their online state resolves — the strip itself only *renders* the subset
+// that is online (see onlineFollowing below).
+const followingCandidateIds = computed(() => rankedFollowing.value?.map(u => u.id) ?? [])
+const onlineFollowing = computed(
+  () => rankedFollowing.value?.filter(u => presenceStore.onlineByUserId[u.id] === true) ?? [],
+)
+
+const { stop: stopPresence } = useDmPresence({ stripUserIds: followingCandidateIds })
 
 // ── Init: navigate to /inbox?start=userId for Chat button ─
 const route = useRoute()
@@ -25,15 +44,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopPresence()
 })
-
-// ---- Following Carousel (ranked, Redis-cached)
-const { fetchRankedFollowing } = useFollowingData()
-const { data: rankedFollowing } = useAsyncData(
-    'home-following-ranked',
-    () => fetchRankedFollowing(),
-    // This branch is client-only rendered below; keep non-blocking to reduce home TTFB.
-    { lazy: true }
-)
 </script>
 
 <template>
@@ -55,8 +65,10 @@ const { data: rankedFollowing } = useAsyncData(
       </div>
 
       <template v-else>
-        <SectionTitle class="ml-3">Friends</SectionTitle>
-        <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3" />
+        <template v-if="onlineFollowing.length > 0">
+          <SectionTitle class="ml-3">Friends</SectionTitle>
+          <HomeFollowingCarousel :users="onlineFollowing" class="mx-3" />
+        </template>
         <!-- ── DM Threads ────────────────────────────── -->
         <div v-if="store.dmThreads.length > 0" class="divide-y divide-muted/10">
           <NuxtLink

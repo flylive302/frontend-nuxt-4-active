@@ -26,7 +26,7 @@ export interface Thread {
   acceptedAt: string | null
   isInitiator: boolean
   /** Newest message id (as string) the peer has seen in this thread, or null if never opened. */
-  peerSeenUpToMessageId: string | null
+  peerSeenUpToMessageId: string | number | null
 }
 
 // ── Typed message content envelope (dm-realtime-platform/09) ─────────────

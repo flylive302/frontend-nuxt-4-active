@@ -28,14 +28,28 @@ interface PresenceAckResponse {
   data?: Record<number, boolean>
 }
 
-export function useDmPresence() {
+export interface UseDmPresenceOptions {
+  /**
+   * Extra candidate ids to keep subscribed even though they aren't a thread
+   * participant — e.g. the inbox page's online-contacts strip. Priority
+   * order is: open-thread peer, then these, then the thread list (see
+   * computeWantedUserIds). Reactive so the strip can populate async.
+   */
+  stripUserIds?: Ref<number[]> | ComputedRef<number[]>
+}
+
+export function useDmPresence(options: UseDmPresenceOptions = {}) {
   const { socket, status } = useAudioSocket()
   const inboxStore = useInboxStore()
   const presenceStore = usePresenceStore()
   const emitAsync = createEmitAsync(socket)
 
   // ── GATE ──────────────────────────────────────────────
-  /** The contacts currently visible: open thread peer + loaded thread list participants, capped. */
+  /**
+   * The contacts currently visible, priority-ordered and capped: open
+   * thread peer, then the strip's candidate ids, then loaded thread list
+   * participants.
+   */
   function computeWantedUserIds(): number[] {
     const ids = new Set<number>()
 
@@ -43,6 +57,12 @@ export function useDmPresence() {
     if (activeThread) {
       const peerId = Number(activeThread.participant.id)
       if (!Number.isNaN(peerId)) ids.add(peerId)
+    }
+
+    for (const stripId of options.stripUserIds?.value ?? []) {
+      if (ids.size >= PRESENCE_SUBSCRIBE_MAX) break
+      const id = Number(stripId)
+      if (!Number.isNaN(id)) ids.add(id)
     }
 
     for (const thread of [...inboxStore.dmThreads, ...inboxStore.requestThreads]) {
@@ -97,7 +117,12 @@ export function useDmPresence() {
   }
 
   const stopWantedWatch = watch(
-    () => [inboxStore.activeThreadId, inboxStore.dmThreads, inboxStore.requestThreads] as const,
+    () => [
+      inboxStore.activeThreadId,
+      inboxStore.dmThreads,
+      inboxStore.requestThreads,
+      options.stripUserIds?.value,
+    ] as const,
     () => { void sync() },
     { deep: true, immediate: true },
   )

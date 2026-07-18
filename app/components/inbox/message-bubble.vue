@@ -6,7 +6,7 @@ import { isMessageSeen } from '~/utils/messageSeenStatus'
 const props = defineProps<{
   message: ThreadMessage
   /** Peer's thread-level seen watermark (newest message id they've seen), from the store. */
-  peerSeenUpToMessageId: string | null
+  peerSeenUpToMessageId: string | number | null
 }>()
 const emit = defineEmits<{ 'long-press': [] }>()
 
@@ -61,7 +61,7 @@ function onContextMenu(e: Event) {
         <UIcon name="i-lucide-ban" class="size-3 inline mr-1" />This message was deleted
       </p>
       <!-- Normal content -->
-      <p v-else class="leading-snug wrap-break-word">{{ message.content }}</p>
+      <p v-else class="allow-copy leading-snug wrap-break-word">{{ message.content }}</p>
       <p
         class="text-[10px] mt-0.5 text-right flex items-center justify-end gap-0.5"
         :class="message.isOwn ? 'text-white/60' : 'text-muted'"

@@ -5,10 +5,12 @@
 // affected; only the copy/cut/context-menu affordances are suppressed.
 export default defineNuxtPlugin(() => {
   // Editable fields must stay fully usable — users need to select, cut/copy,
-  // and (on mobile) long-press to paste into their own inputs.
+  // and (on mobile) long-press to paste into their own inputs. `.allow-copy`
+  // is the explicit opt-in exemption (e.g. DM message bubble text) — keep in
+  // sync with the CSS selector in assets/css/main.css.
   const isEditable = (target: EventTarget | null): boolean => {
     const el = target as HTMLElement | null
-    return !!el?.closest?.('input, textarea, [contenteditable="true"], [contenteditable=""]')
+    return !!el?.closest?.('input, textarea, [contenteditable="true"], [contenteditable=""], .allow-copy')
   }
 
   const block = (event: Event) => {

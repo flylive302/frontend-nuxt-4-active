@@ -175,6 +175,38 @@ describe('useDmPresence', () => {
     )
   })
 
+  it('includes strip candidate ids, prioritized after the open thread peer but before the thread list', async () => {
+    inboxStore.activeThreadId = 'thread-9'
+    inboxStore.threadById.mockReturnValue({ participant: { id: '9' } })
+    inboxStore.dmThreads = [{ participant: { id: '1' } }]
+    const stripUserIds = ref<number[]>([2, 3])
+
+    const { useDmPresence } = await import('../../app/composables/inbox/useDmPresence')
+    useDmPresence({ stripUserIds })
+    await vi.waitFor(() => expect(mockSocket.emit).toHaveBeenCalled())
+
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      'presence:subscribe',
+      { userIds: [9, 2, 3, 1] },
+      expect.any(Function),
+    )
+  })
+
+  it('caps the wanted set at PRESENCE_SUBSCRIBE_MAX, dropping thread-list ids first', async () => {
+    const stripUserIds = ref<number[]>(Array.from({ length: 45 }, (_, i) => 1000 + i))
+    inboxStore.dmThreads = Array.from({ length: 10 }, (_, i) => ({ participant: { id: String(2000 + i) } }))
+
+    const { useDmPresence } = await import('../../app/composables/inbox/useDmPresence')
+    useDmPresence({ stripUserIds })
+    await vi.waitFor(() => expect(mockSocket.emit).toHaveBeenCalled())
+
+    const call = mockSocket.emit.mock.calls[0]
+    const subscribedIds: number[] = call[1].userIds
+    expect(subscribedIds).toHaveLength(50)
+    expect(subscribedIds.slice(0, 45)).toEqual(stripUserIds.value)
+    expect(subscribedIds.slice(45)).toEqual([2000, 2001, 2002, 2003, 2004])
+  })
+
   it('re-subscribes with a fresh snapshot on socket reconnect', async () => {
     inboxStore.dmThreads = [{ participant: { id: '1' } }]
     await setup()

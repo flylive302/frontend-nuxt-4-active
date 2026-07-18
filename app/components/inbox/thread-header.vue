@@ -44,7 +44,7 @@ defineEmits<{
       <UserAvatar v-else :img="avatar" :frame-asset-url="frame ?? undefined" animated class="size-12" />
       <span
         v-if="!isSystem && online"
-        class="absolute bottom-0 right-0 size-3 rounded-full bg-success ring-2 ring-default"
+        class="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-success ring-2 ring-default"
         aria-label="Online"
       />
     </div>

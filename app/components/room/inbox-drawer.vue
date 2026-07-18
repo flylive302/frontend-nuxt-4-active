@@ -30,14 +30,23 @@ function backToList(): void {
 const store = useInboxStore()
 const { fetchThreads, loadMoreThreads } = useInboxActions()
 const { fetchRankedFollowing } = useFollowingData()
-const { stop: stopPresence } = useDmPresence()
+const presenceStore = usePresenceStore()
+
+const rankedFollowing = ref<Awaited<ReturnType<typeof fetchRankedFollowing>>>([])
+const followingLoaded = ref(false)
+
+// Candidate ids for the strip must stay presence-subscribed; the strip
+// itself renders only the online subset (see onlineFollowing below).
+const followingCandidateIds = computed(() => rankedFollowing.value?.map(u => u.id) ?? [])
+const onlineFollowing = computed(
+  () => rankedFollowing.value?.filter(u => presenceStore.onlineByUserId[u.id] === true) ?? [],
+)
+
+const { stop: stopPresence } = useDmPresence({ stripUserIds: followingCandidateIds })
 
 onBeforeUnmount(() => {
   stopPresence()
 })
-
-const rankedFollowing = ref<Awaited<ReturnType<typeof fetchRankedFollowing>>>([])
-const followingLoaded = ref(false)
 
 onMounted(() => {
   isClientHydrated.value = true
@@ -117,8 +126,10 @@ watch(isOpen, async (open) => {
         </div>
 
         <template v-else>
-          <SectionTitle class="ml-3">Friends</SectionTitle>
-          <HomeFollowingCarousel v-if="rankedFollowing?.length" :users="rankedFollowing" class="mx-3" />
+          <template v-if="onlineFollowing.length > 0">
+            <SectionTitle class="ml-3">Friends</SectionTitle>
+            <HomeFollowingCarousel :users="onlineFollowing" class="mx-3" />
+          </template>
 
           <!-- ── DM Threads ────────────────────────────── -->
           <div v-if="store.dmThreads.length > 0" class="divide-y divide-muted/10">
