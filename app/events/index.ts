@@ -13,6 +13,9 @@ import { useSystemEvents } from './system.events'
 import { useVipEvents } from './vip.events'
 import { useFollowEvents } from './follow.events'
 import { useSlideEvents } from './slide.events'
+import { useMissionEvents } from './mission.events'
+import { useInboxEvents } from './inbox.events'
+import { usePresenceEvents } from './presence.events'
 
 /**
  * Registry of all domain-specific socket event handlers.
@@ -35,6 +38,9 @@ export function useAllEventHandlers() {
   const registerVip = useVipEvents()
   const registerFollow = useFollowEvents()
   const registerSlide = useSlideEvents()
+  const registerMission = useMissionEvents()
+  const registerInbox = useInboxEvents()
+  const registerPresence = usePresenceEvents()
 
   return function registerAllEventHandlers(socket: Socket): void {
     registerEconomy(socket)
@@ -47,5 +53,8 @@ export function useAllEventHandlers() {
     registerVip(socket)
     registerFollow(socket)
     registerSlide(socket)
+    registerMission(socket)
+    registerInbox(socket)
+    registerPresence(socket)
   }
 }

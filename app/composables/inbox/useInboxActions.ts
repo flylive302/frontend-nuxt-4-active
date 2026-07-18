@@ -128,6 +128,7 @@ export function useInboxActions() {
       senderId: String(authStore.user?.id ?? 'me'),
       content: content.trim(),
       type: 'text',
+      kind: 'text',
       sentAt: new Date().toISOString(),
       readAt: null,
       unsent: false,

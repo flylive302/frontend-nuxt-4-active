@@ -9,6 +9,8 @@ withDefaults(
     isSystem?: boolean
     /** Full page pins the header with `position: fixed`; a drawer contains it in-flow instead. */
     fixed?: boolean
+    /** dm-realtime-platform/07: presence dot on the avatar. */
+    online?: boolean
   }>(),
   { fixed: true },
 )
@@ -32,7 +34,7 @@ defineEmits<{
     />
 
     <!-- Avatar / Icon -->
-    <div class="shrink-0">
+    <div class="relative shrink-0">
       <div
         v-if="isSystem"
         class="size-9 rounded-full bg-primary/15 flex items-center justify-center"
@@ -40,6 +42,11 @@ defineEmits<{
         <UIcon name="i-lucide-shield-check" class="size-5 text-primary" />
       </div>
       <UserAvatar v-else :img="avatar" :frame-asset-url="frame ?? undefined" animated class="size-12" />
+      <span
+        v-if="!isSystem && online"
+        class="absolute bottom-0 right-0 size-3 rounded-full bg-success ring-2 ring-default"
+        aria-label="Online"
+      />
     </div>
 
     <!-- Name + Signature + Gender -->

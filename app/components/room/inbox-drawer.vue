@@ -30,6 +30,11 @@ function backToList(): void {
 const store = useInboxStore()
 const { fetchThreads, loadMoreThreads } = useInboxActions()
 const { fetchRankedFollowing } = useFollowingData()
+const { stop: stopPresence } = useDmPresence()
+
+onBeforeUnmount(() => {
+  stopPresence()
+})
 
 const rankedFollowing = ref<Awaited<ReturnType<typeof fetchRankedFollowing>>>([])
 const followingLoaded = ref(false)

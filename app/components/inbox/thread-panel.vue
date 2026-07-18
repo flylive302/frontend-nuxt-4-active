@@ -17,7 +17,8 @@ const emit = defineEmits<{ (e: 'exit'): void }>()
 
 // ── Composables ───────────────────────────────────────
 const store = useInboxStore()
-const { loadMessages, loadOlderMessages, sendMessage, markRead, fetchThreads } = useInboxActions()
+const { loadOlderMessages, sendMessage, markRead } = useInboxActions()
+const { reconcileInbox } = useInboxReconcile()
 const { acceptRequest, denyRequest, unsendMessage, deleteMessage, deleteThread, blockUser } = useInboxThread()
 const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
 const { resolvePropAsset } = usePropLookup()
@@ -47,6 +48,14 @@ function formatDateLabel(dateStr: string): string {
 // ── Thread meta ───────────────────────────────────────
 const thread = computed(() => store.threadById(props.threadId))
 const isRequest = computed(() => thread.value?.kind === 'request')
+
+// dm-realtime-platform/07: presence dot for the header.
+const presenceStore = usePresenceStore()
+const isPeerOnline = computed(() => {
+  const peerId = thread.value?.participant.id
+  if (peerId === undefined) return false
+  return presenceStore.onlineByUserId[Number(peerId)] === true
+})
 
 // ── Scroll ────────────────────────────────────────────
 const scrollEl = ref<HTMLElement | null>(null)
@@ -139,11 +148,11 @@ async function confirmDeleteChat(): Promise<void> {
 
 // ── Init ──────────────────────────────────────────────
 onMounted(async () => {
-  // Ensure thread list is loaded (needed for thread metadata: kind, isInitiator)
-  if (!store.threadsLoaded) {
-    await fetchThreads()
-  }
-  await loadMessages(props.threadId)
+  // Thread-open reconcile trigger (issue 03, dm-realtime-platform): refetches
+  // thread list + unread counts (covers metadata like kind/isInitiator) and,
+  // since activeThreadId is now set, this thread's tail.
+  store.activeThreadId = props.threadId
+  await reconcileInbox('thread-open')
   await markRead(props.threadId)
   listenForTyping(props.threadId)
   scrollToBottom()
@@ -166,6 +175,7 @@ onBeforeUnmount(() => {
       :frame="resolvePropAsset(thread?.participant.frame_id) ?? undefined"
       :signature="thread?.participant.signature"
       :gender="thread?.participant.gender"
+      :online="isPeerOnline"
       @block="handleBlock"
       @delete-chat="handleDeleteChat"
       @report="handleReport"
@@ -219,6 +229,7 @@ onBeforeUnmount(() => {
           </div>
           <InboxMessageBubble
             :message="msg"
+            :peer-seen-up-to-message-id="thread?.peerSeenUpToMessageId ?? null"
             @long-press="onLongPress(msg.id)"
           />
         </template>

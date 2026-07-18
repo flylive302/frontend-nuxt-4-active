@@ -100,6 +100,8 @@ export interface UserProfile {
   mice_wave_id: number | null
   slides_id: number | null
   gender: ProfileGender | null
+  /** ISO 8601 timestamp of this user's last activity; null if never active. */
+  last_seen_at: string | null
   wealth_xp: string   // Use instead of total_gift_coins_sent
   charm_xp: string    // Use instead of total_gift_coins_received
   profile_visits: number

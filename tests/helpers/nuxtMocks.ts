@@ -207,6 +207,16 @@ export function createMockUserSync() {
 }
 
 // ========================================
+// Inbox Reconcile Mock
+// ========================================
+
+export function createMockInboxReconcile() {
+  return {
+    reconcileInbox: vi.fn().mockResolvedValue(undefined),
+  }
+}
+
+// ========================================
 // Mall Store Mock
 // ========================================
 
@@ -235,6 +245,7 @@ export function setupNuxtMocks(mocks: {
   telemetry?: ReturnType<typeof createMockTelemetry>
   bootstrapAssets?: ReturnType<typeof createMockBootstrapAssets>
   userSync?: ReturnType<typeof createMockUserSync>
+  inboxReconcile?: ReturnType<typeof createMockInboxReconcile>
   mallStore?: ReturnType<typeof createMockMallStore>
   route?: Record<string, unknown>
   cookieValue?: string | null
@@ -247,6 +258,7 @@ export function setupNuxtMocks(mocks: {
   const telemetry = mocks.telemetry ?? createMockTelemetry()
   const bootstrapAssets = mocks.bootstrapAssets ?? createMockBootstrapAssets()
   const userSync = mocks.userSync ?? createMockUserSync()
+  const inboxReconcile = mocks.inboxReconcile ?? createMockInboxReconcile()
   const mallStore = mocks.mallStore ?? createMockMallStore()
   const route = mocks.route ?? { meta: { middleware: [] } }
   const cookieValue = mocks.cookieValue ?? null
@@ -260,6 +272,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).useTelemetry = () => telemetry
   ;(globalThis as Record<string, unknown>).useBootstrapAssets = () => bootstrapAssets
   ;(globalThis as Record<string, unknown>).useUserSync = () => userSync
+  ;(globalThis as Record<string, unknown>).useInboxReconcile = () => inboxReconcile
   ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useRoute = () => route
   ;(globalThis as Record<string, unknown>).useCookie = () => ref(cookieValue)
@@ -270,7 +283,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).reactive = reactive
   ;(globalThis as Record<string, unknown>).readonly = <T>(value: T) => value
 
-  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets, userSync, mallStore }
+  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets, userSync, inboxReconcile, mallStore }
 }
 
 /**
@@ -280,7 +293,7 @@ export function setupNuxtMocks(mocks: {
 export function cleanupNuxtMocks(): void {
   const keys = [
     'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore',
-    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useUserSync', 'useMallStore', 'useRoute', 'useCookie',
+    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useUserSync', 'useInboxReconcile', 'useMallStore', 'useRoute', 'useCookie',
     'ref', 'shallowRef', 'computed', 'reactive', 'readonly', 'useRoomParticipantsStore',
   ] as const
   for (const key of keys) {

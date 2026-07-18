@@ -138,6 +138,12 @@ export const useInboxStore = defineStore('inbox', () => {
     if (thread) thread.unreadCount = 0
   }
 
+  /** Update the peer's seen watermark for a thread (dm.thread.seen hint / reconcile). */
+  function setPeerSeenUpTo(threadId: string | number, seenUpToMessageId: string | number): void {
+    const thread = threadById(threadId)
+    if (thread) thread.peerSeenUpToMessageId = String(seenUpToMessageId)
+  }
+
   function bumpOfficialUnread(): void {
     officialUnreadCount.value++
   }
@@ -217,6 +223,7 @@ export const useInboxStore = defineStore('inbox', () => {
     replaceOptimisticMessage,
     markMessageUnsent,
     markThreadRead,
+    setPeerSeenUpTo,
     bumpThreadUnread,
     bumpOfficialUnread,
     clearOfficialUnread,

@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import type { ThreadMessage } from '~/types/inbox'
 import { formatRelativeTime } from '~/utils/date'
+import { isMessageSeen } from '~/utils/messageSeenStatus'
 
-defineProps<{ message: ThreadMessage }>()
+const props = defineProps<{
+  message: ThreadMessage
+  /** Peer's thread-level seen watermark (newest message id they've seen), from the store. */
+  peerSeenUpToMessageId: string | null
+}>()
 const emit = defineEmits<{ 'long-press': [] }>()
+
+// Seen (peer's watermark has reached this message) vs delivered (readAt fallback
+// for self-heal before the first reconcile carries the watermark). Read receipts
+// (dm-realtime-platform/08): seen ticks are derived from the thread-level
+// watermark, not a per-message flag.
+const isSeen = computed(() => isMessageSeen(props.message.id, props.peerSeenUpToMessageId, props.message.readAt))
 
 // Long-press / right-click support
 let touchTimer: ReturnType<typeof setTimeout> | null = null
@@ -59,8 +70,8 @@ function onContextMenu(e: Event) {
         <!-- Read receipt checkmarks -->
         <UIcon
           v-if="message.isOwn && !message.unsent"
-          :name="message.readAt ? 'i-lucide-check-check' : 'i-lucide-check'"
-          :class="message.readAt ? 'text-blue-300' : ''"
+          :name="isSeen ? 'i-lucide-check-check' : 'i-lucide-check'"
+          :class="isSeen ? 'text-blue-300' : ''"
           class="size-3.5"
         />
       </p>

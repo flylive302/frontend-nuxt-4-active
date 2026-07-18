@@ -88,6 +88,10 @@ vi.stubGlobal('useAuthLifecycle', () => mockAuthLifecycle)
 const mockUserSync = { syncUser: vi.fn().mockResolvedValue(undefined) }
 vi.stubGlobal('useUserSync', () => mockUserSync)
 
+// Mock useInboxReconcile (handleConnect reconciles inbox on every re-connect)
+const mockInboxReconcile = { reconcileInbox: vi.fn().mockResolvedValue(undefined) }
+vi.stubGlobal('useInboxReconcile', () => mockInboxReconcile)
+
 // ============================================
 // Tests
 // ============================================
@@ -311,14 +315,19 @@ describe('useAudioSocket', () => {
       // First connect after boot: bootstrap already hydrated the user → no sync.
       connectHandler?.()
       expect(mockUserSync.syncUser).not.toHaveBeenCalled()
+      expect(mockInboxReconcile.reconcileInbox).not.toHaveBeenCalled()
 
       // Every subsequent (re)connect — auto-reconnect, post-failure rebuild, or
-      // PWA-resume all land on `connect` — self-heals via a fresh fetch.
+      // PWA-resume all land on `connect` — self-heals via a fresh fetch, and
+      // reconciles the inbox (issue 03, dm-realtime-platform).
       connectHandler?.()
       expect(mockUserSync.syncUser).toHaveBeenCalledTimes(1)
+      expect(mockInboxReconcile.reconcileInbox).toHaveBeenCalledTimes(1)
+      expect(mockInboxReconcile.reconcileInbox).toHaveBeenCalledWith('socket-reconnect')
 
       connectHandler?.()
       expect(mockUserSync.syncUser).toHaveBeenCalledTimes(2)
+      expect(mockInboxReconcile.reconcileInbox).toHaveBeenCalledTimes(2)
     })
   })
 

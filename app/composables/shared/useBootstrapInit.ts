@@ -30,6 +30,7 @@ export function useBootstrapInit() {
   const { trackBootstrapStarted, trackBootstrapCompleted, trackBootstrapFailed } = useTelemetry()
   const { startAssetDownload } = useBootstrapAssets()
   const { syncUser } = useUserSync()
+  const { reconcileInbox } = useInboxReconcile()
 
   // ========================================
   // Public API
@@ -59,6 +60,10 @@ export function useBootstrapInit() {
     if (authStore.token) {
       scheduleAfterFirstPaint(() => {
         void syncUser()
+        // App foreground/bootstrap reconcile trigger (issue 03,
+        // dm-realtime-platform) — closes the gap for any inbox realtime
+        // hint missed while the app was closed/backgrounded.
+        void reconcileInbox('bootstrap')
       })
     }
 

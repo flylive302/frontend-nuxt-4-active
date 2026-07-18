@@ -14,8 +14,10 @@ const isSystem = computed(() => threadId.value === 'system')
 const notificationStore = useNotificationStore()
 const inboxStore = useInboxStore()
 const { markAsRead, fetchNotifications } = useNotificationActions()
-const { loadMessages, sendMessage } = useInboxActions()
+const { sendMessage } = useInboxActions()
+const { reconcileInbox } = useInboxReconcile()
 const { resolvePropAsset } = usePropLookup()
+const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
 
 // ── Active thread meta (DM only) ──────────────────────
 const thread = computed(() => inboxStore.threadById(threadId.value))
@@ -64,8 +66,18 @@ onMounted(async () => {
     if (notificationStore.items.length === 0) await fetchNotifications(true)
     scrollToBottom()
   } else {
-    await loadMessages(threadId.value)
+    // Thread-open reconcile trigger (issue 03, dm-realtime-platform).
+    inboxStore.activeThreadId = threadId.value
+    await reconcileInbox('thread-open')
+    listenForTyping(threadId.value)
     scrollToBottom()
+  }
+})
+
+onBeforeUnmount(() => {
+  if (!isSystem.value) {
+    stopListening(threadId.value)
+    if (inboxStore.activeThreadId === threadId.value) inboxStore.activeThreadId = null
   }
 })
 </script>
@@ -170,11 +182,21 @@ onMounted(async () => {
           v-for="msg in inboxStore.messages"
           :key="msg.id"
           :message="msg"
+          :peer-seen-up-to-message-id="thread?.peerSeenUpToMessageId ?? null"
         />
       </template>
+
+      <!-- Typing indicator -->
+      <div v-if="isOtherTyping" class="flex justify-start px-3 mb-1.5">
+        <div class="bg-elevated rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-1">
+          <span class="size-1.5 bg-muted rounded-full animate-bounce" style="animation-delay: 0ms" />
+          <span class="size-1.5 bg-muted rounded-full animate-bounce" style="animation-delay: 150ms" />
+          <span class="size-1.5 bg-muted rounded-full animate-bounce" style="animation-delay: 300ms" />
+        </div>
+      </div>
     </div>
 
     <!-- Send input — DM only -->
-    <InboxMessageInput v-if="!isSystem" @send="handleSend" />
+    <InboxMessageInput v-if="!isSystem" @send="handleSend" @typing="sendTyping" />
   </main>
 </template>

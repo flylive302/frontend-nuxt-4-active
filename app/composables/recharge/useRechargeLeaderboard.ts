@@ -15,6 +15,7 @@
 import { useDocumentVisibility } from '@vueuse/core'
 import type { HonorWallData, LeaderboardResponse } from '~/types/mission/recharge'
 import { useApi } from '~/composables/shared/useApi'
+import { lastMissionFinaleReady } from '~/events/mission.events'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[RechargeLeaderboard]')
@@ -27,16 +28,9 @@ interface HonorWallEnvelope {
   data: HonorWallData
 }
 
-interface FinaleReadyPayload {
-  timeframe: string
-  instance_key: string
-}
-
 export function useRechargeLeaderboard(timeframe: 'weekly' | 'monthly') {
   const { api, normalizeError } = useApi()
   const store = useMissionStore()
-  const { $echo } = useNuxtApp()
-  const authStore = useAuthStore()
   const visibility = useDocumentVisibility()
 
   const isLoading = ref(false)
@@ -114,24 +108,22 @@ export function useRechargeLeaderboard(timeframe: 'weekly' | 'monthly') {
   }
 
   // ========================================
-  // Finale echo subscription
+  // Finale MSAB signal subscription
   // ========================================
 
-  function subscribeToFinale(): void {
-    const userId = authStore.user?.id
-    if (!userId) return
+  let stopFinaleWatch: (() => void) | null = null
 
-    $echo.private(`user.${userId}`).listen('.mission.finale.ready', (payload: FinaleReadyPayload) => {
-      if (payload.timeframe !== timeframe) return
+  function subscribeToFinale(): void {
+    stopFinaleWatch = watch(lastMissionFinaleReady, (payload) => {
+      if (!payload || payload.timeframe !== timeframe) return
       stopPolling()
       fetchFinaleSnapshot().catch((err: unknown) => log.warn('Finale snapshot fetch failed', err))
-    })
+    }, { flush: 'sync' })
   }
 
   function unsubscribeFinale(): void {
-    const userId = authStore.user?.id
-    if (!userId) return
-    $echo.private(`user.${userId}`).stopListening('.mission.finale.ready')
+    stopFinaleWatch?.()
+    stopFinaleWatch = null
   }
 
   // ========================================

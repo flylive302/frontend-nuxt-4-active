@@ -165,10 +165,6 @@ export default defineNuxtConfig({
             audioServerUrl:
                 process.env.NUXT_PUBLIC_AUDIO_SERVER_URL
                 || (process.env.NODE_ENV === 'development' ? 'ws://localhost:3030' : 'wss://localhost:3030'),
-            reverbAppKey: process.env.NUXT_PUBLIC_REVERB_APP_KEY || '',
-            reverbHost: process.env.NUXT_PUBLIC_REVERB_HOST || 'localhost',
-            reverbPort: process.env.NUXT_PUBLIC_REVERB_PORT || '8080',
-            reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
             // OTA live-update manifest (capacitor-07). Absolute URL of the static
             // `manifest.json` on Cloudflare R2. Empty ⇒ the native OTA check no-ops
             // (web build never reads it). Baked into the bundle at generate time.

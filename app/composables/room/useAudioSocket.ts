@@ -104,6 +104,7 @@ let _apiInstance: ReturnType<typeof useApi> | null = null;
 let _authActions: ReturnType<typeof useAuthActions> | null = null;
 let _realtimeEvents: ReturnType<typeof useRealtimeEvents> | null = null;
 let _userSync: ReturnType<typeof useUserSync> | null = null;
+let _inboxReconcile: ReturnType<typeof useInboxReconcile> | null = null;
 
 // ============================================
 // Composable
@@ -128,6 +129,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
   if (!_authActions) _authActions = useAuthActions();
   if (!_realtimeEvents) _realtimeEvents = useRealtimeEvents();
   if (!_userSync) _userSync = useUserSync();
+  if (!_inboxReconcile) _inboxReconcile = useInboxReconcile();
 
   const { registerRealtimeEventHandlers } = _realtimeEvents;
 
@@ -179,6 +181,10 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // boot/login is skipped — bootstrap already hydrates the user. Fire-and-forget.
     if (_hasConnectedOnce) {
       void _userSync!.syncUser();
+      // Socket reconnect trigger (issue 03, dm-realtime-platform) — reconciles
+      // inbox thread list/unread/tail against the same at-most-once, no-replay
+      // gap that motivates the user re-sync above.
+      void _inboxReconcile!.reconcileInbox('socket-reconnect');
     }
     _hasConnectedOnce = true;
   }

@@ -3,10 +3,10 @@
 // ========================================
 // Covers issue-21 finale mechanics:
 //   AC1: poll rate switches to finale_poll_seconds inside finale_warning_seconds window
-//   AC3: mission.finale.ready stops polling and fetches the honor-wall snapshot once
+//   AC3: mission.finale.ready (MSAB signal) stops polling and fetches the honor-wall snapshot once
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 // ========================================
 // Module mocks (hoisted — must precede imports of the SUT)
@@ -32,6 +32,12 @@ vi.mock('~/composables/shared/useApi', () => ({
     api: (...args: unknown[]) => apiMock(...args),
     normalizeError: (e: unknown) => ({ message: String(e) }),
   }),
+}))
+
+// The MSAB finale-ready signal the composable watches instead of Echo.
+const lastMissionFinaleReady = ref<{ timeframe: string; instance_key: string } | null>(null)
+vi.mock('~/events/mission.events', () => ({
+  lastMissionFinaleReady,
 }))
 
 // ========================================
@@ -70,31 +76,16 @@ function makeMissionStore(progressConfig = makeConfig(), resetsAt?: string) {
   }
 }
 
-function makeEcho() {
-  const listeners: Record<string, (payload: unknown) => void> = {}
-  const channel = {
-    listen: vi.fn((event: string, cb: (p: unknown) => void) => {
-      listeners[event] = cb
-      return channel
-    }),
-    stopListening: vi.fn(),
-    _trigger: (event: string, payload: unknown) => listeners[event]?.(payload),
-  }
-  return {
-    private: vi.fn(() => channel),
-    channel,
-  }
-}
-
 // ========================================
 // Setup / teardown
 // ========================================
 
 let missionStore: ReturnType<typeof makeMissionStore>
-let echo: ReturnType<typeof makeEcho>
+let unmountFns: Array<() => void> = []
 
 beforeEach(async () => {
   vi.useFakeTimers()
+  unmountFns = []
 
   apiMock = vi.fn().mockImplementation((url: string) => {
     if (url.includes('honor-wall')) {
@@ -104,26 +95,28 @@ beforeEach(async () => {
   })
 
   missionStore = makeMissionStore()
-  echo = makeEcho()
+  lastMissionFinaleReady.value = null
 
   ;(globalThis as Record<string, unknown>).useMissionStore = () => missionStore
-  ;(globalThis as Record<string, unknown>).useAuthStore = () => ({ user: { id: 42 } })
-  ;(globalThis as Record<string, unknown>).useNuxtApp = () => ({ $echo: echo })
   ;(globalThis as Record<string, unknown>).ref = ref
   ;(globalThis as Record<string, unknown>).computed = computed
+  ;(globalThis as Record<string, unknown>).watch = watch
   ;(globalThis as Record<string, unknown>).readonly = <T>(v: T) => v
   ;(globalThis as Record<string, unknown>).onMounted = (fn: () => void) => fn()
-  ;(globalThis as Record<string, unknown>).onUnmounted = vi.fn()
+  ;(globalThis as Record<string, unknown>).onUnmounted = (fn: () => void) => { unmountFns.push(fn) }
 
   vi.resetModules()
 })
 
 afterEach(() => {
+  // Dispose watchers registered by each composable instance so a leftover
+  // watch from a prior test doesn't fire on the shared finale-ready signal.
+  for (const fn of unmountFns) fn()
+  unmountFns = []
   vi.useRealTimers()
   vi.resetModules()
   const keys = [
-    'useMissionStore', 'useAuthStore', 'useNuxtApp',
-    'ref', 'computed', 'readonly', 'onMounted', 'onUnmounted',
+    'useMissionStore', 'ref', 'computed', 'watch', 'readonly', 'onMounted', 'onUnmounted',
   ]
   for (const key of keys) Reflect.deleteProperty(globalThis, key)
 })
@@ -137,7 +130,6 @@ describe('adaptive poll rate', () => {
     missionStore = makeMissionStore(makeConfig(), resetsAtMs(10 * 60 * 1000)) // 10 min out
     ;(globalThis as Record<string, unknown>).useMissionStore = () => missionStore
 
-    vi.resetModules()
     const mod = await import('~/composables/recharge/useRechargeLeaderboard')
     mod.useRechargeLeaderboard('weekly')
 
@@ -152,7 +144,6 @@ describe('adaptive poll rate', () => {
     missionStore = makeMissionStore(makeConfig(), resetsAtMs(60_000)) // 60s out → inside 180s window
     ;(globalThis as Record<string, unknown>).useMissionStore = () => missionStore
 
-    vi.resetModules()
     const mod = await import('~/composables/recharge/useRechargeLeaderboard')
     mod.useRechargeLeaderboard('weekly')
 
@@ -173,17 +164,13 @@ describe('mission.finale.ready handling', () => {
     missionStore = makeMissionStore(makeConfig(), resetsAtMs(60_000))
     ;(globalThis as Record<string, unknown>).useMissionStore = () => missionStore
 
-    vi.resetModules()
     const mod = await import('~/composables/recharge/useRechargeLeaderboard')
     mod.useRechargeLeaderboard('weekly')
 
     await vi.runAllTicks()
 
-    expect(echo.private).toHaveBeenCalledWith('user.42')
-    expect(echo.channel.listen).toHaveBeenCalledWith('.mission.finale.ready', expect.any(Function))
-
-    // Fire finale.ready for the matching timeframe
-    echo.channel._trigger('.mission.finale.ready', { timeframe: 'weekly', instance_key: 'w-2026-23' })
+    // Fire finale.ready (MSAB signal) for the matching timeframe
+    lastMissionFinaleReady.value = { timeframe: 'weekly', instance_key: 'w-2026-23' }
     await vi.runAllTicks()
 
     // Honor-wall endpoint fetched exactly once
@@ -203,14 +190,13 @@ describe('mission.finale.ready handling', () => {
     missionStore = makeMissionStore(makeConfig(), resetsAtMs(60_000))
     ;(globalThis as Record<string, unknown>).useMissionStore = () => missionStore
 
-    vi.resetModules()
     const mod = await import('~/composables/recharge/useRechargeLeaderboard')
     mod.useRechargeLeaderboard('weekly') // weekly composable
 
     await vi.runAllTicks()
 
     // Fire for monthly (wrong timeframe)
-    echo.channel._trigger('.mission.finale.ready', { timeframe: 'monthly', instance_key: 'm-2026-06' })
+    lastMissionFinaleReady.value = { timeframe: 'monthly', instance_key: 'm-2026-06' }
     await vi.runAllTicks()
 
     // No honor-wall fetch, no finaleReady

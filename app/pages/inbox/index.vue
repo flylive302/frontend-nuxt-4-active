@@ -4,6 +4,7 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 // ── Composables ───────────────────────────────────────
 const store = useInboxStore()
 const { fetchThreads, loadMoreThreads, startThread } = useInboxActions()
+const { stop: stopPresence } = useDmPresence()
 
 // ── Init: navigate to /inbox?start=userId for Chat button ─
 const route = useRoute()
@@ -19,6 +20,10 @@ onMounted(async () => {
       await navigateTo(`/inbox/${thread.id}`, { replace: true })
     }
   }
+})
+
+onBeforeUnmount(() => {
+  stopPresence()
 })
 
 // ---- Following Carousel (ranked, Redis-cached)

@@ -267,6 +267,122 @@ export interface ConfigInvalidatePayload {
 }
 
 // ========================================
+// Mission Events (Recharge Activity)
+// ========================================
+
+/**
+ * mission.progress.updated - Fired after a successful milestone claim.
+ */
+export interface MissionProgressUpdatedPayload {
+  milestone_id: number
+  timeframe: string
+  instance_key: string
+}
+
+/**
+ * mission.finale.ready - Fired once a closed weekly/monthly instance's
+ * ranking snapshot is finalized for a Top-N viewer.
+ */
+export interface MissionFinaleReadyPayload {
+  timeframe: string
+  instance_key: string
+}
+
+// ========================================
+// Inbox Events (DM / thread / official — dm-realtime-platform/02)
+// ========================================
+// Realtime Hints only (ADR 0021) — mirror backend broadcastWith() shapes
+// exactly (backend/app/Events/Inbox/*.php). MSAB is pure pass-through.
+
+/**
+ * dm.message.received - New DM delivered to the recipient's private channel.
+ * Mirrors App\Events\Inbox\DmMessageSent::broadcastWith().
+ */
+export interface DmMessageReceivedPayload {
+  threadId: number
+  message: {
+    id: number
+    threadId: number
+    senderId: number | null
+    content: string
+    type: string
+    /** Coarse payload-shape discriminator (dm-realtime-platform/09) — text|media|voice. */
+    kind: string
+    sentAt: string
+    readAt: string | null
+    unsent: boolean
+    isOwn: boolean
+  }
+}
+
+/**
+ * dm.message.unsent - A message was unsent by its sender.
+ * Mirrors App\Events\Inbox\DmMessageUnsent::broadcastWith().
+ */
+export interface DmMessageUnsentPayload {
+  threadId: number
+  messageId: number
+}
+
+/**
+ * dm.thread.request - A stranger request was created targeting the recipient.
+ * Mirrors App\Events\Inbox\DmThreadRequested::broadcastWith().
+ */
+export interface DmThreadRequestPayload {
+  threadId: number
+  thread: {
+    id: number
+    kind: string
+    participant: {
+      id: number
+      name: string
+      avatar: string | null
+      frame_id: number | null
+      signature: string | null
+      gender: number | null
+    }
+    lastMessage: string | null
+    lastMessageAt: string | null
+    unreadCount: number
+    requestMessageCount: number
+    acceptedAt: string | null
+    isInitiator: boolean
+  }
+}
+
+/**
+ * dm.thread.accepted - The recipient's stranger request was accepted.
+ * Mirrors App\Events\Inbox\DmThreadAccepted::broadcastWith().
+ */
+export interface DmThreadAcceptedPayload {
+  threadId: number
+}
+
+/**
+ * dm.thread.seen - The peer's thread-level seen watermark advanced (read receipt).
+ * Mirrors App\Services\Realtime\Emitters\InboxEventEmitter::emitDmThreadSeen().
+ */
+export interface DmThreadSeenPayload {
+  threadId: number
+  seenUpToMessageId: number
+}
+
+/**
+ * official.message.received - Official/system broadcast message. Laravel
+ * fans this out per-user today (targeted/filtered/all loop); MSAB routes
+ * user_id-targeted like the DM events, or broadcasts (io.emit) when Laravel
+ * publishes with both user_id and room_id null.
+ * Mirrors App\Events\Inbox\OfficialMessageBroadcast::broadcastWith().
+ */
+export interface OfficialMessageReceivedPayload {
+  id: number
+  content: string
+  isTargeted: boolean
+  isFiltered: boolean
+  sentAt: string
+}
+
+// ========================================
 // Socket Event Map
 // ========================================
 
@@ -310,4 +426,16 @@ export interface ServerToClientEvents {
 
   // System
   'config:invalidate': (payload: ConfigInvalidatePayload) => void
+
+  // Mission (Recharge Activity)
+  'mission.progress.updated': (payload: MissionProgressUpdatedPayload) => void
+  'mission.finale.ready': (payload: MissionFinaleReadyPayload) => void
+
+  // Inbox (DM / thread / official)
+  'dm.message.received': (payload: DmMessageReceivedPayload) => void
+  'dm.message.unsent': (payload: DmMessageUnsentPayload) => void
+  'dm.thread.request': (payload: DmThreadRequestPayload) => void
+  'dm.thread.accepted': (payload: DmThreadAcceptedPayload) => void
+  'dm.thread.seen': (payload: DmThreadSeenPayload) => void
+  'official.message.received': (payload: OfficialMessageReceivedPayload) => void
 }

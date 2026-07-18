@@ -1,39 +1,32 @@
 /**
  * Realtime composable for Recharge Activity mission updates.
  *
- * Subscribes to the user's private channel and listens for
- * `mission.progress.updated` broadcasts (emitted after a successful claim).
- * The caller provides `onUpdate` — what to re-fetch on event.
+ * Watches the `mission.progress.updated` MSAB signal (app/events/mission.events.ts)
+ * and calls `onUpdate` — what to re-fetch on event.
  *
  * Call subscribe() once after the page mounts; unsubscribe() on unmount.
  */
 
+import { lastMissionProgressUpdate } from '~/events/mission.events'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[MissionEcho]')
 
 export function useMissionEcho(onUpdate: () => void | Promise<void>) {
-  const { $echo } = useNuxtApp()
-  const authStore = useAuthStore()
+  let stopWatch: (() => void) | null = null
 
   function subscribe(): void {
-    const userId = authStore.user?.id
-    if (!userId) return
-
-    const channel = $echo.private(`user.${userId}`)
-    if (!channel) return
-
-    channel.listen('.mission.progress.updated', () => {
+    stopWatch = watch(lastMissionProgressUpdate, (payload) => {
+      if (!payload) return
       Promise.resolve(onUpdate()).catch((err: unknown) =>
         log.warn('Failed to refresh mission progress', err),
       )
-    })
+    }, { flush: 'sync' })
   }
 
   function unsubscribe(): void {
-    const userId = authStore.user?.id
-    if (!userId) return
-    $echo.leave(`user.${userId}`)
+    stopWatch?.()
+    stopWatch = null
   }
 
   return { subscribe, unsubscribe }

@@ -4,6 +4,11 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 const route = useRoute()
 const threadId = computed(() => route.params.threadId as string)
 
+const { stop: stopPresence } = useDmPresence()
+onBeforeUnmount(() => {
+  stopPresence()
+})
+
 async function handleExit(): Promise<void> {
   await navigateTo('/inbox', { replace: true })
 }

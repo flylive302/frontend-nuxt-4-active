@@ -2,8 +2,12 @@
 import type { Thread } from '~/types/inbox'
 import { formatRelativeTime } from '~/utils/date'
 
-defineProps<{ thread: Thread }>()
+const props = defineProps<{ thread: Thread }>()
 const { resolvePropAsset } = usePropLookup()
+
+// dm-realtime-platform/07: presence dot, scoped to subscribed contacts only.
+const presenceStore = usePresenceStore()
+const isOnline = computed(() => presenceStore.onlineByUserId[Number(props.thread.participant.id)] === true)
 </script>
 
 <template>
@@ -16,6 +20,11 @@ const { resolvePropAsset } = usePropLookup()
           :frame-asset-url="resolvePropAsset(thread.participant.frame_id) ?? undefined"
           animated
           class="size-12"
+      />
+      <span
+          v-if="isOnline"
+          class="absolute bottom-0 right-0 size-3 rounded-full bg-success ring-2 ring-default"
+          aria-label="Online"
       />
       <span
           v-if="thread.unreadCount > 0"
