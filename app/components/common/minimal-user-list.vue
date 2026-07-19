@@ -76,7 +76,7 @@ const genderColor = computed(() =>
           <ProfileBadge :txt="user.signature" :vip="user.vip_level" class="shrink-0 max-w-24" />
           <UIcon
             v-if="user.country"
-            :name="`i-flag-${user.country.toLowerCase().trim()}-4x3`"
+            :name="getFlagIcon(user.country)"
             class="rounded overflow-hidden h-5 size-6 shadow-lg"
           />
           <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge" >

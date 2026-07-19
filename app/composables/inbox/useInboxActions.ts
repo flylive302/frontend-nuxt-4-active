@@ -165,10 +165,12 @@ export function useInboxActions() {
   async function markRead(threadId: string): Promise<void> {
     store.markThreadRead(threadId)
     try {
-      await api(`/inbox/threads/${threadId}/read`, { method: 'POST' })
+      // Idempotent — retry through transient timeouts on flaky mobile networks
+      await api(`/inbox/threads/${threadId}/read`, { method: 'POST', retry: 2, retryDelay: 1000 })
     }
     catch (err) {
-      log.warn('Failed to mark thread as read', err)
+      // REACT failure: local state already updated; server unread self-heals on next fetch
+      log.debug('Failed to mark thread as read', err)
     }
   }
 

@@ -14,11 +14,13 @@ const props = withDefaults(defineProps<{
   autoplay?: boolean;
   replaceElements?: Record<string, HTMLImageElement>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
+  motionPause?: boolean;
 }>(), {
   width: '100%',
   height: '100%',
   loop: 0,
   autoplay: true,
+  motionPause: true,
   replaceElements: () => ({}),
   dynamicElements: () => ({})
 });
@@ -30,6 +32,7 @@ const { reload } = useSvgaPlayer(canvas, {
   name: toRef(props, 'name'),
   loop: toRef(props, 'loop'),
   autoplay: toRef(props, 'autoplay'),
+  motionPause: props.motionPause,
   onComplete: () => emit('complete'),
   replaceElements: props.replaceElements,
   dynamicElements: props.dynamicElements,

@@ -161,7 +161,7 @@ onMounted(async () => {
               <div class="flex items-center gap-2">
                 <!-- Country -->
                 <div class="flex items-center gap-2">
-                  <UIcon :name="`i-flag-${agency.country.toLowerCase()}-4x3`" class="size-6 rounded" />
+                  <UIcon :name="getFlagIcon(agency.country)" class="size-6 rounded" />
                   <span class="text-sm text-muted">{{ agency.country }}</span>
                 </div>
 

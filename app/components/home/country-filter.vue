@@ -10,15 +10,6 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
 
-// ========================================
-// Helpers
-// ========================================
-
-/** Map country code → flag icon class */
-const getFlagIcon = (code: string): string => {
-  const flagCode = code === 'uk' ? 'gb' : code.toLowerCase()
-  return `i-flag-${flagCode}-4x3`
-}
 </script>
 
 <template>

@@ -43,9 +43,6 @@ onMounted(() => nextTick(hideHiddenInputs))
 // after the first tick, so USelectMenu creates its hidden inputs late.
 watch(selectedCountry, () => nextTick(hideHiddenInputs))
 
-const INVALID_FLAG_CODES = new Set(['an'])
-const DEFAULT_FLAG_ICON = 'i-lucide-earth'
-
 const phoneValue = computed({
   get: () => phone.value,
   set: (val: string) => {
@@ -57,14 +54,7 @@ const phonePlaceholder = computed(() => {
   return selectedCountry.value?.name ? `Enter your ${selectedCountry.value.name} number` : 'Phone number'
 })
 
-/**
- * Gets the appropriate flag icon name for a country code
- */
-function getFlagIconName(code: string): string {
-  const normalized = (code || '').toLowerCase()
-  if (INVALID_FLAG_CODES.has(normalized)) return DEFAULT_FLAG_ICON
-  return `i-flag-${normalized}-4x3`
-}
+const getFlagIconName = getFlagIcon
 
 function focusPhoneInput(): void {
   if (!import.meta.client) return

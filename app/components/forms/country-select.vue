@@ -24,16 +24,9 @@ const model = defineModel<string>({ default: '' })
 
 const { countries, loading, ensureLoaded, detectIfAllowed } = useCountries()
 
-const INVALID_FLAG_CODES = new Set(['an'])
-const DEFAULT_FLAG_ICON = 'i-lucide-earth'
-
 const selected = ref<Country | undefined>(undefined)
 
-function getFlagIconName(code: string): string {
-  const normalized = (code || '').toLowerCase()
-  if (INVALID_FLAG_CODES.has(normalized)) return DEFAULT_FLAG_ICON
-  return `i-flag-${normalized}-4x3`
-}
+const getFlagIconName = getFlagIcon
 
 function syncFromModel(): void {
   if (!model.value || selected.value?.code === model.value) return

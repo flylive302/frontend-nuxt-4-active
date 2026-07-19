@@ -411,7 +411,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
             <div class="flex gap-2 items-center">
               <div class="flex pt-1 gap-1 items-center">
-                <UIcon :name="`i-flag-${profileWritable.agency.country.toLowerCase()}-4x3`" class="ssize-6 rounded inline mr-1" />
+                <UIcon :name="getFlagIcon(profileWritable.agency.country)" class="ssize-6 rounded inline mr-1" />
                 <p class="text-sm text-muted! font-semibold truncate">
                   {{ profileWritable.agency.country }}
                 </p>

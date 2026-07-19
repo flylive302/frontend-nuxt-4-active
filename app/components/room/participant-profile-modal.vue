@@ -217,7 +217,7 @@ async function handleDemote() {
               </UBadge>
               <UIcon 
                 v-if="participant.country"
-                :name="`i-flag-${participant.country.toLowerCase()}-4x3`"
+                :name="getFlagIcon(participant.country)"
                 class="rounded overflow-hidden h-6 size-8 shadow-lg" 
               />
             </div>

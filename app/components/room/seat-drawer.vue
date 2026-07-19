@@ -371,7 +371,7 @@ const seatUserAge = computed(() =>
           <div class="flex gap-1">
             <UIcon
               v-if="seatUserCountry"
-              :name="`i-flag-${seatUserCountry.toLowerCase()}-4x3`"
+              :name="getFlagIcon(seatUserCountry)"
               class="rounded overflow-hidden h-6 size-8 shadow-lg"
             />
             <MarqueeName

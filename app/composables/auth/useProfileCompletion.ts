@@ -33,9 +33,6 @@ const ICON_NON_BINARY = 'i-lucide-non-binary' as const
 const ICON_HELP_CIRCLE = 'i-lucide-help-circle' as const
 const ICON_DEFAULT_GENDER = 'i-lucide-venus-and-mars' as const
 
-const INVALID_FLAG_CODES = new Set(['an'])
-const DEFAULT_FLAG_ICON = 'i-lucide-earth'
-
 const GENDER_OPTIONS: GenderOption[] = [
   { label: 'Male', value: GENDER_MALE, icon: ICON_MARS },
   { label: 'Female', value: GENDER_FEMALE, icon: ICON_VENUS },
@@ -191,11 +188,7 @@ export function useProfileCompletion() {
 
   const selectedCountry = ref<Country | undefined>(undefined)
 
-  function getFlagIconName(code: string): string {
-    const normalized = (code || '').toLowerCase()
-    if (INVALID_FLAG_CODES.has(normalized)) return DEFAULT_FLAG_ICON
-    return `i-flag-${normalized}-4x3`
-  }
+  const getFlagIconName = getFlagIcon
 
   function onCountryChange(country: Country | undefined): void {
     if (!country) return

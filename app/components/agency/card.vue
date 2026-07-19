@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<{
 
 const statusConfig = computed(() => AGENCY_STATUS_CONFIG[props.status])
 
-const flagIcon = computed(() => `i-flag-${props.countryCode.toLowerCase()}-4x3`)
+const flagIcon = computed(() => getFlagIcon(props.countryCode))
 
 const avatarSrc = computed(() => 
   props.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(props.name)}`

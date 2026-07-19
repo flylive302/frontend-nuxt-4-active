@@ -117,6 +117,7 @@ onMounted(async () => {
       v-if="ready"
       :name="slide.svgaUrl"
       :loop="1"
+      :motion-pause="false"
       :replace-elements="images"
       :dynamic-elements="textElements"
       :height="`${slide.height}px`"

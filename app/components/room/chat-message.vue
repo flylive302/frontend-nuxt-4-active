@@ -93,7 +93,7 @@ const charmLevel = computed(() =>
       </div>
       <div class="flex items-center mt-1 ml-2">
         <UIcon
-            :name="`i-flag-${participant?.country.toLowerCase().trim()}-4x3`"
+            :name="getFlagIcon(participant?.country)"
             class="rounded overflow-hidden h-5 size-6 shadow-lg"
         />
         <img

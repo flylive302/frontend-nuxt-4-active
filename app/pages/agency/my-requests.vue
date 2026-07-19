@@ -130,7 +130,7 @@ const processedRequests = computed(() =>
                 <div class="flex-1 min-w-0">
                   <h3 class="font-semibold truncate">{{ request.agency?.name }}</h3>
                   <div class="flex items-center gap-2 text-sm text-muted">
-                    <icon :name="`i-flag-${request.agency?.country.toLowerCase()}-4x3`" class="size-4 rounded" />
+                    <icon :name="getFlagIcon(request.agency?.country)" class="size-4 rounded" />
                     <span>{{ request.agency?.country }}</span>
                   </div>
                 </div>
