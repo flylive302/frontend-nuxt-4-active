@@ -2,6 +2,11 @@
 // Single-thread chat UI shared by the full-page /inbox/[threadId] route AND
 // the in-room chat drawer (RoomChatDrawer) — one component so the thread
 // never looks different between the two surfaces.
+import type { MediaContentPayload } from '~/types/inbox'
+import type { MessageGroupPosition } from '~/utils/dm-thread-view'
+import { computeGroupPosition, formatDaySeparatorLabel, shouldShowDaySeparator } from '~/utils/dm-thread-view'
+import { dmMessageCopyText } from '~/utils/dm-message-preview'
+
 const props = withDefaults(
   defineProps<{
     threadId: string
@@ -18,31 +23,35 @@ const emit = defineEmits<{ (e: 'exit'): void }>()
 // ── Composables ───────────────────────────────────────
 const store = useInboxStore()
 const { loadOlderMessages, sendMessage, markRead } = useInboxActions()
+const { pickImage, cancelUpload, retryUpload, discardFailed } = useDmComposer()
 const { reconcileInbox } = useInboxReconcile()
 const { acceptRequest, denyRequest, unsendMessage, deleteMessage, deleteThread, blockUser } = useInboxThread()
 const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
 const { resolvePropAsset } = usePropLookup()
 const authStore = useAuthStore()
+const toast = useToast()
 
-// ── Date separator helper ─────────────────────────────
-function shouldShowDate(index: number): boolean {
-  if (index === 0) return true
-  const prev = store.messages[index - 1]
-  const curr = store.messages[index]
-  if (!prev || !curr) return false
-  const prevDate = new Date(prev.sentAt).toDateString()
-  const currDate = new Date(curr.sentAt).toDateString()
-  return prevDate !== currDate
+// ── Grouping / day separators (pure derivation, dm-messenger-v2/07) ──
+function groupPosition(index: number): MessageGroupPosition {
+  return computeGroupPosition(store.messages, index)
 }
 
-function formatDateLabel(dateStr: string): string {
-  const d = new Date(dateStr)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === today.toDateString()) return 'Today'
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+function showDaySeparator(index: number): boolean {
+  return shouldShowDaySeparator(store.messages, index)
+}
+
+function daySeparatorLabel(dateStr: string): string {
+  return formatDaySeparatorLabel(dateStr)
+}
+
+function groupWrapperClass(index: number): string[] {
+  const pos = groupPosition(index)
+  const msg = store.messages[index]
+  return [
+    'thread-msg',
+    `thread-msg--${pos}`,
+    msg?.isOwn ? 'thread-msg--own' : 'thread-msg--peer',
+  ]
 }
 
 // ── Thread meta ───────────────────────────────────────
@@ -57,19 +66,20 @@ const isPeerOnline = computed(() => {
   return presenceStore.onlineByUserId[Number(peerId)] === true
 })
 
-// ── Scroll ────────────────────────────────────────────
+// ── Scroll (dm-messenger-v2/07: scroll-to-bottom pill) ────
 const scrollEl = ref<HTMLElement | null>(null)
+const threadMessages = computed(() => store.messages)
+const { isScrolledUp, newMessageCount, scrollToBottom, onScroll, jumpToBottom } = useThreadScrollPill(scrollEl, threadMessages)
 
-function scrollToBottom(smooth = false): void {
-  nextTick(() => {
-    if (!scrollEl.value) return
-    scrollEl.value.scrollTo({ top: scrollEl.value.scrollHeight, behavior: smooth ? 'smooth' : 'instant' })
-  })
+// ── Lightbox (dm-messenger-v2/03) ─────────────────────
+// Bubble emits `open-image` with the full media payload; the lightbox owns
+// its own gesture/open state internally, we just call its exposed `open()`
+// with the asset URL.
+const lightboxRef = ref<{ open: (url: string) => void } | null>(null)
+
+function onOpenImage(payload: MediaContentPayload): void {
+  lightboxRef.value?.open(payload.url)
 }
-
-watch(() => store.messages.length, () => {
-  if (store.activeThreadId === props.threadId) scrollToBottom(true)
-})
 
 // ── Long-press message action ─────────────────────────
 const selectedMessageId = ref<string | null>(null)
@@ -81,6 +91,26 @@ function onLongPress(messageId: string): void {
 }
 
 const selectedMessage = computed(() => store.messages.find(m => String(m.id) === String(selectedMessageId.value)))
+
+// Copy: text messages copy their text, media/voice copy the asset URL;
+// null (unsent/unparseable) hides the option entirely.
+const copyableText = computed(() => {
+  const msg = selectedMessage.value
+  if (!msg) return null
+  return dmMessageCopyText(msg.kind, msg.content, msg.unsent)
+})
+
+async function handleCopy(): Promise<void> {
+  if (!copyableText.value) return
+  try {
+    await navigator.clipboard.writeText(copyableText.value)
+    toast.add({ title: 'Copied', icon: 'i-lucide-clipboard-check', color: 'success' })
+  }
+  catch {
+    toast.add({ title: 'Could not copy to clipboard.', color: 'error' })
+  }
+  showMessageMenu.value = false
+}
 
 async function handleDelete(): Promise<void> {
   if (!selectedMessageId.value) return
@@ -114,6 +144,10 @@ async function handleDeny(): Promise<void> {
 // ── Send ──────────────────────────────────────────────
 async function handleSend(content: string): Promise<void> {
   await sendMessage(props.threadId, content)
+}
+
+function handlePickImage(file: File): void {
+  pickImage(props.threadId, file)
 }
 
 // ── Block / Delete Chat / Report ──────────────────────
@@ -166,7 +200,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full overflow-hidden">
+  <div class="flex flex-col h-full overflow-hidden relative">
     <!-- Header -->
     <InboxThreadHeader
       :fixed="fixedHeader"
@@ -176,6 +210,7 @@ onBeforeUnmount(() => {
       :signature="thread?.participant.signature"
       :gender="thread?.participant.gender"
       :online="isPeerOnline"
+      :last-seen-at="thread?.participant.lastSeenAt ?? null"
       @block="handleBlock"
       @delete-chat="handleDeleteChat"
       @report="handleReport"
@@ -183,7 +218,12 @@ onBeforeUnmount(() => {
     />
 
     <!-- Messages -->
-    <div ref="scrollEl" class="flex-1 overflow-y-auto pb-2 flex flex-col" :class="fixedHeader ? 'pt-14' : ''">
+    <div
+      ref="scrollEl"
+      class="flex-1 overflow-y-auto pb-2 flex flex-col"
+      :class="fixedHeader ? 'pt-[calc(3.5rem+env(safe-area-inset-top,0px))]' : ''"
+      @scroll.passive="onScroll"
+    >
       <!-- Loading -->
       <div v-if="store.messagesLoading && store.messages.length === 0" class="space-y-3 px-3 pt-6">
         <div v-for="i in 4" :key="i" class="animate-pulse flex" :class="i % 2 === 0 ? 'justify-end' : 'justify-start'">
@@ -219,31 +259,51 @@ onBeforeUnmount(() => {
           </UButton>
         </div>
 
-        <!-- Message bubbles with date separators -->
+        <!-- Message bubbles: grouped clusters + day separators (dm-messenger-v2/07) -->
         <template v-for="(msg, idx) in store.messages" :key="msg.id">
-          <!-- Date separator -->
-          <div v-if="shouldShowDate(idx)" class="flex justify-center py-2">
-            <span class="text-[10px] text-muted bg-elevated/80 px-3 py-1 rounded-full">
-              {{ formatDateLabel(msg.sentAt) }}
+          <!-- Day separator -->
+          <div v-if="showDaySeparator(idx)" class="flex justify-center py-2">
+            <span class="text-[10px] font-medium text-muted bg-elevated/80 px-3 py-1 rounded-full">
+              {{ daySeparatorLabel(msg.sentAt) }}
             </span>
           </div>
-          <InboxMessageBubble
-            :message="msg"
-            :peer-seen-up-to-message-id="thread?.peerSeenUpToMessageId ?? null"
-            @long-press="onLongPress(msg.id)"
-          />
+          <div :class="groupWrapperClass(idx)">
+            <InboxMessageBubble
+              :message="msg"
+              :peer-seen-up-to-message-id="thread?.peerSeenUpToMessageId ?? null"
+              @long-press="onLongPress(msg.id)"
+              @cancel-upload="cancelUpload(msg.id)"
+              @retry-upload="retryUpload(msg.id)"
+              @discard-failed="discardFailed(msg.id)"
+              @open-image="onOpenImage"
+            />
+          </div>
         </template>
 
         <!-- Typing indicator -->
         <div v-if="isOtherTyping" class="flex justify-start px-3 mb-1.5">
           <div class="bg-elevated rounded-2xl rounded-bl-sm px-4 py-2.5 flex items-center gap-1">
-            <span class="size-1.5 bg-muted rounded-full animate-bounce" style="animation-delay: 0ms" />
-            <span class="size-1.5 bg-muted rounded-full animate-bounce" style="animation-delay: 150ms" />
-            <span class="size-1.5 bg-muted rounded-full animate-bounce" style="animation-delay: 300ms" />
+            <span class="typing-dot size-1.5 bg-muted rounded-full" />
+            <span class="typing-dot size-1.5 bg-muted rounded-full" />
+            <span class="typing-dot size-1.5 bg-muted rounded-full" />
           </div>
         </div>
       </template>
     </div>
+
+    <!-- Scroll-to-bottom pill (dm-messenger-v2/07) -->
+    <Transition name="scroll-pill">
+      <button
+        v-if="isScrolledUp"
+        type="button"
+        class="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-elevated/95 backdrop-blur border border-muted/20 shadow-lg px-3.5 py-2 text-xs font-medium text-default active:scale-95 transition-transform"
+        :class="fixedHeader ? 'bottom-24' : 'bottom-20'"
+        @click="jumpToBottom"
+      >
+        <UIcon name="i-lucide-chevron-down" class="size-4" />
+        <span v-if="newMessageCount > 0">{{ newMessageCount > 99 ? '99+' : newMessageCount }} new</span>
+      </button>
+    </Transition>
 
     <!-- Request banner — recipient view -->
     <div v-if="isRequest && !thread?.isInitiator" class="px-4 py-3 bg-elevated border-t border-muted/20">
@@ -291,12 +351,23 @@ onBeforeUnmount(() => {
       v-if="authStore.user?.id !== null"
       @send="handleSend"
       @typing="sendTyping"
+      @pick-image="handlePickImage"
     />
 
     <!-- Message action sheet -->
     <UModal v-model:open="showMessageMenu">
       <template #content>
         <div class="p-4 space-y-1">
+          <UButton
+            v-if="copyableText"
+            block
+            variant="ghost"
+            color="neutral"
+            icon="i-lucide-copy"
+            @click="handleCopy"
+          >
+            Copy
+          </UButton>
           <UButton
             v-if="selectedMessage?.isOwn"
             block
@@ -352,6 +423,9 @@ onBeforeUnmount(() => {
       :reportable-id="Number(thread.participant.id)"
     />
 
+    <!-- Full-screen image lightbox (dm-messenger-v2/03) -->
+    <InboxImageLightbox ref="lightboxRef" />
+
     <!-- Delete chat confirm dialog -->
     <UModal v-model:open="showDeleteConfirm">
       <template #content>
@@ -370,3 +444,82 @@ onBeforeUnmount(() => {
     </UModal>
   </div>
 </template>
+
+<style scoped>
+/* ── Same-sender clustering (dm-messenger-v2/07) ──────────────────────── */
+/* message-bubble.vue owns its own mb-1.5 + corner radii; we tighten/round
+   via :deep() from the wrapper rather than editing that component (owned
+   by a parallel agent — see issue 07). */
+
+/* Tight spacing: first/middle of a cluster sit close to the next bubble. */
+.thread-msg--first :deep(.mb-1\.5),
+.thread-msg--middle :deep(.mb-1\.5) {
+  margin-bottom: 2px;
+}
+
+/* Own messages (right-aligned, bg-primary): flatten the tail-side corner
+   that isn't the actual tail of the cluster. */
+.thread-msg--own.thread-msg--first :deep(.bg-primary),
+.thread-msg--own.thread-msg--middle :deep(.bg-primary) {
+  border-bottom-right-radius: 6px;
+}
+.thread-msg--own.thread-msg--middle :deep(.bg-primary),
+.thread-msg--own.thread-msg--last :deep(.bg-primary) {
+  border-top-right-radius: 6px;
+}
+
+/* Peer messages (left-aligned, bg-elevated): same treatment, mirrored. */
+.thread-msg--peer.thread-msg--first :deep(.bg-elevated),
+.thread-msg--peer.thread-msg--middle :deep(.bg-elevated) {
+  border-bottom-left-radius: 6px;
+}
+.thread-msg--peer.thread-msg--middle :deep(.bg-elevated),
+.thread-msg--peer.thread-msg--last :deep(.bg-elevated) {
+  border-top-left-radius: 6px;
+}
+
+/* Single timestamp/tick per cluster: only the last bubble in a group shows
+   its meta row (time + read receipt); earlier bubbles in the same cluster
+   hide theirs, matching WhatsApp/IG-style grouping. */
+.thread-msg--first :deep(.text-\[10px\]),
+.thread-msg--middle :deep(.text-\[10px\]) {
+  display: none;
+}
+
+/* ── Typing indicator dots ────────────────────────────────────────────
+   WhatsApp-style stagger: each dot lifts + brightens in sequence. A custom
+   keyframe (not animate-bounce) so the rise is small and the opacity pulse
+   reads clearly at size-1.5. */
+.typing-dot {
+  animation: typing-dot 1.2s ease-in-out infinite;
+  opacity: 0.4;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* ── Scroll-to-bottom pill transition ─────────────────────────────────── */
+.scroll-pill-enter-active,
+.scroll-pill-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.scroll-pill-enter-from,
+.scroll-pill-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+}
+</style>
+

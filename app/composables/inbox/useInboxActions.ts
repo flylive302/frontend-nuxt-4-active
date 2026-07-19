@@ -5,7 +5,12 @@
 // All side-effects (store mutations) happen here; store stays mutation-only.
 
 import { createLogger } from '~/utils/logger'
-import type { Thread, ThreadsResponse, MessagesResponse, SendMessageResponse } from '~/types/inbox'
+import type {
+  Thread,
+  ThreadsResponse,
+  MessagesResponse,
+  SendMessageResponse,
+} from '~/types/inbox'
 
 const log = createLogger('[useInboxActions]')
 
@@ -151,6 +156,10 @@ export function useInboxActions() {
       return false
     }
   }
+
+  // Image attachment sending moved to useDmComposer (dm-messenger-v2/02) —
+  // it needs machine-state ownership (uploading/cancel/retry) that doesn't
+  // fit this composable's simpler request/response actions.
 
   // ── Mark thread as read ───────────────────────────────
   async function markRead(threadId: string): Promise<void> {

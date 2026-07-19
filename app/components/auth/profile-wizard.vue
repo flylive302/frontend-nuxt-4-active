@@ -35,6 +35,23 @@ async function handleAllowMic() {
   micState.value = result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'idle'
 }
 
+const { hasGrantedCamera, requestCameraAccess } = useCameraPermission()
+
+// Camera permission — same inline pattern as the mic, so the DM camera
+// button can open the camera later without a capture-time prompt.
+const cameraState = ref<'idle' | 'granted' | 'denied'>('idle')
+const cameraGranted = computed(() => cameraState.value === 'granted')
+const cameraStatusText = computed(() =>
+  cameraState.value === 'granted' ? "You're all set to snap photos in chats"
+    : cameraState.value === 'denied' ? 'Blocked — enable it in your device settings'
+      : 'So you can send photos in chats'
+)
+
+async function handleAllowCamera() {
+  const result = await requestCameraAccess()
+  cameraState.value = result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'idle'
+}
+
 // ── Step computation ──────────────────────────────
 // Snapshot on mount — prevents steps from vanishing when a field
 // is filled mid-flow (e.g. avatar upload updates the store immediately).
@@ -157,6 +174,7 @@ onMounted(() => {
 
   // Reflect an existing device grant so returning users see it already enabled.
   if (hasGrantedMic()) micState.value = 'granted'
+  if (hasGrantedCamera()) cameraState.value = 'granted'
 
   initCountryDetection()
 })
@@ -253,6 +271,24 @@ async function onAvatarFileSelected(file: File) {
               <p class="text-xs text-neutral-400 leading-relaxed">{{ micStatusText }}</p>
             </div>
             <span v-if="!micGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Allow</span>
+          </button>
+
+          <!-- Camera permission — same inline pattern, for DM photo capture -->
+          <button
+            type="button"
+            class="flex items-center gap-3 p-4 rounded-2xl border text-left transition-colors disabled:cursor-default"
+            :class="cameraGranted ? 'border-primary-500 bg-neutral-800' : 'border-neutral-700 bg-neutral-900'"
+            :disabled="cameraGranted"
+            @click="handleAllowCamera"
+          >
+            <div class="flex items-center justify-center size-9 rounded-full bg-primary/10 border border-primary/20 flex-shrink-0">
+              <UIcon :name="cameraGranted ? 'i-lucide-check' : 'i-lucide-camera'" class="size-5 text-primary" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-neutral-200 font-medium">{{ cameraGranted ? 'Camera enabled' : 'Allow camera' }}</p>
+              <p class="text-xs text-neutral-400 leading-relaxed">{{ cameraStatusText }}</p>
+            </div>
+            <span v-if="!cameraGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Allow</span>
           </button>
         </div>
       </template>

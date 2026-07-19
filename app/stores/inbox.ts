@@ -6,6 +6,7 @@
 
 import { defineStore } from 'pinia'
 import type { Thread, ThreadMessage } from '~/types/inbox'
+import { dmMessagePreview } from '~/utils/dm-message-preview'
 
 export const useInboxStore = defineStore('inbox', () => {
   // ── Thread sections ──────────────────────────────────
@@ -124,6 +125,25 @@ export const useInboxStore = defineStore('inbox', () => {
     bumpThread(confirmed.threadId, confirmed)
   }
 
+  /** Removes a message by id (cancel/discard of an optimistic bubble). No-op if not found. */
+  function removeMessage(messageId: string | number): void {
+    const sid = String(messageId)
+    messages.value = messages.value.filter(m => String(m.id) !== sid)
+  }
+
+  /** Patches upload lifecycle fields on an optimistic media bubble. No-op if not found. */
+  function setMessageUploadState(
+    messageId: string | number,
+    patch: { uploadStatus?: ThreadMessage['uploadStatus'], uploadProgress?: number, localPreviewUrl?: string },
+  ): void {
+    const sid = String(messageId)
+    const msg = messages.value.find(m => String(m.id) === sid)
+    if (!msg) return
+    if (patch.uploadStatus !== undefined) msg.uploadStatus = patch.uploadStatus
+    if (patch.uploadProgress !== undefined) msg.uploadProgress = patch.uploadProgress
+    if (patch.localPreviewUrl !== undefined) msg.localPreviewUrl = patch.localPreviewUrl
+  }
+
   function markMessageUnsent(messageId: string | number): void {
     const sid = String(messageId)
     const msg = messages.value.find(m => String(m.id) === sid)
@@ -173,7 +193,8 @@ export const useInboxStore = defineStore('inbox', () => {
     const sid = String(threadId)
     const thread = threadById(sid)
     if (!thread) return
-    thread.lastMessage = msg.isOwn ? `You: ${msg.content}` : msg.content
+    const preview = dmMessagePreview(msg.kind, msg.content)
+    thread.lastMessage = msg.isOwn ? `You: ${preview}` : preview
     thread.lastMessageAt = msg.sentAt
     // Bubble to top of its section
     if (thread.kind === 'dm') {
@@ -221,6 +242,8 @@ export const useInboxStore = defineStore('inbox', () => {
     prependMessages,
     appendMessage,
     replaceOptimisticMessage,
+    removeMessage,
+    setMessageUploadState,
     markMessageUnsent,
     markThreadRead,
     setPeerSeenUpTo,

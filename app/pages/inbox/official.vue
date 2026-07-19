@@ -21,7 +21,7 @@ onMounted(async () => {
 <template>
   <main class="flex flex-col h-dvh overflow-hidden">
     <!-- Header -->
-    <div class="fixed top-0 left-0 right-0 z-10 safe-area-top flex items-center gap-3 px-4 bg-background/90 backdrop-blur border-b border-muted/20 safe-area-top">
+    <div class="fixed top-0 left-0 right-0 z-10 safe-area-top flex items-center gap-3 px-4 bg-background/90 backdrop-blur border-b border-muted/20">
       <UButton
         icon="i-lucide-arrow-left"
         color="neutral"
@@ -41,7 +41,7 @@ onMounted(async () => {
     </div>
 
     <!-- Messages -->
-    <div ref="scrollEl" class="flex-1 overflow-y-auto pt-20 pb-6 px-4 space-y-3">
+    <div ref="scrollEl" class="flex-1 overflow-y-auto pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] px-4 space-y-3">
       <!-- Loading skeleton -->
       <div v-if="loading && messages.length === 0" class="space-y-3 pt-4">
         <div v-for="i in 5" :key="i" class="animate-pulse">

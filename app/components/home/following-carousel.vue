@@ -7,14 +7,31 @@ import { ASSETS } from '~/constants/assets'
 // Each card links to /profile/{signature}.
 // Uses UCarousel (Embla) with dragFree for momentum scrolling.
 
+import { NuxtLink } from '#components'
 import type { FollowingCard } from '~/composables/user/useFollowingData'
 import MarqueeName from "~/components/common/marquee-name.vue";
 
 defineOptions({ name: 'HomeFollowingCarousel' })
 
-defineProps<{
-  users: FollowingCard[]
+const props = withDefaults(
+  defineProps<{
+    users: FollowingCard[]
+    /** 'profile' (default) links cards to /profile/{signature}; 'chat' emits `chat` so inbox surfaces can open a DM thread instead. */
+    tapAction?: 'profile' | 'chat'
+  }>(),
+  { tapAction: 'profile' },
+)
+
+const emit = defineEmits<{
+  /** Card tapped in 'chat' mode — parent starts/opens the DM thread. */
+  chat: [user: FollowingCard]
 }>()
+
+const isChatMode = computed(() => props.tapAction === 'chat')
+
+function onCardTap(user: FollowingCard): void {
+  if (isChatMode.value) emit('chat', user)
+}
 
 const { resolvePropAsset } = usePropLookup()
 
@@ -30,12 +47,14 @@ const presenceStore = usePresenceStore()
     <ClientOnly>
       <template #fallback>
         <div class="flex gap-2 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <NuxtLink
+          <component
+            :is="isChatMode ? 'button' : NuxtLink"
             v-for="(item, index) in users"
             :key="item.signature"
-            :to="`/profile/${item.signature}`"
+            :to="isChatMode ? undefined : `/profile/${item.signature}`"
             class="following-card flex shrink-0 basis-24 flex-col items-center gap-1 active:scale-95 transition-transform duration-150"
             :style="{ animationDelay: `${index * 50}ms` }"
+            @click="onCardTap(item)"
           >
             <div class="relative shrink-0">
               <UserAvatar
@@ -56,7 +75,7 @@ const presenceStore = usePresenceStore()
                 {{ item.name }}
               </span>
             </div>
-          </NuxtLink>
+          </component>
         </div>
       </template>
       <UCarousel
@@ -67,10 +86,12 @@ const presenceStore = usePresenceStore()
         :ui="{ item: 'basis-24' }"
       >
         <template #default="{ item, index }">
-          <NuxtLink
-            :to="`/profile/${item.signature}`"
-            class="following-card flex flex-col items-center gap-1 active:scale-95 transition-transform duration-150 "
+          <component
+            :is="isChatMode ? 'button' : NuxtLink"
+            :to="isChatMode ? undefined : `/profile/${item.signature}`"
+            class="following-card w-full flex flex-col py-2 bg-primary/10 rounded-xl items-center gap-1 active:scale-95 transition-transform duration-150 "
             :style="{ animationDelay: `${index * 50}ms` }"
+            @click="onCardTap(item)"
           >
             <div class="relative shrink-0">
               <UserAvatar
@@ -82,7 +103,7 @@ const presenceStore = usePresenceStore()
               />
               <span
                 v-if="presenceStore.onlineByUserId[item.id] === true"
-                class="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-success ring-2 ring-default"
+                class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-success ring-2 ring-default"
                 aria-label="Online"
               />
             </div>
@@ -92,7 +113,7 @@ const presenceStore = usePresenceStore()
                 :name="item.name"
                 delay="0.5s"
             />
-          </NuxtLink>
+          </component>
         </template>
       </UCarousel>
     </ClientOnly>

@@ -10,6 +10,7 @@
 // (see useInboxReconcile). Do NOT call reconcileInbox from here.
 
 import type { Socket } from 'socket.io-client'
+import { dmMessagePreview } from '~/utils/dm-message-preview'
 import type { Thread, ThreadMessage } from '~/types/inbox'
 import type {
   DmMessageReceivedPayload,
@@ -32,16 +33,16 @@ export function useInboxEvents() {
     socket.on('dm.message.received', (payload: DmMessageReceivedPayload) => {
       const tid = String(payload.threadId)
       // Normalize IDs to strings (backend sends integers, FE routes use strings).
-      // Only `text` kind is wired end-to-end today (dm-realtime-platform/09) —
-      // media/voice have no send path yet, so any other kind falls back to text
-      // rendering rather than producing an invalid union member.
+      // `kind` passes through as-is (dm-messenger-v2): media/voice must keep
+      // their kind so bubbles render payloads instead of raw JSON; an unknown
+      // future kind flows to the bubble's stale-OTA placeholder.
       const msg: ThreadMessage = {
         id: String(payload.message.id),
         threadId: tid,
         senderId: payload.message.senderId !== null ? String(payload.message.senderId) : null,
         content: payload.message.content,
         type: payload.message.type,
-        kind: 'text',
+        kind: payload.message.kind as ThreadMessage['kind'],
         sentAt: payload.message.sentAt,
         readAt: payload.message.readAt,
         unsent: payload.message.unsent,
@@ -52,7 +53,7 @@ export function useInboxEvents() {
         store.appendMessage(msg)
       }
       else if (store.threadById(tid)) {
-        store.bumpThreadUnread(tid, msg.content, msg.sentAt)
+        store.bumpThreadUnread(tid, dmMessagePreview(msg.kind, msg.content), msg.sentAt)
       }
       // Thread not present locally (e.g. very first message on a brand new
       // thread) — no API call here (REACT-only); the next reconcileInbox

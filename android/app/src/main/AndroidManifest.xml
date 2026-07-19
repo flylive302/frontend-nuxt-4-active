@@ -71,6 +71,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
+    <!-- DM camera capture (dm-messenger-v2/03): <input capture="environment">
+         in the WebView only launches the camera when CAMERA is held; without
+         it Capacitor silently falls back to the file picker. Marked not
+         required so Play doesn't filter camera-less devices. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <!-- Microphone foreground service (capacitor-03). FOREGROUND_SERVICE_MICROPHONE
          + the matching foregroundServiceType are required on Android 14+ (target
          SDK 36). POST_NOTIFICATIONS (API 33+) lets the persistent broadcasting

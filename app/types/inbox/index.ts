@@ -49,6 +49,9 @@ export interface VoiceContentPayload {
   durationMs: number
 }
 
+/** Optimistic media-bubble lifecycle (dm-messenger-v2/02); absent on confirmed server messages. */
+export type MediaUploadStatus = 'uploading' | 'failed' | 'sent'
+
 interface ThreadMessageBase {
   id: string
   threadId: string
@@ -59,6 +62,12 @@ interface ThreadMessageBase {
   readAt: string | null
   unsent: boolean
   isOwn: boolean
+  /** Optimistic media bubble only: uploading/failed/sent. Undefined for text + confirmed messages. */
+  uploadStatus?: MediaUploadStatus
+  /** Optimistic media bubble only: 0-100 upload progress. */
+  uploadProgress?: number
+  /** Optimistic media bubble only: local object URL preview shown before the remote URL exists. Revoke on settle. */
+  localPreviewUrl?: string
 }
 
 export interface TextThreadMessage extends ThreadMessageBase {
@@ -66,14 +75,12 @@ export interface TextThreadMessage extends ThreadMessageBase {
   content: string
 }
 
-/** Reserved contract-only — no send path, upload pipeline, or UI yet. */
 export interface MediaThreadMessage extends ThreadMessageBase {
   kind: 'media'
   content: string
   media: MediaContentPayload
 }
 
-/** Reserved contract-only — no send path, upload pipeline, or UI yet. */
 export interface VoiceThreadMessage extends ThreadMessageBase {
   kind: 'voice'
   content: string
@@ -113,4 +120,32 @@ export interface MessagesResponse {
 
 export interface SendMessageResponse {
   data: ThreadMessage
+}
+
+// ── Attachment upload lifecycle (dm-messenger-v2/01) ──────────────────
+
+/** Scoped ImageKit signed-upload auth for a thread-namespaced folder. */
+export interface DmAttachmentUploadAuth {
+  token: string
+  signature: string
+  expire: number
+  publicKey: string
+  folder: string
+  urlEndpoint: string
+  /** Server-generated random asset name — non-guessable URL. */
+  fileName: string
+}
+
+export interface DmAttachmentUploadAuthResponse {
+  data: DmAttachmentUploadAuth
+}
+
+export interface DmAttachmentFinalizeResponse {
+  data: MediaContentPayload
+}
+
+// ── Voice note upload lifecycle (dm-messenger-v2/04) ──────────────────
+
+export interface DmVoiceFinalizeResponse {
+  data: VoiceContentPayload
 }

@@ -44,15 +44,57 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopPresence()
 })
+
+// Online-friend card tap → open (or start) the DM thread with that user.
+async function handleFriendChat(user: { id: number }): Promise<void> {
+  const thread = await startThread(String(user.id))
+  if (thread) await navigateTo(`/inbox/${thread.id}`)
+}
+
+// ── Search anyone by ID → message them ────────────────
+const searchOpen = ref(false)
+
+async function handleSearchMessage(user: { id: number }): Promise<void> {
+  searchOpen.value = false
+  await handleFriendChat(user)
+}
 </script>
 
 <template>
-  <main class="safe-area-bottom safe-area-top">
+  <!-- Top inset is handled by NavAlt's `spacer` (the fixed nav pads itself). -->
+  <main class="safe-area-bottom">
     <NavAlt spacer back-to="/">
       Messages
     </NavAlt>
 
-    <div class="pt-14 pb-24">
+    <div class="pt-8">
+      <!-- ── Search anyone by ID ─────────────────────── -->
+      <button
+        type="button"
+        class="mx-3 mt-2 mb-4 flex items-center gap-2 w-[calc(100%-1.5rem)] rounded-full bg-muted border border-muted/20 px-4 py-2.5 text-sm text-muted active:scale-[0.98] transition-transform"
+        @click="searchOpen = true"
+      >
+        <UIcon name="i-lucide-search" class="size-4 shrink-0" />
+        Search People by ID to message…
+      </button>
+      <UserSearchDrawer
+        v-model:open="searchOpen"
+        title="New Message"
+        description="Search by ID and start a chat."
+      >
+        <template #actions="{ user }">
+          <UButton
+            icon="i-lucide-message-circle"
+            size="sm"
+            variant="soft"
+            class="w-full justify-center rounded-t-none"
+            @click="handleSearchMessage(user)"
+          >
+            Message
+          </UButton>
+        </template>
+      </UserSearchDrawer>
+
       <!-- Loading skeleton -->
       <div v-if="store.threadsLoading && !store.threadsLoaded" class="divide-y divide-muted/10">
         <div v-for="i in 6" :key="i" class="flex items-center gap-3 px-4 py-3 animate-pulse">
@@ -66,8 +108,8 @@ onBeforeUnmount(() => {
 
       <template v-else>
         <template v-if="onlineFollowing.length > 0">
-          <SectionTitle class="ml-3">Friends</SectionTitle>
-          <HomeFollowingCarousel :users="onlineFollowing" class="mx-3" />
+          <SectionTitle class="ml-3">Online Friends</SectionTitle>
+          <HomeFollowingCarousel :users="onlineFollowing" tap-action="chat" class="mx-3" @chat="handleFriendChat" />
         </template>
         <!-- ── DM Threads ────────────────────────────── -->
         <div v-if="store.dmThreads.length > 0" class="divide-y divide-muted/10">

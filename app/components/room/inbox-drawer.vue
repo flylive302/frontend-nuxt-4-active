@@ -27,8 +27,14 @@ function backToList(): void {
   activeThreadId.value = null
 }
 
+// Online-friend card tap → open (or start) the DM thread inside the drawer.
+async function handleFriendChat(user: { id: number }): Promise<void> {
+  const thread = await startThread(String(user.id))
+  if (thread) openThread(thread.id)
+}
+
 const store = useInboxStore()
-const { fetchThreads, loadMoreThreads } = useInboxActions()
+const { fetchThreads, loadMoreThreads, startThread } = useInboxActions()
 const { fetchRankedFollowing } = useFollowingData()
 const presenceStore = usePresenceStore()
 
@@ -128,7 +134,7 @@ watch(isOpen, async (open) => {
         <template v-else>
           <template v-if="onlineFollowing.length > 0">
             <SectionTitle class="ml-3">Friends</SectionTitle>
-            <HomeFollowingCarousel :users="onlineFollowing" class="mx-3" />
+            <HomeFollowingCarousel :users="onlineFollowing" tap-action="chat" class="mx-3" @chat="handleFriendChat" />
           </template>
 
           <!-- ── DM Threads ────────────────────────────── -->

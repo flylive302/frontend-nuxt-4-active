@@ -103,6 +103,33 @@ describe('useInboxEvents', () => {
       expect(store.appendMessage).not.toHaveBeenCalled()
     })
 
+    it('preserves the media kind so bubbles render the payload, not raw JSON', () => {
+      store.activeThreadId = '42'
+      const mediaPayload = {
+        ...payload,
+        message: { ...payload.message, type: 'media', kind: 'media', content: '{"url":"https://x/y.jpg","mimeType":"image/jpeg"}' },
+      }
+
+      socket.handlers.get('dm.message.received')!(mediaPayload)
+
+      expect(store.appendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'media', content: mediaPayload.message.content }),
+      )
+    })
+
+    it('bumps thread unread with a kind-aware preview for voice messages', () => {
+      store.activeThreadId = null
+      store.threadById.mockReturnValue({ id: '42' } as Thread)
+      const voicePayload = {
+        ...payload,
+        message: { ...payload.message, type: 'voice', kind: 'voice', content: '{"url":"https://x/y.webm","durationMs":1200}' },
+      }
+
+      socket.handlers.get('dm.message.received')!(voicePayload)
+
+      expect(store.bumpThreadUnread).toHaveBeenCalledWith('42', '🎤 Voice message', payload.message.sentAt)
+    })
+
     it('does nothing (no API call) when the thread is not present locally', () => {
       store.activeThreadId = null
       store.threadById.mockReturnValue(undefined)
