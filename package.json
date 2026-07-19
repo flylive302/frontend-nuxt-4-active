@@ -8,7 +8,7 @@
     "dev": "nuxt dev --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "cap:build": "NITRO_PRESET=static nuxt generate --dotenv .env.capacitor && cap sync android",
+    "cap:build": "RELEASE=$(git rev-parse HEAD 2>/dev/null || echo '') && NUXT_PUBLIC_SENTRY_RELEASE=$RELEASE NITRO_PRESET=static nuxt generate --dotenv .env.capacitor && printf '%s' \"$RELEASE\" > .output/ota-release.txt && cap sync android",
     "cap:android": "cap open android",
     "cap:sync": "cap sync android",
     "cap:publish": "node --env-file-if-exists=.env.ota scripts/ota-publish.mjs",

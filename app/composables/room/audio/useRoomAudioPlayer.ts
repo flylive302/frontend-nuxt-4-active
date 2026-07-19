@@ -401,7 +401,19 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     isPlayerOpen.value = true; // keep the panel up even if the slot is denied
     const outputTrack = ensureEngine().getOutputTrack();
-    await produceTrack(outputTrack);
+
+    // `produceTrack` awaits transport creation, so the engine can be disposed
+    // underneath us mid-call (owner force-take via `handleRevoked`, leave,
+    // stop). Disposal closes the AudioContext, which ends `outputTrack`, and
+    // mediasoup's `produce()` then throws InvalidStateError. That is teardown,
+    // not a user error — tear down cleanly instead of rejecting into the click.
+    try {
+      await produceTrack(outputTrack);
+    } catch (err) {
+      log.warn('produceTrack failed during startSession (usually teardown mid-start)', err);
+      stopStreaming(roomId);
+      return false;
+    }
 
     const ok = await startTrack(roomId, queue.current, true, force);
     if (!ok) {

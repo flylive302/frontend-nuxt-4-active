@@ -88,6 +88,18 @@ if (!existsSync(join(webDir, 'index.html'))) {
   process.exit(1)
 }
 
+// Commit this bundle was built from. Written by `cap:build` AFTER `nuxt
+// generate` (which wipes .output), and read here rather than recomputed from
+// git: the working tree may have moved since the build, and a manifest that
+// misreports the bundle's commit is worse than one that omits it. Lives outside
+// `.output/public` so it is never zipped or served.
+const releasePath = join('.output', 'ota-release.txt')
+const release = existsSync(releasePath) ? readFileSync(releasePath, 'utf8').trim() : ''
+if (!release) {
+  console.warn('⚠ no .output/ota-release.txt — manifest will omit `release`.')
+  console.warn('  Rebuild with `npm run cap:build` so Sentry events carry a commit SHA.')
+}
+
 const zipName = `bundle-${bundleVersion}.zip`
 const zipPath = join(tmpdir(), zipName)
 
@@ -133,6 +145,9 @@ const manifest = {
   url: `${publicBase.replace(/\/$/, '')}/${zipName}`,
   checksum,
   minNativeShellVersion,
+  // Informational only — the OTA gate ignores it. Lets you answer "does the
+  // live bundle contain commit X?" via `git merge-base --is-ancestor X <release>`.
+  ...(release ? { release } : {}),
 }
 const manifestPath = join(tmpdir(), 'manifest.json')
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))

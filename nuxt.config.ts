@@ -172,7 +172,12 @@ export default defineNuxtConfig({
             sentry: {
                 dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
                 environment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || 'production',
-                // CF_PAGES_COMMIT_SHA is set automatically by Cloudflare Pages at build time
+                // Two build paths, both resolving to a git SHA so web and native
+                // releases are directly comparable in Sentry:
+                //   web    → CF_PAGES_COMMIT_SHA, set automatically by Cloudflare Pages.
+                //   native → NUXT_PUBLIC_SENTRY_RELEASE, set by `cap:build` (package.json).
+                // Do NOT put NUXT_PUBLIC_SENTRY_RELEASE in .env.capacitor — cap:build
+                // computes it per build; a pinned value would stamp every bundle alike.
                 release: process.env.NUXT_PUBLIC_SENTRY_RELEASE || process.env.CF_PAGES_COMMIT_SHA || '',
             },
         }

@@ -453,6 +453,15 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
+    // Re-GATE after the await: the transport was validated at entry, but
+    // `audio:consume` is a network round-trip and a room leave or reconnect
+    // rebuild runs `cleanup()`, which nulls `consumerTransport`. Without this
+    // the next line derefs null.
+    if (!consumerTransport.value) {
+      log.warn('Consumer transport torn down while audio:consume was in flight', { producerId });
+      return;
+    }
+
     const consumer = await consumerTransport.value.consume({
       id: response.data.id,
       producerId: response.data.producerId,

@@ -92,18 +92,19 @@ function handleLoadMoreMembers(): void {
 // ========================================
 
 onMounted(async () => {
-  // Hydrate user's agency context first (needed for membership checks)
-  await fetchUserAgency()
-  
-  // Fetch the viewed agency details
-  await fetchAgencyById(agencyId.value)
-  await fetchAgencyMembers(agencyId.value, true)
-  
-  // Fetch user's join requests only if not already a member
+  // These three are independent — the user's agency context does not gate
+  // fetching the viewed agency. Awaiting them serially made the page wait on a
+  // full round-trip chain (Sentry: consecutive-HTTP on /agency/:id).
+  await Promise.all([
+    fetchUserAgency(),
+    fetchAgencyById(agencyId.value),
+    fetchAgencyMembers(agencyId.value, true),
+  ])
+
+  // Stays sequential: membership is only known after fetchUserAgency resolves.
   if (!agencyStore.isAgencyMember) {
     await fetchMyJoinRequests(true)
   }
-
 })
 
 

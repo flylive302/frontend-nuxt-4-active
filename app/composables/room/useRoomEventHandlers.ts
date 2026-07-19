@@ -401,15 +401,18 @@ export function setupRoomEventHandlers(
           {
             label: 'Accept',
             color: 'primary',
-            onClick: async () => {
-              await acceptInvite();
-              await startAudio();
-            },
+            // Nothing awaits a toast action, so an async handler's rejection
+            // escapes as an unhandled rejection — which is how a dismissed mic
+            // prompt reached Sentry (JAVASCRIPT-VUE-5V). Terminate the chain here.
+            onClick: () => void acceptSeatInvite(),
           },
           {
             label: 'Decline',
             color: 'neutral',
-            onClick: () => void declineInvite(),
+            // `void` discards the promise but does NOT catch it — same trap.
+            onClick: () => void declineInvite().catch((err: unknown) => {
+              log.warn('Failed to decline seat invite', err);
+            }),
           },
         ],
       });
@@ -520,4 +523,33 @@ export function setupRoomEventHandlers(
 
   // Lucky gift event handlers (floating multipliers, SVGA announcements)
   setupLuckyEventHandlers(socket);
+
+  /**
+   * REACT: accept a seat invite and open the mic, converting every failure into
+   * user feedback. Taking the seat runs the browser's permission prompt, and a
+   * dismissed prompt rejects with `NotAllowedError` — expected user behaviour,
+   * not an app fault, so it gets the same guidance as the seat drawer's own
+   * denial path rather than a silent failure.
+   */
+  async function acceptSeatInvite(): Promise<void> {
+    try {
+      await acceptInvite();
+      await startAudio();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'NotAllowedError') {
+        toast.add({
+          title: 'Microphone blocked',
+          description: 'Enable microphone access for FlyLive in your device settings to speak on a seat.',
+          color: 'warning',
+        });
+        return;
+      }
+      log.warn('Failed to accept seat invite', err);
+      toast.add({
+        title: 'Could not take the seat',
+        description: 'Something went wrong accepting the invitation. Please try again.',
+        color: 'error',
+      });
+    }
+  }
 }
