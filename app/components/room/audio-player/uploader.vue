@@ -92,7 +92,7 @@ function rejectionReason(file: File): string | null {
     return `"${file.name}" is not a supported audio file.`;
   }
   if (file.size > MAX_SIZE_BYTES) {
-    return `"${file.name}" is too large (max ${MAX_SIZE_MB}MB).`;
+    return `"${file.name}" is too large to decode on this device (max ${MAX_SIZE_MB}MB).`;
   }
   return null;
 }

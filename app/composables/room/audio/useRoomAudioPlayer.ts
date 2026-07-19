@@ -68,7 +68,7 @@ const currentTrackId = ref<string | null>(null);
 const isPlayerOpen = ref(false);
 
 // Composed modules (not reactive — internal only).
-let queue = new PlaylistQueue();
+const queue = new PlaylistQueue();
 let engine: AudioPlaybackEngine | null = null;
 
 let positionInterval: ReturnType<typeof setInterval> | null = null;
@@ -279,7 +279,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     const message =
       err instanceof AudioPlaybackError
         ? err.message
-        : `Could not play "${track.title}". The file may be corrupt or unsupported.`;
+        : `Could not play "${track.title}" — the file's encoding may be unsupported or corrupt. Try re-exporting as MP3 or AAC.`;
     log.warn('Playback failed', err);
     toast.add({ title: 'Music Error', description: message, color: 'error' });
   }
@@ -578,9 +578,22 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   }
 
   /**
-   * Full cleanup on leave/refresh — stop, drop listeners, clear the queue.
-   * The queue clears here (and only here) because local `File` handles cannot
-   * be re-read across a reload (ADR 0006).
+   * Playback/streaming teardown on room leave (covers manual leave, room
+   * switch, kick/eject, and room-closed — every path funnels through this one
+   * `cleanup()`, see `useRoomAudio.leaveRoom`): stop production, release the
+   * MSAB mutex (via `stopStreaming`'s `audioPlayer:stop`) when a session was
+   * live, drop socket listeners, hide the panel, reset playback state.
+   *
+   * The in-memory Playlist (`queue`) is deliberately **not** cleared here —
+   * PRD "Playlist retention" (stories 18–21): a DJ's queue survives room
+   * switches, kicks, and owner takeover within the same browser session.
+   * `handleRevoked` already preserves it the same way. Only a hard page
+   * refresh clears it, and that happens for free — a reload resets this
+   * module's singleton state, since local `File` handles cannot be re-read
+   * across a reload anyway (ADR 0006). No caller currently needs an explicit
+   * full-clear path (logout also flows through this same `cleanup()` via the
+   * `currentRoom` watcher, and the PRD does not call out logout as a clear
+   * trigger) — if one is ever added, clear the queue there, not here.
    */
   function cleanup(roomId?: string): void {
     if (roomId && isActive.value) {
@@ -593,8 +606,6 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     }
     cleanupListeners();
 
-    queue = new PlaylistQueue();
-    syncQueue();
     isPlayerOpen.value = false;
 
     playerState.status = 'idle';

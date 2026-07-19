@@ -200,7 +200,7 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
       return buffer;
     } catch (err) {
       throw new AudioPlaybackError(
-        `Could not decode "${file.name}" — it may be corrupt, an unsupported format, or too large.`,
+        `Could not decode "${file.name}" — the file's encoding may be unsupported or corrupt. Try re-exporting it as MP3 or AAC.`,
         err,
       );
     }
