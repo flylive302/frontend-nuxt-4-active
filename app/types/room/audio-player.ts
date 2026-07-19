@@ -57,6 +57,12 @@ export interface AudioPlayerPlayPayload {
   roomId: string;
   title: string;
   duration: number;
+  /**
+   * music-dj-queue/04: opt in to the FIFO waiting queue on a live-holder denial.
+   * Sent true only for the non-force first-track acquire; omitted (server default
+   * false) keeps the legacy "denied" behavior. Track-change/takeover emits omit it.
+   */
+  enqueue?: boolean;
 }
 
 /** Client → MSAB: Owner force-takes a live music slot (same shape as play). */
@@ -68,6 +74,16 @@ export interface AudioPlayerTakeoverPayload {
 
 /** Client → MSAB: Stop playing music */
 export interface AudioPlayerStopPayload {
+  roomId: string;
+}
+
+/**
+ * Client → MSAB: cancel a waiting-queue spot (music-dj-queue/05). Emitted when a
+ * queued admin presses stop/close or leaves the room while still waiting, so the
+ * server dequeues them instead of granting the slot to someone who changed their
+ * mind.
+ */
+export interface AudioPlayerLeaveQueuePayload {
   roomId: string;
 }
 
@@ -94,6 +110,16 @@ export interface AudioPlayerRevokedEvent {
   byUserId: number;
 }
 
+/**
+ * MSAB → queue head (targeted): the music slot is now provisionally yours.
+ * music-dj-queue/04 — the grantee auto-starts their first queued track through
+ * the normal play flow (which succeeds via reuse-if-mine against the provisional
+ * mutex). No payload beyond the room for scope-matching.
+ */
+export interface AudioPlayerGrantedEvent {
+  roomId: string;
+}
+
 /** Music player state from room:join ack */
 export interface MusicPlayerJoinState {
   userId: number;
@@ -107,4 +133,8 @@ export interface MusicPlayerJoinState {
 export interface AudioPlayerResponse {
   success: boolean;
   error?: string;
+  /** music-dj-queue/04: true when a denied play was placed in the waiting queue. */
+  queued?: boolean;
+  /** music-dj-queue/04: 1-based position in the waiting queue (with `queued`). */
+  position?: number;
 }

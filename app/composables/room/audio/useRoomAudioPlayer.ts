@@ -23,9 +23,11 @@ import type {
   AudioPlayerState,
   AudioPlayerPlayPayload,
   AudioPlayerStopPayload,
+  AudioPlayerLeaveQueuePayload,
   AudioPlayerStateUpdatePayload,
   AudioPlayerStateChangedEvent,
   AudioPlayerRevokedEvent,
+  AudioPlayerGrantedEvent,
   AudioPlayerTakeoverPayload,
   AudioPlayerResponse,
   MusicPlayerJoinState,
@@ -66,6 +68,16 @@ const currentTrackId = ref<string | null>(null);
  * and closes only via the explicit ✕ (`closePlayer`), force-take, or leave.
  */
 const isPlayerOpen = ref(false);
+
+/**
+ * music-dj-queue/04: waiting-queue state. Set when a play against a live DJ is
+ * denied-but-enqueued; cleared on grant (auto-start), leave/cleanup, close, or
+ * revoke. Module-level like {@link isPlayerOpen} — one DJ session per tab. The
+ * server-side dequeue on cancel/leave is ticket 05; here the client only tracks
+ * and clears its own waiting flag.
+ */
+const isWaitingForSlot = ref(false);
+const queuePosition = ref<number | null>(null);
 
 // Composed modules (not reactive — internal only).
 const queue = new PlaylistQueue();
@@ -114,6 +126,9 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     isPlayerOpen.value &&
     !(isMusicPlayingInRoom.value && playerState.userId !== authStore.user?.id),
   );
+
+  // music-dj-queue/04: this DJ is enqueued behind a live DJ, awaiting a grant.
+  const isWaiting = computed(() => isWaitingForSlot.value);
 
   const currentIndex = computed(() => queueTracks.value.findIndex((t) => t.id === currentTrackId.value));
   const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < queueTracks.value.length - 1);
@@ -215,11 +230,14 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     // Owner force-take overwrites the slot; a plain play is denied when another
     // admin already holds it (story 20: the admin retries, no auto-grab).
     const event = force ? 'audioPlayer:takeover' : 'audioPlayer:play';
+    // music-dj-queue/04: opt into the waiting queue only for the non-force first
+    // acquire. Track changes (isFirst=false) and takeover must never enqueue.
+    const wantsQueue = event === 'audioPlayer:play' && isFirst;
     let res: AudioPlayerResponse;
     try {
       res = await emitAsync<AudioPlayerPlayPayload | AudioPlayerTakeoverPayload, AudioPlayerResponse>(
         event,
-        { roomId, title: track.title, duration },
+        { roomId, title: track.title, duration, ...(wantsQueue ? { enqueue: true } : {}) },
       );
     } catch (err) {
       // EXECUTE failure (socket timeout / disconnect): surface a clean toast and
@@ -240,6 +258,23 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     if (isFirst && !res.success) {
       engine?.stop();
       playerState.status = 'idle';
+
+      // music-dj-queue/04: denied-but-enqueued → show the waiting state (no error
+      // toast). The waiting flag is set here and deliberately survives the
+      // producer teardown in startSession's failure path (stopStreaming does NOT
+      // clear it — only close/leave/revoke/grant do); the grant later re-runs
+      // startSession, whose play succeeds via reuse-if-mine.
+      if (res.queued) {
+        isWaitingForSlot.value = true;
+        queuePosition.value = res.position ?? null;
+        toast.add({
+          title: 'Music',
+          description: `You're #${res.position ?? '?'} in line — your music starts automatically when the current DJ finishes.`,
+          color: 'info',
+        });
+        return false;
+      }
+
       toast.add({
         title: 'Music',
         description: force
@@ -348,6 +383,21 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
    */
   async function startSession(roomId: string, force: boolean): Promise<boolean> {
     if (!queue.current) return false;
+
+    // music-dj-queue/05 GATE: re-pressing play while already enqueued must not
+    // re-produce or re-toast the denial — nudge once and bail. handleGranted
+    // clears the waiting flag BEFORE it calls startSession, so the grant path is
+    // never gated here (regression-guarded in the spec).
+    if (isWaitingForSlot.value) {
+      toast.add({
+        title: 'Music',
+        description: queuePosition.value != null
+          ? `You're #${queuePosition.value} in line — your music starts automatically.`
+          : `You're in line — your music starts automatically.`,
+        color: 'info',
+      });
+      return false;
+    }
 
     isPlayerOpen.value = true; // keep the panel up even if the slot is denied
     const outputTrack = ensureEngine().getOutputTrack();
@@ -462,6 +512,12 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
    * Stop streaming but **preserve the queue** for in-session resume: close the
    * music producer, tear down the engine, release the MSAB mutex. Also the
    * clean end-of-queue / remove-last path. The queue clears only on leave.
+   *
+   * music-dj-queue/04 (deviation from the literal contract, advisor-confirmed):
+   * this does NOT clear the waiting state, because startSession's failure path
+   * calls it right after a denied-but-enqueued play to tear down the producer —
+   * clearing here would wipe the waiting flag we just set. The waiting cancel
+   * paths are `closePlayer`, `cleanup`, `handleRevoked`, and `handleGranted`.
    */
   function stopStreaming(roomId: string): void {
     stopPositionTracking();
@@ -490,7 +546,58 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
    */
   function closePlayer(roomId: string): void {
     if (isActive.value) stopStreaming(roomId);
+    // music-dj-queue/05: closing while enqueued cancels the spot server-side too
+    // (dequeue), then clears the local waiting flag. Fire-and-forget REACT — the
+    // ack is irrelevant; do it BEFORE clearWaiting so the emit still fires.
+    cancelWaitingSpot(roomId);
+    clearWaiting();
     isPlayerOpen.value = false;
+  }
+
+  /** music-dj-queue/04: reset the local waiting flag. */
+  function clearWaiting(): void {
+    isWaitingForSlot.value = false;
+    queuePosition.value = null;
+  }
+
+  /**
+   * music-dj-queue/05: tell MSAB to drop our waiting-queue spot (LREM). Only when
+   * we are actually enqueued and the socket is alive — a fire-and-forget REACT
+   * emit (the ack is irrelevant). Callers invoke this BEFORE clearWaiting so the
+   * guard still sees the waiting flag. A revoke does NOT use this: a revoked user
+   * was the DJ, not a waiter.
+   */
+  function cancelWaitingSpot(roomId: string): void {
+    if (!isWaitingForSlot.value || !socket.value) return;
+    emitAsync<AudioPlayerLeaveQueuePayload, AudioPlayerResponse>('audioPlayer:leaveQueue', { roomId })
+      .catch((err) => { log.warn('Failed to emit audioPlayer:leaveQueue', err); });
+  }
+
+  /**
+   * music-dj-queue/04: the slot freed and MSAB granted it to us (targeted
+   * `audioPlayer:granted`). Auto-start our first queued track via the normal play
+   * flow — the play inside `startSession` succeeds via reuse-if-mine against the
+   * provisional mutex the server already SET to us.
+   *
+   * Runs from a socket callback, so it uses the store refs cached at composable
+   * init. GATE: must actually be waiting, have a track to play, and match the
+   * current room — otherwise ignore silently.
+   */
+  function handleGranted(event: AudioPlayerGrantedEvent): void {
+    if (!isWaitingForSlot.value) return;
+    if (!queue.current) return;
+    if (event.roomId !== roomStore.currentRoom?.id?.toString()) return;
+
+    clearWaiting();
+    void startSession(event.roomId, false).then((ok) => {
+      if (!ok) {
+        // Grant start failed (e.g. lost the reuse race) — do NOT re-enqueue; the
+        // playlist is retained so the DJ can retry manually. Waiting already clear.
+        log.warn('Music grant auto-start failed');
+        return;
+      }
+      toast.add({ title: 'Music', description: 'Your music is starting.', color: 'info' });
+    });
   }
 
   /**
@@ -506,6 +613,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     engine?.dispose();
     engine = null;
 
+    clearWaiting(); // music-dj-queue/04: a revoke also cancels any waiting state
     isPlayerOpen.value = false; // hide the displaced DJ's panel (queue is kept)
 
     // Reflect "someone else is now playing" immediately so the DJ-only player
@@ -532,6 +640,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     if (!socket.value) return;
 
     socket.value.on('audioPlayer:revoked', handleRevoked);
+    socket.value.on('audioPlayer:granted', handleGranted); // music-dj-queue/04
 
     socket.value.on('audioPlayer:stateChanged', (event: AudioPlayerStateChangedEvent) => {
       // Don't override local state from our own broadcast.
@@ -564,6 +673,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     if (!socket.value) return;
     socket.value.off('audioPlayer:stateChanged');
     socket.value.off('audioPlayer:revoked', handleRevoked);
+    socket.value.off('audioPlayer:granted', handleGranted); // music-dj-queue/04
   }
 
   /** Sync UI when joining a room where music is already playing. */
@@ -606,6 +716,12 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     }
     cleanupListeners();
 
+    // music-dj-queue/05: leaving while enqueued cancels the spot server-side too.
+    // `roomId` is undefined on some leave paths — fall back to the current room;
+    // skip the emit (but still clear locally) if none is resolvable.
+    const queueRoomId = roomId ?? roomStore.currentRoom?.id?.toString();
+    if (queueRoomId) cancelWaitingSpot(queueRoomId);
+    clearWaiting(); // music-dj-queue/04: leaving cancels any local waiting state
     isPlayerOpen.value = false;
 
     playerState.status = 'idle';
@@ -623,6 +739,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     playerState: readonly(playerState),
     queueTracks: readonly(queueTracks),
     currentTrackId: readonly(currentTrackId),
+    queuePosition: readonly(queuePosition),
 
     // Computed
     isPlaying,
@@ -630,6 +747,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     isActive,
     isMusicPlayingInRoom,
     isPlayerVisible,
+    isWaiting,
     hasNext,
     hasPrev,
 

@@ -55,6 +55,8 @@ const {
   isPlaying,
   isPaused,
   isPlayerVisible,
+  isWaiting,
+  queuePosition,
   hasNext,
   hasPrev,
   play,
@@ -496,5 +498,21 @@ function handleVolumeChange(vol: number): void {
       :is-loading="isUploaderLoading"
       @files-selected="handleFilesSelected"
     />
+  </div>
+
+  <!--
+    music-dj-queue/04: waiting-queue indicator. Rendered INDEPENDENTLY of
+    isPlayerVisible — the live DJ's ~2s stateUpdate broadcast flips playerState to
+    their id, which would hide anything nested in the player card. Shown while this
+    admin is enqueued behind the current DJ; auto-clears on grant / leave / close.
+  -->
+  <div
+    v-if="isWaiting"
+    class="fixed left-1/2 -translate-x-1/2 bottom-24 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full backdrop-blur-xl bg-black/70 ring-1 ring-white/10 shadow-lg shadow-black/40"
+  >
+    <UIcon name="i-lucide-hourglass" class="text-sm text-primary animate-pulse" />
+    <span class="text-[12px] font-medium text-white select-none">
+      Waiting for the DJ slot<template v-if="queuePosition"> — #{{ queuePosition }} in line</template>
+    </span>
   </div>
 </template>
