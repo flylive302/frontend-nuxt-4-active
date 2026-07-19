@@ -15,6 +15,8 @@ useSeoMeta({
   robots: 'noindex, nofollow',
 })
 
+const log = createLogger('[VerifyEmail]')
+
 const OTP_LENGTH = 6
 const RESEND_COOLDOWN_SECONDS = 30
 
@@ -67,7 +69,12 @@ async function onSubmit(event: FormSubmitEvent<VerifyFormData>): Promise<void> {
 
 // Auto-submit once all digits are entered (mobile-friendly).
 function onComplete(): void {
-  formRef.value?.submit?.()
+  // Nothing awaits this, so a rejection escapes as an unhandled rejection rather than
+  // reaching `handleSubmit`'s catch — which is how a wrong OTP surfaced in Sentry as a
+  // hard error (JAVASCRIPT-VUE-5B). Terminate the chain here.
+  void formRef.value?.submit?.()?.catch((err: unknown) => {
+    log.warn('Auto-submit of the verification code failed', err)
+  })
 }
 
 async function onResend(): Promise<void> {
