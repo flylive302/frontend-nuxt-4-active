@@ -10,6 +10,7 @@
 import type { Room } from '~/types/room/room'
 import { ASSETS } from '~/constants/assets'
 import { roomBackgroundImageSrc } from '~/utils/imagekit'
+import MarqueeName from "~/components/common/marquee-name.vue";
 
 defineOptions({
   inheritAttrs: false
@@ -37,7 +38,11 @@ const props = withDefaults(defineProps<{
 // ========================================
 
 const { enterRoom, showPasswordPrompt, pendingRoom, entering, onPasswordSuccess } = useRoomEntry()
-const { roomExpandStyleForRoom } = useRoomExpandTransition()
+const { roomExpandStyleForRoom, registerRoomCard, claimRoomExpand } = useRoomExpandTransition()
+
+// The same room can render in several cards at once (carousel + grid); only
+// the arbitration winner may carry the shared view-transition-name.
+const cardInstanceKey = registerRoomCard(props.room.id)
 
 // ========================================
 // Computed
@@ -77,6 +82,7 @@ const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 
  * into a real background rather than an empty box.
  */
 function handleRoomClick(): void {
+  claimRoomExpand(cardInstanceKey)
   void enterRoom(props.room, roomBackgroundSrc.value)
 }
 
@@ -95,7 +101,7 @@ const getFlagIcon = (code: string): string => {
     v-bind="$attrs"
     class="relative rounded-3xl squircle overflow-hidden"
     :class="{ 'room-card-loading': entering }"
-    :style="roomExpandStyleForRoom(props.room.id)"
+    :style="roomExpandStyleForRoom(props.room.id, cardInstanceKey)"
     @click="handleRoomClick"
   >
     <figure class="h-full w-full">
@@ -131,7 +137,7 @@ const getFlagIcon = (code: string): string => {
     <aside class="absolute inset-0 p-2 flex items-end">
 
       <div class="backdrop-blur-sm shadow-md border border-primary/10 rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1 max-w-8/12">
           <img
             :src="`${props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER}?tr=w-24,q-60,f-webp`"
             alt="Live"
@@ -143,9 +149,10 @@ const getFlagIcon = (code: string): string => {
           >
 
           <!-- Text -->
-          <p class="text-sm font-bold max-w-24 leading-none">
-            {{ props.room.name }}
-          </p>
+          <MarqueeName
+              text-class="text-sm font-bold leading-none"
+              :name="props.room.name"
+          />
         </div>
 
         <div class="flex items-center gap-1">

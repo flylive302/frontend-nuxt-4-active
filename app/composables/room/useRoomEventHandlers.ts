@@ -278,7 +278,15 @@ export function setupRoomEventHandlers(
     // Compat: a producer announced without `source` (pre-feature server/peer)
     // is treated as `mic`.
     if (roomStore.currentRoom) {
-      await consumeProducer(event.producerId, roomStore.currentRoom.id.toString(), event.userId, event.source ?? 'mic');
+      try {
+        await consumeProducer(event.producerId, roomStore.currentRoom.id.toString(), event.userId, event.source ?? 'mic');
+      } catch (err) {
+        // Timeout/disconnect mid-consume is expected network churn: the
+        // reconnect pipeline rebuilds transports and re-consumes every live
+        // producer, so log and lean on that self-heal instead of surfacing
+        // an unhandled rejection.
+        log.warn('Failed to consume announced producer', { producerId: event.producerId, err });
+      }
     }
   });
 

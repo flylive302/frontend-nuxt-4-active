@@ -26,8 +26,18 @@ interface RoomExpandState {
 
 const EMPTY: RoomExpandState = { roomId: null, seedSrc: '' }
 
+/**
+ * Live card instances by unique instance key → roomId, in mount order. The
+ * same room can be rendered by several cards at once (carousel + grid), but
+ * the browser aborts the whole transition if two elements share the name —
+ * so exactly ONE registered instance may carry it at a time.
+ */
+const cardRegistry = reactive(new Map<string, number>())
+
 export function useRoomExpandTransition() {
   const state = useState<RoomExpandState>('room-expand-transition', () => ({ ...EMPTY }))
+  /** Instance key of the tapped card — preferred owner while it stays mounted. */
+  const claimKey = useState<string | null>('room-expand-claim', () => null)
 
   /** Cached URL for the room page's first frame, so the expanding card is never blank. */
   const seedSrc = computed(() => state.value.seedSrc)
@@ -35,9 +45,38 @@ export function useRoomExpandTransition() {
   /** The room page root — the only element that can own the name on that page. */
   const roomExpandStyle: StyleValue = { viewTransitionName: ROOM_EXPAND_VIEW_TRANSITION_NAME }
 
-  /** A room card — owns the name only while its room is the one being entered or left. */
-  function roomExpandStyleForRoom(roomId: number): StyleValue | undefined {
-    return state.value.roomId === roomId ? roomExpandStyle : undefined
+  /**
+   * Register a card instance for name arbitration. Call from the card's
+   * setup; returns its instance key. Unregisters automatically on unmount.
+   */
+  function registerRoomCard(roomId: number): string {
+    const key = useId()
+    cardRegistry.set(key, roomId)
+    onUnmounted(() => {
+      cardRegistry.delete(key)
+    })
+    return key
+  }
+
+  /** Prefer the tapped instance; else the first mounted card of that room. */
+  function ownerKeyForRoom(roomId: number): string | undefined {
+    const claimed = claimKey.value
+    if (claimed && cardRegistry.get(claimed) === roomId) return claimed
+    for (const [key, id] of cardRegistry) {
+      if (id === roomId) return key
+    }
+    return undefined
+  }
+
+  /** A room card — owns the name only if its room is active AND it won arbitration. */
+  function roomExpandStyleForRoom(roomId: number, instanceKey: string): StyleValue | undefined {
+    if (state.value.roomId !== roomId) return undefined
+    return ownerKeyForRoom(roomId) === instanceKey ? roomExpandStyle : undefined
+  }
+
+  /** Mark `instanceKey` as the tapped card so the morph originates from it. */
+  function claimRoomExpand(instanceKey: string): void {
+    claimKey.value = instanceKey
   }
 
   /**
@@ -54,5 +93,5 @@ export function useRoomExpandTransition() {
     state.value = { ...EMPTY }
   }
 
-  return { seedSrc, roomExpandStyle, roomExpandStyleForRoom, beginRoomExpand, clearRoomExpand }
+  return { seedSrc, roomExpandStyle, roomExpandStyleForRoom, registerRoomCard, claimRoomExpand, beginRoomExpand, clearRoomExpand }
 }

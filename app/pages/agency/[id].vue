@@ -12,7 +12,8 @@ import { useRoute } from 'vue-router'
 
 definePageMeta({
   layout: 'alt',
-  middleware: 'auth'
+  middleware: 'auth',
+  validate: route => /^\d+$/.test(String(route.params.id)),
 })
 
 // ========================================

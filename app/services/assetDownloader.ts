@@ -299,9 +299,13 @@ function captureDownloadFailure(item: DownloadQueueItem, error: Error): void {
       },
     },
   }
-  // 5xx = transient CDN/infra failure; report as warning, not an alertable error
-  if (httpStatus !== null && httpStatus >= 500) {
-    Sentry.captureMessage(error.message, { level: 'warning', ...extras })
+  // Any HTTP status = the client did its job and the CDN answered: 5xx is
+  // transient infra, 4xx is a data-integrity gap (DB references an asset
+  // missing from the CDN) — both are server-side actionables, not client
+  // exceptions. The url in the context identifies the broken record.
+  // Non-HTTP failures (timeout, size mismatch, network) stay exceptions.
+  if (httpStatus !== null) {
+    Sentry.captureMessage(`Asset download failed: HTTP ${httpStatus}`, { level: 'warning', ...extras })
   }
   else {
     Sentry.captureException(error, extras)

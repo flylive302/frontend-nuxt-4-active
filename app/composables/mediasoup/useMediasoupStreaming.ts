@@ -465,13 +465,22 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       consumerProducerByKey.value.set(trackingKey, producerId);
     }
 
-    // Resume the consumer (consumers start paused)
-    const resumeResponse = await emitAsync<object, ConsumerResumeResponse>('consumer:resume', {
-      roomId,
-      consumerId: consumer.id,
-    });
+    // Resume the consumer (consumers start paused). On timeout/disconnect the
+    // half-built consumer must not linger: it would block a clean re-consume
+    // (the `already consuming` guard above) while never producing audio.
+    let resumeResponse: ConsumerResumeResponse;
+    try {
+      resumeResponse = await emitAsync<object, ConsumerResumeResponse>('consumer:resume', {
+        roomId,
+        consumerId: consumer.id,
+      });
+    } catch (err) {
+      stopConsumer(producerId);
+      throw err;
+    }
 
     if (!resumeResponse.success) {
+      stopConsumer(producerId);
       return;
     }
 

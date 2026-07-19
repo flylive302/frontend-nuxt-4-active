@@ -47,6 +47,13 @@ export function useBoundedDrag(options?: UseBoundedDragOptions) {
   const { position, isDragging } = useDraggable(dragEl, {
     initialValue: { x: 0, y: 0 },
     handle: options?.handle,
+    // The draggable element usually sits behind a v-if while this composable's
+    // component stays mounted, so the window-level pointermove listener outlives
+    // the element. useDraggable's move handler calls getBoundingClientRect on
+    // the target unconditionally — if the element is hidden MID-DRAG (e.g.
+    // tapping the minimized disc restores the room) the next pointermove
+    // crashes on the null ref. Disabling on null gates start AND move.
+    disabled: () => !dragEl.value,
     onMove: (pos) => {
       pos.x = clamp(pos.x, EDGE_PADDING, winW.value - elW.value - EDGE_PADDING);
       pos.y = clamp(pos.y, EDGE_PADDING, winH.value - elH.value - EDGE_PADDING);

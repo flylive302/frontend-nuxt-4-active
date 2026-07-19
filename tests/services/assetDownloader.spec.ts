@@ -56,6 +56,7 @@ const { mockCacheStorage, mockAssetIndex, mockNetworkDetector, mockSentry } = vi
   },
   mockSentry: {
     captureException: vi.fn(),
+    captureMessage: vi.fn(),
   },
 }))
 
@@ -401,7 +402,7 @@ describe('assetDownloader', () => {
   // ========================================
 
   describe('Sentry capture on retry exhaustion', () => {
-    it('captures exactly one Sentry event when retries are exhausted', async () => {
+    it('captures exactly one warning-level Sentry message when retries are exhausted on an HTTP status', async () => {
       setupFailingFetch(404)
 
       await enqueue([sampleItems[0]!])
@@ -414,7 +415,10 @@ describe('assetDownloader', () => {
         { timeout: 10000 }
       )
 
-      expect(mockSentry.captureException).toHaveBeenCalledTimes(1)
+      // HTTP failures (4xx/5xx) are server-side actionables, reported as
+      // warnings — never as client exceptions.
+      expect(mockSentry.captureMessage).toHaveBeenCalledTimes(1)
+      expect(mockSentry.captureException).not.toHaveBeenCalled()
     })
 
     it('captures with correct context shape, tags, and parsed httpStatus', async () => {
@@ -430,9 +434,10 @@ describe('assetDownloader', () => {
         { timeout: 10000 }
       )
 
-      expect(mockSentry.captureException).toHaveBeenCalledWith(
-        expect.any(Error),
+      expect(mockSentry.captureMessage).toHaveBeenCalledWith(
+        'Asset download failed: HTTP 404',
         {
+          level: 'warning',
           tags: {
             asset_scope: 'global',
             asset_priority: 'critical',

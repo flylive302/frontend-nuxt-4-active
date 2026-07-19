@@ -107,6 +107,15 @@ export function useGiftSending() {
       return false;
     }
 
+    // GATE: the sender must be authenticated. `authStore.user` CAN be null
+    // here (session revoked / auth refresh gap) — the old `user!` assertions
+    // crashed the whole component tree instead of failing the send.
+    const sender = authStore.user;
+    if (!sender) {
+      toast.add({ title: 'Not signed in', description: 'Please sign in again to send gifts.', color: 'error' });
+      return false;
+    }
+
     isSending.value = true;
 
     try {
@@ -132,13 +141,13 @@ export function useGiftSending() {
       // Lucky gifts use fly animation, all others use fullscreen playback modal
       if (selectedGift.category === 'lucky') {
         for (const recipientId of selectedRecipients) {
-          triggerFly(selectedGift.thumbnail_url, authStore.user!.id, recipientId);
+          triggerFly(selectedGift.thumbnail_url, sender.id, recipientId);
         }
 
         // Activate lucky combo button
         comboStore.setLuckyContext({
           gift: selectedGift,
-          senderId: authStore.user!.id,
+          senderId: sender.id,
           recipientIds: [...selectedRecipients],
           quantity: selectedQuantity,
         });
@@ -152,16 +161,16 @@ export function useGiftSending() {
         // of the playback queue (which advances to other gifts as they play).
         comboStore.setNormalContext({
           gift: selectedGift,
-          senderId: authStore.user!.id,
+          senderId: sender.id,
           recipientIds: [...selectedRecipients],
           quantity: selectedQuantity,
         });
 
         const playbackItem = {
           gift: selectedGift,
-          senderId: authStore.user!.id,
-          senderName: authStore.user!.name ?? 'Unknown',
-          senderAvatar: authStore.user!.avatar ?? undefined,
+          senderId: sender.id,
+          senderName: sender.name ?? 'Unknown',
+          senderAvatar: sender.avatar ?? undefined,
           recipientIds: [...selectedRecipients],
           quantity: selectedQuantity,
         };
@@ -221,6 +230,11 @@ export function useGiftSending() {
       return false;
     }
 
+    // GATE: sender must still be authenticated (see send()) — `user` can be
+    // null mid-session and the old `user!` assertions crashed the render tree.
+    const sender = authStore.user;
+    if (!sender) return false;
+
     // Fresh batchId per press — each combo is its own queued animation, never
     // interrupting whatever is currently playing.
     const batchId = newBatchId();
@@ -238,9 +252,9 @@ export function useGiftSending() {
     // already on screen — same FIFO path as send() and other users' gifts.
     giftStore.enqueuePlayback({
       gift: ctx.gift,
-      senderId: authStore.user!.id,
-      senderName: authStore.user!.name ?? 'Unknown',
-      senderAvatar: authStore.user!.avatar ?? undefined,
+      senderId: sender.id,
+      senderName: sender.name ?? 'Unknown',
+      senderAvatar: sender.avatar ?? undefined,
       recipientIds: [...validRecipients],
       quantity: ctx.quantity,
     });

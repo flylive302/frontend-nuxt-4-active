@@ -20,7 +20,10 @@
 
 import { PRESENCE_SUBSCRIBE_MAX } from '~/constants/inbox'
 import { createEmitAsync } from '~/utils/socket'
+import { createLogger } from '~/utils/logger'
 import { useAudioSocket } from '../room/useAudioSocket'
+
+const log = createLogger('[DmPresence]')
 
 interface PresenceAckResponse {
   success: boolean
@@ -101,7 +104,14 @@ export function useDmPresence(options: UseDmPresenceOptions = {}) {
 
     unsubscribe(toUnsubscribe)
     presenceStore.setSubscriptions(wanted)
-    await subscribe(toSubscribe)
+    try {
+      await subscribe(toSubscribe)
+    } catch (err) {
+      // Timeout/disconnect mid-subscribe is expected churn: the reconnect
+      // watcher runs resubscribeAll() with a fresh snapshot, and presence
+      // degrades gracefully (dots just stay stale) until then.
+      log.warn('presence:subscribe failed, awaiting reconnect self-heal', err)
+    }
   }
 
   /**
@@ -113,7 +123,11 @@ export function useDmPresence(options: UseDmPresenceOptions = {}) {
   async function resubscribeAll(): Promise<void> {
     const wanted = computeWantedUserIds()
     presenceStore.setSubscriptions(wanted)
-    await subscribe(wanted)
+    try {
+      await subscribe(wanted)
+    } catch (err) {
+      log.warn('presence resubscribe failed, next reconnect retries', err)
+    }
   }
 
   const stopWantedWatch = watch(

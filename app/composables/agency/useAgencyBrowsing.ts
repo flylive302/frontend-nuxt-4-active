@@ -8,6 +8,19 @@ import { createLogger } from '~/utils/logger'
 const log = createLogger('[useAgencyBrowsing]')
 
 // ========================================
+// GATE Helpers
+// ========================================
+
+/**
+ * Validate an agency/member id before it is interpolated into a URL.
+ * Guards against NaN reaching the API (e.g. `Number(route.params.id)`
+ * on a broken `/agency/undefined` link).
+ */
+function isValidAgencyId(id: number): boolean {
+  return Number.isInteger(id) && id > 0
+}
+
+// ========================================
 // Composable
 // ========================================
 
@@ -87,6 +100,12 @@ export function useAgencyBrowsing() {
    * @param id - Agency ID
    */
   async function fetchAgencyById(id: number): Promise<void> {
+    if (!isValidAgencyId(id)) {
+      log.warn('Aborted fetchAgencyById: invalid id', { id })
+      store.currentAgency.error = 'Failed to load agency'
+      return
+    }
+
     store.currentAgency.loading = true
     store.currentAgency.error = null
     store.currentAgency.members = []
@@ -110,6 +129,11 @@ export function useAgencyBrowsing() {
    * @param reset - Whether to reset pagination
    */
   async function fetchAgencyMembers(agencyId: number, reset = false): Promise<void> {
+    if (!isValidAgencyId(agencyId)) {
+      log.warn('Aborted fetchAgencyMembers: invalid id', { agencyId })
+      return
+    }
+
     if (reset) {
       store.currentAgency.members = []
       store.currentAgency.membersCursor = null

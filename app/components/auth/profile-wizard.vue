@@ -88,7 +88,11 @@ function transitionStep(delta: number) {
       stepIndex.value = next
       await nextTick()
     })
-    t.finished.then(() => delete document.documentElement.dataset.wizardDir)
+    // `finished` rejects as normal control flow when the transition is
+    // skipped (tab hidden, rapid steps) — cleanup must run either way.
+    t.finished
+      .catch(() => {})
+      .finally(() => delete document.documentElement.dataset.wizardDir)
   } else {
     stepIndex.value = next
   }
