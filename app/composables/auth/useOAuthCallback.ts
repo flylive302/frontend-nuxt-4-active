@@ -7,6 +7,7 @@
 
 import type { OAuthPopupResult } from '~/composables/auth/useOAuthPopup'
 import type { BootstrapUser } from '~/types/user/bootstrap'
+import { usePushSubscription } from '~/composables/notification/usePushSubscription'
 
 
 export interface OAuthCallbackParams {
@@ -72,6 +73,12 @@ export function useOAuthCallback() {
       title: isNew ? 'Account created!' : 'Welcome back!',
       color: 'success',
     })
+
+    // REACT — register this device for push, mirroring useAuth's login/verifyEmail.
+    // This path was missing it, so social sign-in users never got an FCM token and
+    // could never receive a push, while email/password users could. Fire-and-forget:
+    // permission denial or a web build is a graceful no-op.
+    usePushSubscription().register().catch(() => {})
 
     return {
       success: true,
