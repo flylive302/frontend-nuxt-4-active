@@ -12,6 +12,11 @@ import { CalendarDate, type DateValue, getLocalTimeZone, today } from '@internat
 import { useAuthForm, type UseAuthFormOptions } from '~/composables/auth/useAuthForm'
 import { type Country, isValidE164Phone } from '~/composables/auth/usePhoneSchema'
 import type { UpdateProfilePayload, GenderOption } from '~/types/user/auth'
+// Imported explicitly rather than relying on the `app/utils` auto-import: the
+// Vitest config is plain `vitest/config` with no Nuxt auto-import layer, so the
+// bare reference resolved at runtime but threw `getFlagIcon is not defined`
+// across 9 specs. Harmless in the app, where the auto-import would cover it.
+import { DEFAULT_FLAG_ICON, getFlagIcon } from '~/utils/flag-icon'
 
 // ========================================
 // Constants

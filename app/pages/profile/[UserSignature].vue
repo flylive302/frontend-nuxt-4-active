@@ -614,7 +614,10 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           Room
         </UButton>
 
-        <UButton :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="subtle" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
+        <!-- `profileId` is null until the profile resolves; interpolating it then
+             produced the literal string "null" in the query (`/inbox?start=null`),
+             which /inbox forwarded to POST /inbox/start/null → 500 (PHP-LARAVEL-7T). -->
+        <UButton v-if="profileId" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="subtle" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
           Chat
         </UButton>
 

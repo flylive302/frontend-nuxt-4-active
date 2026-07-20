@@ -61,6 +61,15 @@ export function useInboxActions() {
 
   // ── Get-or-create thread with a user ─────────────────
   async function startThread(userId: string | number): Promise<Thread | null> {
+    // GATE — the id reaches us from a route query (`/inbox?start=`), where a
+    // stringified null or any other junk arrives as a plain truthy string and
+    // the type signature can't help. Sending it built `/inbox/start/null`, which
+    // Postgres rejected while casting to bigint → 500 (PHP-LARAVEL-7T).
+    if (!/^\d+$/.test(String(userId))) {
+      log.warn('Refusing to start thread with a non-numeric user id', userId)
+      return null
+    }
+
     try {
       const res = await api<{ data: Thread }>(`/inbox/start/${userId}`, { method: 'POST' })
       store.upsertThread(res.data)
