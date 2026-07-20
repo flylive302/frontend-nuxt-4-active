@@ -12,7 +12,7 @@ const Cropper = defineAsyncComponent(async () => {
   return (await import('vue-advanced-cropper')).Cropper as unknown as Component
 })
 const CircleStencil = defineAsyncComponent(async () =>
-  (await import('vue-advanced-cropper')).CircleStencil as unknown as Component
+    (await import('vue-advanced-cropper')).CircleStencil as unknown as Component
 )
 
 // ========================================
@@ -67,14 +67,23 @@ const cropperRef = ref<any>(null)
 const imageSrc = ref<string | null>(null)
 const isProcessing = ref(false)
 
+// The cropper starts with `visibleArea: null` and only populates it once the image has
+// decoded and `resetVisibleArea()` resolves — which is exactly when it emits `ready`.
+// `zoom()` and `rotate()` read `visibleArea.left` with no `imageLoaded` guard of their
+// own (unlike `getResult()`/`reset()`, which do check), so tapping either control before
+// that point throws "Cannot read properties of null (reading 'left')" and kills the
+// modal (Sentry JAVASCRIPT-VUE-3Y — 13 users, all on slow Android WebViews where the
+// decode gap is wide enough to tap into).
+const isReady = ref(false)
+
 // ========================================
 // Event Handlers
 // ========================================
 async function onCrop() {
   if (!cropperRef.value || isProcessing.value) return
-  
+
   isProcessing.value = true
-  
+
   try {
     const { canvas } = cropperRef.value.getResult()
     if (!canvas) {
@@ -101,15 +110,21 @@ function closeModal() {
   emit('cancel')
 }
 
+// The `:disabled` bindings below already make these unreachable before `ready`; the
+// guard is the backstop for the re-arm window, where a fast tap can land before the
+// disabled attribute repaints.
 function rotate(angle: number) {
+  if (!isReady.value) return
   cropperRef.value?.rotate(angle)
 }
 
 function zoomIn() {
+  if (!isReady.value) return
   cropperRef.value?.zoom(ZOOM_IN_FACTOR)
 }
 
 function zoomOut() {
+  if (!isReady.value) return
   cropperRef.value?.zoom(ZOOM_OUT_FACTOR)
 }
 
@@ -117,25 +132,35 @@ function reset() {
   cropperRef.value?.reset()
 }
 
+// Emitted after the cropper resolves `resetVisibleArea()`, so `visibleArea` is populated
+// by the time this fires.
+function onCropperReady() {
+  isReady.value = true
+}
+
 // ========================================
 // Watchers & Lifecycle
 // ========================================
 watch(
-  () => props.imageFile,
-  (newFile) => {
-    if (newFile) {
-      if (imageSrc.value) {
-        URL.revokeObjectURL(imageSrc.value)
+    () => props.imageFile,
+    (newFile) => {
+      // Swapping the source sends the cropper back through decode with `visibleArea`
+      // unset. Leaving this true would re-open the same crash on the second image.
+      isReady.value = false
+
+      if (newFile) {
+        if (imageSrc.value) {
+          URL.revokeObjectURL(imageSrc.value)
+        }
+        imageSrc.value = URL.createObjectURL(newFile)
+      } else {
+        if (imageSrc.value) {
+          URL.revokeObjectURL(imageSrc.value)
+        }
+        imageSrc.value = null
       }
-      imageSrc.value = URL.createObjectURL(newFile)
-    } else {
-      if (imageSrc.value) {
-        URL.revokeObjectURL(imageSrc.value)
-      }
-      imageSrc.value = null
-    }
-  },
-  { immediate: true }
+    },
+    { immediate: true }
 )
 
 onBeforeUnmount(() => {
@@ -146,12 +171,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <USlideover 
-    :open="modelValue" 
-    side="bottom"
-    title="Crop Image"
-    description="Adjust your image by zooming, rotating, and cropping before saving"
-    @update:open="emit('update:modelValue', $event)"
+  <USlideover
+      :open="modelValue"
+      side="bottom"
+      title="Crop Image"
+      description="Adjust your image by zooming, rotating, and cropping before saving"
+      @update:open="emit('update:modelValue', $event)"
   >
     <template #content>
       <UCard class="flex flex-col flex-1">
@@ -164,14 +189,14 @@ onBeforeUnmount(() => {
               Scroll to zoom, drag to move
             </p>
             <UButton
-              variant="soft"
-              color="error"
-              icon="i-lucide-x" 
-              class="-my-1" 
-              type="button" 
-              :disabled="isProcessing"
-              aria-label="Close"
-              @click.prevent="closeModal" 
+                variant="soft"
+                color="error"
+                icon="i-lucide-x"
+                class="-my-1"
+                type="button"
+                :disabled="isProcessing"
+                aria-label="Close"
+                @click.prevent="closeModal"
             />
           </div>
         </template>
@@ -188,6 +213,7 @@ onBeforeUnmount(() => {
                 aspectRatio: props.aspectRatio,
                 previewClass: 'border'
               }"
+              @ready="onCropperReady"
           />
           <div v-else class="flex flex-col items-center gap-2 text-gray-400">
             <UIcon name="i-lucide-image" class="h-8 w-8" />
@@ -203,7 +229,7 @@ onBeforeUnmount(() => {
                 color="neutral"
                 variant="subtle"
                 type="button"
-                :disabled="isProcessing"
+                :disabled="isProcessing || !isReady"
                 aria-label="Zoom out"
                 @click.prevent="zoomOut"
             />
@@ -215,7 +241,7 @@ onBeforeUnmount(() => {
                 color="neutral"
                 variant="subtle"
                 type="button"
-                :disabled="isProcessing"
+                :disabled="isProcessing || !isReady"
                 aria-label="Rotate left"
                 @click.prevent="rotate(-ROTATE_ANGLE)"
             />
@@ -239,7 +265,7 @@ onBeforeUnmount(() => {
                 color="neutral"
                 variant="subtle"
                 type="button"
-                :disabled="isProcessing"
+                :disabled="isProcessing || !isReady"
                 aria-label="Rotate right"
                 @click.prevent="rotate(ROTATE_ANGLE)"
             />
@@ -251,7 +277,7 @@ onBeforeUnmount(() => {
                 color="neutral"
                 variant="subtle"
                 type="button"
-                :disabled="isProcessing"
+                :disabled="isProcessing || !isReady"
                 aria-label="Zoom in"
                 @click.prevent="zoomIn"
             />
