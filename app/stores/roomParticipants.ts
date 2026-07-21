@@ -21,7 +21,7 @@ export const useRoomParticipantsStore = defineStore('roomParticipants', () => {
    * re-join MERGES the snapshot onto stale state), so a participant who left
    * while we were disconnected lingers forever and the displayed count drifts.
    *
-   * Upsert/prune is done in place (not a wholesale Map replace) to preserve
+   * Upsert/prune is done-issues in place (not a wholesale Map replace) to preserve
    * object identity for unchanged participants — avoids list re-render churn.
    * `keepSelfId` shields the local user, who is added separately by joinRoom
    * and never appears in the snapshot's `participants` array.

@@ -85,7 +85,7 @@ describe('useSeatReactionPlayer — fetch failure no-op', () => {
     expect(lastInstance!.destroyed).toBe(true)
   })
 
-  it('reports done exactly once even if destroy() is subsequently called again by the caller', async () => {
+  it('reports done-issues exactly once even if destroy() is subsequently called again by the caller', async () => {
     const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
     const canvas = ref({} as HTMLCanvasElement)
     const onDone = vi.fn()

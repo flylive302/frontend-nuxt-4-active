@@ -4523,7 +4523,7 @@ export const REACTIONS: readonly ReactionManifestEntry[] = [
     "name": "hourglass done",
     "category": "Objects",
     "tags": [
-      "hourglass-done"
+      "hourglass-done-issues"
     ]
   },
   {
@@ -4531,7 +4531,7 @@ export const REACTIONS: readonly ReactionManifestEntry[] = [
     "name": "hourglass not done",
     "category": "Objects",
     "tags": [
-      "hourglass-not-done"
+      "hourglass-not-done-issues"
     ]
   },
   {

@@ -136,7 +136,7 @@ function ensureFgsWatch(
       },
       // immediate: `currentRoom` is set in doEnterRoom() BEFORE the room page
       // mounts and first calls useRoomAudio() (which installs this watch). A
-      // non-immediate watch would miss that already-done null→room transition and
+      // non-immediate watch would miss that already-done-issues null→room transition and
       // never start the mediaPlayback FGS for a pure Listener. On install it
       // reconciles against current state: a no-op when not in a room (empty
       // running set), or starts mediaPlayback when already in one. The detached

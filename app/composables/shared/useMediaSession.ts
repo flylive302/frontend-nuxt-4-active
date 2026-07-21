@@ -12,7 +12,7 @@
 //
 // If iOS background audio still doesn't work after this, the next step is
 // to append the consumer <audio> elements to a hidden DOM node with
-// `playsInline` set — that is NOT done here to keep scope minimal.
+// `playsInline` set — that is NOT done-issues here to keep scope minimal.
 
 
 

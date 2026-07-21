@@ -5,7 +5,7 @@
  * component stays INTENT-only. Implements the playback rule from
  * `planReactionPlayback`: loop until the intrinsic duration read at
  * `load` has repeated enough times to clear REACTION_MIN_DISPLAY_MS, then
- * finish the current loop and report done.
+ * finish the current loop and report done-issues.
  *
  * `dotlottie-web` only exposes a boolean `loop` (no native loop-count), so
  * loops are counted manually via the `loop` event and `setLoop(false)` is
