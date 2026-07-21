@@ -143,11 +143,12 @@ function clearActiveReaction(): void {
 
       <!-- Mute indicator -->
       <Transition name="seat-fade">
-        <UIcon
+        <span
           v-if="!isEmpty && isMuted"
-          name="i-lucide-mic-off"
-          class="size-4 text-white absolute bottom-0 -right-1 z-20"
-        />
+          class="absolute bottom-0 -right-1 z-20 flex items-center justify-center size-4.5 rounded-full bg-neutral-950/60 backdrop-blur-sm ring-1 ring-white/20"
+        >
+          <UIcon name="i-lucide-mic-off" class="size-3 text-red-400" />
+        </span>
       </Transition>
 
       <!-- Speaking indicator -->
