@@ -65,7 +65,7 @@ watch(sorted, async () => {
           :key="`a-${badge.badge_id}`"
           :image-url="badge.image_url"
           :asset-url="badge.asset_url"
-          img-class="size-6 min-w-6 shrink-0"
+          img-class="size-8 min-w-8 shrink-0"
           alt=""
       />
       <!-- Duplicate set for seamless looping — only rendered when marquee is active -->
@@ -75,7 +75,7 @@ watch(sorted, async () => {
             :key="`b-${badge.badge_id}`"
             :image-url="badge.image_url"
             :asset-url="badge.asset_url"
-            img-class="size-6 min-w-6 shrink-0"
+            img-class="size-8 min-w-8 shrink-0"
             aria-hidden="true"
             alt=""
         />
@@ -86,7 +86,7 @@ watch(sorted, async () => {
 
 <style scoped>
 .marquee-track {
-  animation: marquee-scroll 6s linear infinite;
+  animation: marquee-scroll 16s linear infinite;
   width: max-content;
 }
 

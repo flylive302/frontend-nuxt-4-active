@@ -155,7 +155,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       </template>
 
       <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" :paused="!headerVisible" class="mx-auto max-w-28" />
+        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" :paused="!headerVisible" class="mx-auto max-w-34" />
       </template>
 
       <template #name>
