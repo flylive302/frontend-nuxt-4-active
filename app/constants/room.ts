@@ -233,3 +233,18 @@ export const SLIDE_QUEUE_TICK_INTERVAL_MS = 1_000;
 
 
 
+
+// ============================================
+
+// ---- Audio transport recovery (msab-load-stability 10) ----
+// A transport `failed` used to be terminal (toast + leave/rejoin the only
+// cure). Recovery attempts bounded ICE restarts before declaring failure.
+
+/** How long a `disconnected` state may persist before an ICE restart is attempted. */
+export const TRANSPORT_DISCONNECTED_GRACE_MS = 2_000;
+
+/** Max ICE-restart attempts per outage before recovery is declared exhausted. */
+export const TRANSPORT_RECOVERY_MAX_ATTEMPTS = 3;
+
+/** Backoff before each successive restart attempt (index = attempt - 1). */
+export const TRANSPORT_RECOVERY_BACKOFF_MS = [1_000, 2_000, 4_000] as const;

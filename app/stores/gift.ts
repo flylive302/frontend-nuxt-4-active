@@ -7,7 +7,7 @@
 import { defineStore } from 'pinia';
 import { useFxPreferencesStore } from '~/stores/fxPreferences';
 import type { Gift, GiftPlaybackItem } from '~/types/gift/gift';
-import { MAX_PLAYBACK_QUEUE_SIZE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
+import { BURST_SHED_QUEUE_DEPTH, MAX_PLAYBACK_QUEUE_SIZE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
 import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 
 export const useGiftStore = defineStore('giftStore', () => {
@@ -145,7 +145,9 @@ export const useGiftStore = defineStore('giftStore', () => {
     }
 
     // Coalesce a run of identical (gift, sender) items into one entry playing
-    // ×N — a 77-combo burst becomes one queue slot instead of 77.
+    // ×N — a 77-combo burst becomes one queue slot instead of 77. Runs BEFORE
+    // the burst-shed gate: a coalesced repeat never grows the queue, so
+    // shedding it would silently eat a paid combo press for zero backlog win.
     const last = playbackQueue.value[playbackQueue.value.length - 1];
     if (
       last &&
@@ -154,6 +156,17 @@ export const useGiftStore = defineStore('giftStore', () => {
       (last.repeats ?? 1) < MAX_PLAYBACK_REPEATS
     ) {
       last.repeats = (last.repeats ?? 1) + 1;
+      return;
+    }
+
+    // GATE: burst-mode load shedding (msab-load-stability 11). Once the
+    // backlog reaches BURST_SHED_QUEUE_DEPTH, stop admitting non-critical
+    // gifts — the caller already booked balance/XP before enqueueing, so a
+    // shed item only skips its full-screen animation. This keeps the queue
+    // (and the video/svga decode work behind it) bounded well under the hard
+    // MAX_PLAYBACK_QUEUE_SIZE cap during a heavy multi-sender burst, instead
+    // of freezing the main thread trying to play everything that lands.
+    if (playbackQueue.value.length >= BURST_SHED_QUEUE_DEPTH && !item.gift.is_critical) {
       return;
     }
 

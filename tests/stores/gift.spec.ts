@@ -188,3 +188,75 @@ describe('useGiftStore playback queue', () => {
     expect(store.playbackQueue.map(i => i.repeats ?? 1)).toEqual([1, 1])
   })
 })
+
+// ============================================================
+// Burst-mode load shedding (msab-load-stability 11)
+// ============================================================
+describe('useGiftStore playback queue — burst-mode load shedding', () => {
+  it('bounds the backlog under a synthetic burst of hundreds of non-critical sends', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { BURST_SHED_QUEUE_DEPTH, MAX_PLAYBACK_QUEUE_SIZE } = await import('../../app/constants/gift')
+    const store = useGiftStore()
+
+    // Hundreds of distinct (gift, sender) pairs so nothing coalesces —
+    // worst case for backlog growth.
+    for (let i = 0; i < 500; i++) {
+      store.enqueuePlayback(playback(i, i))
+    }
+
+    // The queue never grows anywhere near the hard cap; shedding kicks in
+    // once backlog reaches BURST_SHED_QUEUE_DEPTH and holds it there.
+    expect(store.playbackQueue.length).toBeLessThanOrEqual(BURST_SHED_QUEUE_DEPTH)
+    expect(store.playbackQueue.length).toBeLessThan(MAX_PLAYBACK_QUEUE_SIZE)
+    expect(store.isPlaying).toBe(true) // never froze — first item is on screen
+  })
+
+  it('sheds non-critical gifts once backlog reaches BURST_SHED_QUEUE_DEPTH', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { BURST_SHED_QUEUE_DEPTH } = await import('../../app/constants/gift')
+    const store = useGiftStore()
+
+    for (let i = 0; i < BURST_SHED_QUEUE_DEPTH + 5; i++) {
+      store.enqueuePlayback(playback(i, i))
+    }
+
+    // Backlog capped exactly at the shed threshold, not left to creep past it.
+    expect(store.playbackQueue).toHaveLength(BURST_SHED_QUEUE_DEPTH)
+  })
+
+  it('never sheds critical gifts, even deep in a burst', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { BURST_SHED_QUEUE_DEPTH } = await import('../../app/constants/gift')
+    const store = useGiftStore()
+
+    for (let i = 0; i < BURST_SHED_QUEUE_DEPTH + 10; i++) {
+      store.enqueuePlayback(playback(i, i))
+    }
+    const depthBeforeCritical = store.playbackQueue.length
+
+    store.enqueuePlayback({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      gift: { id: 999, asset_type: 'image', is_critical: true } as any,
+      senderId: 999,
+      senderName: 'Tester',
+      recipientIds: [99],
+      quantity: 1,
+    })
+
+    expect(store.playbackQueue).toHaveLength(depthBeforeCritical + 1)
+    expect(store.playbackQueue[store.playbackQueue.length - 1]?.gift.id).toBe(999)
+  })
+
+  it('below the shed threshold, behaves exactly as before (no shedding)', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { BURST_SHED_QUEUE_DEPTH } = await import('../../app/constants/gift')
+    const store = useGiftStore()
+
+    for (let i = 0; i < BURST_SHED_QUEUE_DEPTH - 1; i++) {
+      store.enqueuePlayback(playback(i, i))
+    }
+
+    // queue holds one less than the current item, i.e. nothing shed yet
+    expect(store.playbackQueue).toHaveLength(BURST_SHED_QUEUE_DEPTH - 2)
+  })
+})

@@ -16,6 +16,22 @@ export const COMBO_BUTTON_TIMEOUT_MS = 5000;
 /** Maximum number of gifts in the playback queue (drop-oldest beyond this) */
 export const MAX_PLAYBACK_QUEUE_SIZE = 50;
 
+/**
+ * Backlog depth at which burst-mode load-shedding activates (msab-load-stability
+ * 11). Below this the queue behaves as today. At/above it, non-critical gifts
+ * are shed (not queued) instead of piling up — balances/XP are already booked
+ * by the caller before enqueue, so shedding here only skips the full-screen
+ * animation, keeping main-thread decode/render work bounded during a burst.
+ * Critical gifts (`gift.is_critical`) always play regardless of backlog.
+ */
+export const BURST_SHED_QUEUE_DEPTH = 12;
+
+/** Longtask duration (ms) that counts as a reportable main-thread stall. */
+export const STALL_REPORT_THRESHOLD_MS = 200;
+
+/** Minimum interval between stall reports to Sentry (throttle, in milliseconds). */
+export const STALL_REPORT_THROTTLE_MS = 60000;
+
 /** Maximum ×N repeats a coalesced identical-gift run can accumulate */
 export const MAX_PLAYBACK_REPEATS = 99;
 

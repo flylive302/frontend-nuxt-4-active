@@ -6,9 +6,14 @@ import type {
   AudioProduceResponse,
   ProducerSource,
 } from '~/types/room/audio';
+import * as Sentry from '@sentry/nuxt';
 import type { AudioSocket } from '../room/useAudioSocket';
 import { useMediasoupDevice } from './useMediasoupDevice';
+import { attachTransportRecovery, type TransportRecoveryHandle } from './useTransportRecovery';
 import { createEmitAsync } from '~/utils/socket';
+import { createLogger } from '~/utils/logger';
+
+const logger = createLogger('[TransportRecovery]');
 
 // ============================================
 // Types
@@ -21,6 +26,9 @@ type Transport = mediasoupTypes.Transport;
 const producerTransport = shallowRef<Transport | null>(null);
 const consumerTransport = shallowRef<Transport | null>(null);
 const currentRoomId = ref<string | null>(null);
+
+// Recovery engines follow their transport's lifetime (msab-load-stability 10).
+const recoveryHandles = new Map<string, TransportRecoveryHandle>();
 
 // Cached to prevent inject() warning when called outside Vue setup context
 let _toast: ReturnType<typeof useToast> | null = null;
@@ -59,16 +67,45 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     }
   }
 
-  function attachFailureListener(transport: Transport, _label: string) {
-    transport.on('connectionstatechange', (state: mediasoupTypes.ConnectionState) => {
-      if (state === 'failed') {
+  /**
+   * msab-load-stability 10: `failed` is no longer terminal. The recovery
+   * engine attempts bounded ICE restarts (server hands fresh ICE creds via
+   * `transport:restartIce`); the toast is last-resort, shown only after
+   * recovery is exhausted — and the terminal branch reports to Sentry with
+   * recovery + gift-load context (this path produced zero events before).
+   */
+  function attachFailureListener(transport: Transport, label: string) {
+    recoveryHandles.get(transport.id)?.dispose();
+    recoveryHandles.set(transport.id, attachTransportRecovery(transport, {
+      requestIceRestart: async () => {
+        const response = await emitAsync<object, { success: boolean; data?: { iceParameters: mediasoupTypes.IceParameters }; error?: string }>(
+          'transport:restartIce',
+          { roomId: currentRoomId.value, transportId: transport.id },
+        );
+        return response.success && response.data ? response.data.iceParameters : null;
+      },
+      onRecovered: ({ attempts }) => {
+        logger.info(`${label} recovered after ICE restart`, { attempts });
+      },
+      onExhausted: ({ attempts }) => {
+        const giftStore = useGiftStore();
+        Sentry.captureMessage('Audio transport failed after recovery exhausted', {
+          level: 'error',
+          tags: { transport: label },
+          extra: {
+            attempts,
+            giftQueueDepth: giftStore.playbackQueue.length,
+            giftPlaying: giftStore.isPlaying,
+          },
+        });
         toast.add({
           title: 'Audio connection failed',
-          description: 'Your network may be blocking the audio relay. Try a different network or check firewall settings.',
+          description: 'We tried to reconnect your audio but couldn\'t. Try a different network or check firewall settings.',
           color: 'error',
         });
-      }
-    });
+      },
+      log: (msg, data) => logger.info(`${label}: ${msg}`, data),
+    }));
   }
 
   // ========================================
@@ -88,10 +125,12 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
 
     // Defensive: close stale transports from previous room session
     if (consumerTransport.value) {
+      disposeRecovery(consumerTransport.value);
       consumerTransport.value.close();
       consumerTransport.value = null;
     }
     if (producerTransport.value) {
+      disposeRecovery(producerTransport.value);
       producerTransport.value.close();
       producerTransport.value = null;
     }
@@ -246,16 +285,24 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
    */
   function cleanup(): void {
     if (producerTransport.value) {
+      disposeRecovery(producerTransport.value);
       producerTransport.value.close();
       producerTransport.value = null;
     }
 
     if (consumerTransport.value) {
+      disposeRecovery(consumerTransport.value);
       consumerTransport.value.close();
       consumerTransport.value = null;
     }
 
     currentRoomId.value = null;
+  }
+
+  /** Intentional teardown must never fire recovery attempts or the toast. */
+  function disposeRecovery(transport: Transport): void {
+    recoveryHandles.get(transport.id)?.dispose();
+    recoveryHandles.delete(transport.id);
   }
 
   // ========================================
