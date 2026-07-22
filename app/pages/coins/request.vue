@@ -81,7 +81,7 @@ watch(lastCoinRequestUpdate, () => {
 
       <h2 class="text-lg font-bold mt-8"><span class="text-success">Claim your</span> Coins for using the app</h2>
       <p class="text-sm text-muted mb-4">Click the Claim button to request your coins. We'll review your eligibility and automatically add coins to your balance if approved. If rejected, contact support for eligibility details.</p>
-<!--      <EconomyChooseDefaultReseller color="tertiary" />-->
+      <EconomyChooseDefaultReseller color="tertiary" />
 
       <!-- Form - Hidden when pending request exists -->
       <Transition

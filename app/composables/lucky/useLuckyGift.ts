@@ -12,7 +12,10 @@
  * State is owned by useLuckySessionStore.
  */
 import type { AudioSocket } from '~/composables/room/useAudioSocket';
-import type { LuckyDrawResult } from '~/types/lucky';
+import type { LuckyDrawResult, LuckyNoDrawPayload } from '~/types/lucky';
+import { createLogger } from '~/utils/logger';
+
+const logger = createLogger('[LuckyGift]');
 
 
 // ============================================
@@ -26,7 +29,7 @@ const MAX_FLOATERS = 5;
 const FLOATER_DURATION = 2500;
 
 /** Lucky socket event names (used for cleanup) */
-const LUCKY_EVENTS = ['lucky:result'] as const;
+const LUCKY_EVENTS = ['lucky:result', 'lucky:no-draw'] as const;
 
 // ============================================
 // Module-Level State
@@ -82,6 +85,15 @@ function handleLuckyResult(data: LuckyDrawResult): void {
   addFloater(data.multiplier);
 }
 
+/**
+ * Typed "no draw" signal (Epic B ticket 08): the draw was skipped for a
+ * user-visible reason (capped / disabled / no_eligible_tier). Rendering is
+ * deliberately minimal pending the prod probe outcome — log only for now.
+ */
+function handleLuckyNoDraw(data: LuckyNoDrawPayload): void {
+  logger.debug('lucky:no-draw received', data);
+}
+
 // ============================================
 // Public API: Setup / Cleanup
 // ============================================
@@ -93,6 +105,7 @@ function handleLuckyResult(data: LuckyDrawResult): void {
 export function setupLuckyEventHandlers(socket: AudioSocket): void {
   if (!_store) _store = useLuckySessionStore();
   socket.on('lucky:result', handleLuckyResult);
+  socket.on('lucky:no-draw', handleLuckyNoDraw);
 }
 
 /**

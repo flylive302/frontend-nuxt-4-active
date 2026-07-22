@@ -20,6 +20,14 @@ export interface LuckyDrawResult {
   gift_name: string;
 }
 
+/** Payload for `lucky:no-draw` — the draw was skipped for a visible reason */
+export interface LuckyNoDrawPayload {
+  /** Why no draw happened */
+  reason: 'capped' | 'disabled' | 'no_eligible_tier';
+  gift_id: number;
+  batch_id: string;
+}
+
 // Big-win announcements (room/app SVGA) are no longer lucky-specific: they now
 // flow through the unified slide overlay (`slide:play`). See ADR 0009 and
 // docs/issues/unified-slide-overlay/03-lucky-migration.md.
