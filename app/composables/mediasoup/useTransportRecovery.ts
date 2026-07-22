@@ -30,13 +30,21 @@ export interface RecoverableTransport {
   on: (event: 'connectionstatechange', cb: (state: mediasoupTypes.ConnectionState) => void) => void;
 }
 
+/** Why recovery went terminal: retries ran out, or the server no longer has
+ * the transport (prod-bugs 03 — further restarts are futile by construction). */
+export type RecoveryExhaustedReason = 'attempts-exhausted' | 'transport-gone';
+
 export interface TransportRecoveryDeps {
-  /** Ask MSAB for fresh ICE parameters; null = server refused/errored (counts as a failed attempt). */
-  requestIceRestart: () => Promise<mediasoupTypes.IceParameters | null>;
+  /**
+   * Ask MSAB for fresh ICE parameters; null = server refused/errored (counts
+   * as a failed attempt); 'transport-gone' = server says the transport no
+   * longer exists (typed refusal) — recovery goes terminal immediately.
+   */
+  requestIceRestart: () => Promise<mediasoupTypes.IceParameters | null | 'transport-gone'>;
   /** Silent-recovery hook (logging/metrics only — never a toast). */
   onRecovered: (ctx: { attempts: number }) => void;
   /** Terminal: bounded retries exhausted. The ONLY place a failure toast may come from. */
-  onExhausted: (ctx: { attempts: number }) => void;
+  onExhausted: (ctx: { attempts: number; reason: RecoveryExhaustedReason }) => void;
   log: (msg: string, data?: Record<string, unknown>) => void;
   disconnectedGraceMs?: number;
   maxAttempts?: number;
@@ -109,7 +117,7 @@ export function attachTransportRecovery(
     if (attempts >= maxAttempts) {
       exhausted = true;
       deps.log('transport recovery exhausted', { attempts });
-      deps.onExhausted({ attempts });
+      deps.onExhausted({ attempts, reason: 'attempts-exhausted' });
       return;
     }
 
@@ -132,6 +140,15 @@ export function attachTransportRecovery(
       // EXECUTE: fresh ICE creds from MSAB, then client-side restart
       // (re-gathers candidates against the same transport/producers).
       const iceParameters = await deps.requestIceRestart();
+      if (iceParameters === 'transport-gone') {
+        // Server no longer has this transport — retrying restartIce can never
+        // succeed. Go terminal now instead of burning remaining attempts.
+        exhausted = true;
+        recovering = false;
+        deps.log('transport gone server-side — recovery terminal', { attempts });
+        deps.onExhausted({ attempts, reason: 'transport-gone' });
+        return;
+      }
       if (!iceParameters) throw new Error('server declined ICE restart');
       await transport.restartIce({ iceParameters });
       // Success/failure now arrives via connectionstatechange: `connected`

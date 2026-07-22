@@ -29,7 +29,7 @@ function fakeTransport() {
 
 const ICE = { usernameFragment: 'u', password: 'p' } as unknown as mediasoupTypes.IceParameters
 
-function harness(transport = fakeTransport(), opts: { serverIce?: (typeof ICE) | null } = {}) {
+function harness(transport = fakeTransport(), opts: { serverIce?: (typeof ICE) | null | 'transport-gone' } = {}) {
   const requestIceRestart = vi.fn(async () => opts.serverIce === undefined ? ICE : opts.serverIce)
   const onRecovered = vi.fn()
   const onExhausted = vi.fn()
@@ -96,7 +96,7 @@ describe('transport recovery', () => {
     await vi.advanceTimersByTimeAsync(20_000)
 
     expect(requestIceRestart).toHaveBeenCalledTimes(3)
-    expect(onExhausted).toHaveBeenCalledExactlyOnceWith({ attempts: 3 })
+    expect(onExhausted).toHaveBeenCalledExactlyOnceWith({ attempts: 3, reason: 'attempts-exhausted' })
     expect(onRecovered).not.toHaveBeenCalled()
 
     // Further failures never re-fire the terminal branch (no toast spam).
@@ -112,7 +112,21 @@ describe('transport recovery', () => {
     transport.fire('failed')
     await vi.advanceTimersByTimeAsync(60_000) // all backoffs elapse, every attempt declined
 
-    expect(onExhausted).toHaveBeenCalledExactlyOnceWith({ attempts: 3 })
+    expect(onExhausted).toHaveBeenCalledExactlyOnceWith({ attempts: 3, reason: 'attempts-exhausted' })
+    expect(transport.restartIce).not.toHaveBeenCalled()
+  })
+
+  it('server reporting transport-gone goes terminal immediately without burning attempts', async () => {
+    const transport = fakeTransport()
+    const { onExhausted, requestIceRestart } = harness(transport, { serverIce: 'transport-gone' })
+
+    transport.fire('failed')
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    // One round trip is enough — no further futile restarts against a
+    // transport MSAB has already torn down (prod-bugs 03).
+    expect(requestIceRestart).toHaveBeenCalledTimes(1)
+    expect(onExhausted).toHaveBeenCalledExactlyOnceWith({ attempts: 1, reason: 'transport-gone' })
     expect(transport.restartIce).not.toHaveBeenCalled()
   })
 

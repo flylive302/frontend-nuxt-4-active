@@ -82,16 +82,20 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
           'transport:restartIce',
           { roomId: currentRoomId.value, transportId: transport.id },
         );
-        return response.success && response.data ? response.data.iceParameters : null;
+        if (response.success && response.data) return response.data.iceParameters;
+        // prod-bugs 03: MSAB's typed refusal for a closed/torn-down transport —
+        // retrying is futile; the engine goes terminal instead of burning attempts.
+        if (response.error === 'Transport not found') return 'transport-gone';
+        return null;
       },
       onRecovered: ({ attempts }) => {
         logger.info(`${label} recovered after ICE restart`, { attempts });
       },
-      onExhausted: ({ attempts }) => {
+      onExhausted: ({ attempts, reason }) => {
         const giftStore = useGiftStore();
         Sentry.captureMessage('Audio transport failed after recovery exhausted', {
           level: 'error',
-          tags: { transport: label },
+          tags: { transport: label, reason },
           extra: {
             attempts,
             giftQueueDepth: giftStore.playbackQueue.length,
