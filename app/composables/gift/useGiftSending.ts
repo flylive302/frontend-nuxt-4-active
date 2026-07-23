@@ -245,9 +245,8 @@ export function useGiftSending() {
         );
       }
 
-      // Reset selection for next send
-      giftStore.setQuantity(1);
-
+      // Quantity intentionally sticks across sends (user choice persists
+      // until changed manually — HITL 2026-07-24).
       return true;
     } finally {
       isSending.value = false;

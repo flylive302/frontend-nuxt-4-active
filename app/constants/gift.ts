@@ -5,7 +5,7 @@
  */
 
 /** Available quantity options for sending gifts */
-export const GIFT_QUANTITY_OPTIONS = [1, 7, 17, 77, 777, 1777] as const;
+export const GIFT_QUANTITY_OPTIONS = [1, 7, 17, 77, 177] as const;
 
 /** Duration to display static image gifts (in milliseconds) */
 export const STATIC_DISPLAY_DURATION_MS = 3000;
