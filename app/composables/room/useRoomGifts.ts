@@ -1,89 +1,14 @@
 /**
  * Room Gifts Composable
  *
- * Handles gift queue processing for rate-limited gift sending.
- * Uses module-level state for the gift queue to prevent duplicates.
+ * Handles gift sending as a single burst emit (one `gift:send` covers every
+ * recipient of a send/combo press) and returns the server ack so callers can
+ * reconcile the optimistic debit against `acceptedRecipientIds`.
  */
-import { ref, type Ref } from 'vue';
-import { GIFT_QUEUE_INTERVAL_MS } from '../../constants/gift';
-import type { AudioSocket } from './useAudioSocket';
+import type { Ref } from 'vue';
+import type { AudioSocket, GiftSendAck } from '~/types/room/audio';
+import { createEmitAsync } from '~/utils/socket';
 import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
-
-// ============================================
-// Types
-// ============================================
-
-/** Data required for an outgoing gift socket message */
-export interface QueuedGift {
-  roomId: string;
-  giftId: number;
-  recipientId: number;
-  quantity: number;
-  /** Groups all per-recipient emits from one send/combo press (playback coalescing) */
-  batchId?: string;
-}
-
-// ============================================
-// Module-Level State
-// ============================================
-
-/** Outgoing gift queue to handle rapid combo sends */
-const giftQueue: QueuedGift[] = [];
-/** Whether the gift queue is currently being processed */
-const isProcessingGiftQueue = ref(false);
-
-/**
- * Clear the gift queue and reset processing state.
- * Called on room leave to prevent stale gifts from being sent.
- */
-export function clearGiftQueue(): void {
-  giftQueue.length = 0;
-  isProcessingGiftQueue.value = false;
-}
-
-// ============================================
-// Queue Processor
-// ============================================
-
-/**
- * Process the outgoing gift queue sequentially with spacing.
- * This ensures we don't hit server-side rate limits while maintaining
- * smooth optimistic updates on the sender's side.
- */
-function processGiftQueue(socket: Ref<AudioSocket | null>) {
-  if (isProcessingGiftQueue.value || giftQueue.length === 0) return;
-
-  isProcessingGiftQueue.value = true;
-
-  const processNext = () => {
-    // Stop if socket is gone or queue is empty
-    if (!socket.value || giftQueue.length === 0) {
-      isProcessingGiftQueue.value = false;
-      return;
-    }
-
-    const gift = giftQueue.shift();
-    if (gift) {
-      // GF-017: Re-verify seat at emit time (queue delay may make original check stale)
-      const seatsStore = useRoomSeatsStore();
-      const stillSeated = seatsStore.seats.some(
-        (seat) => seat.occupantId === gift.recipientId,
-      );
-      if (stillSeated) {
-        socket.value.emit('gift:send', gift);
-      }
-    }
-
-    // Schedule next if queue still has items
-    if (giftQueue.length > 0) {
-      setTimeout(processNext, GIFT_QUEUE_INTERVAL_MS);
-    } else {
-      isProcessingGiftQueue.value = false;
-    }
-  };
-
-  processNext();
-}
 
 // ============================================
 // Composable
@@ -95,33 +20,46 @@ export interface UseRoomGiftsParams {
 }
 
 export interface UseRoomGiftsReturn {
-  /** Send a gift to a user (queued for rate limiting) */
-  sendGift: (giftId: number, recipientId: number, quantity?: number, batchId?: string) => void;
+  /** Send a gift burst to every seated recipient; resolves with the server ack. */
+  sendGift: (
+    giftId: number,
+    recipientIds: number[],
+    quantity?: number,
+    batchId?: string,
+  ) => Promise<GiftSendAck | null>;
   /** Send preload signal to recipients */
   prepareGift: (giftId: number, recipientIds: number[]) => void;
 }
 
 /**
- * Gift queue management for room audio.
- * Handles rate-limited gift sending via queue.
+ * Gift sending for room audio: one burst emit per send/combo press.
  */
 export function useRoomGifts({
   socket,
   getCurrentRoomId,
 }: UseRoomGiftsParams): UseRoomGiftsReturn {
+  const emitAsync = createEmitAsync(socket);
+
   /**
-   * Send a gift to a user.
-   * Pushes to a local queue to be processed with spacing.
+   * Send a gift to every currently-seated recipient in one burst emit.
+   * GATE: only seated recipients are booked/sent. EXECUTE: single emit with
+   * ack. REACT (sender-side optimistic accumulation) runs for every seated
+   * recipient before the emit resolves.
    */
-  function sendGift(giftId: number, recipientId: number, quantity: number = 1, batchId?: string): void {
+  async function sendGift(
+    giftId: number,
+    recipientIds: number[],
+    quantity: number = 1,
+    batchId?: string,
+  ): Promise<GiftSendAck | null> {
     const roomId = getCurrentRoomId();
-    if (!socket.value || !roomId) return;
+    if (!socket.value || !roomId) return null;
 
     const seatsStore = useRoomSeatsStore();
-    const isRecipientSeated = seatsStore.seats.some(
-      (seat) => seat.occupantId === recipientId,
+    const seatedRecipientIds = recipientIds.filter((recipientId) =>
+      seatsStore.seats.some((seat) => seat.occupantId === recipientId),
     );
-    if (!isRecipientSeated) return;
+    if (seatedRecipientIds.length === 0) return null;
 
     // Sender-side optimistic accumulation — SINGLE SOURCE. The sender is
     // excluded from the gift:received broadcast, so we mirror what the receiver
@@ -132,34 +70,34 @@ export function useRoomGifts({
     const { getGiftById } = useGiftData();
     const gift = getGiftById(giftId);
     if (gift && roomStore.currentRoom) {
-      // Room XP credits the same split base the backend books as `xpBase`
-      // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)), which is
-      // exactly what seatGiftValue returns. Using the full GCV here over-counts
-      // lucky sends and drifts the sender's bar ahead of the receiver's (and the
-      // authoritative value) until a refetch.
-      const addedXp = seatGiftValue(gift, quantity);
-      const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
-      roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
-      // Daily XP (prd-daily-room-xp.md) mirrors the same amount, bumped via the
-      // store setter — it also drives the in-room XP button, not the level bar.
-      roomStore.bumpDailyXp(addedXp);
-      // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
-      // landing now counts toward every period, so this applies unconditionally.
-      bumpPeriodTotalXp(addedXp);
-      seatsStore.addSeatGiftValue(recipientId, seatGiftValue(gift, quantity));
+      const addedXpPerRecipient = seatGiftValue(gift, quantity);
+      for (const recipientId of seatedRecipientIds) {
+        // Room XP credits the same split base the backend books as `xpBase`
+        // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)), which is
+        // exactly what seatGiftValue returns. Using the full GCV here over-counts
+        // lucky sends and drifts the sender's bar ahead of the receiver's (and the
+        // authoritative value) until a refetch.
+        const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
+        roomStore.currentRoom.room_xp = (currentXp + addedXpPerRecipient).toString();
+        // Daily XP (prd-daily-room-xp.md) mirrors the same amount, bumped via the
+        // store setter — it also drives the in-room XP button, not the level bar.
+        roomStore.bumpDailyXp(addedXpPerRecipient);
+        // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
+        // landing now counts toward every period, so this applies unconditionally.
+        bumpPeriodTotalXp(addedXpPerRecipient);
+        seatsStore.addSeatGiftValue(recipientId, addedXpPerRecipient);
+      }
     }
 
-    // Push to queue for background processing
-    giftQueue.push({
-      roomId,
-      giftId,
-      recipientId,
-      quantity,
-      batchId,
-    });
-
-    // Trigger queue processor
-    processGiftQueue(socket);
+    // Single burst emit for every seated recipient; resolves with the ack.
+    try {
+      return await emitAsync<
+        { roomId: string; giftId: number; recipientIds: number[]; quantity: number; batchId?: string },
+        GiftSendAck
+      >('gift:send', { roomId, giftId, recipientIds: seatedRecipientIds, quantity, batchId });
+    } catch {
+      return null;
+    }
   }
 
   /**

@@ -9,13 +9,25 @@
  */
 import type { ChatMessageEvent } from '~/types/room/audio';
 import MarqueeName from "~/components/common/marquee-name.vue";
-import { CHAT_MESSAGE_TYPE_SYSTEM } from '~/constants/room';
+import { CHAT_MESSAGE_TYPE_SYSTEM, CHAT_MESSAGE_TYPE_GIFT, CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room';
 
 const props = defineProps<{
   message: ChatMessageEvent;
 }>();
 
 const isSystemMessage = computed(() => props.message.type === CHAT_MESSAGE_TYPE_SYSTEM);
+const isGiftMessage = computed(() => props.message.type === CHAT_MESSAGE_TYPE_GIFT);
+const isLuckyWinMessage = computed(() => props.message.type === CHAT_MESSAGE_TYPE_LUCKY_WIN);
+// Locally-synthesized announcement bubbles (join/system, gift, lucky-win) all
+// render centered, no avatar/identity — only the tint differs. Any future
+// announcement type not yet recognized here falls back to the plain system
+// styling below.
+const isAnnouncementMessage = computed(() => isSystemMessage.value || isGiftMessage.value || isLuckyWinMessage.value);
+const announcementClass = computed(() => {
+  if (isGiftMessage.value) return 'text-xs text-center font-medium px-3 py-1 rounded-full bg-primary/15 text-primary ring ring-primary/30';
+  if (isLuckyWinMessage.value) return 'text-xs text-center font-semibold px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 ring ring-amber-400/40';
+  return 'text-xs text-muted italic text-center';
+});
 
 const { getLevelFromXp } = useLevelLookup()
 
@@ -73,9 +85,9 @@ const charmLevel = computed(() =>
 </script>
 
 <template>
-  <!-- System bubble (membership events, etc): muted, centered, no avatar/identity. -->
-  <div v-if="isSystemMessage" class="flex justify-center py-2">
-    <p class="text-xs text-muted italic text-center">{{ message.content }}</p>
+  <!-- Announcement bubble (system/membership, gift-sent, lucky-win): centered, no avatar/identity. -->
+  <div v-if="isAnnouncementMessage" class="flex justify-center py-2">
+    <p :class="announcementClass">{{ message.content }}</p>
   </div>
   <div v-else class="flex py-3">
     <!-- Avatar -->

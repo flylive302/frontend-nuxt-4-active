@@ -38,9 +38,6 @@ export const MAX_PLAYBACK_REPEATS = 99;
 /** Maximum blob URLs kept in the in-memory video cache (LRU eviction + revoke) */
 export const VIDEO_CACHE_MAX_ENTRIES = 20;
 
-/** Minimum interval between outgoing gift socket messages (in milliseconds) */
-export const GIFT_QUEUE_INTERVAL_MS = 100;
-
 /** Stall window for gift playback (in milliseconds): force-advances the queue only
  * after this long with NO `progress` heartbeat from the active player. Healthy
  * playback of any duration re-arms the timer, so long animations are never cut off.

@@ -33,9 +33,129 @@ import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import { createLogger } from '~/utils/logger';
-import { SPEAKER_ACTIVE_TTL_MS } from '~/constants/room';
+import { SPEAKER_ACTIVE_TTL_MS, CHAT_MESSAGE_TYPE_GIFT } from '~/constants/room';
+import { COMBO_BUTTON_TIMEOUT_MS } from '~/constants/gift';
+import type { Gift } from '~/types/gift/gift';
 
 const log = createLogger('[RoomEvents]');
+
+/**
+ * Legs (batchId:recipientId) already accumulated from `gift:received`. A
+ * burst-shaped event (recipientIds[]) and its N legacy singular siblings
+ * (recipientId) carry the SAME batchId and describe the SAME legs — without
+ * this gate, whichever shape arrives second would double-book seat/XP
+ * accumulation for a recipient already credited by the other shape. Events
+ * without a batchId (un-upgraded MSAB) skip the gate entirely — no coalescing
+ * partner to dedupe against.
+ */
+const seenGiftLegs = new Set<string>();
+const SEEN_GIFT_LEGS_CAP = 1000;
+
+function hasSeenGiftLeg(batchId: string, recipientId: number): boolean {
+  const key = `${batchId}:${recipientId}`;
+  if (seenGiftLegs.has(key)) return true;
+  seenGiftLegs.add(key);
+  if (seenGiftLegs.size > SEEN_GIFT_LEGS_CAP) {
+    seenGiftLegs.delete(seenGiftLegs.values().next().value!);
+  }
+  return false;
+}
+
+/**
+ * Chat gift-announcement streak tracker (lucky-burst-draw ticket 10), keyed by
+ * (senderId, giftId, sorted recipientIds) — NOT batchId. `useGiftSending`'s
+ * `combo()` mints a FRESH batchId per press (so the playback queue animates
+ * each combo tap separately, see `seenBatchIds` in the gift store), so batchId
+ * cannot double as "same combo streak" for the chat bubble. This key
+ * identifies a repeated send of the same gift to the same recipient set,
+ * which is what "one bubble per streak, patched in place" actually means.
+ * A streak expires (and is deleted) after COMBO_BUTTON_TIMEOUT_MS of
+ * inactivity, mirroring the combo button's own lifetime.
+ */
+interface GiftChatStreak {
+  messageId: string;
+  quantity: number;
+  totalCoins: number;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+const giftChatStreaks = new Map<string, GiftChatStreak>();
+
+function giftChatStreakKey(senderId: number, giftId: number, recipientIds: number[]): string {
+  return `${senderId}:${giftId}:${[...recipientIds].sort((a, b) => a - b).join(',')}`;
+}
+
+/**
+ * Compose the gift-sent announcement copy (lucky-burst-draw ticket 05/10).
+ * Single recipient names them; multiple recipients collapse to a seat count.
+ */
+function formatGiftChatContent(
+  senderName: string,
+  giftLabel: string,
+  quantity: number,
+  recipientIds: number[],
+  recipientName: string | undefined,
+  totalCoins: number,
+): string {
+  const target = recipientIds.length === 1 ? (recipientName ?? 'a recipient') : `${recipientIds.length} seats`;
+  return `${senderName} sent ${giftLabel} ×${quantity} to ${target} — ${totalCoins.toLocaleString('en-US')} coins`;
+}
+
+/**
+ * EXECUTE + REACT: synthesize/patch the gift-sent chat bubble for a
+ * burst-shaped `gift:received` event (recipientIds present). Legacy singular
+ * siblings of the same burst (scalar recipientId only) are never passed in
+ * here — see the call site — so they can never double-announce.
+ */
+function synthesizeGiftChatMessage(
+  audioStore: ReturnType<typeof useRoomAudioStore>,
+  participantsStore: ReturnType<typeof useRoomParticipantsStore>,
+  event: GiftReceivedEvent,
+  gift: Gift,
+  recipientIds: number[],
+): void {
+  if (recipientIds.length === 0) return;
+
+  const senderName = participantsStore.participants.get(event.senderId)?.name ?? 'Someone';
+  const giftLabel = gift.label ?? gift.name;
+  const recipientName = recipientIds.length === 1
+    ? participantsStore.participants.get(recipientIds[0]!)?.name
+    : undefined;
+  const addedCoins = gift.price * event.quantity * recipientIds.length;
+
+  const key = giftChatStreakKey(event.senderId, event.giftId, recipientIds);
+  const existing = giftChatStreaks.get(key);
+  // The tracked bubble may have scrolled out of the MAX_CHAT_MESSAGES window —
+  // patching a message id that's gone would silently no-op, so start fresh.
+  const stillTracked = existing && audioStore.messages.some((m) => m.id === existing.messageId);
+
+  if (existing && stillTracked) {
+    clearTimeout(existing.timer);
+    existing.quantity += event.quantity;
+    existing.totalCoins += addedCoins;
+    audioStore.patchMessageContent(
+      existing.messageId,
+      formatGiftChatContent(senderName, giftLabel, existing.quantity, recipientIds, recipientName, existing.totalCoins),
+    );
+    existing.timer = setTimeout(() => giftChatStreaks.delete(key), COMBO_BUTTON_TIMEOUT_MS);
+    return;
+  }
+
+  const messageId = `gift-${key}-${Date.now()}`;
+  audioStore.addMessage({
+    id: messageId,
+    userId: event.senderId,
+    content: formatGiftChatContent(senderName, giftLabel, event.quantity, recipientIds, recipientName, addedCoins),
+    type: CHAT_MESSAGE_TYPE_GIFT,
+    timestamp: Date.now(),
+  });
+  giftChatStreaks.set(key, {
+    messageId,
+    quantity: event.quantity,
+    totalCoins: addedCoins,
+    timer: setTimeout(() => giftChatStreaks.delete(key), COMBO_BUTTON_TIMEOUT_MS),
+  });
+}
 
 /**
  * Decay timer for speaking indicators. MSAB never emits an "all silent"
@@ -424,31 +544,54 @@ export function setupRoomEventHandlers(
     audioStore.addMessage(event);
   });
 
-  // Gift events
+  // Gift events. Burst-shaped events carry `recipientIds[]`; legacy
+  // un-upgraded MSAB (or the N legacy singular siblings of a burst) carry the
+  // singular `recipientId`. Normalize to an array up front.
   socket.on('gift:received', (event: GiftReceivedEvent) => {
-
-    // Accumulate gift coin value for seat display
+    const recipientIds = event.recipientIds ?? [event.recipientId];
+    const batchId = event.batchId;
+    // Legs of this batch not yet processed — dedupes the burst-shaped event
+    // against its N legacy singular siblings for BOTH the XP/seat accumulation
+    // below and the lucky fly animations (which would otherwise double-fire).
+    const newLegs = batchId
+      ? recipientIds.filter((recipientId) => !hasSeenGiftLeg(batchId, recipientId))
+      : recipientIds;
     const giftForValue = getGiftById(event.giftId);
+
+    // Accumulate gift coin value for seat display, once per (batchId, recipient) leg.
     if (giftForValue) {
-      // Seat total and room XP both credit the split base the backend books
-      // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)); seatGiftValue
-      // returns exactly that. Must match the sender's optimistic bump in
-      // useRoomGifts.sendGift or the two clients' room XP drift apart on lucky sends.
-      seatsStore.addSeatGiftValue(event.recipientId, seatGiftValue(giftForValue, event.quantity));
-
-      // Update room XP
-      if (roomStore.currentRoom) {
+      for (const recipientId of newLegs) {
+        // Seat total and room XP both credit the split base the backend books
+        // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)); seatGiftValue
+        // returns exactly that. Must match the sender's optimistic bump in
+        // useRoomGifts.sendGift or the two clients' room XP drift apart on lucky sends.
         const addedXp = seatGiftValue(giftForValue, event.quantity);
-        const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
+        seatsStore.addSeatGiftValue(recipientId, addedXp);
 
-        roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
-        // Daily XP (prd-daily-room-xp.md) mirrors the same amount as the
-        // sender's optimistic bump in useRoomGifts.sendGift.
-        roomStore.bumpDailyXp(addedXp);
-        // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
-        // landing now counts toward every period, so this applies unconditionally.
-        bumpPeriodTotalXp(addedXp);
+        // Update room XP
+        if (roomStore.currentRoom) {
+          const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
+          roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
+          // Daily XP (prd-daily-room-xp.md) mirrors the same amount as the
+          // sender's optimistic bump in useRoomGifts.sendGift.
+          roomStore.bumpDailyXp(addedXp);
+          // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
+          // landing now counts toward every period, so this applies unconditionally.
+          bumpPeriodTotalXp(addedXp);
+        }
       }
+    }
+
+    // Chat gift-announcement bubble (lucky-burst-draw ticket 10) — synthesized
+    // for EVERY client in the room, including the sender, so runs before the
+    // sender/minimized early returns below (those only gate the fly/playback
+    // FX). Only the burst shape (recipientIds present) synthesizes — the N
+    // legacy singular siblings sharing the same batchId describe the SAME
+    // legs and must never double-announce. Current-room gate: `gift:received`
+    // is only wired while this room's socket is joined, so no extra roomId
+    // check is needed here (unlike the global membership listeners).
+    if (event.recipientIds && giftForValue) {
+      synthesizeGiftChatMessage(audioStore, participantsStore, event, giftForValue, event.recipientIds);
     }
 
     // Skip if current user is the sender
@@ -464,20 +607,25 @@ export function setupRoomEventHandlers(
 
     if (gift) {
       if (gift.category === 'lucky') {
-        triggerFly(gift.thumbnail_url, event.senderId, event.recipientId);
+        // Only un-seen legs fly — the burst-shaped event and its legacy
+        // singular siblings describe the same legs.
+        for (const recipientId of newLegs) {
+          triggerFly(gift.thumbnail_url, event.senderId, recipientId);
+        }
         return;
       }
 
       // Pass batchId so the queue coalesces this send's per-recipient fan-out
-      // into one playback. Distinct send/combo presses carry distinct batchIds,
-      // so genuine combos still enqueue separately and play one after another —
-      // nothing ever interrupts the gift currently on screen.
+      // (burst-shaped + legacy singular siblings) into one playback. Distinct
+      // send/combo presses carry distinct batchIds, so genuine combos still
+      // enqueue separately and play one after another — nothing ever
+      // interrupts the gift currently on screen.
       giftStore.enqueuePlayback({
         gift,
         senderId: event.senderId,
         senderName: sender?.name ?? 'Unknown',
         senderAvatar: sender?.avatar ?? undefined,
-        recipientIds: [event.recipientId],
+        recipientIds,
         quantity: event.quantity,
         batchId: event.batchId,
       });
@@ -485,11 +633,15 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('gift:error', (event: GiftErrorEvent) => {
-    // Rollback optimistic coin deduction on server error
-    if (comboStore.pendingRefund > 0) {
-      const currentCoins = Number(authStore.user?.coins ?? 0);
-      authStore.patchBalance({ coins: String(currentCoins + comboStore.pendingRefund) });
-      comboStore.pendingRefund = 0;
+    // Rollback the optimistic coin deduction tracked for THIS batch. A send
+    // without a batchId (shouldn't happen post-burst-migration) has nothing
+    // to key the refund on, so it's skipped rather than guessing.
+    if (event.batchId) {
+      const refundAmount = comboStore.consumePendingRefund(event.batchId);
+      if (refundAmount > 0) {
+        const currentCoins = Number(authStore.user?.coins ?? 0);
+        authStore.patchBalance({ coins: String(currentCoins + refundAmount) });
+      }
     }
 
     // MSAB sends { code, reason }; normalize for display

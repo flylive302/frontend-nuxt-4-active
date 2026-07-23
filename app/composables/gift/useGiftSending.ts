@@ -4,6 +4,8 @@
  * Handles gift sending with balance validation, socket emission,
  * and playback triggering.
  */
+import type { GiftSendAck } from '~/types/room/audio';
+
 export function useGiftSending() {
   // ========================================
   // Dependencies
@@ -16,6 +18,7 @@ export function useGiftSending() {
   const { sendGift: emitGift } = useRoomAudio();
   const { triggerFly } = useLuckyFly();
   const toast = useToast();
+  const log = createLogger('[useGiftSending]');
 
   // Initialize preload watcher (extracted from gift store — SRP fix)
   useGiftPreload(
@@ -73,6 +76,43 @@ export function useGiftSending() {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
+  /**
+   * REACT: reconcile the optimistic debit for one burst send against its ack.
+   * Refunds coins for legs the server dropped (unseated recipients) or, on a
+   * total failure (no ack / success:false), refunds the whole tracked amount.
+   * Never blocks send()/combo()'s return — always called fire-and-forget.
+   */
+  function reconcileBurstRefund(
+    batchId: string,
+    perRecipientCost: number,
+    requestedRecipientIds: number[],
+    ack: GiftSendAck | null,
+  ): void {
+    const trackedAmount = comboStore.consumePendingRefund(batchId);
+    if (trackedAmount <= 0) return;
+
+    if (!ack || !ack.success) {
+      // Total failure — refund everything this burst debited.
+      const currentCoins = Number(authStore.user?.coins ?? 0);
+      authStore.patchBalance({ coins: String(currentCoins + trackedAmount) });
+      return;
+    }
+
+    const acceptedIds = ack.acceptedRecipientIds ?? requestedRecipientIds;
+    const droppedCount = requestedRecipientIds.filter((id) => !acceptedIds.includes(id)).length;
+    if (droppedCount === 0) return;
+
+    const refundAmount = perRecipientCost * droppedCount;
+    const currentCoins = Number(authStore.user?.coins ?? 0);
+    authStore.patchBalance({ coins: String(currentCoins + refundAmount) });
+
+    toast.add({
+      title: 'Some recipients missed this gift',
+      description: `${droppedCount} recipient${droppedCount > 1 ? 's' : ''} left their seat — refunded.`,
+      color: 'warning',
+    });
+  }
+
   // ========================================
   // Methods
   // ========================================
@@ -119,23 +159,31 @@ export function useGiftSending() {
     isSending.value = true;
 
     try {
-      // Track amount for potential rollback
-      comboStore.setPendingRefund(totalCost.value);
+      // One batchId for the whole send — every recipient's gift:received carries
+      // it so receivers collapse this fan-out into a single playback.
+      const batchId = newBatchId();
+      const recipientIds = [...selectedRecipients];
+      const perRecipientCost = selectedGift.price * selectedQuantity;
+
+      // Track amount for potential rollback, keyed to THIS batch (fixes the
+      // scalar last-write-wins bug when sends overlap).
+      comboStore.setPendingRefund(batchId, totalCost.value);
 
       // Optimistic coin deduction
       deductCoins(totalCost.value);
 
-      // One batchId for the whole send — every recipient's gift:received carries
-      // it so receivers collapse this fan-out into a single playback.
-      const batchId = newBatchId();
-
-      // Emit socket event for each recipient. emitGift (useRoomGifts.sendGift)
+      // Single burst emit for every recipient. emitGift (useRoomGifts.sendGift)
       // owns the sender-side optimistic accumulation (room XP + seat gift value)
       // since the sender is excluded from the gift:received broadcast. Do NOT
       // accumulate here too — that double-counts the seat total for the sender.
-      for (const recipientId of selectedRecipients) {
-        emitGift(selectedGift.id, recipientId, selectedQuantity, batchId);
-      }
+      // REACT: reconcile the debit against the ack once it resolves — never
+      // blocks this function's optimistic return.
+      emitGift(selectedGift.id, recipientIds, selectedQuantity, batchId)
+        .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, recipientIds, ack))
+        .catch((err: unknown) => {
+          log.warn('gift:send failed', err);
+          reconcileBurstRefund(batchId, perRecipientCost, recipientIds, null);
+        });
 
       // Start playback immediately (optimistic)
       // Lucky gifts use fly animation, all others use fullscreen playback modal
@@ -238,15 +286,23 @@ export function useGiftSending() {
     // Fresh batchId per press — each combo is its own queued animation, never
     // interrupting whatever is currently playing.
     const batchId = newBatchId();
+    const perRecipientCost = ctx.gift.price * ctx.quantity;
 
-    // Emit socket event for each valid (seated) recipient. emitGift owns the
-    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
-    for (const recipientId of validRecipients) {
-      emitGift(ctx.gift.id, recipientId, ctx.quantity, batchId);
-    }
+    // Track amount for potential rollback, keyed to THIS batch.
+    comboStore.setPendingRefund(batchId, comboCost);
 
     // Deduct coins for combo
     deductCoins(comboCost);
+
+    // Single burst emit for every valid (seated) recipient. emitGift owns the
+    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
+    // REACT: reconcile once the ack resolves — never blocks this function's return.
+    emitGift(ctx.gift.id, validRecipients, ctx.quantity, batchId)
+      .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, validRecipients, ack))
+      .catch((err: unknown) => {
+        log.warn('gift:send (combo) failed', err);
+        reconcileBurstRefund(batchId, perRecipientCost, validRecipients, null);
+      });
 
     // Enqueue a separate playback so the combo plays in order behind whatever is
     // already on screen — same FIFO path as send() and other users' gifts.
@@ -293,14 +349,26 @@ export function useGiftSending() {
       return false;
     }
 
-    // Emit socket event for each valid (seated) recipient. emitGift owns the
-    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
-    for (const recipientId of validRecipients) {
-      emitGift(ctx.gift.id, recipientId, ctx.quantity);
-    }
+    // Fresh batchId per press, mirroring combo() — each lucky combo press is its
+    // own tracked burst so overlapping presses each reconcile independently.
+    const batchId = newBatchId();
+    const perRecipientCost = ctx.gift.price * ctx.quantity;
+
+    comboStore.setPendingRefund(batchId, comboCost);
 
     // Deduct coins and play fly animation
     deductCoins(comboCost);
+
+    // Single burst emit for every valid (seated) recipient. emitGift owns the
+    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
+    // REACT: reconcile once the ack resolves — never blocks this function's return.
+    emitGift(ctx.gift.id, validRecipients, ctx.quantity, batchId)
+      .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, validRecipients, ack))
+      .catch((err: unknown) => {
+        log.warn('gift:send (luckyCombo) failed', err);
+        reconcileBurstRefund(batchId, perRecipientCost, validRecipients, null);
+      });
+
     for (const recipientId of validRecipients) {
       triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
     }

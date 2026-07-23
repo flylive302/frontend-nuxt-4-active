@@ -108,21 +108,11 @@ export interface GiftPlaybackItem {
 // ============================================
 
 /**
- * Payload sent to server via socket.io
- * Event: 'gift:send'
+ * Payload sent to server via socket.io (event: 'gift:send') and the event
+ * received when a gift is sent in the room. Re-exported from audio.ts
+ * (single source of truth for socket event types).
  */
-export interface GiftSendPayload {
-  roomId: string;
-  giftId: number;
-  recipientId: number;
-  quantity: number;
-}
-
-/**
- * Event received when a gift is sent in the room.
- * Re-exported from audio.ts (single source of truth for socket event types).
- */
-export type { GiftReceivedEvent } from '../room/audio';
+export type { GiftSendPayload, GiftSendAck, GiftReceivedEvent } from '../room/audio';
 
 
 // ============================================

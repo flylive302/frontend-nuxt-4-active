@@ -6,14 +6,14 @@
  *
  * @see useSeatActions.ts - Seat management operations
  * @see useRoomEventHandlers.ts - Socket event handlers
- * @see useRoomGifts.ts - Gift queue processing
+ * @see useRoomGifts.ts - Gift burst sending
  */
 import type { JoinRoomResponse, SelfMutePayload, SelfMuteResponse } from '~/types/room/audio';
 import { userToParticipant } from '~/types/room/audio';
 import type { Ref, ComputedRef, EffectScope } from 'vue';
 import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
-import { useRoomGifts, clearGiftQueue, type UseRoomGiftsReturn } from './useRoomGifts';
+import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
@@ -333,7 +333,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     stopAudio,
   });
 
-  // Gift queue (send, prepare)
+  // Gift sending (burst send, prepare)
   const giftActions = useRoomGifts({
     socket,
     getCurrentRoomId,
@@ -756,9 +756,6 @@ export function useRoomAudio(): UseRoomAudioReturn {
     cleanupMediasoup();
     // Reset mediasoup session state (closes audio elements, clears Maps)
     useMediasoupSessionStore().$reset();
-
-    // Clear pending gift queue to prevent stale gifts
-    clearGiftQueue();
 
     // Clear lucky animation state
     useLuckySessionStore().$reset();

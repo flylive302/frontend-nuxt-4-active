@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useLuckyOdds, type OddsTier } from '~/composables/lucky/useLuckyOdds'
+import { LUCKY_DRAW_COPY } from '~/constants/lucky'
 
-const SESSION_KEY = 'lucky_odds_acknowledged'
-
-const { fetchOdds: fetchOddsTiers } = useLuckyOdds()
+const { fetchOdds: fetchOddsTiers, hasAcknowledged, markAcknowledged } = useLuckyOdds()
+const authStore = useAuthStore()
 
 const emit = defineEmits<{
   acknowledged: []
@@ -22,14 +22,22 @@ async function fetchOdds(): Promise<void> {
 }
 
 /**
- * Call this before the first lucky gift send in a session.
+ * Call this before the first lucky gift send.
  * Returns true if the modal was opened, false if already acknowledged (event fired immediately).
+ * Acknowledgement is persisted once-per-user-ever (keyed by user ID) across sessions/restarts.
  */
 async function show(): Promise<boolean> {
-  if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_KEY) === '1') {
+  const userId = authStore.user?.id
+  if (!userId) {
     emit('acknowledged')
     return false
   }
+
+  if (hasAcknowledged(userId)) {
+    emit('acknowledged')
+    return false
+  }
+
   await fetchOdds()
   understood.value = false
   isOpen.value = true
@@ -38,9 +46,13 @@ async function show(): Promise<boolean> {
 
 function handleConfirm(): void {
   if (!understood.value) return
-  if (typeof sessionStorage !== 'undefined') {
-    sessionStorage.setItem(SESSION_KEY, '1')
+  const userId = authStore.user?.id
+  if (!userId) {
+    isOpen.value = false
+    emit('acknowledged')
+    return
   }
+  markAcknowledged(userId)
   isOpen.value = false
   emit('acknowledged')
 }
@@ -64,12 +76,8 @@ defineExpose({ show })
   >
     <template #body>
       <div class="space-y-4">
-        <p class="text-sm text-neutral-400 leading-relaxed">
-          Every lucky gift you send enters one random draw: it either wins a coin prize of
-          <span class="text-white font-medium">2× your gift value or more</span>, or it wins nothing — most draws win nothing.
-          Prizes are paid from a shared prize pool funded by lucky gifts; the biggest multipliers only become available while
-          the pool is large enough to pay them, and some have daily win limits. Spending virtual coins does not guarantee any
-          particular outcome. <span class="text-white font-medium">No real-world currency or prizes are involved.</span>
+        <p class="text-sm text-neutral-400 leading-relaxed whitespace-pre-line">
+          {{ LUCKY_DRAW_COPY.descriptionPart1 }}<span class="text-white font-medium">{{ LUCKY_DRAW_COPY.baseMultiplier }}</span>{{ LUCKY_DRAW_COPY.descriptionPart2 }}
         </p>
 
         <div v-if="isLoading" class="py-4 flex justify-center">
@@ -99,7 +107,7 @@ defineExpose({ show })
 
         <UCheckbox
           v-model="understood"
-          label="I understand that Lucky Draw prizes are virtual and have no real-world monetary value."
+          :label="LUCKY_DRAW_COPY.checkbox"
           :ui="{ label: 'text-sm text-neutral-300' }"
         />
       </div>

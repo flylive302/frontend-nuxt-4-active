@@ -121,6 +121,19 @@ export const MAX_CHAT_MESSAGES = 500;
 export const CHAT_MESSAGE_TYPE_SYSTEM = 'system';
 
 /**
+ * Chat message type for locally-synthesized gift-sent announcement bubbles
+ * (lucky-burst-draw ticket 10). Doubles as the update-in-place discriminator
+ * for combo-streak patching.
+ */
+export const CHAT_MESSAGE_TYPE_GIFT = 'gift';
+
+/**
+ * Chat message type for locally-synthesized lucky-win announcement bubbles
+ * (lucky-burst-draw ticket 10).
+ */
+export const CHAT_MESSAGE_TYPE_LUCKY_WIN = 'lucky-win';
+
+/**
  * Maximum number of tracks the DJ's Playlist queue holds. Adds beyond this are
  * ignored (the existing queue keeps playing). Bounds the session-local list;
  * memory is bounded separately by the engine's lazy-decode (ADR 0006).

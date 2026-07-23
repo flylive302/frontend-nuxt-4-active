@@ -15,9 +15,41 @@ describe('useGiftComboStore', () => {
     const { useGiftComboStore } = await import('../../app/stores/giftCombo')
     const store = useGiftComboStore()
 
-    expect(store.pendingRefund).toBe(0)
+    expect(store.pendingRefunds.size).toBe(0)
     expect(store.lastLuckyContext).toBeNull()
     expect(store.isLuckyComboActive).toBe(false)
+  })
+
+  describe('setPendingRefund / consumePendingRefund', () => {
+    it('tracks a refund amount per batchId and consuming it removes the entry', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      store.setPendingRefund('batch-a', 500)
+
+      expect(store.consumePendingRefund('batch-a')).toBe(500)
+      // Consumed — a second read returns 0, not the stale amount.
+      expect(store.consumePendingRefund('batch-a')).toBe(0)
+    })
+
+    it('overlapping sends each track and consume their own batch independently (regression: scalar last-write-wins bug)', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      store.setPendingRefund('batch-a', 100)
+      store.setPendingRefund('batch-b', 250)
+
+      // Consuming batch-b must not clear or corrupt batch-a's tracked amount.
+      expect(store.consumePendingRefund('batch-b')).toBe(250)
+      expect(store.consumePendingRefund('batch-a')).toBe(100)
+    })
+
+    it('consuming an unknown batchId returns 0', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      expect(store.consumePendingRefund('never-tracked')).toBe(0)
+    })
   })
 
   describe('setLuckyContext / clearLuckyContext', () => {
@@ -51,16 +83,16 @@ describe('useGiftComboStore', () => {
   })
 
   describe('$reset()', () => {
-    it('clears all three fields to their initial values', async () => {
+    it('clears all fields to their initial values', async () => {
       const { useGiftComboStore } = await import('../../app/stores/giftCombo')
       const store = useGiftComboStore()
 
-      store.setPendingRefund(200)
+      store.setPendingRefund('batch-a', 200)
       store.setLuckyContext({ gift: { id: 5 } as Gift, senderId: 1, recipientIds: [3], quantity: 2 })
 
       store.$reset()
 
-      expect(store.pendingRefund).toBe(0)
+      expect(store.pendingRefunds.size).toBe(0)
       expect(store.lastLuckyContext).toBeNull()
       expect(store.isLuckyComboActive).toBe(false)
     })

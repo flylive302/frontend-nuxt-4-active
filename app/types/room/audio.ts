@@ -342,18 +342,41 @@ export interface ChatMessageEvent {
 // GIFT EVENTS
 // ============================================
 
+/**
+ * Payload emitted for `gift:send`. One burst emit covers every recipient of a
+ * single send/combo press — `recipientIds` replaces the old per-recipient
+ * scalar `recipientId` fan-out.
+ */
 export interface GiftSendPayload {
   roomId: string;
   giftId: number;
-  recipientId: number;
+  recipientIds: number[];
   quantity?: number;
+  /** Groups this burst so receivers coalesce it into a single playback. */
+  batchId?: string;
+}
+
+/**
+ * Ack returned by the `gift:send` callback. The server drops unseated legs —
+ * `acceptedRecipientIds` may be a subset of the requested `recipientIds`, or
+ * absent entirely for older MSAB instances (treat as "all accepted").
+ */
+export interface GiftSendAck {
+  success: boolean;
+  acceptedRecipientIds?: number[];
+  /** e.g. 'NO_RECIPIENTS_SEATED' when zero legs were seated. */
+  code?: string;
+  reason?: string;
 }
 
 export interface GiftReceivedEvent {
   senderId: number;
   roomId: string;
   giftId: number;
+  /** Legacy singular shape — always present on the N per-recipient legacy events. */
   recipientId: number;
+  /** Burst shape — present on the single burst-coalesced event. */
+  recipientIds?: number[];
   quantity: number;
   /**
    * Groups all per-recipient emits from one send/combo press. Receivers
@@ -367,6 +390,8 @@ export interface GiftErrorEvent {
   transactionId: string;
   code: number | string;
   reason: string;
+  /** Groups this error with the pendingRefund entry keyed by the same send's batchId. */
+  batchId?: string;
   /** @deprecated Use `code` — kept for backward compatibility */
   error?: 'insufficient_balance' | 'invalid_gift' | string;
   /** @deprecated Use `reason` — kept for backward compatibility */

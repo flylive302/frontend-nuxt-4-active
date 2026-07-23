@@ -6,10 +6,41 @@
 // useRoomEventHandlers — so app-scope slides reach users who are in no room.
 
 import type { Socket } from 'socket.io-client'
-import type { SlidePlayPayload } from '~/types/slide'
+import type { SlidePlayPayload, SlideLuckyWinBlock } from '~/types/slide'
+import type { ChatMessageEvent } from '~/types/room/audio'
 import { createLogger } from '~/utils/logger'
+import { CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room'
 
 const log = createLogger('[SlideEvents]')
+
+/**
+ * Render the multiplier without trailing decimal noise (20 not 20.00, but 0.5
+ * stays 0.5) — mirrors the backend's `LuckyTriggerContext::formatMultiplier`.
+ */
+function formatLuckyMultiplier(multiplier: number): string {
+  return multiplier.toFixed(2).replace(/\.?0+$/, '')
+}
+
+/**
+ * Chat lucky-win announcement bubble (lucky-burst-draw ticket 10) — synthesized
+ * locally off the room-wide `slide:play` broadcast every client already
+ * receives. The `lucky` block's mere presence means the win crossed the
+ * server-side slide-binding threshold (only slide-bound tiers emit
+ * `slide:play` at all) — no client-side threshold check needed. Each win is
+ * its own bubble — no streak/update-in-place, unlike gift-sent bubbles.
+ */
+function synthesizeLuckyWinChatMessage(lucky: SlideLuckyWinBlock): void {
+  const audioStore = useRoomAudioStore()
+  const message: ChatMessageEvent = {
+    id: `lucky-win-${lucky.winnerId}-${Date.now()}`,
+    userId: lucky.winnerId,
+    userName: lucky.winnerName,
+    content: `${lucky.winnerName} got a Lucky win of ${formatLuckyMultiplier(lucky.multiplier)}x — won ${lucky.coinsWon.toLocaleString('en-US')} coins`,
+    type: CHAT_MESSAGE_TYPE_LUCKY_WIN,
+    timestamp: Date.now(),
+  }
+  audioStore.addMessage(message)
+}
 
 /**
  * Composable to register the slide overlay socket handler. Captures the shared
@@ -18,6 +49,7 @@ const log = createLogger('[SlideEvents]')
  */
 export function useSlideEvents() {
   const { admitPayload } = useSlidePlayback()
+  const roomStore = useRoomStore()
 
   return function registerSlideEvents(socket: Socket): void {
     socket.on('slide:play', (payload: SlidePlayPayload) => {
@@ -32,6 +64,14 @@ export function useSlideEvents() {
       // not on the wire payload yet (resolver supplies it in a later slice), so
       // coalesce is currently sender-scoped. See ADR 0009.
       admitPayload(payload)
+
+      // REACT — lucky-win chat bubble, current-room gated (mirrors the
+      // `event.roomId !== String(roomStore.currentRoom?.id)` pattern used
+      // elsewhere, e.g. useRoomEventHandlers' `room:mode`). `slide:play` also
+      // carries app-scope slides with no room at all, which never match.
+      if (payload.lucky && String(payload.lucky.roomId) === String(roomStore.currentRoom?.id)) {
+        synthesizeLuckyWinChatMessage(payload.lucky)
+      }
     })
   }
 }

@@ -52,6 +52,17 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     messages.value = [];
   }
 
+  /**
+   * Patch an already-added message's content in place, by id. Used to update
+   * a gift/lucky-win announcement bubble in place (combo-streak cumulative
+   * quantity + total) without pushing a new message. No-op if the message has
+   * since scrolled out of the `MAX_CHAT_MESSAGES` window.
+   */
+  function patchMessageContent(id: string, content: string) {
+    const message = messages.value.find((m) => m.id === id);
+    if (message) message.content = content;
+  }
+
   return {
     audioState,
     setAudioConnected,
@@ -62,5 +73,6 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     messages,
     addMessage,
     clearMessages,
+    patchMessageContent,
   };
 });

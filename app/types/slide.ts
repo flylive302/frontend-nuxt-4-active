@@ -14,6 +14,21 @@ export interface SlideLink {
   userId: number | null
 }
 
+/**
+ * Additive structured block present only on lucky-win slides (lucky-burst-draw
+ * ticket 10). Its mere presence on a `slide:play` payload means the win
+ * crossed the server-side slide-binding threshold — only slide-bound tiers
+ * emit `slide:play` at all, so no client-side threshold check is needed.
+ */
+export interface SlideLuckyWinBlock {
+  winnerId: number
+  winnerName: string
+  /** Raw float cashback multiplier, e.g. 20 or 0.5 — format before display. */
+  multiplier: number
+  coinsWon: number
+  roomId: number
+}
+
 /** The wire shape emitted on `slide:play`. */
 export interface SlidePlayPayload {
   slideId: number
@@ -29,6 +44,8 @@ export interface SlidePlayPayload {
   /** SVGA key → resolved text string. */
   texts: Record<string, string>
   link: SlideLink
+  /** Present only for lucky-win slides — absent on gift/entry slides. */
+  lucky?: SlideLuckyWinBlock
 }
 
 // ========================================
