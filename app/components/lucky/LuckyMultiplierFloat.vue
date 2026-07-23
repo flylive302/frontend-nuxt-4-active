@@ -30,7 +30,8 @@ defineProps<{
         :style="{ '--x-offset': `${(floater.id % 3) * 20 - 30}px` }"
       >
         <span class="lucky-float-multiplier flex-middle">
-          ×{{ floater.multiplier }}
+          <template v-if="floater.kind === 'notice'">{{ floater.text }}</template>
+          <template v-else>×{{ floater.multiplier }}</template>
         </span>
       </div>
     </TransitionGroup>
@@ -71,7 +72,7 @@ defineProps<{
   font-weight: 800;
   font-size: 1.3rem;
   text-shadow: none;
-  animation: floatUpBust 3s ease-out forwards;
+  animation: floatUpBust 2s ease-out forwards;
 }
 
 .lucky-float--tiny {
@@ -107,15 +108,55 @@ defineProps<{
   display: inline-block;
 }
 
-/* Bust float: small, subdued, fades quickly without the pop-scale */
+/* Notice float: no-draw hint — subdued text pill, stays readable then fades */
+.lucky-float--notice {
+  color: #e5e7eb;
+  background: rgba(17, 24, 39, 0.72);
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: auto;
+  height: auto;
+  padding: 0.35rem 0.7rem;
+  border-radius: 9999px;
+  text-shadow: none;
+  white-space: nowrap;
+  animation: floatUpNotice 3.5s ease-out forwards;
+}
+
+/* Bust float: subdued (no pop/glow), but stays visible as long as a win so a
+   loss reads as a result — holds opacity then fades on the win schedule. */
 @keyframes floatUpBust {
   0% {
     opacity: 1;
     transform: translateY(0) translateX(var(--x-offset, 0)) scale(1.1);
   }
+  20% {
+    opacity: 1;
+    transform: translateY(-30px) translateX(var(--x-offset, 0)) scale(1.05);
+  }
   100% {
     opacity: 0;
-    transform: translateY(-70px) translateX(var(--x-offset, 0)) scale(0.8);
+    transform: translateY(-180px) translateX(var(--x-offset, 0)) scale(0.9);
+  }
+}
+
+/* Notice float-up: fade in, hold to be read, then fade out */
+@keyframes floatUpNotice {
+  0% {
+    opacity: 0;
+    transform: translateY(0) translateX(var(--x-offset, 0)) scale(0.9);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(-10px) translateX(var(--x-offset, 0)) scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(-40px) translateX(var(--x-offset, 0)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) translateX(var(--x-offset, 0)) scale(0.95);
   }
 }
 

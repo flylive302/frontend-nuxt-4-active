@@ -12,7 +12,7 @@
  * State is owned by useLuckySessionStore.
  */
 import type { AudioSocket } from '~/composables/room/useAudioSocket';
-import type { LuckyDrawResult, LuckyNoDrawPayload } from '~/types/lucky';
+import type { FloatingMultiplier, LuckyDrawResult, LuckyNoDrawPayload, LuckyNoDrawReason } from '~/types/lucky';
 import { createLogger } from '~/utils/logger';
 
 const logger = createLogger('[LuckyGift]');
@@ -25,8 +25,19 @@ const logger = createLogger('[LuckyGift]');
 /** Max concurrent floating multipliers */
 const MAX_FLOATERS = 5;
 
-/** Time (ms) each floating multiplier stays visible */
+/** Time (ms) a win/bust multiplier floater stays visible (bust == win) */
 const FLOATER_DURATION = 2500;
+
+/** Time (ms) a no-draw notice floater stays visible — longer, to be read */
+const NOTICE_DURATION = 3500;
+
+/** Sender-facing copy per no-draw reason (honest, non-alarming) */
+const NO_DRAW_COPY: Record<LuckyNoDrawReason, string> = {
+  capped: 'pool capped for today',
+  user_capped: 'your daily win limit reached',
+  disabled: 'lucky draws unavailable',
+  no_eligible_tier: 'lucky draws unavailable',
+};
 
 /** Lucky socket event names (used for cleanup) */
 const LUCKY_EVENTS = ['lucky:result', 'lucky:no-draw'] as const;
@@ -40,6 +51,12 @@ const LUCKY_EVENTS = ['lucky:result', 'lucky:no-draw'] as const;
 let _store: ReturnType<typeof useLuckySessionStore> | null = null;
 
 let floaterIdCounter = 0;
+
+/**
+ * Reasons already surfaced this room session — throttles no-draw notices to one
+ * per reason so spamming gifts can't flood the screen. Cleared on room leave.
+ */
+const shownNoticeReasons = new Set<LuckyNoDrawReason>();
 
 // ============================================
 // Helpers
@@ -58,9 +75,10 @@ function getColorClass(multiplier: number): string {
 }
 
 /**
- * Add a floating multiplier and auto-remove after duration.
+ * Push any floater through the shared store pipeline and auto-remove after its
+ * duration. Evicts the oldest when at MAX_FLOATERS so the queue stays bounded.
  */
-function addFloater(multiplier: number): void {
+function pushFloater(entry: FloatingMultiplier, duration: number): void {
   const store = _store;
   if (!store) return;
 
@@ -69,12 +87,31 @@ function addFloater(multiplier: number): void {
     if (first) store.removeFloater(first.id);
   }
 
-  const id = ++floaterIdCounter;
-  store.addFloater({ id, multiplier, colorClass: getColorClass(multiplier) });
+  store.addFloater(entry);
 
   setTimeout(() => {
-    store.removeFloater(id);
-  }, FLOATER_DURATION);
+    store.removeFloater(entry.id);
+  }, duration);
+}
+
+/**
+ * Add a floating multiplier (win or ×0 bust) — bust shares the win duration.
+ */
+function addMultiplierFloater(multiplier: number): void {
+  pushFloater(
+    { id: ++floaterIdCounter, kind: 'multiplier', multiplier, colorClass: getColorClass(multiplier) },
+    FLOATER_DURATION,
+  );
+}
+
+/**
+ * Add a text notice floater (no-draw hint) through the same pipeline.
+ */
+function addNoticeFloater(text: string): void {
+  pushFloater(
+    { id: ++floaterIdCounter, kind: 'notice', text, colorClass: 'lucky-float--notice' },
+    NOTICE_DURATION,
+  );
 }
 
 // ============================================
@@ -82,16 +119,21 @@ function addFloater(multiplier: number): void {
 // ============================================
 
 function handleLuckyResult(data: LuckyDrawResult): void {
-  addFloater(data.multiplier);
+  addMultiplierFloater(data.multiplier);
 }
 
 /**
  * Typed "no draw" signal (Epic B ticket 08): the draw was skipped for a
- * user-visible reason (capped / disabled / no_eligible_tier). Rendering is
- * deliberately minimal pending the prod probe outcome — log only for now.
+ * user-visible reason (capped / user_capped / disabled / no_eligible_tier).
+ * Renders one notice floater per reason per room session so no skip is silent
+ * and repeats don't flood the screen; the throttle resets on room leave.
  */
 function handleLuckyNoDraw(data: LuckyNoDrawPayload): void {
-  logger.debug('lucky:no-draw received', data);
+  if (shownNoticeReasons.has(data.reason)) return;
+  shownNoticeReasons.add(data.reason);
+
+  addNoticeFloater(NO_DRAW_COPY[data.reason] ?? NO_DRAW_COPY.disabled);
+  logger.debug('lucky:no-draw rendered', data);
 }
 
 // ============================================
@@ -116,6 +158,9 @@ export function cleanupLuckyEventHandlers(socket: AudioSocket): void {
   for (const event of LUCKY_EVENTS) {
     socket.off(event);
   }
+  // Room leave: forget which no-draw notices were shown so the next session
+  // surfaces each reason once again.
+  shownNoticeReasons.clear();
 }
 
 // ============================================
@@ -154,12 +199,24 @@ if (import.meta.dev && import.meta.client) {
       });
     },
 
+    /** Simulate a no-draw notice floater (default: pool capped) */
+    notice(reason: LuckyNoDrawReason = 'capped'): void {
+      handleLuckyNoDraw({ reason, gift_id: 0, batch_id: 'sim' });
+    },
+
     /** Fire several floaters in sequence with delays */
     all(): void {
       this.float(0.01);
       setTimeout(() => this.float(0.25), 500);
       setTimeout(() => this.float(2.0), 1000);
       setTimeout(() => this.float(50.0), 1500);
+    },
+
+    /** Fire one notice per reason (resets the throttle first so all show) */
+    notices(): void {
+      shownNoticeReasons.clear();
+      const reasons: LuckyNoDrawReason[] = ['capped', 'user_capped', 'disabled', 'no_eligible_tier'];
+      reasons.forEach((reason, i) => setTimeout(() => this.notice(reason), i * 600));
     },
   };
 

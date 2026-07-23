@@ -20,10 +20,13 @@ export interface LuckyDrawResult {
   gift_name: string;
 }
 
+/** Reasons the backend skips a draw (mirrors App\Enums\Lucky\LuckyEmptyReason) */
+export type LuckyNoDrawReason = 'capped' | 'user_capped' | 'disabled' | 'no_eligible_tier';
+
 /** Payload for `lucky:no-draw` — the draw was skipped for a visible reason */
 export interface LuckyNoDrawPayload {
-  /** Why no draw happened */
-  reason: 'capped' | 'disabled' | 'no_eligible_tier';
+  /** Why no draw happened. `user_capped` = the sender's own daily-win cap. */
+  reason: LuckyNoDrawReason;
   gift_id: number;
   batch_id: string;
 }
@@ -36,10 +39,27 @@ export interface LuckyNoDrawPayload {
 // Animation State
 // ============================================
 
-/** A single floating multiplier entry in the queue */
-export interface FloatingMultiplier {
+/** Shared fields for any floater rendered through the lucky floater pipeline */
+interface FloatingFloaterBase {
   id: number;
-  multiplier: number;
-  /** Tier-based color class */
+  /** Discriminates a numeric win floater from a text notice floater */
+  kind: 'multiplier' | 'notice';
+  /** Tier-based (win) or notice color class */
   colorClass: string;
 }
+
+/** A numeric win floater — the floating multiplier text (`×2.5`, `×0`, …) */
+export interface MultiplierFloater extends FloatingFloaterBase {
+  kind: 'multiplier';
+  multiplier: number;
+}
+
+/** A text notice floater — a no-draw hint ("pool capped for today", …) */
+export interface NoticeFloater extends FloatingFloaterBase {
+  kind: 'notice';
+  /** Sender-facing hint text */
+  text: string;
+}
+
+/** A single floater entry in the queue — win multiplier or no-draw notice */
+export type FloatingMultiplier = MultiplierFloater | NoticeFloater;
