@@ -49,7 +49,6 @@ function synthesizeLuckyWinChatMessage(lucky: SlideLuckyWinBlock): void {
  */
 export function useSlideEvents() {
   const { admitPayload } = useSlidePlayback()
-  const roomStore = useRoomStore()
 
   return function registerSlideEvents(socket: Socket): void {
     socket.on('slide:play', (payload: SlidePlayPayload) => {
@@ -65,11 +64,12 @@ export function useSlideEvents() {
       // coalesce is currently sender-scoped. See ADR 0009.
       admitPayload(payload)
 
-      // REACT — lucky-win chat bubble, current-room gated (mirrors the
-      // `event.roomId !== String(roomStore.currentRoom?.id)` pattern used
-      // elsewhere, e.g. useRoomEventHandlers' `room:mode`). `slide:play` also
-      // carries app-scope slides with no room at all, which never match.
-      if (payload.lucky && String(payload.lucky.roomId) === String(roomStore.currentRoom?.id)) {
+      // REACT — lucky-win chat bubble, everywhere the slide itself plays
+      // (HITL 2026-07-23): the slide's server-resolved scope already decides
+      // distribution (room-scope → that room's sockets, app-scope → everyone),
+      // so the bubble simply follows the slide. Only slide-bound wins carry
+      // the `lucky` block — sub-threshold wins never announce.
+      if (payload.lucky) {
         synthesizeLuckyWinChatMessage(payload.lucky)
       }
     })

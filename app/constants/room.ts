@@ -133,6 +133,22 @@ export const CHAT_MESSAGE_TYPE_GIFT = 'gift';
  */
 export const CHAT_MESSAGE_TYPE_LUCKY_WIN = 'lucky-win';
 
+/** Chat message type for a real user-typed message (see useRoomChat.sendChatMessage's default). */
+export const CHAT_MESSAGE_TYPE_TEXT = 'text';
+
+// ============================================
+// Chat filter tabs (lucky-burst-draw ticket 10 follow-up)
+// ============================================
+
+/** Shows every message regardless of type. */
+export const CHAT_TAB_ALL = 'all';
+/** Shows only real user-typed messages (`CHAT_MESSAGE_TYPE_TEXT`). */
+export const CHAT_TAB_CHAT = 'chat';
+/** Shows only locally-synthesized announcement bubbles (system/gift/lucky-win — every non-text type). */
+export const CHAT_TAB_GIFTS = 'gifts';
+
+export type ChatTab = typeof CHAT_TAB_ALL | typeof CHAT_TAB_CHAT | typeof CHAT_TAB_GIFTS;
+
 /**
  * Maximum number of tracks the DJ's Playlist queue holds. Adds beyond this are
  * ignored (the existing queue keeps playing). Bounds the session-local list;

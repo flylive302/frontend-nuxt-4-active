@@ -5,6 +5,7 @@
  * Extracted from useRoomAudio for better separation of concerns.
  */
 import type { AudioSocket } from './useAudioSocket';
+import { CHAT_MESSAGE_TYPE_TEXT } from '~/constants/room';
 
 export interface UseRoomChatParams {
   /** Socket instance */
@@ -25,7 +26,7 @@ export function useRoomChat({ socket, getCurrentRoomId }: UseRoomChatParams) {
    * @param content - Message content
    * @param type - Message type (default: 'text')
    */
-  function sendChatMessage(content: string, type: string = 'text'): void {
+  function sendChatMessage(content: string, type: string = CHAT_MESSAGE_TYPE_TEXT): void {
     const roomId = getCurrentRoomId();
     
     if (!socket.value || !roomId) {

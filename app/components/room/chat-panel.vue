@@ -3,6 +3,8 @@ import type { Component } from 'vue';
 import { defineAsyncComponent } from 'vue';
 import { useRoomAudio } from '~/composables/room/useRoomAudio';
 import type { StickyScrollTarget } from '~/composables/room/useChatStickyScroll';
+import { filterChatMessages } from '~/utils/chat';
+import { CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_TAB_GIFTS, type ChatTab } from '~/constants/room';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
 // doesn't get linked as render-blocking CSS on routes that don't reach this
@@ -17,6 +19,16 @@ const DynamicScrollerItem = defineAsyncComponent(async () =>
 
 const audioStore = useRoomAudioStore();
 const { sendChatMessage } = useRoomAudio();
+
+// Filter tabs (All / Chat / Gifts) — local UI-only state, trivial predicate
+// filtering via the pure `filterChatMessages` util (no business logic here).
+const chatTabs: { id: ChatTab; label: string }[] = [
+  { id: CHAT_TAB_ALL, label: 'All' },
+  { id: CHAT_TAB_CHAT, label: 'Chat' },
+  { id: CHAT_TAB_GIFTS, label: 'Gifts' },
+];
+const activeChatTab = ref<ChatTab>(CHAT_TAB_ALL);
+const filteredMessages = computed(() => filterChatMessages(audioStore.messages, activeChatTab.value));
 
 // Input state
 const messageInput = ref('');
@@ -98,11 +110,29 @@ function handleKeydown(event: KeyboardEvent) {
         @click="handleClearChat"
     />
 
+    <!-- Filter tabs: All / Chat / Gifts -->
+    <div class="flex items-center gap-1 mb-1 pr-7" role="tablist" aria-label="Chat filter">
+      <button
+          v-for="tab in chatTabs"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          :aria-selected="activeChatTab === tab.id"
+          class="text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
+          :class="activeChatTab === tab.id
+            ? 'bg-primary text-white'
+            : 'bg-primary/10 text-muted hover:bg-primary/20'"
+          @click="activeChatTab = tab.id"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
+
     <!-- Messages Container -->
     <div class="relative flex-1 overflow-hidden">
       <DynamicScroller
         ref="scrollerRef"
-        :items="audioStore.messages"
+        :items="filteredMessages"
         :min-item-size="48"
         key-field="id"
         class="h-full overflow-y-auto py-10 scrollbar-hide"
@@ -131,9 +161,12 @@ function handleKeydown(event: KeyboardEvent) {
     </div>
 
     <!-- Empty State -->
-    <p v-if="audioStore.messages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
+    <p v-if="filteredMessages.length === 0 && audioStore.messages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
       No messages yet.
       <br> Be the first to say hello! 👋
+    </p>
+    <p v-else-if="filteredMessages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
+      No messages in this view.
     </p>
 
     <!-- Input -->

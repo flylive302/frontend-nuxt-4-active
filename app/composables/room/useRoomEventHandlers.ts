@@ -102,21 +102,39 @@ function formatGiftChatContent(
 }
 
 /**
+ * Minimal shape synthesis needs off a `gift:received` event (or a
+ * FE-synthetic stand-in for the sender's own send — see
+ * `announceLocalGiftSend`). Deliberately NOT `GiftReceivedEvent` — decoupling
+ * from the wire shape lets the sender-local call site build a plain object
+ * instead of faking wire fields (e.g. `recipientId`) it doesn't have.
+ */
+interface GiftChatSourceEvent {
+  senderId: number;
+  giftId: number;
+  quantity: number;
+}
+
+/**
  * EXECUTE + REACT: synthesize/patch the gift-sent chat bubble for a
  * burst-shaped `gift:received` event (recipientIds present). Legacy singular
  * siblings of the same burst (scalar recipientId only) are never passed in
  * here — see the call site — so they can never double-announce.
+ *
+ * `senderNameOverride` lets the sender's own local synthesis (see
+ * `announceLocalGiftSend`) use the auth user's name directly — the sender may
+ * not have an entry in `participantsStore` to resolve from.
  */
 function synthesizeGiftChatMessage(
   audioStore: ReturnType<typeof useRoomAudioStore>,
   participantsStore: ReturnType<typeof useRoomParticipantsStore>,
-  event: GiftReceivedEvent,
+  event: GiftChatSourceEvent,
   gift: Gift,
   recipientIds: number[],
+  senderNameOverride?: string,
 ): void {
   if (recipientIds.length === 0) return;
 
-  const senderName = participantsStore.participants.get(event.senderId)?.name ?? 'Someone';
+  const senderName = senderNameOverride ?? participantsStore.participants.get(event.senderId)?.name ?? 'Someone';
   const giftLabel = gift.label ?? gift.name;
   const recipientName = recipientIds.length === 1
     ? participantsStore.participants.get(recipientIds[0]!)?.name
@@ -155,6 +173,41 @@ function synthesizeGiftChatMessage(
     totalCoins: addedCoins,
     timer: setTimeout(() => giftChatStreaks.delete(key), COMBO_BUTTON_TIMEOUT_MS),
   });
+}
+
+/**
+ * Sender-side gift-sent chat bubble (lucky-burst-draw ticket 10 follow-up,
+ * HITL 2026-07-23): MSAB excludes the sender from `gift:received`, so the
+ * sender's own client never runs `synthesizeGiftChatMessage` off the
+ * broadcast. `useGiftSending`'s `send()`/`combo()` REACT sections call this
+ * directly with a synthetic source built from the local send — NOT
+ * `luckyCombo()`, since lucky-category gifts announce only via the lucky-win
+ * slide bubble (see the `category !== 'lucky'` gate on the `gift:received`
+ * call site below). Shares the same module-level streak map, so a sender's
+ * own combo taps patch the same bubble in place, and the streak key still
+ * dedupes naturally against a same-batch `gift:received` for the sender,
+ * should one ever arrive.
+ */
+export function announceLocalGiftSend(
+  params: {
+    senderId: number;
+    senderName: string;
+    giftId: number;
+    quantity: number;
+    recipientIds: number[];
+  },
+  gift: Gift,
+): void {
+  const audioStore = useRoomAudioStore();
+  const participantsStore = useRoomParticipantsStore();
+  synthesizeGiftChatMessage(
+    audioStore,
+    participantsStore,
+    { senderId: params.senderId, giftId: params.giftId, quantity: params.quantity },
+    gift,
+    params.recipientIds,
+    params.senderName,
+  );
 }
 
 /**
@@ -583,14 +636,18 @@ export function setupRoomEventHandlers(
     }
 
     // Chat gift-announcement bubble (lucky-burst-draw ticket 10) — synthesized
-    // for EVERY client in the room, including the sender, so runs before the
-    // sender/minimized early returns below (those only gate the fly/playback
-    // FX). Only the burst shape (recipientIds present) synthesizes — the N
-    // legacy singular siblings sharing the same batchId describe the SAME
-    // legs and must never double-announce. Current-room gate: `gift:received`
-    // is only wired while this room's socket is joined, so no extra roomId
-    // check is needed here (unlike the global membership listeners).
-    if (event.recipientIds && giftForValue) {
+    // for EVERY OTHER client in the room (the sender's own bubble is
+    // synthesized locally by `announceLocalGiftSend` — MSAB excludes the
+    // sender from this broadcast), so runs before the sender/minimized early
+    // returns below (those only gate the fly/playback FX). Only the burst
+    // shape (recipientIds present) synthesizes — the N legacy singular
+    // siblings sharing the same batchId describe the SAME legs and must never
+    // double-announce. Lucky-category gifts never get a gift-sent bubble —
+    // they announce only via the lucky-win slide bubble (HITL 2026-07-23).
+    // Current-room gate: `gift:received` is only wired while this room's
+    // socket is joined, so no extra roomId check is needed here (unlike the
+    // global membership listeners).
+    if (event.recipientIds && giftForValue && giftForValue.category !== 'lucky') {
       synthesizeGiftChatMessage(audioStore, participantsStore, event, giftForValue, event.recipientIds);
     }
 

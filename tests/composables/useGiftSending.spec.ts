@@ -20,6 +20,12 @@ vi.stubGlobal('piniaPluginPersistedstate', {
   localStorage: () => ({}),
   sessionStorage: () => ({}),
 })
+// The sender-local chat-bubble wiring (HITL 2026-07-23) is out of scope for
+// this file (burst-send + refund reconciliation only) — see
+// useGiftSendingChatBubble.spec.ts for that coverage with real stores.
+vi.mock('../../app/composables/room/useRoomEventHandlers', () => ({
+  announceLocalGiftSend: vi.fn(),
+}))
 
 const GIFT = { id: 9, price: 50, category: 'normal', thumbnail_url: 'x.png' } as never
 

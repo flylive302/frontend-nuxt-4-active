@@ -79,7 +79,7 @@ describe('useSlideEvents — lucky-win chat bubble', () => {
     expect(audioStore.messages[0]?.content).toBe('Sara got a Lucky win of 20x — won 5,000 coins')
   })
 
-  it('lucky block + different room → no bubble', async () => {
+  it('lucky block + different room → bubble still shows (follows the slide, HITL 2026-07-23)', async () => {
     const { socket, audioStore } = await setup(2)
 
     socket.handlers.get('slide:play')?.({
@@ -87,7 +87,8 @@ describe('useSlideEvents — lucky-win chat bubble', () => {
       lucky: { winnerId: 5, winnerName: 'Sara', multiplier: 20, coinsWon: 5000, roomId: 1 },
     })
 
-    expect(audioStore.messages).toHaveLength(0)
+    expect(audioStore.messages).toHaveLength(1)
+    expect(audioStore.messages[0]?.type).toBe(CHAT_MESSAGE_TYPE_LUCKY_WIN)
   })
 
   it('no lucky block (plain gift/entry slide) → no bubble', async () => {

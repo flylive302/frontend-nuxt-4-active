@@ -5,6 +5,7 @@
  * and playback triggering.
  */
 import type { GiftSendAck } from '~/types/room/audio';
+import { announceLocalGiftSend } from '~/composables/room/useRoomEventHandlers';
 
 export function useGiftSending() {
   // ========================================
@@ -102,15 +103,11 @@ export function useGiftSending() {
     const droppedCount = requestedRecipientIds.filter((id) => !acceptedIds.includes(id)).length;
     if (droppedCount === 0) return;
 
+    // Silent by design (HITL 2026-07-23): a dropped-leg refund is self-healing
+    // bookkeeping — surfacing it as a toast spammed busy rooms.
     const refundAmount = perRecipientCost * droppedCount;
     const currentCoins = Number(authStore.user?.coins ?? 0);
     authStore.patchBalance({ coins: String(currentCoins + refundAmount) });
-
-    toast.add({
-      title: 'Some recipients missed this gift',
-      description: `${droppedCount} recipient${droppedCount > 1 ? 's' : ''} left their seat — refunded.`,
-      color: 'warning',
-    });
   }
 
   // ========================================
@@ -231,6 +228,21 @@ export function useGiftSending() {
         // Seed the combo-streak badge (decoupled from playNext now).
         giftStore.resetCombo();
         giftStore.incrementCombo();
+
+        // Sender-local gift-sent chat bubble (HITL 2026-07-23) — MSAB excludes
+        // the sender from `gift:received`, so the sender's own client would
+        // otherwise never see this announcement. Non-lucky only: lucky gifts
+        // announce solely via the lucky-win slide bubble.
+        announceLocalGiftSend(
+          {
+            senderId: sender.id,
+            senderName: sender.name ?? 'Unknown',
+            giftId: selectedGift.id,
+            quantity: selectedQuantity,
+            recipientIds: [...selectedRecipients],
+          },
+          selectedGift,
+        );
       }
 
       // Reset selection for next send
@@ -317,6 +329,20 @@ export function useGiftSending() {
 
     // Increment combo counter (drawer button streak display)
     giftStore.incrementCombo();
+
+    // Sender-local gift-sent chat bubble (see send()) — shares the same
+    // module-level streak map, so this patches the sender's own bubble from
+    // send() in place rather than creating a second one.
+    announceLocalGiftSend(
+      {
+        senderId: sender.id,
+        senderName: sender.name ?? 'Unknown',
+        giftId: ctx.gift.id,
+        quantity: ctx.quantity,
+        recipientIds: [...validRecipients],
+      },
+      ctx.gift,
+    );
 
     return true;
   }

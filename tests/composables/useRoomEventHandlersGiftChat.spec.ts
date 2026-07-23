@@ -50,6 +50,7 @@ function createMockSocket() {
 }
 
 const GOLDEN_ROSE = { id: 9, name: 'Golden Rose', label: null, price: 500, category: 'normal' }
+const LUCKY_GIFT = { id: 11, name: 'Lucky Coin', label: null, price: 100, category: 'lucky' }
 
 describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
   beforeEach(() => {
@@ -65,7 +66,8 @@ describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
     vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
   })
 
-  async function setup() {
+  async function setup(gift: typeof GOLDEN_ROSE = GOLDEN_ROSE) {
+    vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(gift) }))
     const { setupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
@@ -192,5 +194,21 @@ describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
     })
 
     expect(audioStore.messages).toHaveLength(1)
+  })
+
+  it('never synthesizes a gift-sent bubble for a lucky-category gift (lucky gifts announce only via the lucky-win slide bubble)', async () => {
+    const { socket, audioStore } = await setup(LUCKY_GIFT)
+
+    socket.handlers.get('gift:received')?.({
+      senderId: 2,
+      roomId: '1',
+      giftId: 11,
+      recipientId: 3,
+      recipientIds: [3],
+      quantity: 1,
+      batchId: 'batch-lucky',
+    })
+
+    expect(audioStore.messages).toHaveLength(0)
   })
 })

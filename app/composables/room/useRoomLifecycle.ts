@@ -194,6 +194,10 @@ export function useRoomLifecycle(): void {
         // Minimized → clear gift playback to save resources
         giftStore.clearPlayback();
       } else if (roomStore.currentRoom) {
+        // Captured before any await: currentRoom can become null mid-rebuild
+        // (user leaves while the timeout races) and the catch below would
+        // otherwise crash re-reading it (Sentry JAVASCRIPT-VUE-6R).
+        const unminimizedRoomId = String(roomStore.currentRoom.id);
         // Un-minimized → refresh room metadata from API (may be stale)
         fetchRoomById(roomStore.currentRoom.id);
 
@@ -202,7 +206,7 @@ export function useRoomLifecycle(): void {
           if (isJoining.value) return; // Prevent double-join
           isJoining.value = true;
           try {
-            await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
+            await withTimeout(rebuildRoomAudio(unminimizedRoomId), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
           } catch (err) {
             log.warn('Failed to rebuild room audio on un-minimize', err);
             toast.add({
@@ -210,7 +214,7 @@ export function useRoomLifecycle(): void {
               description: 'Audio may take a moment to restore.',
               color: 'warning',
             });
-            scheduleRebuildRetry(String(roomStore.currentRoom.id));
+            scheduleRebuildRetry(unminimizedRoomId);
           } finally {
             isJoining.value = false;
           }
