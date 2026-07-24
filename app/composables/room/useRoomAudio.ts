@@ -205,6 +205,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
     isProducing,
     isLocalMuted,
     toggleLocalMute: toggleMediasoupMute,
+    reapplyMuteToProducer,
     producer,
     setVolume: setMediasoupVolume,
     getVolume: getMediasoupVolume,
@@ -704,6 +705,18 @@ export function useRoomAudio(): UseRoomAudioReturn {
     ) {
       try {
         await startAudio();
+        // audio-pipe-observability 12: the fresh getUserMedia track is enabled
+        // by default and this rejoin path does NOT reset isLocalMuted — so a
+        // muted user reconnecting would silently go LIVE (hot mic) while the UI
+        // still shows muted. Preserve the mute: disable the new track locally,
+        // and reconcile the server + every other user's mute indicator to the
+        // NEW producer. Scoped here (the single rejoin re-produce funnel) so it
+        // never collides with recoverUnmute, which intentionally goes live while
+        // isLocalMuted is still true.
+        if (isLocalMuted.value) {
+          reapplyMuteToProducer();
+          emitMuteState(true);
+        }
       } catch (err) {
         log.warn('Failed to re-produce audio after seat reclaim', err);
       }

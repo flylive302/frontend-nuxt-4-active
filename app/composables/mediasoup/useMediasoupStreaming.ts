@@ -403,6 +403,21 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   }
 
   /**
+   * Reconcile the current producer's track to the existing mute flag WITHOUT
+   * flipping it (audio-pipe-observability 12). A re-produce (seat-reclaim rejoin)
+   * mints a fresh, enabled getUserMedia track; if the user was muted, that track
+   * would go live while the UI still shows muted — a hot mic. Call this right
+   * after such a re-produce to disable the fresh track when `isLocalMuted`.
+   * Distinct from `toggleLocalMute`, which changes the mute state.
+   */
+  function reapplyMuteToProducer(): void {
+    const track = producer.value?.track;
+    if (track) {
+      track.enabled = !isLocalMuted.value;
+    }
+  }
+
+  /**
    * Consume audio from a remote producer.
    *
    * @param producerId - ID of the remote producer to consume
@@ -753,6 +768,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     produceTrack,
     stopMusicProducer,
     toggleLocalMute,
+    reapplyMuteToProducer,
     consumeProducer,
     stopConsumer,
     cleanup,
