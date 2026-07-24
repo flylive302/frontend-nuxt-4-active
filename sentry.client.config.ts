@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nuxt'
+import { applySentryEventPolicy } from '~/utils/sentry-event-policy'
 
 const config = useRuntimeConfig()
 
@@ -12,11 +13,11 @@ Sentry.init({
   // 20% of transactions — adjust per environment as traffic grows
   tracesSampleRate: 0.2,
 
-  // Strip any PII that might land in the user context; only id is allowed
-  beforeSend(event) {
-    if (event.user) {
-      event.user = { id: event.user.id }
-    }
-    return event
+  // Strips PII down to `user.id`, and tags auto-recovered stale-bundle errors
+  // `recovered: true` so the issue stream can filter them with `!recovered:true`
+  // without losing the evidence that chunk recovery still works.
+  // Logic lives in `~/utils/sentry-event-policy` so it is unit-testable.
+  beforeSend(event, hint) {
+    return applySentryEventPolicy(event, hint)
   },
 })
