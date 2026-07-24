@@ -11,11 +11,14 @@
 import { useDocumentVisibility, useEventListener } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
 import { withTimeout } from '~/utils/with-timeout';
+import { evaluateTransportRebuild } from '~/utils/transport-rebuild-budget';
 import { RoomBlockedError } from '~/utils/socket/socketErrorMessages';
 import {
   ROOM_OP_TIMEOUT_MS,
   AUDIO_REBUILD_RETRY_BASE_MS,
   AUDIO_REBUILD_RETRY_MAX_MS,
+  TRANSPORT_REBUILD_MAX_AUTO,
+  TRANSPORT_REBUILD_COOLDOWN_MS,
 } from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
@@ -37,6 +40,17 @@ const isRecovering = ref(false);
 let rebuildRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let rebuildRetryAttempt = 0;
 
+/**
+ * Bounded auto-rebuild budget for terminal transport failure
+ * (audio-pipe-observability 10). Unlike the socket-failed path, a transport
+ * rebuild resolves on transport *creation* while consumer ICE connects lazily,
+ * so the `attempts-exhausted` half re-fails and would loop without a gate. Cap
+ * to TRANSPORT_REBUILD_MAX_AUTO auto-rebuilds per cooldown window; the window
+ * self-resets once exhaustions stop (audio healed).
+ */
+let transportRebuildAttempt = 0;
+let lastTransportExhaustionAt = 0;
+
 // ============================================
 // Composable
 // ============================================
@@ -49,7 +63,7 @@ export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
-  const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, connectionStatus } = useRoomAudio();
+  const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, connectionStatus, onTransportExhausted } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, onReconnect, onReconnectFailed } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
@@ -95,6 +109,33 @@ export function useRoomLifecycle(): void {
       rebuildRetryTimer = null;
     }
     rebuildRetryAttempt = 0;
+  }
+
+  /**
+   * Settle to a defined chat-only state with an actionable "Reconnect" button —
+   * the shared floor for both the socket-failed and transport-exhausted paths.
+   * The fixed toast id means the two paths can't stack, and a later successful
+   * rebuild dismisses it (attemptRoomReconnect / re-join both remove it by id).
+   */
+  function showReconnectAffordance(): void {
+    toast.add({
+      id: RECONNECT_FAILED_TOAST_ID,
+      title: 'Audio disconnected',
+      description: 'Chat and gifting still work. Tap reconnect to restore audio.',
+      color: 'warning',
+      duration: 0,
+      actions: [
+        {
+          label: 'Reconnect',
+          color: 'primary',
+          onClick: () => {
+            if (roomStore.currentRoom) {
+              void attemptRoomReconnect(String(roomStore.currentRoom.id));
+            }
+          },
+        },
+      ],
+    });
   }
 
   /**
@@ -289,25 +330,56 @@ export function useRoomLifecycle(): void {
       // retry affordance, while backoff keeps retrying in the background.
       disconnectSocket(true);
       scheduleRebuildRetry(roomId);
-      toast.add({
-        id: RECONNECT_FAILED_TOAST_ID,
-        title: 'Audio disconnected',
-        description: 'Chat and gifting still work. Tap reconnect to restore audio.',
-        color: 'warning',
-        duration: 0,
-        actions: [
-          {
-            label: 'Reconnect',
-            color: 'primary',
-            onClick: () => {
-              if (roomStore.currentRoom) {
-                void attemptRoomReconnect(String(roomStore.currentRoom.id));
-              }
-            },
-          },
-        ],
-      });
+      showReconnectAffordance();
     } finally {
+      isRecovering.value = false;
+    }
+  });
+
+  // ========================================
+  // Transport Recovery Exhausted (audio-pipe-observability 10)
+  // ========================================
+  // A mediasoup transport died and its bounded ICE restarts were exhausted,
+  // while the Socket.IO socket stayed healthy — so none of the socket-level
+  // recovery above fires. Wire it into the SAME proven rebuild path, but bound
+  // the auto-attempt: the rebuild resolves on transport *creation* (consumer ICE
+  // connects lazily), so the `attempts-exhausted` half re-fails and would loop.
+  // One auto-rebuild per cooldown window, then settle to the manual "Reconnect"
+  // affordance. Robust to both `reason` halves — see ticket 10 §2/§5.
+  onTransportExhausted(async () => {
+    if (!roomStore.currentRoom) return; // transports only exist inside a room
+    if (isRecovering.value) return;
+    isRecovering.value = true;
+
+    try {
+      const roomId = String(roomStore.currentRoom.id);
+
+      const { autoRebuild, next } = evaluateTransportRebuild(
+        { attempt: transportRebuildAttempt, lastAt: lastTransportExhaustionAt },
+        Date.now(),
+        TRANSPORT_REBUILD_COOLDOWN_MS,
+        TRANSPORT_REBUILD_MAX_AUTO,
+      );
+      transportRebuildAttempt = next.attempt;
+
+      if (autoRebuild) {
+        // For `transport-gone` this fully heals (fresh transport:create). For
+        // `attempts-exhausted` it may report success yet re-exhaust lazily — the
+        // budget then routes the recurrence straight to the affordance.
+        const recovered = await attemptRoomReconnect(roomId);
+        if (recovered) return;
+      }
+
+      // Budget spent this window (or the one auto-rebuild failed): settle to the
+      // manual affordance. Deliberately no scheduleRebuildRetry here — the socket
+      // is still healthy (chat/gifts work), so background socket churn would hurt
+      // more than help; the user reconnects audio on demand, and the visibility /
+      // socket-reconnect paths still auto-heal if the socket later drops.
+      showReconnectAffordance();
+    } finally {
+      // Stamp AFTER the rebuild completes so the health window measures the fresh
+      // transport's survival time, not the rebuild's own duration.
+      lastTransportExhaustionAt = Date.now();
       isRecovering.value = false;
     }
   });

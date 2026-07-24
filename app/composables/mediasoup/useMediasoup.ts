@@ -56,6 +56,7 @@ export function useMediasoup(socket: Ref<AudioSocket | null>) {
     producerTransport: transportsComposable.producerTransport,
     consumerTransport: transportsComposable.consumerTransport,
     createTransports: transportsComposable.createTransports,
+    onTransportExhausted: transportsComposable.onTransportExhausted,
 
     // Streaming
     producer: streamingComposable.producer,

@@ -86,6 +86,27 @@ export const ROOM_OP_TIMEOUT_MS = 30_000;
 export const AUDIO_REBUILD_RETRY_BASE_MS = 2_000;
 export const AUDIO_REBUILD_RETRY_MAX_MS = 30_000;
 
+/**
+ * Transport-recovery-exhausted auto-rebuild budget (audio-pipe-observability 10).
+ * When a mediasoup transport dies while the socket stays healthy, recovery is
+ * wired into the same rebuild path as the socket-failed case — but that rebuild
+ * resolves on transport *creation*, not connection. For the `attempts-exhausted`
+ * half (client network / TURN unreachable) a fresh transport re-fails ICE, so an
+ * unbounded auto-rebuild would loop: churn the socket, flicker seats, and emit a
+ * fresh Sentry event every cycle. Cap auto-rebuilds to one per cooldown window;
+ * further exhaustions inside the window settle straight to the manual "Reconnect"
+ * affordance. The window is measured from the previous exhaustion's *handling
+ * completion*, so it captures how long the fresh transport actually survived —
+ * and self-resets once audio has been healthy for a full window.
+ *
+ * Cooldown is set well above the recovery engine's worst-case cycle-to-exhaustion
+ * (grace 2s + 3 attempts × [backoff 1/2/4s + ICE round-trip + browser ICE-fail
+ * detection] ≈ 25–45s), so a genuinely broken path always re-fails *inside* the
+ * window and hits the affordance rather than earning a second auto-rebuild.
+ */
+export const TRANSPORT_REBUILD_MAX_AUTO = 1;
+export const TRANSPORT_REBUILD_COOLDOWN_MS = 120_000;
+
 // ============================================
 // Chat
 // ============================================

@@ -30,6 +30,18 @@ const currentRoomId = ref<string | null>(null);
 // Recovery engines follow their transport's lifetime (msab-load-stability 10).
 const recoveryHandles = new Map<string, TransportRecoveryHandle>();
 
+/**
+ * Recovery owner for terminal transport failure (audio-pipe-observability 10).
+ * When bounded ICE restarts are exhausted the transport is dead but the socket
+ * may still be healthy, so none of the socket-level recovery fires. This file
+ * stays transport-only: it reports the failure to Sentry and hands off to the
+ * registered owner (useRoomLifecycle) which drives the clean rebuild + retry
+ * affordance. The fallback toast fires only when no owner is registered, so the
+ * user is never left in a silent dead-end.
+ */
+type TransportExhaustedCallback = () => void;
+let _transportExhaustedCallback: TransportExhaustedCallback | null = null;
+
 // Cached to prevent inject() warning when called outside Vue setup context
 let _toast: ReturnType<typeof useToast> | null = null;
 
@@ -93,6 +105,8 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       },
       onExhausted: ({ attempts, reason }) => {
         const giftStore = useGiftStore();
+        // Keep the signal — this is the observability surface the epic was
+        // chartered around; capture regardless of who owns recovery.
         Sentry.captureMessage('Audio transport failed after recovery exhausted', {
           level: 'error',
           tags: { transport: label, reason },
@@ -102,9 +116,18 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
             giftPlaying: giftStore.isPlaying,
           },
         });
+        // Hand recovery to the registered owner (useRoomLifecycle) — it wires
+        // the terminal failure into the same rebuild + "Reconnect" affordance
+        // the socket-failed path already uses. Robust to both `reason` halves.
+        if (_transportExhaustedCallback) {
+          _transportExhaustedCallback();
+          return;
+        }
+        // No owner registered (e.g. transport somehow outlived the lifecycle
+        // watcher) — never a silent dead-end, but don't blame the user's network.
         toast.add({
-          title: 'Audio connection failed',
-          description: 'We tried to reconnect your audio but couldn\'t. Try a different network or check firewall settings.',
+          title: 'Audio disconnected',
+          description: 'Audio stopped and couldn\'t reconnect. Leave and rejoin the room to restore it.',
           color: 'error',
         });
       },
@@ -309,6 +332,15 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     recoveryHandles.delete(transport.id);
   }
 
+  /**
+   * Register the recovery owner for terminal transport failure. Mirrors
+   * useAudioSocket.onReconnectFailed — useRoomLifecycle registers once and owns
+   * the clean rebuild + user-facing retry affordance.
+   */
+  function onTransportExhausted(cb: TransportExhaustedCallback): void {
+    _transportExhaustedCallback = cb;
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -317,6 +349,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
     consumerTransport,
     createTransports,
     createProducerTransport,
+    onTransportExhausted,
     cleanup,
   };
 }

@@ -59,6 +59,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   recoverPlayback: () => Promise<boolean>;
   /** Probe audio session health (used by lifecycle resume to avoid unnecessary rebuilds) */
   probeAudioHealth: () => Promise<'healthy' | 'needs-playback-recovery' | 'needs-rebuild'>;
+  /** Register the owner for terminal transport failure (audio-pipe-observability 10) */
+  onTransportExhausted: (cb: () => void) => void;
   /** Audio player composable for music playback */
   audioPlayer: ReturnType<typeof import('./audio/useRoomAudioPlayer').useRoomAudioPlayer>;
 }
@@ -189,6 +191,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const {
     loadDevice,
     createTransports,
+    onTransportExhausted,
     startAudio: startMediasoupAudio,
     stopAudio: stopMediasoupAudio,
     restartAudio: restartMediasoupAudio,
@@ -834,6 +837,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     setVolume,
     recoverPlayback,
     probeAudioHealth,
+
+    // Transport recovery ownership (audio-pipe-observability 10)
+    onTransportExhausted,
 
     // Audio player
     audioPlayer,
