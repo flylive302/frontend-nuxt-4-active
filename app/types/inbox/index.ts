@@ -95,6 +95,8 @@ export interface OfficialMessage {
   isTargeted: boolean
   isFiltered: boolean
   sentAt: string
+  /** Optional deep-link CTA; when set the bubble becomes tappable (level-up messages, etc.). */
+  linkUrl: string | null
 }
 
 // ── API response shapes ───────────────────────────────

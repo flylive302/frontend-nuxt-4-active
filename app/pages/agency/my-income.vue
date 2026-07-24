@@ -29,6 +29,7 @@ const incomeStore = useIncomeStore()
 const { fetchAll, fetchHistory, fetchSnapshot, claim } = useIncomeActions()
 const agencyStore = useAgencyStore()
 const { fetchUserAgency } = useAgencyMembership()
+const { currentModal: milestoneModal, drain: drainMilestones, closeModal: closeMilestoneModal } = useMilestoneDrain()
 
 // ========================================
 // Computed
@@ -68,6 +69,9 @@ onMounted(async () => {
 
   if (agencyStore.isAgencyMember) {
     await Promise.all([fetchAll(), fetchHistory()])
+    // Page-gated: celebrate any tiers crossed since this device's last visit,
+    // now that the active run (and its current_tier) is loaded.
+    drainMilestones()
   }
 })
 </script>
@@ -194,5 +198,12 @@ onMounted(async () => {
         :title="incomeStore.error"
       />
     </div>
+
+    <!-- Page-gated agency-milestone celebration -->
+    <EventsIncomeTargetModal
+      :open="milestoneModal !== null"
+      :modal="milestoneModal"
+      @close="closeMilestoneModal"
+    />
   </main>
 </template>

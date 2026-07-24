@@ -44,11 +44,6 @@ initMediaSession()
 
     <SystemOtaUpdateToast />
 
-    <EventsBadgeEarnedModal />
-    <EventsLevelUpModal />
-    <EventsIncomeTargetModal />
-    <EventsSeatCapUnlockedModal />
-
     <SlideOverlayLayer />
   </div>
 </template>

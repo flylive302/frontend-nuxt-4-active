@@ -1,10 +1,12 @@
 /**
- * room-seat-caps 04: seat-cap unlock event wiring → achievement-modal queue.
+ * level-up-celebrations 06: the app-wide celebration queue is gone.
  *
- * Mocks Nuxt auto-imports (stores, sibling composables) and drives a fake
- * socket through useProgressionEvents to assert the `room.seat_cap_unlocked`
- * relay lands in the useAchievementModals queue with correct mapped data and
- * consistent wealth/charm queue behavior (defers while a gift is playing).
+ * Where this used to assert `room.seat_cap_unlocked` fed a global modal queue,
+ * it now proves the opposite — progression events register only the badge and
+ * user.progression store-updating handlers. Seat-cap unlocks are delivered as
+ * a durable official inbox message (backend), the `level.up` back-compat
+ * listener is removed, and no celebration modal can fire mid-gift because the
+ * queue (useAchievementModals) no longer exists.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ref, watch, readonly } from 'vue'
@@ -14,19 +16,14 @@ import type { Socket } from 'socket.io-client'
 // Mock Nuxt Auto-imports
 // ============================================
 
-const giftStore = { isPlaying: false }
-const roomStore: { currentRoom: object | null } = { currentRoom: null }
+const onBadgeEarned = vi.fn()
+const handleLevelUp = vi.fn()
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('watch', watch)
 vi.stubGlobal('readonly', readonly)
-vi.stubGlobal('useGiftStore', () => giftStore)
-vi.stubGlobal('useRoomStore', () => roomStore)
-vi.stubGlobal('useBadgeActions', () => ({ onBadgeEarned: vi.fn() }))
-vi.stubGlobal('useLevelActions', () => ({ handleLevelUp: vi.fn() }))
-
-const { useAchievementModals } = await import('../../app/composables/progression/useAchievementModals')
-vi.stubGlobal('useAchievementModals', useAchievementModals)
+vi.stubGlobal('useBadgeActions', () => ({ onBadgeEarned }))
+vi.stubGlobal('useLevelActions', () => ({ handleLevelUp }))
 
 const { useProgressionEvents } = await import('../../app/events/progression.events')
 
@@ -45,62 +42,52 @@ function createFakeSocket() {
   }
 }
 
-const payload = {
-  room_id: 7,
-  room_name: 'My Room',
-  new_level: 3,
-  seat_cap: 20,
-}
-
-describe('room.seat_cap_unlocked event wiring', () => {
+describe('progression events after the global celebration queue removal', () => {
   beforeEach(() => {
-    giftStore.isPlaying = false
-    roomStore.currentRoom = null
-    // Drain any leftover modal state between tests
-    useAchievementModals().closeSeatCapUnlockModal()
+    onBadgeEarned.mockClear()
+    handleLevelUp.mockClear()
   })
 
-  it('registers a handler for room.seat_cap_unlocked', () => {
+  it('registers only the badge and user.progression handlers', () => {
     const { socket, handlers } = createFakeSocket()
     useProgressionEvents()(socket)
 
-    expect(handlers.has('room.seat_cap_unlocked')).toBe(true)
+    expect(handlers.has('badge.earned')).toBe(true)
+    expect(handlers.has('user.progression')).toBe(true)
   })
 
-  it('opens the seat-cap modal with mapped data when the event fires', () => {
+  it('no longer registers the seat-cap modal or level.up back-compat handlers', () => {
+    const { socket, handlers } = createFakeSocket()
+    useProgressionEvents()(socket)
+
+    expect(handlers.has('room.seat_cap_unlocked')).toBe(false)
+    expect(handlers.has('level.up')).toBe(false)
+  })
+
+  it('badge.earned updates the badge store (which raises its own toast)', () => {
     const { socket, fire } = createFakeSocket()
     useProgressionEvents()(socket)
 
-    fire('room.seat_cap_unlocked', payload)
-
-    const modals = useAchievementModals()
-    expect(modals.seatCapUnlockModalOpen.value).toBe(true)
-    expect(modals.seatCapUnlockModalData.value).toEqual({
-      roomId: 7,
-      roomName: 'My Room',
-      newLevel: 3,
-      seatCap: 20,
+    fire('badge.earned', {
+      badge_id: 5,
+      badge_name: 'Trailblazer',
+      badge_image: 'https://example.com/badge.webp',
+      category: 'special',
+      context: 'reward',
     })
+
+    expect(onBadgeEarned).toHaveBeenCalledOnce()
+    expect(onBadgeEarned.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({ badge: expect.objectContaining({ id: 5, name: 'Trailblazer' }) }),
+    )
   })
 
-  it('queues instead of opening while a gift is playing in a room (wealth/charm-consistent)', () => {
-    roomStore.currentRoom = { id: 7 }
-    giftStore.isPlaying = true
-
+  it('user.progression forwards each level-up to the auth store (no modal)', () => {
     const { socket, fire } = createFakeSocket()
     useProgressionEvents()(socket)
 
-    fire('room.seat_cap_unlocked', payload)
+    fire('user.progression', { level_ups: [{ type: 'wealth' }, { type: 'charm' }] })
 
-    const modals = useAchievementModals()
-    expect(modals.seatCapUnlockModalOpen.value).toBe(false)
-    expect(modals.pendingModals.value).toHaveLength(1)
-    expect(modals.pendingModals.value[0]?.type).toBe('seatCapUnlock')
-
-    // Gift playback ends → queue processes
-    giftStore.isPlaying = false
-    modals.processQueue()
-    expect(modals.seatCapUnlockModalOpen.value).toBe(true)
-    expect(modals.pendingModals.value).toHaveLength(0)
+    expect(handleLevelUp).toHaveBeenCalledTimes(2)
   })
 })

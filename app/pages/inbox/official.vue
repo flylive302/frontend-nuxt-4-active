@@ -4,6 +4,11 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 const { messages, loading, nextCursor, fetchMessages, loadOlder, markRead } = useOfficialMessages()
 const scrollEl = ref<HTMLElement | null>(null)
 
+function openMessageLink(linkUrl: string | null): void {
+  if (!linkUrl) return
+  navigateTo(linkUrl)
+}
+
 function scrollToBottom(): void {
   nextTick(() => {
     if (!scrollEl.value) return
@@ -79,17 +84,28 @@ onMounted(async () => {
         :key="msg.id"
         class="flex justify-center"
       >
-        <div class="max-w-sm w-full rounded-2xl px-4 py-3 bg-elevated shadow-sm">
+        <component
+          :is="msg.linkUrl ? 'button' : 'div'"
+          :type="msg.linkUrl ? 'button' : undefined"
+          class="max-w-sm w-full rounded-2xl px-4 py-3 bg-elevated shadow-sm text-left"
+          :class="msg.linkUrl ? 'cursor-pointer transition hover:bg-elevated/70 active:scale-[0.99] ring-1 ring-primary/20' : ''"
+          @click="openMessageLink(msg.linkUrl)"
+        >
           <!-- Targeted badge -->
           <div v-if="msg.isTargeted" class="flex items-center gap-1 mb-1.5">
             <UIcon name="i-lucide-at-sign" class="size-3 text-primary" />
             <span class="text-xs font-medium text-primary">For you</span>
           </div>
           <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
+          <!-- CTA affordance (only when the message carries a link) -->
+          <div v-if="msg.linkUrl" class="flex items-center gap-1 mt-2 text-primary">
+            <span class="text-xs font-medium">View</span>
+            <UIcon name="i-lucide-chevron-right" class="size-3.5" />
+          </div>
           <p class="text-xs text-muted mt-1.5 text-right">
             {{ new Date(msg.sentAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
           </p>
-        </div>
+        </component>
       </div>
     </div>
   </main>

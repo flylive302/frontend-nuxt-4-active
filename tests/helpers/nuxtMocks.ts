@@ -103,6 +103,35 @@ export function createMockLevelsStore(overrides: Record<string, unknown> = {}) {
 }
 
 // ========================================
+// Level-Up Watermark Store Mock
+// ========================================
+
+export function createMockLevelUpWatermarkStore(overrides: Record<string, unknown> = {}) {
+  return {
+    wealthLevelSeen: null as number | null,
+    charmLevelSeen: null as number | null,
+    milestoneSeen: {} as Record<string, number>,
+    setWealthLevelSeen: vi.fn(),
+    setCharmLevelSeen: vi.fn(),
+    setMilestoneSeen: vi.fn(),
+    setMilestoneSeenExclusive: vi.fn(),
+    $reset: vi.fn(),
+    ...overrides,
+  }
+}
+
+// ========================================
+// Income Store Mock
+// ========================================
+
+export function createMockIncomeStore(overrides: Record<string, unknown> = {}) {
+  return {
+    activeRun: null as unknown,
+    ...overrides,
+  }
+}
+
+// ========================================
 // Asset Store Mock
 // ========================================
 
@@ -241,6 +270,8 @@ export function setupNuxtMocks(mocks: {
   levelsStore?: ReturnType<typeof createMockLevelsStore>
   assetStore?: ReturnType<typeof createMockAssetStore>
   authStore?: ReturnType<typeof createMockAuthStore>
+  levelUpWatermarkStore?: ReturnType<typeof createMockLevelUpWatermarkStore>
+  incomeStore?: ReturnType<typeof createMockIncomeStore>
   api?: ReturnType<typeof createMockApi>
   telemetry?: ReturnType<typeof createMockTelemetry>
   bootstrapAssets?: ReturnType<typeof createMockBootstrapAssets>
@@ -254,6 +285,8 @@ export function setupNuxtMocks(mocks: {
   const levelsStore = mocks.levelsStore ?? createMockLevelsStore()
   const assetStore = mocks.assetStore ?? createMockAssetStore()
   const authStore = mocks.authStore ?? createMockAuthStore()
+  const levelUpWatermarkStore = mocks.levelUpWatermarkStore ?? createMockLevelUpWatermarkStore()
+  const incomeStore = mocks.incomeStore ?? createMockIncomeStore()
   const api = mocks.api ?? createMockApi()
   const telemetry = mocks.telemetry ?? createMockTelemetry()
   const bootstrapAssets = mocks.bootstrapAssets ?? createMockBootstrapAssets()
@@ -268,6 +301,8 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).useLevelsStore = () => levelsStore
   ;(globalThis as Record<string, unknown>).useAssetStore = () => assetStore
   ;(globalThis as Record<string, unknown>).useAuthStore = () => authStore
+  ;(globalThis as Record<string, unknown>).useLevelUpWatermarkStore = () => levelUpWatermarkStore
+  ;(globalThis as Record<string, unknown>).useIncomeStore = () => incomeStore
   ;(globalThis as Record<string, unknown>).useApi = () => api
   ;(globalThis as Record<string, unknown>).useTelemetry = () => telemetry
   ;(globalThis as Record<string, unknown>).useBootstrapAssets = () => bootstrapAssets
@@ -283,7 +318,7 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).reactive = reactive
   ;(globalThis as Record<string, unknown>).readonly = <T>(value: T) => value
 
-  return { bootstrapStore, levelsStore, assetStore, authStore, api, telemetry, bootstrapAssets, userSync, inboxReconcile, mallStore }
+  return { bootstrapStore, levelsStore, assetStore, authStore, levelUpWatermarkStore, incomeStore, api, telemetry, bootstrapAssets, userSync, inboxReconcile, mallStore }
 }
 
 /**
@@ -292,7 +327,7 @@ export function setupNuxtMocks(mocks: {
  */
 export function cleanupNuxtMocks(): void {
   const keys = [
-    'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore',
+    'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore', 'useLevelUpWatermarkStore', 'useIncomeStore',
     'useApi', 'useTelemetry', 'useBootstrapAssets', 'useUserSync', 'useInboxReconcile', 'useMallStore', 'useRoute', 'useCookie',
     'ref', 'shallowRef', 'computed', 'reactive', 'readonly', 'useRoomParticipantsStore',
   ] as const

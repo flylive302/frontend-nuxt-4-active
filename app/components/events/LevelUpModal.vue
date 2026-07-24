@@ -2,30 +2,47 @@
 // ========================================
 // Level Up Modal
 // ========================================
-// Celebratory modal shown when user levels up.
+// Celebratory modal for a level-up crossed since the device's last visit
+// to /levels/wealth or /levels/charm (level-up-celebrations, ticket 04).
+// Page-gated: props/emits driven, hosted by LevelsLevelPage.vue via
+// useLevelUpDrain — no global queue coupling.
 // Uses GPU-friendly animations (transform + opacity only).
 
-const { levelUpModalOpen, levelUpModalData, closeLevelUpModal } = useAchievementModals()
-const { getBadgeFromXp } = useLevelLookup()
+import type { LevelUpModalItem } from '~/composables/progression/useLevelUpDrain'
+import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
+
+// ========================================
+// Props / Emits
+// ========================================
+
+const props = defineProps<{
+  open: boolean
+  modal: LevelUpModalItem | null
+}>()
+
+const emit = defineEmits<{
+  close: []
+}>()
 
 // ========================================
 // Computed
 // ========================================
 
 /**
- * New level's badge image, read straight from the bootstrap level config
- * (no extra request). Falls back to the type's default badge.
+ * The crossed level's own badge image from bootstrap level config.
+ * Falls back to the category's default badge.
  */
 const badgeImage = computed(() => {
-  if (!levelUpModalData.value) return null
-  return getBadgeFromXp(levelUpModalData.value.currentXp, levelUpModalData.value.type)
+  if (!props.modal) return null
+  return props.modal.imageUrl
+    ?? (props.modal.category === 'wealth' ? DEFAULT_WEALTH_BADGE : DEFAULT_CHARM_BADGE)
 })
 
 /**
- * Type-specific styling.
+ * Category-specific styling.
  */
 const typeStyle = computed(() => {
-  if (levelUpModalData.value?.type === 'wealth') {
+  if (props.modal?.category === 'wealth') {
     return {
       bgColor: 'bg-amber-500/20',
       textColor: 'text-amber-400',
@@ -46,24 +63,32 @@ const typeStyle = computed(() => {
 })
 
 /**
- * Format XP with thousands separator.
+ * Number of levels this modal represents. For a 'summary' modal this is the
+ * total crossed since the last visit (`crossedCount`), not just the gap to
+ * the last individually-shown level — keeps this number consistent with the
+ * "You crossed N levels" summary copy below.
  */
-const formattedXp = computed(() => {
-  if (!levelUpModalData.value?.currentXp) return '0'
-  const xp = parseFloat(levelUpModalData.value.currentXp)
-  return new Intl.NumberFormat().format(Math.floor(xp))
+const levelDelta = computed(() => {
+  if (!props.modal) return 0
+  return props.modal.kind === 'summary'
+    ? (props.modal.crossedCount ?? props.modal.level - props.modal.previousLevel)
+    : props.modal.level - props.modal.previousLevel
 })
+
+function handleClose(): void {
+  emit('close')
+}
 </script>
 
 <template>
   <UModal
-    :open="levelUpModalOpen"
+    :open="open"
     :ui="{
       content: 'bg-transparent shadow-none ring-0',
       overlay: 'bg-black/70 backdrop-blur-sm',
     }"
     class="z-90"
-    @close="closeLevelUpModal"
+    @close="handleClose"
   >
     <template #content>
       <Transition
@@ -76,7 +101,7 @@ const formattedXp = computed(() => {
         appear
       >
         <div
-          v-if="levelUpModalData"
+          v-if="modal"
           class="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-neutral-800 to-neutral-950 p-6 text-center shadow-2xl min-w-60"
           role="dialog"
           aria-labelledby="levelup-modal-title"
@@ -94,7 +119,7 @@ const formattedXp = computed(() => {
           <img
             v-if="badgeImage"
             :src="badgeImage"
-            :alt="`${typeStyle.label} ${levelUpModalData.newLevel} badge`"
+            :alt="`${typeStyle.label} ${modal.level} badge`"
             class="relative mx-auto mb-3 h-20 w-20 object-contain drop-shadow-lg"
           >
 
@@ -105,13 +130,13 @@ const formattedXp = computed(() => {
               :class="[typeStyle.gradientFrom, typeStyle.gradientTo]"
             >
               <span class="text-5xl font-black text-white drop-shadow-lg">
-                {{ levelUpModalData.newLevel }}
+                {{ modal.level }}
               </span>
             </div>
           </div>
           <!-- Previous Level -->
           <UBadge color="info" variant="soft" class="absolute left-2 top-2">
-            was {{ levelUpModalData.previousLevel }}
+            was {{ modal.previousLevel }}
           </UBadge>
 
           <!-- Title -->
@@ -119,7 +144,7 @@ const formattedXp = computed(() => {
             id="levelup-modal-title"
             class="mb-1 text-xl font-bold text-white"
           >
-            Level Up! 🚀
+            {{ modal.kind === 'summary' ? 'Great Progress! 🚀' : 'Level Up! 🚀' }}
           </h2>
 
           <!-- Type Label -->
@@ -131,12 +156,21 @@ const formattedXp = computed(() => {
             {{ typeStyle.label }}
           </p>
 
-          <!-- XP Display -->
+          <!-- Summary Description -->
           <p
+            v-if="modal.kind === 'summary'"
             id="levelup-modal-description"
             class="mb-4 text-sm text-neutral-400"
           >
-            Current XP: <span class="font-medium text-white">{{ formattedXp }}</span>
+            You crossed <span class="font-medium text-white">{{ modal.crossedCount }}</span> levels
+            and reached <span class="font-medium text-white">{{ modal.levelName }}</span>
+          </p>
+          <p
+            v-else
+            id="levelup-modal-description"
+            class="mb-4 text-sm text-neutral-400"
+          >
+            You reached <span class="font-medium text-white">{{ modal.levelName }}</span>
           </p>
 
           <!-- Progress Indicator -->
@@ -145,7 +179,7 @@ const formattedXp = computed(() => {
             :class="[typeStyle.bgColor, typeStyle.textColor]"
           >
             <UIcon name="i-heroicons-arrow-trending-up" class="h-4 w-4" />
-            +{{ levelUpModalData.newLevel - levelUpModalData.previousLevel }} Level{{ levelUpModalData.newLevel - levelUpModalData.previousLevel > 1 ? 's' : '' }}
+            +{{ levelDelta }} Level{{ levelDelta > 1 ? 's' : '' }}
           </div>
 
           <!-- Close Button -->
@@ -155,7 +189,7 @@ const formattedXp = computed(() => {
             class="absolute right-0 top-0"
             aria-label="Close"
             icon="i-heroicons-x-mark"
-            @click="closeLevelUpModal"
+            @click="handleClose"
           />
         </div>
       </Transition>

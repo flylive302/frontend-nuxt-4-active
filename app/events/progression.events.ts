@@ -5,24 +5,26 @@
 import type { Socket } from 'socket.io-client'
 import type {
   BadgeEarnedPayload,
-  RoomSeatCapUnlockedPayload,
-  UserLevelUpPayload,
   UserProgressionPayload,
 } from '~/types/room/socket-events'
 
-
 /**
  * Composable to register progression-related socket event handlers.
- * Captures action and modal dependencies during setup() phase.
+ *
+ * Celebration modals are no longer fired from here — they are page-gated
+ * (level-up-celebrations epic). Level-up shows on /levels/wealth|charm via
+ * useLevelUpDrain; the badge earns a toast; seat-cap unlocks are delivered as
+ * a durable official inbox message from the backend. The old app-wide modal
+ * queue (useAchievementModals), the `level.up` back-compat listener, and the
+ * `room.seat_cap_unlocked` modal handler were removed with ticket 06.
  */
 export function useProgressionEvents() {
   const { onBadgeEarned } = useBadgeActions()
-  const { showBadgeEarned, showLevelUp, showSeatCapUnlocked } = useAchievementModals()
   const { handleLevelUp } = useLevelActions()
 
   return function registerProgressionEvents(socket: Socket): void {
-    // badge.earned: standalone badges (rewards, agency targets, events, admin grants).
-    // Level-ups no longer award badges, so this is the only badge-earned path.
+    // badge.earned: standalone badges (rewards, agency targets, events, admin
+    // grants). onBadgeEarned updates the store and raises its own toast.
     socket.on('badge.earned', (payload: BadgeEarnedPayload) => {
       onBadgeEarned({
         id: 0, // Temporary ID; real data will be fetched on next store refresh
@@ -35,30 +37,15 @@ export function useProgressionEvents() {
           image_url: payload.badge_image,
         },
       } as import('~/types/progression/badge').UserBadge)
-      showBadgeEarned(payload)
-    })
-
-    // level.up: kept for backward compatibility; not emitted by the gift job anymore.
-    socket.on('level.up', (payload: UserLevelUpPayload) => {
-      handleLevelUp(payload)
-      showLevelUp(payload)
     })
 
     // user.progression: single event from the gift side-effects job combining
-    // all level-ups in one transaction for this user. Level-ups no longer award
-    // badges — the new level's image comes from the bootstrap level config, shown
-    // by the level-up modal (badge system refactor).
+    // all level-ups in one transaction for this user. Updates the auth store's
+    // XP only; the celebration is derived page-side from XP + watermark.
     socket.on('user.progression', (payload: UserProgressionPayload) => {
       for (const levelUp of payload.level_ups) {
         handleLevelUp(levelUp)
-        showLevelUp(levelUp)
       }
-    })
-
-    // room.seat_cap_unlocked: room-seat-caps — server targets the room owner's
-    // sockets only when a room level-up crosses a Seat Unlock Ladder entry.
-    socket.on('room.seat_cap_unlocked', (payload: RoomSeatCapUnlockedPayload) => {
-      showSeatCapUnlocked(payload)
     })
   }
 }

@@ -5,12 +5,13 @@
 // UI + event binding for wealth/charm level pages.
 // Both pages are visually identical — only color, XP source, and description differ.
 
-import { h, computed } from 'vue'
+import { h, computed, onMounted } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { LevelConfig } from '~/types/user/bootstrap'
 import { computeLevelStatus } from '~/utils/levels'
 import type { LevelComputedStatus } from '~/utils/levels'
 import { withImageKitTransform } from '~/utils/imagekit'
+import { useLevelUpDrain } from '~/composables/progression/useLevelUpDrain'
 
 // ========================================
 // Props
@@ -31,6 +32,16 @@ const props = defineProps<{
 const authStore = useAuthStore()
 const bootstrapStore = useBootstrapStore()
 const { resolvePropAsset } = usePropLookup()
+
+// ========================================
+// Level-Up Celebration (page-gated, own-track only)
+// ========================================
+
+const { currentModal, drain, closeModal } = useLevelUpDrain()
+
+onMounted(() => {
+  drain(props.category)
+})
 
 // ========================================
 // Table Setup
@@ -224,5 +235,11 @@ const tableData = computed<LevelRow[]>(() =>
         :class="`border-${color}`"
       />
     </div>
+
+    <EventsLevelUpModal
+      :open="!!currentModal"
+      :modal="currentModal"
+      @close="closeModal"
+    />
   </div>
 </template>
