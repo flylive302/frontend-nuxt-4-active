@@ -348,9 +348,17 @@ export function useRoomLifecycle(): void {
       }
 
       // Genuine breakage: socket dead, transport failed, or consumer ended.
+      // Re-guard and capture here, not at the watcher's entry: the probe awaits
+      // above can span seconds, and the user can leave the room inside them.
+      // Re-reading `currentRoom` after an await is what crashed watcher 2
+      // (Sentry JAVASCRIPT-VUE-6R); the same read survived here and in the catch
+      // below. Capturing keeps the retry pinned to the room we actually probed.
+      const rebuildRoomId = roomStore.currentRoom ? String(roomStore.currentRoom.id) : null;
+      if (!rebuildRoomId) return;
+
       isJoining.value = true;
       try {
-        await withTimeout(rebuildRoomAudio(String(roomStore.currentRoom.id)), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
+        await withTimeout(rebuildRoomAudio(rebuildRoomId), ROOM_OP_TIMEOUT_MS, 'rebuildRoomAudio');
       } catch (err) {
         log.warn('Failed to rebuild room audio on visibility restore', err);
         toast.add({
@@ -358,7 +366,7 @@ export function useRoomLifecycle(): void {
           description: 'Audio may take a moment to restore.',
           color: 'warning',
         });
-        scheduleRebuildRetry(String(roomStore.currentRoom.id));
+        scheduleRebuildRetry(rebuildRoomId);
       } finally {
         isJoining.value = false;
       }

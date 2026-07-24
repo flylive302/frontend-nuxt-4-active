@@ -20,6 +20,26 @@ describe('isStaleBundleError', () => {
     ])('matches the %s dynamic-import phrasing', (_engine, message) => {
       expect(isStaleBundleError(new Error(message))).toBe(true);
     });
+
+    // Sentry JAVASCRIPT-VUE-6G. Nuxt's route-middleware loader does
+    // `await Vf[name]?.().then(E => E.default || E)`, so a stale import that
+    // resolves `undefined` throws on `.default` and produces none of the
+    // phrasings above — the user dead-ended on the route with no reload.
+    it.each([
+      ['Chromium', "Cannot read properties of undefined (reading 'default')"],
+      ['Safari', "undefined is not an object (evaluating 'E.default')"],
+    ])('matches the %s middleware-import failure', (_engine, message) => {
+      expect(isStaleBundleError(new Error(message))).toBe(true);
+    });
+
+    // The object identifier is minified and changes every build, so the matcher
+    // must key on the property name alone. If this ever regresses to including
+    // the identifier, this case is what catches it.
+    it('still matches when the minified identifier differs', () => {
+      expect(
+        isStaleBundleError(new Error("undefined is not an object (evaluating 'qZ.default')")),
+      ).toBe(true);
+    });
   });
 
   describe('does NOT match application errors', () => {

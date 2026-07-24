@@ -24,6 +24,18 @@ const STALE_BUNDLE_MESSAGES = [
   'Importing a module script failed', // Safari
   // Vite preload of a chunk's stylesheet.
   'Unable to preload CSS',
+  // Nuxt's route-MIDDLEWARE loader, not a component: it does
+  // `await Vf[name]?.().then(E => E.default || E)`, so a stale import that
+  // resolves `undefined` throws on `.default` instead of producing any of the
+  // phrasings above (Sentry JAVASCRIPT-VUE-6G, iOS Safari + Chromium).
+  //
+  // Matching `.default` is deliberately narrow rather than fuzzy: `.default` is
+  // an ES-module interop artifact that application code essentially never reads,
+  // so this cannot swallow a normal app error. It is matched on the *property
+  // name only* — the object identifier is minified and changes every build, so
+  // anything including it would silently stop matching on the next deploy.
+  "(reading 'default')", // Chromium
+  ".default')", // Safari — "undefined is not an object (evaluating 'E.default')"
 ] as const;
 
 /**
