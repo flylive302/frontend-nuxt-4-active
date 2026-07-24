@@ -10,6 +10,22 @@ export default defineNuxtConfig({
     ssr: false,
     spaLoadingTemplate: true,
     devtools: { enabled: false },
+    // Client source maps for readable Sentry stack traces. 'hidden' emits the
+    // maps but strips the //# sourceMappingURL comment, so nothing references
+    // them publicly; the @sentry/nuxt module uploads then deletes them
+    // (filesToDeleteAfterUpload below) so no .map ships to CF Pages / the APK.
+    sourcemap: { client: 'hidden' },
+    // Build-time source map upload. Only runs when SENTRY_AUTH_TOKEN is present
+    // (CF Pages env for web, .env.capacitor for the native cap:build) — a
+    // tokenless local/dev build skips upload but still deletes the maps.
+    sentry: {
+        org: process.env.SENTRY_ORG || 'flylive',
+        project: process.env.SENTRY_PROJECT || 'javascript-vue',
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        sourcemaps: {
+            filesToDeleteAfterUpload: ['.output/**/public/**/*.map', './**/*.map'],
+        },
+    },
     features: {
         inlineStyles: false,
     },
@@ -120,7 +136,10 @@ export default defineNuxtConfig({
             },
         },
         build: {
-            sourcemap: false,
+            // 'hidden' (not false) so the client build actually emits .map files
+            // for @sentry/nuxt to upload; kept in sync with the top-level
+            // sourcemap.client above. Maps are deleted post-upload, none ship.
+            sourcemap: 'hidden',
             chunkSizeWarningLimit: 1000,
             rollupOptions: {
                 onwarn(warning, warn) {
