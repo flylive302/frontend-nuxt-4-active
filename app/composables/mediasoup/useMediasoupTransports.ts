@@ -42,6 +42,135 @@ const recoveryHandles = new Map<string, TransportRecoveryHandle>();
 type TransportExhaustedCallback = () => void;
 let _transportExhaustedCallback: TransportExhaustedCallback | null = null;
 
+// ============================================
+// ICE diagnostics (audio-pipe-observability 11)
+// ============================================
+// The `attempts-exhausted` half is unisolable without knowing, per event,
+// whether the client was even handed a TURN relay and what ICE candidate types
+// it managed to gather. Captured here and attached to the exhaustion Sentry
+// event. Pure/module-level — no Vue/socket state needed.
+
+interface IceSchemeSummary {
+  /** URL schemes present in the ICE servers handed at transport creation. */
+  schemes: string[];
+  /** Whether any `turn:`/`turns:` relay was offered (else STUN-only). */
+  hadTurn: boolean;
+}
+
+interface IceDiag {
+  localCandidateTypes: string[];
+  remoteCandidateTypes: string[];
+  /** e.g. `relay/relay`, `srflx/host`, or null if no pair was ever selected. */
+  selectedPair: string | null;
+  /** Whether the client gathered any `relay` candidate (TURN actually usable). */
+  relayGathered: boolean;
+}
+
+/** Minimal shape of the RTCStats rows we read (RTCStatsReport values are `any`). */
+interface RtcStatEntry {
+  type: string;
+  id: string;
+  candidateType?: string;
+  selected?: boolean;
+  nominated?: boolean;
+  state?: string;
+  localCandidateId?: string;
+  remoteCandidateId?: string;
+}
+
+/** Was the client handed a TURN relay at transport creation, or STUN-only? */
+function summarizeIceSchemes(iceServers: RTCIceServer[] | undefined): IceSchemeSummary {
+  const schemes = new Set<string>();
+  for (const server of iceServers ?? []) {
+    const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+    for (const url of urls) {
+      const scheme = url.split(':', 1)[0];
+      if (scheme) schemes.add(scheme);
+    }
+  }
+  return { schemes: [...schemes], hadTurn: schemes.has('turn') || schemes.has('turns') };
+}
+
+/** Snapshot gathered candidate types + selected pair from the transport's PC. */
+async function collectIceDiag(transport: Transport): Promise<IceDiag> {
+  const empty: IceDiag = {
+    localCandidateTypes: [],
+    remoteCandidateTypes: [],
+    selectedPair: null,
+    relayGathered: false,
+  };
+  try {
+    const stats = await transport.getStats();
+    const local = new Set<string>();
+    const remote = new Set<string>();
+    const candidateType = new Map<string, string>();
+    stats.forEach((report: RtcStatEntry) => {
+      if (report.type === 'local-candidate' && report.candidateType) {
+        local.add(report.candidateType);
+        candidateType.set(report.id, report.candidateType);
+      } else if (report.type === 'remote-candidate' && report.candidateType) {
+        remote.add(report.candidateType);
+        candidateType.set(report.id, report.candidateType);
+      }
+    });
+    let selectedPair: string | null = null;
+    stats.forEach((report: RtcStatEntry) => {
+      const isSelected =
+        report.type === 'candidate-pair' &&
+        (report.selected === true || (report.nominated === true && report.state === 'succeeded'));
+      if (isSelected) {
+        const l = report.localCandidateId ? candidateType.get(report.localCandidateId) : undefined;
+        const r = report.remoteCandidateId ? candidateType.get(report.remoteCandidateId) : undefined;
+        selectedPair = `${l ?? '?'}/${r ?? '?'}`;
+      }
+    });
+    return {
+      localCandidateTypes: [...local],
+      remoteCandidateTypes: [...remote],
+      selectedPair,
+      relayGathered: local.has('relay'),
+    };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Report a terminal transport failure to Sentry with full ICE diagnostics.
+ * MUST run before recovery tears the transport down, so getStats() sees the
+ * failed transport's real candidate state.
+ */
+async function captureTransportExhaustion(
+  transport: Transport,
+  label: string,
+  attempts: number,
+  reason: string,
+  iceSchemes: IceSchemeSummary,
+): Promise<void> {
+  const diag = await collectIceDiag(transport);
+  const giftStore = useGiftStore();
+  Sentry.captureMessage('Audio transport failed after recovery exhausted', {
+    level: 'error',
+    tags: {
+      transport: label,
+      reason,
+      hadTurn: iceSchemes.hadTurn,
+      relayGathered: diag.relayGathered,
+    },
+    extra: {
+      attempts,
+      giftQueueDepth: giftStore.playbackQueue.length,
+      giftPlaying: giftStore.isPlaying,
+      // audio-pipe-observability 11 — ICE context to split the two failure modes.
+      iceSchemes: iceSchemes.schemes,
+      localCandidateTypes: diag.localCandidateTypes,
+      remoteCandidateTypes: diag.remoteCandidateTypes,
+      selectedCandidatePair: diag.selectedPair,
+      connectionState: transport.connectionState,
+    },
+  });
+}
+
 // Cached to prevent inject() warning when called outside Vue setup context
 let _toast: ReturnType<typeof useToast> | null = null;
 
@@ -63,22 +192,6 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
   // Get device from device composable
   const { device } = useMediasoupDevice();
 
-  // Diagnose European/symmetric-NAT failures: log whether the server handed us
-  // TURN candidates (only `stun:` URLs means TURN is unavailable for this user).
-  function logIceServers(label: string, iceServers: RTCIceServer[] | undefined) {
-    if (!iceServers || iceServers.length === 0) {
-      return;
-    }
-    const schemes = new Set<string>();
-    for (const server of iceServers) {
-      const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-      for (const url of urls) {
-        const scheme = url.split(':', 1)[0];
-        if (scheme) schemes.add(scheme);
-      }
-    }
-  }
-
   /**
    * msab-load-stability 10: `failed` is no longer terminal. The recovery
    * engine attempts bounded ICE restarts (server hands fresh ICE creds via
@@ -86,7 +199,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
    * recovery is exhausted — and the terminal branch reports to Sentry with
    * recovery + gift-load context (this path produced zero events before).
    */
-  function attachFailureListener(transport: Transport, label: string) {
+  function attachFailureListener(transport: Transport, label: string, iceSchemes: IceSchemeSummary) {
     recoveryHandles.get(transport.id)?.dispose();
     recoveryHandles.set(transport.id, attachTransportRecovery(transport, {
       requestIceRestart: async () => {
@@ -103,19 +216,20 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       onRecovered: ({ attempts }) => {
         logger.info(`${label} recovered after ICE restart`, { attempts });
       },
-      onExhausted: ({ attempts, reason }) => {
-        const giftStore = useGiftStore();
+      onExhausted: async ({ attempts, reason }) => {
         // Keep the signal — this is the observability surface the epic was
-        // chartered around; capture regardless of who owns recovery.
-        Sentry.captureMessage('Audio transport failed after recovery exhausted', {
-          level: 'error',
-          tags: { transport: label, reason },
-          extra: {
-            attempts,
-            giftQueueDepth: giftStore.playbackQueue.length,
-            giftPlaying: giftStore.isPlaying,
-          },
-        });
+        // chartered around; capture regardless of who owns recovery. Snapshot
+        // ICE diagnostics from the still-open transport BEFORE handing off to
+        // recovery (which rebuilds and closes it). Async is safe — the engine
+        // fire-and-forgets onExhausted (REACT). Guard: observability must NEVER
+        // block the handoff below — a throw here would otherwise skip both the
+        // rebuild and the fallback toast, re-creating the silent dead-end
+        // ticket 10 kills (this path gates BOTH `reason` halves).
+        try {
+          await captureTransportExhaustion(transport, label, attempts, reason, iceSchemes);
+        } catch {
+          // swallow — recovery must not depend on telemetry succeeding
+        }
         // Hand recovery to the registered owner (useRoomLifecycle) — it wires
         // the terminal failure into the same rebuild + "Reconnect" affordance
         // the socket-failed path already uses. Robust to both `reason` halves.
@@ -174,7 +288,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       throw new Error(consumerResponse.error || 'Failed to create consumer transport');
     }
 
-    logIceServers('Consumer transport', consumerResponse.data.iceServers);
+    const consumerIceSchemes = summarizeIceSchemes(consumerResponse.data.iceServers);
 
     consumerTransport.value = device.value.createRecvTransport({
       id: consumerResponse.data.id,
@@ -184,7 +298,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       iceServers: consumerResponse.data.iceServers,
     });
 
-    attachFailureListener(consumerTransport.value, 'Consumer transport');
+    attachFailureListener(consumerTransport.value, 'Consumer transport', consumerIceSchemes);
 
     // Handle consumer transport connection
     consumerTransport.value.on(
@@ -235,7 +349,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       throw new Error(response.error || 'Failed to create producer transport');
     }
 
-    logIceServers('Producer transport', response.data.iceServers);
+    const producerIceSchemes = summarizeIceSchemes(response.data.iceServers);
 
     producerTransport.value = device.value.createSendTransport({
       id: response.data.id,
@@ -245,7 +359,7 @@ export function useMediasoupTransports(socket: Ref<AudioSocket | null>) {
       iceServers: response.data.iceServers,
     });
 
-    attachFailureListener(producerTransport.value, 'Producer transport');
+    attachFailureListener(producerTransport.value, 'Producer transport', producerIceSchemes);
 
     // Handle producer transport connection
     producerTransport.value.on(
