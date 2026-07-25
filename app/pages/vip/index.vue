@@ -11,7 +11,6 @@ import type { VipLevel, VipPreviewItem, VipProp, VipTileItem } from '~/types/vip
 import type { MinimalUser } from '~/types/user/bootstrap'
 import { VIP_PRIVILEGE_LABELS, VIP_PRIVILEGE_ICONS } from '~/types/vip/vip-level'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
-import { collectCumulativeBadges } from '~/utils/vip-badges'
 
 // ========================================
 // Page Configuration
@@ -170,8 +169,8 @@ const nonPropPrivileges = computed(() =>
 
 /**
  * VIP level data for the congrats modal.
- * Badges are collected CUMULATIVELY across all levels up to and including the
- * purchased level (purchasing a tier grants every lower tier's badges too).
+ * Props and badges are both scoped to the purchased tier's own items, matching
+ * how the browse grid presents them — the grant itself stays cumulative.
  */
 const congratsLevelData = computed(() => {
   const level = levels.value.find(l => l.level === congratsLevel.value)
@@ -179,7 +178,7 @@ const congratsLevelData = computed(() => {
     name: level?.name ?? `VIP ${congratsLevel.value}`,
     color: level?.color ?? '#1a1a2e',
     props: level?.props ?? [],
-    badges: collectCumulativeBadges(levels.value, congratsLevel.value),
+    badges: level?.badges ?? [],
   }
 })
 
