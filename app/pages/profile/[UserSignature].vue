@@ -65,7 +65,7 @@ const authStore = useAuthStore()
 // ========================================
 
 const signature = computed(() => route.params.UserSignature as string)
-const giftsContainerRef = ref<HTMLElement | null>(null)
+const profileScrollRef = ref<HTMLElement | null>(null)
 const followAnimating = ref(false)
 const activeTab = ref('gifts')
 
@@ -213,8 +213,21 @@ async function handlePreviewFileSelected(file: File): Promise<void> {
 // Infinite Scroll for Active Tab
 // ========================================
 
+// Bound to the profile body — the element that actually scrolls. Binding this to
+// the History block instead made `scrollHeight - scrollTop - clientHeight` a
+// permanent ~0 (an unconstrained element is always "at the bottom"), so page 2
+// fired the moment the profile resolved rather than on user scroll.
+// Only these tabs paginate. `badges` is deliberately absent — useProfileBadges is
+// a single-shot ensureLoaded() with no fetchMore, so an exhaustive lookup is used
+// rather than a ternary: a fall-through would page a tab the user is not viewing.
+function paginatedSourceForActiveTab() {
+  if (activeTab.value === 'entries') return entriesProps
+  if (activeTab.value === 'frames') return framesProps
+  return null
+}
+
 useInfiniteScroll(
-  giftsContainerRef,
+  profileScrollRef,
   async () => {
     if (activeTab.value === 'gifts') {
       if (giftsHasMore.value && !giftsLoading.value) {
@@ -223,12 +236,29 @@ useInfiniteScroll(
       return
     }
 
-    const source = activeTab.value === 'entries' ? entriesProps : framesProps
+    const source = paginatedSourceForActiveTab()
+    if (!source) return
+
     if (source.loaded.value && source.hasMore.value && !source.loading.value) {
       await source.fetchMore()
     }
   },
-  { distance: 200 }
+  {
+    distance: 200,
+    // vueuse re-invokes onLoadMore for as long as there is room for more
+    // content, so a container that does not overflow must never qualify —
+    // that is a short page, not a scroll-to-bottom.
+    canLoadMore: (el) => {
+      if (!el || el.scrollHeight <= el.clientHeight) return false
+
+      if (activeTab.value === 'gifts') {
+        return giftsHasMore.value && !giftsLoading.value
+      }
+
+      const source = paginatedSourceForActiveTab()
+      return !!source && source.loaded.value && source.hasMore.value && !source.loading.value
+    },
+  }
 )
 
 // ========================================
@@ -391,7 +421,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     </ProfileHeader>
     </div>
 
-    <div class="max-h-[58vh] overflow-scroll relative z-50 mt-2">
+    <div ref="profileScrollRef" class="max-h-[58vh] overflow-scroll relative z-50 mt-2">
       <SectionTitle class="mx-8">Cp RelationShips</SectionTitle>
       <EventsProfileCard class="mx-4"/>
 
@@ -431,7 +461,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       </div>
 
       <!-- History Section -->
-      <div ref="giftsContainerRef" class="mb-12 mt-4 relative z-30">
+      <div class="mb-12 mt-4 relative z-30">
         <SectionTitle class="mx-8">History</SectionTitle>
 
         <UTabs
