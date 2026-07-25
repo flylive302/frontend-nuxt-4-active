@@ -13,6 +13,10 @@ export default defineNuxtPlugin({
   name: 'inbox-bootstrap',
   parallel: true,
   setup() {
+    // Maintenance wall: no inbox to fetch, and the request would only fail
+    // against a backend that is intentionally down.
+    if (useRuntimeConfig().public.maintenanceMode) return
+
     const authStore = useAuthStore()
     const { fetchThreads } = useInboxActions()
 

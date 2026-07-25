@@ -22,6 +22,12 @@ useHead(() => isAuthRoute.value ? {} : {
 })
 
 const GlobalShell = defineAsyncComponent(() => import('~/components/system/global-shell.client.vue'))
+
+// Maintenance wall: the whole app is one static page, so GlobalShell must not
+// mount. It owns the room lifecycle (which would try to rejoin a persisted room
+// over a socket that is intentionally never opened) and the asset-download gate,
+// a `fixed inset-0` overlay that would render ON TOP of the maintenance page.
+const { maintenanceMode } = useRuntimeConfig().public
 </script>
 
 <template>
@@ -35,6 +41,6 @@ const GlobalShell = defineAsyncComponent(() => import('~/components/system/globa
       <NuxtPage />
     </NuxtLayout>
 
-    <GlobalShell v-if="!isAuthRoute" />
+    <GlobalShell v-if="!isAuthRoute && !maintenanceMode" />
   </UApp>
 </template>

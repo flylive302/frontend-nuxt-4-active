@@ -12,6 +12,11 @@
  * The only visible indicator is the download progress bar.
  */
 export default defineNuxtPlugin(() => {
+  // Maintenance wall: the app renders one static page and nothing else, so skip
+  // the /bootstrap fetch and the multi-MB gift-asset prefetch. Both would only
+  // retry against a backend that is intentionally down.
+  if (useRuntimeConfig().public.maintenanceMode) return
+
   const { init } = useBootstrapInit()
   const { startAssetDownload, pause, resume } = useBootstrapAssets()
   const authStore = useAuthStore()

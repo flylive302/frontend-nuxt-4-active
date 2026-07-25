@@ -18,6 +18,11 @@ export default defineNuxtPlugin({
   name: 'audio-socket',
   parallel: true,
   setup() {
+    // Maintenance wall: never open the audio socket. Without this the client
+    // would sit on /maintenance burning battery on reconnect backoff against a
+    // fleet that is intentionally unavailable.
+    if (useRuntimeConfig().public.maintenanceMode) return
+
     const authStore = useAuthStore()
     const { connect, disconnect } = useAudioSocket()
 

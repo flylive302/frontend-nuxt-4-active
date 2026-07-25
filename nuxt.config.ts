@@ -188,6 +188,13 @@ export default defineNuxtConfig({
             // `manifest.json` on Cloudflare R2. Empty ⇒ the native OTA check no-ops
             // (web build never reads it). Baked into the bundle at generate time.
             otaManifestUrl: process.env.NUXT_PUBLIC_OTA_MANIFEST_URL || '',
+            // Whole-app maintenance wall. `true` makes middleware/maintenance.global.ts
+            // redirect every route to /maintenance and skips the bootstrap fetch +
+            // socket connect entirely, so the wall holds with Laravel and MSAB down.
+            // Baked into the bundle at build time (ssr: false), so flipping it costs a
+            // CF Pages redeploy on web and an OTA push for the native shell — it is a
+            // deploy-scoped switch, NOT a runtime toggle.
+            maintenanceMode: process.env.NUXT_PUBLIC_MAINTENANCE_MODE === 'true',
             sentry: {
                 dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
                 environment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || 'production',
