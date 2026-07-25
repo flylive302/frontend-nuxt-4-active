@@ -24,6 +24,8 @@
 // plugin itself is not testable in isolation.
 import { isStaleBundleError } from '~/utils/stale-bundle-error'
 
+import { markReloadIntent } from '~/utils/reload-intent'
+
 const RELOAD_GUARD_KEY = 'chunk-reload-at'
 const RELOAD_GUARD_WINDOW_MS = 60_000
 
@@ -38,6 +40,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
     sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()))
     log.warn('Stale chunk detected — reloading against new deploy', reason)
+    // Tell the room lifecycle this unload is a reload, not a close, so it skips
+    // the `room:leave` emit and lets MSAB's disconnect grace hold the seat.
+    markReloadIntent()
     reloadNuxtApp({ persistState: true, force: true })
   }
 

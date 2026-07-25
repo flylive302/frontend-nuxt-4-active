@@ -28,6 +28,19 @@ export const useRoomStore = defineStore('roomStore', () => {
    */
   const minimizedRoom = ref<Room | null>(null);
 
+  /**
+   * Persisted marker for the room the user is *actively* in, with the timestamp
+   * of its last heartbeat. Distinct from `minimizedRoom`, which is cleared by
+   * `setCurrentRoom` and so is always null for an active session — precisely the
+   * case a reload has to recover.
+   *
+   * Only a marker whose heartbeat is within ACTIVE_ROOM_MARKER_TTL_MS may
+   * authorise an automatic rehydrate. The TTL is what keeps this from becoming a
+   * "shared links auto-join you" mechanism: a stale marker is ignored, so a cold
+   * link tap behaves exactly as it does today.
+   */
+  const activeRoom = ref<{ id: number; at: number } | null>(null);
+
   // ========================================
   // Actions
   // ========================================
@@ -62,6 +75,22 @@ export const useRoomStore = defineStore('roomStore', () => {
     currentRoom.value = room;
     isMinimized.value = false;
     minimizedRoom.value = null;
+    activeRoom.value = room ? { id: room.id, at: Date.now() } : null;
+  }
+
+  /**
+   * Refresh the active-room marker's heartbeat. Called on an interval by the
+   * room lifecycle so the marker stays inside its TTL for as long as the user is
+   * genuinely in the room, and goes stale on its own once they are not.
+   */
+  function touchActiveRoom() {
+    if (currentRoom.value) {
+      activeRoom.value = { id: currentRoom.value.id, at: Date.now() };
+    }
+  }
+
+  function clearActiveRoom() {
+    activeRoom.value = null;
   }
 
   /**
@@ -86,6 +115,9 @@ export const useRoomStore = defineStore('roomStore', () => {
     currentRoom.value = null;
     isMinimized.value = false;
     minimizedRoom.value = null;
+    // A genuine leave must invalidate the marker immediately — otherwise a
+    // reload moments later would rehydrate a room the user deliberately left.
+    activeRoom.value = null;
   }
 
   function updateRoomLevel(level: number, xp: string) {
@@ -123,6 +155,7 @@ export const useRoomStore = defineStore('roomStore', () => {
     userRoom,
     isMinimized,
     minimizedRoom,
+    activeRoom,
     previousRoute,
     status,
 
@@ -131,6 +164,8 @@ export const useRoomStore = defineStore('roomStore', () => {
     minimizeRoom,
     maximizeRoom,
     setCurrentRoom,
+    touchActiveRoom,
+    clearActiveRoom,
     refreshCurrentRoom,
     setUserRoom,
     leaveRoom,
@@ -140,6 +175,6 @@ export const useRoomStore = defineStore('roomStore', () => {
   };
 }, {
   persist: {
-    pick: ['userRoom', 'previousRoute', 'minimizedRoom'],
+    pick: ['userRoom', 'previousRoute', 'minimizedRoom', 'activeRoom'],
   },
 });

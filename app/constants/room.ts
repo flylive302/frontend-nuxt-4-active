@@ -77,6 +77,24 @@ export const CONNECTION_TIMEOUT_MS = 10_000;
 export const ROOM_OP_TIMEOUT_MS = 30_000;
 
 /**
+ * How often the active-room marker's heartbeat is refreshed while the user sits
+ * in a room. The marker is what lets a reloaded page tell "I was in this room a
+ * moment ago" from "I opened this link cold", so it must be recent enough to be
+ * trustworthy and cheap enough to write on an interval.
+ */
+export const ACTIVE_ROOM_HEARTBEAT_MS = 5_000;
+
+/**
+ * How stale the active-room marker may be and still authorise an automatic
+ * rehydrate. Must exceed ACTIVE_ROOM_HEARTBEAT_MS by enough to cover a slow
+ * reload on low-end Android (app boot + socket connect + join), but stay short
+ * enough that a marker can never outlive the session that wrote it — otherwise
+ * a day-old marker would silently auto-join a room from a shared link, which is
+ * the behaviour the marker-driven design exists to prevent.
+ */
+export const ACTIVE_ROOM_MARKER_TTL_MS = 60_000;
+
+/**
  * Exponential backoff for automatic room-audio rebuild retries after a failed
  * reconnect/rebuild (base doubles per attempt, capped). Retries continue until
  * the rebuild succeeds or the user leaves the room — a transient failure (e.g.

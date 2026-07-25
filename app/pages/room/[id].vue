@@ -28,17 +28,34 @@ const { floatingMultipliers } = useLuckyGift();
 
 
 // ========================================
-// Route Guard — redirect home if no room in store
+// Route Guard — rehydrate on cold mount, redirect only on a genuine leave
 // ========================================
 
+const route = useRoute();
+const { rehydrateFromRoute, rehydrating } = useRoomRehydration();
+
+/**
+ * A full reload nulls `currentRoom` (it is in-memory only), which is
+ * indistinguishable from a genuine leave by store state alone. Attempt a
+ * marker-authorised rehydrate before treating an empty store as "the user left"
+ * — that conflation is what silently ejected reloading users.
+ */
+function leaveRoomPage(): void {
+  const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+  navigateTo(target, { replace: true });
+}
 
 watch(
   () => roomStore.currentRoom,
-  (room) => {
-    if (!room) {
-      const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
-      navigateTo(target, { replace: true });
-    }
+  async (room) => {
+    if (room) return;
+    // Already recovering — don't race the rehydrate with a redirect.
+    if (rehydrating.value) return;
+
+    const roomId = Number(route.params.id);
+    if (Number.isFinite(roomId) && await rehydrateFromRoute(roomId)) return;
+
+    leaveRoomPage();
   },
   { immediate: true },
 );
@@ -296,6 +313,13 @@ onUnmounted(() => {
 
 
     </template>
+
+    <!-- Rehydrating after a reload — hold the page rather than redirecting, so a
+         slow rejoin reads as work in progress instead of a freeze or an eject. -->
+    <div v-else-if="rehydrating" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3">
+      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-primary" />
+      <p class="text-sm text-muted">Rejoining the room…</p>
+    </div>
   </div>
 </template>
 

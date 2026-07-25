@@ -8,17 +8,19 @@
  *
  * Extracted from shell.vue to enable page-route-based room architecture.
  */
-import { useDocumentVisibility, useEventListener } from '@vueuse/core';
+import { useDocumentVisibility, useEventListener, useIntervalFn } from '@vueuse/core';
 import { createLogger } from '~/utils/logger';
 import { withTimeout } from '~/utils/with-timeout';
 import { evaluateTransportRebuild } from '~/utils/transport-rebuild-budget';
 import { RoomBlockedError } from '~/utils/socket/socketErrorMessages';
+import { isReloadIntended } from '~/utils/reload-intent';
 import {
   ROOM_OP_TIMEOUT_MS,
   AUDIO_REBUILD_RETRY_BASE_MS,
   AUDIO_REBUILD_RETRY_MAX_MS,
   TRANSPORT_REBUILD_MAX_AUTO,
   TRANSPORT_REBUILD_COOLDOWN_MS,
+  ACTIVE_ROOM_HEARTBEAT_MS,
 } from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
@@ -448,6 +450,18 @@ export function useRoomLifecycle(): void {
   });
 
   // ========================================
+  // Active-room marker heartbeat
+  // ========================================
+  // Keeps the persisted marker fresh while the user is genuinely in a room, so a
+  // reload can tell "I was here a second ago" from "I opened this link cold".
+  // The marker is only trusted inside ACTIVE_ROOM_MARKER_TTL_MS, so stopping the
+  // heartbeat is what makes it expire — no explicit cleanup needed on the paths
+  // that end a session abnormally.
+  useIntervalFn(() => {
+    roomStore.touchActiveRoom();
+  }, ACTIVE_ROOM_HEARTBEAT_MS);
+
+  // ========================================
   // Terminal cleanup: leave the room on real page unload (app / tab close)
   // ========================================
   // `pagehide` fires on genuine document unload (PWA/TWA close, tab close) —
@@ -456,10 +470,19 @@ export function useRoomLifecycle(): void {
   // instantly instead of waiting ~20s for the server socket's pingTimeout to
   // fire the disconnect-driven full leave. Best-effort: if the frame doesn't
   // flush before unload, the pingTimeout path still cleans up.
+  // A deliberate reload is the exception: emitting room:leave there frees the
+  // seat instantly, so the user rejoins seatless seconds later. Staying silent
+  // lets MSAB's disconnect path RESERVE the seat (SEAT_RETENTION_GRACE_MS) and
+  // reclaimSeat hand it back on rejoin — which is the whole point of surviving
+  // the reload. Only app-initiated reloads set this flag; a real close still
+  // leaves eagerly.
   useEventListener(window, 'pagehide', () => {
-    if (roomStore.currentRoom) {
-      leaveRoom(String(roomStore.currentRoom.id));
+    if (!roomStore.currentRoom) return;
+    if (isReloadIntended()) {
+      log.info('Reload in progress — skipping room:leave so the seat survives');
+      return;
     }
+    leaveRoom(String(roomStore.currentRoom.id));
   });
 
 }
