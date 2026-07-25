@@ -3,7 +3,7 @@
 // Follows Page — Followers / Following / Viewers Tabs
 // ========================================
 
-import type { MinimalUser, VisitorUser } from '~/types/user/bootstrap'
+import type { FollowListUser, VisitorUser } from '~/types/user/bootstrap'
 import { formatVisitTime } from '~/utils/date'
 
 // ========================================
@@ -65,12 +65,12 @@ const TAB_ITEMS = computed(() => {
 })
 
 // ── Per-tab cursor lists ──
-const followers = useCursorUserList<MinimalUser>(
+const followers = useCursorUserList<FollowListUser>(
   cursor => fetchFollowsPage('followers', targetUserId.value!, cursor),
   normalizeFollowsError,
 )
 
-const following = useCursorUserList<MinimalUser>(
+const following = useCursorUserList<FollowListUser>(
   cursor => fetchFollowsPage('following', targetUserId.value!, cursor),
   normalizeFollowsError,
 )

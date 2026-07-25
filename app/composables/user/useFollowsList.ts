@@ -6,12 +6,12 @@
 // useApi directly. normalizeError is re-exposed so callers can branch on the
 // HTTP status (e.g. 403 → restricted) without importing useApi themselves.
 
-import type { MinimalUser } from '~/types/user/bootstrap'
+import type { FollowListUser } from '~/types/user/bootstrap'
 
 export type FollowsKind = 'followers' | 'following'
 
 export interface FollowsPage {
-  data: MinimalUser[]
+  data: FollowListUser[]
   nextCursor: string | null
 }
 
@@ -25,7 +25,7 @@ export function useFollowsList() {
 
     const response = await api<{
       status: string
-      data: MinimalUser[]
+      data: FollowListUser[]
       meta: { pagination: { next_cursor: string | null } }
     }>(`/users/${userId}/${kind}?${params}`)
 

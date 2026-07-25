@@ -22,6 +22,23 @@ interface FollowStatusResponse {
   }
 }
 
+/** Follow-status shape a caller may seed in from an already-fetched list row. */
+export interface FollowStatusSeed {
+  is_following: boolean
+  is_followed_by: boolean
+}
+
+export interface UseFollowOptions {
+  /**
+   * Pre-fetched status for the current `targetUserId` (e.g. `is_following` /
+   * `is_followed_by` inlined on a followers/following list row). When present
+   * and the composable hasn't loaded state yet, it is used to initialize
+   * state and `fetchStatus()` is skipped. Initialize-only: it never
+   * overwrites state once loaded (see `applySeed` below).
+   */
+  initialStatus?: MaybeRefOrGetter<FollowStatusSeed | null>
+}
+
 // ========================================
 // Composable
 // ========================================
@@ -31,10 +48,13 @@ interface FollowStatusResponse {
  *
  * @param targetUserId - Reactive getter for the target user's ID
  * @param profileRef - Optional writable ref to the profile for optimistic count updates
+ * @param options - Optional seed to avoid the per-user `/follow-status` fetch
+ *   when the caller already has the status from a list response
  */
 export function useFollow(
   targetUserId: MaybeRefOrGetter<number | null>,
   profileRef?: Ref<UserProfile | null>,
+  options?: UseFollowOptions,
 ) {
   // ========================================
   // Dependencies
@@ -178,8 +198,38 @@ export function useFollow(
   }
 
   // ========================================
-  // Auto-fetch on target change
+  // Seed / auto-fetch on target change
   // ========================================
+
+  const initialStatus = options?.initialStatus
+
+  /**
+   * Apply the seed if one covers the current id — but only while state hasn't
+   * loaded yet. Initialize-only, never overwrite: once `statusLoaded` is
+   * true (set here or by `fetchStatus`), this is a no-op, so a later
+   * re-evaluation of the seed getter can never clobber the optimistic flip
+   * `toggleFollow` writes at that point.
+   */
+  function applySeed(): boolean {
+    if (statusLoaded.value) return false
+    const seed = initialStatus ? toValue(initialStatus) : null
+    if (!seed) return false
+
+    // A caller building the seed from list-row fields yields a truthy object even
+    // when the backend hasn't shipped the flags yet (FE deployed ahead of Laravel,
+    // or a stale cached bundle). Without this check that seed would load `undefined`
+    // as state and suppress the fetch, silently rendering "Follow" for people the
+    // viewer already follows. Treat a non-boolean seed as absent and fall back to
+    // fetching, so deploy order stays a performance concern, not a correctness one.
+    if (typeof seed.is_following !== 'boolean' || typeof seed.is_followed_by !== 'boolean') {
+      return false
+    }
+
+    isFollowing.value = seed.is_following
+    isFollowedBy.value = seed.is_followed_by
+    statusLoaded.value = true
+    return true
+  }
 
   watch(
     () => toValue(targetUserId),
@@ -189,11 +239,21 @@ export function useFollow(
         isFollowing.value = false
         isFollowedBy.value = false
         statusLoaded.value = false
-        void fetchStatus()
+
+        if (!applySeed()) void fetchStatus()
       }
     },
     { immediate: true },
   )
+
+  // A list refetch can patch props in place (same id, new object) without
+  // re-running the watch above. Re-evaluate the seed for that case — still
+  // gated by the initialize-only rule in `applySeed`.
+  if (initialStatus) {
+    watch(() => toValue(initialStatus), () => {
+      applySeed()
+    })
+  }
 
   // ========================================
   // Return

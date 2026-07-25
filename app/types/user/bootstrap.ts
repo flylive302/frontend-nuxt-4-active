@@ -47,6 +47,19 @@ export interface VisitorUser extends MinimalUser {
 }
 
 /**
+ * A MinimalUser plus viewer-relative follow flags.
+ * Returned by: GET /users/{id}/followers, GET /users/{id}/following
+ * (`FollowListUserResource` — carries the flags `MinimalUser`/`MinimalUserResource`
+ * must NOT, since that shape is also embedded in Room.owner, RoomMember.user, etc.)
+ */
+export interface FollowListUser extends MinimalUser {
+  /** Whether the authenticated viewer follows this user. */
+  is_following: boolean
+  /** Whether this user follows the authenticated viewer. */
+  is_followed_by: boolean
+}
+
+/**
  * Bootstrap user - authenticated user from bootstrap.
  * Returned by: GET /bootstrap, POST /auth/login, POST /auth/register, GET /auth/user
  */
