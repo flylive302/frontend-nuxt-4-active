@@ -32,6 +32,17 @@ function resolveGlobalCap(): number {
     : SLIDE_QUEUE_GLOBAL_CAP_MOBILE
 }
 
+/**
+ * The app-wide SlideQueue if it already exists, else `null`.
+ *
+ * Read-only measurement hook for `services/stallMonitor.ts`. Deliberately does
+ * not construct the queue the way `getSlideQueue()` does — sampling what was
+ * running when the main thread stalled must not itself create work.
+ */
+export function peekSlideQueue(): SlideQueue | null {
+  return instance
+}
+
 /** The app-wide SlideQueue, created lazily on first use. */
 export function getSlideQueue(): SlideQueue {
   if (!instance) {

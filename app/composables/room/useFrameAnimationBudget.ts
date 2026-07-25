@@ -54,6 +54,20 @@ export function useFrameAnimationBudget() {
   };
 }
 
+/**
+ * How many seats the last budget pass allowed a live animated frame.
+ *
+ * Read-only measurement hook for `services/stallMonitor.ts`, which samples what
+ * work was active when the main thread stalled. Reads the budget's own memory
+ * rather than `allowedSeats.value`: touching the computed could force an early
+ * re-evaluation, and `compute()` writes the no-thrash memory — so reading it
+ * would change which seats animate next. An instrument must not move its own
+ * subject.
+ */
+export function activeFrameAnimationCount(): number {
+  return budget.activeCount;
+}
+
 /** Test-only: drop the shared computed + budget memory between cases. */
 export function __resetFrameAnimationBudgetForTest(): void {
   allowedSeats = null;

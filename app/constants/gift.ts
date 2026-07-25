@@ -26,11 +26,9 @@ export const MAX_PLAYBACK_QUEUE_SIZE = 50;
  */
 export const BURST_SHED_QUEUE_DEPTH = 12;
 
-/** Longtask duration (ms) that counts as a reportable main-thread stall. */
-export const STALL_REPORT_THRESHOLD_MS = 200;
-
-/** Minimum interval between stall reports to Sentry (throttle, in milliseconds). */
-export const STALL_REPORT_THROTTLE_MS = 60000;
+// Main-thread stall thresholds used to live here, from when the monitor was
+// believed to be a gift instrument. It observes every route, so its tuning now
+// sits with the other measurement constants in `constants/telemetry.ts`.
 
 /** Maximum ×N repeats a coalesced identical-gift run can accumulate */
 export const MAX_PLAYBACK_REPEATS = 99;

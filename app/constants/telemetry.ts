@@ -74,3 +74,88 @@ export const DEVICE_CORES_LOW = 4;
 
 /** `hardwareConcurrency` at or below this is mid-tier; above it is high-end. */
 export const DEVICE_CORES_MID = 6;
+
+// ========================================
+// Main-thread stall telemetry
+// ========================================
+//
+// Tuning for `utils/stall-telemetry.ts` + `services/stallMonitor.ts`. These used
+// to live in `constants/gift.ts` back when the monitor was believed to be a
+// gift-playback instrument. It is app-wide — it observes every route — so the
+// tuning belongs with the other measurement constants, not inside one feature.
+
+/**
+ * Reportable stall thresholds (ms), by device tier.
+ *
+ * Reviewed 2026-07-26 against the real device mix (predominantly low-end to
+ * mid-tier Android). The previous flat 200ms was set for a gift-burst freeze
+ * that pinned the thread for 1–2 *minutes*; applied app-wide it also catches
+ * ordinary boot hydration, which routinely exceeds 200ms on a 2GB Android and
+ * is not a defect. That is the main reason the longtask issue accumulated
+ * thousands of events without becoming actionable.
+ *
+ * Raising the floor per tier keeps the pathological stalls (the ones users feel
+ * as a freeze) and drops the ordinary-hydration baseline. The applied value
+ * rides every report as a tag so a volume change stays readable — a drop caused
+ * by a fix and a drop caused by this retune must not look identical.
+ */
+export const STALL_THRESHOLD_LOW_MS = 500;
+
+/** @see STALL_THRESHOLD_LOW_MS */
+export const STALL_THRESHOLD_MID_MS = 350;
+
+/** @see STALL_THRESHOLD_LOW_MS */
+export const STALL_THRESHOLD_HIGH_MS = 250;
+
+/**
+ * Threshold when the tier cannot be read. Treated as mid rather than high:
+ * `deviceMemory` is Chromium-only, so an unknown tier is more likely a device
+ * the classifier could not see than a desktop.
+ */
+export const STALL_THRESHOLD_UNKNOWN_MS = STALL_THRESHOLD_MID_MS;
+
+/**
+ * Minimum interval between stall reports, applied **per lifecycle phase**.
+ *
+ * A single global bucket would let a cold-boot storm spend the only allowed
+ * report and silently swallow every in-session stall for the next minute —
+ * which is exactly the separation this instrument exists to provide. Per-phase
+ * keys cost at most 3x the volume and keep the phases independent.
+ */
+export const STALL_REPORT_THROTTLE_MS = 60_000;
+
+/**
+ * How long after Vue app mount still counts as `hydration` rather than
+ * `in-session`. Covers the first paint plus the bootstrap fetches that land
+ * immediately after mount; past it, cost is steady-state and attributable to
+ * whatever the user is doing.
+ */
+export const STALL_HYDRATION_SETTLE_MS = 3_000;
+
+/**
+ * How many route changes to retain for resolving "which route was active when
+ * this entry started". `buffered: true` replays tasks from before the observer
+ * existed, so the report time is not the entry time and the live route is not
+ * necessarily the right answer.
+ */
+export const STALL_ROUTE_TIMELINE_MAX = 20;
+
+/** Longest active-work label list carried on a tag — enough to point, not to bloat. */
+export const STALL_ACTIVE_WORK_MAX = 4;
+
+/** Longest attribution label carried on a tag. Keeps tag cardinality sane. */
+export const STALL_ATTRIBUTION_MAX_CHARS = 80;
+
+/**
+ * Stall duration buckets, ascending by upper bound. Bucketed for the same
+ * reason as `SESSION_AGE_BUCKETS`: this rides a tag. Raw ms goes in `extra`.
+ */
+export const STALL_DURATION_BUCKETS: ReadonlyArray<{ maxMs: number; label: string }> = [
+  { maxMs: 500, label: '<500ms' },
+  { maxMs: 1_000, label: '500ms-1s' },
+  { maxMs: 3_000, label: '1s-3s' },
+  { maxMs: 10_000, label: '3s-10s' },
+] as const;
+
+/** Bucket label for anything past the last bound above. */
+export const STALL_DURATION_OVERFLOW_LABEL = '>10s';

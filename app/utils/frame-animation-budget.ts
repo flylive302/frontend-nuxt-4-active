@@ -36,6 +36,12 @@ export interface FrameAnimationBudget {
   compute(eligible: readonly EligibleFrameSeat[]): ReadonlySet<number>;
   /** Forget the previous selection (e.g. on room leave). */
   reset(): void;
+  /**
+   * How many seats the last `compute()` allowed. Read-only measurement hook for
+   * `services/stallMonitor.ts`; never recomputes, because `compute()` writes the
+   * no-thrash memory and an instrument must not alter what it measures.
+   */
+  readonly activeCount: number;
 }
 
 export function createFrameAnimationBudget(
@@ -73,6 +79,10 @@ export function createFrameAnimationBudget(
 
     reset(): void {
       previous = new Set<number>();
+    },
+
+    get activeCount(): number {
+      return previous.size;
     },
   };
 }
