@@ -25,6 +25,7 @@
 import { isStaleBundleError } from '~/utils/stale-bundle-error'
 
 import { markReloadIntent } from '~/utils/reload-intent'
+import { markReloadCause, type RecordableReloadCause } from '~/utils/reload-telemetry'
 
 const RELOAD_GUARD_KEY = 'chunk-reload-at'
 const RELOAD_GUARD_WINDOW_MS = 60_000
@@ -32,14 +33,20 @@ const RELOAD_GUARD_WINDOW_MS = 60_000
 export default defineNuxtPlugin((nuxtApp) => {
   const log = createLogger('[ChunkReload]')
 
-  function reloadOnce(reason: string): void {
+  function reloadOnce(cause: RecordableReloadCause, detail: string): void {
     const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY) ?? 0)
     if (Date.now() - last < RELOAD_GUARD_WINDOW_MS) {
-      log.warn('Chunk load failed again within guard window — not reloading', reason)
+      // Suppressed, so no reload happens and there is nothing to record.
+      log.warn('Chunk load failed again within guard window — not reloading', detail)
       return
     }
     sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()))
-    log.warn('Stale chunk detected — reloading against new deploy', reason)
+    log.warn('Stale chunk detected — reloading against new deploy', detail)
+    // Leave a queryable record of WHY this reload happened. The suppression
+    // below is correct and stays, but it must not leave the reload invisible —
+    // the next boot reads this marker and reports it (see
+    // `plugins/reload-telemetry.client.ts`).
+    markReloadCause(cause, detail, window.location.pathname)
     // Tell the room lifecycle this unload is a reload, not a close, so it skips
     // the `room:leave` emit and lets MSAB's disconnect grace hold the seat.
     markReloadIntent()
@@ -47,13 +54,13 @@ export default defineNuxtPlugin((nuxtApp) => {
   }
 
   nuxtApp.hook('app:chunkError', ({ error }) => {
-    reloadOnce(String(error))
+    reloadOnce('chunk-preload', String(error))
   })
 
   window.addEventListener('vite:preloadError', (event) => {
     // Prevent Vite from rethrowing (which lands in Sentry as unhandled).
     event.preventDefault()
-    reloadOnce(String((event as unknown as { payload?: unknown }).payload))
+    reloadOnce('chunk-preload', String((event as unknown as { payload?: unknown }).payload))
   })
 
   // Route-component resolution failures never reach the two hooks above.
@@ -61,6 +68,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   // instead of being masked by a reload loop.
   nuxtApp.$router.onError((error) => {
     if (!isStaleBundleError(error)) return
-    reloadOnce(String(error))
+    reloadOnce('router-resolve', String(error))
   })
 })

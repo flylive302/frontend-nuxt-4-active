@@ -14,6 +14,7 @@ import { withTimeout } from '~/utils/with-timeout';
 import { evaluateTransportRebuild } from '~/utils/transport-rebuild-budget';
 import { RoomBlockedError } from '~/utils/socket/socketErrorMessages';
 import { isReloadIntended } from '~/utils/reload-intent';
+import { clearInRoomSnapshot, writeInRoomSnapshot } from '~/utils/reload-telemetry';
 import {
   ROOM_OP_TIMEOUT_MS,
   AUDIO_REBUILD_RETRY_BASE_MS,
@@ -65,6 +66,7 @@ export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
+  const authStore = useAuthStore();
   const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, connectionStatus, onTransportExhausted } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, onReconnect, onReconnectFailed } = useAudioSocket();
   const { fetchRoomById } = useRoom();
@@ -457,8 +459,33 @@ export function useRoomLifecycle(): void {
   // The marker is only trusted inside ACTIVE_ROOM_MARKER_TTL_MS, so stopping the
   // heartbeat is what makes it expire — no explicit cleanup needed on the paths
   // that end a session abnormally.
+  // The same tick also refreshes the telemetry snapshot (REACT). A WebView
+  // renderer kill leaves nothing behind in the JS runtime, so this persisted
+  // snapshot is the ONLY evidence the next boot has that the user was in a room
+  // when the session died — see `utils/reload-telemetry.ts`. It is kept
+  // separate from `activeRoom` on purpose: that marker drives rehydration
+  // behaviour, this one only observes it, and a measurement must not be able to
+  // change what it measures.
   useIntervalFn(() => {
     roomStore.touchActiveRoom();
+
+    const room = roomStore.currentRoom;
+    if (!room) {
+      // Bounds the false-positive window after a genuine leave to one tick.
+      clearInRoomSnapshot();
+      return;
+    }
+
+    writeInRoomSnapshot({
+      roomId: room.id,
+      seated: seatsStore.seats.some((seat) => seat.occupantId === authStore.user?.id),
+      hidden: visibility.value === 'hidden',
+      // `minimizeRoom()` keeps `currentRoom` set, so the user can be "in a room"
+      // while browsing elsewhere. Read the real path rather than synthesising
+      // `/room/{id}`, or every minimized session lies about where it was.
+      minimized: roomStore.isMinimized,
+      route: window.location.pathname,
+    });
   }, ACTIVE_ROOM_HEARTBEAT_MS);
 
   // ========================================
@@ -477,11 +504,23 @@ export function useRoomLifecycle(): void {
   // the reload. Only app-initiated reloads set this flag; a real close still
   // leaves eagerly.
   useEventListener(window, 'pagehide', () => {
-    if (!roomStore.currentRoom) return;
+    // A deliberate reload must KEEP the telemetry snapshot — it is the evidence
+    // the next boot reads to attribute the reload.
     if (isReloadIntended()) {
-      log.info('Reload in progress — skipping room:leave so the seat survives');
+      if (roomStore.currentRoom) {
+        log.info('Reload in progress — skipping room:leave so the seat survives');
+      }
       return;
     }
+
+    // Anything else is a genuine close: drop the snapshot so reopening inside
+    // its TTL is not misread as a renderer kill. This runs BEFORE the
+    // current-room guard on purpose — leaving a room and closing the app a
+    // second later is ordinary behaviour, and the heartbeat that would
+    // otherwise clear the snapshot only ticks every 5s.
+    clearInRoomSnapshot();
+
+    if (!roomStore.currentRoom) return;
     leaveRoom(String(roomStore.currentRoom.id));
   });
 
