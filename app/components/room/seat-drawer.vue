@@ -16,9 +16,8 @@ const seatsStore = useRoomSeatsStore()
 const participantsStore = useRoomParticipantsStore()
 const authStore = useAuthStore()
 const giftStore = useGiftStore()
-const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, isAudioReady } = useRoomAudio()
+const { takeSeat, leaveSeat, startAudio, muteUser, unmuteUser, lockSeat, unlockSeat, inviteToSeat, isAudioReady } = useRoomAudio()
 const { blockUser } = useRoomBlocking()
-const { myMembership } = useRoomMembers()
 const { resolvePropAsset } = usePropLookup()
 const { hasGrantedMic, markMicGranted, probeMicState, requestMicAccess } = useMicPermission()
 const toast = useToast()
@@ -40,7 +39,8 @@ watch(
   },
 )
 
-// Profile-only mode: no seat/social actions, just the profile card + visit-profile.
+// Profile mode: opened from an avatar tap rather than a seat tap. It shows the
+// same card, minus the seat-slot actions (there is no slot to act on).
 const isProfileMode = computed(() => seatsStore.profileUserId !== null)
 
 // The participant being viewed in profile mode (null if they've left the room).
@@ -49,6 +49,15 @@ const profileUser = computed(() =>
     ? (participantsStore.participants.get(seatsStore.profileUserId) ?? null)
     : null,
 )
+
+// UI-only: a profile-mode target who leaves mid-view is pruned from the
+// participant map, leaving an empty card behind. Close instead of showing it.
+watch(profileUser, (user) => {
+  if (isProfileMode.value && !user) {
+    isOpen.value = false
+    seatsStore.closeProfile()
+  }
+})
 
 // activeSeat is the 0-indexed seat index, or null when no seat is selected
 const seatIndex = computed(() => seatsStore.activeSeat)
@@ -64,6 +73,23 @@ const displayUser = computed(() =>
   isProfileMode.value ? profileUser.value : (currentSeat.value?.user ?? null),
 )
 
+// The target of every per-user action (follow / chat / gift / kick / invite).
+// Drawn from displayUser so seat mode and profile mode share one identity.
+const targetUserId = computed(() => displayUser.value?.id ?? null)
+
+// Per-user action eligibility — target-state driven, never mode driven.
+const { canManageMembers, freeSeatIndex, isSelfTarget, canFollow, canChat, canGift, canMute, canKick, canInviteToSeat } =
+  useSeatDrawerActions(targetUserId)
+
+// The seat the shown user occupies. In seat mode that's the tapped seat; in
+// profile mode we resolve it from the target, so mute reads the right seat's
+// state no matter which way the drawer was opened.
+const targetSeat = computed(() =>
+  isProfileMode.value
+    ? (seatsStore.seatsWithUsers.find((s) => s.user?.id === targetUserId.value) ?? null)
+    : (currentSeat.value ?? null),
+)
+
 // Check if the current user occupies this seat
 const isCurrentUserSeat = computed(() => {
   return currentSeat.value?.user?.id === authStore.user?.id
@@ -72,14 +98,11 @@ const isCurrentUserSeat = computed(() => {
 // Check if the seat is empty
 const isSeatEmpty = computed(() => !currentSeat.value?.user)
 
-// Check if seat is muted
-const isSeatMuted = computed(() => currentSeat.value?.isMuted ?? false)
+// Check if the target's seat is muted
+const isSeatMuted = computed(() => targetSeat.value?.isMuted ?? false)
 
 // Check if seat is locked
 const isSeatLocked = computed(() => currentSeat.value?.isLocked ?? false)
-
-// Check if current user is room owner
-const { isRoomOwner } = useRoomPermissions()
 
 // Handle starting invite mode
 function handleStartInvite() {
@@ -183,10 +206,13 @@ async function handleLeaveSeat() {
 }
 
 /**
- * Handle mute/unmute toggle (owner only)
+ * Handle mute/unmute toggle (owner/admin only).
+ *
+ * Targets the user, not the slot, so it works for a seated user reached from a
+ * chat avatar as well as from their seat.
  */
 async function handleToggleMute() {
-  const userId = currentSeat.value?.user?.id
+  const userId = targetUserId.value
   if (!userId) return
 
   isLoading.value = true
@@ -233,14 +259,17 @@ async function handleToggleLock() {
  * direct socket emit.
  */
 async function handleKickUser(duration: BlockDurationValue) {
-  const userId = currentSeat.value?.user?.id
+  const userId = targetUserId.value
   if (!userId) return
 
   isLoading.value = true
   try {
     const success = await blockUser(roomStore.currentRoom!.id, { user_id: userId, duration })
     if (success) {
+      // Kick is reachable from both modes, so clear both — closeSeat alone
+      // would leave a profile-mode drawer open on a user who is now gone.
       seatsStore.closeSeat()
+      seatsStore.closeProfile()
     }
   } catch (error) {
     log.warn('Failed to kick user from seat', error)
@@ -249,22 +278,48 @@ async function handleKickUser(duration: BlockDurationValue) {
   }
 }
 
-const { isToggling, statusLoaded, isSelf, buttonIcon, toggleFollow, buttonLabel } = useFollow(
-  computed(() => currentSeat.value?.user?.id ?? null)
-)
+const { isToggling, statusLoaded, buttonIcon, toggleFollow, buttonLabel } = useFollow(targetUserId)
 
 function handleChatButton() {
-  const userId = currentSeat.value?.user?.id
+  const userId = targetUserId.value
   if (!userId) return
   isOpen.value = false
   seatsStore.openChat(userId)
 }
 
 function handleGiftButton() {
-  const userId = currentSeat.value?.user?.id
+  const userId = targetUserId.value
   if (!userId) return
   isOpen.value = false
   giftStore.setLockedRecipient(userId)
+}
+
+/**
+ * Invite the shown (non-seated) user onto the lowest free unlocked seat.
+ *
+ * Profile mode has no seat slot of its own, so it inverts the seat-first
+ * invite flow (`startInviteMode` → pick a user) into user-first: the target is
+ * already known, so we resolve the slot instead. `canInviteToSeat` guarantees
+ * `freeSeatIndex` is non-null; the server is still the final arbiter and
+ * surfaces its own error toast.
+ */
+async function handleInviteToSeat() {
+  const userId = targetUserId.value
+  const seat = freeSeatIndex.value
+  if (!userId || seat === null) return
+
+  isLoading.value = true
+  try {
+    const success = await inviteToSeat(userId, seat)
+    if (success) {
+      isOpen.value = false
+      seatsStore.closeProfile()
+    }
+  } catch (error) {
+    log.warn('Failed to invite user to seat', error)
+  } finally {
+    isLoading.value = false
+  }
 }
 
 async function handleNavigateAway(path: string) {
@@ -279,14 +334,6 @@ function handleVisitProfile() {
   if (!signature) return
   handleNavigateAway(`/profile/${signature}`)
 }
-
-/** Current user can manage members (owner or admin) */
-const canManageMembers = computed(() => {
-  // Owner can always manage
-  if (isRoomOwner.value) return true
-  // Admin members can also manage
-  return myMembership.value?.role === 'admin';
-})
 
 /**
  * Get wealth level info from user's XP.
@@ -309,18 +356,19 @@ const dataCardAsset = computed(() =>
 
 const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
-// For own seat: read directly from auth store so the value is always fresh.
-// For other seats: use whatever the participant map has (country is not PII-stripped).
+// For self: read directly from auth store so the value is always fresh.
+// For others: use whatever the participant map has (country is not PII-stripped).
+// Keyed off the target user, not the seat — profile mode can show self too.
 const seatUserCountry = computed(() => {
   if (!displayUser.value) return null
-  if (isCurrentUserSeat.value) return authStore.user?.country?.trim() || displayUser.value.country?.trim() || null
+  if (isSelfTarget.value) return authStore.user?.country?.trim() || displayUser.value.country?.trim() || null
   return displayUser.value.country?.trim() || null
 })
 
-// Age is only available for the authenticated user's own seat — date_of_birth is
+// Age is only available for the authenticated user themselves — date_of_birth is
 // stripped from other participants' data for privacy.
 const seatUserAge = computed(() =>
-  isCurrentUserSeat.value ? getAge(authStore.user?.date_of_birth ?? null) : null
+  isSelfTarget.value ? getAge(authStore.user?.date_of_birth ?? null) : null
 )
 </script>
 
@@ -331,10 +379,12 @@ const seatUserAge = computed(() =>
   />
 
   <UDrawer
-    v-model:open="isOpen" 
-    title="Seat Options" 
+    v-model:open="isOpen"
+    :title="isProfileMode ? 'User Options' : 'Seat Options'"
     :class="dataCardAsset ? 'min-h-9/12' : ''"
-    description="Manage seat actions like joining, leaving, muting, or locking."
+    :description="isProfileMode
+      ? 'Follow, chat, gift, mute, invite to a seat, or remove this user.'
+      : 'Manage seat actions like joining, leaving, muting, or locking.'"
     :ui="{
       content: 'bg-transparent backdrop-blur-xs ring-0',
       overlay: 'bg-white/10',
@@ -409,15 +459,24 @@ const seatUserAge = computed(() =>
 
           <BadgesEquippedBadgeMarquee
             :equipped-badges="displayUser.equipped_badges ?? []"
-            class=""
+            class="max-w-3/4"
           />
 
         </div>
 
-        <!-- Action Buttons — seat/social actions are hidden in view-only profile mode -->
-        <div v-if="!isProfileMode" class="mt-6 max-w-24 mx-auto">
+        <!--
+          Action Buttons.
+
+          Two clusters with different gating:
+          - seat-SLOT actions (take/leave/lock/invite-to-this-seat) need a
+            slot, so they render in seat mode only;
+          - per-USER actions (mute/kick/invite/follow/chat/gift) are gated by
+            the target's own state via useSeatDrawerActions, so they render in
+            whichever mode the target qualifies in.
+        -->
+        <div class="mt-6 max-w-24 mx-auto">
           <div class="flex justify-center items-center gap-2 ">
-            <div class="flex gap-2">
+            <div v-if="!isProfileMode" class="flex gap-2">
               <!-- Take Seat button — only when seat is empty and unlocked -->
               <UButton
                   v-if="(isSeatEmpty && !isSeatLocked)"
@@ -441,10 +500,16 @@ const seatUserAge = computed(() =>
               />
             </div>
 
-            <div v-if="canManageMembers" class="flex gap-2">
-              <!-- Mute/Unmute Seat - Owner only, when seat is occupied -->
+            <!-- Seat mode always has the lock button; profile mode only shows
+                 this row when the target actually qualifies for something. -->
+            <div
+              v-if="canManageMembers && (!isProfileMode || canMute || canKick || canInviteToSeat)"
+              class="flex gap-2"
+            >
+              <!-- Mute/Unmute — targets the user, so it follows them into
+                   profile mode as long as they're on a seat -->
               <UButton
-                  v-if="!isSeatEmpty && !isCurrentUserSeat"
+                  v-if="canMute"
                   class="rounded-xl text-white"
                   size="xl" variant="solid"
                   :color="isSeatMuted ? 'success' : 'warning'"
@@ -453,29 +518,43 @@ const seatUserAge = computed(() =>
                   @click="handleToggleMute"
               />
 
-              <!-- Lock/Unlock Seat - Owner only -->
-              <UButton
-                  class="rounded-xl text-white"
-                  size="xl" variant="solid" square
-                  :color="isSeatLocked ? 'success' : 'error'"
-                  :loading="isLoading"
-                  :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'"
-                  @click="handleToggleLock"
-              />
+              <!-- Seat-slot moderation — needs the slot, so seat mode only -->
+              <template v-if="!isProfileMode">
+                <!-- Lock/Unlock Seat -->
+                <UButton
+                    class="rounded-xl text-white"
+                    size="xl" variant="solid" square
+                    :color="isSeatLocked ? 'success' : 'error'"
+                    :loading="isLoading"
+                    :icon="isSeatLocked ? 'i-lucide-lock-open' : 'i-lucide-lock'"
+                    @click="handleToggleLock"
+                />
 
-              <!-- Invite User to Seat - Owner only, when seat is empty and not locked -->
+                <!-- Pick a user for THIS seat, when it's empty -->
+                <UButton
+                    v-if="isSeatEmpty"
+                    class="rounded-xl text-white" size="xl"
+                    variant="solid" color="info" :loading="isLoading"
+                    square
+                    icon="i-lucide-user-plus"
+                    @click="handleStartInvite"
+                />
+              </template>
+
+              <!-- Invite THIS user onto a free seat — only when they're in the
+                   room, not already seated, and a free seat exists -->
               <UButton
-                  v-if="isSeatEmpty"
+                  v-if="canInviteToSeat"
                   class="rounded-xl text-white" size="xl"
                   variant="solid" color="info" :loading="isLoading"
                   square
                   icon="i-lucide-user-plus"
-                  @click="handleStartInvite"
+                  @click="handleInviteToSeat"
               />
 
-              <!-- Kick User from Room - Admin/Owner only, when seat is occupied by another user -->
+              <!-- Kick User from Room — needs room presence, not a seat -->
               <KickDurationPopover
-                  v-if="!isSeatEmpty && !isCurrentUserSeat"
+                  v-if="canKick"
                   v-model:open="isKickPopoverOpen"
                   @select="handleKickUser"
               >
@@ -489,10 +568,10 @@ const seatUserAge = computed(() =>
             </div>
           </div>
 
-          <div v-if="!isSeatEmpty && !isCurrentUserSeat" class="flex items-center gap-1 justify-center mt-3">
-                        <!-- Follow button -->
+          <div v-if="canFollow || canChat || canGift" class="flex items-center gap-1 justify-center mt-3">
+                        <!-- Follow button — needs neither a seat nor room presence -->
             <UButton
-                v-if="!isSelf"
+                v-if="canFollow"
                 class="rounded-xl text-white backdrop-blur-lg"
                 size="xl"
                 variant="outline"
@@ -503,9 +582,9 @@ const seatUserAge = computed(() =>
               {{buttonLabel}}
             </UButton>
 
-            <!-- Chat button -->
+            <!-- Chat button — DM thread, works for any user -->
             <UButton
-                v-if="!isSelf && !isSeatEmpty"
+                v-if="canChat"
                 class="rounded-xl text-white backdrop-blur-lg"
                 size="xl"
                 variant="outline"
@@ -515,9 +594,9 @@ const seatUserAge = computed(() =>
               Chat
             </UButton>
 
-            <!-- Gift button -->
+            <!-- Gift button — gift recipients resolve from occupied seats only -->
             <UButton
-                v-if="!isSelf && !isSeatEmpty"
+                v-if="canGift"
                 class="rounded-xl text-white backdrop-blur-lg py-1"
                 size="xl"
                 variant="outline"

@@ -5,9 +5,22 @@ import type { MinimalUser } from '~/types/user/bootstrap'
 import { useSlots } from 'vue';
 import MarqueeName from "~/components/common/marquee-name.vue";
 
-const props = defineProps<{
-  user: MinimalUser
-  marqueeDelay?: string
+const props = withDefaults(
+  defineProps<{
+    user: MinimalUser
+    marqueeDelay?: string
+    /**
+     * What an avatar tap does. 'navigate' (default) leaves for the user's
+     * profile page; 'emit' hands the decision to the parent, which is how
+     * in-room surfaces keep the user in the room.
+     */
+    avatarAction?: 'navigate' | 'emit'
+  }>(),
+  { marqueeDelay: undefined, avatarAction: 'navigate' },
+)
+
+const emit = defineEmits<{
+  avatarClick: [user: MinimalUser]
 }>()
 
 // ========================================
@@ -37,6 +50,19 @@ const genderColor = computed(() =>
   getGenderInfo(props.user.gender).color as 'primary' | 'secondary' | 'tertiary' | 'neutral'
 )
 
+// ========================================
+// Handlers
+// ========================================
+
+function handleAvatarClick() {
+  if (props.avatarAction === 'emit') {
+    emit('avatarClick', props.user)
+    return
+  }
+
+  roomStore.minimizeRoom()
+  void navigateTo(`/profile/${props.user.signature}`)
+}
 </script>
 
 <template>
@@ -48,10 +74,7 @@ const genderColor = computed(() =>
         animated
         :frame-asset-url="resolvePropAsset(user.frame_id) ?? undefined"
         class="w-14 ml-1 shrink-0"
-        @click="async () => {
-          roomStore.minimizeRoom();
-          navigateTo(`/profile/${user.signature}`);
-        }"
+        @click="handleAvatarClick"
       />
 
       <div class="flex flex-col justify-center min-h-full px-2 flex-1 min-w-0 py-1">

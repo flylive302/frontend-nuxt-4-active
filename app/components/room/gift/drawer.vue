@@ -181,11 +181,13 @@ watch(
   }
 );
 
-// Close when seat drawer opens while gift drawer is open (mutual exclusion)
+// Close when the seat drawer opens while the gift drawer is open (mutual
+// exclusion). Covers both of the seat drawer's modes — seat tap and avatar tap
+// — since either one replaces the gift drawer's target.
 watch(
-  () => seatsStore.activeSeat,
-  (newSeat) => {
-    if (newSeat !== null && isOpen.value) {
+  () => seatsStore.activeSeat !== null || seatsStore.profileUserId !== null,
+  (seatDrawerOpen) => {
+    if (seatDrawerOpen && isOpen.value) {
       isOpen.value = false;
       giftStore.clearLockedRecipient();
     }

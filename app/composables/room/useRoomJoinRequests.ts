@@ -4,6 +4,7 @@
 
 import type { RoomJoinRequest, JoinRoomRequest } from '~/types/room/room'
 import { createLogger } from '~/utils/logger'
+import { reportMalformedPayload } from '~/utils/api/reportMalformedPayload'
 
 const log = createLogger('[useRoomJoinRequests]')
 
@@ -80,7 +81,14 @@ export function useRoomJoinRequests() {
   async function fetchMyJoinRequests(): Promise<void> {
     try {
       const response = await api<{ success: true; data: RoomJoinRequest[] }>('/user/room/join-requests/mine')
-      store.myJoinRequests.items = response.data
+      // Never let a malformed payload leave `items` undefined — it is dereferenced
+      // in render-time computeds (useRoomMembershipState). Log the shape rather than
+      // masking it silently: the source of the bad payload is still unattributed.
+      if (!Array.isArray(response?.data)) {
+        log.warn('Unexpected /join-requests/mine payload shape', { received: typeof response })
+        reportMalformedPayload('/user/room/join-requests/mine', response)
+      }
+      store.myJoinRequests.items = Array.isArray(response?.data) ? response.data : []
       store.myJoinRequests.hasMore = false
     } catch (err) {
       log.warn('Failed to fetch my join requests', err)

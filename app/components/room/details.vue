@@ -16,6 +16,12 @@ const roomStore = useRoomStore();
 const bootstrapStore = useBootstrapStore();
 
 // ========================================
+// Composables
+// ========================================
+
+const { openUser } = useRoomUserDrawer();
+
+// ========================================
 // Types
 // ========================================
 
@@ -97,6 +103,21 @@ const tableData = computed<RoomLevelRow[]>(() =>
 
 /** Loading state */
 const loading = computed(() => !bootstrapStore.isReady);
+
+// ========================================
+// Handlers
+// ========================================
+
+/**
+ * Owner badge tapped — show them in the room drawer rather than leaving for
+ * their profile page. An owner who isn't currently in their own room has no
+ * participant record, so `openUser` falls back to navigation.
+ */
+function handleOpenOwner(): void {
+  const owner = roomStore.currentRoom?.owner;
+  if (!owner) return;
+  openUser({ id: owner.id, signature: owner.signature });
+}
 </script>
 
 <template>
@@ -138,13 +159,14 @@ const loading = computed(() => !bootstrapStore.isReady);
       </div>
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">Followers: 750</h2>
-        <NuxtLink 
+        <button
           v-if="roomStore.currentRoom?.owner?.signature"
-          :to="`/profile/`+ roomStore.currentRoom.owner.signature"
-          @click="roomStore.minimizeRoom()"
+          type="button"
+          class="cursor-pointer"
+          @click="handleOpenOwner"
         >
           <ProfileBadge :show-badge="false" :txt="roomStore.currentRoom?.owner?.signature" />
-        </NuxtLink>        
+        </button>
         <ProfileBadge v-else :show-badge="false" />
       </div>
     </div>

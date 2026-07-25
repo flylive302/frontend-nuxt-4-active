@@ -94,3 +94,44 @@ describe('useRoomJoinRequests — approve/reject in-flight guard', () => {
     expect(isRequestActionPending(3)).toBe(false)
   })
 })
+
+// ========================================
+// Covers JAVASCRIPT-VUE-74: `TypeError: undefined is not an object
+// (evaluating 'r.value.items.find')` at useRoomMembershipState.ts:34.
+// A payload without a `data` array used to be assigned straight into the store,
+// leaving `items` undefined for a render-time computed to dereference.
+// ========================================
+
+describe('useRoomJoinRequests — fetchMyJoinRequests payload shape guard', () => {
+  it.each([
+    ['a payload with no data key', {}],
+    ['an explicitly null data', { data: null }],
+    ['a non-array data', { data: { 0: 'nope' } }],
+    ['an undefined response', undefined],
+  ])('keeps items an array given %s', async (_label, payload) => {
+    apiMock.mockResolvedValueOnce(payload)
+
+    const { useRoomJoinRequests } = await import('~/composables/room/useRoomJoinRequests')
+    const { fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
+
+    await fetchMyJoinRequests()
+
+    expect(Array.isArray(myJoinRequests.value.items)).toBe(true)
+    expect(myJoinRequests.value.items).toEqual([])
+    // The exact operation that crashed in production must not throw.
+    expect(() => myJoinRequests.value.items.find(r => r?.room_id === 141)).not.toThrow()
+  })
+
+  it('still stores a well-formed data array', async () => {
+    const request = { id: 1, room_id: 141, status: 'pending' }
+    apiMock.mockResolvedValueOnce({ success: true, data: [request] })
+
+    const { useRoomJoinRequests } = await import('~/composables/room/useRoomJoinRequests')
+    const { fetchMyJoinRequests, myJoinRequests } = useRoomJoinRequests()
+
+    await fetchMyJoinRequests()
+
+    expect(myJoinRequests.value.items).toEqual([request])
+    expect(myJoinRequests.value.hasMore).toBe(false)
+  })
+})

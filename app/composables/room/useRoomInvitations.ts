@@ -3,6 +3,10 @@
 // ========================================
 
 import type { RoomInvitation, InviteToRoomRequest, RoomMemberPagination } from '~/types/room/room'
+import { createLogger } from '~/utils/logger'
+import { reportMalformedPayload } from '~/utils/api/reportMalformedPayload'
+
+const log = createLogger('[useRoomInvitations]')
 
 
 /**
@@ -47,7 +51,14 @@ export function useRoomInvitations() {
       // Laravel Resource Collection returns { data: RoomInvitation[] }
       const response = await api<{ data: RoomInvitation[] }>('/user/room/invitations', { params: queryParams })
 
-      store.receivedInvitations.items = response.data
+      // Never let a malformed payload leave `items` undefined — it is dereferenced
+      // in render-time computeds (useRoomMembershipState). Log the shape rather than
+      // masking it silently: the source of the bad payload is still unattributed.
+      if (!Array.isArray(response?.data)) {
+        log.warn('Unexpected /user/room/invitations payload shape', { received: typeof response })
+        reportMalformedPayload('/user/room/invitations', response)
+      }
+      store.receivedInvitations.items = Array.isArray(response?.data) ? response.data : []
       store.receivedInvitations.hasMore = false // Simple collection, no pagination
     } catch (err) {
       const normalized = normalizeError(err)

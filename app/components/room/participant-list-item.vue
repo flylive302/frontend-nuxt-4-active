@@ -21,6 +21,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'invite', userId: number): void
+  /** Avatar tapped — the parent decides where it goes (it owns the drawer). */
+  (e: 'openUser', user: RoomParticipant): void
 }>()
 
 /** Current user can manage members (owner or admin) */
@@ -33,7 +35,12 @@ const canManageMembers = computed(() => {
 </script>
 
 <template>
-  <MinimalUserList :user="participant" :marquee-delay="marqueeDelay">
+  <MinimalUserList
+    :user="participant"
+    :marquee-delay="marqueeDelay"
+    avatar-action="emit"
+    @avatar-click="emit('openUser', participant)"
+  >
     <template #default>
       <UBadge v-if="speakerIds.has(participant.id)" size="sm" color="primary" variant="soft" class="absolute top-0 right-0">Speaker</UBadge>
     </template>

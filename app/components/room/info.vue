@@ -26,6 +26,7 @@ const roomStore = useRoomStore()
 const participantsStore = useRoomParticipantsStore()
 const seatsStore = useRoomSeatsStore()
 const { inviteToSeat } = useRoomAudio()
+const { openUser } = useRoomUserDrawer()
 
 // ========================================
 // Leaderboard Composable
@@ -128,6 +129,19 @@ watch(isOpenRight, (isOpen) => {
 // ========================================
 // Handlers
 // ========================================
+
+/**
+ * Avatar tapped in either drawer — show the user without leaving the room.
+ *
+ * Both drawers are dismissed first so the seat drawer isn't buried under them.
+ * Leaderboard contributors who have since left the room fall back to their
+ * profile page inside `openUser`.
+ */
+function handleOpenUser(user: { id: number; signature?: string | null }) {
+  isOpenLeft.value = false
+  isOpenRight.value = false
+  openUser(user)
+}
 
 async function handleInvite(userId: number) {
   // Use inviteModeSeat if available, otherwise fallback to activeSeat (legacy)
@@ -270,7 +284,13 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                       {{ entry.rank }}
                     </UBadge>
 
-                    <MinimalUserList class="grow" :user="entry.user" :marquee-delay="`${(entry.user.id % 8) * 1.2}s`">
+                    <MinimalUserList
+                      class="grow"
+                      :user="entry.user"
+                      :marquee-delay="`${(entry.user.id % 8) * 1.2}s`"
+                      avatar-action="emit"
+                      @avatar-click="handleOpenUser"
+                    >
                       <UButton size="xs" variant="soft" color="tertiary" icon="i-lucide-coins" class="mr-1 px-1">
                         {{ formatCurrency(entry.total_value) }}
                       </UButton>
@@ -311,6 +331,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                     :is-inviting="isInviting"
                     :marquee-delay="`${(item.id % 8) * 1.2}s`"
                     @invite="handleInvite"
+                    @open-user="handleOpenUser"
                   />
                 </DynamicScrollerItem>
               </template>
