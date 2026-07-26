@@ -59,7 +59,7 @@ function buildTextElements(): Record<string, HTMLCanvasElement> | undefined {
 
     ctx.font = slideFont(fit.fontSize)
     ctx.fillStyle = '#ffffff'
-    ctx.textAlign = 'left'
+    ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     const lineStep = fit.fontSize * SLIDE_TEXT_LINE_HEIGHT
     const firstY = c.height / 2 - ((fit.lines.length - 1) * lineStep) / 2
