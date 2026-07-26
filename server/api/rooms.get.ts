@@ -1,6 +1,11 @@
 import { getQuery } from 'h3'
 
-const CACHE_TTL = 60 // seconds
+// home-room-feed 06: dropped 60 → 30. The ranking is now a stored, recomputed
+// value (rooms.trending_score) rather than a static sort, and the refresh job
+// runs every 60s — at a 60s edge TTL a reorder could take ~2 min to surface.
+// 30s halves that. It cannot go below the job's own 60s cadence in effect;
+// that cadence, not this TTL, is the real floor on freshness.
+const CACHE_TTL = 30 // seconds
 
 type CloudflareCacheStorage = CacheStorage & { default: Cache }
 
@@ -8,7 +13,7 @@ type CloudflareCacheStorage = CacheStorage & { default: Cache }
  * Cached rooms proxy using Cloudflare's data-center-persistent Cache API.
  *
  * SSR path before: Worker → Laravel (~2 200 ms per request)
- * SSR path after : Worker → CF Cache hit (~5 ms) | cold → Laravel (~2 200 ms, cached for next 60 s)
+ * SSR path after : Worker → CF Cache hit (~5 ms) | cold → Laravel (~2 200 ms, cached for CACHE_TTL)
  *
  * Falls back to direct Laravel call in dev (no caches. default available).
  */
