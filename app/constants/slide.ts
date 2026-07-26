@@ -14,8 +14,8 @@ export const SLIDE_TEXT_FONT_FAMILY = 'Inter, sans-serif'
 export const SLIDE_TEXT_FONT_WEIGHT = 'bold'
 
 /** Auto-fit bounds: shrink from max toward min, then wrap onto extra lines. */
-export const SLIDE_TEXT_MAX_FONT_SIZE = 46
-export const SLIDE_TEXT_MIN_FONT_SIZE = 32
+export const SLIDE_TEXT_MAX_FONT_SIZE = 32
+export const SLIDE_TEXT_MIN_FONT_SIZE = 22
 export const SLIDE_TEXT_MAX_LINES = 2
-export const SLIDE_TEXT_LINE_HEIGHT = 1.3
-export const SLIDE_TEXT_PADDING_X = 0
+export const SLIDE_TEXT_LINE_HEIGHT = 1
+export const SLIDE_TEXT_PADDING_X = 16
