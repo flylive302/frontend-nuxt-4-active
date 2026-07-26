@@ -2,8 +2,10 @@
 import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
-import { ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
+import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { roomBackgroundImageSrc } from '~/utils/imagekit'
+import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
+import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
 import type { RoomsResponse } from '~/types/room/room'
 
@@ -37,42 +39,62 @@ const { fetchRooms } = useRoom()
 // Default to "All" — shows rooms from every country
 const selectedCountry = ref<string>('')
 
-const { data: roomsResponse, status: roomsStatus, refresh: refreshRooms } = useAsyncData(
-  'home-rooms',
+// Per-country key. Load-bearing, not tidiness: `getCachedData` hands back the
+// cached payload on first paint, so a single shared key would paint
+// All-country rooms under a highlighted country chip as soon as the filter
+// survives a mount (ticket 03 persists it) — with no refetch to correct it.
+const roomsKey = computed(() => `home-rooms-${selectedCountry.value || 'all'}`)
+
+// `getCachedData` may only serve this instance's first paint. Set in onMounted,
+// which runs *after* Nuxt has already queued the initial fetch — see
+// `shouldReuseCachedRooms` for why every later resolution must hit the network.
+let hasPaintedRooms = false
+
+const { data: roomsPayload, status: roomsStatus, refresh: refreshRooms } = useAsyncData<HomeRoomsPayload>(
+  roomsKey,
   async () => {
+    // Tag the payload with the country it was fetched for — everything the grid
+    // renders is then derived from this one object, so rows can never belong to
+    // a different country than the label they're keyed by.
+    const country = selectedCountry.value
     const params: Record<string, string | number> = { page: 1 }
-    if (selectedCountry.value) params.country = selectedCountry.value
-    return await $fetch<RoomsResponse>('/api/rooms', { params })
+    if (country) params.country = country
+    const res = await $fetch<RoomsResponse>('/api/rooms', { params })
+    return { country, res }
   },
   {
-    watch: [selectedCountry],
     lazy: false,
+    // No `watch: [selectedCountry]` — the reactive key already refetches on
+    // change, and Nuxt suppresses the watch option for the duration of a key
+    // change anyway, so it would be dead weight.
+    //
     // Returning home (e.g. leaving a room) must paint the previous rooms
     // immediately — a refetch would flash the skeleton behind the closing
-    // reveal. Only the first mount reuses the payload; a country change
-    // (`cause: 'watch'`) always refetches. Freshness comes from the silent
-    // refresh below, which keeps `status` at 'success'.
+    // reveal. Only this instance's first paint reuses the payload; every
+    // country change, including back to one already visited, hits the network.
+    // Freshness for the country already on screen comes from the silent
+    // refresh below, which the `!roomsPayload` term in the skeleton gate keeps
+    // invisible (`status` does briefly go 'pending').
     getCachedData: (key, nuxtApp, ctx) =>
-      ctx.cause === 'initial' ? nuxtApp.payload.data[key] ?? nuxtApp.static.data[key] : undefined,
+      shouldReuseCachedRooms(ctx.cause, hasPaintedRooms)
+        ? nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
+        : undefined,
   }
 )
 
-const carouselRooms = computed(() => roomsResponse.value?.data?.slice(0, 5) || [])
-const initialListRooms = computed(() => roomsResponse.value?.data?.slice(5) || [])
-const roomsMeta = computed(() => roomsResponse.value?.meta)
-const activeCountries = computed(() => roomsResponse.value?.meta?.active_countries ?? [])
+/** Country the rooms currently on screen were fetched for; `null` until a payload exists. */
+const loadedCountry = computed(() => roomsPayload.value?.country ?? null)
+const isCountrySettling = computed(() =>
+  isHomeCountrySettling(selectedCountry.value, loadedCountry.value, roomsStatus.value)
+)
 
-const fetchRoomsList = async ({ page }: { page: number }) => {
-  if (page === 1) {
-    return {
-      data: initialListRooms.value,
-      meta: roomsMeta.value
-    }
-  }
-  const params: { page: number; country?: string } = { page }
-  if (selectedCountry.value) params.country = selectedCountry.value
-  return await fetchRooms(params)
-}
+const carouselRooms = computed(() => roomsPayload.value?.res.data?.slice(0, HOME_CAROUSEL_ROOM_COUNT) || [])
+const activeCountries = computed(() => roomsPayload.value?.res.meta?.active_countries ?? [])
+
+const fetchRoomsList = createHomeRoomsListFetcher({
+  payload: () => roomsPayload.value ?? null,
+  fetchRooms,
+})
 
 // Wrapper to satisfy InfiniteScroll prop type requirements and avoid template casting
 const infiniteScrollFetcher = async (ctx: { page: number }) => {
@@ -143,8 +165,15 @@ useHead(() => {
 // Preload room page chunk after idle so first paint / LCP stay unblocked
 onMounted(() => {
   // Cached rooms painted instantly above; pull fresh participant counts behind
-  // them. `status` stays 'success', so the skeleton never returns.
-  if (roomsResponse.value) void refreshRooms()
+  // them. The skeleton stays away because a payload is already on screen, not
+  // because `status` holds at 'success' — it does dip to 'pending' here.
+  // This refreshes the carousel only: the new payload carries the *same*
+  // country, so `loadedCountry` and the grid's `:key` don't change and
+  // InfiniteScroll keeps the counts it loaded with. Pre-existing behaviour.
+  if (roomsPayload.value) void refreshRooms()
+
+  // Close the cache window: from here on, a country change must hit the network.
+  hasPaintedRooms = true
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -180,9 +209,10 @@ onMounted(() => {
     <!-- Country Filter -->
     <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />
 
-    <!-- Room Section: skeleton only on a cold load — a background refresh keeps
-         the already-painted rooms on screen rather than flashing placeholders -->
-    <template v-if="roomsStatus === 'pending' && !roomsResponse">
+    <!-- Room Section: skeleton on a cold load, and while a freshly-tapped
+         country is still resolving — a background refresh of the *same* country
+         keeps the already-painted rooms on screen rather than flashing placeholders -->
+    <template v-if="(roomsStatus === 'pending' && !roomsPayload) || isCountrySettling">
       <div class="flex gap-3 overflow-hidden mb-6 px-3">
         <div v-for="i in 3" :key="i" class="shrink-0 w-2/3 h-72 rounded-2xl bg-white/5 animate-pulse" />
       </div>
@@ -233,8 +263,13 @@ onMounted(() => {
       </div>
 
       <div class="mx-3">
+        <!-- Keyed by the country the data was *loaded* for, never the one just
+             tapped: remounting on selection would re-seed page 1 from the old
+             payload. Still needed alongside the skeleton gate above — revisiting
+             an already-fetched country settles synchronously, so this is the only
+             thing that re-seeds the grid on that path. -->
         <InfiniteScroll
-          :key="selectedCountry || '__all__'"
+          :key="loadedCountry || '__all__'"
           :fetcher="infiniteScrollFetcher"
           :initial-page="1"
           :per-page="15"
