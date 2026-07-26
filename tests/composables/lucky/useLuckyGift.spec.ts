@@ -107,21 +107,19 @@ describe('useLuckyGift — no-draw notices + bust duration', () => {
     expect(store.floatingMultipliers).toHaveLength(2)
   })
 
-  it('keeps a ×0 bust floater on screen exactly as long as a win floater', () => {
-    fireResult(0) // bust
+  it('renders no floater at all for a ×0 bust, only for the win', () => {
+    fireResult(0) // bust — silent by design (no SVGA authored for ×0)
     fireResult(2) // win
 
-    const bust = store.floatingMultipliers.find(
-      (f) => f.kind === 'multiplier' && f.multiplier === 0,
-    )
-    expect(bust?.colorClass).toBe('lucky-float--bust')
-    expect(store.floatingMultipliers).toHaveLength(2)
+    expect(store.floatingMultipliers).toHaveLength(1)
+    const only = store.floatingMultipliers[0]
+    expect(only?.kind).toBe('multiplier')
+    expect(only?.kind === 'multiplier' && only.multiplier).toBe(2)
 
-    // Just before the shared duration, both remain (bust never fades early).
+    // Just before the win duration it remains.
     vi.advanceTimersByTime(2499)
-    expect(store.floatingMultipliers).toHaveLength(2)
+    expect(store.floatingMultipliers).toHaveLength(1)
 
-    // At the shared duration, both are removed together.
     vi.advanceTimersByTime(1)
     expect(store.floatingMultipliers).toHaveLength(0)
   })

@@ -25,7 +25,7 @@ const logger = createLogger('[LuckyGift]');
 /** Max concurrent floating multipliers */
 const MAX_FLOATERS = 5;
 
-/** Time (ms) a win/bust multiplier floater stays visible (bust == win) */
+/** Time (ms) a win floater stays visible (matches the cashback SVGA length) */
 const FLOATER_DURATION = 2500;
 
 /** Time (ms) a no-draw notice floater stays visible — longer, to be read */
@@ -63,18 +63,6 @@ const shownNoticeReasons = new Set<LuckyNoDrawReason>();
 // ============================================
 
 /**
- * Resolve color class from multiplier value.
- */
-function getColorClass(multiplier: number): string {
-  if (multiplier >= 100) return 'lucky-float--jackpot';
-  if (multiplier >= 10) return 'lucky-float--epic';
-  if (multiplier >= 2) return 'lucky-float--great';
-  if (multiplier >= 1) return 'lucky-float--good';
-  if (multiplier > 0) return 'lucky-float--tiny';
-  return 'lucky-float--bust';
-}
-
-/**
  * Push any floater through the shared store pipeline and auto-remove after its
  * duration. Evicts the oldest when at MAX_FLOATERS so the queue stays bounded.
  */
@@ -95,11 +83,14 @@ function pushFloater(entry: FloatingMultiplier, duration: number): void {
 }
 
 /**
- * Add a floating multiplier (win or ×0 bust) — bust shares the win duration.
+ * Add a winning cashback floater (SVGA). GATE: ×0 busts render nothing — a
+ * losing draw is silent by design.
  */
-function addMultiplierFloater(multiplier: number): void {
+function addMultiplierFloater(multiplier: number, coinsWon: number): void {
+  if (!(multiplier > 0)) return;
+
   pushFloater(
-    { id: ++floaterIdCounter, kind: 'multiplier', multiplier, colorClass: getColorClass(multiplier) },
+    { id: ++floaterIdCounter, kind: 'multiplier', multiplier, coinsWon, colorClass: 'lucky-float--cashback' },
     FLOATER_DURATION,
   );
 }
@@ -119,7 +110,7 @@ function addNoticeFloater(text: string): void {
 // ============================================
 
 function handleLuckyResult(data: LuckyDrawResult): void {
-  addMultiplierFloater(data.multiplier);
+  addMultiplierFloater(data.multiplier, data.coins_won);
 }
 
 /**
@@ -204,12 +195,12 @@ if (import.meta.dev && import.meta.client) {
       handleLuckyNoDraw({ reason, gift_id: 0, batch_id: 'sim' });
     },
 
-    /** Fire several floaters in sequence with delays */
+    /** Fire several floaters in sequence with delays (0 is a silent bust) */
     all(): void {
-      this.float(0.01);
-      setTimeout(() => this.float(0.25), 500);
-      setTimeout(() => this.float(2.0), 1000);
-      setTimeout(() => this.float(50.0), 1500);
+      this.float(0);
+      setTimeout(() => this.float(2), 500);
+      setTimeout(() => this.float(10), 1000);
+      setTimeout(() => this.float(100), 1500);
     },
 
     /** Fire one notice per reason (resets the throttle first so all show) */

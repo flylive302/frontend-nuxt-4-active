@@ -48,10 +48,15 @@ interface FloatingFloaterBase {
   colorClass: string;
 }
 
-/** A numeric win floater — the floating multiplier text (`×2.5`, `×0`, …) */
+/**
+ * A win floater — rendered as a per-tier SVGA animation. Only created for
+ * multiplier > 0; ×0 (bust) draws produce no floater at all.
+ */
 export interface MultiplierFloater extends FloatingFloaterBase {
   kind: 'multiplier';
   multiplier: number;
+  /** Coins awarded — drawn into the SVGA's coins placeholder. */
+  coinsWon: number;
 }
 
 /** A text notice floater — a no-draw hint ("pool capped for today", …) */

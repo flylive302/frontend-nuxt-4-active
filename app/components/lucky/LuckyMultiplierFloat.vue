@@ -2,11 +2,14 @@
 /**
  * LuckyMultiplierFloat
  *
- * Renders floating multiplier text animations (similar to emoji reactions).
- * Each float rises upward and fades out over 2.5s.
- * Mounted in the room chat area, below the last seats.
+ * Renders the sender-side lucky floaters in the room chat area, below the last
+ * seats. Two shapes:
+ *   - win  → a per-tier SVGA cashback animation (LuckyCashbackSvga)
+ *   - notice → a small HTML text pill (no-draw hint)
+ * ×0 busts produce no floater at all, so nothing is rendered for a loss.
  */
 import type { FloatingMultiplier } from '~/types/lucky';
+import { luckyFloatLanePct } from '~/utils/lucky-cashback';
 
 // ============================================
 // Props
@@ -26,13 +29,15 @@ defineProps<{
         v-for="floater in floaters"
         :key="floater.id"
         class="lucky-float-item"
-        :class="floater.colorClass"
-        :style="{ '--x-offset': `${(floater.id % 3) * 20 - 30}px` }"
+        :class="[floater.colorClass, floater.kind === 'multiplier' ? 'lucky-float-item--svga' : '']"
+        :style="{ '--lane': `${luckyFloatLanePct(floater.id)}%` }"
       >
-        <span class="lucky-float-multiplier flex-middle">
-          <template v-if="floater.kind === 'notice'">{{ floater.text }}</template>
-          <template v-else>×{{ floater.multiplier }}</template>
-        </span>
+        <LuckyCashbackSvga
+          v-if="floater.kind === 'multiplier'"
+          :multiplier="floater.multiplier"
+          :coins-won="floater.coinsWon"
+        />
+        <span v-else class="lucky-float-multiplier flex-middle">{{ floater.text }}</span>
       </div>
     </TransitionGroup>
   </div>
@@ -42,8 +47,8 @@ defineProps<{
 .lucky-float-container {
   position: absolute;
   bottom: 60%;
-  left: 0;
-  width: 200px;
+  left: 10%;
+  width: 80%;
   height: 200px;
   pointer-events: none;
   z-index: 50;
@@ -51,57 +56,25 @@ defineProps<{
 }
 
 .lucky-float-item {
-  --color-tiny: rgba(241, 174, 73, 0.99);
   position: absolute;
   bottom: 10%;
-  left: 50%;
-  font-weight: 800;
-  font-size: 1.5rem;
-  width: 1.8rem;
-  height: 1.8rem;
-  text-shadow: 0 2px 8px rgba(92, 92, 92, 0.5);
+  left: var(--lane, 50%);
+  pointer-events: none;
+  min-width: auto;
+  height: auto;
   white-space: nowrap;
-  animation: floatUp 2s ease-out forwards;
-  transform: translateX(var(--x-offset, 0));
-  border-radius: 100%;
+  animation: floatUp 80s ease-out forwards;
+  transform: translateX(-50%);
 }
 
-/* Tier color classes */
-.lucky-float--bust {
-  color: rgb(255 255 255);
-  font-weight: 800;
-  font-size: 1.3rem;
+/* SVGA win floater: the animation carries its own size + effects, so the
+   wrapper only positions and floats it. */
+.lucky-float-item--svga {
+  width: auto;
+  height: auto;
   text-shadow: none;
-  animation: floatUpBust 2s ease-out forwards;
-}
-
-.lucky-float--tiny {
-  color: white;
-  background: var(--color-tiny);
-  font-size: 1rem;
-}
-
-.lucky-float--good {
-  color: #48bb78;
-  font-size: 1.3rem;
-}
-
-.lucky-float--great {
-  color: #4ade80;
-  font-size: 1.7rem;
-  text-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
-}
-
-.lucky-float--epic {
-  color: #ed8936;
-  font-size: 2rem;
-  text-shadow: 0 0 16px rgba(237, 137, 54, 0.7), 0 0 32px rgba(237, 137, 54, 0.35);
-}
-
-.lucky-float--jackpot {
-  color: #f56565;
-  font-size: 2.4rem;
-  text-shadow: 0 0 20px rgba(245, 101, 101, 0.8), 0 0 40px rgba(245, 101, 101, 0.4);
+  border-radius: 0;
+  animation: floatUpSvga 2.5s ease-out forwards;
 }
 
 .lucky-float-multiplier {
@@ -123,20 +96,23 @@ defineProps<{
   animation: floatUpNotice 3.5s ease-out forwards;
 }
 
-/* Bust float: subdued (no pop/glow), but stays visible as long as a win so a
-   loss reads as a result — holds opacity then fades on the win schedule. */
-@keyframes floatUpBust {
+/* SVGA float-up: gentler rise, no scaling (the animation handles its own pop) */
+@keyframes floatUpSvga {
   0% {
-    opacity: 1;
-    transform: translateY(0) translateX(var(--x-offset, 0)) scale(1.1);
+    opacity: 0;
+    transform: translateY(10px) translateX(-50%);
   }
-  20% {
+  12% {
     opacity: 1;
-    transform: translateY(-30px) translateX(var(--x-offset, 0)) scale(1.05);
+    transform: translateY(0) translateX(-50%);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-70px) translateX(-50%);
   }
   100% {
     opacity: 0;
-    transform: translateY(-180px) translateX(var(--x-offset, 0)) scale(0.9);
+    transform: translateY(-110px) translateX(-50%);
   }
 }
 
@@ -144,19 +120,19 @@ defineProps<{
 @keyframes floatUpNotice {
   0% {
     opacity: 0;
-    transform: translateY(0) translateX(var(--x-offset, 0)) scale(0.9);
+    transform: translateY(0) translateX(-50%) scale(0.9);
   }
   10% {
     opacity: 1;
-    transform: translateY(-10px) translateX(var(--x-offset, 0)) scale(1);
+    transform: translateY(-10px) translateX(-50%) scale(1);
   }
   85% {
     opacity: 1;
-    transform: translateY(-40px) translateX(var(--x-offset, 0)) scale(1);
+    transform: translateY(-40px) translateX(-50%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(-60px) translateX(var(--x-offset, 0)) scale(0.95);
+    transform: translateY(-60px) translateX(-50%) scale(0.95);
   }
 }
 
@@ -164,15 +140,15 @@ defineProps<{
 @keyframes floatUp {
   0% {
     opacity: 1;
-    transform: translateY(0) translateX(var(--x-offset, 0)) scale(0.6);
+    transform: translateY(0) translateX(-50%) scale(0.6);
   }
   20% {
     opacity: 1;
-    transform: translateY(-30px) translateX(var(--x-offset, 0)) scale(1.2);
+    transform: translateY(-30px) translateX(-50%) scale(1.2);
   }
   100% {
     opacity: 0;
-    transform: translateY(-180px) translateX(var(--x-offset, 0)) scale(0.8);
+    transform: translateY(-180px) translateX(-50%) scale(0.8);
   }
 }
 
