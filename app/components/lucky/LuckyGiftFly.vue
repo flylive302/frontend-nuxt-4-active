@@ -38,31 +38,31 @@ function animateFlyItem(el: Element | null, item: LuckyFlyItem): void {
   const keyframes: Keyframe[] = [
     // Phase 1: Appear at sender (invisible, small)
     {
-      transform: `translate(${startPos.x}px, ${startPos.y}px) scale(0.3)`,
+      transform: `translate(${startPos.x}px, ${startPos.y}px) scale(0.2)`,
       opacity: 0,
       offset: 0,
     },
     // Phase 2: Pop at sender (visible, slightly oversized)
     {
-      transform: `translate(${startPos.x}px, ${startPos.y}px) scale(1.2)`,
+      transform: `translate(${startPos.x}px, ${startPos.y}px) scale(1.1)`,
       opacity: 1,
       offset: 0.15,
     },
     // Phase 3: Fly to center (largest)
     {
-      transform: `translate(${centerPos.x}px, ${centerPos.y}px) scale(1.5)`,
+      transform: `translate(${centerPos.x}px, ${centerPos.y}px) scale(1.3)`,
       opacity: 1,
       offset: 0.5,
     },
     // Phase 4: Land at receiver (normal size)
     {
-      transform: `translate(${endPos.x}px, ${endPos.y}px) scale(1.0)`,
+      transform: `translate(${endPos.x}px, ${endPos.y}px) scale(0.9)`,
       opacity: 1,
       offset: 0.85,
     },
     // Phase 5: Vanish at receiver (small, invisible)
     {
-      transform: `translate(${endPos.x}px, ${endPos.y}px) scale(0.3)`,
+      transform: `translate(${endPos.x}px, ${endPos.y}px) scale(0.2)`,
       opacity: 0,
       offset: 1,
     },
