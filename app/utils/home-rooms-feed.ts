@@ -138,3 +138,39 @@ export function isHomeCountrySettling(
   if (status === 'error') return false
   return loadedCountry !== selectedCountry
 }
+
+/**
+ * Whether the selected country chip has to be reset back to "All" because the
+ * country it points at has dropped out of the active list — e.g. the last
+ * room in that country closed between visits and a cookie-restored selection
+ * now points at nothing.
+ *
+ * Every guard here exists to avoid clobbering a choice that is still valid:
+ *
+ * - `selectedCountry === ''` is already "All"; there is nothing to reset.
+ * - `payloadCountry !== selectedCountry` means this payload belongs to a chip
+ *   the user has since tapped away from — resolving it must not overwrite
+ *   whatever the user picked after the request went out.
+ * - An empty `activeCountries` means a failed or in-flight request, not a
+ *   vanished country. Resetting on that would wipe a valid selection on a
+ *   plain network blip.
+ * - The membership check is case-insensitive because the backend lowercases
+ *   country codes via `strtolower`, but nothing here should depend on that
+ *   casing detail holding forever.
+ *
+ * @param payloadCountry  the country the resolved payload was fetched for
+ * @param selectedCountry the chip currently selected (`''` = All)
+ * @param activeCountries the response's `meta.active_countries`
+ */
+export function shouldResetStaleCountry(
+  payloadCountry: string,
+  selectedCountry: string,
+  activeCountries: string[]
+): boolean {
+  if (!selectedCountry) return false
+  if (payloadCountry !== selectedCountry) return false
+  if (activeCountries.length === 0) return false
+
+  const selectedLower = selectedCountry.toLowerCase()
+  return !activeCountries.some((code) => code.toLowerCase() === selectedLower)
+}

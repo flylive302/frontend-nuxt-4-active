@@ -3,6 +3,7 @@ import { evaluateHasMore } from '../../app/utils/infinite-scroll-pagination'
 import {
   createHomeRoomsListFetcher,
   isHomeCountrySettling,
+  shouldResetStaleCountry,
   shouldReuseCachedRooms,
   toScrollMeta,
   type HomeRoomsPayload,
@@ -346,5 +347,27 @@ describe('shouldReuseCachedRooms', () => {
       expect(shouldReuseCachedRooms(cause, false)).toBe(false)
       expect(shouldReuseCachedRooms(cause, true)).toBe(false)
     }
+  })
+})
+
+describe('shouldResetStaleCountry', () => {
+  it('resets when the selected country has dropped out of the active list', () => {
+    expect(shouldResetStaleCountry('US', 'US', ['pk', 'ca'])).toBe(true)
+  })
+
+  it('does not reset on an empty active list — that is a failed/in-flight request, not a vanished country', () => {
+    expect(shouldResetStaleCountry('US', 'US', [])).toBe(false)
+  })
+
+  it('does not reset when the chip is already on "All"', () => {
+    expect(shouldResetStaleCountry('US', '', ['pk', 'ca'])).toBe(false)
+  })
+
+  it('does not reset when the payload belongs to a country the user has since tapped away from', () => {
+    expect(shouldResetStaleCountry('PK', 'US', ['pk', 'ca'])).toBe(false)
+  })
+
+  it('matches active countries case-insensitively', () => {
+    expect(shouldResetStaleCountry('US', 'US', ['us', 'pk'])).toBe(false)
   })
 })
