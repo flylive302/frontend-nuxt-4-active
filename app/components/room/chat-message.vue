@@ -128,7 +128,7 @@ const charmLevel = computed(() =>
       <div v-if="participant?.vip_level" class="bubble" :style="bubbleStyle">
         <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
       </div>
-      <div v-else class="w-fit p-2 rounded-md bg-primary/10 ring ring-primary my-2 backdrop-blur-xs max-w-10/12 ml-2">
+      <div v-else class="w-fit p-2 rounded-md bg-primary/50 ring ring-primary my-2 max-w-10/12 ml-2">
         <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
       </div>
     </div>
