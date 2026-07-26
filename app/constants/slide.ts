@@ -18,4 +18,4 @@ export const SLIDE_TEXT_MAX_FONT_SIZE = 32
 export const SLIDE_TEXT_MIN_FONT_SIZE = 22
 export const SLIDE_TEXT_MAX_LINES = 2
 export const SLIDE_TEXT_LINE_HEIGHT = 1
-export const SLIDE_TEXT_PADDING_X = 16
+export const SLIDE_TEXT_PADDING_X = 12
