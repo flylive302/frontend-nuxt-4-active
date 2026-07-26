@@ -1,5 +1,6 @@
 import { HOME_CAROUSEL_ROOM_COUNT } from '~/constants/carousel'
 import type { RoomsResponse } from '~/types/room/room'
+import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 import type { BootstrapRoom } from '~/types/user/bootstrap'
 
 /**
@@ -20,7 +21,34 @@ export interface HomeRoomsPayload {
 /** One page handed to the home grid. Shaped for `InfiniteScroll`'s fetcher contract. */
 export interface HomeRoomsListPage {
   data: BootstrapRoom[]
-  meta?: RoomsResponse['meta']
+  meta?: InfiniteScrollPaginationMeta
+}
+
+/**
+ * Translates Laravel's nested snake-case pagination into the flat camelCase
+ * shape `InfiniteScroll` reads.
+ *
+ * Without this the grid destructures `{page, perPage, total}` off an object
+ * that only carries `{pagination, active_countries}`, gets three `undefined`s,
+ * and stops after page 1 forever.
+ *
+ * The numbers are the server's, never the grid's own row count. The carousel
+ * skims `HOME_CAROUSEL_ROOM_COUNT` rooms off page 1, so counting rendered rows
+ * would understate the page and end the feed early; page offsets are unaffected
+ * by that slice, since the backend still pages in whole `per_page` blocks
+ * (page 1 = rooms 1–15, page 2 = 16–30 — no overlap, no gap).
+ */
+export function toScrollMeta(
+  meta: RoomsResponse['meta'] | undefined
+): InfiniteScrollPaginationMeta | undefined {
+  const pagination = meta?.pagination
+  if (!pagination) return undefined
+
+  return {
+    page: pagination.current_page,
+    perPage: pagination.per_page,
+    total: pagination.total,
+  }
 }
 
 interface HomeRoomsListDeps {
@@ -50,15 +78,18 @@ export function createHomeRoomsListFetcher(
     if (page === 1) {
       return {
         data: payload?.res.data?.slice(HOME_CAROUSEL_ROOM_COUNT) ?? [],
-        meta: payload?.res.meta,
+        meta: toScrollMeta(payload?.res.meta),
       }
     }
 
     const params: { page: number; country?: string } = { page }
     if (payload?.country) params.country = payload.country
 
+    // Page 2+ carries the identical nested shape, so it needs the same
+    // normalization — normalizing page 1 alone makes the grid load page 2 and
+    // then stop again.
     const res = await deps.fetchRooms(params)
-    return { data: res.data, meta: res.meta }
+    return { data: res.data, meta: toScrollMeta(res.meta) }
   }
 }
 

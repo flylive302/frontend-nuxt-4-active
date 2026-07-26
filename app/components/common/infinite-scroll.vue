@@ -3,6 +3,7 @@ import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
 import { useInfiniteScroll } from '@vueuse/core'
 import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';
+import { evaluateHasMore, type InfiniteScrollPayload } from '~/utils/infinite-scroll-pagination';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
 // doesn't get linked as render-blocking CSS on routes that don't actually
@@ -20,13 +21,7 @@ defineOptions({ name: 'InfiniteScroll' })
 
 export type { InfiniteScrollItem } from '~/types/ui/infinite-scroll'
 
-interface PaginationMeta {
-  page: number
-  perPage: number
-  total?: number
-}
-
-type FetchPayload<Item extends InfiniteScrollItem> = { data: Item[]; meta?: PaginationMeta } | Item[]
+type FetchPayload<Item extends InfiniteScrollItem> = InfiniteScrollPayload<Item>
 
 interface FetchContext {
   endpoint: string
@@ -123,22 +118,6 @@ const { fetchPage: transportFetchPage } = useInfiniteScrollTransport()
 async function defaultFetcher(context: FetchContext): Promise<FetchPayload<InfiniteScrollItem>> {
   return transportFetchPage(context)
 }
-
-function evaluateHasMore(
-  response: FetchPayload<InfiniteScrollItem>,
-  fetchedItems: InfiniteScrollItem[],
-  metaFallback: { page: number; perPage: number }
-): boolean {
-  if (!Array.isArray(response) && response.meta) {
-    const { page, perPage, total } = response.meta
-    if (typeof total === 'number') {
-      return page * perPage < total
-    }
-    return fetchedItems.length >= perPage
-  }
-  return fetchedItems.length >= metaFallback.perPage
-}
-
 
 async function loadNextPage(): Promise<void> {
   if (isLoading.value || !hasMore.value) return

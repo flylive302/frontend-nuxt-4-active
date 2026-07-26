@@ -2,8 +2,9 @@
  * Low-level fetch for InfiniteScroll component ($fetch isolated from template layer).
  */
 import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll'
+import type { InfiniteScrollPayload } from '~/utils/infinite-scroll-pagination'
 
-type FetchPayload<Item extends InfiniteScrollItem> = { data: Item[]; meta?: { page: number; perPage: number; total?: number } } | Item[]
+type FetchPayload<Item extends InfiniteScrollItem> = InfiniteScrollPayload<Item>
 
 export interface InfiniteScrollFetchContext {
   endpoint: string

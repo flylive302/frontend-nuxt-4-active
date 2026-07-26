@@ -8,6 +8,7 @@ import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldReuseCachedRoo
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
 import type { RoomsResponse } from '~/types/room/room'
+import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 
 const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
 const EventsBanners = defineAsyncComponent(() => import('~/components/events/banners.vue'))
@@ -96,9 +97,15 @@ const fetchRoomsList = createHomeRoomsListFetcher({
   fetchRooms,
 })
 
-// Wrapper to satisfy InfiniteScroll prop type requirements and avoid template casting
+// Wrapper to satisfy InfiniteScroll prop type requirements and avoid template
+// casting. Only `data` needs the cast — BootstrapRoom can't satisfy
+// InfiniteScrollItem's index signature. `meta` stays honestly typed so a
+// regression back to the raw nested pagination shape fails typecheck.
 const infiniteScrollFetcher = async (ctx: { page: number }) => {
-  return fetchRoomsList(ctx) as Promise<{ data: { id: string | number }[] }>
+  return fetchRoomsList(ctx) as Promise<{
+    data: { id: string | number }[]
+    meta?: InfiniteScrollPaginationMeta
+  }>
 }
 
 useIntersectionObserver(roomRef, ([entry]) => {

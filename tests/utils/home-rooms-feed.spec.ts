@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
+import { evaluateHasMore } from '../../app/utils/infinite-scroll-pagination'
 import {
   createHomeRoomsListFetcher,
   isHomeCountrySettling,
   shouldReuseCachedRooms,
+  toScrollMeta,
   type HomeRoomsPayload,
 } from '../../app/utils/home-rooms-feed'
 import { HOME_CAROUSEL_ROOM_COUNT } from '../../app/constants/carousel'
@@ -20,15 +22,26 @@ function rooms(country: string, count: number, idBase: number): BootstrapRoom[] 
   return Array.from({ length: count }, (_, i) => room(idBase + i, country))
 }
 
-function response(data: BootstrapRoom[], activeCountries: string[] = ['US', 'PK']): RoomsResponse {
+/**
+ * `pagination` is parameterized because the page-2 assertions below would
+ * otherwise pass against a meta that still claims `current_page: 1` — i.e. for
+ * the wrong reason.
+ */
+function response(
+  data: BootstrapRoom[],
+  activeCountries: string[] = ['US', 'PK'],
+  pagination: RoomsResponse['meta']['pagination'] = {
+    current_page: 1,
+    last_page: 3,
+    per_page: 20,
+    total: 60,
+  }
+): RoomsResponse {
   return {
     status: 'success',
     message: 'ok',
     data,
-    meta: {
-      pagination: { current_page: 1, last_page: 3, per_page: 20, total: 60 },
-      active_countries: activeCountries,
-    },
+    meta: { pagination, active_countries: activeCountries },
   }
 }
 
@@ -51,7 +64,8 @@ describe('createHomeRoomsListFetcher', () => {
     const page = await fetcher({ page: 1 })
 
     expect(page.data).toEqual(gridRowsOf(US_PAYLOAD))
-    expect(page.meta).toBe(US_PAYLOAD.res.meta)
+    // Normalized, not the raw nested meta — that pass-through was the bug.
+    expect(page.meta).toEqual({ page: 1, perPage: 20, total: 60 })
     expect(fetchRooms).not.toHaveBeenCalled() // page 1 is never a network call
   })
 
@@ -133,6 +147,159 @@ describe('createHomeRoomsListFetcher', () => {
     await fetcher({ page: 2 })
 
     expect(fetchRooms).toHaveBeenCalledWith({ page: 2 })
+  })
+
+  // Page 2 returns the backend payload raw, so it carries the identical nested
+  // shape page 1 does. Normalizing only page 1 would let the grid load page 2
+  // and then stop again — the same dead end, one page further down.
+  it('normalizes the meta on page 2, not just page 1', async () => {
+    const fetchRooms = vi.fn().mockResolvedValue(
+      response(rooms('US', 20, 400), ['US', 'PK'], {
+        current_page: 2,
+        last_page: 3,
+        per_page: 20,
+        total: 60,
+      })
+    )
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms })
+
+    const page = await fetcher({ page: 2 })
+
+    expect(page.meta).toEqual({ page: 2, perPage: 20, total: 60 })
+  })
+
+  it('hands the grid no meta at all when no payload has resolved', async () => {
+    const fetcher = createHomeRoomsListFetcher({ payload: () => null, fetchRooms: vi.fn() })
+
+    expect((await fetcher({ page: 1 })).meta).toBeUndefined()
+  })
+})
+
+describe('toScrollMeta', () => {
+  it('flattens Laravel pagination into the shape InfiniteScroll reads', () => {
+    const meta = response([], ['US'], {
+      current_page: 2,
+      last_page: 4,
+      per_page: 15,
+      total: 52,
+    }).meta
+
+    expect(toScrollMeta(meta)).toEqual({ page: 2, perPage: 15, total: 52 })
+  })
+
+  // The raw object carries `pagination` and `active_countries`; destructuring
+  // `{page, perPage, total}` off it yields three undefineds, which is what made
+  // the grid stop after one page.
+  it('drops the keys InfiniteScroll does not read', () => {
+    const normalized = toScrollMeta(response([]).meta)
+
+    expect(Object.keys(normalized ?? {}).sort()).toEqual(['page', 'perPage', 'total'])
+    expect(normalized).not.toHaveProperty('pagination')
+    expect(normalized).not.toHaveProperty('active_countries')
+  })
+
+  it('is undefined when there is no meta or no pagination block', () => {
+    expect(toScrollMeta(undefined)).toBeUndefined()
+    expect(toScrollMeta({ active_countries: ['US'] } as RoomsResponse['meta'])).toBeUndefined()
+  })
+
+  // Backend per_page is 15 and the carousel takes 5 off page 1, so the grid
+  // renders 10 rows for a 15-row page. Reporting 10 would make page 1 look
+  // short and end the feed; the server's 15 keeps the offsets honest.
+  it('reports the server page size, never the post-carousel row count', () => {
+    const res = response(rooms('US', 15, 500), ['US'], {
+      current_page: 1,
+      last_page: 2,
+      per_page: 15,
+      total: 30,
+    })
+
+    const gridRows = res.data.slice(HOME_CAROUSEL_ROOM_COUNT)
+
+    expect(gridRows).toHaveLength(15 - HOME_CAROUSEL_ROOM_COUNT)
+    expect(toScrollMeta(res.meta)?.perPage).toBe(15)
+  })
+})
+
+/**
+ * The bug lived in the seam, not in either function: `toScrollMeta` and
+ * `evaluateHasMore` are each fine alone, and the grid still stopped at page 1.
+ * So walk a real Laravel payload through both, at the production page size,
+ * with the carousel taking its slice — the exact composition that was broken.
+ */
+describe('paging the home grid end to end', () => {
+  const PER_PAGE = 15 // backend RoomFilterDTO default; matches the grid's :per-page
+
+  /** Drives the real fetcher + hasMore loop over a backend holding `total` rooms. */
+  async function walkFeed(total: number) {
+    const allRooms = rooms('US', total, 1000)
+    const pageOf = (n: number) =>
+      response(allRooms.slice((n - 1) * PER_PAGE, n * PER_PAGE), ['US'], {
+        current_page: n,
+        last_page: Math.max(1, Math.ceil(total / PER_PAGE)),
+        per_page: PER_PAGE,
+        total,
+      })
+
+    const fetchRooms = vi.fn(async ({ page }: { page: number }) => pageOf(page))
+    const fetcher = createHomeRoomsListFetcher({
+      payload: () => ({ country: 'US', res: pageOf(1) }),
+      fetchRooms,
+    })
+
+    const rendered: BootstrapRoom[] = []
+    let page = 1
+    let hasMore = true
+
+    // Mirrors InfiniteScroll.loadNextPage: fetch, append, re-evaluate, advance.
+    while (hasMore && page <= 10) {
+      const result = await fetcher({ page })
+      rendered.push(...result.data)
+      hasMore = evaluateHasMore(result, result.data, { page, perPage: PER_PAGE })
+      page += 1
+    }
+
+    return { rendered, requests: page - 1, carouselRooms: allRooms.slice(0, HOME_CAROUSEL_ROOM_COUNT) }
+  }
+
+  it('reaches every room past the carousel, with no gap and no duplicate', async () => {
+    for (const total of [16, 30, 31, 45]) {
+      const { rendered, carouselRooms } = await walkFeed(total)
+
+      const ids = rendered.map((r) => r.id)
+      expect(new Set(ids).size, `total=${total} duplicated a room`).toBe(ids.length)
+      // Everything the carousel didn't take must reach the grid, in order.
+      expect(ids, `total=${total} skipped rooms`).toEqual(
+        Array.from({ length: total - HOME_CAROUSEL_ROOM_COUNT }, (_, i) => 1000 + HOME_CAROUSEL_ROOM_COUNT + i)
+      )
+      expect(carouselRooms).toHaveLength(HOME_CAROUSEL_ROOM_COUNT)
+    }
+  })
+
+  it('stops at the real end rather than paging forever', async () => {
+    // ceil(total / 15) pages, and not one request beyond.
+    expect((await walkFeed(16)).requests).toBe(2)
+    expect((await walkFeed(30)).requests).toBe(2)
+    expect((await walkFeed(31)).requests).toBe(3)
+    expect((await walkFeed(45)).requests).toBe(3)
+  })
+
+  // The regression this ticket fixes: page 1 renders 10 rows for a 15-row page,
+  // so any row-count-based check reads it as short and ends the feed here.
+  it('does not mistake the carousel slice for the end of the list', async () => {
+    const { rendered, requests } = await walkFeed(30)
+
+    expect(requests).toBeGreaterThan(1)
+    expect(rendered).toHaveLength(30 - HOME_CAROUSEL_ROOM_COUNT)
+  })
+
+  it('never asks for a second page when one page holds everything', async () => {
+    for (const total of [8, 15]) {
+      const { rendered, requests } = await walkFeed(total)
+
+      expect(requests, `total=${total} fetched a needless page`).toBe(1)
+      expect(rendered).toHaveLength(total - HOME_CAROUSEL_ROOM_COUNT)
+    }
   })
 })
 
