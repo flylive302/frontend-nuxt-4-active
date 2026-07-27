@@ -93,13 +93,13 @@ watch(isOpen, async (open) => {
   >
     <!-- Trigger — mirrors home-footer inbox button (icon + unread badge) -->
     <UButton
-      class="flex-middle relative backdrop-blur-lg text-primary"
+      class="flex-middle relative text-primary p-0"
       :aria-label="isClientHydrated && inboxBadge ? `Inbox, ${inboxBadge} unread` : 'Inbox'"
-      variant="subtle"
+      variant="ghost"
       square
-      size="md"
+      size="xl"
     >
-      <UIcon class="size-5 drop-shadow-md" name="i-lucide-message-circle" />
+      <UIcon class="size-8 drop-shadow-md" name="i-lucide-message-circle" />
       <span
         v-if="isClientHydrated && inboxBadge"
         class="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center"

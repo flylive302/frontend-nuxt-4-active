@@ -84,13 +84,14 @@ watch(isOpen, (open) => {
     <!-- Trigger Button — only while seated, disabled while own reaction plays -->
     <UButton
       v-if="isSelfSeated"
-      size="md"
-      icon="i-lucide-laugh"
-      variant="subtle"
+      size="xl"
+      variant="ghost"
       color="primary"
-      class="backdrop-blur-lg text-primary"
+      class="p-0 text-primary"
       :disabled="isSelfReactionPlaying"
-    />
+    >
+      <UIcon class="size-8" name="i-lucide-laugh" />
+    </UButton>
 
     <template #content>
       <div class="flex flex-col gap-2 p-2">

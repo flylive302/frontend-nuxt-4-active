@@ -170,15 +170,28 @@ function handleKeydown(event: KeyboardEvent) {
     </p>
 
     <!-- Input -->
-    <div class="flex items-center gap-2">
-      <UInput ref="inputRef" v-model="messageInput" class="w-full" size="lg" icon="i-lucide-user" placeholder="Type a message..." @keydown="handleKeydown" />
+    <div class="flex items-center">
+      <UInput
+          ref="inputRef"
+          v-model="messageInput"
+          :ui="{
+            base: 'rounded-r-none rounded-l-full ring-0'
+          }"
+          class="w-full"
+          size="lg"
+          icon="i-lucide-user"
+          placeholder="Type a message..."
+          @keydown="handleKeydown" />
       <UButton
-          icon="i-lucide-send"
           size="sm"
-          class="size-8"
+          variant="solid"
+          color="neutral"
+          class="size-9 p-2 rounded-l-none rounded-r-full bg-neutral-900!"
           :disabled="!messageInput.trim()"
           @click="handleSend"
-      />
+      >
+        <UIcon class="size-8 text-primary" name="i-lucide-send" />
+      </UButton>
     </div>
 
   </div>

@@ -25,6 +25,7 @@ const PRESETS: { label: string; svgaUrl: string; top: number; height: number }[]
   { label: 'Entry — VIP 5', svgaUrl: 'https://assets.flyliveapp.com/vip/5/slide.svga', top: 150, height: 60 },
   { label: 'Entry — VIP 6', svgaUrl: 'https://assets.flyliveapp.com/vip/6/slide.svga', top: 150, height: 60 },
   { label: 'Entry — VIP 7', svgaUrl: 'https://assets.flyliveapp.com/vip/7/slide.svga', top: 150, height: 60 },
+  { label: 'Gift Slides', svgaUrl: 'https://assets.flyliveapp.com/slides/6.svga', top: 150, height: 60 },
 ]
 
 const DUMMY_AVATAR = 'https://lh3.googleusercontent.com/a/ACg8ocInsjfxhW72ehM2y6VU572uZ9T8bimDBUhgMumlbMCbO49p9ta0=s96-c'

@@ -94,7 +94,7 @@ const charmLevel = computed(() =>
     <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
     <div class="min-w-0">
 
-      <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 backdrop-blur-lg bg-primary-30 ring ring-primary rounded-md">
+      <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary rounded-md">
         <MarqueeName
             class="flex-1 max-w-24 mx-auto"
             text-class="text-sm font-bold leading-none"

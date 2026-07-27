@@ -120,7 +120,7 @@ onMounted(async () => {
       :motion-pause="false"
       :replace-elements="images"
       :dynamic-elements="textElements"
-      :height="`${slide.height}px`"
+      :width="`${slide.height}px`"
       class="w-auto"
       @complete="emit('complete')"
     />

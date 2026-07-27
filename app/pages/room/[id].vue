@@ -229,12 +229,13 @@ onUnmounted(() => {
               <!-- Volume Control with Popover -->
               <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
                 <UButton
-                    :icon="volumeIcon"
-                    size="md"
-                    variant="subtle"
-                    class="backdrop-blur-lg text-primary"
+                    size="xl"
+                    variant="ghost"
+                    class="p-0 text-primary"
                     @click.right.prevent="toggleMute"
-                />
+                >
+                  <UIcon class="size-8" :name="volumeIcon" />
+                </UButton>
 
                 <template #content>
                   <div class="flex flex-col items-center gap-2 py-2 w-8">
@@ -261,27 +262,29 @@ onUnmounted(() => {
               <!-- Mic Mute/Unmute - only show when producing audio -->
               <UButton
                   v-if="isProducing"
-                  size="md"
-                  :icon="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'"
-                  :variant="isLocalMuted ? 'solid' : 'subtle'"
+                  size="xl"
+                  variant="ghost"
                   :color="isLocalMuted ? 'error' : 'primary'"
                   :class="isLocalMuted ? 'text-white' : 'text-primary'"
-                  class="backdrop-blur-lg"
+                  class="p-0"
                   @click="() => { toggleLocalMute() }"
-              />
-              <UButton v-else icon="i-lucide-mic" size="md" class="text-primary" variant="soft" disabled />
+              >
+                <UIcon class="size-8 drop-shadow-md" :name="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'" />
+              </UButton>
+              <UButton v-else icon="i-lucide-mic" size="xl" class="text-primary" variant="soft" disabled />
 
               <!-- Reaction Drawer trigger (ADR 0015) -->
               <LazyRoomReactionDrawer />
 
               <!-- Room Settings Button -->
               <UButton
-                  icon="i-lucide-settings"
-                  size="md"
-                  variant="subtle"
-                  class="backdrop-blur-lg text-primary"
+                  size="xl"
+                  variant="ghost"
+                  class="p-0 text-primary"
                   @click="() => { settingsOpen = true }"
-              />
+              >
+                <UIcon class="size-8 drop-shadow-md" name="i-lucide-settings" />
+              </UButton>
 
               <!-- Users Inbox Model View -->
               <LazyRoomInboxDrawer />
