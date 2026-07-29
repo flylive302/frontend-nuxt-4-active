@@ -18,6 +18,19 @@ export interface LuckyDrawResult {
   tier_name: string;
   /** Gift name */
   gift_name: string;
+  /**
+   * End-to-end join key: the burst's primary `transaction_id`, echoed back from
+   * the API. Matches `GiftSendAck.transaction_id` from the `gift:send` ack, so a
+   * sender can attribute this result to the exact gift that produced it.
+   *
+   * ⛔ Not `LuckyNoDrawPayload.batch_id` — that is the API's own internal
+   * `gift_<uuid>`, a value this client has never seen. Only `reference_id`
+   * joins.
+   *
+   * Optional: absent until the audio server ships the ack half (built,
+   * awaiting AWS cutover), and null for draws with no reference.
+   */
+  reference_id?: string | null;
 }
 
 /** Reasons the backend skips a draw (mirrors App\Enums\Lucky\LuckyEmptyReason) */

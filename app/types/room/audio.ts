@@ -375,6 +375,21 @@ export interface GiftSendAck {
    * nothing read.)
    */
   error?: string;
+  /**
+   * The burst's server-minted id, and the ONLY end-to-end join key on the gift
+   * path. It is carried unchanged through the audio server's buffer, the batch
+   * POST, `GiftBatchProcessor`, both Laravel queue hops, and back out as
+   * `LuckyDrawResult.reference_id` on `lucky:result` — so a sender can match a
+   * result to the exact gift that caused it.
+   *
+   * ⛔ Not `GiftSendPayload.batchId`. That client-minted value is stripped by
+   * the API's batch validator and never reaches the result path, despite the
+   * API emitting an unrelated field of the same name on `lucky:no-draw`.
+   *
+   * Optional: absent on failed acks and on audio-server instances predating
+   * the ack change (built, awaiting AWS cutover).
+   */
+  transaction_id?: string;
 }
 
 export interface GiftReceivedEvent {
