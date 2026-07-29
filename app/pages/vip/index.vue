@@ -485,9 +485,9 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
     />
 
     <!-- Footer Controls -->
-    <footer aria-label="VIP Level Selection" class="fixed inset-x-0 bottom-0 pb-2 z-50 backdrop-blur-lg">
+    <footer aria-label="VIP Level Selection" class="fixed inset-x-0 bottom-0 z-50">
       <!-- VIP Level Tabs -->
-      <div class="flex w-full overflow-x-auto scrollbar-hide mt-1 py-1">
+      <div class="flex w-full overflow-x-auto scrollbar-hide py-1">
         <UButton
             v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
             class="min-w-fit shrink-0 rounded-full mx-2 transition-transform duration-200 shadow-md" :style="bgColor"
@@ -498,27 +498,29 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
         </UButton>
       </div>
 
-      <div class="relative flex items-center justify-center">
-        <p class="text-white text-xl font-bold">PRICE</p>
-        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5 ml-2 mt-1" alt="room xp indicator">
-        <p class="text-success text-2xl font-bold">{{ formattedPrice }}</p>
-      </div>
+      <div class="backdrop-blur-lg safe-area-bottom">
+        <div class="relative flex items-center justify-center">
+          <p class="text-white text-xl font-bold">PRICE</p>
+          <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5 ml-2 mt-1" alt="room xp indicator">
+          <p class="text-success text-2xl font-bold">{{ formattedPrice }}</p>
+        </div>
 
-      <!-- Action Buttons -->
-      <div class="flex gap-2 px-3 py-2">
-        <UButton
-            size="md" variant="soft" color="tertiary" class="w-full justify-center rounded-xl shadow-md"
-            aria-label="Gift VIP to a friend" @click="handleGiftOpen"
-        >
-          Gift
-        </UButton>
-        <UButton
-            size="md" variant="solid" color="tertiary" class="w-full justify-center rounded-xl shadow-md" :loading="isPurchasing"
-            :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
-            @click="handlePurchase"
-        >
-          {{ purchaseLabel }}
-        </UButton>
+        <!-- Action Buttons -->
+        <div class="flex gap-2 px-3 pt-2 pb-4">
+          <UButton
+              size="md" variant="soft" color="tertiary" class="w-full justify-center rounded-xl shadow-md"
+              aria-label="Gift VIP to a friend" @click="handleGiftOpen"
+          >
+            Gift
+          </UButton>
+          <UButton
+              size="md" variant="solid" color="tertiary" class="w-full justify-center rounded-xl shadow-md" :loading="isPurchasing"
+              :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
+              @click="handlePurchase"
+          >
+            {{ purchaseLabel }}
+          </UButton>
+        </div>
       </div>
     </footer>
   </main>
