@@ -66,7 +66,7 @@ function handleAvatarClick() {
 </script>
 
 <template>
-  <div class="relative rounded-lg bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 shadow-md shadow-neutral-900">
+  <div class="relative rounded-lg bg-linear-to-bl to-neutral-950 border-2 border-neutral-700 shadow-md shadow-neutral-900 overflow-hidden">
     
     <div class="flex relative z-10">
       <UserAvatar
@@ -97,11 +97,6 @@ function handleAvatarClick() {
         </div>
         <div class="flex items-center gap-0.5 ">
           <ProfileBadge :txt="user.signature" :vip="user.vip_level" class="shrink-0 max-w-24" />
-          <UIcon
-            v-if="user.country"
-            :name="getFlagIcon(user.country)"
-            class="rounded overflow-hidden h-5 size-6 shadow-lg"
-          />
           <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge" >
           <img v-if="user.vip_level" :src="`https://ik.imagekit.io/flylive/vip/${user.vip_level}/badge.png`" class="w-9" alt="" >
           <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4 ml-1" alt="users charm badge" >

@@ -278,7 +278,20 @@ async function handleKickUser(duration: BlockDurationValue) {
   }
 }
 
-const { isToggling, statusLoaded, buttonIcon, toggleFollow, buttonLabel } = useFollow(targetUserId)
+const { isFollowing, isToggling, statusLoaded, buttonIcon, toggleFollow } = useFollow(targetUserId)
+
+// Shared follow celebration (styles live globally in assets/css/main.css)
+const { followAnimating, burst } = useFollowBurst()
+
+/** Follow / follow-back, plus the burst animation on a *new* follow only. */
+async function handleFollowClick(): Promise<void> {
+  const wasFollowing = isFollowing.value
+  await toggleFollow()
+
+  if (!wasFollowing && isFollowing.value) {
+    burst()
+  }
+}
 
 function handleChatButton() {
   const userId = targetUserId.value
@@ -365,11 +378,24 @@ const seatUserCountry = computed(() => {
   return displayUser.value.country?.trim() || null
 })
 
-// Age is only available for the authenticated user themselves — date_of_birth is
-// stripped from other participants' data for privacy.
-const seatUserAge = computed(() =>
-  isSelfTarget.value ? getAge(authStore.user?.date_of_birth ?? null) : null
-)
+// For self: read from the auth store so an just-edited DOB is reflected instantly.
+// For others: date_of_birth ships in the participant payload (MinimalUserResource),
+// so their age renders too.
+// getGenderInfo returns a plain string; UBadge wants its own color union.
+type BadgeColor = 'primary' | 'secondary' | 'tertiary' | 'neutral'
+
+const genderInfo = computed(() => {
+  const info = getGenderInfo(displayUser.value?.gender)
+  return { icon: info.icon, color: info.color as BadgeColor }
+})
+
+const seatUserAge = computed(() => {
+  if (!displayUser.value) return null
+  const dob = isSelfTarget.value
+    ? (authStore.user?.date_of_birth ?? displayUser.value.date_of_birth)
+    : displayUser.value.date_of_birth
+  return getAge(dob ?? null)
+})
 </script>
 
 <template>
@@ -431,8 +457,8 @@ const seatUserAge = computed(() =>
                 delay="0s"
             />
               <UBadge
-                  color="secondary"
-                  :icon="getGenderInfo(displayUser.gender).icon"
+                  :color="genderInfo.color"
+                  :icon="genderInfo.icon"
                   size="sm"
                   class="w-fit text-white p-1"
               >
@@ -474,8 +500,8 @@ const seatUserAge = computed(() =>
             the target's own state via useSeatDrawerActions, so they render in
             whichever mode the target qualifies in.
         -->
-        <div class="mt-6 max-w-24 mx-auto">
-          <div class="flex justify-center items-center gap-2 ">
+        <div class="mt-6 mx-auto">
+          <div class="flex justify-center items-center gap-2">
             <div v-if="!isProfileMode" class="flex gap-2">
               <!-- Take Seat button — only when seat is empty and unlocked -->
               <UButton
@@ -568,26 +594,26 @@ const seatUserAge = computed(() =>
             </div>
           </div>
 
-          <div v-if="canFollow || canChat || canGift" class="flex items-center gap-1 justify-center mt-3">
-                        <!-- Follow button — needs neither a seat nor room presence -->
+          <div v-if="canFollow || canChat || canGift" class="gap-1 pl-4 flex items-center justify-center mt-3 w-full">
+
+            <!-- Follow button — needs neither a seat nor room presence -->
             <UButton
-                v-if="canFollow"
-                class="rounded-xl text-white backdrop-blur-lg"
+                class="rounded-xl text-white follow-btn transition-all duration-150"
+                :class="{
+                  'follow-btn--animating': followAnimating,
+                }"
                 size="xl"
-                variant="outline"
+                :variant="isFollowing ? 'solid' : 'subtle'"
                 :loading="!statusLoaded || isToggling"
                 :icon="buttonIcon"
-                @click="toggleFollow"
-            >
-              {{buttonLabel}}
-            </UButton>
+                @click="handleFollowClick"
+            />
 
             <!-- Chat button — DM thread, works for any user -->
             <UButton
-                v-if="canChat"
-                class="rounded-xl text-white backdrop-blur-lg"
+                class="rounded-xl"
                 size="xl"
-                variant="outline"
+                variant="subtle"
                 icon="i-lucide-message-circle-more"
                 @click="handleChatButton"
             >
@@ -596,13 +622,13 @@ const seatUserAge = computed(() =>
 
             <!-- Gift button — gift recipients resolve from occupied seats only -->
             <UButton
-                v-if="canGift"
-                class="rounded-xl text-white backdrop-blur-lg py-1"
-                size="xl"
-                variant="outline"
-                @click="handleGiftButton"
+              class="rounded-xl p-0"
+              size="xl"
+              square
+              variant="ghost"
+              @click="handleGiftButton"
             >
-              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="min-w-8" >
+              <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="max-w-12 min-w-12" >
             </UButton>
 
           </div>

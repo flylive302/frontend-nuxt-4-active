@@ -82,7 +82,7 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
     <div class="w-3/4 mx-auto relative z-10">
       <img :src="RECHARGE_ACTIVITY.topHeader" alt="recharge activity" class="w-full">
       <p class="font-bold absolute inset-0 flex items-center justify-center text-md mt-2 text-white">
-        Recharge {{ milestone.threshold.toLocaleString() }} Coins
+        {{ milestone.threshold.toLocaleString() }} Coins
       </p>
     </div>
 

@@ -6,6 +6,7 @@
  */
 import type { FollowListUser } from '~/types/user/bootstrap'
 import { useFollow } from '~/composables/user/useFollow'
+import UserTrackButton from "~/components/user/track-button.vue";
 
 defineOptions({ name: 'UserFollowListItem' })
 
@@ -17,30 +18,52 @@ const props = defineProps<{
 // Follow Logic (GATE/EXECUTE/REACT encapsulated)
 // ========================================
 
-// Pass a getter for the user ID, seeded from the list row so the list never
-// fans out a `/follow-status` request per row (see 01-batch-follow-status.md).
-const { isFollowing, isSelf, buttonLabel, toggleFollow, isToggling } = useFollow(
-  () => props.user.id,
-  undefined,
-  { initialStatus: () => ({ is_following: props.user.is_following, is_followed_by: props.user.is_followed_by }) },
-)
+
+const { isFollowing, isToggling, statusLoaded, buttonLabel, buttonIcon, isSelf, toggleFollow } = useFollow(props.user.id)
+
+// Shared follow celebration (styles live globally in assets/css/main.css)
+const { followAnimating, burst } = useFollowBurst()
+
+/** Follow / follow-back, plus the burst animation on a *new* follow only. */
+async function handleFollowClick(): Promise<void> {
+  const wasFollowing = isFollowing.value
+  await toggleFollow()
+
+  if (!wasFollowing && isFollowing.value) {
+    burst()
+  }
+}
 
 </script>
 
 <template>
   <div class="px-2 py-1">
     <MinimalUserList :user="user">
-      <template #default>
+      <template #actions>
         <!-- Follow Action (only for other users) -->
-        <div v-if="!isSelf" class="flex items-center justify-end pr-3">
+        <div class="flex items-center">
           <UButton
-            :label="buttonLabel"
-            :color="isFollowing ? 'neutral' : 'primary'"
-            :variant="isFollowing ? 'soft' : 'solid'"
-            size="xs"
-            class="min-w-24 justify-center font-bold"
-            :loading="isToggling"
-            @click.stop="toggleFollow"
+              v-if="!isSelf"
+              class="rounded-none follow-btn w-full justify-center transition-all duration-150"
+              :class="{
+                'follow-btn--animating': followAnimating,
+                'bg-primary': isFollowing,
+              }"
+              variant="subtle"
+              :label="buttonLabel"
+              :loading="!statusLoaded || isToggling"
+              :icon="buttonIcon"
+              @click="handleFollowClick"
+          />
+
+          <UButton :to="`/inbox?start=${user.signature}`" icon="i-lucide-message-circle-more" variant="subtle" class="w-full rounded-none justify-center">
+            Chat
+          </UButton>
+
+          <UserTrackButton
+              :user-id="user.id"
+              :name="user.name"
+              class="w-full rounded-none justify-center"
           />
         </div>
       </template>

@@ -138,9 +138,9 @@ onMounted(async () => {
           <div class="grid grid-cols-5 gap-2 px-3">
             <!-- Agency Logo -->
             <NuxtImg
-                :src="agency.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${agency.name}`"
-                :alt="agency.name"
-                class="w-full aspect-square object-cover col-span-2"
+              :src="agency.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${agency.name}`"
+              :alt="agency.name"
+              class="w-full aspect-square object-cover col-span-2"
             />
 
             <!-- Agency Info -->

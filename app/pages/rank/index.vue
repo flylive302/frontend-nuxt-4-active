@@ -122,7 +122,7 @@ useHead({
     </div>
 
     <footer aria-label="Primary" class="absolute inset-x-2 bottom-5 z-100">
-      <div class="m-3">
+      <div class="mx-3">
         <RankingPeriodTabs
             :model-value="period"
             @update:model-value="setPeriod"

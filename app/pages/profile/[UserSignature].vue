@@ -9,6 +9,7 @@ import type { UserProfile, PropPreviewItem } from '~/types/user/user-profile'
 import type { ProfileImageType } from '~/composables/auth/useProfileImageUpload'
 import {computed} from "vue";
 import MarqueeName from "~/components/common/marquee-name.vue";
+import UserTrackButton from "~/components/user/track-button.vue";
 
 // ========================================
 // Page Configuration
@@ -66,8 +67,10 @@ const authStore = useAuthStore()
 
 const signature = computed(() => route.params.UserSignature as string)
 const profileScrollRef = ref<HTMLElement | null>(null)
-const followAnimating = ref(false)
 const activeTab = ref('gifts')
+
+// Shared follow celebration (styles live globally in assets/css/main.css)
+const { followAnimating, burst } = useFollowBurst()
 
 // ========================================
 // User Profile Composable
@@ -145,8 +148,7 @@ async function handleFollowClick(): Promise<void> {
 
   // Trigger particle burst on successful follow (not unfollow)
   if (!wasFollowing && isFollowing.value) {
-    followAnimating.value = true
-    setTimeout(() => { followAnimating.value = false }, 600)
+    burst()
   }
 }
 
@@ -266,7 +268,8 @@ useInfiniteScroll(
 // ========================================
 
 const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
-const { isTracking, isJoiningRoom, trackUser, goToRoom } = useProfileRoomActions(readonlyProfile, enterRoom)
+// Tracking now lives in <UserTrackButton>; this page keeps only room joining.
+const { isJoiningRoom, goToRoom } = useProfileRoomActions(readonlyProfile, enterRoom)
 const { resolvePropAsset } = usePropLookup()
 
 // ========================================
@@ -595,17 +598,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       class="fixed inset-x-2 z-50 bottom-4"
     >
       <div v-if="profileId !== authStore.user?.id" class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
-        <UButton
-            :loading="isTracking"
-            :disabled="isTracking"
-            icon="i-mdi-airplane-search"
-            size="md"
-            variant="subtle"
-            class="pl-1 pr-2 gap-1 backdrop-blur-xs"
-            @click="trackUser"
-        >
-          Track
-        </UButton>
+        <UserTrackButton :user-id="profileId" :name="profileWritable?.name" />
 
         <!-- Follow Button (hidden for own profile) -->
         <UButton
@@ -618,7 +611,6 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
             class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150 backdrop-blur-xs"
             :class="{
               'follow-btn--animating': followAnimating,
-              'follow-btn--active': isFollowing,
             }"
             @click="handleFollowClick"
         >
@@ -698,58 +690,3 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     />
   </div>
 </template>
-
-<style scoped>
-/* ── Follow Button Micro-Animations ── */
-
-.follow-btn {
-  position: relative;
-  overflow: visible;
-  transform: scale(1);
-}
-
-/* Scale bounce on animating */
-.follow-btn--animating {
-  animation: follow-bounce 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes follow-bounce {
-  0% { transform: scale(1); }
-  30% { transform: scale(0.92); }
-  60% { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
-
-/* Active state glow */
-.follow-btn--active {
-  box-shadow: 0 0 12px -2px var(--color-primary-400);
-}
-
-/* ── Particle Burst ── */
-.follow-btn--animating::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  animation: follow-burst 500ms ease-out forwards;
-  background:
-    radial-gradient(circle at 20% 30%, var(--color-primary-400) 2px, transparent 2px),
-    radial-gradient(circle at 80% 25%, var(--color-primary-300) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 50% 10%, var(--color-primary-500) 2px, transparent 2px),
-    radial-gradient(circle at 15% 70%, var(--color-primary-300) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 85% 75%, var(--color-primary-400) 2px, transparent 2px),
-    radial-gradient(circle at 50% 90%, var(--color-primary-500) 1.5px, transparent 1.5px);
-}
-
-@keyframes follow-burst {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-}
-</style>
