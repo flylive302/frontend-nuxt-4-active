@@ -50,3 +50,26 @@ export const LUCKY_FLY_DURATION_MS = 2000;
 
 /** Size of the lucky gift fly thumbnail in pixels */
 export const LUCKY_FLY_THUMBNAIL_SIZE = 64;
+
+/**
+ * `gift:send` ack failure messages, copied verbatim from the audio server's
+ * `src/shared/errors.ts`. MSAB acks with the literal message, not a code, so
+ * these strings ARE the contract — if one is renamed there, the matching arm in
+ * `useGiftSending` silently falls through to the generic message.
+ */
+export const GIFT_SEND_ERROR = {
+  NO_RECIPIENTS_SEATED: 'No recipients seated',
+  NOT_IN_ROOM: 'Not in room',
+  RATE_LIMITED: 'Too many requests',
+  INVALID_PAYLOAD: 'Invalid payload',
+} as const;
+
+/**
+ * Minimum gap between two "gift not sent" toasts, in milliseconds.
+ *
+ * A combo is one emit per tap, so a rejected combo fails once per tap — twenty
+ * taps against an empty seat produced twenty identical refunds. The operator
+ * needs to be told once, not twenty times; this keeps the same anti-spam
+ * posture as the deliberately-silent partial-drop refund below it.
+ */
+export const GIFT_FAILURE_TOAST_COOLDOWN_MS = 4000;

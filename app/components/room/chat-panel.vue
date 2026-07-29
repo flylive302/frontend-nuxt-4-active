@@ -97,18 +97,18 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="grow overflow-hidden flex flex-col h-full bg-linear-to-b from-primary/10 to-primary/20 p-2 rounded-xl shadow-md relative">
+  <div class="grow overflow-hidden flex flex-col h-full bg-primary/20 ring ring-primary p-2 rounded-xl shadow-xl shadow-neutral-900/40 relative">
     <!-- Clear chat (local view only) -->
     <UButton
-        icon="i-lucide-eraser"
-        size="xs"
-        color="neutral"
         variant="ghost"
-        class="absolute top-1 right-1 z-10 size-6"
+        class="absolute top-1 right-1 z-10 justify-center p-0"
         :disabled="audioStore.messages.length === 0"
         aria-label="Clear chat"
         @click="handleClearChat"
-    />
+    >
+      <UIcon name="i-lucide-eraser" class="size-4" />
+      Clear
+    </UButton>
 
     <!-- Filter tabs: All / Chat / Gifts -->
     <div class="flex items-center gap-1 mb-1 pr-7" role="tablist" aria-label="Chat filter">
@@ -120,8 +120,8 @@ function handleKeydown(event: KeyboardEvent) {
           :aria-selected="activeChatTab === tab.id"
           class="text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
           :class="activeChatTab === tab.id
-            ? 'bg-primary text-white'
-            : 'bg-primary/10 text-muted hover:bg-primary/20'"
+            ? 'bg-primary text-white scale-110'
+            : 'bg-primary text-muted hover:bg-primary/20'"
           @click="activeChatTab = tab.id"
       >
         {{ tab.label }}
@@ -186,7 +186,7 @@ function handleKeydown(event: KeyboardEvent) {
           size="sm"
           variant="solid"
           color="neutral"
-          class="size-9 p-2 rounded-l-none rounded-r-full bg-neutral-900!"
+          class="size-9 p-2 rounded-l-none rounded-r-full bg-neutral-950!"
           :disabled="!messageInput.trim()"
           @click="handleSend"
       >

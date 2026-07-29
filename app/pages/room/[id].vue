@@ -225,7 +225,39 @@ onUnmounted(() => {
           <div class="size-full flex flex-col">
             <RoomChatPanel />
 
-            <div class="flex gap-3 py-2 mb-2">
+            <div class="flex justify-between py-1 mt-2 mb-3 bg-primary/10 shadow-md ring ring-primary/30 rounded-lg px-3">
+              <!-- Room Settings Button -->
+              <UButton
+                  size="xl"
+                  variant="ghost"
+                  class="p-0 text-primary"
+                  @click="() => { settingsOpen = true }"
+              >
+                <UIcon class="size-8" name="i-lucide-settings" />
+              </UButton>
+
+              <!-- Reaction Drawer trigger (ADR 0015) -->
+              <LazyRoomReactionDrawer />
+
+              <!-- Mic Mute/Unmute - only show when producing audio -->
+              <UButton
+                  v-if="isProducing"
+                  size="xl"
+                  variant="ghost"
+                  :color="isLocalMuted ? 'error' : 'primary'"
+                  :class="isLocalMuted ? 'text-white' : 'text-primary'"
+                  class="p-0"
+                  @click="() => { toggleLocalMute() }"
+              >
+                <UIcon class="size-8" :name="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'" />
+              </UButton>
+              <UButton v-else size="xl" class="text-primary p-0" variant="ghost" disabled >
+                <UIcon class="size-8" name="i-lucide-mic" />
+              </UButton>
+
+              <!-- Users Inbox Model View -->
+              <LazyRoomInboxDrawer />
+
               <!-- Volume Control with Popover -->
               <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
                 <UButton
@@ -259,41 +291,11 @@ onUnmounted(() => {
                 </template>
               </UPopover>
 
-              <!-- Mic Mute/Unmute - only show when producing audio -->
-              <UButton
-                  v-if="isProducing"
-                  size="xl"
-                  variant="ghost"
-                  :color="isLocalMuted ? 'error' : 'primary'"
-                  :class="isLocalMuted ? 'text-white' : 'text-primary'"
-                  class="p-0"
-                  @click="() => { toggleLocalMute() }"
-              >
-                <UIcon class="size-8 drop-shadow-md" :name="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'" />
-              </UButton>
-              <UButton v-else icon="i-lucide-mic" size="xl" class="text-primary" variant="soft" disabled />
-
-              <!-- Reaction Drawer trigger (ADR 0015) -->
-              <LazyRoomReactionDrawer />
-
-              <!-- Room Settings Button -->
-              <UButton
-                  size="xl"
-                  variant="ghost"
-                  class="p-0 text-primary"
-                  @click="() => { settingsOpen = true }"
-              >
-                <UIcon class="size-8 drop-shadow-md" name="i-lucide-settings" />
-              </UButton>
-
-              <!-- Users Inbox Model View -->
-              <LazyRoomInboxDrawer />
             </div>
           </div>
 
           <!-- Side Controls & Gifting -->
           <div class="flex flex-col items-center gap-3 justify-end pb-3">
-
             <LazyRoomGiftDrawer />
           </div>
 

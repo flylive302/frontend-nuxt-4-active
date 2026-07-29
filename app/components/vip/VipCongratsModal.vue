@@ -95,7 +95,7 @@ function handleClose(): void {
         <!-- Unlocked Props -->
         <div
           v-if="vipProps.length > 0"
-          class="relative z-10 w-full max-w-sm"
+          class="relative z-10 w-full max-w-sm min-h-48 overflow-scroll"
         >
           <p class="text-center text-sm font-medium text-white/70 mb-3">
             Your VIP Props
@@ -123,47 +123,38 @@ function handleClose(): void {
                 {{ vipProp.name }}
               </span>
             </div>
-          </div>
-        </div>
-
-        <!-- Unlocked Badges (cumulative across all levels up to this one) -->
-        <div
-          v-if="vipBadges.length > 0"
-          class="relative z-10 w-full max-w-sm mt-4"
-        >
-          <p class="text-center text-sm font-medium text-white/70 mb-3">
-            Your VIP Badges
-          </p>
-          <div class="grid grid-cols-3 gap-3">
+            <!-- Unlocked Badges (cumulative across all levels up to this one) -->
             <div
-              v-for="vipBadge in vipBadges"
-              :key="vipBadge.id"
-              class="flex flex-col items-center gap-1.5"
+                v-if="vipBadges.length > 0"
+                v-for="vipBadge in vipBadges"
+                :key="vipBadge.id"
+                class="flex flex-col items-center gap-1.5"
             >
               <div class="w-full aspect-square rounded-lg bg-white/10 overflow-hidden flex items-center justify-center p-1">
                 <img
-                  v-if="vipBadge.icon_url"
-                  :src="vipBadge.icon_url"
-                  :alt="vipBadge.name"
-                  class="w-full h-full object-contain"
+                    v-if="vipBadge.icon_url"
+                    :src="vipBadge.icon_url"
+                    :alt="vipBadge.name"
+                    class="w-full h-full object-contain"
                 >
                 <UIcon
-                  v-else
-                  name="i-heroicons-shield-check"
-                  class="size-8 text-white/40"
+                    v-else
+                    name="i-heroicons-shield-check"
+                    class="size-8 text-white/40"
                 />
               </div>
               <span class="text-xs text-white/80 text-center leading-tight font-medium">
-                {{ vipBadge.name }}
-              </span>
+                    {{ vipBadge.name }}
+                  </span>
             </div>
           </div>
+
         </div>
 
         <!-- CTA -->
         <UButton
           size="xl"
-          color="warning"
+          color="tertiary"
           variant="solid"
           class="relative z-10 mt-8 px-8"
           @click="handleClose"

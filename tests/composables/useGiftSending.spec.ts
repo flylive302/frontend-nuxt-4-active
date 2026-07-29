@@ -2,10 +2,11 @@
  * Unit tests for useGiftSending — burst send + per-batch refund reconciliation
  * (gift-burst-send 09).
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, watch, toRef } from 'vue'
 import type { GiftSendAck } from '../../app/types/room/audio'
+import { GIFT_FAILURE_TOAST_COOLDOWN_MS } from '../../app/constants/gift'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -14,7 +15,10 @@ vi.stubGlobal('toRef', toRef)
 vi.stubGlobal('createLogger', () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }))
 vi.stubGlobal('useGiftPreload', vi.fn())
 vi.stubGlobal('useLuckyFly', () => ({ triggerFly: vi.fn() }))
-vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
+// Stable across `useToast()` calls so the burst-failure tests below can assert
+// on what the sender was actually told.
+const toastAdd = vi.fn()
+vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 vi.stubGlobal('piniaPluginPersistedstate', {
   cookies: () => ({}),
   localStorage: () => ({}),
@@ -59,7 +63,12 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
   seatsStore.updateSeat(2, 4, false)
 
   const { useGiftSending } = await import('../../app/composables/gift/useGiftSending')
-  return { useGiftSending: useGiftSending(), comboStore, giftStore, authStore }
+  return { useGiftSending: useGiftSending(), comboStore, giftStore, authStore, seatsStore, toastAdd }
+}
+
+/** The `{ title, description, color }` object handed to `toast.add`. */
+function toastArg(call: number): { title: string; description: string; color: string } {
+  return toastAdd.mock.calls[call]?.[0] as { title: string; description: string; color: string }
 }
 
 describe('useGiftSending.send', () => {
@@ -164,6 +173,180 @@ describe('useGiftSending.send', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(authStore.user?.coins).toBe('950') // 900 + 50
+  })
+})
+
+/**
+ * A rejected burst refunded the coins and said nothing at all. Twenty combo
+ * taps at an unseated recipient therefore looked exactly like twenty that
+ * worked: the animation played, the balance ended where it started, and MSAB's
+ * `No recipients seated` never reached the screen.
+ *
+ * Partial-leg drops must stay silent — that silence is a deliberate HITL call
+ * (2026-07-23) about toast spam in busy rooms, and it is only the TOTAL failure
+ * branch that gained a message.
+ */
+describe('useGiftSending — burst rejection feedback', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('names the seat requirement when every leg was unseated', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, error: 'No recipients seated' } satisfies GiftSendAck
+    )
+    const { useGiftSending: sending, giftStore, toastAdd } = await setup(sendGiftMock)
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).title).toBe('Gift not sent')
+    expect(toastArg(0).color).toBe('error')
+    expect(toastArg(0).description).toContain('mic seat')
+    expect(toastArg(0).description).toContain('refunded')
+  })
+
+  it('falls back to the server text for an unmapped error', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, error: 'Room is closed' } satisfies GiftSendAck
+    )
+    const { useGiftSending: sending, giftStore, toastAdd } = await setup(sendGiftMock)
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).description).toContain('Room is closed')
+  })
+
+  it('reports a lost connection when the emit rejects outright', async () => {
+    const sendGiftMock = vi.fn().mockRejectedValue(new Error('Socket not connected'))
+    const { useGiftSending: sending, giftStore, toastAdd } = await setup(sendGiftMock)
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).description).toContain('Could not reach the room server')
+  })
+
+  it('stays silent when 1 of 5 recipients drops — the send still worked', async () => {
+    // The operator's rule: do not interrupt someone whose gift mostly landed.
+    // MSAB never errors a partial burst (`errors.ts` NO_RECIPIENTS_SEATED is
+    // "raised only when EVERY recipient in a burst was dropped") — it acks
+    // success with the accepted subset, which lands in the silent branch.
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: true, acceptedRecipientIds: [2, 3, 4, 5] } satisfies GiftSendAck
+    )
+    const { useGiftSending: sending, giftStore, authStore, seatsStore, toastAdd } = await setup(sendGiftMock)
+
+    seatsStore.updateSeat(3, 5, false)
+    seatsStore.updateSeat(4, 6, false)
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2, 3, 4, 5, 6])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // 5 × 50 debited, 1 dropped leg refunded — quietly.
+    expect(authStore.user?.coins).toBe('800')
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('speaks up only when ALL 5 recipients drop', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, error: 'No recipients seated' } satisfies GiftSendAck
+    )
+    const { useGiftSending: sending, giftStore, authStore, seatsStore, toastAdd } = await setup(sendGiftMock)
+
+    seatsStore.updateSeat(3, 5, false)
+    seatsStore.updateSeat(4, 6, false)
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2, 3, 4, 5, 6])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // Nothing landed — full refund, and the sender is told why.
+    expect(authStore.user?.coins).toBe('1000')
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).description).toContain('mic seat')
+  })
+
+  it('shows ONE toast for a run of rejected combo taps, not one per tap', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, error: 'No recipients seated' } satisfies GiftSendAck
+    )
+    const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock)
+
+    // Freeze the clock inside one cooldown window — this is the reported case:
+    // twenty taps landing far faster than GIFT_FAILURE_TOAST_COOLDOWN_MS.
+    const frozen = 1_700_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(frozen)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    for (let tap = 0; tap < 20; tap++) {
+      await sending.combo()
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+
+    expect(sendGiftMock).toHaveBeenCalledTimes(20)
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('toasts again once the cooldown has elapsed', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, error: 'No recipients seated' } satisfies GiftSendAck
+    )
+    const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock)
+
+    const start = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(start)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    await sending.combo()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+
+    // One millisecond past the window — the sender is told again, so a problem
+    // that persists across separate attempts never goes quiet forever.
+    nowSpy.mockReturnValue(start + GIFT_FAILURE_TOAST_COOLDOWN_MS + 1)
+
+    await sending.combo()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(toastAdd).toHaveBeenCalledTimes(2)
   })
 })
 

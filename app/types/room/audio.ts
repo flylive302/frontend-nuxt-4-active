@@ -364,9 +364,17 @@ export interface GiftSendPayload {
 export interface GiftSendAck {
   success: boolean;
   acceptedRecipientIds?: number[];
-  /** e.g. 'NO_RECIPIENTS_SEATED' when zero legs were seated. */
-  code?: string;
-  reason?: string;
+  /**
+   * Failure message, present only when `success` is false. MSAB acks with
+   * `{ success, error }` — its handler return is passed to the socket callback
+   * verbatim — so this is the literal string from the audio server's
+   * `src/shared/errors.ts`, e.g. `'No recipients seated'`. Match it against
+   * `GIFT_SEND_ERROR` in `~/constants/gift` rather than inlining the text.
+   *
+   * (This replaced `code` / `reason`, which the server has never sent and
+   * nothing read.)
+   */
+  error?: string;
 }
 
 export interface GiftReceivedEvent {

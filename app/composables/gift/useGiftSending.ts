@@ -6,6 +6,7 @@
  */
 import type { GiftSendAck } from '~/types/room/audio';
 import { announceLocalGiftSend } from '~/composables/room/useRoomEventHandlers';
+import { GIFT_FAILURE_TOAST_COOLDOWN_MS, GIFT_SEND_ERROR } from '~/constants/gift';
 
 export function useGiftSending() {
   // ========================================
@@ -33,6 +34,14 @@ export function useGiftSending() {
 
   /** Prevents double-sending while request is in progress */
   const isSending = ref(false);
+
+  /**
+   * Timestamp of the last "gift not sent" toast, throttling the burst-failure
+   * message. Plain local state rather than a ref — nothing renders it, and
+   * keeping it per-composable-instance means one room's rejections never
+   * suppress another's.
+   */
+  let lastFailureToastAt = 0;
 
   // ========================================
   // Computed
@@ -93,9 +102,13 @@ export function useGiftSending() {
     if (trackedAmount <= 0) return;
 
     if (!ack || !ack.success) {
-      // Total failure — refund everything this burst debited.
+      // Total failure — refund everything this burst debited, and SAY SO. The
+      // refund alone used to be the entire response: a rejected burst put the
+      // coins back and played the animation, so a run of taps against an
+      // unseated recipient looked identical to a run that worked.
       const currentCoins = Number(authStore.user?.coins ?? 0);
       authStore.patchBalance({ coins: String(currentCoins + trackedAmount) });
+      notifyBurstFailure(ack);
       return;
     }
 
@@ -108,6 +121,50 @@ export function useGiftSending() {
     const refundAmount = perRecipientCost * droppedCount;
     const currentCoins = Number(authStore.user?.coins ?? 0);
     authStore.patchBalance({ coins: String(currentCoins + refundAmount) });
+  }
+
+  /**
+   * REACT: tell the sender why a whole burst was rejected.
+   *
+   * Throttled, because a combo emits once per tap: without the cooldown a
+   * twenty-tap run against an unseated recipient would stack twenty identical
+   * toasts. Partial-leg drops never reach here — those stay silent by design
+   * (HITL 2026-07-23).
+   */
+  function notifyBurstFailure(ack: GiftSendAck | null): void {
+    const now = Date.now();
+    if (now - lastFailureToastAt < GIFT_FAILURE_TOAST_COOLDOWN_MS) return;
+    lastFailureToastAt = now;
+
+    toast.add({
+      title: 'Gift not sent',
+      description: describeSendFailure(ack),
+      color: 'error',
+    });
+  }
+
+  /**
+   * Map a `gift:send` ack failure to something the sender can act on.
+   *
+   * Every branch states the refund explicitly: the coins are already back in
+   * the balance by the time this runs, and a silent re-credit reads as a
+   * double charge to anyone watching the number.
+   */
+  function describeSendFailure(ack: GiftSendAck | null): string {
+    if (!ack) {
+      return 'Could not reach the room server. Your coins were refunded.';
+    }
+
+    switch (ack.error) {
+      case GIFT_SEND_ERROR.NO_RECIPIENTS_SEATED:
+        return 'The people you picked need to be on a mic seat. Your coins were refunded.';
+      case GIFT_SEND_ERROR.NOT_IN_ROOM:
+        return 'You are no longer in this room. Rejoin and try again — your coins were refunded.';
+      case GIFT_SEND_ERROR.RATE_LIMITED:
+        return 'Sending too fast. Wait a moment and try again — your coins were refunded.';
+      default:
+        return `${ack.error ?? 'The room server rejected it'}. Your coins were refunded.`;
+    }
   }
 
   // ========================================

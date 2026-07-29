@@ -24,8 +24,8 @@ const isLuckyWinMessage = computed(() => props.message.type === CHAT_MESSAGE_TYP
 // styling below.
 const isAnnouncementMessage = computed(() => isSystemMessage.value || isGiftMessage.value || isLuckyWinMessage.value);
 const announcementClass = computed(() => {
-  if (isGiftMessage.value) return 'text-xs text-center font-medium px-3 py-1 rounded-full bg-primary/15 text-primary ring ring-primary/30';
-  if (isLuckyWinMessage.value) return 'text-xs text-center font-semibold px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 ring ring-amber-400/40';
+  if (isGiftMessage.value) return 'text-xs font-bold px-3 py-1 rounded-md bg-radial from-transparent to-secondary-700 text-white';
+  if (isLuckyWinMessage.value) return 'text-xs font-bold px-3 py-1 rounded-md bg-radial from-transparent to-tertiary-700 text-white';
   return 'text-xs text-muted italic text-center';
 });
 
@@ -85,51 +85,53 @@ const charmLevel = computed(() =>
 </script>
 
 <template>
-  <!-- Announcement bubble (system/membership, gift-sent, lucky-win): centered, no avatar/identity. -->
-  <div v-if="isAnnouncementMessage" class="flex justify-center py-2">
-    <p :class="announcementClass">{{ message.content }}</p>
-  </div>
-  <div v-else class="flex py-3">
-    <!-- Avatar -->
-    <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
-    <div class="min-w-0">
+  <div>
+    <!-- Announcement bubble (system/membership, gift-sent, lucky-win): centered, no avatar/identity. -->
+    <div v-if="isAnnouncementMessage" class="flex justify-center py-2">
+      <p :class="announcementClass">{{ message.content }}</p>
+    </div>
+    <div v-else class="flex py-3">
+      <!-- Avatar -->
+      <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
+      <div class="min-w-0">
 
-      <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary rounded-md">
-        <MarqueeName
-            class="flex-1 max-w-24 mx-auto"
-            text-class="text-sm font-bold leading-none"
-            :name="displayName"
-            delay="0s"
+        <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary rounded-md">
+          <MarqueeName
+              class="flex-1 max-w-24 mx-auto"
+              text-class="text-sm font-bold leading-none"
+              :name="displayName"
+              delay="0s"
+          />
+          <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+        </div>
+        <div class="flex items-center mt-1 ml-2">
+          <UIcon
+              :name="getFlagIcon(participant?.country)"
+              class="rounded overflow-hidden h-5 size-6 shadow-lg"
+          />
+          <img
+              v-if="participant?.vip_level"
+              :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
+              class="w-10"
+              alt=""
+          >
+          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge">
+
+          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge">
+        </div>
+
+        <BadgesEquippedBadgeMarquee
+            v-if="participant?.equipped_badges?.length"
+            :equipped-badges="participant.equipped_badges"
+            class="ml-1.5 mt-0.5 max-w-48"
         />
-        <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
-      </div>
-      <div class="flex items-center mt-1 ml-2">
-        <UIcon
-            :name="getFlagIcon(participant?.country)"
-            class="rounded overflow-hidden h-5 size-6 shadow-lg"
-        />
-        <img
-            v-if="participant?.vip_level"
-            :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
-            class="w-10"
-            alt=""
-        >
-        <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge">
 
-        <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge">
-      </div>
-
-      <BadgesEquippedBadgeMarquee
-        v-if="participant?.equipped_badges?.length"
-        :equipped-badges="participant.equipped_badges"
-        class="ml-1.5 mt-0.5 max-w-48"
-      />
-
-      <div v-if="participant?.vip_level" class="bubble" :style="bubbleStyle">
-        <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
-      </div>
-      <div v-else class="w-fit p-2 rounded-md bg-primary/50 ring ring-primary my-2 max-w-10/12 ml-2">
-        <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
+        <div v-if="participant?.vip_level" class="bubble" :style="bubbleStyle">
+          <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
+        </div>
+        <div v-else class="w-fit p-2 rounded-md bg-primary/50 ring ring-primary my-2 max-w-10/12 ml-2">
+          <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
+        </div>
       </div>
     </div>
   </div>
