@@ -11,6 +11,7 @@ import type { VipLevel, VipPreviewItem, VipProp, VipTileItem } from '~/types/vip
 import type { MinimalUser } from '~/types/user/bootstrap'
 import { VIP_PRIVILEGE_LABELS, VIP_PRIVILEGE_ICONS } from '~/types/vip/vip-level'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
+import MarqueeName from "~/components/common/marquee-name.vue";
 
 // ========================================
 // Page Configuration
@@ -425,9 +426,11 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
                     >
                     <UIcon v-else name="i-heroicons-gift" class="h-12 text-white/90" />
                   </div>
-                  <p class="text-sm font-bold text-center leading-tight truncate w-24">
-                    {{ tile.data.name }}
-                  </p>
+                  <MarqueeName
+                    class="flex-1 max-w-24"
+                    text-class="text-sm font-bold text-center leading-tight truncate "
+                    :name="tile.data.name"
+                  />
                 </div>
               </div>
             </div>
@@ -438,17 +441,16 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
                 Privileges
               </h3>
               <div class="grid grid-cols-3 gap-2">
-                <div
-v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`"
-                  class="flex flex-col items-center justify-center gap-2">
-                  <div
-class="flex aspect-square w-full items-center justify-center rounded-md transition-all duration-300"
-                    :style="privilegeBoxStyle">
+                <div v-for="privilege in nonPropPrivileges" :key="`privilege-${activeLevel.level}-${privilege}`" class="flex flex-col items-center justify-center gap-2">
+                  <div class="flex aspect-square w-full items-center justify-center rounded-md transition-all duration-300" :style="privilegeBoxStyle">
                     <UIcon :name="VIP_PRIVILEGE_ICONS[privilege] ?? 'i-heroicons-star'" class="size-12 text-white/90" />
                   </div>
-                  <p class="text-sm font-bold text-center leading-tight truncate w-24">
-                    {{ VIP_PRIVILEGE_LABELS[privilege] ?? privilege }}
-                  </p>
+
+                  <MarqueeName
+                    class="flex-1 max-w-20"
+                    text-class="text-sm font-bold text-center leading-tight truncate w-24"
+                    :name="VIP_PRIVILEGE_LABELS[privilege] ?? privilege"
+                  />
                 </div>
               </div>
             </div>
@@ -460,46 +462,61 @@ class="flex aspect-square w-full items-center justify-center rounded-md transiti
 
     <!-- VIP Gift Modal -->
     <VipGiftModal
-v-if="activeLevel" v-model:open="isGiftModalOpen" :level-name="`VIP ${activeLevel.level}`"
-      :price="activeLevel.price" @confirm="handleGiftConfirm" />
+        v-if="activeLevel"
+        v-model:open="isGiftModalOpen"
+        :level-name="`VIP
+        ${activeLevel.level}`"
+        :price="activeLevel.price"
+        @confirm="handleGiftConfirm"
+    />
 
     <!-- VIP Prop/Badge Preview Modal -->
-    <VipPropPreviewModal :item="selectedPreviewItem" :open="isPropPreviewOpen" @close="handlePropPreviewClose" />
+    <VipPropPreviewModal
+        :item="selectedPreviewItem"
+        :open="isPropPreviewOpen"
+        @close="handlePropPreviewClose"
+    />
 
     <!-- VIP Congratulations Modal -->
     <VipCongratsModal
-:open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
-      :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props"
-      :vip-badges="congratsLevelData.badges" @close="handleCongratsClose" />
+        :open="isCongratsOpen" :vip-level="congratsLevel" :vip-name="congratsLevelData.name"
+        :vip-color="congratsLevelData.color" :vip-props="congratsLevelData.props"
+        :vip-badges="congratsLevelData.badges" @close="handleCongratsClose"
+    />
 
     <!-- Footer Controls -->
     <footer aria-label="VIP Level Selection" class="fixed inset-x-0 bottom-0 pb-2 z-50 backdrop-blur-lg">
       <!-- VIP Level Tabs -->
-      <div class="flex w-full overflow-x-auto scrollbar-hide">
+      <div class="flex w-full overflow-x-auto scrollbar-hide mt-1 py-1">
         <UButton
-v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
-          class="min-w-fit shrink-0 rounded-none transition-transform duration-200" :style="bgColor"
-          :class="activeIndex === index ? 'scale-110 bg-tertiary!' : 'to-muted'" :aria-pressed="activeIndex === index"
-          :aria-label="`Select VIP Level ${level.level}`" @click="setActiveLevel(index)">
+            v-for="(level, index) in levels" :key="`vip-tab-${level.level}`" variant="soft"
+            class="min-w-fit shrink-0 rounded-full mx-2 transition-transform duration-200 shadow-md" :style="bgColor"
+            :class="activeIndex === index ? 'scale-110 bg-tertiary!' : 'to-muted'" :aria-pressed="activeIndex === index"
+            :aria-label="`Select VIP Level ${level.level}`" @click="setActiveLevel(index)"
+        >
           VIP {{ level.level }}
         </UButton>
       </div>
 
-      <div class="text-md font-bold text-white text-center">
-        PRICE {{ formattedPrice }}
+      <div class="relative flex items-center justify-center">
+        <p class="text-white text-xl font-bold">PRICE</p>
+        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5 ml-2 mt-1" alt="room xp indicator">
+        <p class="text-success text-2xl font-bold">{{ formattedPrice }}</p>
       </div>
 
       <!-- Action Buttons -->
       <div class="flex gap-2 px-3 py-2">
         <UButton
-size="md" variant="soft" color="tertiary" class="w-full justify-center"
-          aria-label="Gift VIP to a friend" @click="handleGiftOpen">
+            size="md" variant="soft" color="tertiary" class="w-full justify-center rounded-xl shadow-md"
+            aria-label="Gift VIP to a friend" @click="handleGiftOpen"
+        >
           Gift
         </UButton>
         <UButton
-size="md" variant="solid" color="tertiary" class="w-full justify-center" :loading="isPurchasing"
-          :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
-          @click="handlePurchase">
+            size="md" variant="solid" color="tertiary" class="w-full justify-center rounded-xl shadow-md" :loading="isPurchasing"
+            :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
+            @click="handlePurchase"
+        >
           {{ purchaseLabel }}
         </UButton>
       </div>

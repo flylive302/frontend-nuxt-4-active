@@ -291,9 +291,11 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                       avatar-action="emit"
                       @avatar-click="handleOpenUser"
                     >
-                      <UButton size="xs" variant="soft" color="tertiary" icon="i-lucide-coins" class="mr-1 px-1">
-                        {{ formatCurrency(entry.total_value) }}
-                      </UButton>
+                      <template #default>
+                        <UButton size="xs" variant="soft" color="primary" icon="i-lucide-coins" class="mr-1 px-1">
+                          {{ formatCurrency(entry.total_value) }}
+                        </UButton>
+                      </template>
                     </MinimalUserList>
                   </div>
                 </DynamicScrollerItem>

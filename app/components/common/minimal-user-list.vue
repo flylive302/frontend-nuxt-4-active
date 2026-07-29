@@ -99,6 +99,9 @@ function handleAvatarClick() {
           >
             {{ getAge(user.date_of_birth) }}
           </UBadge>
+          <div v-if="slots.default" class="flex flex-col justify-center min-h-full shrink-0">
+            <slot />
+          </div>
         </div>
         <div class="flex items-center gap-0.5 ">
           <ProfileBadge :txt="user.signature" :vip="user.vip_level" class="shrink-0 max-w-24" />
@@ -112,10 +115,6 @@ function handleAvatarClick() {
         :equipped-badges="user.equipped_badges"
         class="max-w-full"
     />
-
-    <div v-if="slots.default" class="flex flex-col justify-center min-h-full shrink-0">
-      <slot />
-    </div>
 
     <div v-if="slots.actions">
       <slot name="actions"/>

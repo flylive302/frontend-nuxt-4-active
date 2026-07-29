@@ -434,7 +434,7 @@ const seatUserAge = computed(() => {
         />
       </div>
       
-      <div class="relative z-10 px-3" :class="dataCardAsset ? 'mt-32' : 'my-8'">
+      <div class="relative z-10 px-3" :class="dataCardAsset ? 'mt-44' : 'my-8'">
 
         <div v-if="displayUser" class="flex flex-col justify-center items-center relative z-10">
           <LazyUserAvatar
@@ -442,9 +442,9 @@ const seatUserAge = computed(() => {
             :frame-asset-url="resolvePropAsset(displayUser.frame_id) ?? undefined"
             :animated="true" class="size-32"
             @click="handleVisitProfile"
-            />
+          />
 
-          <div class="flex gap-1">
+          <div class="flex gap-1 mt-3">
             <UIcon
               v-if="seatUserCountry"
               :name="getFlagIcon(seatUserCountry)"
@@ -465,7 +465,7 @@ const seatUserAge = computed(() => {
                 {{ seatUserAge }}
               </UBadge>
           </div>
-          <div class="flex items-center gap-1 justify-center">
+          <div class="flex items-center gap-1 mt-2 justify-center">
 
             <ProfileBadge
                 v-if="displayUser.signature"
@@ -490,17 +490,7 @@ const seatUserAge = computed(() => {
 
         </div>
 
-        <!--
-          Action Buttons.
-
-          Two clusters with different gating:
-          - seat-SLOT actions (take/leave/lock/invite-to-this-seat) need a
-            slot, so they render in seat mode only;
-          - per-USER actions (mute/kick/invite/follow/chat/gift) are gated by
-            the target's own state via useSeatDrawerActions, so they render in
-            whichever mode the target qualifies in.
-        -->
-        <div class="mt-6 mx-auto">
+        <div class="mt-4 mx-auto">
           <div class="flex justify-center items-center gap-2">
             <div v-if="!isProfileMode" class="flex gap-2">
               <!-- Take Seat button — only when seat is empty and unlocked -->
@@ -594,7 +584,7 @@ const seatUserAge = computed(() => {
             </div>
           </div>
 
-          <div v-if="canFollow || canChat || canGift" class="gap-1 pl-4 flex items-center justify-center mt-3 w-full">
+          <div v-if="canFollow || canChat || canGift" class="gap-1 pl-4 flex items-center justify-center mt-2 w-full">
 
             <!-- Follow button — needs neither a seat nor room presence -->
             <UButton
