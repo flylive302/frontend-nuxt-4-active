@@ -9,7 +9,7 @@
 
 import type { Room } from '~/types/room/room'
 import { ASSETS } from '~/constants/assets'
-import { roomBackgroundImageSrc } from '~/utils/imagekit'
+import { roomBackgroundImageSrc, avatarImageSrc } from '~/utils/imagekit'
 import MarqueeName from "~/components/common/marquee-name.vue";
 
 defineOptions({
@@ -123,7 +123,7 @@ function handleRoomClick(): void {
       <UIcon :name="getFlagIcon(props.room.country)" class="size-6 rounded-md drop-shadow-lg" />
 
       <div class="w-fit flex items-center justify-end gap-2 backdrop-blur-2xl rounded rounded-tr-2xl px-2 border border-primary/10 shadow-md">
-        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5" alt="room xp indicator">
+        <img :src="ASSETS.COIN_ICON" class="size-5" alt="room xp indicator">
         <p class="font-bold text-lg text-white">{{formatXp(props.room.daily_xp)}}</p>
       </div>
     </div>
@@ -134,7 +134,7 @@ function handleRoomClick(): void {
       <div class="backdrop-blur-sm shadow-md border border-primary/10 rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1 max-w-8/12">
           <img
-            :src="`${props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER}?tr=w-24,q-60,f-webp`"
+            :src="avatarImageSrc(props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER, { w: 48 })"
             alt="Live"
             width="24"
             height="24"

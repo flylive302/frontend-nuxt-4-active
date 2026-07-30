@@ -4,6 +4,8 @@ import { getAge } from '~/utils/date'
 import type { MinimalUser } from '~/types/user/bootstrap'
 import { useSlots } from 'vue';
 import MarqueeName from "~/components/common/marquee-name.vue";
+import { withImageKitTransform, levelBadgeSrc } from '~/utils/imagekit'
+import { vipBadgeUIImg } from '~/constants/assets'
 
 const props = withDefaults(
   defineProps<{
@@ -85,7 +87,7 @@ function handleAvatarClick() {
               :name="user.name"
               :delay="marqueeDelay"
           />
-          <img v-if="user.vip_level" :src="`https://ik.imagekit.io/flylive/vip/${user.vip_level}/badge.png`" class="w-9" alt="" >
+          <img v-if="user.vip_level" :src="withImageKitTransform(vipBadgeUIImg(user.vip_level), { w: 72 })" class="w-9" alt="" >
           <UIcon
               :name="getFlagIcon(user.country)"
               class="rounded overflow-hidden h-5 size-6 shadow-lg"
@@ -105,8 +107,9 @@ function handleAvatarClick() {
         </div>
         <div class="flex items-center gap-0.5 ">
           <ProfileBadge :txt="user.signature" :vip="user.vip_level" class="shrink-0 max-w-24" />
-          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge" >
-          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4 ml-1" alt="users charm badge" >
+          <!-- Level badges are height-constrained and wide (aspect ~2.8-3.2), so they size by `h-`, not `w-` -->
+          <img v-if="wealthLevel.badge" :src="levelBadgeSrc(wealthLevel.badge.image_url, 20)" class="h-5" alt="users wealth badge" >
+          <img v-if="charmLevel.badge" :src="levelBadgeSrc(charmLevel.badge.image_url, 16)" class="h-4 ml-1" alt="users charm badge" >
         </div>
       </div>
     </div>

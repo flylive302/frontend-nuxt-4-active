@@ -140,7 +140,10 @@ const tableData = computed<LevelRow[]>(() =>
       level: item.name,
       requiredXP: item.required_xp.toLocaleString() + ' XP',
       badge: {
-        badgeSrc: item.image_url || props.defaultBadgeUrl,
+        // Painted at `max-w-12` (48 CSS px) below. Previously passed through raw, which looked
+        // sharp but fetched the full 512px source — ~110 KB per row, once per level in the table.
+        // w-128 is still ~2.6x DPR at that box, so sharpness is unchanged.
+        badgeSrc: withImageKitTransform(item.image_url || props.defaultBadgeUrl, { w: 128, q: 75 }),
         class: item.level === currentLevel.value ? `border border-${props.color} bg-${props.color}/10 rounded-md px-2 py-1 inset-shadow-sm` : '',
       },
     }

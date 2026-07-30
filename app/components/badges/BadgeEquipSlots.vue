@@ -101,7 +101,7 @@ function onSlotsUpdate(e: DraggableEvent): void {
 
 function slotImageUrl(imageUrl: string | null | undefined): string {
   if (!imageUrl) return ''
-  return withImageKitTransform(imageUrl, { w: 64, q: 75 })
+  return withImageKitTransform(imageUrl, { w: 140, q: 75 })
 }
 </script>
 

@@ -2,6 +2,7 @@
 import { computed, onMounted, nextTick } from 'vue';
 import { ASSETS } from '~/constants/assets';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
+import { withImageKitTransform } from '~/utils/imagekit';
 
 const roomStore = useRoomStore();
 const { leaveRoom, isProducing, isLocalMuted, toggleLocalMute } = useRoomAudio();
@@ -15,6 +16,12 @@ const displayRoom = computed(() => roomStore.currentRoom ?? roomStore.minimizedR
 
 // Mic is audible to the room only while producing AND not locally muted.
 const isMicLive = computed(() => isProducing.value && !isLocalMuted.value);
+
+// Room preview thumbnail — dynamic logo URL needs the transform; the ROOM_CARD_TOP
+// fallback already carries its own `tr` so this no-ops for that branch.
+const roomPreviewSrc = computed(() =>
+  withImageKitTransform(displayRoom.value?.logo ?? ASSETS.ROOM_CARD_TOP, { w: 64 }),
+);
 
 // Set initial position after mount when element dimensions are known
 onMounted(async () => {
@@ -51,7 +58,7 @@ function disconnect(): void {
     <!-- Room bubble — tap to return to the room -->
     <div class="relative bg-primary size-16 aspect-square p-1 rounded-full" @click="returnToRoom">
       <NuxtImg
-          :src="displayRoom?.logo ?? ASSETS.ROOM_CARD_TOP"
+          :src="roomPreviewSrc"
           alt="Minimized Room Preview"
           :width="64"
           :height="64"

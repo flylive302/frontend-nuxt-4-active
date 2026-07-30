@@ -4,6 +4,7 @@
 // ========================================
 
 import { onMounted } from 'vue'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Imports from Utils
@@ -118,7 +119,7 @@ onMounted(() => {
             class="flex gap-2 p-2 border-b border-black shadow-lg shadow-primary-950/50"
           >
             <NuxtImg
-              :src="invitation.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${invitation.agency?.name}`"
+              :src="withImageKitTransform(invitation.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${invitation.agency?.name}`, { w: 256 })"
               :alt="invitation.agency?.name"
               class="size-12"
             />

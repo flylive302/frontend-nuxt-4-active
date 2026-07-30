@@ -10,6 +10,8 @@
 import type { ChatMessageEvent } from '~/types/room/audio';
 import MarqueeName from "~/components/common/marquee-name.vue";
 import { CHAT_MESSAGE_TYPE_SYSTEM, CHAT_MESSAGE_TYPE_GIFT, CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room';
+import { withImageKitTransform, levelBadgeSrc } from '~/utils/imagekit';
+import { vipBadgeUIImg } from '~/constants/assets';
 
 const props = defineProps<{
   message: ChatMessageEvent;
@@ -44,10 +46,16 @@ const displayFrame = computed(() => resolvePropAsset(participant.value?.frame_id
 const chatBubbleId = computed(() => participant.value?.chat_bubble_id ?? props.message.userChatBubbleId ?? null);
 // Chat bubble props store the frame image in thumbnail_url (asset_url is empty for this type).
 // Falls back to the default bubble so the frame is always visible.
+// Deliberately NOT transformed: the source is already 161x94 / 8.5 KB, which exactly covers the
+// 79px border box at 2x DPR. Adding `tr=w-400` here would UPSCALE it to ~35 KB — four times worse.
 const DEFAULT_BUBBLE_URL = 'https://ik.imagekit.io/flylive/vip/15/chat_bubble.png';
 const chatBubbleImage = computed(() => {
   const url = chatBubbleId.value ? resolvePropThumbnail(chatBubbleId.value) : null;
-  return url || DEFAULT_BUBBLE_URL; // `||` so an empty string also falls back
+  // Equipped bubbles are catalog art of unbounded size, painted into the same fixed 79px border
+  // box — so they get sized down. Safe because `border-image-slice` below is a PERCENTAGE, which
+  // is resolution-independent; a pixel slice value would have broken under resizing.
+  const sized = url ? withImageKitTransform(url, { w: 320 }) : null;
+  return sized || DEFAULT_BUBBLE_URL; // `||` so an empty string also falls back
 });
 
 const bubbleStyle = computed(() => ({
@@ -111,13 +119,14 @@ const charmLevel = computed(() =>
           />
           <img
               v-if="participant?.vip_level"
-              :src="`https://ik.imagekit.io/flylive/vip/${participant?.vip_level}/badge.png`"
+              :src="withImageKitTransform(vipBadgeUIImg(participant?.vip_level), { w: 80 })"
               class="w-10"
               alt=""
           >
-          <img v-if="wealthLevel.badge" :src="wealthLevel.badge.image_url" class="h-5" alt="users wealth badge">
+          <!-- Level badges are height-constrained and wide (aspect ~2.8-3.2), so they size by `h-`, not `w-` -->
+          <img v-if="wealthLevel.badge" :src="levelBadgeSrc(wealthLevel.badge.image_url, 20)" class="h-5" alt="users wealth badge">
 
-          <img v-if="charmLevel.badge" :src="charmLevel.badge.image_url" class="h-4" alt="users charm badge">
+          <img v-if="charmLevel.badge" :src="levelBadgeSrc(charmLevel.badge.image_url, 16)" class="h-4" alt="users charm badge">
         </div>
 
         <BadgesEquippedBadgeMarquee

@@ -211,7 +211,7 @@ function openPreview(reward: RankingRewardItem, resolved: ResolvedRewardAsset): 
                 >
                   <!-- Coins -->
                   <template v-if="reward.reward_type === 'coins'">
-                    <img :src="ASSETS.COIN_ICON" alt="" class="w-14" aria-hidden="true">
+                    <img :src="ASSETS.COIN_ICON_LARGE" alt="" class="w-14" aria-hidden="true">
                     <span class="text-xs text-center font-bold text-white leading-tight">
                       +{{ reward.coin_value?.toLocaleString() }}
                       <template v-if="reward.coin_mode === 'percentage'">%</template>
@@ -256,7 +256,7 @@ function openPreview(reward: RankingRewardItem, resolved: ResolvedRewardAsset): 
 
                   <!-- Bootstrap miss: graceful fallback -->
                   <template v-else>
-                    <img :src="ASSETS.COIN_ICON" alt="" class="w-14" aria-hidden="true">
+                    <img :src="ASSETS.COIN_ICON_LARGE" alt="" class="w-14" aria-hidden="true">
                     <span class="text-xs text-center text-amber-300 font-bold leading-tight">
                       {{ reward.reward_type }}
                     </span>

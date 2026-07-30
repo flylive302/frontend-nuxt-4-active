@@ -10,6 +10,7 @@
 
 import type { LevelUpModalItem } from '~/composables/progression/useLevelUpDrain'
 import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props / Emits
@@ -34,8 +35,11 @@ const emit = defineEmits<{
  */
 const badgeImage = computed(() => {
   if (!props.modal) return null
-  return props.modal.imageUrl
+  const url = props.modal.imageUrl
     ?? (props.modal.category === 'wealth' ? DEFAULT_WEALTH_BADGE : DEFAULT_CHARM_BADGE)
+  // Painted at `h-20 w-20` (80 CSS px) below. The default-badge constants are base URLs, so
+  // without this the modal would pull the full 512px source (~106 KB) for an 80px render.
+  return withImageKitTransform(url, { w: 200, q: 75 })
 })
 
 /**

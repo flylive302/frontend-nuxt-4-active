@@ -1,5 +1,20 @@
 import type { AssetScope, AssetType, AssetPriority } from '~/types/asset/asset'
 import { ASSETS } from '~/constants/assets'
+import { roomBackgroundImageSrc } from '~/utils/imagekit'
+
+/**
+ * Precached room-background variant.
+ *
+ * `ASSETS.ROOM_BG_PLACEHOLDER` is intentionally base-only (callers size it per layout), so
+ * precaching the bare constant downloaded the **full-size original** for every user at
+ * bootstrap — bytes no call site ever requests, because a precache entry only serves a render
+ * when the two URLs match byte-for-byte.
+ *
+ * This reproduces the carousel + high-fetch-priority variant, i.e. the same URL the LCP
+ * room card requests. Keep it in sync with `roomBackgroundImageSrc`; if that helper's widths
+ * change, this follows automatically.
+ */
+const ROOM_BG_PLACEHOLDER_PRECACHE = roomBackgroundImageSrc(ASSETS.ROOM_BG_PLACEHOLDER, 'carousel', true)
 
 export interface AssetManifestItem {
     url: string
@@ -14,7 +29,7 @@ export interface AssetManifestItem {
 
 export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
     {
-        url: ASSETS.ROOM_BG_PLACEHOLDER,
+        url: ROOM_BG_PLACEHOLDER_PRECACHE,
         assetType: 'image',
         scope: 'global',
         priority: 'critical',

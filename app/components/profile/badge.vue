@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 const props = withDefaults(defineProps<{
   txt?: string | number
@@ -34,7 +35,7 @@ async function onCopy() {
       </span>
     </Transition>
     <div v-if="vip && vip > 11" class="relative flex items-center justify-center">
-      <img :src="`https://ik.imagekit.io/flylive/vip/${vip}/pretty_id.png`" class="min-w-26" alt="">
+      <img :src="withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${vip}/pretty_id.png`, { w: 208 })" class="min-w-26" alt="">
       <p class="absolute z-20 top-0 text-xs ml-6 mt-3 font-extrabold">{{txt}}</p>
     </div>
 

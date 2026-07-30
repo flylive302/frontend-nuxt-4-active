@@ -6,6 +6,7 @@ import { ASSETS } from '~/constants/assets'
 import { TRANSACTION_TYPE_LABELS } from '~/constants/economy/transactionConstants'
 import { isPositiveTransaction, getOtherPartyDisplay } from '~/utils/economy/transactionHelpers'
 import { formatCurrency } from '~/utils/currency'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props
@@ -74,8 +75,8 @@ const backgroundClass = computed(() =>
 /**
  * Get thumbnail URL with fallback.
  */
-const thumbnailUrl = computed(() => 
-  props.transaction.thumbnail_url ?? ASSETS.DEFAULT_TRANSACTION_THUMB
+const thumbnailUrl = computed(() =>
+  withImageKitTransform(props.transaction.thumbnail_url ?? ASSETS.DEFAULT_TRANSACTION_THUMB, { w: 128 })
 )
 
 /**

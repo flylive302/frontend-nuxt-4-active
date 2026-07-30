@@ -60,6 +60,23 @@ const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
 const vip = authStore.user?.vip_level;
 
+// Header cover — CDN-transformed (w-800) so the `h-48` box stops fetching the
+// full-resolution original; `withImageKitTransform` returns '' for a nullish
+// cover, so fall through to the local placeholder in that case.
+const coverImageSrc = computed(() =>
+  withImageKitTransform(authStore.user?.cover_image, { w: 1200, q: 75 }) || ASSETS.PROFILE_COVER_PLACEHOLDER
+)
+
+// VIP badge extension stays split (webp for vip<=2, png for vip>2): verified via
+// curl that badge.webp 404s for vip>2 and badge.png 404s for vip<=2 on the CDN —
+// there is no single extension that covers every level, so unifying would break
+// half of them. (Note: room/chat-message.vue, room/seat-drawer.vue and
+// common/minimal-user-list.vue request `badge.png` unconditionally and are
+// therefore broken for vip 1–2; out of scope to fix here.)
+const vipBadgeSrc = computed(() =>
+  vip ? withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${vip}/badge.${vip > 2 ? 'png' : 'webp'}`, { w: 256 }) : ''
+)
+
 // ========================================
 // Image Preview (cover / avatar)
 // ========================================
@@ -100,7 +117,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     <ProfileHeader>
       <template #cover>
         <NuxtImg
-          :src="authStore.user?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER"
+          :src="coverImageSrc"
           format="webp"
           densities="x1 x2"
           sizes="320px"
@@ -131,7 +148,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       <template #signature-badges>
         <div class="w-full flex justify-end items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
           <ProfileBadge :vip="authStore?.user?.vip_level" :txt="authStore?.user?.signature || undefined" class="w-8/12" />
-          <img v-if="vip" :src="`https://ik.imagekit.io/flylive/vip/${vip}/badge.${vip > 2 ? 'png' : 'webp'}`" class="w-4/12" alt="">
+          <img v-if="vip" :src="vipBadgeSrc" class="w-4/12" alt="">
         </div>
       </template>
 

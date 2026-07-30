@@ -11,6 +11,7 @@ import type { VipLevel, VipPreviewItem, VipProp, VipTileItem } from '~/types/vip
 import type { MinimalUser } from '~/types/user/bootstrap'
 import { VIP_PRIVILEGE_LABELS, VIP_PRIVILEGE_ICONS } from '~/types/vip/vip-level'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
+import { withImageKitTransform } from '~/utils/imagekit'
 import MarqueeName from "~/components/common/marquee-name.vue";
 
 // ========================================
@@ -321,11 +322,15 @@ const bootstrapVipLevel = computed(() =>
 )
 
 const flagUrl = computed(() =>
-  activeLevel.value ? `${vipUIAssetBase(activeLevel.value.level)}/flag.png` : ''
+  activeLevel.value ? withImageKitTransform(`${vipUIAssetBase(activeLevel.value.level)}/flag.png`, { w: 512 }) : ''
 )
 
 const emblemAnimatedUrl = computed(() =>
   bootstrapVipLevel.value?.emblem_animated_url ?? ''
+)
+
+const entryAnimationThumbnailSrc = computed(() =>
+  withImageKitTransform(entryAnimationProp.value?.thumbnail_url, { w: 512 })
 )
 
 const url = computed(() => bootstrapVipLevel.value?.card_animated_url ?? '')
@@ -394,7 +399,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
               <div v-if="entryAnimationProp" @click="handlePropPreview(entryAnimationProp)">
                 <NuxtImg
                     v-if="entryAnimationProp.thumbnail_url"
-                    :src="entryAnimationProp.thumbnail_url"
+                    :src="entryAnimationThumbnailSrc"
                     :alt="entryAnimationProp.name"
                     class="shadow-xl w-full"
                 />
@@ -501,7 +506,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
       <div class="backdrop-blur-lg safe-area-bottom">
         <div class="relative flex items-center justify-center">
           <p class="text-white text-xl font-bold">PRICE</p>
-          <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-5 ml-2 mt-1" alt="room xp indicator">
+          <img :src="ASSETS.COIN_ICON" class="size-5 ml-2 mt-1" alt="room xp indicator">
           <p class="text-success text-2xl font-bold">{{ formattedPrice }}</p>
         </div>
 

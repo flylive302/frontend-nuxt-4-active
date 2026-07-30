@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
+import { withImageKitTransform } from '~/utils/imagekit'
 /**
  * RoomSeat - Individual speaker seat component
  * Shows user avatar, name, and audio status indicators
@@ -136,7 +137,7 @@ function clearActiveReaction(): void {
         <UserAvatar
           v-else
           key="empty"
-          :img="(roomStore?.currentRoom?.owner?.vip_level ?? 0) > 2 ? `https://ik.imagekit.io/flylive/vip/${roomStore.currentRoom!.owner!.vip_level}/seat.webp` : undefined"
+          :img="(roomStore?.currentRoom?.owner?.vip_level ?? 0) > 2 ? withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${roomStore.currentRoom!.owner!.vip_level}/seat.webp`, { w: 256 }) : undefined"
           class="relative z-20"
         />
       </Transition>

@@ -194,6 +194,22 @@ const imagePreviewSrc = computed<string>(() =>
     : profileWritable.value?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER
 )
 
+// Header cover — CDN-transformed (w-800) so the `h-48` box stops fetching the
+// full-resolution original; `withImageKitTransform` returns '' for a nullish
+// cover, so fall through to the local placeholder in that case.
+const coverImageSrc = computed(() =>
+  withImageKitTransform(profileWritable.value?.cover_image, { w: 1200, q: 75 }) || ASSETS.PROFILE_COVER_PLACEHOLDER
+)
+
+// VIP badge extension stays split (webp for vip<=2, png for vip>2) — same CDN
+// verification as pages/profile/index.vue: neither extension exists for every
+// level, so unifying would 404 half of them.
+const vipBadgeSrc = computed(() => {
+  const level = profileWritable.value?.vip_level
+  if (!level) return ''
+  return withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${level}/badge.${level > 2 ? 'png' : 'webp'}`, { w: 256 })
+})
+
 function openImagePreview(type: ProfileImageType): void {
   imagePreviewType.value = type
   imagePreviewOpen.value = true
@@ -339,7 +355,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     <ProfileHeader>
       <template #cover>
         <NuxtImg
-          :src="profileWritable?.cover_image ?? ASSETS.PROFILE_COVER_PLACEHOLDER"
+          :src="coverImageSrc"
           format="webp"
           densities="x1 x2"
           sizes="320px"
@@ -370,7 +386,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       <template #signature-badges>
         <div class="w-full flex justify-center items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
           <ProfileBadge :vip="profileWritable?.vip_level" :txt="profileWritable?.signature || undefined" class="w-8/12" />
-          <img v-if="profileWritable?.vip_level" :src="`https://ik.imagekit.io/flylive/vip/${profileWritable.vip_level}/badge.png`" class="w-4/12" alt="">
+          <img v-if="profileWritable?.vip_level" :src="vipBadgeSrc" class="w-4/12" alt="">
         </div>
       </template>
 

@@ -4,6 +4,7 @@
 // ========================================
 
 import { onMounted, computed } from 'vue'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Page Configuration
@@ -147,7 +148,7 @@ onMounted(async () => {
         <div class="py-3 bg-linear-to-bl to-neutral-950 border border-neutral-700 relative overflow-hidden rounded-lg">
           <NuxtLink :to="`/agency/${agency.id}`" class="grid grid-cols-5 gap-2 px-3">
             <NuxtImg
-                :src="agency.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${agency.name}`"
+                :src="withImageKitTransform(agency.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${agency.name}`, { w: 256 })"
                 :alt="agency.name"
                 class="w-full aspect-square object-cover col-span-2"
             />

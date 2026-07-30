@@ -4,6 +4,7 @@
 // ========================================
 
 import { onMounted } from 'vue'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Imports from Utils
@@ -123,7 +124,7 @@ const processedRequests = computed(() =>
                 class="flex gap-3 mb-3"
               >
                 <NuxtImg
-                  :src="request.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${request.agency?.name}`"
+                  :src="withImageKitTransform(request.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${request.agency?.name}`, { w: 256 })"
                   :alt="request.agency?.name"
                   class="size-12 rounded-lg object-cover border border-muted"
                 />
@@ -175,7 +176,7 @@ const processedRequests = computed(() =>
               <!-- Agency Info -->
               <div class="flex gap-3 mb-2">
                 <NuxtImg
-                  :src="request.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${request.agency?.name}`"
+                  :src="withImageKitTransform(request.agency?.logo || `https://api.dicebear.com/7.x/initials/svg?seed=${request.agency?.name}`, { w: 256 })"
                   :alt="request.agency?.name"
                   class="size-10 rounded-lg object-cover border border-muted"
                 />

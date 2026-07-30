@@ -193,7 +193,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
         class="cursor-pointer shadow-md backdrop-blur-lg font-bold text-md leading-none text-primary"
         @click="($event.currentTarget as HTMLElement)?.blur()"
       >
-        <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-4" alt="room xp indicator">
+        <img :src="ASSETS.COIN_ICON" class="size-4" alt="room xp indicator">
         {{formatXp(dailyXp)}}
       </UButton>
 
@@ -216,7 +216,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                 size="xs"
                 class="cursor-pointer text-primary shadow-md backdrop-blur-xs font-bold"
               >
-                <img :src="ASSETS.COIN_ICON+`?tr=w-24,q-80,f-webp`" class="size-4" alt="room xp indicator">
+                <img :src="ASSETS.COIN_ICON" class="size-4" alt="room xp indicator">
                 {{formatXp(periodTotalXp)}}
               </UButton>
             </div>

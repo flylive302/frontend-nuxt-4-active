@@ -117,7 +117,7 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
         >
           <!-- Coin reward -->
           <template v-if="reward.reward_type === 'coins'">
-            <img :src="ASSETS.COIN_ICON" alt="" class="w-20 sm:w-24" aria-hidden="true">
+            <img :src="ASSETS.COIN_ICON_LARGE" alt="" class="w-20 sm:w-24" aria-hidden="true">
             <span class="text-md text-center font-bold">+{{ reward.coin_value?.toLocaleString() }} Coins</span>
           </template>
 
@@ -158,7 +158,7 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
 
             <!-- No thumbnail: generic fallback -->
             <template v-else>
-              <img :src="ASSETS.COIN_ICON" alt="" class="w-20 sm:w-24" aria-hidden="true">
+              <img :src="ASSETS.COIN_ICON_LARGE" alt="" class="w-20 sm:w-24" aria-hidden="true">
             </template>
 
             <span class="text-amber-300 text-md text-center font-bold">{{ resolved.name }}</span>
@@ -166,7 +166,7 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
 
           <!-- Store miss (reward data not in bootstrap yet): graceful fallback -->
           <template v-else>
-            <img :src="ASSETS.COIN_ICON" alt="" class="w-20 sm:w-24" aria-hidden="true">
+            <img :src="ASSETS.COIN_ICON_LARGE" alt="" class="w-20 sm:w-24" aria-hidden="true">
             <span class="text-amber-300 text-md text-center font-bold">{{ reward.reward_type }}</span>
           </template>
         </div>

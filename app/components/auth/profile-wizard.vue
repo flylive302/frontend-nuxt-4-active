@@ -307,7 +307,7 @@ async function onAvatarFileSelected(file: File) {
             :class="{ 'gender-card--female-selected': formState.gender === GENDER_FEMALE }"
             @click="selectGender(GENDER_FEMALE)"
           >
-            <NuxtImg :src="ASSETS.GENDER_FEMALE" alt="Female" class="gender-card__img w-full aspect-square object-contain rounded-xl" preload />
+            <NuxtImg :src="ASSETS.GENDER_FEMALE" alt="Female" class="gender-card__img w-full aspect-square object-contain rounded-xl" />
             <span class="mt-3 text-base font-semibold text-neutral-200">Female</span>
           </button>
 
@@ -316,7 +316,7 @@ async function onAvatarFileSelected(file: File) {
             :class="{ 'gender-card--male-selected': formState.gender === GENDER_MALE }"
             @click="selectGender(GENDER_MALE)"
           >
-            <NuxtImg :src="ASSETS.GENDER_MALE" alt="Male" class="gender-card__img w-full aspect-square object-contain rounded-xl" preload />
+            <NuxtImg :src="ASSETS.GENDER_MALE" alt="Male" class="gender-card__img w-full aspect-square object-contain rounded-xl" />
             <span class="mt-3 text-base font-semibold text-neutral-200">Male</span>
           </button>
         </div>

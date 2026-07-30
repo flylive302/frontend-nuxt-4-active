@@ -6,6 +6,7 @@
 // Allows selecting a recipient from the user's social connections.
 
 import type { MinimalUser } from '~/types/user/bootstrap'
+import { avatarImageSrc } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -126,7 +127,7 @@ function handleConfirm() {
             @click="selectRecipient(user)"
           >
             <NuxtImg
-              :src="user.avatar || '/default-avatar.png'"
+              :src="avatarImageSrc(user.avatar || '/default-avatar.png')"
               :alt="user.name"
               class="h-10 w-10 rounded-full object-cover"
               loading="lazy"

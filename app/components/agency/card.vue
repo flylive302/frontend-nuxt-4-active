@@ -5,6 +5,7 @@
 
 import type { AgencyStatus } from '~/types/agency/agency'
 import { AGENCY_STATUS_CONFIG } from '~/types/agency/agency'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props
@@ -32,8 +33,11 @@ const statusConfig = computed(() => AGENCY_STATUS_CONFIG[props.status])
 
 const flagIcon = computed(() => getFlagIcon(props.countryCode))
 
-const avatarSrc = computed(() => 
-  props.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(props.name)}`
+const avatarSrc = computed(() =>
+  // Helper no-ops on the Dicebear fallback (not an ImageKit host), so wrapping the whole
+  // expression is safe and keeps the agency logo from being served at full resolution.
+  withImageKitTransform(props.avatar, { w: 256 })
+  || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(props.name)}`
 )
 
 const isApproved = computed(() => props.status === 'approved')
