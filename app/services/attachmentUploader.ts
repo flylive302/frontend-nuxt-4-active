@@ -15,6 +15,7 @@ import {
   DM_VOICE_MAX_BYTES,
   DM_VOICE_MAX_DURATION_MS,
 } from '~/constants/inbox'
+import { downscaleImageToBlob } from '~/utils/image-file'
 
 // ========================================
 // Types
@@ -98,25 +99,20 @@ export function validateVoiceRecording(blob: Blob, durationMs: number): string |
 /**
  * Downscales an image to a long-edge cap via canvas, re-encoding as JPEG.
  * No-ops (returns original dimensions) if already within the cap.
+ *
+ * The canvas work itself lives in `~/utils/image-file` so the DM path and the
+ * `useImageUpload` path share one implementation. DM's caps stay explicit
+ * arguments here — this path's behaviour is unchanged.
  */
-export async function downscaleImage(
+export function downscaleImage(
   file: File,
   maxLongEdge: number = DM_IMAGE_DOWNSCALE_LONG_EDGE_PX,
 ): Promise<DownscaleResult> {
-  const bitmap = await createImageBitmap(file)
-  const longEdge = Math.max(bitmap.width, bitmap.height)
-  const scale = longEdge > maxLongEdge ? maxLongEdge / longEdge : 1
-  const width = Math.round(bitmap.width * scale)
-  const height = Math.round(bitmap.height * scale)
-
-  const canvas = new OffscreenCanvas(width, height)
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas 2D context unavailable.')
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close?.()
-
-  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: DM_IMAGE_COMPRESS_QUALITY })
-  return { blob, width, height }
+  return downscaleImageToBlob(file, {
+    maxLongEdge,
+    quality: DM_IMAGE_COMPRESS_QUALITY,
+    preserveAlpha: false,
+  })
 }
 
 // ========================================

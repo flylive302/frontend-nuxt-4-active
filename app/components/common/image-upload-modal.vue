@@ -4,6 +4,7 @@
 // ========================================
 import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
+import { CROP_RESULT_MAX_LONG_EDGE_PX } from '~/constants/upload'
 
 // Async-load cropper + its stylesheet only when this modal is mounted, so the
 // vue-advanced-cropper chunk + its CSS stay out of the auth-route critical path.
@@ -21,6 +22,17 @@ const CircleStencil = defineAsyncComponent(async () =>
 const ZOOM_IN_FACTOR = 1.2
 const ZOOM_OUT_FACTOR = 0.8
 const ROTATE_ANGLE = 90
+
+// `vue-advanced-cropper` defaults canvas.maxWidth/maxHeight to Infinity, so
+// `getResult()` hands back the crop at FULL source resolution — a 4608px camera
+// original becomes a multi-MB JPEG before the upload layer ever sees it. Capping
+// here means the expensive encode happens once, at a sane size.
+const RESULT_CANVAS = {
+  minWidth: 0,
+  minHeight: 0,
+  maxWidth: CROP_RESULT_MAX_LONG_EDGE_PX,
+  maxHeight: CROP_RESULT_MAX_LONG_EDGE_PX,
+} as const
 
 type OutputFormat = 'image/jpeg' | 'image/png' | 'image/webp'
 
@@ -208,6 +220,7 @@ onBeforeUnmount(() => {
               ref="cropperRef"
               class="h-[60vh] border w-auto rounded-lg overflow-hidden inset-shadow-sm"
               :src="imageSrc"
+              :canvas="RESULT_CANVAS"
               :stencil-component="resolvedStencil"
               :stencil-props="{
                 aspectRatio: props.aspectRatio,

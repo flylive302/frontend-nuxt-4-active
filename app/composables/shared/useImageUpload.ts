@@ -14,6 +14,8 @@ import {
   MAX_IMAGE_SIZE,
   ALLOWED_IMAGE_TYPES,
 } from '~/types/asset/upload'
+import { UPLOAD_IMAGE_CAPS } from '~/constants/upload'
+import { downscaleImageForUpload } from '~/utils/image-file'
 
 
 // ========================================
@@ -61,6 +63,22 @@ export function useImageUpload() {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       throw new Error('Invalid file type. Allowed: JPG, PNG, WebP')
     }
+  }
+
+  // ========================================
+  // Downscale
+  // ========================================
+
+  /**
+   * Shrinks a picked image to its asset class's ceiling before upload.
+   *
+   * Keyed by `folder` rather than an options argument on purpose: every caller
+   * already passes a folder, including the ones going through
+   * `createUploadState()`, so no call site has to opt in. Falls back to the
+   * original file on any failure — see `downscaleImageForUpload`.
+   */
+  function prepareForUpload(file: File, folder: ImageUploadFolder): Promise<File> {
+    return downscaleImageForUpload(file, UPLOAD_IMAGE_CAPS[folder])
   }
 
   // ========================================
@@ -182,14 +200,18 @@ export function useImageUpload() {
     folder: ImageUploadFolder,
     options: UploadOptions = {}
   ): Promise<ImageUploadResult> {
-    // Validate
+    // Validate — against the ORIGINAL file, so the 5MB ceiling still means
+    // "what the user may pick", not "what survived the downscale".
     validateFile(file)
+
+    // Shrink to the asset class's ceiling
+    const prepared = await prepareForUpload(file, folder)
 
     // Get auth params
     const authParams = await getAuthParams(folder)
 
     // Upload to ImageKit
-    return uploadToImageKit(file, authParams, options)
+    return uploadToImageKit(prepared, authParams, options)
   }
 
   // ========================================
@@ -242,6 +264,7 @@ export function useImageUpload() {
 
   return {
     validateFile,
+    prepareForUpload,
     getAuthParams,
     uploadToImageKit,
     uploadImage,
