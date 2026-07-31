@@ -27,7 +27,16 @@ export interface UploadImageCap {
  * artifact that an admin has to read; everything else is display art.
  */
 export const UPLOAD_IMAGE_CAPS: Record<ImageUploadFolder, UploadImageCap> = {
-  'avatars': { maxLongEdge: 512, quality: 0.85, preserveAlpha: true },
+  // Avatars are shown FULLSCREEN by `image-preview-modal.vue`, so a small cap
+  // here is visible blur on a modern phone — and it buys nothing, because the
+  // median avatar is already 62 KB. Matching the crop ceiling means the crop
+  // flow's own cap does the work in a single encode; the MB-scale tail is
+  // already handled by CROP_RESULT_MAX_LONG_EDGE_PX, not by this entry.
+  //
+  // preserveAlpha is false because it could never fire: both avatar entry
+  // points (`profile-wizard.vue`, `image-preview-modal.vue`) crop with
+  // outputFormat 'image/jpeg', so alpha is gone before `uploadImage` sees it.
+  'avatars': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false },
   // 1600, not 1200, to match CROP_RESULT_MAX_LONG_EDGE_PX. Covers arrive from
   // the crop flow already capped at 1600; a 1200 ceiling would re-decode and
   // re-encode that JPEG a second time, and two lossy generations on a wide
