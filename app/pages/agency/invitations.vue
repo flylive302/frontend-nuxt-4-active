@@ -52,6 +52,17 @@ async function handleBlockAgency(agencyId: number): Promise<void> {
   await blockAgency(agencyId)
 }
 
+function handleLoadMore(): void {
+  fetchReceivedInvitations()
+}
+
+// ========================================
+// Computed
+// ========================================
+
+const hasMore = computed(() => agencyStore.receivedInvitations.hasMore)
+const loading = computed(() => agencyStore.receivedInvitations.loading)
+
 // ========================================
 // Lifecycle
 // ========================================
@@ -193,6 +204,18 @@ onMounted(() => {
           </div>
         </div>
 
+      </div>
+
+      <!-- Load More -->
+      <div v-if="hasMore" class="flex justify-center pt-4">
+        <UButton
+          variant="soft"
+          color="primary"
+          :loading="loading"
+          @click="handleLoadMore"
+        >
+          Load More
+        </UButton>
       </div>
 
       <!-- Error State -->

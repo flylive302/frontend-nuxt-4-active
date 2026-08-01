@@ -41,6 +41,10 @@ async function handleCancel(agencyId: number): Promise<void> {
   cancellingId.value = null
 }
 
+function handleLoadMore(): void {
+  fetchMyJoinRequests()
+}
+
 // ========================================
 // Lifecycle
 // ========================================
@@ -60,6 +64,9 @@ const pendingRequests = computed(() =>
 const processedRequests = computed(() =>
   agencyStore.myJoinRequests.items.filter(r => r.status !== 'pending')
 )
+
+const hasMore = computed(() => agencyStore.myJoinRequests.hasMore)
+const loading = computed(() => agencyStore.myJoinRequests.loading)
 </script>
 
 <template>
@@ -193,6 +200,18 @@ const processedRequests = computed(() =>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Load More -->
+      <div v-if="hasMore" class="flex justify-center pt-4">
+        <UButton
+          variant="soft"
+          color="primary"
+          :loading="loading"
+          @click="handleLoadMore"
+        >
+          Load More
+        </UButton>
       </div>
 
       <!-- Error State -->

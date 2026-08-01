@@ -41,15 +41,20 @@ export function useAgencyInvitations() {
     store.receivedInvitations.error = null
 
     try {
-      const params = { per_page: 20 }
+      const params: Record<string, unknown> = { per_page: 20 }
 
-      const response = await api<{ data: AgencyInvitation[] }>(
-        '/user/agency/invitations',
-        { params }
-      )
+      if (store.receivedInvitations.cursor) {
+        params.cursor = store.receivedInvitations.cursor
+      }
 
-      store.receivedInvitations.items = response.data
-      store.receivedInvitations.hasMore = false // Uses offset pagination
+      const response = await api<{
+        data: AgencyInvitation[]
+        meta: { next_cursor: string | null }
+      }>('/user/agency/invitations', { params })
+
+      store.receivedInvitations.items.push(...response.data)
+      store.receivedInvitations.cursor = response.meta.next_cursor
+      store.receivedInvitations.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       log.warn('Failed to fetch received invitations', error)
       store.receivedInvitations.error = 'Failed to load invitations'
@@ -137,15 +142,20 @@ export function useAgencyInvitations() {
     store.sentInvitations.error = null
 
     try {
-      const params = { per_page: 20 }
+      const params: Record<string, unknown> = { per_page: 20 }
 
-      const response = await api<{ data: AgencyInvitation[] }>(
-        '/user/agency/invitations/sent',
-        { params }
-      )
+      if (store.sentInvitations.cursor) {
+        params.cursor = store.sentInvitations.cursor
+      }
 
-      store.sentInvitations.items = response.data
-      store.sentInvitations.hasMore = false
+      const response = await api<{
+        data: AgencyInvitation[]
+        meta: { next_cursor: string | null }
+      }>('/user/agency/invitations/sent', { params })
+
+      store.sentInvitations.items.push(...response.data)
+      store.sentInvitations.cursor = response.meta.next_cursor
+      store.sentInvitations.hasMore = response.meta.next_cursor !== null
     } catch (error) {
       log.warn('Failed to fetch sent invitations', error)
       store.sentInvitations.error = 'Failed to load sent invitations'

@@ -42,6 +42,7 @@ const showInviteDialog = ref(false)
 
 const invitations = computed(() => agencyStore.sentInvitations.items)
 const loading = computed(() => agencyStore.sentInvitations.loading)
+const hasMore = computed(() => agencyStore.sentInvitations.hasMore)
 
 const pendingInvitations = computed(() =>
   invitations.value.filter(i => i.status === 'pending' && !i.is_expired)
@@ -64,6 +65,10 @@ async function handleCancel(invitationId: number): Promise<void> {
 async function handleInviteUser(user: MinimalUser): Promise<void> {
   // We utilize the composable action which handles the API call and toast
   await sendInvitation({ user_id: user.id })
+}
+
+function handleLoadMore(): void {
+  fetchSentInvitations()
 }
 
 // ========================================
@@ -193,6 +198,18 @@ onMounted(() => {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Load More -->
+      <div v-if="hasMore" class="flex justify-center pt-4">
+        <UButton
+          variant="soft"
+          color="primary"
+          :loading="loading"
+          @click="handleLoadMore"
+        >
+          Load More
+        </UButton>
       </div>
 
       <!-- Error State -->

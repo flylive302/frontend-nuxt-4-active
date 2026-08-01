@@ -43,6 +43,7 @@ const selectedRequest = ref<AgencyJoinRequest | null>(null)
 
 const requests = computed(() => agencyStore.joinRequests.items)
 const loading = computed(() => agencyStore.joinRequests.loading)
+const hasMore = computed(() => agencyStore.joinRequests.hasMore)
 
 // ========================================
 // Event Handlers
@@ -58,6 +59,10 @@ async function handleReject(request: AgencyJoinRequest): Promise<void> {
   processingId.value = request.id
   await rejectJoinRequest(request.id)
   processingId.value = null
+}
+
+function handleLoadMore(): void {
+  fetchJoinRequests()
 }
 
 function handleShowBlockModal(request: AgencyJoinRequest): void {
@@ -200,6 +205,18 @@ onMounted(() => {
             </UButton>
           </div>
 
+        </div>
+
+        <!-- Load More -->
+        <div v-if="hasMore" class="flex justify-center pt-4">
+          <UButton
+            variant="soft"
+            color="primary"
+            :loading="loading"
+            @click="handleLoadMore"
+          >
+            Load More
+          </UButton>
         </div>
       </div>
 
