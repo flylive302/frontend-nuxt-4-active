@@ -234,7 +234,7 @@ function getUploadStatusColor(status: string): string {
   <main>
     <NavAlt spacer back-to="/agency/list">Create New Agency</NavAlt>
 
-    <div class="px-3 py-14 space-y-6">
+    <div class="px-3 py-14 pt-18 space-y-6">
       <!-- Upload Progress Banner -->
       <div
         v-if="isUploading || currentStep === 'submitting'"
@@ -257,7 +257,7 @@ function getUploadStatusColor(status: string): string {
         </div>
       </div>
 
-      <UForm :schema="pageSchema" :state="{ ...state, ...phone }" class="space-y-6" @submit="onSubmit">
+      <UForm :schema="pageSchema" :state="{ ...state, ...phone }" class="space-y-6 mt-14" @submit="onSubmit">
         <!-- Agency Name -->
         <UFormField label="Agency Name" name="agencyName" required>
           <template #hint>
