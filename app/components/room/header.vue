@@ -11,6 +11,7 @@ const roomStore = useRoomStore();
 const bootstrapStore = useBootstrapStore();
 const { leaveRoom } = useRoomAudio();
 const { resolvePropAsset } = usePropLookup();
+const { shareRoom, sharing } = useRoomShare();
 
 // ========================================
 // State
@@ -195,6 +196,9 @@ const openLeaveDrawer = (event: Event) => {
         size="xl"
         class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
         variant="soft"
+        :disabled="sharing"
+        aria-label="Share this room"
+        @click="shareRoom"
       />
 
       <UDrawer
