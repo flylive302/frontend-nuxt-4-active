@@ -57,6 +57,51 @@ export const SESSION_AGE_OVERFLOW_LABEL = '>1h';
 export const SESSION_AGE_UNKNOWN_LABEL = 'unknown';
 
 // ========================================
+// Silent-join detection
+// ========================================
+//
+// Tuning for `utils/silent-join.ts` + `composables/room/useSilentJoinDetection.ts`.
+//
+// ⚠️ Ticket 13's AC says these belong "with the other room constants". They are
+// here instead, deliberately, following this file's own rule: these bound a
+// *measurement*, not room behaviour, and must be re-tunable without touching
+// the join path they observe. `constants/room.ts` holds the values that decide
+// what the app DOES (`TRANSPORT_DISCONNECTED_GRACE_MS` and friends); moving
+// these in beside them is what let the stall thresholds sit in
+// `constants/gift.ts` until 2026-07-26. The AC's intent — a named constant, not
+// a magic number — is met either way.
+
+/**
+ * How long after a completed join to wait before audio is considered overdue.
+ *
+ * Sized above the join path's own worst case rather than guessed: the recv
+ * transport connects lazily on the first `consume()`, and that round trip sits
+ * behind `audio:consume` + `consumer:resume`, each bounded by
+ * `SOCKET_TIMEOUT_MS` (10s). A deadline shorter than one of those would report
+ * a join that was merely slow. This is the point at which we start suspecting,
+ * NOT the point at which we accuse — see the extension below.
+ */
+export const SILENT_JOIN_DEADLINE_MS = 12_000;
+
+/**
+ * How much longer to keep watching a join that looked silent at the deadline.
+ *
+ * The whole reason `flowing-late` exists. A join that recovers at 20s is a
+ * latency problem; a join that never recovers is a correctness problem, and
+ * collapsing the two would hide which one production actually has.
+ */
+export const SILENT_JOIN_LATE_WINDOW_MS = 8_000;
+
+/**
+ * Gap between `currentTime` samples when testing whether audio is advancing.
+ *
+ * Matches the 500ms `probeAudioHealth()` already uses (`useMediasoupStreaming.ts`).
+ * Same technique, same interval — deliberately not re-derived, because that one
+ * is proven against real playback on the device mix this app ships to.
+ */
+export const SILENT_JOIN_ADVANCE_SAMPLE_MS = 500;
+
+// ========================================
 // Device classification
 // ========================================
 // `navigator.deviceMemory` reports GB, rounded to a power of two (0.25 … 8),

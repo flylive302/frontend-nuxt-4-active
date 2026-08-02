@@ -19,6 +19,7 @@ import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS, DEFAULT_SEAT_COUNT } from '~/constants/room';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
+import { useSilentJoinDetection, type SilentJoinWatchHandle } from './useSilentJoinDetection';
 import { useBroadcastHlsPlayback } from './audio/useBroadcastHlsPlayback';
 import { selectMediaTransport, planTransportHandoff, type MediaTransport } from '~/utils/mediaTransport';
 import { propToEntryAnimationGift } from '~/utils/prop';
@@ -351,6 +352,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
   // Audio player (music playback through mediasoup)
   const audioPlayer = useRoomAudioPlayer(socket);
+
+  // observability-audio-quality 13: silent-join detection. Instrumentation
+  // only — it observes the join, it never steers it.
+  const silentJoin = useSilentJoinDetection();
+  let silentJoinWatch: SilentJoinWatchHandle | null = null;
 
   // realtime-09: broadcast-tier HLS playback for passive Listeners. When the Room
   // is in broadcast mode and the local user is NOT a Speaker, play the single CDN
@@ -753,6 +759,18 @@ export function useRoomAudio(): UseRoomAudioReturn {
     const room = roomStore.currentRoom;
     if (room) activateMediaSession(room.name, room.logo ?? null);
 
+    // 6. observability-audio-quality 13: start watching whether audio actually
+    // arrives. Detection only — nothing below this line changes what the user
+    // sees or hears. Fire-and-forget: the handle is cancelled on leave so a
+    // user who departs mid-window is never reported as a silent join.
+    if (room) {
+      silentJoinWatch?.cancel();
+      silentJoinWatch = silentJoin.observeJoin({
+        roomId: room.id,
+        seated: seatsStore.speakerIds.has(authStore.user?.id ?? -1),
+      });
+    }
+
     // undefined
   }
 
@@ -761,6 +779,12 @@ export function useRoomAudio(): UseRoomAudioReturn {
    * NOTE: Socket stays connected for app-wide events.
    */
   function leaveRoom(roomId?: string): void {
+    // Abandon any in-flight silent-join observation FIRST. A user who leaves
+    // four seconds in never gave the join a chance to deliver audio, and
+    // reporting them would be this instrument's largest false-positive source.
+    silentJoinWatch?.cancel();
+    silentJoinWatch = null;
+
     useGiftComboStore().$reset();
 
     const targetRoomId = roomId ?? roomStore.currentRoom?.id?.toString();

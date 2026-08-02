@@ -432,12 +432,24 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     producerUserId?: number,
     source: ProducerSource = 'mic',
   ): Promise<void> {
-    if (!device.value?.loaded || !consumerTransport.value) {
+    const authStore = useAuthStore();
+    if (producerUserId !== undefined && producerUserId === authStore.user?.id) {
       return;
     }
 
-    const authStore = useAuthStore();
-    if (producerUserId !== undefined && producerUserId === authStore.user?.id) {
+    // observability-audio-quality 13: the single funnel every remote producer
+    // announcement passes through — both the join-time catch-up loop over
+    // `existingProducers` and the live `audio:newProducer` event call this.
+    //
+    // 🔴 Counted HERE, above the readiness gate, on purpose. Every early return
+    // below is a way for an announced producer to never become audio, and five
+    // of the six are silent — no log, no telemetry. Counting after the gate
+    // would make the readiness case invisible to the very detector that exists
+    // to find it. Counted after the self-check, because our own producer was
+    // never something to hear.
+    session.noteProducerAnnounced();
+
+    if (!device.value?.loaded || !consumerTransport.value) {
       return;
     }
 
