@@ -25,6 +25,27 @@ let _micGainNode: GainNode | null = null;
 let _micDestinationNode: MediaStreamAudioDestinationNode | null = null;
 let _micVisibilityHandler: (() => void) | null = null;
 
+// ---- Single-flight guards (audio-pipe-observability/15) ----
+// `startAudio()` and `consumeProducer()` both check a "do I already have one?"
+// map and only write the answer several awaits later. Two callers that pass the
+// check together both build a producer / consumer, and the second write
+// overwrites the first — orphaning a live, unreachable stream that keeps
+// playing. Heard as doubled or echoed voice until the page is reloaded.
+//
+// These live at module scope because the state they guard is a singleton: the
+// mediasoup session store and `producerTransport` are shared by every
+// `useMediasoupStreaming()` instance, so per-instance guards would not see each
+// other.
+//
+// 🔴 Concurrent callers await the SAME promise rather than early-returning. An
+// early return would convert doubling into silence: if the first call then
+// failed, the second caller would have skipped the work believing it was
+// handled, and that producer would never be heard at all. Sharing the promise
+// propagates the rejection to every caller, so their existing catch-and-retry
+// paths still run.
+let _startAudioInFlight: Promise<void> | null = null;
+const _consumeInFlight = new Map<string, Promise<void>>();
+
 const REMOTE_AUDIO_CONTAINER_ID = 'flylive-remote-audio';
 
 function getRemoteAudioContainer(): HTMLElement | null {
@@ -109,6 +130,33 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
+    // audio-pipe-observability/15: `producer.value` is not written until
+    // `produceMicTrack()` finishes, and that spans `getUserMedia()` — which on
+    // first grant sits on a permission prompt for seconds. Three unserialised
+    // callers reach here (take-seat, accept-invite, seat-reclaim after a
+    // reconnect), so the guard above cannot stand alone. Join the produce
+    // already running instead of starting a second one; MSAB does not close the
+    // producer a second produce displaces, so both would stay audible.
+    if (_startAudioInFlight) {
+      return _startAudioInFlight;
+    }
+
+    _startAudioInFlight = produceMicTrack();
+    try {
+      await _startAudioInFlight;
+    }
+    finally {
+      _startAudioInFlight = null;
+    }
+  }
+
+  /**
+   * EXECUTE half of `startAudio()` — acquire the mic and produce it.
+   *
+   * Split out so the single-flight guard has something to hold a promise to.
+   * ⛔ Call `startAudio()`, never this: on its own it has no concurrency guard.
+   */
+  async function produceMicTrack(): Promise<void> {
     if (!producerTransport.value) {
       await createProducerTransport();
     }
@@ -469,6 +517,47 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
+    // audio-pipe-observability/15: the check above is the ONLY dedup gate, and
+    // the map it reads is not written until `buildConsumer()` returns — two
+    // awaits later. MSAB can deliver the same producer twice: it is visible to
+    // a joiner's `existingProducers` snapshot from the moment `audio:produce`
+    // tracks it, but the `audio:newProducer` broadcast fires two awaits later,
+    // by which time that joiner has already joined the socket room. Both
+    // deliveries reach here concurrently, both pass, and the second
+    // `addConsumer` orphans the first consumer and its `<audio>` element —
+    // still playing, no longer reachable by `stopConsumer()`. Reproduces on
+    // every reconnect, since `room:join` replays the whole snapshot.
+    const inFlight = _consumeInFlight.get(producerId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const build = buildConsumer(producerId, roomId, trackingKey);
+    _consumeInFlight.set(producerId, build);
+    try {
+      await build;
+    }
+    finally {
+      _consumeInFlight.delete(producerId);
+    }
+  }
+
+  /**
+   * EXECUTE half of `consumeProducer()` — build, resume and attach one consumer.
+   *
+   * Split out so the single-flight guard has something to hold a promise to.
+   * ⛔ Call `consumeProducer()`, never this: on its own it has no concurrency
+   * guard, and it skips the announcement counter ticket 13 depends on.
+   */
+  async function buildConsumer(
+    producerId: string,
+    roomId: string,
+    trackingKey: string | undefined,
+  ): Promise<void> {
+    if (!consumerTransport.value || !device.value) {
+      return;
+    }
+
     const response = await emitAsync<object, AudioConsumeResponse>('audio:consume', {
       roomId,
       transportId: consumerTransport.value.id,
@@ -609,6 +698,15 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    * which is called from leaveRoom().
    */
   function cleanup(): void {
+    // audio-pipe-observability/15: the single-flight guards are module scope, so
+    // they outlive the room. Released here because a produce that never settles
+    // — a mic permission prompt the user simply ignores — would otherwise lock
+    // every later room out of producing for the rest of the page's life. The
+    // work they guard is not cancelled, but it is about to fail anyway: the
+    // transports it needs are closed below.
+    _startAudioInFlight = null;
+    _consumeInFlight.clear();
+
     // Close producer
     stopAudio();
 
