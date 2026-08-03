@@ -51,6 +51,9 @@ export interface SilentJoinWatchHandle {
   cancel: () => void;
 }
 
+/** Handle for a join that is not being observed. Shared, so it allocates nothing. */
+const NO_WATCH: SilentJoinWatchHandle = { cancel: () => {} };
+
 export function useSilentJoinDetection() {
   const session = useMediasoupSessionStore();
 
@@ -151,10 +154,26 @@ export function useSilentJoinDetection() {
    * so a future caller cannot silently fold a failed join into `silent`.
    */
   function observeJoin(input: { roomId: number; seated: boolean }): SilentJoinWatchHandle {
+    // 🔴 Telemetry does not get to break a room join. `run()` already catches
+    // its own async faults, but the synchronous setup below reads stores and
+    // registers a watcher — so it is guarded too, and a failure degrades to
+    // "this join is not observed" rather than to a user who cannot enter.
+    try {
+      return startObservation(input);
+    } catch (error) {
+      log.warn('Join audio observation could not start', error);
+      return NO_WATCH;
+    }
+  }
+
+  function startObservation(input: {
+    roomId: number;
+    seated: boolean;
+  }): SilentJoinWatchHandle {
     // ========================================
     // GATE
     // ========================================
-    if (!import.meta.client) return { cancel: () => {} };
+    if (!import.meta.client) return NO_WATCH;
 
     let cancelled = false;
     let stopVolumeWatch: (() => void) | null = null;
@@ -212,6 +231,21 @@ export function useSilentJoinDetection() {
         outcome = await observe('late');
         if (cancelled || outcome === null) return;
       }
+
+      // Dev-only (`createLogger`'s `info` is gated on `isDev`), and the only way
+      // to verify this instrument by hand. Three of the six outcomes emit
+      // nothing on purpose, so without this line "graded `idle` correctly" and
+      // "never ran at all" are indistinguishable to a human tester — which
+      // would make the ticket's own handover checklist unfalsifiable.
+      //
+      // 🔴 `info`, NOT `debug`. `console.debug` renders at Chrome's **Verbose**
+      // level, which "Default levels" HIDES — the line is emitted and the
+      // tester sees nothing. Cost me one full verification round.
+      log.info('Join audio verdict', outcome, {
+        producersAnnounced: session.producersAnnounced - baselineProducers,
+        consumersCreated: session.consumers.size - baselineConsumers,
+        playbackMuted,
+      });
 
       if (!isReportableJoinOutcome(outcome)) return;
 
