@@ -11,6 +11,7 @@ import type { ChatMessageEvent } from '~/types/room/audio';
 import MarqueeName from "~/components/common/marquee-name.vue";
 import { CHAT_MESSAGE_TYPE_SYSTEM, CHAT_MESSAGE_TYPE_GIFT, CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room';
 import { withImageKitTransform, levelBadgeSrc } from '~/utils/imagekit';
+import { shouldRenderChatBubble } from '~/utils/chat';
 import { vipBadgeUIImg } from '~/constants/assets';
 
 const props = defineProps<{
@@ -61,6 +62,12 @@ const chatBubbleImage = computed(() => {
 const bubbleStyle = computed(() => ({
   borderImageSource: `url(${chatBubbleImage.value})`,
 }));
+
+// Reading `chatBubbleId` (not `participant`) also covers authors who have left the room, where
+// only the message snapshot survives — matching how `displayFrame` already resolves above.
+const hasChatBubble = computed(() =>
+  shouldRenderChatBubble(chatBubbleId.value, participant.value?.vip_level)
+);
 
 // Format timestamp to relative time
 const formattedTime = computed(() => {
@@ -135,7 +142,7 @@ const charmLevel = computed(() =>
             class="ml-1.5 mt-0.5 max-w-48"
         />
 
-        <div v-if="participant?.vip_level" class="bubble" :style="bubbleStyle">
+        <div v-if="hasChatBubble" class="bubble" :style="bubbleStyle">
           <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
         </div>
         <div v-else class="w-fit p-2 rounded-md bg-primary/50 ring ring-primary my-2 max-w-10/12 ml-2">

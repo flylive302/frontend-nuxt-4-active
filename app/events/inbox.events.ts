@@ -35,7 +35,9 @@ export function useInboxEvents() {
       // Normalize IDs to strings (backend sends integers, FE routes use strings).
       // `kind` passes through as-is (dm-messenger-v2): media/voice must keep
       // their kind so bubbles render payloads instead of raw JSON; an unknown
-      // future kind flows to the bubble's stale-OTA placeholder.
+      // future kind flows to the bubble's stale-OTA placeholder. `media`/`voice`
+      // carry the structured payload — dropping them here would push the bubble
+      // onto the legacy `content`-parsing fallback.
       const msg: ThreadMessage = {
         id: String(payload.message.id),
         threadId: tid,
@@ -43,6 +45,8 @@ export function useInboxEvents() {
         content: payload.message.content,
         type: payload.message.type,
         kind: payload.message.kind as ThreadMessage['kind'],
+        media: payload.message.media ?? undefined,
+        voice: payload.message.voice ?? undefined,
         sentAt: payload.message.sentAt,
         readAt: payload.message.readAt,
         unsent: payload.message.unsent,

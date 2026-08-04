@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterChatMessages } from '../../app/utils/chat'
+import { filterChatMessages, shouldRenderChatBubble } from '../../app/utils/chat'
 import {
   CHAT_TAB_ALL,
   CHAT_TAB_CHAT,
@@ -43,5 +43,36 @@ describe('filterChatMessages', () => {
 
   it('returns an empty array when no message matches the tab', () => {
     expect(filterChatMessages([msg('text-1', CHAT_MESSAGE_TYPE_TEXT)], CHAT_TAB_GIFTS)).toEqual([])
+  })
+})
+
+describe('shouldRenderChatBubble', () => {
+  // The bug this guards: a chat bubble awarded by an admin to a user who never bought VIP.
+  // The prop is owned and equipped, so it must render at vip level 0.
+  it('renders an equipped bubble for a non-VIP user', () => {
+    expect(shouldRenderChatBubble(42, 0)).toBe(true)
+  })
+
+  // Regression guard: VIP grants the default bubble skin with nothing equipped.
+  it('renders the default bubble for a VIP user with nothing equipped', () => {
+    expect(shouldRenderChatBubble(null, 3)).toBe(true)
+  })
+
+  it('renders an equipped bubble for a VIP user', () => {
+    expect(shouldRenderChatBubble(42, 3)).toBe(true)
+  })
+
+  it('falls back to the plain box when there is neither a bubble nor VIP', () => {
+    expect(shouldRenderChatBubble(null, 0)).toBe(false)
+  })
+
+  // A departed author has no live participant, so vip level arrives undefined while the
+  // bubble id survives on the message snapshot.
+  it('renders an equipped bubble when the author has left the room', () => {
+    expect(shouldRenderChatBubble(42, undefined)).toBe(true)
+  })
+
+  it('falls back to the plain box when both values are absent', () => {
+    expect(shouldRenderChatBubble(undefined, undefined)).toBe(false)
   })
 })

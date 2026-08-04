@@ -93,11 +93,11 @@ function onLongPress(messageId: string): void {
 const selectedMessage = computed(() => store.messages.find(m => String(m.id) === String(selectedMessageId.value)))
 
 // Copy: text messages copy their text, media/voice copy the asset URL;
-// null (unsent/unparseable) hides the option entirely.
+// null (unsent/unresolvable) hides the option entirely.
 const copyableText = computed(() => {
   const msg = selectedMessage.value
   if (!msg) return null
-  return dmMessageCopyText(msg.kind, msg.content, msg.unsent)
+  return dmMessageCopyText(msg)
 })
 
 async function handleCopy(): Promise<void> {

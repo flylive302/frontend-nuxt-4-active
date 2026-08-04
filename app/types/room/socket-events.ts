@@ -3,6 +3,8 @@
 // ========================================
 // Real-time events from MSAB - 21 total
 
+import type { MediaContentPayload, VoiceContentPayload } from '~/types/inbox'
+
 // ========================================
 // Economy Events
 // ========================================
@@ -308,6 +310,10 @@ export interface DmMessageReceivedPayload {
     type: string
     /** Coarse payload-shape discriminator (dm-realtime-platform/09) — text|media|voice. */
     kind: string
+    /** Structured image payload; null unless `kind` is media. Never inlined in `content`. */
+    media?: MediaContentPayload | null
+    /** Structured voice payload; null unless `kind` is voice. Never inlined in `content`. */
+    voice?: VoiceContentPayload | null
     sentAt: string
     readAt: string | null
     unsent: boolean

@@ -32,8 +32,9 @@ export interface Thread {
 // ── Typed message content envelope (dm-realtime-platform/09) ─────────────
 // `kind` is a coarse payload-shape discriminator derived on the backend from
 // the persisted `type` (text/emoji/sticker/system → text; media; voice).
-// `media` and `voice` are reserved at the type level only — no send path,
-// upload pipeline, or UI exists for them yet.
+// The structured `media`/`voice` payloads travel in their own keys — never
+// inside `content`, which every client (including bundles that predate the
+// kind-aware renderer) prints verbatim.
 
 export type MessageKind = 'text' | 'media' | 'voice'
 
@@ -68,6 +69,15 @@ interface ThreadMessageBase {
   uploadProgress?: number
   /** Optimistic media bubble only: local object URL preview shown before the remote URL exists. Revoke on settle. */
   localPreviewUrl?: string
+  /**
+   * Structured image payload, set on media messages. The server sends it in its
+   * own key so `content` stays human-safe — a client that doesn't understand
+   * `kind` renders `content` verbatim and must never see raw JSON. Null/absent
+   * when the stored payload is malformed (bubble falls back to the placeholder).
+   */
+  media?: MediaContentPayload | null
+  /** Structured voice payload, set on voice messages. Same contract as {@link media}. */
+  voice?: VoiceContentPayload | null
 }
 
 export interface TextThreadMessage extends ThreadMessageBase {
@@ -78,13 +88,11 @@ export interface TextThreadMessage extends ThreadMessageBase {
 export interface MediaThreadMessage extends ThreadMessageBase {
   kind: 'media'
   content: string
-  media: MediaContentPayload
 }
 
 export interface VoiceThreadMessage extends ThreadMessageBase {
   kind: 'voice'
   content: string
-  voice: VoiceContentPayload
 }
 
 export type ThreadMessage = TextThreadMessage | MediaThreadMessage | VoiceThreadMessage

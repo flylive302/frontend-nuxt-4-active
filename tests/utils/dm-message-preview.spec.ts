@@ -1,5 +1,21 @@
+import type { ThreadMessage } from '~/types/inbox'
 import { describe, expect, it } from 'vitest'
 import { dmMessageCopyText, dmMessagePreview } from '~/utils/dm-message-preview'
+
+function message(overrides: Partial<ThreadMessage> & Pick<ThreadMessage, 'kind'>): ThreadMessage {
+  return {
+    id: '1',
+    threadId: '1',
+    senderId: '2',
+    type: overrides.kind,
+    content: '',
+    sentAt: '2026-08-05T00:00:00Z',
+    readAt: null,
+    unsent: false,
+    isOwn: false,
+    ...overrides,
+  } as ThreadMessage
+}
 
 describe('dmMessagePreview', () => {
   it('returns text content as-is', () => {
@@ -21,19 +37,44 @@ describe('dmMessagePreview', () => {
 
 describe('dmMessageCopyText', () => {
   it('copies text content verbatim', () => {
-    expect(dmMessageCopyText('text', 'hello there', false)).toBe('hello there')
+    expect(dmMessageCopyText(message({ kind: 'text', content: 'hello there' }))).toBe('hello there')
   })
 
-  it('copies the asset URL for media and voice messages', () => {
-    expect(dmMessageCopyText('media', '{"url":"https://x/y.jpg","mimeType":"image/jpeg"}', false)).toBe('https://x/y.jpg')
-    expect(dmMessageCopyText('voice', '{"url":"https://x/y.webm","durationMs":1200}', false)).toBe('https://x/y.webm')
+  it('copies the asset URL from the structured payload', () => {
+    expect(dmMessageCopyText(message({
+      kind: 'media',
+      content: '📷 Photo',
+      media: { url: 'https://x/y.jpg', mimeType: 'image/jpeg' },
+    }))).toBe('https://x/y.jpg')
+
+    expect(dmMessageCopyText(message({
+      kind: 'voice',
+      content: '🎤 Voice message',
+      voice: { url: 'https://x/y.webm', durationMs: 1200 },
+    }))).toBe('https://x/y.webm')
+  })
+
+  it('falls back to the asset URL inlined in content (legacy wire format)', () => {
+    expect(dmMessageCopyText(message({
+      kind: 'media',
+      content: '{"url":"https://x/y.jpg","mimeType":"image/jpeg"}',
+    }))).toBe('https://x/y.jpg')
   })
 
   it('returns null when there is nothing copyable', () => {
-    expect(dmMessageCopyText('text', 'gone', true)).toBeNull() // unsent
-    expect(dmMessageCopyText('text', '', false)).toBeNull() // empty
-    expect(dmMessageCopyText('media', 'not-json', false)).toBeNull() // unparseable
-    expect(dmMessageCopyText('media', '{"mimeType":"image/jpeg"}', false)).toBeNull() // no url
-    expect(dmMessageCopyText('sticker', '{"id":9}', false)).toBeNull() // unknown kind
+    expect(dmMessageCopyText(message({ kind: 'text', content: 'gone', unsent: true }))).toBeNull()
+    expect(dmMessageCopyText(message({ kind: 'text', content: '' }))).toBeNull()
+    expect(dmMessageCopyText(message({ kind: 'media', content: 'not-json' }))).toBeNull()
+    expect(dmMessageCopyText(message({ kind: 'media', content: '{"mimeType":"image/jpeg"}' }))).toBeNull()
+    expect(dmMessageCopyText(message({ kind: 'sticker' as 'text', content: '{"id":9}' }))).toBeNull()
+  })
+
+  it('never exposes the URL of an unsent photo', () => {
+    expect(dmMessageCopyText(message({
+      kind: 'media',
+      content: '',
+      unsent: true,
+      media: { url: 'https://x/secret.jpg', mimeType: 'image/jpeg' },
+    }))).toBeNull()
   })
 })

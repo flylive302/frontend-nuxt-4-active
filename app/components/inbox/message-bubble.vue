@@ -2,10 +2,8 @@
 import type { MediaContentPayload, ThreadMessage, VoiceContentPayload } from '~/types/inbox'
 import { formatRelativeTime } from '~/utils/date'
 import { isMessageSeen } from '~/utils/messageSeenStatus'
-import { createLogger } from '~/utils/logger'
+import { resolveMediaPayload, resolveVoicePayload } from '~/utils/dm-message-payload'
 import { useVoicePlayback } from '~/composables/inbox/useVoicePlayback'
-
-const log = createLogger('[InboxMessageBubble]')
 
 const props = defineProps<{
   message: ThreadMessage
@@ -36,38 +34,12 @@ const isSeen = computed(() => isMessageSeen(props.message.id, props.peerSeenUpTo
 const isUploading = computed(() => props.message.kind === 'media' && props.message.uploadStatus === 'uploading')
 const isUploadFailed = computed(() => props.message.kind === 'media' && props.message.uploadStatus === 'failed')
 
-// Media thumbnail (dm-messenger-v2/01): while uploading, prefer the local
-// object-URL preview (remote URL doesn't exist yet); once confirmed, parse
-// `content`'s JSON payload. Parsed defensively — a stale-OTA/backend
-// mismatch degrades to a placeholder rather than crashing the bubble.
-const mediaPayload = computed<MediaContentPayload | null>(() => {
-  if (props.message.kind !== 'media' || props.message.unsent) return null
-  if (props.message.localPreviewUrl) return props.message.media ?? { url: props.message.localPreviewUrl, mimeType: 'image/jpeg' }
-  try {
-    const parsed = JSON.parse(props.message.content) as Partial<MediaContentPayload>
-    if (typeof parsed.url !== 'string' || typeof parsed.mimeType !== 'string') return null
-    return parsed as MediaContentPayload
-  }
-  catch (err) {
-    log.warn('Failed to parse media message payload', err)
-    return null
-  }
-})
-
-// Voice payload (dm-messenger-v2/04): parsed defensively same as media —
-// a stale-OTA/backend mismatch degrades to the "unknown" placeholder.
-const voicePayload = computed<VoiceContentPayload | null>(() => {
-  if (props.message.kind !== 'voice' || props.message.unsent) return null
-  try {
-    const parsed = JSON.parse(props.message.content) as Partial<VoiceContentPayload>
-    if (typeof parsed.url !== 'string' || typeof parsed.durationMs !== 'number') return null
-    return parsed as VoiceContentPayload
-  }
-  catch (err) {
-    log.warn('Failed to parse voice message payload', err)
-    return null
-  }
-})
+// Media / voice payloads (dm-messenger-v2): resolution lives in a pure util so
+// the structured-key-first, legacy-`content`-fallback contract is testable and
+// shared with the copy action. A payload that won't resolve degrades to the
+// "unknown" placeholder below rather than crashing the bubble.
+const mediaPayload = computed<MediaContentPayload | null>(() => resolveMediaPayload(props.message))
+const voicePayload = computed<VoiceContentPayload | null>(() => resolveVoicePayload(props.message))
 
 // Voice playback derivation (dm-messenger-v2/05): waveform bars, progress,
 // remaining time and rate label all come from this composable subscribing

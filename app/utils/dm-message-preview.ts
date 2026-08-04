@@ -8,6 +8,9 @@
 // this OTA bundle) degrade to a neutral label, matching the bubble's
 // stale-OTA placeholder strategy.
 
+import type { ThreadMessage } from '~/types/inbox'
+import { resolveMediaPayload, resolveVoicePayload } from '~/utils/dm-message-payload'
+
 export function dmMessagePreview(kind: string, content: string): string {
   if (kind === 'media') return '📷 Photo'
   if (kind === 'voice') return '🎤 Voice message'
@@ -17,20 +20,17 @@ export function dmMessagePreview(kind: string, content: string): string {
 
 /**
  * What a "Copy" action should put on the clipboard for a message, or null
- * when there is nothing copyable (unsent, empty, unparseable payload,
+ * when there is nothing copyable (unsent, empty, unresolvable payload,
  * unknown kind). Text copies the text; media/voice copy the asset URL.
+ *
+ * Takes the whole message, not `content`: the asset URL lives in the
+ * structured `media`/`voice` key, and `content` is only a fallback there.
  */
-export function dmMessageCopyText(kind: string, content: string, unsent: boolean): string | null {
-  if (unsent) return null
-  if (kind === 'text') return content || null
-  if (kind === 'media' || kind === 'voice') {
-    try {
-      const parsed = JSON.parse(content) as { url?: unknown }
-      return typeof parsed.url === 'string' && parsed.url.length > 0 ? parsed.url : null
-    }
-    catch {
-      return null
-    }
-  }
-  return null
+export function dmMessageCopyText(message: ThreadMessage): string | null {
+  if (message.unsent) return null
+  if (message.kind === 'text') return message.content || null
+
+  const url = resolveMediaPayload(message)?.url ?? resolveVoicePayload(message)?.url
+
+  return url !== undefined && url.length > 0 ? url : null
 }

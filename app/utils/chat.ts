@@ -20,3 +20,21 @@ export function filterChatMessages(messages: ChatMessageEvent[], tab: ChatTab): 
   if (tab === CHAT_TAB_CHAT) return messages.filter((m) => m.type === CHAT_MESSAGE_TYPE_TEXT);
   return messages.filter((m) => m.type !== CHAT_MESSAGE_TYPE_TEXT);
 }
+
+/**
+ * Pure decision: should this message render inside a chat bubble frame?
+ *
+ * Two independent grants, either of which is sufficient:
+ * - An **equipped** bubble (`chatBubbleId` set). Ownership is already proven by the id being
+ *   set on the user, so VIP is NOT required — a bubble awarded by an admin to a non-VIP user
+ *   renders exactly like a purchased one.
+ * - **VIP membership**, which grants the default bubble skin even with nothing equipped.
+ *
+ * Returning false means the plain (frameless) message box is used instead.
+ */
+export function shouldRenderChatBubble(
+  chatBubbleId?: number | null,
+  vipLevel?: number | null
+): boolean {
+  return Boolean(chatBubbleId) || Boolean(vipLevel);
+}
