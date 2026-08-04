@@ -139,6 +139,23 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
    * Call after anything that moves coins outside the game — a recharge, a reward,
    * a gift received. Without it the game keeps showing a stale number until the
    * next round.
+   *
+   * ⛔ CURRENTLY A NO-OP, AND NOT BECAUSE OF THIS CODE. Do not "fix" it here.
+   *
+   * JoyPlay install their inbound listener per partner. Partners they have not
+   * compiled in — us — fall to a default branch guarded by
+   * `e.origin === location.origin`, which inside their iframe means
+   * "https://joyplay.cn". A cross-origin iframe can never satisfy that, so every
+   * message we post is dropped and logged as `origin` in their console. Every
+   * partner-specific listener omits the check; only the fall-through has it.
+   *
+   * We cannot inject into a cross-origin frame, and the string we send is already
+   * the one their spec documents, so there is nothing on our side to change. Asked
+   * them to drop the guard for our appKey on 2026-08-04.
+   *
+   * Kept live deliberately: it starts working the moment they ship, with no
+   * release of ours. Root cause and the exact source lines are in
+   * docs/issues/game-integration/03-joyplay-integration-design.md.
    */
   function notifyBalanceChanged(): void {
     const origin = vendorOrigin.value;

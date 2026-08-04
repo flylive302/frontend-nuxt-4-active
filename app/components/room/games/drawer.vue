@@ -42,39 +42,33 @@ watch(isOpen, async (nowOpen) => {
 
 <template>
   <!--
-    No overlay, no panel background: the game IS the panel.
+    🔴 STOCK NUXT UI DRAWER — no `:overlay` and no `:ui` overrides, by request
+    (2026-08-04). Everything below is the library default: dimmed overlay, panel
+    background, ring, rounded top, and the default handle.
 
-    🔴 The handle STAYS, and it is not decoration — it is the only exit we control.
-    An overlaid close button was tried on 2026-08-04 and reverted: anywhere inside
-    the square covers the game's own controls, because their layout uses all four
-    corners. The handle sits ABOVE the game and blocks nothing.
+    That means there are TWO ways out and both are ours: the handle, and tapping
+    the overlay outside the panel. Neither depends on the vendor.
 
-    Do not set `:handle="false"`. With no overlay to click outside of, and pointer
-    events over the square going into the iframe rather than to Vaul (so
-    swipe-to-dismiss does not work), removing it leaves a player with the game
-    covering half the room and no way back. The game's own exit button posts
-    `newTppClose` to us, but that is the same channel as `OpenGameSucc`, which this
-    build logs internally and never actually posts up — so it cannot be the only
-    way out.
+    ⛔ JoyPlay's own in-game ✕ is NOT a way out and must not be treated as one.
+    Their build only posts `newTppClose` to the parent frame for partners
+    hardcoded in an if/else chain; we fall through to a native WebView bridge that
+    does not exist in a browser, so the tap is a silent no-op. We therefore stopped
+    asking for that button (`showMiniExitBtn=0` in GameLaunchService::buildUrl) and
+    their code hides it on its own. Root cause and the exact source lines are in
+    docs/issues/game-integration/03-joyplay-integration-design.md.
 
     `title` and `description` stay because Reka UI wires them to `aria-labelledby`
     and `aria-describedby` — dropping them logs an accessibility warning and leaves
     screen readers announcing an unnamed dialog. They are never painted, because
     `#content` replaces the default header/body entirely.
-
-    The `pb-[env(safe-area-inset-bottom)]` is the reason the game itself no longer
-    asks for bottom clearance (see GameLaunchService::buildUrl): the home indicator
-    is our layer's problem, and here the reserved strip is our own dark colour
-    rather than a white band inside the game.
   -->
   <UDrawer
     v-model:open="isOpen"
     :title="GAME_PANEL_TITLE"
-    :overlay="false"
     :ui="{
-      content: 'bg-transparent ring-0 border-0 pb-[env(safe-area-inset-bottom)]',
-      handle: 'bg-white/70!',
+      content: ''
     }"
+    class="min-80vh"
     description="Play a game without leaving the room"
   >
     <UButton

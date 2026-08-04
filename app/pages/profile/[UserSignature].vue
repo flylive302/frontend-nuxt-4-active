@@ -479,6 +479,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         </NuxtLink>
       </div>
 
+      <AgencyInviteButton :user-id="profileId" :agency-id="profileWritable?.agency?.id" class="mt-2 mx-12" />
+
       <!-- History Section -->
       <div class="mb-12 mt-4 relative z-30">
         <SectionTitle class="mx-8">History</SectionTitle>
