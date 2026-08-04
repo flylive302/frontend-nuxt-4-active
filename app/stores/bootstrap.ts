@@ -39,6 +39,9 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   const vapid_public_key = ref<string | null>()
   const vipLevels = ref<VipLevel[]>([])
   const featuredRooms = ref<FeaturedRoom[]>([]);
+  // JoyPlay games kill switch. Defaults FALSE so the button never renders before
+  // the server has said it may — the integration ships inert.
+  const gamesEnabled = ref(false);
 
   /** Gift catalog (accumulates as user scrolls) */
   const giftCatalog = ref<Gift[]>([])
@@ -149,6 +152,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = newConfig.vapid_public_key
     vipLevels.value = newConfig.vip_levels ?? []
     featuredRooms.value = newConfig.featured_rooms ?? []
+    gamesEnabled.value = newConfig.games_enabled ?? false
   }
 
   /**
@@ -190,6 +194,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = null
     vipLevels.value = []
     featuredRooms.value = []
+    gamesEnabled.value = false
   }
 
   /**
@@ -239,6 +244,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key,
     vipLevels,
     featuredRooms,
+    gamesEnabled,
     lastBootstrapAt,
 
     // Getters

@@ -279,6 +279,8 @@ export interface BootstrapConfig {
   props: BootstrapProp[]
   vip_levels: VipLevel[]
   featured_rooms: FeaturedRoom[]
+  /** JoyPlay games kill switch. Sent uncached so a flip reaches clients immediately. */
+  games_enabled?: boolean
 }
 
 /**

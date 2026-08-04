@@ -96,6 +96,10 @@ const volume = ref(savedVolume);
 const isMuted = ref(false);
 const volumePopoverOpen = ref(false);
 const settingsOpen = ref(false);
+// Held on the page, not inside the drawer, so leaving the room can close the
+// games panel programmatically — an iframe left mounted keeps a vendor session
+// alive behind a room the player has already left.
+const gamesOpen = ref(false);
 const lastNonZeroVolume = ref(savedVolume > 0 ? savedVolume : 0.8);
 
 /**
@@ -296,7 +300,13 @@ onUnmounted(() => {
 
           <!-- Side Controls & Gifting -->
           <div class="flex flex-col items-center gap-3 justify-end pb-3">
+            <!-- Games Panel -->
+            <LazyRoomGamesDrawer v-model:open="gamesOpen" />
+            <!-- Games Panel End-->
+
+            <!-- Gift Drawer -->
             <LazyRoomGiftDrawer />
+            <!-- Gift Drawer End -->
           </div>
 
         </div>
