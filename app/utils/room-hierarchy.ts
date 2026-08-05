@@ -27,13 +27,17 @@ export function toRoomRank(role: RoomMemberRole | null | undefined): RoomRank {
 }
 
 /**
- * Whether `actor` may remove `target` from the room (kick = block, ADR 0017).
+ * Whether `actor` outranks `target` enough to take a moderation action against
+ * them — kick (= block, ADR 0017), mute, or force them off a seat.
  *
- * - Owner removes anyone but themselves.
- * - Admin removes plain members only — never the owner, never another admin.
- * - Member removes nobody.
+ * - Owner acts on anyone but themselves.
+ * - Admin acts on plain members only — never the owner, never another admin.
+ * - Member acts on nobody.
+ *
+ * One rule for every hostile action on purpose: gating kick but not mute just
+ * moves the hole. MSAB enforces the same table in `verifyRoomModerationTarget`.
  */
-export function canRemoveFromRoom(actor: RoomRank, target: RoomRank): boolean {
+export function canModerateRoomMember(actor: RoomRank, target: RoomRank): boolean {
   if (actor === 'owner') return target !== 'owner'
   if (actor === 'admin') return target === 'member'
   return false

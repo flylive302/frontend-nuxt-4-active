@@ -16,7 +16,7 @@
 // Imports
 // ========================================
 
-import { canRemoveFromRoom, type RoomRank } from '~/utils/room-hierarchy'
+import { canModerateRoomMember, type RoomRank } from '~/utils/room-hierarchy'
 
 // ========================================
 // Types
@@ -64,12 +64,15 @@ export interface SeatDrawerActions {
  *                    seats, so a non-seated recipient opens the gift drawer
  *                    with an empty recipient list. Seated targets only.
  * - mute           — silences a live producer, which only a seated user has.
+ *                    Rank-gated: silencing someone is a hostile act, so an
+ *                    admin may mute members but never the owner or a peer
+ *                    admin. MSAB refuses those too (`verifyRoomModerationTarget`).
  * - kick           — kick IS a room block (ADR 0017): it needs the target to
  *                    be present in the room, seated or not. Gone → no button.
- *                    Also rank-gated: an admin may kick members but never the
- *                    owner and never another admin (see `canRemoveFromRoom`).
+ *                    Same rank gate as mute.
  * - invite to seat — only meaningful for someone present but not speaking,
  *                    and only when a free unlocked seat exists to invite onto.
+ *                    NOT rank-gated: an invitation is not a hostile act.
  */
 export function resolveSeatDrawerActions(state: SeatDrawerActionState): SeatDrawerActions {
   const { targetUserId, selfUserId, isTargetInRoom, isTargetSeated, viewerRank, targetRank, freeSeatIndex } = state
@@ -78,14 +81,15 @@ export function resolveSeatDrawerActions(state: SeatDrawerActionState): SeatDraw
   // Every action below targets someone else; a null target has nothing to act on.
   const isOther = targetUserId !== null && !isSelf
   const canModerate = isOther && viewerRank !== 'member' && isTargetInRoom
+  const outranksTarget = canModerate && canModerateRoomMember(viewerRank, targetRank)
 
   return {
     isSelf,
     canFollow: isOther,
     canChat: isOther,
     canGift: isOther && isTargetSeated,
-    canMute: canModerate && isTargetSeated,
-    canKick: canModerate && canRemoveFromRoom(viewerRank, targetRank),
+    canMute: outranksTarget && isTargetSeated,
+    canKick: outranksTarget,
     canInviteToSeat: canModerate && !isTargetSeated && freeSeatIndex !== null,
   }
 }

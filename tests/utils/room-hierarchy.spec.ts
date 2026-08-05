@@ -8,7 +8,7 @@
 // ========================================
 
 import { describe, it, expect } from 'vitest'
-import { canManageRoomAdmins, canRemoveFromRoom, toRoomRank } from '~/utils/room-hierarchy'
+import { canManageRoomAdmins, canModerateRoomMember, toRoomRank } from '~/utils/room-hierarchy'
 
 describe('toRoomRank', () => {
   it('passes owner and admin through', () => {
@@ -26,26 +26,26 @@ describe('toRoomRank', () => {
   })
 })
 
-describe('canRemoveFromRoom', () => {
+describe('canModerateRoomMember', () => {
   it('lets the owner remove admins and members', () => {
-    expect(canRemoveFromRoom('owner', 'admin')).toBe(true)
-    expect(canRemoveFromRoom('owner', 'member')).toBe(true)
+    expect(canModerateRoomMember('owner', 'admin')).toBe(true)
+    expect(canModerateRoomMember('owner', 'member')).toBe(true)
   })
 
   it('never allows removing the owner — not by an admin, not by anyone', () => {
-    expect(canRemoveFromRoom('admin', 'owner')).toBe(false)
-    expect(canRemoveFromRoom('member', 'owner')).toBe(false)
-    expect(canRemoveFromRoom('owner', 'owner')).toBe(false)
+    expect(canModerateRoomMember('admin', 'owner')).toBe(false)
+    expect(canModerateRoomMember('member', 'owner')).toBe(false)
+    expect(canModerateRoomMember('owner', 'owner')).toBe(false)
   })
 
   it('lets an admin remove plain members only', () => {
-    expect(canRemoveFromRoom('admin', 'member')).toBe(true)
-    expect(canRemoveFromRoom('admin', 'admin')).toBe(false)
+    expect(canModerateRoomMember('admin', 'member')).toBe(true)
+    expect(canModerateRoomMember('admin', 'admin')).toBe(false)
   })
 
   it('lets a plain member remove nobody', () => {
-    expect(canRemoveFromRoom('member', 'member')).toBe(false)
-    expect(canRemoveFromRoom('member', 'admin')).toBe(false)
+    expect(canModerateRoomMember('member', 'member')).toBe(false)
+    expect(canModerateRoomMember('member', 'admin')).toBe(false)
   })
 })
 

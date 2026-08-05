@@ -16,7 +16,7 @@
 // members never pay for the request.
 // ========================================
 
-import { canManageRoomAdmins, canRemoveFromRoom, toRoomRank, type RoomRank } from '~/utils/room-hierarchy'
+import { canManageRoomAdmins, canModerateRoomMember, toRoomRank, type RoomRank } from '~/utils/room-hierarchy'
 
 export function useRoomHierarchy() {
   const roomStore = useRoomStore()
@@ -73,7 +73,7 @@ export function useRoomHierarchy() {
     if (typeof userId !== 'number') return false
     if (userId === useAuthStore().user?.id) return false
 
-    return canRemoveFromRoom(myRank.value, rankOf(userId))
+    return canModerateRoomMember(myRank.value, rankOf(userId))
   }
 
   return { myRank, canModerate, canManageAdmins, rankOf, canRemove }

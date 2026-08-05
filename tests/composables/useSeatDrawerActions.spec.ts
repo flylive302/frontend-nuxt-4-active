@@ -149,32 +149,52 @@ describe('resolveSeatDrawerActions — self', () => {
   })
 })
 
-describe('resolveSeatDrawerActions — rank gating on kick', () => {
-  it('lets the owner kick an admin', () => {
-    expect(actionsFor({ viewerRank: 'owner', targetRank: 'admin' }).canKick).toBe(true)
+describe('resolveSeatDrawerActions — rank gating on kick and mute', () => {
+  it('lets the owner kick and mute an admin', () => {
+    const actions = actionsFor({ viewerRank: 'owner', targetRank: 'admin' })
+
+    expect(actions.canKick).toBe(true)
+    expect(actions.canMute).toBe(true)
   })
 
-  it('lets an admin kick a plain member', () => {
-    expect(actionsFor({ viewerRank: 'admin', targetRank: 'member' }).canKick).toBe(true)
+  it('lets an admin kick and mute a plain member', () => {
+    const actions = actionsFor({ viewerRank: 'admin', targetRank: 'member' })
+
+    expect(actions.canKick).toBe(true)
+    expect(actions.canMute).toBe(true)
   })
 
-  it('never lets an admin kick the room owner', () => {
-    expect(actionsFor({ viewerRank: 'admin', targetRank: 'owner' }).canKick).toBe(false)
+  it('never lets an admin kick OR mute the room owner', () => {
+    const actions = actionsFor({ viewerRank: 'admin', targetRank: 'owner' })
+
+    // The incident: an admin silenced/removed the owner in the owner's own room.
+    expect(actions.canKick).toBe(false)
+    expect(actions.canMute).toBe(false)
   })
 
-  it('never lets an admin kick another admin', () => {
-    expect(actionsFor({ viewerRank: 'admin', targetRank: 'admin' }).canKick).toBe(false)
-  })
-
-  it('never offers kick on the owner, even to another owner-ranked viewer', () => {
-    expect(actionsFor({ viewerRank: 'owner', targetRank: 'owner' }).canKick).toBe(false)
-  })
-
-  it('keeps mute and invite available to an admin whose kick is blocked by rank', () => {
+  it('never lets an admin kick OR mute another admin', () => {
     const actions = actionsFor({ viewerRank: 'admin', targetRank: 'admin' })
 
     expect(actions.canKick).toBe(false)
-    expect(actions.canMute).toBe(true)
+    expect(actions.canMute).toBe(false)
+  })
+
+  it('never offers kick or mute on the owner, even to another owner-ranked viewer', () => {
+    const actions = actionsFor({ viewerRank: 'owner', targetRank: 'owner' })
+
+    expect(actions.canKick).toBe(false)
+    expect(actions.canMute).toBe(false)
+  })
+
+  it('still offers invite-to-seat across ranks — an invitation is not hostile', () => {
+    const actions = actionsFor({
+      viewerRank: 'admin',
+      targetRank: 'admin',
+      isTargetSeated: false,
+    })
+
+    expect(actions.canKick).toBe(false)
+    expect(actions.canInviteToSeat).toBe(true)
   })
 })
 
