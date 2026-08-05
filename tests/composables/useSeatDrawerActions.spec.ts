@@ -20,7 +20,8 @@ const BASE: SeatDrawerActionState = {
   selfUserId: SELF_ID,
   isTargetInRoom: true,
   isTargetSeated: true,
-  canManageMembers: true,
+  viewerRank: 'owner',
+  targetRank: 'member',
   freeSeatIndex: 3,
 }
 
@@ -102,7 +103,7 @@ describe('resolveSeatDrawerActions — target who left the room', () => {
 })
 
 describe('resolveSeatDrawerActions — non-moderator viewer', () => {
-  const member = { canManageMembers: false }
+  const member = { viewerRank: 'member' } as const
 
   it('withholds every moderation action', () => {
     const actions = actionsFor({ ...member, isTargetSeated: false })
@@ -145,6 +146,35 @@ describe('resolveSeatDrawerActions — self', () => {
 
     expect(actions.isSelf).toBe(true)
     expect(actions.canKick).toBe(false)
+  })
+})
+
+describe('resolveSeatDrawerActions — rank gating on kick', () => {
+  it('lets the owner kick an admin', () => {
+    expect(actionsFor({ viewerRank: 'owner', targetRank: 'admin' }).canKick).toBe(true)
+  })
+
+  it('lets an admin kick a plain member', () => {
+    expect(actionsFor({ viewerRank: 'admin', targetRank: 'member' }).canKick).toBe(true)
+  })
+
+  it('never lets an admin kick the room owner', () => {
+    expect(actionsFor({ viewerRank: 'admin', targetRank: 'owner' }).canKick).toBe(false)
+  })
+
+  it('never lets an admin kick another admin', () => {
+    expect(actionsFor({ viewerRank: 'admin', targetRank: 'admin' }).canKick).toBe(false)
+  })
+
+  it('never offers kick on the owner, even to another owner-ranked viewer', () => {
+    expect(actionsFor({ viewerRank: 'owner', targetRank: 'owner' }).canKick).toBe(false)
+  })
+
+  it('keeps mute and invite available to an admin whose kick is blocked by rank', () => {
+    const actions = actionsFor({ viewerRank: 'admin', targetRank: 'admin' })
+
+    expect(actions.canKick).toBe(false)
+    expect(actions.canMute).toBe(true)
   })
 })
 

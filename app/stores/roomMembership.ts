@@ -51,6 +51,16 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
    */
   const myMembership = ref<RoomMember | null>(null)
 
+  /**
+   * user_ids holding `admin` in the current room — the whole roster, not a
+   * page of it. Moderation UI needs a target's rank, and `members` only holds
+   * the pages already scrolled, so rank cannot be read from that list.
+   */
+  const adminIds = ref<Set<number>>(new Set())
+
+  /** Roster already fetched for `currentRoomId` (prevents refetch per drawer). */
+  const adminsLoaded = ref(false)
+
   // ========================================
   // Computed
   // ========================================
@@ -71,6 +81,8 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
   }
 
   function resetLists(): void {
+    adminIds.value = new Set()
+    adminsLoaded.value = false
     members.value = createPaginatedList()
     joinRequests.value = createPaginatedList()
     myJoinRequests.value = createPaginatedList()
@@ -126,7 +138,17 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     members.value.items = members.value.items.filter(m => m.user_id !== userId)
   }
 
-  /** Update a member's role. Also updates myMembership when it's the current user. */
+  /** Replace the room's admin roster wholesale (result of the roster fetch). */
+  function setRoomAdmins(userIds: number[]): void {
+    adminIds.value = new Set(userIds)
+    adminsLoaded.value = true
+  }
+
+  /**
+   * Update a member's role. Also updates myMembership when it's the current
+   * user, and keeps the admin roster in step so a promotion/demotion changes
+   * what the moderation UI offers without a refetch.
+   */
   function updateMemberRole(userId: number, newRole: RoomMember['role']): void {
     const member = members.value.items.find(m => m.user_id === userId)
     if (member) {
@@ -135,6 +157,14 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     if (myMembership.value && myMembership.value.user_id === userId) {
       myMembership.value = { ...myMembership.value, role: newRole }
     }
+
+    const nextAdmins = new Set(adminIds.value)
+    if (newRole === 'admin') {
+      nextAdmins.add(userId)
+    } else {
+      nextAdmins.delete(userId)
+    }
+    adminIds.value = nextAdmins
   }
 
   /** Replace myMembership directly. */
@@ -192,6 +222,8 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     receivedInvitations,
     sentInvitations,
     myMembership,
+    adminIds,
+    adminsLoaded,
 
     // Computed
     pendingRequestCount,
@@ -206,6 +238,7 @@ export const useRoomMembershipStore = defineStore('roomMembership', () => {
     isCurrentRoom,
     addMember,
     removeMember,
+    setRoomAdmins,
     updateMemberRole,
     setMyMembership,
     clearMyJoinRequest,

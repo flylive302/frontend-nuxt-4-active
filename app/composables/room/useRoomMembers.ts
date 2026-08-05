@@ -3,7 +3,17 @@
 // ========================================
 
 import type { RoomMember, RoomMemberRole, GetRoomMembersParams } from '~/types/room/room'
+import { ADMIN_ROSTER_PAGE_SIZE } from '~/constants/room'
+import { createLogger } from '~/utils/logger'
 
+const log = createLogger('[RoomMembers]')
+
+/**
+ * In-flight admin-roster request, keyed by room. Several surfaces ask for the
+ * roster the moment a moderator enters a room (seat drawer, members panel);
+ * without this they each fire the same GET before any of them has landed.
+ */
+const adminRosterInFlight = new Map<number, Promise<void>>()
 
 /**
  * Composable for managing room members.
@@ -153,6 +163,48 @@ export function useRoomMembers() {
     }
   }
 
+  /**
+   * Fetch the room's admin roster (all of it, one page).
+   *
+   * Separate from `fetchMembers` on purpose: that list is cursor-paginated for
+   * display, so it can only answer "is this user an admin?" for the pages
+   * already scrolled — useless for gating a moderation button on an arbitrary
+   * participant. Fetched once per room; the role-change socket event keeps it
+   * current from there.
+   *
+   * A failure leaves the roster empty, which only ever *hides* moderation
+   * buttons — the backend refuses the action either way.
+   */
+  async function fetchRoomAdmins(roomId: number): Promise<void> {
+    store.setRoom(roomId)
+    if (store.adminsLoaded) return
+
+    const pending = adminRosterInFlight.get(roomId)
+    if (pending) return pending
+
+    const request = (async () => {
+      try {
+        const response = await api<{ data: RoomMember[] }>(`/rooms/${roomId}/members`, {
+          params: { role: 'admin', per_page: ADMIN_ROSTER_PAGE_SIZE },
+        })
+
+        const ids = (Array.isArray(response.data) ? response.data : [])
+          .map(m => m.user_id ?? m.user?.id)
+          .filter((id): id is number => typeof id === 'number')
+
+        store.setRoomAdmins(ids)
+      } catch (err) {
+        log.warn('Failed to load room admin roster', err)
+      } finally {
+        adminRosterInFlight.delete(roomId)
+      }
+    })()
+
+    adminRosterInFlight.set(roomId, request)
+
+    return request
+  }
+
   // ========================================
   // Return
   // ========================================
@@ -173,6 +225,7 @@ export function useRoomMembers() {
     // Actions
     fetchMembers,
     fetchMyMembership,
+    fetchRoomAdmins,
     leaveRoomMembership,
   }
 }

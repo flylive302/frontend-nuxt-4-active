@@ -26,6 +26,15 @@ export const MAX_SEAT_COUNT = 30;
 export const SEAT_COUNT_STEP = 5;
 
 /**
+ * Page size for the room's admin roster (`GET /rooms/{id}/members?role=admin`).
+ *
+ * Moderation UI needs a target's rank, and the paginated members list only
+ * holds the pages already scrolled. Admins per room are a handful, so the
+ * roster is fetched whole in one page rather than walked with a cursor.
+ */
+export const ADMIN_ROSTER_PAGE_SIZE = 100;
+
+/**
  * Max seats allowed to run a LIVE animated avatar-frame concurrently
  * (room-battery-perf/02). Active speakers get priority; seats over budget
  * render the cached still-frame instead.

@@ -36,6 +36,9 @@ const membersListRef = ref<HTMLElement | null>(null);
 
 const { members, loading: membersLoading, fetchMembers } = useRoomMembers();
 
+/** Rank rules — who this viewer may kick, and whether they may hand out admin. */
+const { canRemove, canManageAdmins } = useRoomHierarchy();
+
 // Load next page as the members list scrolls near its end
 // (fetchMembers gates on hasMore/loading internally).
 useInfiniteScroll(
@@ -136,9 +139,10 @@ function getMemberActions(member: RoomMember) {
           Admin
         </UBadge>
 
-        <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick -->
+        <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick.
+             Rank-gated: an admin sees no kick button on the owner or on a peer admin. -->
         <KickDurationPopover
-          v-if="canManageMembers && member.role !== 'owner'"
+          v-if="canManageMembers && canRemove(member.user_id)"
           @select="(duration: BlockDurationValue) => handleKickMember(member, duration)"
         >
           <UButton
@@ -150,9 +154,11 @@ function getMemberActions(member: RoomMember) {
           />
         </KickDurationPopover>
 
-        <!-- Admin Actions Dropdown (not for owner, only if current user can manage) -->
+        <!-- Role management (promote/demote) — owner only. An admin who could
+             promote would be able to out-number the owner in their own room,
+             and the API refuses it, so the control is not offered. -->
         <UDropdownMenu
-          v-if="canManageMembers && member.role !== 'owner'"
+          v-if="canManageAdmins && member.role !== 'owner'"
           :items="getMemberActions(member)"
           style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
         >

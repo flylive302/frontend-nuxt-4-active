@@ -42,7 +42,6 @@ const loading = ref(false)
 // ========================================
 
 const authStore = useAuthStore()
-const roomStore = useRoomStore()
 
 // ========================================
 // Composables
@@ -59,12 +58,11 @@ const { resolvePropAsset } = usePropLookup()
 /** Current user is room owner */
 const { isRoomOwner } = useRoomPermissions()
 
+/** Rank rules for this room — who outranks whom (owner > admin > member). */
+const { canModerate, canRemove, rankOf } = useRoomHierarchy()
+
 /** Current user can manage members (owner or admin) */
-const { myMembership } = useRoomMembers()
-const canManageMembers = computed(() => {
-  if (isRoomOwner.value) return true
-  return myMembership.value?.role === 'admin'
-})
+const canManageMembers = canModerate
 
 /** Is viewing own profile */
 const isOwnProfile = computed(() => {
@@ -77,19 +75,10 @@ const showAdminActions = computed(() => {
 })
 
 /** Get a participant's current role */
-const participantRole = computed((): 'owner' | 'admin' | 'member' => {
-  // Check if participant is room owner
-  if (props.participant?.id === roomStore.currentRoom?.owner?.id) {
-    return 'owner'
-  }
-  // Check from member list
-  const membershipStore = useRoomMembershipStore()
-  const member = membershipStore.members.items.find(
-    m => m.user_id === props.participant?.id || m.user?.id === props.participant?.id
-  )
-  if (member) return member.role as 'owner' | 'admin' | 'member'
-  return 'member'
-})
+const participantRole = computed(() => rankOf(props.participant?.id))
+
+/** Kicking is rank-gated — an admin cannot kick the owner or another admin. */
+const canKickParticipant = computed(() => canRemove(props.participant?.id))
 
 /** Can promote to admin (not owner, currently member) */
 const canPromote = computed(() => {
@@ -257,9 +246,11 @@ async function handleDemote() {
           View Full Profile
         </UButton>
 
-        <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick -->
+        <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick.
+             Rank-gated: never shown for the owner, and never shown to an admin
+             looking at another admin. -->
         <KickDurationPopover
-          v-if="showAdminActions"
+          v-if="showAdminActions && canKickParticipant"
           @select="handleKick"
         >
           <UButton

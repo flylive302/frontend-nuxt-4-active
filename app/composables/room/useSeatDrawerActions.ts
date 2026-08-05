@@ -13,6 +13,12 @@
 // ========================================
 
 // ========================================
+// Imports
+// ========================================
+
+import { canRemoveFromRoom, type RoomRank } from '~/utils/room-hierarchy'
+
+// ========================================
 // Types
 // ========================================
 
@@ -25,8 +31,10 @@ export interface SeatDrawerActionState {
   isTargetInRoom: boolean
   /** Target currently occupies a seat. */
   isTargetSeated: boolean
-  /** Viewer is room owner or an admin member. */
-  canManageMembers: boolean
+  /** Viewer's rank in this room — owner and admin may moderate. */
+  viewerRank: RoomRank
+  /** Target's rank in this room — decides who is allowed to act on them. */
+  targetRank: RoomRank
   /** First empty, unlocked seat an invited user could be placed on. */
   freeSeatIndex: number | null
 }
@@ -58,16 +66,18 @@ export interface SeatDrawerActions {
  * - mute           — silences a live producer, which only a seated user has.
  * - kick           — kick IS a room block (ADR 0017): it needs the target to
  *                    be present in the room, seated or not. Gone → no button.
+ *                    Also rank-gated: an admin may kick members but never the
+ *                    owner and never another admin (see `canRemoveFromRoom`).
  * - invite to seat — only meaningful for someone present but not speaking,
  *                    and only when a free unlocked seat exists to invite onto.
  */
 export function resolveSeatDrawerActions(state: SeatDrawerActionState): SeatDrawerActions {
-  const { targetUserId, selfUserId, isTargetInRoom, isTargetSeated, canManageMembers, freeSeatIndex } = state
+  const { targetUserId, selfUserId, isTargetInRoom, isTargetSeated, viewerRank, targetRank, freeSeatIndex } = state
 
   const isSelf = targetUserId !== null && targetUserId === selfUserId
   // Every action below targets someone else; a null target has nothing to act on.
   const isOther = targetUserId !== null && !isSelf
-  const canModerate = isOther && canManageMembers && isTargetInRoom
+  const canModerate = isOther && viewerRank !== 'member' && isTargetInRoom
 
   return {
     isSelf,
@@ -75,7 +85,7 @@ export function resolveSeatDrawerActions(state: SeatDrawerActionState): SeatDraw
     canChat: isOther,
     canGift: isOther && isTargetSeated,
     canMute: canModerate && isTargetSeated,
-    canKick: canModerate,
+    canKick: canModerate && canRemoveFromRoom(viewerRank, targetRank),
     canInviteToSeat: canModerate && !isTargetSeated && freeSeatIndex !== null,
   }
 }
@@ -94,11 +104,10 @@ export function useSeatDrawerActions(targetUserId: MaybeRefOrGetter<number | nul
   const authStore = useAuthStore()
   const seatsStore = useRoomSeatsStore()
   const participantsStore = useRoomParticipantsStore()
-  const { isRoomOwner } = useRoomPermissions()
-  const { myMembership } = useRoomMembers()
+  const { myRank, canModerate, rankOf } = useRoomHierarchy()
 
   /** Owner always moderates; admin members do too. */
-  const canManageMembers = computed(() => isRoomOwner.value || myMembership.value?.role === 'admin')
+  const canManageMembers = canModerate
 
   /** Lowest empty, unlocked seat — the slot an invite would target. */
   const freeSeatIndex = computed<number | null>(() => {
@@ -122,7 +131,8 @@ export function useSeatDrawerActions(targetUserId: MaybeRefOrGetter<number | nul
       selfUserId: authStore.user?.id ?? null,
       isTargetInRoom: isTargetInRoom.value,
       isTargetSeated: isTargetSeated.value,
-      canManageMembers: canManageMembers.value,
+      viewerRank: myRank.value,
+      targetRank: rankOf(toValue(targetUserId)),
       freeSeatIndex: freeSeatIndex.value,
     }),
   )
