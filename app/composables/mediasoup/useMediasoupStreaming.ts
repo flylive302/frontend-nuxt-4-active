@@ -46,6 +46,24 @@ let _micVisibilityHandler: (() => void) | null = null;
 let _startAudioInFlight: Promise<void> | null = null;
 const _consumeInFlight = new Map<string, Promise<void>>();
 
+// ---- Displacement-key guard (aws-app-affinity/14) ----
+// `_consumeInFlight` above is keyed on `producerId`, which only covers the SAME
+// producer arriving twice. It cannot see the other collision: a user's stale and
+// fresh mic producers have DIFFERENT producerIds but the same displacement key,
+// so both pass every guard above, both read an empty slot at the displacement
+// check, and neither stops the other — the same audible doubling, through a door
+// the producerId map does not watch.
+//
+// Reachable because the live `audio:newProducer` handler is registered
+// (`useRoomAudio.ts:512`) before the join-time catch-up loop runs (`:731`), and
+// MSAB delivers a producer through both paths by design.
+//
+// 🔴 This map holds a build keyed on `${userId}:${source}`, and a caller sharing
+// that key WAITS for it rather than skipping — waiting preserves the serial
+// loop's semantics (build, register, then get displaced by the newer one),
+// whereas skipping would leave the newer producer unheard.
+const _consumeInFlightByKey = new Map<string, Promise<void>>();
+
 const REMOTE_AUDIO_CONTAINER_ID = 'flylive-remote-audio';
 
 function getRemoteAudioContainer(): HTMLElement | null {
@@ -505,11 +523,26 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // independently, so a fresh mic producer only displaces the stale mic
     // consumer (never touches that user's music consumer), and vice versa.
     const trackingKey = producerUserId !== undefined ? `${producerUserId}:${source}` : undefined;
-    if (trackingKey !== undefined) {
-      const existingProducerId = consumerProducerByKey.value.get(trackingKey);
-      if (existingProducerId && existingProducerId !== producerId) {
-        stopConsumer(existingProducerId);
-      }
+
+    // audio-pipe-observability/15: the `consumers` check below is the ONLY
+    // dedup gate, and the map it reads is not written until `buildConsumer()`
+    // returns — two awaits later. MSAB can deliver the same producer twice: it
+    // is visible to a joiner's `existingProducers` snapshot from the moment
+    // `audio:produce` tracks it, but the `audio:newProducer` broadcast fires two
+    // awaits later, by which time that joiner has already joined the socket
+    // room. Both deliveries reach here concurrently, both pass, and the second
+    // `addConsumer` orphans the first consumer and its `<audio>` element —
+    // still playing, no longer reachable by `stopConsumer()`. Reproduces on
+    // every reconnect, since `room:join` replays the whole snapshot.
+    //
+    // 🔴 This guard stays FIRST, above the displacement-key wait below. Sharing
+    // the same promise is what propagates a rejection to every caller for this
+    // producer; route them through the key wait instead and a failed first call
+    // would let the second one quietly succeed on its own, breaking the
+    // "surfaces a failure to the joining caller too" contract.
+    const inFlight = _consumeInFlight.get(producerId);
+    if (inFlight) {
+      return inFlight;
     }
 
     // Check if already consuming
@@ -517,28 +550,58 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    // audio-pipe-observability/15: the check above is the ONLY dedup gate, and
-    // the map it reads is not written until `buildConsumer()` returns — two
-    // awaits later. MSAB can deliver the same producer twice: it is visible to
-    // a joiner's `existingProducers` snapshot from the moment `audio:produce`
-    // tracks it, but the `audio:newProducer` broadcast fires two awaits later,
-    // by which time that joiner has already joined the socket room. Both
-    // deliveries reach here concurrently, both pass, and the second
-    // `addConsumer` orphans the first consumer and its `<audio>` element —
-    // still playing, no longer reachable by `stopConsumer()`. Reproduces on
-    // every reconnect, since `room:join` replays the whole snapshot.
-    const inFlight = _consumeInFlight.get(producerId);
-    if (inFlight) {
-      return inFlight;
+    // aws-app-affinity/14: a DIFFERENT producer sharing this displacement key
+    // may be mid-build. Wait it out so the displacement read below observes its
+    // registration and correctly stops it — otherwise both survive and the
+    // speaker is heard twice.
+    //
+    // Loops rather than awaiting once: several callers can be parked on the
+    // same build, and they resume in registration order, so each must re-read
+    // the tail and follow whoever claimed the key next. Terminates because a
+    // build always clears its own entry in `finally`, so the map drains.
+    if (trackingKey !== undefined) {
+      let keyInFlight = _consumeInFlightByKey.get(trackingKey);
+      while (keyInFlight) {
+        // Swallowed on purpose: the other producer's failure is its caller's to
+        // surface, and it must not stop us restoring THIS speaker.
+        await keyInFlight.catch(() => {});
+
+        // The world moved while we waited — re-run the producerId guards.
+        const nowInFlight = _consumeInFlight.get(producerId);
+        if (nowInFlight) {
+          return nowInFlight;
+        }
+        if (consumers.value.has(producerId)) {
+          return;
+        }
+
+        const next = _consumeInFlightByKey.get(trackingKey);
+        keyInFlight = next === keyInFlight ? undefined : next;
+      }
+    }
+
+    if (trackingKey !== undefined) {
+      const existingProducerId = consumerProducerByKey.value.get(trackingKey);
+      if (existingProducerId && existingProducerId !== producerId) {
+        stopConsumer(existingProducerId);
+      }
     }
 
     const build = buildConsumer(producerId, roomId, trackingKey);
     _consumeInFlight.set(producerId, build);
+    if (trackingKey !== undefined) {
+      _consumeInFlightByKey.set(trackingKey, build);
+    }
     try {
       await build;
     }
     finally {
       _consumeInFlight.delete(producerId);
+      // Only clear the key if we still own it — a later caller may already have
+      // claimed it, and deleting theirs would reopen the race we just closed.
+      if (trackingKey !== undefined && _consumeInFlightByKey.get(trackingKey) === build) {
+        _consumeInFlightByKey.delete(trackingKey);
+      }
     }
   }
 
@@ -706,6 +769,12 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     // transports it needs are closed below.
     _startAudioInFlight = null;
     _consumeInFlight.clear();
+    // aws-app-affinity/14: same reasoning, and it matters more here — a waiter
+    // parked on a build that can no longer settle would hold up every later
+    // consume for that speaker. Clearing only stops NEW callers from parking;
+    // anyone already waiting is released when the build it holds rejects
+    // against the transports closed below.
+    _consumeInFlightByKey.clear();
 
     // Close producer
     stopAudio();
