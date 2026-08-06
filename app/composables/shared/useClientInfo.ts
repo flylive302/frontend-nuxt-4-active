@@ -3,6 +3,13 @@
 // ========================================
 // Provides client type detection for API headers.
 // Uses VueUse for PWA/browser detection.
+//
+// Deliberately NOT a platform source for Sentry. This distinguishes browser
+// vs installed-PWA by `display-mode`, never whether the code runs inside the
+// Capacitor native shell, and it only ever feeds an HTTP header. The Sentry
+// platform tag (android vs web) is resolved separately, from
+// `Capacitor.isNativePlatform()`, by `~/utils/client-platform.ts` — see that
+// file for why this composable can't answer the same question.
 
 import { useMediaQuery } from '@vueuse/core'
 
