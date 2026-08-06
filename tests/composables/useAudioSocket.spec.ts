@@ -405,4 +405,67 @@ describe('useAudioSocket', () => {
       expect(mockIo).toHaveBeenCalledWith('ws://localhost:3030', expect.any(Object))
     })
   })
+
+  // ticket 10: the handshake carries a correlation identifier so a client-side
+  // action can be joined to MSAB's server-side logs.
+  describe('correlation id on the handshake (ticket 10)', () => {
+    /** Pulls the auth payload sent to the server by invoking socket.io's dynamic auth callback. */
+    async function capturedAuthPayload(): Promise<{ token: string | null; correlationId: string }> {
+      const { io: mockIo } = await import('socket.io-client')
+      const lastCall = vi.mocked(mockIo).mock.calls.at(-1)!
+      const authOption = (lastCall[1] as { auth: (cb: (data: { token: string | null; correlationId: string }) => void) => void }).auth
+      let captured!: { token: string | null; correlationId: string }
+      authOption((data) => { captured = data })
+      return captured
+    }
+
+    it('sends a correlation id alongside the token, matching the MSAB charset contract', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+      await connect()
+
+      const payload = await capturedAuthPayload()
+      expect(payload.token).toBe('valid-token')
+      // Mirrors MSAB's resolveCorrelationId contract exactly: ≤128 chars, [A-Za-z0-9._:-].
+      // A base64 id (with '/' or '+') would fail this and get silently discarded server-side.
+      expect(payload.correlationId).toMatch(/^[A-Za-z0-9._:-]{1,128}$/)
+    })
+
+    it('re-supplies the SAME id across automatic reconnect attempts (AC#5)', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+      await connect()
+
+      // Socket.IO re-invokes the dynamic `auth` callback on every reconnect
+      // attempt without a new connect() call — the token may rotate, but the
+      // correlation id must not, or the reconnect can't be joined to the
+      // original session in the server logs.
+      const first = await capturedAuthPayload()
+      mockAuthStore.msabToken = 'rotated-token'
+      const second = await capturedAuthPayload()
+
+      expect(second.token).toBe('rotated-token')
+      expect(second.correlationId).toBe(first.correlationId)
+    })
+
+    it('mints a NEW id on a fresh connect() — a genuinely new logical session', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect } = useAudioSocket()
+
+      await connect('wss://mumbai.audio.flyliveapp.com')
+      const first = await capturedAuthPayload()
+
+      mockSocket.connected = true
+      await connect('wss://frankfurt.audio.flyliveapp.com')
+      const second = await capturedAuthPayload()
+
+      expect(second.correlationId).not.toBe(first.correlationId)
+    })
+  })
 })

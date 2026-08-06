@@ -407,12 +407,25 @@ export function useAudioSocket(): UseAudioSocketReturn {
     status.value = 'connecting';
     error.value = null;
 
+    // Correlation identifier for observability (ticket 10): ties this socket's
+    // connection and every event it sends to one id in the MSAB server logs.
+    // Minted once per connect() call, then captured by the `auth` closure below —
+    // Socket.IO re-invokes that closure on every automatic reconnection attempt,
+    // so the SAME id is re-supplied across those (visible server-side as the same
+    // id reappearing at "Client authenticated"). A brand-new id only appears when
+    // connect() itself runs again, i.e. a genuinely new logical session (e.g. the
+    // full socket rebuild in useRoomLifecycle), not a transport-level reconnect.
+    // crypto.randomUUID() matches MSAB's resolveCorrelationId charset
+    // ([A-Za-z0-9._:-]) and is already used elsewhere in the app (useApi.ts,
+    // useDeviceId.ts) — no separate correlation-id utility exists to reuse.
+    const correlationId = crypto.randomUUID();
+
     // Create new socket connection
     _connectedUrl = serverUrl;
     const io = await getIo();
     socket.value = io(serverUrl, {
-      auth: (cb: (data: { token: string | null }) => void) => {
-        cb({ token: authStore.msabToken });
+      auth: (cb: (data: { token: string | null; correlationId: string }) => void) => {
+        cb({ token: authStore.msabToken, correlationId });
       },
       reconnection: true,
       reconnectionAttempts: 10,

@@ -120,13 +120,6 @@ export const useRoomStore = defineStore('roomStore', () => {
     activeRoom.value = null;
   }
 
-  function updateRoomLevel(level: number, xp: string) {
-    if (currentRoom.value) {
-      currentRoom.value.current_level = level;
-      currentRoom.value.room_xp = xp;
-    }
-  }
-
   /**
    * Optimistic bump of live daily XP (mirrors the room_xp bump technique used
    * by useRoomGifts.sendGift / useRoomEventHandlers's gift:received handler).
@@ -169,7 +162,6 @@ export const useRoomStore = defineStore('roomStore', () => {
     refreshCurrentRoom,
     setUserRoom,
     leaveRoom,
-    updateRoomLevel,
     bumpDailyXp,
     updateParticipantCount,
   };

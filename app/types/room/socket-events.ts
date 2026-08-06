@@ -82,17 +82,6 @@ export interface UserProgressionPayload {
 // ========================================
 
 /**
- * room.level_up - Fired when a room levels up.
- */
-export interface RoomLevelUpPayload {
-  room_id: number
-  room_name: string
-  previous_level: number
-  new_level: number
-  current_xp: string
-}
-
-/**
  * room.seat_cap_unlocked - Fired to the room owner only when a room level-up
  * crosses one or more Seat Unlock Ladder entries (highest cap only).
  */
@@ -403,11 +392,9 @@ export interface ServerToClientEvents {
 
   // Achievement
   'badge.earned': (payload: BadgeEarnedPayload) => void
-  'level.up': (payload: UserLevelUpPayload) => void
   'user.progression': (payload: UserProgressionPayload) => void
 
   // Room
-  'room.level_up': (payload: RoomLevelUpPayload) => void
   'room.seat_cap_unlocked': (payload: RoomSeatCapUnlockedPayload) => void
   'room.participant_count': (payload: RoomParticipantCountPayload) => void
   'room.updated': (payload: RoomUpdatedPayload) => void
