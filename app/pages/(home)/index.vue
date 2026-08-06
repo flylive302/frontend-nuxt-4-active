@@ -7,7 +7,6 @@ import { roomBackgroundImageSrc } from '~/utils/imagekit'
 import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
-import type { RoomsResponse } from '~/types/room/room'
 import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 
 const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
@@ -36,6 +35,10 @@ const roomAutoplay = computed(() => {
 
 // ---- Room Logic
 const { fetchRooms } = useRoom()
+// Initial page-1 load goes through the cached BFF route; the infinite-scroll
+// continuation below uses `fetchRooms` (per-user, uncached). See
+// `useHomeRoomsData` for why the two paths differ on purpose.
+const { fetchCachedRooms } = useHomeRoomsData()
 
 // The country chip lives in the browse store, which cookie-persists it (see
 // `stores/homeFeed.ts` for why a cookie and not localStorage).
@@ -70,9 +73,7 @@ const { data: roomsPayload, status: roomsStatus, refresh: refreshRooms } = useAs
     // renders is then derived from this one object, so rows can never belong to
     // a different country than the label they're keyed by.
     const country = selectedCountry.value
-    const params: Record<string, string | number> = { page: 1 }
-    if (country) params.country = country
-    const res = await $fetch<RoomsResponse>('/api/rooms', { params })
+    const res = await fetchCachedRooms(country)
     return { country, res }
   },
   {
