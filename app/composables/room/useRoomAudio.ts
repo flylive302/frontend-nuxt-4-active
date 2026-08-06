@@ -18,6 +18,7 @@ import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { CONNECTION_TIMEOUT_MS, DEFAULT_SEAT_COUNT } from '~/constants/room';
+import { consumeCatchupProducers } from '~/utils/catchup-producers';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { useSilentJoinDetection, type SilentJoinWatchHandle } from './useSilentJoinDetection';
 import { useBroadcastHlsPlayback } from './audio/useBroadcastHlsPlayback';
@@ -728,18 +729,28 @@ export function useRoomAudio(): UseRoomAudioReturn {
       }
     }
 
-    // 3. Consume existing producers (listen to active speakers)
+    // 3. Consume existing producers (listen to active speakers).
+    //
+    // aws-app-affinity/04: bounded-concurrent, NOT serial. Serially this cost
+    // one awaited round trip per speaker, so a large room took proportionally
+    // longer to recover than a small one and — on a degraded link — could
+    // exhaust the ROOM_OP_TIMEOUT_MS backstop before finishing, abandoning the
+    // rejoin entirely. Every reconnect paid it: blip, backgrounded app, socket
+    // drop, PWA resume.
+    //
+    // 🔴 Dedup FIRST. `consumeProducer()` displaces a user's stale consumer via
+    // a read-modify-write on `consumerProducerByKey` spanning two awaits, so
+    // two snapshot entries for the same (user, source) run concurrently would
+    // both skip displacement and leave one speaker audible twice. See
+    // `dedupeCatchupProducers` for the full argument — it is a prerequisite of
+    // the concurrency, not a tidy-up.
     if (response.existingProducers && response.existingProducers.length > 0) {
-      // undefined
-      for (const producer of response.existingProducers) {
-        try {
-          // Compat: a catch-up entry without `source` (pre-feature server) is
-          // treated as `mic`.
-          await consumeProducer(producer.producerId, roomId, producer.userId, producer.source ?? 'mic');
-        } catch (err) {
-          log.warn('Failed to consume producer', err)
-        }
-      }
+      await consumeCatchupProducers(
+        response.existingProducers,
+        roomId,
+        consumeProducer,
+        (err) => log.warn('Failed to consume producer', err),
+      );
     }
 
     // 4. Initialize audio player state from join response

@@ -86,6 +86,29 @@ export const CONNECTION_TIMEOUT_MS = 10_000;
 export const ROOM_OP_TIMEOUT_MS = 30_000;
 
 /**
+ * How many of a join snapshot's existing producers are re-consumed at once
+ * (aws-app-affinity/04).
+ *
+ * The catch-up loop used to be strictly serial, so a rejoin cost
+ * `3 + 2×(N−1)` *sequential* round trips at `SOCKET_TIMEOUT_MS` each, all
+ * inside the `ROOM_OP_TIMEOUT_MS` backstop above. Two producers timing out
+ * back-to-back therefore exhausted the whole budget before a room was half
+ * recovered, and the rejoin was abandoned — on every reconnect, not just
+ * affinity moves.
+ *
+ * Sized against real rooms rather than a round number: seats run
+ * `MIN_SEAT_COUNT`(5) → `MAX_SEAT_COUNT`(30), default `DEFAULT_SEAT_COUNT`(15).
+ * At 4, a full default room recovers in 4 rounds instead of 15, and at most 4
+ * producers can be burning a 10 s timeout at the same time.
+ *
+ * ⚠️ Bounded on purpose — do not raise this to "just do them all". An
+ * unbounded burst on a 30-seat room fires 30 simultaneous socket emits into a
+ * link that is, by definition of a reconnect, already unhealthy; that turns a
+ * slow recovery into a self-inflicted timeout storm.
+ */
+export const ROOM_RECONSUME_CONCURRENCY = 4;
+
+/**
  * How often the active-room marker's heartbeat is refreshed while the user sits
  * in a room. The marker is what lets a reloaded page tell "I was in this room a
  * moment ago" from "I opened this link cold", so it must be recent enough to be
