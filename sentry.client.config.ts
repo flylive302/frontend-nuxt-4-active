@@ -21,6 +21,16 @@ Sentry.init({
 
   sendDefaultPii: false,
 
+  // 🔴 THIS IS THE MASTER TRACE DIAL FOR THE WHOLE STACK, NOT JUST THE BROWSER.
+  // Since observability-audio-quality/12 shipped trace propagation, every API
+  // call carries `sentry-trace` + `baggage`. The Laravel SDK honours an incoming
+  // parent decision and IGNORES its own `traces_sample_rate`
+  // (`sentry/sentry/src/State/Hub.php:387` — a sampled parent returns 1.0; and
+  // at :281 a `baggage` `sentry-sample_rate` wins as `parent:sample_rate`).
+  // ⛔ So lowering `SENTRY_TRACES_SAMPLE_RATE` on the backend does NOT reduce
+  // browser-initiated traces — proven on prod 2026-08-07, where a 0.1 → 0.02
+  // backend change moved backend span volume by zero. Change THIS value.
+  //
   // 🔴 Lowered 0.2 → 0.05 on 2026-08-07 (observability-audio-quality/18).
   // At 0.2 this project alone emitted ~122,000 spans/day against an org-wide
   // reserve of 5,000,000/month shared with the backend — the span reserve was
