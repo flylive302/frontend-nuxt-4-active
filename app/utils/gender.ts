@@ -12,7 +12,10 @@
 export const GenderMap: Record<number, { label: string, icon: string, color: string }> = {
   1: { label: 'Male', icon: 'i-lucide-mars-stroke', color: 'secondary' },
   2: { label: 'Female', icon: 'i-lucide-venus', color: 'primary' },
-  3: { label: 'Non-Binary', icon: 'i-lucide-gender-non-binary', color: 'tertiary' },
+  // `i-lucide-gender-non-binary` does not exist in the lucide set — it 404'd
+  // silently against the remote Iconify API. The real name is `non-binary`,
+  // which the profile wizard already uses.
+  3: { label: 'Non-Binary', icon: 'i-lucide-non-binary', color: 'tertiary' },
   4: { label: 'Not Specified', icon: 'i-lucide-transgender', color: 'neutral' },
 }
 

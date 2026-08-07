@@ -90,6 +90,84 @@ export default defineNuxtConfig({
         // middleware. Pages need no per-route `viewTransition` meta.
         viewTransition: true,
     },
+    // @nuxt/icon comes in via @nuxt/ui. With no collection installed and no
+    // clientBundle config it resolves EVERY icon at runtime from
+    // api.iconify.design — a third party in the render path of every session,
+    // which does not self-heal after a network blip (failed lookups stay
+    // cached for the life of the page). The collections are now installed and
+    // bundled at build time instead.
+    //
+    // ⚠️ `provider: 'none'` is deliberately NOT set. `app/utils/flag-icon.ts`
+    // builds `i-flag-${code}-4x3` from runtime country data (245 codes); the
+    // whole set is 1587KB uncompressed / 416KB brotli in an eagerly imported
+    // chunk, which is not payable on a mobile-first product. Flags therefore
+    // still resolve remotely — tracked in
+    // docs/pending-issues/frontend-offline-resilience/03.
+    icon: {
+        clientBundle: {
+            scan: {
+                // Default globs (@nuxt/icon 2.2.2 module.mjs:666) PLUS ts/js.
+                // Specifying this key replaces the default list, so the
+                // original patterns are repeated here verbatim. Icon names in
+                // this app live in plain TS maps (NOTIFICATION_TYPE_CONFIG,
+                // PROP_TYPE_ICONS, AGENCY_STATUS_CONFIG, the gender map …) —
+                // the stock globs cover only .vue and would leave every one of
+                // those icons resolving over the network.
+                globInclude: ['**/*.{vue,jsx,tsx,md,mdc,mdx,yml,yaml,ts,js}'],
+            },
+            // @nuxt/ui's own default icons live inside node_modules, which the
+            // scan excludes — chevrons, the modal close X, the loading spinner
+            // and the toast icons would all be remote without these.
+            icons: [
+                'lucide:arrow-down',
+                'lucide:arrow-left',
+                'lucide:arrow-right',
+                'lucide:arrow-up',
+                'lucide:arrow-up-right',
+                'lucide:check',
+                'lucide:chevron-down',
+                'lucide:chevron-left',
+                'lucide:chevron-right',
+                'lucide:chevron-up',
+                'lucide:chevrons-left',
+                'lucide:chevrons-right',
+                'lucide:circle-alert',
+                'lucide:circle-check',
+                'lucide:circle-x',
+                'lucide:copy',
+                'lucide:copy-check',
+                'lucide:ellipsis',
+                'lucide:eye',
+                'lucide:eye-off',
+                'lucide:file',
+                'lucide:folder',
+                'lucide:folder-open',
+                'lucide:grip-vertical',
+                'lucide:hash',
+                'lucide:info',
+                'lucide:lightbulb',
+                'lucide:loader-circle',
+                'lucide:menu',
+                'lucide:minus',
+                'lucide:monitor',
+                'lucide:moon',
+                'lucide:panel-left-close',
+                'lucide:panel-left-open',
+                'lucide:plus',
+                'lucide:rotate-ccw',
+                'lucide:search',
+                'lucide:square',
+                'lucide:sun',
+                'lucide:triangle-alert',
+                'lucide:upload',
+                'lucide:x',
+            ],
+            // Build-time tripwire: fails the build if the bundled icon payload
+            // grows past this. Keep it — it is what stops a fat family (flags,
+            // emoji, logos) being added without anyone noticing.
+            sizeLimitKb: 256,
+        },
+    },
     ui: {
         colorMode: false,
         theme: {
