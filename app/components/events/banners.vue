@@ -1,11 +1,20 @@
 <script setup lang="ts">
-defineOptions({ name: 'EventBanners' })
+// `inheritAttrs: false` because this renders two roots (carousel + password
+// modal) — matching `components/room/card.vue`.
+defineOptions({ name: 'EventBanners', inheritAttrs: false })
 
 const { banners } = useEventBanners()
+
+// A banner may point at a room, which cannot be reached by a plain link — see
+// useBannerActions. The prompt modal is mounted once, outside the carousel slot,
+// so a password-protected room banner isn't a silent no-op.
+const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
+const { openBanner, opening } = useBannerActions(enterRoom)
 </script>
 
 <template>
   <UCarousel
+      v-bind="$attrs"
       :autoplay="true"
       :items="banners"
       class-names
@@ -14,7 +23,16 @@ const { banners } = useEventBanners()
       }"
   >
     <template #default="{ item }">
-      <NuxtLink :to="item.navigateTo">
+      <!-- `custom` is load-bearing: it stops RouterLink attaching its own click
+           handler, which would otherwise navigate before openBanner can
+           intercept a room destination. See useBannerActions. -->
+      <NuxtLink v-slot="{ href, navigate }" :to="item.navigateTo" custom>
+      <a
+          :href="href"
+          :aria-busy="opening"
+          class="block"
+          @click="openBanner(item.navigateTo, $event, navigate)"
+      >
       <!-- Decorative banner background -->
       <img
           :src="item.banner"
@@ -23,6 +41,7 @@ const { banners } = useEventBanners()
           width="360"
           height="120"
           class="h-full w-full rounded-lg"
+          :class="opening && 'opacity-60'"
       >
 
       <!--    <NuxtLink class="relative bg-info" to="/recharge">-->
@@ -94,9 +113,18 @@ const { banners } = useEventBanners()
       <!--        </figure>-->
       <!--      </main>-->
       <!--    </NuxtLink>-->
+      </a>
       </NuxtLink>
     </template>
   </UCarousel>
+
+  <!-- Password Prompt Modal (for banners pointing at a password-protected room) -->
+  <RoomPasswordPromptModal
+      v-if="showPasswordPrompt && pendingRoom"
+      v-model:open="showPasswordPrompt"
+      :room="pendingRoom"
+      @success="onPasswordSuccess"
+  />
 </template>
 
 <style scoped>
