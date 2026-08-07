@@ -21,8 +21,19 @@ Sentry.init({
 
   sendDefaultPii: false,
 
-  // 20% of transactions — adjust per environment as traffic grows
-  tracesSampleRate: 0.2,
+  // 🔴 Lowered 0.2 → 0.05 on 2026-08-07 (observability-audio-quality/18).
+  // At 0.2 this project alone emitted ~122,000 spans/day against an org-wide
+  // reserve of 5,000,000/month shared with the backend — the span reserve was
+  // exhausted mid-period and every further span billed to the on-demand budget,
+  // which then ran out and took ERROR ingestion down with it. Spans and errors
+  // meter separately but draw on the same budget, so over-tracing is what
+  // silently buys the blackout.
+  //
+  // ⚠️ This value is baked at build time (`ssr: false`), so changing it costs an
+  // OTA — it is not a runtime dial. Raise it only against the current usage in
+  // `GET /api/0/customers/flylive/` (`categories.spans.reserved` vs `.usage`),
+  // never on feel.
+  tracesSampleRate: 0.05,
 
   // observability-audio-quality/12: `tracesSampleRate` alone produced traces
   // that STOPPED AT THE BROWSER. `browserTracingIntegration` is auto-added by
