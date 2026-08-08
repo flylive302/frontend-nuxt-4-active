@@ -9,6 +9,14 @@ const route = useRoute()
 // /forgot-password/.
 const isAuthRoute = computed(() => /^\/(log-in|sign-up|forgot-password)(\/|$)/.test(route.path))
 
+// `/offline` is a standalone screen (`layout: false`) reached on a native cold
+// boot with NO network — ADR 0026. GlobalShell must not mount over it: it owns
+// `SystemDownloadScreen`, a `fixed inset-0` overlay, and with no network the
+// asset sweep is exactly what would open that gate — putting the stuck
+// "Preparing… 64/245" overlay on top of the screen that exists to explain the
+// outage. The room lifecycle has nothing to do there either.
+const isOfflineRoute = computed(() => route.path === '/offline')
+
 // Preconnect to image CDN + R2 only on routes that actually fetch from them.
 // Auth routes have no images from these origins; emitting the preconnect there
 // burned TLS handshake budget for no gain (Lighthouse: "unused preconnect").
@@ -41,6 +49,12 @@ const { maintenanceMode } = useRuntimeConfig().public
       <NuxtPage />
     </NuxtLayout>
 
-    <GlobalShell v-if="!isAuthRoute && !maintenanceMode" />
+    <GlobalShell v-if="!isAuthRoute && !isOfflineRoute && !maintenanceMode" />
+
+    <!-- Mounted here rather than inside GlobalShell (ADR 0026): losing signal on
+         /log-in or /sign-up must say so too, and GlobalShell is deliberately
+         skipped on auth routes. Non-blocking, so it costs those routes nothing
+         when online. -->
+    <SystemOfflineBanner v-if="!maintenanceMode" />
   </UApp>
 </template>

@@ -120,7 +120,7 @@ function handleRoomClick(): void {
         <UIcon name="i-lucide-lock" class="size-4 text-white drop-shadow-lg" />
       </div>
 
-      <UIcon :name="getFlagIcon(props.room.country)" class="size-6 rounded-md drop-shadow-lg" />
+      <CountryFlag :code="props.room.country" class="size-6 rounded-md drop-shadow-lg" />
 
       <div class="w-fit flex items-center justify-end gap-2 backdrop-blur-2xl rounded rounded-tr-2xl px-2 border border-primary/10 shadow-md">
         <img :src="ASSETS.COIN_ICON" class="size-5" alt="room xp indicator">

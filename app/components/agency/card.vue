@@ -31,8 +31,6 @@ const props = withDefaults(defineProps<{
 
 const statusConfig = computed(() => AGENCY_STATUS_CONFIG[props.status])
 
-const flagIcon = computed(() => getFlagIcon(props.countryCode))
-
 const avatarSrc = computed(() =>
   // Helper no-ops on the Dicebear fallback (not an ImageKit host), so wrapping the whole
   // expression is safe and keeps the agency logo from being served at full resolution.
@@ -77,7 +75,7 @@ const isApproved = computed(() => props.status === 'approved')
     <div class="p-2 bg-gradient-to-br from-transparent to-primary/40">
       <h2 class="text-base font-bold truncate">{{ name }}</h2>
       <div class="flex justify-between items-center mt-1">
-        <icon :name="flagIcon" class="size-8 rounded overflow-hidden h-6 shadow-md shadow-primary/50" />
+        <CountryFlag :code="props.countryCode" class="size-8 rounded overflow-hidden h-6 shadow-md shadow-primary/50" />
         <p class="text-2xl font-bold flex gap-2 leading-none items-center">
           <icon class="size-6" name="i-lucide-users" />
           {{ members }}

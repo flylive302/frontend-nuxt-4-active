@@ -204,10 +204,10 @@ async function handleDemote() {
               >
                 {{ getAge(participant.date_of_birth) }}
               </UBadge>
-              <UIcon 
+              <CountryFlag
                 v-if="participant.country"
-                :name="getFlagIcon(participant.country)"
-                class="rounded overflow-hidden h-6 size-8 shadow-lg" 
+                :code="participant.country"
+                class="rounded overflow-hidden h-6 size-8 shadow-lg"
               />
             </div>
 

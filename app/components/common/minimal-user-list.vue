@@ -88,8 +88,8 @@ function handleAvatarClick() {
               :delay="marqueeDelay"
           />
           <img v-if="user.vip_level" :src="withImageKitTransform(vipBadgeUIImg(user.vip_level), { w: 72 })" class="w-9" alt="" >
-          <UIcon
-              :name="getFlagIcon(user.country)"
+          <CountryFlag
+              :code="user.country"
               class="rounded overflow-hidden h-5 size-6 shadow-lg"
           />
           <UBadge

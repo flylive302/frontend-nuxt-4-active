@@ -96,14 +96,27 @@ export default defineNuxtConfig({
     // which does not self-heal after a network blip (failed lookups stay
     // cached for the life of the page). The collections are now installed and
     // bundled at build time instead.
-    //
-    // ⚠️ `provider: 'none'` is deliberately NOT set. `app/utils/flag-icon.ts`
-    // builds `i-flag-${code}-4x3` from runtime country data (245 codes); the
-    // whole set is 1587KB uncompressed / 416KB brotli in an eagerly imported
-    // chunk, which is not payable on a mobile-first product. Flags therefore
-    // still resolve remotely — tracked in
-    // docs/pending-issues/frontend-offline-resilience/03.
     icon: {
+        // ⛔ NOTHING may resolve over the network (ADR 0027). 'none' swaps the
+        // Iconify fetch for a stub returning an empty Response
+        // (@nuxt/icon runtime/plugin.js:16), so an unbundled icon can no longer
+        // quietly resolve at runtime. Paired with `clientBundle.scan` below —
+        // which THROWS at build on a scanned name that resolves to no icon
+        // (module.mjs:616) — a dead name like `i-lucide-gender-non-binary`
+        // (absent from lucide, and shipped for months) now fails the build.
+        //
+        // This became settable once country flags stopped being icons. They are
+        // now static files under `public/flags/` behind `<CountryFlag>` (see
+        // `app/utils/flag-icon.ts` + `scripts/generate-flags.mjs`): the names
+        // were built at runtime from 245 country codes, so no scan could find
+        // them, and bundling the set costs 416KB brotli in an EAGERLY imported
+        // chunk — paid by every session on a mobile-first product.
+        provider: 'none',
+        // ⚠️ `api.iconify.design` still appears as a STRING in the output, in
+        // the app-config constant and in @iconify/vue's built-in resource list.
+        // It is not a request path: `provider: 'none'` stubs the fetch itself.
+        // ⛔ Do not "fix" it with `serverBundle: false` — that was tried, and
+        // the string survives it (it does not come from the server bundle).
         clientBundle: {
             scan: {
                 // Default globs (@nuxt/icon 2.2.2 module.mjs:666) PLUS ts/js.

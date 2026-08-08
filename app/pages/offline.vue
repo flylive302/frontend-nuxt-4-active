@@ -4,6 +4,15 @@ import { ASSETS } from '~/constants/assets'
 // Offline Page
 // ========================================
 
+// ⚠️ Reached on ONE path only (ADR 0026): a NATIVE cold boot with no network,
+// routed here by `plugins/connectivity.client.ts`. A mid-session drop shows the
+// non-blocking banner instead — a takeover would eject a user from a live audio
+// room over a four-second blip.
+//
+// On web this page is effectively unreachable and that is correct: ADR 0020
+// removed the service worker, so a web cold boot with no network never runs our
+// code at all. ⛔ Do not "fix" that by redirecting here on the `offline` event.
+
 definePageMeta({
   layout: false,
 })
@@ -13,7 +22,9 @@ definePageMeta({
 // ========================================
 
 const isRetrying = ref(false)
+const { retryNow } = useConnectivityMonitor()
 const { probeHealth } = useConnectivityProbe()
+const connectivity = useConnectivityStore()
 
 // ========================================
 // Actions
@@ -22,7 +33,12 @@ const { probeHealth } = useConnectivityProbe()
 async function handleRetry(): Promise<void> {
   isRetrying.value = true
 
-  const ok = await probeHealth()
+  // Route through the monitor when it already owns the offline state, so
+  // recovery clears the banner and bumps `restoredAt` (which the home feed
+  // watches) instead of leaving stale state behind. `probeHealth` alone covers
+  // the case where this page was reached without the store ever flipping.
+  const ok = connectivity.isOffline ? await retryNow() : await probeHealth()
+
   if (ok) {
     navigateTo('/')
   } else {

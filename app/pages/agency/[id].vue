@@ -153,7 +153,7 @@ onMounted(async () => {
               <div class="flex items-center gap-2">
                 <!-- Country -->
                 <div class="flex items-center gap-2">
-                  <icon :name="getFlagIcon(agency.country)" class="size-6 rounded" />
+                  <CountryFlag :code="agency.country" class="size-6 rounded" />
                   <span class="text-white font-semibold">{{ agency.country }}</span>
                 </div>
 

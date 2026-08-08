@@ -96,6 +96,20 @@ const { data: roomsPayload, status: roomsStatus, refresh: refreshRooms } = useAs
   }
 )
 
+// ADR 0026 — the one real subscriber to the connectivity-restored signal.
+// Without it, the banner clears and the feed stays on whatever it managed to
+// load through a dead network ("No results yet."), which is the failure the
+// offline work exists to remove. A refresh, never a reload: a user with a
+// minimized room keeps it.
+const connectivity = useConnectivityStore()
+watch(
+  () => connectivity.restoredAt,
+  (restoredAt) => {
+    if (!restoredAt) return
+    void refreshRooms()
+  },
+)
+
 /** Country the rooms currently on screen were fetched for; `null` until a payload exists. */
 const loadedCountry = computed(() => roomsPayload.value?.country ?? null)
 const isCountrySettling = computed(() =>

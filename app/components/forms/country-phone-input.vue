@@ -54,8 +54,6 @@ const phonePlaceholder = computed(() => {
   return selectedCountry.value?.name ? `Enter your ${selectedCountry.value.name} number` : 'Phone number'
 })
 
-const getFlagIconName = getFlagIcon
-
 function focusPhoneInput(): void {
   if (!import.meta.client) return
   requestAnimationFrame(() => {
@@ -172,18 +170,18 @@ onMounted(async () => {
         @update:model-value="onCountryChange"
       >
         <template #leading>
-          <UIcon
+          <CountryFlag
             v-if="selectedCountry?.code"
-            :name="getFlagIconName(selectedCountry.code)"
+            :code="selectedCountry.code"
             class="size-5 rounded overflow-hidden h-4"
           />
           <UIcon v-else :name="DEFAULT_FLAG_ICON" />
         </template>
 
         <template #item-leading="{ item }">
-          <UIcon
+          <CountryFlag
             v-if="(item as Country)?.code"
-            :name="getFlagIconName((item as Country).code)"
+            :code="(item as Country).code"
             class="size-5 rounded overflow-hidden h-4"
           />
         </template>

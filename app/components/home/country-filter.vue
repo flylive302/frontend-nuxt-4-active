@@ -36,7 +36,7 @@ v-for="country in activeCountries" :key="country"
         :class="modelValue === country ? 'border-b border-primary bg-primary/20 px-1' : ''"
         @click="emit('update:modelValue', country)"
       >
-        <UIcon :name="getFlagIcon(country)" class="size-7 rounded-lg overflow-hidden" />
+        <CountryFlag :code="country" class="size-7 rounded-lg overflow-hidden" />
         {{ country.toUpperCase() }}
       </button>
     </div>

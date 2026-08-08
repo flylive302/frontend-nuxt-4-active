@@ -120,8 +120,8 @@ const charmLevel = computed(() =>
           <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
         </div>
         <div class="flex items-center mt-1 ml-2">
-          <UIcon
-              :name="getFlagIcon(participant?.country)"
+          <CountryFlag
+              :code="participant?.country"
               class="rounded overflow-hidden h-5 size-6 shadow-lg"
           />
           <img

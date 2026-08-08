@@ -22,6 +22,45 @@ type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 let _client: ReturnType<typeof ofetch.create> | null = null
 let _baseURL: string | undefined = undefined
 
+// ========================================
+// Connectivity Reporting (ADR 0026)
+// ========================================
+
+/**
+ * True when a request failed at the TRANSPORT layer — nothing came back at all.
+ *
+ * ⛔ An HTTP error response (4xx/5xx) is NOT this: the network delivered it, so
+ * treating it as an outage would put the offline banner up during a backend
+ * incident, which is a different message.
+ *
+ * `AbortError` is excluded too — a component unmounting mid-request cancels it,
+ * and that says nothing about the network.
+ */
+function isNetworkLevelFailure(error: unknown): boolean {
+  const e = error as { name?: string; response?: { status?: number } } | undefined
+  if (!e) return false
+  if (e.name === 'AbortError') return false
+  return e.response?.status === undefined
+}
+
+/**
+ * Feed one request outcome to the connectivity store.
+ *
+ * ⚠️ Talks to the STORE deliberately, not to `useConnectivityMonitor`: that
+ * composable depends on `useConnectivityProbe`, which depends on this file. The
+ * monitor watches the store's threshold instead, so the cycle never closes.
+ */
+function reportConnectivity(failed: boolean): void {
+  try {
+    const store = useConnectivityStore()
+    if (failed) store.recordFailure()
+    else store.resetFailures()
+  } catch {
+    // No active Pinia (early boot, or a unit test importing this in isolation).
+    // Connectivity reporting is diagnostics — it must never break a request.
+  }
+}
+
 function getClient(baseURL: string | undefined) {
   // Recreate client only if baseURL changed (shouldn't happen in practice)
   if (_client && _baseURL === baseURL) {
@@ -139,8 +178,21 @@ export function useApi() {
     const tryOnce = () => client<T>(url, options)
 
     try {
-      return await tryOnce()
+      const result = await tryOnce()
+      reportConnectivity(false)
+      return result
     } catch (err: unknown) {
+      // ADR 0026 — the SECOND path into the offline banner. The `offline` event
+      // reports LINK status and stays `true` on a captive portal or on wifi
+      // with no upstream, which is exactly when the app rendered "No results
+      // yet." on a dead network. A real request failing at the transport layer
+      // is the signal that actually notices.
+      //
+      // ⚠️ Reports to the STORE, never to `useConnectivityMonitor` — that
+      // composable uses `useConnectivityProbe`, which uses this file, and the
+      // import cycle would be closed here.
+      reportConnectivity(isNetworkLevelFailure(err))
+
       // Only retry for idempotent methods on network/5xx
       if (!isIdempotent(method)) {
         throw err
@@ -151,7 +203,14 @@ export function useApi() {
       const status = (err as any)?.response?.status as number | undefined
 
       if (!status || status >= 500) {
-        return await tryOnce()
+        try {
+          const retried = await tryOnce()
+          reportConnectivity(false)
+          return retried
+        } catch (retryErr: unknown) {
+          reportConnectivity(isNetworkLevelFailure(retryErr))
+          throw retryErr
+        }
       }
       throw err
     }

@@ -26,8 +26,6 @@ const { countries, loading, ensureLoaded, detectIfAllowed } = useCountries()
 
 const selected = ref<Country | undefined>(undefined)
 
-const getFlagIconName = getFlagIcon
-
 function syncFromModel(): void {
   if (!model.value || selected.value?.code === model.value) return
   selected.value = countries.value.find(c => c.code === model.value)
@@ -70,18 +68,18 @@ onMounted(async () => {
       @update:model-value="onChange"
     >
       <template #leading>
-        <UIcon
+        <CountryFlag
           v-if="selected?.code"
-          :name="getFlagIconName(selected.code)"
+          :code="selected.code"
           class="size-5 rounded overflow-hidden h-4"
         />
         <UIcon v-else :name="DEFAULT_FLAG_ICON" />
       </template>
 
       <template #item-leading="{ item }">
-        <UIcon
+        <CountryFlag
           v-if="(item as Country)?.code"
-          :name="getFlagIconName((item as Country).code)"
+          :code="(item as Country).code"
           class="size-5 rounded overflow-hidden h-4"
         />
       </template>

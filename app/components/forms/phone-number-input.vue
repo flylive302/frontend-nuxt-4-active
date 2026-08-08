@@ -28,8 +28,6 @@ const { countries, loading, ensureLoaded, detectIfAllowed } = useCountries()
 const dialCountry = ref<Country | undefined>(undefined)
 const national = ref('')
 
-const getFlagIconName = getFlagIcon
-
 function emitModel(): void {
   const dial = dialCountry.value?.dial_code ?? ''
   model.value = dial && national.value ? `${dial}${national.value}` : ''
@@ -120,9 +118,9 @@ onMounted(async () => {
         @update:model-value="onDialChange"
       >
         <template #leading>
-          <UIcon
+          <CountryFlag
             v-if="dialCountry?.code"
-            :name="getFlagIconName(dialCountry.code)"
+            :code="dialCountry.code"
             class="size-5 rounded overflow-hidden h-4"
           />
           <UIcon v-else name="i-lucide-phone" />
@@ -134,9 +132,9 @@ onMounted(async () => {
         </template>
 
         <template #item-leading="{ item }">
-          <UIcon
+          <CountryFlag
             v-if="(item as Country)?.code"
-            :name="getFlagIconName((item as Country).code)"
+            :code="(item as Country).code"
             class="size-5 rounded overflow-hidden h-4"
           />
         </template>

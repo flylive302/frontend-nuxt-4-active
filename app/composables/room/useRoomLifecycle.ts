@@ -54,6 +54,13 @@ let rebuildRetryAttempt = 0;
 let transportRebuildAttempt = 0;
 let lastTransportExhaustionAt = 0;
 
+/**
+ * A reconnect affordance that was suppressed because the whole device was
+ * offline (ADR 0026). Re-raised when connectivity returns and audio is still
+ * down, so suppression never turns into a silent dead end.
+ */
+let pendingReconnectAffordance = false;
+
 // ============================================
 // Composable
 // ============================================
@@ -71,6 +78,22 @@ export function useRoomLifecycle(): void {
   const { connect: connectSocket, disconnect: disconnectSocket, onReconnect, onReconnectFailed } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
+  const connectivityStore = useConnectivityStore();
+
+  // REACT (ADR 0026) — connectivity came back. If a reconnect affordance was
+  // suppressed while the device was offline and audio has NOT healed on its
+  // own, raise it now: the user is back online and the button can work.
+  watch(
+    () => connectivityStore.restoredAt,
+    () => {
+      if (!pendingReconnectAffordance) return;
+      if (!roomStore.currentRoom) {
+        pendingReconnectAffordance = false;
+        return;
+      }
+      showReconnectAffordance();
+    },
+  );
 
   // NOTE (realtime-22): a reconnect re-joins via joinRoom, which now re-produces
   // our mic if MSAB held our seat through the grace window (the snapshot still
@@ -97,6 +120,8 @@ export function useRoomLifecycle(): void {
       // Audio is back — clear any lingering reconnect-failed banner and stop
       // any pending auto-retry.
       toast.remove(RECONNECT_FAILED_TOAST_ID);
+      // Audio healed, so a suppressed affordance is no longer owed (ADR 0026).
+      pendingReconnectAffordance = false;
       cancelRebuildRetry();
       return true;
     } catch (err) {
@@ -122,6 +147,17 @@ export function useRoomLifecycle(): void {
    * rebuild dismisses it (attemptRoomReconnect / re-join both remove it by id).
    */
   function showReconnectAffordance(): void {
+    // GATE (ADR 0026) — with no network at all, "Tap reconnect to restore
+    // audio" is a false affordance: the rebuild cannot succeed. The global
+    // offline banner is already stating the real cause, and one cause should
+    // produce one message. Deferred, not dropped — the watcher below re-raises
+    // it once connectivity returns and audio is still down.
+    if (connectivityStore.isOffline) {
+      pendingReconnectAffordance = true;
+      return;
+    }
+
+    pendingReconnectAffordance = false;
     toast.add({
       id: RECONNECT_FAILED_TOAST_ID,
       title: 'Audio disconnected',
@@ -299,6 +335,8 @@ export function useRoomLifecycle(): void {
       // self-healed and rejoined in the background, dismiss it — otherwise the
       // user could tap "Reconnect" and tear down the now-working connection.
       toast.remove(RECONNECT_FAILED_TOAST_ID);
+      // Audio healed, so a suppressed affordance is no longer owed (ADR 0026).
+      pendingReconnectAffordance = false;
     } catch (error) {
       log.warn('Failed to re-join room after socket reconnect', error);
       scheduleRebuildRetry(roomId);

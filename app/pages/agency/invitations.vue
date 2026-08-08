@@ -139,7 +139,7 @@ onMounted(() => {
               <div class="">
                 <h3 class="font-semibold truncate">{{ invitation.agency?.name }}</h3>
                 <div class="flex items-center gap-2 text-sm">
-                  <icon :name="getFlagIcon(invitation.agency?.country)" class="size-6 h-5 rounded shadow-md" />
+                  <CountryFlag :code="invitation.agency?.country" class="size-6 h-5 rounded shadow-md" />
                   <span>{{ invitation.agency?.country }}</span>
                   <!-- Expiry -->
                   <UBadge

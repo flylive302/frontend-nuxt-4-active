@@ -186,7 +186,7 @@ function handleConfirm() {
                 <UBadge color="secondary" :icon="getGenderInfo(selectedUser.gender).icon" size="sm" class="w-fit text-white p-1">
                   {{ getAge(selectedUser.date_of_birth) }}
                 </UBadge>
-                <UIcon :name="getFlagIcon(selectedUser.country)" class="rounded overflow-hidden h-6 size-8 shadow-lg"/>
+                <CountryFlag :code="selectedUser.country" class="rounded overflow-hidden h-6 size-8 shadow-lg"/>
               </div>
 
             </div>
