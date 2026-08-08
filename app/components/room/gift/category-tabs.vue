@@ -9,10 +9,17 @@ import type { GiftCategoryGroup } from '~/types/gift/gift';
 defineProps<{
   categories: GiftCategoryGroup[];
 }>();
+
+/**
+ * Active tab (UTabs index string, e.g. "0"). Optional two-way binding so the
+ * drawer can programmatically open a category (lucky-combo reopen flow).
+ */
+const active = defineModel<string>('active');
 </script>
 
 <template>
   <UTabs
+    v-model="active"
     color="primary"
     variant="link"
     size="sm"

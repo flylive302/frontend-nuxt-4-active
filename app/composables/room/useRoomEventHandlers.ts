@@ -28,7 +28,7 @@ import type {
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
-import { setupLuckyEventHandlers, cleanupLuckyEventHandlers } from '../lucky/useLuckyGift';
+import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { propToEntryAnimationGift } from '~/utils/prop';
@@ -664,6 +664,20 @@ export function setupRoomEventHandlers(
 
     if (gift) {
       if (gift.category === 'lucky') {
+        // Sender activity band tap (lucky-animation-ux epic) — burst shape
+        // only, so the N legacy singular siblings of the same batch never
+        // double-count the xN counter (same gate as the chat synthesis above).
+        if (event.recipientIds) {
+          recordLuckyGiftTap({
+            senderId: event.senderId,
+            senderName: sender?.name ?? 'Someone',
+            senderAvatar: sender?.avatar ?? null,
+            giftName: gift.label ?? gift.name,
+            recipientIds: event.recipientIds,
+            quantity: event.quantity,
+          });
+        }
+
         // Only un-seen legs fly — the burst-shaped event and its legacy
         // singular siblings describe the same legs.
         for (const recipientId of newLegs) {

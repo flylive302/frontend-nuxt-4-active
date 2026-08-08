@@ -38,6 +38,7 @@ function synthesizeLuckyWinChatMessage(lucky: SlideLuckyWinBlock): void {
     content: `${lucky.winnerName} got a Lucky win of ${formatLuckyMultiplier(lucky.multiplier)}x — won ${lucky.coinsWon.toLocaleString('en-US')} coins`,
     type: CHAT_MESSAGE_TYPE_LUCKY_WIN,
     timestamp: Date.now(),
+    luckyWin: { multiplier: lucky.multiplier, coinsWon: lucky.coinsWon },
   }
   audioStore.addMessage(message)
 }

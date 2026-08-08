@@ -99,40 +99,110 @@ describe('useLuckyGift — no-draw notices + bust duration', () => {
     fireNoDraw('capped')
     expect(store.floatingMultipliers).toHaveLength(1)
 
-    // Room leave → rejoin: the same reason may surface once again.
+    // Room leave → rejoin: cleanup resets ALL lucky visual state (floaters
+    // included), and the same reason may surface once again.
     cleanupLuckyEventHandlers(socket as never)
+    expect(store.floatingMultipliers).toHaveLength(0)
     setupLuckyEventHandlers(socket as never)
 
     fireNoDraw('capped')
-    expect(store.floatingMultipliers).toHaveLength(2)
+    expect(store.floatingMultipliers).toHaveLength(1)
   })
 
-  it('renders no floater at all for a ×0 bust, only for the win', () => {
-    fireResult(0) // bust — silent by design (no SVGA authored for ×0)
-    fireResult(2) // win
+  it('renders no center cashback for a ×0 bust, only for the win', () => {
+    fireResult(0) // bust — silent by design
+    expect(store.centerCashback).toBeNull()
 
-    expect(store.floatingMultipliers).toHaveLength(1)
-    const only = store.floatingMultipliers[0]
-    expect(only?.kind).toBe('multiplier')
-    expect(only?.kind === 'multiplier' && only.multiplier).toBe(2)
+    fireResult(2) // win → the single center cashback visual
+    expect(store.centerCashback?.multiplier).toBe(2)
+    expect(store.centerCashback?.coinsWon).toBe(200)
+    expect(store.floatingMultipliers).toHaveLength(0) // wins never float now
+  })
 
-    // Just before the win duration it remains.
-    vi.advanceTimersByTime(2499)
+  it('keeps a notice floater visible for its full 3500ms duration', () => {
+    fireNoDraw('capped')
+
+    vi.advanceTimersByTime(3499)
     expect(store.floatingMultipliers).toHaveLength(1)
 
     vi.advanceTimersByTime(1)
     expect(store.floatingMultipliers).toHaveLength(0)
   })
+})
 
-  it('gives a notice floater a longer visible duration than a win floater', () => {
-    fireNoDraw('capped')
+describe('useLuckyGift — center cashback state (lucky-animation-ux)', () => {
+  let socket: ReturnType<typeof createMockSocket>
 
-    // Still visible after the win/bust duration (2500ms) elapses.
-    vi.advanceTimersByTime(2500)
-    expect(store.floatingMultipliers).toHaveLength(1)
+  beforeEach(() => {
+    vi.useFakeTimers()
+    store.$reset()
+    socket = createMockSocket()
+    cleanupLuckyEventHandlers(socket as never)
+    setupLuckyEventHandlers(socket as never)
+  })
 
-    // Gone by its own longer notice duration (3500ms).
-    vi.advanceTimersByTime(1000)
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  function fireResult(multiplier: number, coins = Math.round(multiplier * 100)): void {
+    socket.handlers.get('lucky:result')!({
+      multiplier,
+      coins_won: coins,
+      tier_name: 'T',
+      gift_name: 'G',
+    })
+  }
+
+  it('rapid wins overwrite the single visual — never a queue', () => {
+    fireResult(5)
+    fireResult(5, 700)
+    fireResult(10)
+
+    expect(store.centerCashback?.tier).toBe(10)
+    expect(store.centerCashback?.phase).toBe('visible')
     expect(store.floatingMultipliers).toHaveLength(0)
+  })
+
+  it('a lower tier during a visible higher one renews the timer but keeps the visual', () => {
+    fireResult(10)
+    fireResult(2)
+
+    expect(store.centerCashback?.tier).toBe(10)
+    expect(store.centerCashback?.coinsWon).toBe(1000) // NOT accumulated
+
+    // Timer was renewed by the ×2 win: still visible past the original window.
+    vi.advanceTimersByTime(4999)
+    expect(store.centerCashback?.phase).toBe('visible')
+  })
+
+  it('fades after the visible duration, then clears after the fade duration', () => {
+    fireResult(5)
+
+    vi.advanceTimersByTime(5000)
+    expect(store.centerCashback?.phase).toBe('fading')
+
+    vi.advanceTimersByTime(3000)
+    expect(store.centerCashback).toBeNull()
+  })
+
+  it('a new win during the fade interrupts it and restores full visibility', () => {
+    fireResult(5)
+    vi.advanceTimersByTime(5000)
+    expect(store.centerCashback?.phase).toBe('fading')
+
+    fireResult(2) // lower tier, but the fade is interruptible by ANY win
+    expect(store.centerCashback?.phase).toBe('visible')
+    expect(store.centerCashback?.tier).toBe(2)
+  })
+
+  it('room leave cleanup cancels pending timers and clears the visual', () => {
+    fireResult(5)
+    cleanupLuckyEventHandlers(socket as never)
+
+    expect(store.centerCashback).toBeNull()
+    vi.advanceTimersByTime(10_000) // orphaned timers must not resurrect state
+    expect(store.centerCashback).toBeNull()
   })
 })

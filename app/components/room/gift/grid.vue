@@ -24,6 +24,7 @@ const emit = defineEmits<{
     <RoomGiftCard
       v-for="gift in gifts"
       :key="gift.id"
+      :data-gift-id="gift.id"
       :gift="gift"
       :selected="selectedGiftId === gift.id"
       :readiness="selectedGiftId === gift.id ? selectedGiftReadiness : undefined"

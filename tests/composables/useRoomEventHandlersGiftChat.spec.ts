@@ -26,6 +26,7 @@ vi.stubGlobal('piniaPluginPersistedstate', {
 vi.mock('../../app/composables/lucky/useLuckyGift', () => ({
   setupLuckyEventHandlers: vi.fn(),
   cleanupLuckyEventHandlers: vi.fn(),
+  recordLuckyGiftTap: vi.fn(),
 }))
 vi.mock('../../app/composables/lucky/useLuckyFly', () => ({
   useLuckyFly: () => ({ triggerFly: vi.fn() }),

@@ -48,6 +48,27 @@ export interface LuckyNoDrawPayload {
 // flow through the unified slide overlay (`slide:play`). See ADR 0009 and
 // docs/issues/unified-slide-overlay/03-lucky-migration.md.
 
+/**
+ * Payload for `lucky:room-result` — room-scoped win broadcast (every winning
+ * draw, all tiers). Feeds the sender activity bands and the in-room win chat
+ * bubble on every client in the room, including the sender.
+ */
+export interface LuckyRoomResultPayload {
+  sender_id: number;
+  gift_id: number;
+  gift_name: string;
+  multiplier: number;
+  coins_won: number;
+  tier_name: string;
+  room_id: number;
+  /**
+   * True when this win's tier binds a Slide (`slide:play` will follow). The
+   * slide path owns the chat announcement then — the in-room small-win bubble
+   * must not double-announce.
+   */
+  has_slide: boolean;
+}
+
 // ============================================
 // Animation State
 // ============================================
@@ -81,3 +102,53 @@ export interface NoticeFloater extends FloatingFloaterBase {
 
 /** A single floater entry in the queue — win multiplier or no-draw notice */
 export type FloatingMultiplier = MultiplierFloater | NoticeFloater;
+
+// ============================================
+// Center Cashback State (single persistent animation)
+// ============================================
+
+/**
+ * The ONE center cashback visual. Events overwrite this state — there is never
+ * a queue of these. `null` = nothing on screen.
+ */
+export interface CenterCashbackState {
+  /** SVGA tier currently showing (resolved via resolveCashbackTier) */
+  tier: number;
+  /** Multiplier of the latest win shown (display only, per-win, NOT a sum) */
+  multiplier: number;
+  /** Coins of the latest win shown (per-win, NOT a sum — sums live on the band) */
+  coinsWon: number;
+  /** 'visible' → bouncing at full opacity; 'fading' → fade-out in progress */
+  phase: 'visible' | 'fading';
+  /** Bumped on every state overwrite so the component can restart cleanly */
+  revision: number;
+}
+
+// ============================================
+// Sender Activity Band State
+// ============================================
+
+/**
+ * One sender's live Lucky Gift activity, room-scoped. Reused and updated in
+ * place per sender — never one entry per tap/win.
+ */
+export interface LuckySenderBand {
+  senderId: number;
+  senderName: string;
+  /** Avatar image URL only — the band never renders the avatar frame */
+  senderAvatar: string | null;
+  giftName: string;
+  /** Recipient display: one name, or null when sent to multiple users */
+  recipientName: string | null;
+  recipientCount: number;
+  /** Total lucky gifts sent this activity streak (the gold xN) */
+  quantity: number;
+  /** Accumulated coins WON this streak (wins only — losses never shown) */
+  coinsWon: number;
+  /** Visible slot index (0-based, top first), or null while waiting for a slot */
+  slot: number | null;
+  /** 'visible' → active; 'fading' → inactivity fade (revived by new activity) */
+  phase: 'visible' | 'fading';
+  /** Epoch ms of last activity — drives the inactivity timeout */
+  lastActivityAt: number;
+}

@@ -101,8 +101,17 @@ const charmLevel = computed(() =>
 
 <template>
   <div>
-    <!-- Announcement bubble (system/membership, gift-sent, lucky-win): centered, no avatar/identity. -->
-    <div v-if="isAnnouncementMessage" class="flex justify-center py-2">
+    <!-- Lucky-win bubble: static gold multiplier + coins visual. Deliberately
+         NO animation — a busy room produces many of these per minute. -->
+    <div v-if="isLuckyWinMessage && message.luckyWin" class="flex justify-center py-2">
+      <div class="lucky-win-bubble text-xs font-bold px-3 py-1.5 rounded-md text-white flex items-center gap-2">
+        <span class="lucky-win-bubble__multiplier">×{{ message.luckyWin.multiplier }}</span>
+        <span class="min-w-0">{{ message.content }}</span>
+        <span class="lucky-win-bubble__coins shrink-0">+{{ message.luckyWin.coinsWon.toLocaleString('en-US') }}</span>
+      </div>
+    </div>
+    <!-- Announcement bubble (system/membership, gift-sent, legacy lucky-win): centered, no avatar/identity. -->
+    <div v-else-if="isAnnouncementMessage" class="flex justify-center py-2">
       <p :class="announcementClass">{{ message.content }}</p>
     </div>
     <div v-else class="flex py-3">
@@ -154,6 +163,25 @@ const charmLevel = computed(() =>
 </template>
 
 <style scoped>
+/* Lucky-win bubble: static gold styling echoing the cashback artwork.
+   Pure CSS — no SVGA, no animation frames — by design (performance). */
+.lucky-win-bubble {
+  background: radial-gradient(ellipse at center, rgba(120, 53, 15, 0.55), rgba(76, 29, 149, 0.85));
+  box-shadow: inset 0 0 0 1px rgba(253, 224, 71, 0.35);
+}
+.lucky-win-bubble__multiplier {
+  font-size: 1rem;
+  font-weight: 800;
+  background: linear-gradient(180deg, #fef08a, #f59e0b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+.lucky-win-bubble__coins {
+  color: #fde047;
+}
+
 .bubble {
   width: fit-content;
   max-width: 100%;

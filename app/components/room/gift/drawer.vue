@@ -18,6 +18,7 @@ import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";
 import { useGiftReadiness } from "~/composables/gift/useGiftReadiness";
 import { GIFT_QUANTITY_OPTIONS, COMBO_BUTTON_TIMEOUT_MS } from "~/constants/gift";
+import { LUCKY_ANIMATION } from "~/constants/lucky-animation";
 import {computed} from "vue";
 import {computeLevelStatus, type LevelComputedStatus} from "~/utils/levels";
 
@@ -37,6 +38,10 @@ useGiftRecipientSync();
 
 // Track drawer open state
 const isOpen = ref(false);
+
+// Active category tab (UTabs index string) — set programmatically when the
+// drawer reopens after a lucky combo so the lucky tab is already showing.
+const activeCategoryTab = ref<string>('0');
 
 // ========================================
 // Combo Mode State
@@ -99,7 +104,10 @@ function enterComboMode(type: 'normal' | 'lucky') {
 }
 
 /**
- * Exit combo mode — revert to normal send controls
+ * Exit combo mode — revert to normal send controls.
+ *
+ * Lucky combos run as a floating button over a CLOSED drawer, so ending one
+ * reopens the drawer on the lucky tab, scrolled back to the played gift.
  */
 function exitComboMode() {
   const wasLucky = comboType.value === 'lucky';
@@ -109,10 +117,42 @@ function exitComboMode() {
   stopComboProgress();
   if (wasLucky) {
     endLuckyCombo();
+    reopenOnLuckyGift();
   } else {
     // Drop the normal combo context + streak badge once the combo window ends.
     comboStore.clearNormalContext();
     giftStore.resetCombo();
+  }
+}
+
+/**
+ * Whether the lucky combo float is on screen (drawer closed, big button up).
+ * Guards the drawer-close watcher so closing FOR the float doesn't end the
+ * combo it just started.
+ */
+const isLuckyFloatActive = computed(() => isComboMode.value && comboType.value === 'lucky');
+
+/**
+ * Reopen the drawer after a lucky combo ends: lucky tab active, grid scrolled
+ * to the gift that was played.
+ */
+async function reopenOnLuckyGift(): Promise<void> {
+  isOpen.value = true;
+
+  const luckyTabIndex = giftsByCategory.value.findIndex((group) => group.category === 'lucky');
+  if (luckyTabIndex !== -1) {
+    activeCategoryTab.value = String(luckyTabIndex);
+  }
+
+  // Two ticks: one for the drawer content to mount, one for the tab switch to
+  // render its grid — then the played gift can be scrolled into view.
+  await nextTick();
+  await nextTick();
+  const giftId = giftStore.selectedGift?.id;
+  if (giftId !== undefined) {
+    document
+      .querySelector(`[data-gift-id="${giftId}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
   }
 }
 
@@ -164,7 +204,9 @@ watch(isOpen, (open) => {
     selectAllRecipients();
   }
   if (!open) {
-    if (isComboMode.value) {
+    // The lucky combo float closes the drawer ON PURPOSE — the combo keeps
+    // running as the floating button; only a normal combo ends on close.
+    if (isComboMode.value && !isLuckyFloatActive.value) {
       exitComboMode();
     }
     giftStore.clearLockedRecipient();
@@ -289,6 +331,9 @@ async function doLuckySend(): Promise<void> {
   const success = await send()
   if (success) {
     enterComboMode('lucky')
+    // Lucky combos take over as the floating center button — close the drawer
+    // so the cashback + fly animations are unobstructed. Reopens on combo end.
+    isOpen.value = false
   }
 }
 </script>
@@ -300,6 +345,28 @@ async function doLuckySend(): Promise<void> {
     @acknowledged="onOddsAcknowledged"
     @dismissed="onOddsDismissed"
   />
+
+  <!-- Floating lucky combo button: replaces the drawer while a lucky combo
+       runs so the cashback/fly animations play unobstructed. -->
+  <Teleport to="body">
+    <Transition name="lucky-combo-float">
+      <!-- bottom is inline (not CSS v-bind): teleported nodes sit outside this
+           component's subtree, so scoped v-bind custom properties can't reach them -->
+      <div
+        v-if="isLuckyFloatActive"
+        class="lucky-combo-float"
+        :style="{ bottom: `${LUCKY_ANIMATION.comboFloatBottomPct}vh` }"
+      >
+        <button type="button" class="lucky-combo-float__btn" @pointerdown.prevent="handleComboClick">
+          <span class="lucky-combo-float__count">X{{ giftStore.comboCount }}</span>
+          <span class="lucky-combo-float__label">Combo</span>
+        </button>
+        <div class="lucky-combo-float__track">
+          <div class="lucky-combo-float__fill" :style="{ width: (100 - comboProgress) + '%' }" />
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 
   <UDrawer
       v-model:open="isOpen" title="Send Gift" :overlay="false"
@@ -322,7 +389,7 @@ async function doLuckySend(): Promise<void> {
         <RoomGiftRecipientSelector />
 
         <!-- Category Tabs with Gift Grid -->
-        <RoomGiftCategoryTabs :categories="giftsByCategory">
+        <RoomGiftCategoryTabs v-model:active="activeCategoryTab" :categories="giftsByCategory">
           <template #content="{ item }">
             <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id" :selected-gift-readiness="readinessState" @select="handleSelectGift" />
           </template>
@@ -401,6 +468,86 @@ async function doLuckySend(): Promise<void> {
 </template>
 
 <style scoped>
+/* ========================================
+ * Floating Lucky Combo Button
+ * ======================================== */
+.lucky-combo-float {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lucky-combo-float__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 9999px;
+  border: 3px solid rgba(253, 224, 71, 0.85);
+  background: radial-gradient(circle at 30% 25%, #a855f7, #6d28d9 65%, #4c1d95);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(168, 85, 247, 0.5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: combo-pulse 0.3s ease-out;
+}
+
+.lucky-combo-float__btn:active {
+  transform: scale(0.94);
+}
+
+.lucky-combo-float__count {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(180deg, #fef08a, #f59e0b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+
+.lucky-combo-float__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lucky-combo-float__track {
+  width: 72px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.lucky-combo-float__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fde047, #f59e0b);
+  border-radius: 9999px;
+  transition: width 0.1s linear;
+}
+
+.lucky-combo-float-enter-active,
+.lucky-combo-float-leave-active {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease-out;
+}
+
+.lucky-combo-float-enter-from,
+.lucky-combo-float-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.6);
+}
+
 /* ========================================
  * Combo Morph Transition
  * ======================================== */

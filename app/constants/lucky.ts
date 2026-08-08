@@ -29,7 +29,7 @@ export const LUCKY_CASHBACK_LABEL_KEY = 'test-a'
 export const LUCKY_CASHBACK_COINS_KEY = 'test-b'
 
 /** Rendered height of a cashback float, in px. */
-export const LUCKY_CASHBACK_SVGA_HEIGHT_PX = 150
+export const LUCKY_CASHBACK_SVGA_HEIGHT_PX = 170
 
 // ----------------------------------------
 // Cashback text placeholders

@@ -11,6 +11,7 @@ import {
   LUCKY_FLY_DURATION_MS,
   LUCKY_FLY_THUMBNAIL_SIZE,
 } from "~/constants/gift";
+import { LUCKY_ANIMATION } from "~/constants/lucky-animation";
 import { giftThumbnailSrc } from "~/utils/imagekit";
 
 const { flyItems, removeFlyItem } = useLuckyFly();
@@ -35,6 +36,15 @@ function animateFlyItem(el: Element | null, item: LuckyFlyItem): void {
 
   const { startPos, centerPos, endPos } = item;
 
+  // Flight phases keep the original 0/.15/.5/.85/1 pacing over
+  // LUCKY_FLY_DURATION_MS; the configurable center hold is inserted at the
+  // midpoint so the gift visibly pauses before fanning out. Offsets are the
+  // original absolute times re-scaled onto the extended total duration.
+  const hold = LUCKY_ANIMATION.centerHoldDuration;
+  const total = LUCKY_FLY_DURATION_MS + hold;
+  const at = (fraction: number, extra = 0): number =>
+    (fraction * LUCKY_FLY_DURATION_MS + extra) / total;
+
   const keyframes: Keyframe[] = [
     // Phase 1: Appear at sender (invisible, small)
     {
@@ -46,19 +56,25 @@ function animateFlyItem(el: Element | null, item: LuckyFlyItem): void {
     {
       transform: `translate(${startPos.x}px, ${startPos.y}px) scale(1.1)`,
       opacity: 1,
-      offset: 0.15,
+      offset: at(0.15),
     },
-    // Phase 3: Fly to center (largest)
+    // Phase 3: Arrive at center (largest)
     {
       transform: `translate(${centerPos.x}px, ${centerPos.y}px) scale(1.3)`,
       opacity: 1,
-      offset: 0.5,
+      offset: at(0.5),
+    },
+    // Phase 3b: Hold at center (configurable pause before the fan-out)
+    {
+      transform: `translate(${centerPos.x}px, ${centerPos.y}px) scale(1.3)`,
+      opacity: 1,
+      offset: at(0.5, hold),
     },
     // Phase 4: Land at receiver (normal size)
     {
       transform: `translate(${endPos.x}px, ${endPos.y}px) scale(0.9)`,
       opacity: 1,
-      offset: 0.85,
+      offset: at(0.85, hold),
     },
     // Phase 5: Vanish at receiver (small, invisible)
     {
@@ -69,8 +85,8 @@ function animateFlyItem(el: Element | null, item: LuckyFlyItem): void {
   ];
 
   const animation = el.animate(keyframes, {
-    duration: LUCKY_FLY_DURATION_MS,
-    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    duration: total,
+    easing: LUCKY_ANIMATION.flyEasing,
     fill: "forwards",
   });
 

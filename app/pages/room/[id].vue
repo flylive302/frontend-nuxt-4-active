@@ -203,8 +203,12 @@ onUnmounted(() => {
            (drawers, chat, seats) never snap into place on top of it. -->
       <div class="room-content relative z-10 h-full flex flex-col mt-2">
 
-        <!-- Lucky Gift Animations -->
+        <!-- Lucky Gift Animations: no-draw notices, the single center cashback
+             visual, and the room-visible sender activity bands (state-driven —
+             see useLuckyGift / constants/lucky-animation.ts). -->
         <LuckyMultiplierFloat :floaters="floatingMultipliers" />
+        <LuckyCashbackCenter />
+        <LuckySenderBands />
 
         <RoomHeader />
 

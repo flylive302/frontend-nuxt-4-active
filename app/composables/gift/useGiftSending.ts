@@ -6,6 +6,7 @@
  */
 import type { GiftSendAck } from '~/types/room/audio';
 import { announceLocalGiftSend } from '~/composables/room/useRoomEventHandlers';
+import { recordLuckyGiftTap } from '~/composables/lucky/useLuckyGift';
 import { GIFT_FAILURE_TOAST_COOLDOWN_MS, GIFT_SEND_ERROR } from '~/constants/gift';
 
 export function useGiftSending() {
@@ -246,6 +247,17 @@ export function useGiftSending() {
           triggerFly(selectedGift.thumbnail_url, sender.id, recipientId);
         }
 
+        // Sender-local band tap — MSAB excludes the sender from
+        // `gift:received`, so the sender's own activity band updates here.
+        recordLuckyGiftTap({
+          senderId: sender.id,
+          senderName: sender.name ?? 'Unknown',
+          senderAvatar: sender.avatar ?? null,
+          giftName: selectedGift.label ?? selectedGift.name,
+          recipientIds: [...selectedRecipients],
+          quantity: selectedQuantity,
+        });
+
         // Activate lucky combo button
         comboStore.setLuckyContext({
           gift: selectedGift,
@@ -454,6 +466,16 @@ export function useGiftSending() {
     for (const recipientId of validRecipients) {
       triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
     }
+
+    // Sender-local band tap — same reasoning as send()'s lucky branch.
+    recordLuckyGiftTap({
+      senderId: ctx.senderId,
+      senderName: authStore.user?.name ?? 'Unknown',
+      senderAvatar: authStore.user?.avatar ?? null,
+      giftName: ctx.gift.label ?? ctx.gift.name,
+      recipientIds: validRecipients,
+      quantity: ctx.quantity,
+    });
 
     // Increment combo counter
     giftStore.incrementCombo();

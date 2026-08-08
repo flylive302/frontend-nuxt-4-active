@@ -1,13 +1,15 @@
 <script setup lang="ts">
 /**
- * DEV-ONLY lucky cashback float workbench. Renders `LuckyMultiplierFloat` with
- * dummy floaters on a permanent auto-replay loop so the cashback SVGA can be
- * styled without sending real gifts. Dev builds only — 404 in prod.
+ * DEV-ONLY lucky animation workbench (lucky-animation-ux epic). Drives the
+ * REAL state model — center cashback, sender bands, notice pills — through
+ * useLuckySessionStore so every visual can be styled without sending gifts.
+ * Dev builds only — 404 in prod.
  *
  * Route: /dev/lucky-float-preview
  */
 import type { FloatingMultiplier } from '~/types/lucky'
 import { LUCKY_CASHBACK_SVGA_TIERS } from '~/constants/lucky'
+import { resolveCashbackTier } from '~/utils/lucky-cashback'
 
 // ---------- Config ----------
 definePageMeta({ layout: false })
@@ -16,92 +18,97 @@ if (!import.meta.dev) {
   throw createError({ statusCode: 404, statusMessage: 'Not Found', fatal: true })
 }
 
-// ---------- Constants ----------
-const REPLAY_DELAY_MS = 600
-const REPLAY_PERIOD_MS = 3200
-
 // ---------- State ----------
+const store = useLuckySessionStore()
+
 const multiplier = ref<number>(LUCKY_CASHBACK_SVGA_TIERS[1])
 const coinsWon = ref(1770)
 const noticeText = ref('pool capped for today')
 const showNotice = ref(false)
-const autoReplay = ref(true)
 
-const runId = ref(0)
-const visible = ref(true)
-let replayTimer: ReturnType<typeof setTimeout> | null = null
-let loopTimer: ReturnType<typeof setInterval> | null = null
+let revision = 0
 
 // ---------- Derived ----------
-const floaters = computed<FloatingMultiplier[]>(() => {
-  if (!visible.value) return []
-
-  const list: FloatingMultiplier[] = [{
-    id: runId.value,
-    kind: 'multiplier',
-    multiplier: multiplier.value,
-    coinsWon: coinsWon.value,
-    colorClass: 'lucky-float--cashback',
-  }]
-
-  if (showNotice.value) {
-    list.push({
-      id: runId.value + 1,
-      kind: 'notice',
-      text: noticeText.value,
-      colorClass: 'lucky-float--notice',
-    })
-  }
-
-  return list
-})
+const floaters = computed<FloatingMultiplier[]>(() =>
+  showNotice.value
+    ? [{ id: 1, kind: 'notice', text: noticeText.value, colorClass: 'lucky-float--notice' }]
+    : [],
+)
 
 /** ×0 renders nothing by design — surfaced here so the blank screen isn't a bug. */
 const isBust = computed(() => !(multiplier.value > 0))
 
 // ---------- Handlers ----------
-function replay(): void {
-  if (replayTimer) clearTimeout(replayTimer)
-  visible.value = false
-  replayTimer = setTimeout(() => {
-    runId.value += 2
-    visible.value = true
-  }, REPLAY_DELAY_MS)
+function fireWin(): void {
+  const tier = resolveCashbackTier(multiplier.value)
+  if (tier === null) {
+    store.setCenterCashback(null)
+    return
+  }
+  store.setCenterCashback({
+    tier,
+    multiplier: multiplier.value,
+    coinsWon: coinsWon.value,
+    phase: 'visible',
+    revision: ++revision,
+  })
 }
 
-function startLoop(): void {
-  stopLoop()
-  if (!autoReplay.value) return
-  loopTimer = setInterval(replay, REPLAY_PERIOD_MS)
+function fireFade(): void {
+  store.setCenterCashbackPhase('fading')
 }
 
-function stopLoop(): void {
-  if (loopTimer) clearInterval(loopTimer)
-  loopTimer = null
+function fireBandTap(senderId: number): void {
+  const existing = store.senderBands.get(senderId)
+  if (existing) {
+    store.patchBand(senderId, { quantity: existing.quantity + 1, phase: 'visible', lastActivityAt: Date.now() })
+  } else {
+    store.upsertBand({
+      senderId,
+      senderName: `Player ${senderId}`,
+      senderAvatar: null,
+      giftName: 'Lucky Star',
+      recipientName: 'Host',
+      recipientCount: 1,
+      quantity: 1,
+      coinsWon: 0,
+      slot: senderId - 1,
+      phase: 'visible',
+      lastActivityAt: Date.now(),
+    })
+  }
 }
 
-watch([multiplier, coinsWon, noticeText, showNotice], replay)
-watch(autoReplay, startLoop)
+function fireBandWin(senderId: number): void {
+  const existing = store.senderBands.get(senderId)
+  if (existing) {
+    store.patchBand(senderId, { coinsWon: existing.coinsWon + coinsWon.value })
+  }
+}
 
-onMounted(startLoop)
-onBeforeUnmount(() => {
-  stopLoop()
-  if (replayTimer) clearTimeout(replayTimer)
-})
+function resetAll(): void {
+  store.$reset()
+}
+
+watch([multiplier, coinsWon], fireWin)
+
+onBeforeUnmount(resetAll)
 </script>
 
 <template>
   <div class="dev-page">
     <p class="dev-hint">
-      Lucky cashback float workbench (dev only) — edit
-      <code>app/components/lucky/CashbackSvga.vue</code> or
+      Lucky animation workbench (dev only) — edit
+      <code>LuckyCashbackCenter.vue</code>, <code>LuckySenderBands.vue</code> or
       <code>LuckyMultiplierFloat.vue</code> and it hot-reloads here.
       <strong v-if="isBust"> ×0 = bust → nothing renders (by design).</strong>
     </p>
 
-    <!-- Mirrors the room stage: the float container is absolute inside it -->
+    <!-- Mirrors the room stage: containers are absolute inside it -->
     <div class="dev-stage">
       <LuckyMultiplierFloat :floaters="floaters" />
+      <LuckyCashbackCenter />
+      <LuckySenderBands />
     </div>
 
     <div class="dev-panel">
@@ -116,7 +123,14 @@ onBeforeUnmount(() => {
         >
           ×{{ tier }}
         </button>
-        <button class="dev-btn dev-btn--primary" @click="replay">Replay</button>
+        <button class="dev-btn dev-btn--primary" @click="fireWin">Fire win</button>
+        <button class="dev-btn" @click="fireFade">Start fade</button>
+      </div>
+
+      <div class="dev-row">
+        <button v-for="n in 4" :key="n" class="dev-btn" @click="fireBandTap(n)">Band {{ n }} tap</button>
+        <button v-for="n in 4" :key="`w${n}`" class="dev-btn" @click="fireBandWin(n)">Band {{ n }} win</button>
+        <button class="dev-btn" @click="resetAll">Reset</button>
       </div>
 
       <div class="dev-row">
@@ -132,11 +146,7 @@ onBeforeUnmount(() => {
           <span>notice text</span>
           <input v-model="noticeText" type="text">
         </label>
-      </div>
-
-      <div class="dev-row">
-        <label class="dev-check"><input v-model="autoReplay" type="checkbox"> auto-replay</label>
-        <label class="dev-check"><input v-model="showNotice" type="checkbox"> also show notice pill</label>
+        <label class="dev-check"><input v-model="showNotice" type="checkbox"> show notice pill</label>
       </div>
     </div>
   </div>
@@ -162,6 +172,7 @@ onBeforeUnmount(() => {
   margin: 0 16px;
   border: 1px dashed #2c3140;
   background: repeating-linear-gradient(0deg, #1b1e26 0 39px, #232733 39px 40px);
+  overflow: hidden;
 }
 
 .dev-panel {

@@ -336,6 +336,15 @@ export interface ChatMessageEvent {
   content: string;
   type: string;
   timestamp: number;
+  /**
+   * Lucky-win bubbles only (locally synthesized): the raw win values, so the
+   * bubble can render a STATIC gold multiplier + coins visual — never the full
+   * cashback animation (a busy room would run dozens of them).
+   */
+  luckyWin?: {
+    multiplier: number;
+    coinsWon: number;
+  };
 }
 
 // ============================================
