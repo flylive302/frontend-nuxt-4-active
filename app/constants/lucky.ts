@@ -22,7 +22,7 @@ export const LUCKY_DRAW_COPY = {
 export const LUCKY_CASHBACK_SVGA_BASE_URL = 'https://assets.flyliveapp.com/lucky/cashback'
 
 /** Tiers that have an authored .svga file, ascending. */
-export const LUCKY_CASHBACK_SVGA_TIERS = [2, 5, 10, 25, 50, 100, 250, 500, 750, 1000] as const
+export const LUCKY_CASHBACK_SVGA_TIERS = [5, 10, 20, 50, 100, 250, 500, 1000] as const
 
 /** SVGA placeholder keys authored into every cashback file. */
 export const LUCKY_CASHBACK_LABEL_KEY = 'test-a'

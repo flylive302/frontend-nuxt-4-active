@@ -165,14 +165,14 @@ describe('useLuckyGift — center cashback state (lucky-animation-ux)', () => {
     expect(store.floatingMultipliers).toHaveLength(0)
   })
 
-  it('a lower tier during a visible higher one renews the timer but keeps the visual', () => {
+  it('a lower tier during a visible higher one replaces it — most recent wins', () => {
     fireResult(10)
-    fireResult(2)
+    fireResult(5, 500)
 
-    expect(store.centerCashback?.tier).toBe(10)
-    expect(store.centerCashback?.coinsWon).toBe(1000) // NOT accumulated
+    expect(store.centerCashback?.tier).toBe(5)
+    expect(store.centerCashback?.coinsWon).toBe(500) // NOT accumulated
 
-    // Timer was renewed by the ×2 win: still visible past the original window.
+    // Timer was renewed by the newer win: still visible past the original window.
     vi.advanceTimersByTime(4999)
     expect(store.centerCashback?.phase).toBe('visible')
   })
@@ -188,13 +188,13 @@ describe('useLuckyGift — center cashback state (lucky-animation-ux)', () => {
   })
 
   it('a new win during the fade interrupts it and restores full visibility', () => {
-    fireResult(5)
+    fireResult(10)
     vi.advanceTimersByTime(5000)
     expect(store.centerCashback?.phase).toBe('fading')
 
-    fireResult(2) // lower tier, but the fade is interruptible by ANY win
+    fireResult(5) // lower tier, but the fade is interruptible by ANY win
     expect(store.centerCashback?.phase).toBe('visible')
-    expect(store.centerCashback?.tier).toBe(2)
+    expect(store.centerCashback?.tier).toBe(5)
   })
 
   it('room leave cleanup cancels pending timers and clears the visual', () => {

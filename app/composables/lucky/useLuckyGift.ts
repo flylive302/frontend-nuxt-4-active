@@ -135,13 +135,11 @@ function addNoticeFloater(text: string): void {
 // ============================================
 
 /**
- * Overwrite-or-renew the ONE center cashback from a win.
+ * Overwrite the ONE center cashback from a win.
  *
- * Tier precedence (HITL 2026-08-09):
- *   - no visual, fading, same tier, or HIGHER tier → overwrite immediately
- *     (tier upgrades interrupt the fade; same tier refreshes the number).
- *   - LOWER tier while a higher one is fully visible → renew the timer only;
- *     the higher visual stays (the band carries the exact per-win record).
+ * Most-recent-wins (HITL 2026-08-09): every win replaces the current visual,
+ * regardless of tier — a small win after a big one shows the small one. The
+ * band carries the exact per-win record.
  *
  * The shown number is always ONE win's real amount — never a sum. Sums live
  * on the sender band only.
@@ -153,21 +151,13 @@ function showCenterCashback(multiplier: number, coinsWon: number): void {
   const tier = resolveCashbackTier(multiplier);
   if (tier === null) return; // ×0 bust — a losing draw shows nothing
 
-  const current = store.centerCashback;
-  const overwrite = current === null || current.phase === 'fading' || tier >= current.tier;
-
-  if (overwrite) {
-    store.setCenterCashback({
-      tier,
-      multiplier,
-      coinsWon,
-      phase: 'visible',
-      revision: ++cashbackRevision,
-    });
-  } else {
-    // Lower tier during a fully-visible higher one: keep the visual, renew.
-    store.setCenterCashbackPhase('visible');
-  }
+  store.setCenterCashback({
+    tier,
+    multiplier,
+    coinsWon,
+    phase: 'visible',
+    revision: ++cashbackRevision,
+  });
 
   clearCashbackTimer();
   cashbackTimer = setTimeout(startCashbackFade, LUCKY_ANIMATION.cashbackVisibleDuration);

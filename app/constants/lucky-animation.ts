@@ -65,7 +65,7 @@ export const LUCKY_ANIMATION = {
    * Affects: useLuckyCashbackCenter pre-warm. Unit: tier numbers
    * (must exist in LUCKY_CASHBACK_SVGA_TIERS).
    */
-  cashbackPrewarmTiers: [2, 5, 10, 25] as readonly number[],
+  cashbackPrewarmTiers: [5, 10, 20, 50] as readonly number[],
 
   // ----------------------------------------
   // Sender activity band
