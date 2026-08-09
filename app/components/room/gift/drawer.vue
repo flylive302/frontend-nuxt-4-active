@@ -110,7 +110,7 @@ function enterComboMode(type: 'normal' | 'lucky') {
  * reopens the drawer on the lucky tab, scrolled back to the played gift.
  */
 function exitComboMode() {
-  const wasLucky = comboType.value === 'lucky';
+  const wasLucky = isLuckyCategory(comboType.value);
   isComboMode.value = false;
   comboType.value = null;
   comboProgress.value = 0;
@@ -130,7 +130,7 @@ function exitComboMode() {
  * Guards the drawer-close watcher so closing FOR the float doesn't end the
  * combo it just started.
  */
-const isLuckyFloatActive = computed(() => isComboMode.value && comboType.value === 'lucky');
+const isLuckyFloatActive = computed(() => isComboMode.value && isLuckyCategory(comboType.value));
 
 /**
  * Reopen the drawer after a lucky combo ends: lucky tab active, grid scrolled
@@ -139,7 +139,16 @@ const isLuckyFloatActive = computed(() => isComboMode.value && comboType.value =
 async function reopenOnLuckyGift(): Promise<void> {
   isOpen.value = true;
 
-  const luckyTabIndex = giftsByCategory.value.findIndex((group) => group.category === 'lucky');
+  // Prefer the sent gift's own category so a gild-lucky combo reopens the
+  // gild-lucky tab, not the plain lucky one; fall back to any lucky-family
+  // tab if the sent gift's category isn't in scope here.
+  const sentCategory = giftStore.selectedGift?.category;
+  let luckyTabIndex = sentCategory
+    ? giftsByCategory.value.findIndex((group) => group.category === sentCategory)
+    : -1;
+  if (luckyTabIndex === -1) {
+    luckyTabIndex = giftsByCategory.value.findIndex((group) => isLuckyCategory(group.category));
+  }
   if (luckyTabIndex !== -1) {
     activeCategoryTab.value = String(luckyTabIndex);
   }
@@ -167,7 +176,7 @@ function onComboTimeout() {
  * Handle combo button click — delegates to correct combo function
  */
 async function handleComboClick() {
-  if (comboType.value === 'lucky') {
+  if (isLuckyCategory(comboType.value)) {
     const success = await luckyCombo();
     if (success) {
       resetComboProgress();
@@ -287,7 +296,7 @@ function handleSelectGift(gift: Gift) {
  */
 async function handleSend() {
   const giftCategory = giftStore.selectedGift?.category;
-  if (giftCategory === 'lucky') {
+  if (isLuckyCategory(giftCategory)) {
     await handleSendLucky();
     return;
   }

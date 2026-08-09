@@ -242,7 +242,7 @@ export function useGiftSending() {
 
       // Start playback immediately (optimistic)
       // Lucky gifts use fly animation, all others use fullscreen playback modal
-      if (selectedGift.category === 'lucky') {
+      if (isLuckyCategory(selectedGift.category)) {
         for (const recipientId of selectedRecipients) {
           triggerFly(selectedGift.thumbnail_url, sender.id, recipientId);
         }

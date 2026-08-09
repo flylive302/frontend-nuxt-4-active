@@ -60,7 +60,7 @@ export function useGiftReadiness(selectedGift: Ref<Gift | null>) {
       readinessState.value = 'idle'
       if (gift) {
         // Lucky gifts use fly animation (thumbnail only) — no animation asset to preload
-        if (gift.category === 'lucky') {
+        if (isLuckyCategory(gift.category)) {
           readinessState.value = 'ready'
           return
         }

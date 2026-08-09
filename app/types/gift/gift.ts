@@ -11,7 +11,7 @@
 
 export type GiftAssetType = 'video' | 'svga' | 'image' | 'vap';
 export type GiftRarity = 'common' | 'rare' | 'epic' | 'legendary';
-export type GiftCategory = 'normal' | 'lucky' | 'vip-gifts' | 'cp-gift' | 'premium' | 'celebrity';
+export type GiftCategory = 'normal' | 'lucky' | 'gild-lucky' | 'vip-gifts' | 'cp-gift' | 'premium' | 'celebrity';
 
 /**
  * Gift item as returned from Laravel backend API
@@ -123,6 +123,7 @@ export type { GiftSendPayload, GiftSendAck, GiftReceivedEvent } from '../room/au
 export const GIFT_CATEGORY_CONFIG: Record<GiftCategory, { label: string; icon: string }> = {
   normal: { label: 'Normal', icon: 'i-lucide-gift' },
   lucky: { label: 'Lucky', icon: 'i-lucide-sparkles' },
+  'gild-lucky': { label: 'Gild Lucky', icon: 'i-lucide-sparkles' },
   'vip-gifts': { label: 'VIP', icon: 'i-lucide-crown' },
   'cp-gift': { label: 'CP Gift', icon: 'i-lucide-heart' },
   premium:  { label: 'Premium', icon: 'i-lucide-dollar-sign' },

@@ -182,7 +182,7 @@ function synthesizeGiftChatMessage(
  * broadcast. `useGiftSending`'s `send()`/`combo()` REACT sections call this
  * directly with a synthetic source built from the local send — NOT
  * `luckyCombo()`, since lucky-category gifts announce only via the lucky-win
- * slide bubble (see the `category !== 'lucky'` gate on the `gift:received`
+ * slide bubble (see the `!isLuckyCategory(category)` gate on the `gift:received`
  * call site below). Shares the same module-level streak map, so a sender's
  * own combo taps patch the same bubble in place, and the streak key still
  * dedupes naturally against a same-batch `gift:received` for the sender,
@@ -647,7 +647,7 @@ export function setupRoomEventHandlers(
     // Current-room gate: `gift:received` is only wired while this room's
     // socket is joined, so no extra roomId check is needed here (unlike the
     // global membership listeners).
-    if (event.recipientIds && giftForValue && giftForValue.category !== 'lucky') {
+    if (event.recipientIds && giftForValue && !isLuckyCategory(giftForValue.category)) {
       synthesizeGiftChatMessage(audioStore, participantsStore, event, giftForValue, event.recipientIds);
     }
 
@@ -663,7 +663,7 @@ export function setupRoomEventHandlers(
     const gift = getGiftById(event.giftId);
 
     if (gift) {
-      if (gift.category === 'lucky') {
+      if (isLuckyCategory(gift.category)) {
         // Sender activity band tap (lucky-animation-ux epic) — burst shape
         // only, so the N legacy singular siblings of the same batch never
         // double-count the xN counter (same gate as the chat synthesis above).
