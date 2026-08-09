@@ -109,7 +109,7 @@ const top1FrameAsset = computed(() =>
             tag="div"
             class="h-[88vh] overflow-scroll flex flex-col gap-3"
         >
-            <MinimalUserList v-for="entry in restEntries" :key="entry.user.id" :user="entry.user">
+            <MinimalUserList v-for="entry in restEntries" :key="entry.user.id" :user="entry.user" class="shrink-0">
               <div class="flex flex-col items-end pr-1 gap-0.5">
                 <span class="text-xs font-semibold text-primary">
                   {{ formatCurrency(entry.volume) }}
