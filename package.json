@@ -42,7 +42,7 @@
     "@vueuse/nuxt": "^14.0.0",
     "hls.js": "^1.6.16",
     "libphonenumber-js": "^1.12.25",
-    "mediasoup-client": "^3.18.1",
+    "mediasoup-client": "3.20.0",
     "nuxt": "^4.4.2",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
