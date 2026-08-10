@@ -12,6 +12,7 @@ import type {
   AgencyMember,
   AgencyInvitation,
   AgencyJoinRequest,
+  AgencyLeaveRequest,
   AgencyListFilters,
 } from '~/types/agency/agency'
 
@@ -31,6 +32,14 @@ interface UserAgencyState {
   agency: Agency | null
   membership: AgencyMember | null
   isOwner: boolean
+  loading: boolean
+  error: string | null
+}
+
+// Single-item state for the member's own leave request (not paginated —
+// a member can only ever have at most one pending request at a time).
+interface SingleItemState<T> {
+  item: T | null
   loading: boolean
   error: string | null
 }
@@ -118,6 +127,22 @@ export const useAgencyStore = defineStore('agency', () => {
     cursor: null,
   })
 
+  // User's own (single, at-most-one-pending) leave request.
+  const myLeaveRequest = ref<SingleItemState<AgencyLeaveRequest>>({
+    item: null,
+    loading: false,
+    error: null,
+  })
+
+  // Incoming leave requests (for owners/admins)
+  const leaveRequests = ref<PaginatedState<AgencyLeaveRequest>>({
+    items: [],
+    loading: false,
+    error: null,
+    hasMore: true,
+    cursor: null,
+  })
+
   // ========================================
   // Computed
   // ========================================
@@ -189,6 +214,18 @@ export const useAgencyStore = defineStore('agency', () => {
       hasMore: true,
       cursor: null,
     }
+    myLeaveRequest.value = {
+      item: null,
+      loading: false,
+      error: null,
+    }
+    leaveRequests.value = {
+      items: [],
+      loading: false,
+      error: null,
+      hasMore: true,
+      cursor: null,
+    }
   }
 
   // ========================================
@@ -204,6 +241,8 @@ export const useAgencyStore = defineStore('agency', () => {
     sentInvitations,
     joinRequests,
     myJoinRequests,
+    myLeaveRequest,
+    leaveRequests,
 
     // Computed
     isAgencyMember,

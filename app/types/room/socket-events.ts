@@ -245,6 +245,19 @@ export interface AgencyMemberLeftPayload {
   reason: string
 }
 
+/**
+ * agency.leave_request - Fired to agency owner when a member requests to leave.
+ */
+export interface AgencyLeaveRequestPayload {
+  request_id: number
+  user: {
+    id: number
+    name: string
+    avatar: string | null
+  }
+  message?: string
+}
+
 // ========================================
 // System Events
 // ========================================
@@ -416,6 +429,9 @@ export interface ServerToClientEvents {
   'agency.dissolved': (payload: AgencyStatusPayload) => void
   'agency.member_joined': (payload: AgencyMemberJoinedPayload) => void
   'agency.member_left': (payload: AgencyMemberLeftPayload) => void
+  'agency.leave_request': (payload: AgencyLeaveRequestPayload) => void
+  'agency.leave_request_approved': (payload: AgencyStatusPayload) => void
+  'agency.leave_request_rejected': (payload: AgencyStatusPayload) => void
 
   // System
   'config:invalidate': (payload: ConfigInvalidatePayload) => void

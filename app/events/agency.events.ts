@@ -8,6 +8,7 @@ import type {
   AgencyJoinRequestPayload,
   AgencyStatusPayload,
   AgencyMemberLeftPayload,
+  AgencyLeaveRequestPayload,
 } from '~/types/room/socket-events'
 
 
@@ -17,6 +18,7 @@ import type {
  */
 export function useAgencyEvents() {
   const toast = useToast()
+  const store = useAgencyStore()
 
   return function registerAgencyEvents(socket: Socket): void {
     socket.on('agency.invitation', (payload: AgencyInvitationPayload) => {
@@ -80,6 +82,50 @@ export function useAgencyEvents() {
         title: 'Member Left',
         description: `A member has left your agency (${payload.reason})`,
         color: 'info',
+      })
+    })
+
+    // Owner side: a member requested to leave. This handler is toast-only —
+    // the owner's leave-requests list (app/pages/agency/leave-requests.vue)
+    // is refreshed by visiting the page / nav badge, not by this socket event.
+    socket.on('agency.leave_request', (payload: AgencyLeaveRequestPayload) => {
+      toast.add({
+        title: 'Leave Request',
+        description: `${payload.user.name} requested to leave your agency`,
+        color: 'info',
+      })
+    })
+
+    // Member side: the owner approved the leave request — membership has
+    // actually ended now, mirror that in the store so the button/section
+    // updates without waiting for a page reload.
+    socket.on('agency.leave_request_approved', (payload: AgencyStatusPayload) => {
+      store.userAgency.agency = null
+      store.userAgency.membership = null
+      store.userAgency.isOwner = false
+      store.myLeaveRequest.item = null
+
+      toast.add({
+        title: 'Leave Approved',
+        description: `You have left ${payload.agency_name}`,
+        color: 'success',
+      })
+    })
+
+    // Member side: the owner rejected the leave request — membership stays
+    // active, but a cooldown now applies before another request can be made.
+    // cooldown_ends_at isn't in the socket payload, so refetch the
+    // membership to get the exact server-computed value.
+    socket.on('agency.leave_request_rejected', (payload: AgencyStatusPayload) => {
+      store.myLeaveRequest.item = null
+
+      const { fetchUserAgency } = useAgencyMembership()
+      void fetchUserAgency()
+
+      toast.add({
+        title: 'Leave Request Declined',
+        description: `Your request to leave ${payload.agency_name} was declined`,
+        color: 'warning',
       })
     })
   }

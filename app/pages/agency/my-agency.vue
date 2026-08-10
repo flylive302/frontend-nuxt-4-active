@@ -21,9 +21,10 @@ definePageMeta({
 
 const agencyStore = useAgencyStore()
 const router = useRouter()
-const { leaveAgency, dissolveAgency, fetchUserAgency } = useAgencyMembership()
+const { dissolveAgency, fetchUserAgency } = useAgencyMembership()
 const { fetchJoinRequests } = useAgencyJoinRequests()
 const { fetchSentInvitations } = useAgencyInvitations()
+const { requestLeave, fetchLeaveRequests } = useAgencyLeaveRequests()
 
 // ========================================
 // Component State
@@ -49,9 +50,48 @@ const isApproved = computed(() => agency.value?.status === 'approved')
 
 const canDissolve = computed(() => isOwner.value && agency.value?.status === 'approved')
 
-const dissolveConfirmValid = computed(() => 
+const dissolveConfirmValid = computed(() =>
   dissolveConfirmName.value === agency.value?.name
 )
+
+// ========================================
+// Leave Button — three states, driven only by server fields
+// ========================================
+
+const leaveRequestStatus = computed(() => membership.value?.leave_request_status ?? null)
+const canRequestLeave = computed(() => membership.value?.can_request_leave ?? true)
+const cooldownEndsAt = computed(() => membership.value?.cooldown_ends_at ?? null)
+
+const isLeavePending = computed(() => leaveRequestStatus.value === 'pending')
+const isInCooldown = computed(() =>
+  leaveRequestStatus.value === 'rejected' && !canRequestLeave.value && !!cooldownEndsAt.value
+)
+
+const { hours: cooldownHours, minutes: cooldownMinutes, seconds: cooldownSeconds, isExpired: cooldownExpired } =
+  useAgencyLeaveCooldown(cooldownEndsAt)
+
+// Countdown hit zero client-side — refetch so the server-driven fields
+// flip the button back to normal (server is still the source of truth).
+watch(cooldownExpired, async (expired) => {
+  if (expired && isInCooldown.value) {
+    await fetchUserAgency()
+  }
+})
+
+const cooldownLabel = computed(() => {
+  const h = String(cooldownHours.value).padStart(2, '0')
+  const m = String(cooldownMinutes.value).padStart(2, '0')
+  const s = String(cooldownSeconds.value).padStart(2, '0')
+  return `${h}:${m}:${s}`
+})
+
+const leaveButtonDisabled = computed(() => isLeavePending.value || isInCooldown.value)
+
+const leaveButtonLabel = computed(() => {
+  if (isLeavePending.value) return 'Pending Review'
+  if (isInCooldown.value) return `Available in ${cooldownLabel.value}`
+  return 'Leave Agency'
+})
 
 // Transform agency's coin_reseller to the format expected by ChooseDefaultReseller
 const agencyCoinReseller = computed(() => {
@@ -69,13 +109,17 @@ const agencyCoinReseller = computed(() => {
 // ========================================
 
 async function handleLeave(): Promise<void> {
+  if (leaveButtonDisabled.value) return
+
   processing.value = true
-  const success = await leaveAgency({ reason: leaveReason.value || undefined })
+  const result = await requestLeave({ reason: leaveReason.value || undefined })
   processing.value = false
-  
-  if (success) {
+
+  if (result) {
     showLeaveModal.value = false
-    router.push('/profile')
+    leaveReason.value = ''
+    // Stays on the page — membership is still active until the owner
+    // approves the request (approval clears it via the socket handler).
   }
 }
 
@@ -102,6 +146,7 @@ onMounted(async () => {
   if (agencyStore.isAgencyAdmin && agencyStore.userAgency.agency?.status === 'approved') {
     fetchJoinRequests()
     fetchSentInvitations()
+    fetchLeaveRequests()
   }
   
   // Redirect if user has no agency
@@ -218,6 +263,12 @@ onMounted(async () => {
                 :badge="agencyStore.joinRequests.items.length || undefined"
             />
             <NavProfileItem
+                to="/agency/leave-requests"
+                icon="i-lucide-user-minus"
+                txt="Leave Requests"
+                :badge="agencyStore.leaveRequests.items.length || undefined"
+            />
+            <NavProfileItem
                 to="/agency/member-invites"
                 icon="i-lucide-mail"
                 txt="Sent Invitations"
@@ -263,37 +314,45 @@ onMounted(async () => {
                 variant="soft"
                 color="error"
                 class="w-full justify-center mt-4"
-                icon="i-lucide-log-out"
+                :icon="isLeavePending || isInCooldown ? 'i-lucide-clock' : 'i-lucide-log-out'"
+                :disabled="leaveButtonDisabled"
                 @click="showLeaveModal = true"
             >
-              Leave Agency
+              {{ leaveButtonLabel }}
             </UButton>
+            <p v-if="isLeavePending" class="text-xs text-muted text-center mt-1">
+              Waiting for the owner to review your request.
+            </p>
+            <p v-else-if="isInCooldown" class="text-xs text-muted text-center mt-1">
+              Your last request was declined. You can request again after the countdown.
+            </p>
           </template>
         </div>
       </div>
     </template>
 
     <!-- Leave Agency Modal -->
-    <UModal 
+    <UModal
       v-model:open="showLeaveModal"
-      title="Leave Agency?"
-      description="Confirm that you want to leave this agency."
+      title="Request to Leave?"
+      description="Submit a leave request for the owner to approve."
     >
       <template #content>
         <div class="p-4">
-          <h3 class="text-lg font-semibold">Leave Agency?</h3>
+          <h3 class="text-lg font-semibold">Request to Leave?</h3>
           <p class="text-sm text-muted">
-            Are you sure you want to leave <strong>{{ agency?.name }}</strong>?
-            You'll need to request to join again if you change your mind.
+            Are you sure you want to request to leave <strong>{{ agency?.name }}</strong>?
+            The owner must approve this before you actually leave. If declined, you'll need to
+            wait 24 hours before requesting again.
           </p>
-          
+
           <UTextarea
             v-model="leaveReason"
             placeholder="Reason for leaving (optional)"
             :rows="2"
             class="w-full my-2"
           />
-          
+
           <div class="flex gap-2 justify-end">
             <UButton
               variant="soft"
@@ -305,10 +364,11 @@ onMounted(async () => {
             <UButton
               color="error"
               :loading="processing"
+              :disabled="leaveButtonDisabled"
               class="text-error-200"
               @click="handleLeave"
             >
-              Leave Agency
+              Submit Request
             </UButton>
           </div>
         </div>

@@ -41,6 +41,12 @@ export type AgencyJoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'can
  */
 export type AgencyBlockerType = 'agency' | 'user'
 
+/**
+ * Leave request status.
+ * Only 'pending' requests can be processed.
+ */
+export type AgencyLeaveRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+
 // ========================================
 // Base User Reference (Lightweight)
 // ========================================
@@ -96,6 +102,13 @@ export interface AgencyMember {
   left_at?: string | null
   leave_reason?: string | null
   removed_by?: UserReference | null
+
+  // Leave-request eligibility — present only on the viewer's OWN membership.
+  // Three-state Leave button is driven purely from these fields; no client
+  // clock math beyond countdown display.
+  can_request_leave?: boolean
+  leave_request_status?: 'pending' | 'rejected' | null
+  cooldown_ends_at?: string | null
 }
 
 // ========================================
@@ -139,6 +152,30 @@ export interface AgencyJoinRequest {
   // For agency owner view
   user?: UserReference
   
+  // For processed requests
+  processed_at?: string
+  processed_by?: UserReference
+}
+
+// ========================================
+// Agency Leave Request Resource
+// ========================================
+
+export interface AgencyLeaveRequest {
+  id: number
+  status: AgencyLeaveRequestStatus
+  status_label: string
+  message: string | null
+  created_at: string
+  can_be_processed: boolean
+  can_be_cancelled?: boolean // For user's own requests
+
+  // For requester view
+  agency?: Pick<Agency, 'id' | 'name' | 'country' | 'logo'>
+
+  // For agency owner view
+  user?: UserReference
+
   // For processed requests
   processed_at?: string
   processed_by?: UserReference
