@@ -33,7 +33,7 @@ vi.mock('../../app/composables/room/useRoomEventHandlers', () => ({
 
 const GIFT = { id: 9, price: 50, category: 'normal', thumbnail_url: 'x.png' } as never
 
-async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
+async function setup(sendGiftMock: ReturnType<typeof vi.fn>, options: { connected?: boolean } = {}) {
   const { useGiftComboStore } = await import('../../app/stores/giftCombo')
   const { useGiftStore } = await import('../../app/stores/gift')
   const { useAuthStore } = await import('../../app/stores/auth')
@@ -54,7 +54,10 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
     canAfford: computed(() => true),
     canSend: computed(() => true),
   }))
-  vi.stubGlobal('useRoomAudio', () => ({ sendGift: sendGiftMock }))
+  vi.stubGlobal('useRoomAudio', () => ({
+    sendGift: sendGiftMock,
+    isConnected: computed(() => options.connected ?? true),
+  }))
 
   // Seat every recipient the tests select so the auto-end-combo watcher's
   // seat scan doesn't clear combo context out from under the assertions.
@@ -384,5 +387,71 @@ describe('useGiftSending.combo / luckyCombo', () => {
     expect(recipientIds).toEqual([2])
     expect(typeof batchId).toBe('string')
     expect(batchId.length).toBeGreaterThan(0)
+  })
+})
+
+describe('useGiftSending — connection gate', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('send() while the socket is down: no emit, no debit, one reconnect toast', async () => {
+    const sendGiftMock = vi.fn()
+    const { useGiftSending: sending, giftStore, authStore } = await setup(sendGiftMock, { connected: false })
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    const result = await sending.send()
+
+    expect(result).toBe(false)
+    expect(sendGiftMock).not.toHaveBeenCalled()
+    expect(authStore.user?.coins).toBe('1000')
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).title).toBe('Reconnecting to the room')
+  })
+
+  it('rapid taps while down: the reconnect toast is throttled to one', async () => {
+    const sendGiftMock = vi.fn()
+    const { useGiftSending: sending, giftStore } = await setup(sendGiftMock, { connected: false })
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await sending.send()
+    await sending.send()
+
+    expect(sendGiftMock).not.toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('luckyCombo() while the socket is down: no emit, no debit', async () => {
+    const sendGiftMock = vi.fn()
+    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock, { connected: false })
+
+    comboStore.setLuckyContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    const result = await sending.luckyCombo()
+
+    expect(result).toBe(false)
+    expect(sendGiftMock).not.toHaveBeenCalled()
+    expect(authStore.user?.coins).toBe('1000')
+  })
+
+  it('combo() while the socket is down: no emit, no debit', async () => {
+    const sendGiftMock = vi.fn()
+    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock, { connected: false })
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2, 3], quantity: 1 })
+
+    const result = await sending.combo()
+
+    expect(result).toBe(false)
+    expect(sendGiftMock).not.toHaveBeenCalled()
+    expect(authStore.user?.coins).toBe('1000')
   })
 })

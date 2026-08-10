@@ -18,7 +18,7 @@ export function useGiftSending() {
   const authStore = useAuthStore();
   const seatsStore = useRoomSeatsStore();
   const { canAfford, canSend } = useGiftEligibility();
-  const { sendGift: emitGift } = useRoomAudio();
+  const { sendGift: emitGift, isConnected } = useRoomAudio();
   const { triggerFly } = useLuckyFly();
   const toast = useToast();
   const log = createLogger('[useGiftSending]');
@@ -43,6 +43,13 @@ export function useGiftSending() {
    * suppress another's.
    */
   let lastFailureToastAt = 0;
+
+  /**
+   * Timestamp of the last "reconnecting" toast — same throttling rationale as
+   * `lastFailureToastAt`, separate timer so a burst rejection and a reconnect
+   * gap each get to say their piece once.
+   */
+  let lastReconnectToastAt = 0;
 
   // ========================================
   // Computed
@@ -168,6 +175,32 @@ export function useGiftSending() {
     }
   }
 
+  /**
+   * GATE: the room socket must be live before any coins move.
+   *
+   * A tap while the socket was down/reconnecting used to be accepted anyway:
+   * optimistically debited, guaranteed to fail (`sendGift` returns null on a
+   * missing socket, and an in-flight emit rejects on disconnect), then
+   * refunded with "Could not reach the room server" — a charge-then-refund
+   * churn that reads as a failed payment during rapid combos. Rejecting here
+   * moves the failure BEFORE the debit: nothing moves, one throttled toast.
+   */
+  function gateRoomConnection(): boolean {
+    if (isConnected.value) return true;
+
+    const now = Date.now();
+    if (now - lastReconnectToastAt >= GIFT_FAILURE_TOAST_COOLDOWN_MS) {
+      lastReconnectToastAt = now;
+      toast.add({
+        title: 'Reconnecting to the room',
+        description: 'One moment — no coins were taken. Try again when the connection is back.',
+        color: 'warning',
+      });
+    }
+
+    return false;
+  }
+
   // ========================================
   // Methods
   // ========================================
@@ -179,6 +212,9 @@ export function useGiftSending() {
   async function send(): Promise<boolean> {
     // Prevent double-sending
     if (isSending.value) return false;
+
+    // GATE: refuse before the debit while the socket is down — see gateRoomConnection.
+    if (!gateRoomConnection()) return false;
 
     const { selectedGift, selectedRecipients, selectedQuantity } = giftStore;
 
@@ -335,6 +371,9 @@ export function useGiftSending() {
       return false;
     }
 
+    // GATE: refuse before the debit while the socket is down — see gateRoomConnection.
+    if (!gateRoomConnection()) return false;
+
     // GF-017: Filter against currently seated recipients (direct seat read)
     const seatedIds = getSeatedUserIds();
     const validRecipients = ctx.recipientIds.filter(id => seatedIds.has(id));
@@ -422,6 +461,9 @@ export function useGiftSending() {
   async function luckyCombo(): Promise<boolean> {
     const ctx = comboStore.lastLuckyContext;
     if (!ctx) return false;
+
+    // GATE: refuse before the debit while the socket is down — see gateRoomConnection.
+    if (!gateRoomConnection()) return false;
 
     // GF-017: Filter against currently seated recipients (direct seat read)
     const seatedIds = getSeatedUserIds();

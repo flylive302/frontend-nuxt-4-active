@@ -56,7 +56,7 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
     canAfford: computed(() => true),
     canSend: computed(() => true),
   }))
-  vi.stubGlobal('useRoomAudio', () => ({ sendGift: sendGiftMock }))
+  vi.stubGlobal('useRoomAudio', () => ({ sendGift: sendGiftMock, isConnected: computed(() => true) }))
 
   seatsStore.updateSeat(0, 3, false)
 

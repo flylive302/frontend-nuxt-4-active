@@ -25,6 +25,7 @@ const { dissolveAgency, fetchUserAgency } = useAgencyMembership()
 const { fetchJoinRequests } = useAgencyJoinRequests()
 const { fetchSentInvitations } = useAgencyInvitations()
 const { requestLeave, fetchLeaveRequests } = useAgencyLeaveRequests()
+const { cancelApplication } = useAgencyApplication()
 
 // ========================================
 // Component State
@@ -32,6 +33,7 @@ const { requestLeave, fetchLeaveRequests } = useAgencyLeaveRequests()
 
 const showLeaveModal = ref(false)
 const showDissolveModal = ref(false)
+const showCancelModal = ref(false)
 const leaveReason = ref('')
 const dissolveConfirmName = ref('')
 const processing = ref(false)
@@ -52,6 +54,18 @@ const canDissolve = computed(() => isOwner.value && agency.value?.status === 'ap
 
 const dissolveConfirmValid = computed(() =>
   dissolveConfirmName.value === agency.value?.name
+)
+
+// ========================================
+// Application Cancel / Resubmit — owner only
+// ========================================
+
+const canCancelApplication = computed(() =>
+  isOwner.value && (agency.value?.can_cancel ?? agency.value?.status === 'pending')
+)
+
+const canResubmitApplication = computed(() =>
+  isOwner.value && (agency.value?.can_resubmit ?? (agency.value?.status === 'rejected' || agency.value?.status === 'cancelled'))
 )
 
 // ========================================
@@ -125,15 +139,29 @@ async function handleLeave(): Promise<void> {
 
 async function handleDissolve(): Promise<void> {
   if (!dissolveConfirmValid.value) return
-  
+
   processing.value = true
   const success = await dissolveAgency()
   processing.value = false
-  
+
   if (success) {
     showDissolveModal.value = false
     router.push('/profile')
   }
+}
+
+async function handleCancelApplication(): Promise<void> {
+  processing.value = true
+  const success = await cancelApplication()
+  processing.value = false
+
+  if (success) {
+    showCancelModal.value = false
+  }
+}
+
+function handleResubmit(): void {
+  navigateTo('/agency/edit')
 }
 
 // ========================================
@@ -244,6 +272,17 @@ onMounted(async () => {
           class="mx-3 mt-4"
         />
 
+        <!-- Cancelled Notice -->
+        <UAlert
+          v-if="agency.status === 'cancelled'"
+          color="neutral"
+          variant="subtle"
+          icon="i-lucide-circle-slash"
+          title="Application Cancelled"
+          :description="agency.rejection_note || 'You withdrew this application. You can edit it and submit again.'"
+          class="mx-3 mt-4"
+        />
+
         <!-- Navigation Menu -->
         <div class="mt-4 pb-24">
 
@@ -294,6 +333,30 @@ onMounted(async () => {
 <!--                color="primary"-->
 <!--                class="mt-14"-->
 <!--            />-->
+
+            <!-- Edit & Resubmit Application -->
+            <UButton
+                v-if="canResubmitApplication"
+                variant="soft"
+                color="primary"
+                class="w-full justify-center mt-4"
+                icon="i-lucide-pencil"
+                @click="handleResubmit"
+            >
+              Edit & Submit Again
+            </UButton>
+
+            <!-- Cancel Application -->
+            <UButton
+                v-if="canCancelApplication"
+                variant="soft"
+                color="error"
+                class="w-full justify-center mt-4"
+                icon="i-lucide-circle-slash"
+                @click="showCancelModal = true"
+            >
+              Cancel Application
+            </UButton>
 
             <!-- Dissolve Agency -->
             <UButton
@@ -418,6 +481,44 @@ onMounted(async () => {
               @click="handleDissolve"
             >
               Dissolve Agency
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Cancel Application Modal -->
+    <UModal
+      v-model:open="showCancelModal"
+      title="Cancel Application?"
+      description="This will withdraw your pending agency application."
+    >
+      <template #content>
+        <div class="p-4 space-y-4">
+          <h3 class="text-lg font-semibold">Cancel Application?</h3>
+
+          <UAlert
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-alert-triangle"
+            title="Withdraw this application"
+            description="You can edit and submit it again afterwards, but review will restart from the beginning."
+          />
+
+          <div class="flex gap-2 justify-end">
+            <UButton
+              variant="soft"
+              color="neutral"
+              @click="showCancelModal = false"
+            >
+              Keep Application
+            </UButton>
+            <UButton
+              color="error"
+              :loading="processing"
+              @click="handleCancelApplication"
+            >
+              Cancel Application
             </UButton>
           </div>
         </div>

@@ -10,7 +10,17 @@
  * Agency operational status.
  * Only 'approved' agencies can accept members and send invitations.
  */
-export type AgencyStatus = 'pending' | 'approved' | 'rejected' | 'blocked' | 'dissolved'
+export type AgencyStatus = 'pending' | 'approved' | 'rejected' | 'blocked' | 'dissolved' | 'cancelled'
+
+/**
+ * A national ID document image stored with an agency application.
+ * Pre-uploaded to ImageKit by the client; the API stores url + file_id + side.
+ */
+export interface AgencyNationalIdImage {
+  url: string
+  file_id: string
+  side: 'front' | 'back'
+}
 
 /**
  * Member role within an agency.
@@ -80,7 +90,13 @@ export interface Agency {
   // Sensitive fields (visible to owner, members, admins)
   address?: string
   coin_reseller?: UserReference | null
-  rejection_note?: string // Only if status is 'rejected'
+  rejection_note?: string // Only if status is 'rejected' or 'cancelled'
+
+  // Owner-only fields
+  logo_file_id?: string | null
+  national_id_images?: AgencyNationalIdImage[] | null
+  can_cancel?: boolean
+  can_resubmit?: boolean
 }
 
 // ========================================
@@ -257,6 +273,7 @@ export const AGENCY_STATUS_CONFIG: Record<AgencyStatus, AgencyStatusConfig> = {
   rejected: { label: 'Rejected', color: 'error', icon: 'i-lucide-x-circle' },
   blocked: { label: 'Suspended', color: 'error', icon: 'i-lucide-ban' },
   dissolved: { label: 'Dissolved', color: 'neutral', icon: 'i-lucide-archive' },
+  cancelled: { label: 'Cancelled', color: 'neutral', icon: 'i-lucide-circle-slash' },
 }
 
 export const AGENCY_ROLE_CONFIG: Record<AgencyMemberRole, AgencyRoleConfig> = {
