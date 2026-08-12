@@ -10,7 +10,6 @@ import { ASSETS } from '~/constants/assets';
 const roomStore = useRoomStore();
 const bootstrapStore = useBootstrapStore();
 const { leaveRoom } = useRoomAudio();
-const { resolvePropAsset } = usePropLookup();
 const { shareRoom, sharing } = useRoomShare();
 
 // ========================================
@@ -137,7 +136,7 @@ const openLeaveDrawer = (event: Event) => {
           style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
       >
         <div class="w-10">
-          <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-asset-url="resolvePropAsset(thisRoom?.owner?.frame_id) ?? undefined" />
+          <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-id="thisRoom?.owner?.frame_id" />
           <p class="text-xs text-center">LvL. {{ thisRoom?.current_level != null ? thisRoom.current_level : 0 }}</p>
         </div>
 

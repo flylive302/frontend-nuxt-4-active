@@ -440,7 +440,7 @@ const seatUserAge = computed(() => {
         <div v-if="displayUser" class="flex flex-col justify-center items-center relative z-10">
           <LazyUserAvatar
             :img="displayUser.avatar ?? undefined"
-            :frame-asset-url="resolvePropAsset(displayUser.frame_id) ?? undefined"
+            :frame-id="displayUser.frame_id"
             :animated="true" class="size-32"
             @click="handleVisitProfile"
           />

@@ -284,6 +284,18 @@ export interface BootstrapConfig {
 }
 
 /**
+ * SVGA frame overlay geometry, authored in the admin panel and stored on
+ * `props.metadata.frame`. Offsets are CSS lengths (e.g. `0%`, `-2%`);
+ * `scale` and `padding` are percentages.
+ */
+export interface FrameDisplayConfig {
+  scale: number
+  padding: number
+  top: string
+  left: string
+}
+
+/**
  * Lightweight prop manifest for O(1) lookups.
  * Seeded into mallStore.propIndex at bootstrap time.
  */
@@ -293,6 +305,13 @@ export interface BootstrapProp {
   type: string
   thumbnail_url: string
   asset_url: string
+  /**
+   * SVGA overlay geometry for `frame`-type props, resolved server-side.
+   * Null for every other prop type. Positions the frame around the avatar —
+   * see `UserAvatar`. Replaces the legacy scheme where these numbers were
+   * appended to `name` and parsed on the client.
+   */
+  frame?: FrameDisplayConfig | null
   /**
    * Entry Slide config for `slides`-type props — present only when the prop is
    * bound to an entry Slide. Lets the client resolve the room-entry banner

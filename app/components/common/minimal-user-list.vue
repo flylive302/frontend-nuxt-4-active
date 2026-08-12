@@ -30,7 +30,6 @@ const emit = defineEmits<{
 // ========================================
 
 const { getLevelFromXp } = useLevelLookup()
-const { resolvePropAsset } = usePropLookup()
 
 const roomStore = useRoomStore();
 
@@ -74,7 +73,7 @@ function handleAvatarClick() {
       <UserAvatar
           :img="user.avatar"
           animated
-          :frame-asset-url="resolvePropAsset(user.frame_id) ?? undefined"
+          :frame-id="user.frame_id"
           class="w-14 ml-1 shrink-0"
           @click="handleAvatarClick"
       />

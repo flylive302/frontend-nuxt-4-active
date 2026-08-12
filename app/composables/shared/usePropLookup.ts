@@ -6,7 +6,8 @@
 // fetches it lazily from the API and merges it in.
 // ========================================
 
-import type { BootstrapProp } from '~/types/user/bootstrap'
+import type { BootstrapProp, FrameDisplayConfig } from '~/types/user/bootstrap'
+import { DEFAULT_FRAME_DISPLAY } from '~/constants/frame'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[PropLookup]')
@@ -65,6 +66,29 @@ export function usePropLookup() {
   }
 
   /**
+   * Resolve a frame prop's asset URL together with its overlay geometry.
+   *
+   * Single source of truth for `UserAvatar` — every surface passes a prop ID
+   * and gets the authored scale/padding/offsets, instead of each call site
+   * remembering to thread a separate name string through.
+   *
+   * Returns null while the prop is still missing from the index (a background
+   * fetch is already in flight), so the caller renders a bare avatar rather
+   * than a frame positioned with guessed numbers.
+   */
+  function resolveFrameConfig(
+    propId: number | null | undefined,
+  ): { assetUrl: string, display: FrameDisplayConfig } | null {
+    const prop = resolveProp(propId)
+    if (!prop?.asset_url) return null
+
+    return {
+      assetUrl: prop.asset_url,
+      display: { ...DEFAULT_FRAME_DISPLAY, ...(prop.frame ?? {}) },
+    }
+  }
+
+  /**
    * Resolve a prop by ID, awaiting a background fetch on cache-miss.
    * Use in async contexts where the animation must not be silently skipped.
    */
@@ -103,5 +127,6 @@ export function usePropLookup() {
     resolvePropAsset,
     resolvePropThumbnail,
     resolvePropName,
+    resolveFrameConfig,
   }
 }

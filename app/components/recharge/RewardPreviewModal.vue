@@ -65,6 +65,7 @@ const isVip = computed(() => props.rewardType === 'vip')
                 :name="resolved.name"
                 :asset-url="resolved.assetUrl"
                 :thumbnail-url="resolved.thumbnailUrl ?? ''"
+                :prop-id="resolved.propId"
                 :avatar-img="authStore.user?.avatar ?? undefined"
               />
             </template>

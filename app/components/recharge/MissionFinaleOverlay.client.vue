@@ -27,7 +27,6 @@ const props = defineProps<{
 const store = useMissionStore()
 const { phase, isOpen, dismiss, burstComplete } = useMissionFinale(props.timeframe)
 const sound = useMissionFinaleSound()
-const { resolvePropAsset } = usePropLookup()
 
 // ========================================
 // Data derived from store
@@ -116,7 +115,7 @@ function rankLabelClass(rank: number): string {
                 <div class="fire-ring absolute inset-0 rounded-full" />
                 <UserAvatar
                   :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-                  :frame-asset-url="resolvePropAsset(entry.user.frame_id) ?? undefined"
+                  :frame-id="entry.user.frame_id"
                   animated
                   class="relative z-10 rounded-full ring-2"
                   :class="[entry.rank === 1 ? 'w-16' : 'w-12', rankRingClass(entry.rank)]"
@@ -174,7 +173,7 @@ function rankLabelClass(rank: number): string {
             >
               <UserAvatar
                 :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-                :frame-asset-url="resolvePropAsset(entry.user.frame_id) ?? undefined"
+                :frame-id="entry.user.frame_id"
                 animated
                 class="rounded-full ring-2"
                 :class="[entry.rank === 1 ? 'w-16' : 'w-12', rankRingClass(entry.rank)]"

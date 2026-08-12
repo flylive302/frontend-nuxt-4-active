@@ -23,7 +23,6 @@ const emit = defineEmits<{
 // ========================================
 
 const { data, isLoading, error, fetch } = useHonorWall()
-const { resolvePropAsset } = usePropLookup()
 
 // ========================================
 // Tabs
@@ -183,7 +182,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
                     >
                       <UserAvatar
                         :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-                        :frame-asset-url="resolvePropAsset(entry.user.frame_id) ?? undefined"
+                        :frame-id="entry.user.frame_id"
                         animated
                         :class="entry.rank === 1 ? 'w-16' : 'w-12'"
                         class="rounded-full"

@@ -60,6 +60,8 @@ export interface PropPreviewItem {
   type?: string
   asset_url?: string | null
   thumbnail_url?: string | null
+  /** Catalog prop id (same id space as e.g. `user.frame_id`) — used to resolve frame geometry. */
+  prop_id?: number
 }
 
 /**

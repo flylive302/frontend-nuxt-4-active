@@ -8,8 +8,6 @@ const props = defineProps<{
   timeframe: 'weekly' | 'monthly'
 }>()
 
-const { resolvePropAsset } = usePropLookup()
-
 // Visual order: 2 — 1 — 3 (left-to-right)
 const visualOrder = computed<Array<LeaderboardEntry | null>>(() => {
   const [first, second, third] = props.entries
@@ -44,7 +42,7 @@ function avatarSize(rank: number): string {
         <div class="relative mb-2">
           <UserAvatar
             :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-            :frame-asset-url="resolvePropAsset(entry.user.frame_id) ?? undefined"
+            :frame-id="entry.user.frame_id"
             animated
             :class="[avatarSize(entry.rank), 'ring-2', rankAccent(entry.rank).ring]"
             class="rounded-full"

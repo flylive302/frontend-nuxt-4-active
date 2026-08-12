@@ -13,6 +13,8 @@ export interface ResolvedRewardAsset {
   assetUrl: string | null
   /** Prop type string (from BootstrapProp.type). Only set when reward_type === 'prop'. */
   propType: string | null
+  /** Catalog prop id. Only set when reward_type === 'prop'. */
+  propId: number | null
 }
 
 export function resolveRewardAsset(
@@ -31,6 +33,7 @@ export function resolveRewardAsset(
       thumbnailUrl: prop.thumbnail_url,
       assetUrl: prop.asset_url,
       propType: prop.type,
+      propId: reward.reward_id,
     }
   }
 
@@ -42,6 +45,7 @@ export function resolveRewardAsset(
       thumbnailUrl: vip.emblem_animated_url,
       assetUrl: vip.card_animated_url,
       propType: null,
+      propId: null,
     }
   }
 
@@ -53,6 +57,7 @@ export function resolveRewardAsset(
       thumbnailUrl: badge.image_url,
       assetUrl: null,
       propType: null,
+      propId: null,
     }
   }
 

@@ -33,8 +33,6 @@ function onCardTap(user: FollowingCard): void {
   if (isChatMode.value) emit('chat', user)
 }
 
-const { resolvePropAsset } = usePropLookup()
-
 // Presence dot — strip already renders online-only contacts (see callers),
 // but derive from the store rather than assuming so the dot stays correct
 // if this component is ever reused for a mixed list.
@@ -60,7 +58,7 @@ const presenceStore = usePresenceStore()
               <UserAvatar
                 :animated="true"
                 defer-frame-animation
-                :frame-asset-url="resolvePropAsset(item.frame_id) ?? undefined"
+                :frame-id="item.frame_id"
                 :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                 class="w-14"
               />
@@ -97,7 +95,7 @@ const presenceStore = usePresenceStore()
               <UserAvatar
                 :animated="true"
                 defer-frame-animation
-                :frame-asset-url="resolvePropAsset(item.frame_id) ?? undefined"
+                :frame-id="item.frame_id"
                 :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                 class="w-14"
               />

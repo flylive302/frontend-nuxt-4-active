@@ -394,7 +394,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
           <UserAvatar
             :animated="true"
-            :frame-asset-url="resolvePropAsset(profileWritable?.frame_id) ?? undefined"
+            :frame-id="profileWritable?.frame_id"
             :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-full"
           />

@@ -42,6 +42,11 @@ const isFrame = computed(() => props.item?.kind === 'prop' && props.item.data.ty
 const itemName = computed(() => props.item?.data.name ?? '')
 
 /**
+ * Catalog prop id for the frame overlay (only present for kind === 'prop').
+ */
+const frameId = computed(() => (props.item?.kind === 'prop' ? props.item.data.id : undefined))
+
+/**
  * Animated asset URL — prop's `asset_url` or badge's `animated_url`.
  */
 const animatedUrl = computed(() => {
@@ -104,7 +109,7 @@ function handleClose(): void {
             <template v-if="isFrame">
               <UserAvatar
                 :animated="true"
-                :frame-name="itemName"
+                :frame-id="frameId"
                 :frame-asset-url="animatedUrl ?? undefined"
                 :img="authStore?.user?.avatar ?? undefined"
               />

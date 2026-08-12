@@ -35,14 +35,14 @@ const announcementClass = computed(() => {
 const { getLevelFromXp } = useLevelLookup()
 
 const participantsStore = useRoomParticipantsStore();
-const { resolvePropAsset, resolvePropThumbnail } = usePropLookup();
+const { resolvePropThumbnail } = usePropLookup();
 
 // Resolve live participant data first, then fall back to the message author
 // snapshot. Cross-region/rejoin races can deliver chat before participant sync.
 const participant = computed(() => participantsStore.participants.get(props.message.userId));
 const displayName = computed(() => participant.value?.name ?? props.message.userName ?? 'Unknown');
 const displayAvatar = computed(() => participant.value?.avatar ?? props.message.userAvatar ?? undefined);
-const displayFrame = computed(() => resolvePropAsset(participant.value?.frame_id ?? props.message.userFrameId) ?? undefined);
+const displayFrameId = computed(() => participant.value?.frame_id ?? props.message.userFrameId ?? undefined);
 
 const chatBubbleId = computed(() => participant.value?.chat_bubble_id ?? props.message.userChatBubbleId ?? null);
 // Chat bubble props store the frame image in thumbnail_url (asset_url is empty for this type).
@@ -64,7 +64,7 @@ const bubbleStyle = computed(() => ({
 }));
 
 // Reading `chatBubbleId` (not `participant`) also covers authors who have left the room, where
-// only the message snapshot survives — matching how `displayFrame` already resolves above.
+// only the message snapshot survives — matching how `displayFrameId` already resolves above.
 const hasChatBubble = computed(() =>
   shouldRenderChatBubble(chatBubbleId.value, participant.value?.vip_level)
 );
@@ -116,7 +116,7 @@ const charmLevel = computed(() =>
     </div>
     <div v-else class="flex py-3">
       <!-- Avatar -->
-      <UserAvatar :img="displayAvatar" :frame-asset-url="displayFrame" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
+      <UserAvatar :img="displayAvatar" :frame-id="displayFrameId" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
       <div class="min-w-0">
 
         <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary rounded-md">

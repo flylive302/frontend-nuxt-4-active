@@ -16,7 +16,6 @@ const inboxStore = useInboxStore()
 const { markAsRead, fetchNotifications } = useNotificationActions()
 const { sendMessage } = useInboxActions()
 const { reconcileInbox } = useInboxReconcile()
-const { resolvePropAsset } = usePropLookup()
 const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
 
 // ── Active thread meta (DM only) ──────────────────────
@@ -25,7 +24,7 @@ const thread = computed(() => inboxStore.threadById(threadId.value))
 // ── Header props ──────────────────────────────────────
 const headerName = computed(() => isSystem.value ? 'Official' : (thread.value?.participant.name ?? ''))
 const headerAvatar = computed(() => thread.value?.participant.avatar ?? null)
-const headerFrame = computed(() => resolvePropAsset(thread.value?.participant.frame_id) ?? null)
+const headerFrameId = computed(() => thread.value?.participant.frame_id ?? null)
 
 // ── Scroll container ──────────────────────────────────
 const scrollEl = ref<HTMLElement | null>(null)
@@ -88,7 +87,7 @@ onBeforeUnmount(() => {
     <InboxThreadHeader
       :name="headerName"
       :avatar="headerAvatar"
-      :frame="headerFrame"
+      :frame-id="headerFrameId"
       :is-system="isSystem"
     />
 

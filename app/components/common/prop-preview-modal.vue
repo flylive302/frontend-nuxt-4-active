@@ -81,7 +81,7 @@ function handleClose(): void {
             <template v-if="isFrame">
               <UserAvatar
                 :animated="true"
-                :frame-name="item.name"
+                :frame-id="item.prop_id ?? undefined"
                 :frame-asset-url="item.asset_url ?? undefined"
                 :img="authStore?.user?.avatar ?? undefined"
               />

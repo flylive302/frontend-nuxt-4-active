@@ -19,7 +19,6 @@ definePageMeta({
 const mallStore = useMallStore()
 const authStore = useAuthStore()
 const { purchaseProp, isPurchasing } = useMallActions()
-const { resolvePropAsset } = usePropLookup()
 const {
   tabItems,
   selectedTab,
@@ -72,7 +71,7 @@ async function handlePurchase(propId: number): Promise<void> {
 
     <UserAvatar
       :animated="true"
-      :frame-asset-url="resolvePropAsset(authStore?.user?.frame_id) ?? undefined"
+      :frame-id="authStore?.user?.frame_id"
       :img="authStore?.user?.avatar ?? undefined"
       class="w-28 -mt-32 mx-auto"
     />

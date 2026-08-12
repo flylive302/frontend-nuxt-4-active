@@ -15,6 +15,8 @@ const props = defineProps<{
   thumbnailUrl: string
   signatureValue?: string | null
   avatarImg?: string
+  /** Catalog prop id — resolves the frame's authored overlay geometry. */
+  propId?: number | null
 }>()
 
 const icon = computed(() => PROP_TYPE_ICONS[props.type])
@@ -26,7 +28,7 @@ const iconColor = computed(() => PROP_TYPE_COLORS[props.type])
   <template v-if="type === 'frame'">
     <UserAvatar
       :animated="true"
-      :frame-name="name"
+      :frame-id="propId"
       :frame-asset-url="assetUrl"
       :img="avatarImg"
     />

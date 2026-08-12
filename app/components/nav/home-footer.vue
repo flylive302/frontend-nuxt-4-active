@@ -10,7 +10,6 @@ const inboxStore = useInboxStore();
 const route = useRoute();
 const room = useRoom();
 const { enterRoom: doRoomEntry } = useRoomEntry();
-const { resolvePropAsset } = usePropLookup();
 const isClientHydrated = ref(false);
 
 const createRoomOpen = ref(false);
@@ -54,8 +53,8 @@ const inboxBadge = computed(() => {
   return count > 99 ? '99+' : String(count)
 })
 
-const profileFrameAssetUrl = computed(() =>
-  isClientHydrated.value ? (resolvePropAsset(authStore?.user?.frame_id) ?? undefined) : undefined
+const profileFrameId = computed(() =>
+  isClientHydrated.value ? (authStore?.user?.frame_id ?? undefined) : undefined
 )
 
 const profileAvatarImg = computed(() =>
@@ -120,7 +119,7 @@ const profileAvatarImg = computed(() =>
             class="w-13 profile-avatar-anchor"
             :animated="true"
             defer-frame-animation
-            :frame-asset-url="profileFrameAssetUrl"
+            :frame-id="profileFrameId"
             :img="profileAvatarImg"
         />
       </NuxtLink>

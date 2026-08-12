@@ -27,7 +27,6 @@ const { pickImage, cancelUpload, retryUpload, discardFailed } = useDmComposer()
 const { reconcileInbox } = useInboxReconcile()
 const { acceptRequest, denyRequest, unsendMessage, deleteMessage, deleteThread, blockUser } = useInboxThread()
 const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
-const { resolvePropAsset } = usePropLookup()
 const authStore = useAuthStore()
 const toast = useToast()
 
@@ -206,7 +205,7 @@ onBeforeUnmount(() => {
       :fixed="fixedHeader"
       :name="thread?.participant.name ?? ''"
       :avatar="thread?.participant.avatar"
-      :frame="resolvePropAsset(thread?.participant.frame_id) ?? undefined"
+      :frame-id="thread?.participant.frame_id"
       :signature="thread?.participant.signature"
       :gender="thread?.participant.gender"
       :online="isPeerOnline"

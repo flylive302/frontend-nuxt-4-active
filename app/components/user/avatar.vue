@@ -1,19 +1,26 @@
 <script setup lang="ts">
+import type { FrameDisplayConfig } from '~/types/user/bootstrap'
 import { ASSETS } from '~/constants/assets'
-// ========================================
-// Constants
-// ========================================
-
-/** Default padding when no frame is equipped */
-const DEFAULT_PADDING = '16%'
+import { DEFAULT_FRAME_DISPLAY, NO_FRAME_PADDING } from '~/constants/frame'
 
 // ========================================
 // Props
 // ========================================
 
 const props = withDefaults(defineProps<{
-  frameName?: string
+  /**
+   * Preferred API: the equipped frame prop's ID. Resolves both the SVGA URL
+   * and its authored geometry (scale / padding / offsets) in one step, so no
+   * call site has to remember to thread display config through separately.
+   */
+  frameId?: number | null
+  /**
+   * Explicit SVGA URL, for surfaces that render a frame they haven't equipped
+   * (mall and VIP previews). Overrides whatever `frameId` resolves to.
+   */
   frameAssetUrl?: string
+  /** Explicit geometry override. Wins over the prop's authored config. */
+  frameDisplay?: FrameDisplayConfig
   img?: string | undefined | null
   animated?: boolean
   /**
@@ -37,8 +44,9 @@ const props = withDefaults(defineProps<{
    */
   imgWidth?: number
 }>(), {
-  frameName: '',
+  frameId: undefined,
   frameAssetUrl: undefined,
+  frameDisplay: undefined,
   img: undefined,
   animated: false,
   deferFrameAnimation: false,
@@ -46,80 +54,72 @@ const props = withDefaults(defineProps<{
   imgWidth: undefined,
 });
 
-const rootRef = ref<HTMLElement | null>(null)
+// ========================================
+// State
+// ========================================
 
-const { isVisible: svgaAllowed } = useDeferredVisibility(rootRef, () => props.deferFrameAnimation)
+const rootRef = ref<HTMLElement | null>(null)
 
 // Track load errors so we can fall back to AVATAR_PLACEHOLDER.
 // Reset on every src change so a seat user-swap retries the new URL.
 const hasImgError = ref(false)
 watch(() => props.img, () => { hasImgError.value = false })
 
-const resolvedImgSrc = computed(() => {
-  if (hasImgError.value) return avatarImageSrc(ASSETS.AVATAR_PLACEHOLDER)  // occupied + failed → person silhouette
-  return avatarImageSrc(props.img ?? ASSETS.DEFAULT_SEAT_IMG, props.imgWidth ? { w: props.imgWidth } : undefined) // no img → red chair (empty seat)
-})
+// ========================================
+// Composables
+// ========================================
 
-function onImgError() { hasImgError.value = true }
+const { isVisible: svgaAllowed } = useDeferredVisibility(rootRef, () => props.deferFrameAnimation)
+const { resolveFrameConfig } = usePropLookup()
 
 // ========================================
 // Computed
 // ========================================
 
+const resolvedImgSrc = computed(() => {
+  if (hasImgError.value) return avatarImageSrc(ASSETS.AVATAR_PLACEHOLDER)  // occupied + failed → person silhouette
+  return avatarImageSrc(props.img ?? ASSETS.DEFAULT_SEAT_IMG, props.imgWidth ? { w: props.imgWidth } : undefined) // no img → red chair (empty seat)
+})
+
 /**
- * Parse frameName into display config and resolve SVGA source URL.
+ * Resolve the frame's SVGA URL and its overlay geometry.
  *
- * frameName format: `{name}-{scale}-{padding}-{top}-{left}`
- * e.g. `vip_1_frame-100-26-0%-0%`
- *
- * The SVGA source URL is resolved from the `frameAssetUrl` prop,
- * which contains the full CDN URL from the backend database.
+ * Precedence: explicit props win over whatever `frameId` resolves to, so a
+ * preview surface can pin an asset or hand-tune positioning without the
+ * catalog's authored values leaking in.
  */
 const frameConfig = computed(() => {
-  const parts = props.frameName?.split('-') ?? []
+  const resolved = resolveFrameConfig(props.frameId)
+  const assetUrl = props.frameAssetUrl ?? resolved?.assetUrl
 
-  // Custom format: name-girth-padding-top-left
-  if (parts.length === 5) {
-    const [, girth, padd, top, left] = parts
+  if (!assetUrl) return null
 
-    // frameAssetUrl must be provided — full URL from backend DB
-    if (!props.frameAssetUrl) return null
+  const display = props.frameDisplay ?? resolved?.display ?? DEFAULT_FRAME_DISPLAY
 
-    return {
-      name: props.frameAssetUrl,
-      padding: `${padd}%`,
-      style: {
-        transform: `scale(${+(girth || 100) / 100})`,
-        top: top || '0%',
-        left: left || '0%',
-      },
-    }
+  return {
+    name: assetUrl,
+    padding: `${display.padding}%`,
+    style: {
+      transform: `scale(${display.scale / 100})`,
+      top: display.top,
+      left: display.left,
+    },
   }
-
-  // frameName or frameAssetUrl provided — use the full URL directly
-  if (props.frameAssetUrl) {
-    return {
-      name: props.frameAssetUrl,
-      padding: DEFAULT_PADDING,
-      style: {
-        transform: `scale(${110 / 100})`,
-        top: '0%',
-        left: '0%',
-      },
-    }
-  }
-
-  // No frame data at all
-  return null
 })
 
 const staticFrameUrl = computed(() => (props.staticFrame ? frameConfig.value?.name : undefined))
 const { stillUrl } = useAvatarStillFrame(staticFrameUrl)
+
+// ========================================
+// Handlers
+// ========================================
+
+function onImgError() { hasImgError.value = true }
 </script>
 
 <template>
   <div ref="rootRef" class="relative aspect-square cursor-pointer">
-    <div class="relative" :style="{ padding: frameConfig?.padding ?? DEFAULT_PADDING }">
+    <div class="relative" :style="{ padding: frameConfig?.padding ?? NO_FRAME_PADDING }">
       <img
         class="aspect-square rounded-full object-contain w-full"
         :src="resolvedImgSrc"

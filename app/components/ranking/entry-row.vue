@@ -16,8 +16,6 @@ const props = defineProps<{
   emphasized?: boolean
 }>()
 
-const { resolvePropAsset } = usePropLookup()
-
 // ========================================
 // Computed
 // ========================================
@@ -72,9 +70,9 @@ const rankBadgeClass = computed<string>(() => {
 
     <UserAvatar
         :animated="true"
-        :frame-asset-url="resolvePropAsset(entry.user?.frame_id)"
+        :frame-id="entry.user?.frame_id"
         :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
-        frame-name="top-120-16-0-0"
+        :frame-display="{ scale: 120, padding: 16, top: '0%', left: '0%' }"
         class="w-12"
     />
     <div class="min-w-0 flex-1">

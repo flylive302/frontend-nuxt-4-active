@@ -31,7 +31,6 @@ const props = defineProps<{
 
 const authStore = useAuthStore()
 const bootstrapStore = useBootstrapStore()
-const { resolvePropAsset } = usePropLookup()
 
 // ========================================
 // Level-Up Celebration (page-gated, own-track only)
@@ -167,7 +166,7 @@ const tableData = computed<LevelRow[]>(() =>
       <div class="grid grid-cols-9 gap-1">
         <UserAvatar
             :animated="true"
-            :frame-asset-url="resolvePropAsset(authStore.user?.frame_id) ?? undefined"
+            :frame-id="authStore.user?.frame_id"
             :img="authStore.user?.avatar ?? undefined"
             class="col-span-2"
         />

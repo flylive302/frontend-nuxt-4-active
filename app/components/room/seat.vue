@@ -52,11 +52,11 @@ const avatarSrc = computed(() => {
 });
 
 // Avatar source - only set when seat is occupied
-const userFrame = computed(() => {
+const userFrameId = computed(() => {
   if (isEmpty.value) {
     return undefined;
   }
-  return resolvePropAsset(seat.value?.user?.frame_id) ?? undefined;
+  return seat.value?.user?.frame_id ?? undefined;
 });
 
 // Frame animation budget (room-battery-perf/02): over-budget seats render the
@@ -122,7 +122,7 @@ function clearActiveReaction(): void {
             :animated="true"
             :defer-frame-animation="true"
             :static-frame="!frameAnimationAllowed"
-            :frame-asset-url="userFrame"
+            :frame-id="userFrameId"
             :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
             class="relative z-20"
         />

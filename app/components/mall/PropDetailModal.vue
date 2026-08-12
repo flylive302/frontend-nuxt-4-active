@@ -118,6 +118,7 @@ function handleClose(): void {
               :name="prop.name"
               :asset-url="prop.asset_url"
               :thumbnail-url="prop.thumbnail_url"
+              :prop-id="prop.id"
               :signature-value="prop.signature_value"
               :avatar-img="authStore?.user?.avatar ?? undefined"
             />
