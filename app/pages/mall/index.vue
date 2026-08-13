@@ -72,6 +72,7 @@ async function handlePurchase(propId: number): Promise<void> {
     <UserAvatar
       :animated="true"
       :frame-id="authStore?.user?.frame_id"
+      :user-name="authStore?.user?.name"
       :img="authStore?.user?.avatar ?? undefined"
       class="w-28 -mt-32 mx-auto"
     />

@@ -16,6 +16,13 @@ const log = createLogger('[PropLookup]')
 const pendingFetches = new Set<number>()
 
 /**
+ * Frame props already re-fetched because their cached entry predates the
+ * `frame` field. Attempted at most once per prop per session, so a backend
+ * that genuinely omits the field can't turn this into a request loop.
+ */
+const staleFrameRefreshes = new Set<number>()
+
+/**
  * Composable for resolving prop data from the mallStore prop index.
  *
  * Usage:
@@ -82,10 +89,33 @@ export function usePropLookup() {
     const prop = resolveProp(propId)
     if (!prop?.asset_url) return null
 
+    refreshStaleFrameEntry(propId, prop)
+
     return {
       assetUrl: prop.asset_url,
       display: { ...DEFAULT_FRAME_DISPLAY, ...(prop.frame ?? {}) },
     }
+  }
+
+  /**
+   * Self-heal a frame prop cached before `frame` shipped.
+   *
+   * `propIndex` is persisted to localStorage and bootstrap only re-fetches
+   * after a 50-minute staleness window, so a returning user would otherwise
+   * render every frame at default geometry — and show no SVGA text — for the
+   * rest of that window. The backend always emits `frame` for frame props
+   * (null only for other types), so `undefined` reliably means "old shape".
+   *
+   * Deliberately fire-and-forget: the caller still gets the frame at default
+   * geometry this tick, and the refreshed entry snaps it into place.
+   */
+  function refreshStaleFrameEntry(propId: number | null | undefined, prop: BootstrapProp): void {
+    if (propId == null) return
+    if (prop.type !== 'frame' || prop.frame !== undefined) return
+    if (staleFrameRefreshes.has(propId)) return
+
+    staleFrameRefreshes.add(propId)
+    void triggerFailsafeFetch(propId)
   }
 
   /**

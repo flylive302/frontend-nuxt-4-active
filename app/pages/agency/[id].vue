@@ -214,7 +214,7 @@ onMounted(async () => {
             <!-- Role Badge -->
             <AgencyRoleBadge class="absolute top-0 right-0 z-0 p-1 " :role="`owner`" />
 
-            <UserAvatar :img="agency.owner.avatar ?? undefined" :animated="true" class="w-14" />
+            <UserAvatar :img="agency.owner.avatar ?? undefined" :user-name="agency.owner.name" :animated="true" class="w-14" />
             <div class="relative mt-3">
               <p class="font-semibold">{{ agency.owner.name }}</p>
               <p class="text-sm text-muted">ID: {{ agency.owner.signature }}</p>
@@ -228,7 +228,7 @@ onMounted(async () => {
               <p>Coin Reseller</p>
             </div>
 
-            <UserAvatar :img="agency.coin_reseller.avatar ?? undefined" :animated="true" class="w-14" />
+            <UserAvatar :img="agency.coin_reseller.avatar ?? undefined" :user-name="agency.coin_reseller.name" :animated="true" class="w-14" />
             <div class="relative mt-3">
               <p class="font-semibold">{{ agency.coin_reseller.name }}</p>
               <p v-if="agency.coin_reseller.signature" class="text-sm text-muted">ID: {{ agency.coin_reseller.signature }}
@@ -249,6 +249,7 @@ onMounted(async () => {
           >
             <UserAvatar
                 :img="member.user.avatar ?? undefined"
+                :user-name="member.user.name"
                 :animated="true"
                 class="w-13"
             />

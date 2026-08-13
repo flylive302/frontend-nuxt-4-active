@@ -43,6 +43,7 @@ function avatarSize(rank: number): string {
           <UserAvatar
             :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             :frame-id="entry.user.frame_id"
+            :user-name="entry.user.name"
             animated
             :class="[avatarSize(entry.rank), 'ring-2', rankAccent(entry.rank).ring]"
             class="rounded-full"

@@ -76,6 +76,7 @@ async function handleUnequip(userPropId: number): Promise<void> {
     <UserAvatar
         animated
         :frame-id="authStore?.user?.frame_id"
+        :user-name="authStore?.user?.name"
         :img="authStore?.user?.avatar ?? undefined"
         class="w-28 -mt-32 mx-auto"
     />

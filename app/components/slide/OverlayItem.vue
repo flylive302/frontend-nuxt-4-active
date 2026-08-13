@@ -17,7 +17,7 @@ import {
   SLIDE_TEXT_LINE_HEIGHT,
   SLIDE_TEXT_PADDING_X,
 } from '~/constants/slide'
-import { fitSlideText } from '~/utils/slide-text-fit'
+import { buildSvgaTextCanvases } from '~/utils/svga-text-canvas'
 
 const props = defineProps<{ slide: ActiveSlide }>()
 const emit = defineEmits<{ complete: []; click: [] }>()
@@ -32,47 +32,18 @@ const clickable = computed(() => props.slide.link.type !== 'none')
 // placeholder layer dimensions baked into the .svga file by the designer, so
 // long text is fitted (shrink, then wrap) inside the fixed box instead.
 function buildTextElements(): Record<string, HTMLCanvasElement> | undefined {
-  const out: Record<string, HTMLCanvasElement> = {}
-  for (const [key, text] of Object.entries(props.slide.texts ?? {})) {
-    if (!text) continue
-    const c = document.createElement('canvas')
-    c.width = SLIDE_TEXT_CANVAS_WIDTH
-    c.height = SLIDE_TEXT_CANVAS_HEIGHT
-    const ctx = c.getContext('2d')
-    if (!ctx) continue
-
-    const fit = fitSlideText(
-      text,
-      {
-        maxWidth: c.width - SLIDE_TEXT_PADDING_X * 2,
-        maxHeight: c.height,
-        maxFontSize: SLIDE_TEXT_MAX_FONT_SIZE,
-        minFontSize: SLIDE_TEXT_MIN_FONT_SIZE,
-        maxLines: SLIDE_TEXT_MAX_LINES,
-        lineHeight: SLIDE_TEXT_LINE_HEIGHT,
-      },
-      (t, size) => {
-        ctx.font = slideFont(size)
-        return ctx.measureText(t).width
-      },
-    )
-
-    ctx.font = slideFont(fit.fontSize)
-    ctx.fillStyle = '#ffffff'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    const lineStep = fit.fontSize * SLIDE_TEXT_LINE_HEIGHT
-    const firstY = c.height / 2 - ((fit.lines.length - 1) * lineStep) / 2
-    fit.lines.forEach((line, i) => {
-      ctx.fillText(line, c.width / 2, firstY + i * lineStep)
-    })
-    out[key] = c
-  }
-  return Object.keys(out).length ? out : undefined
-}
-
-function slideFont(size: number): string {
-  return `${SLIDE_TEXT_FONT_WEIGHT} ${size}px ${SLIDE_TEXT_FONT_FAMILY}`
+  return buildSvgaTextCanvases(props.slide.texts ?? {}, {
+    width: SLIDE_TEXT_CANVAS_WIDTH,
+    height: SLIDE_TEXT_CANVAS_HEIGHT,
+    color: '#ffffff',
+    fontFamily: SLIDE_TEXT_FONT_FAMILY,
+    fontWeight: SLIDE_TEXT_FONT_WEIGHT,
+    maxFontSize: SLIDE_TEXT_MAX_FONT_SIZE,
+    minFontSize: SLIDE_TEXT_MIN_FONT_SIZE,
+    maxLines: SLIDE_TEXT_MAX_LINES,
+    lineHeight: SLIDE_TEXT_LINE_HEIGHT,
+    paddingX: SLIDE_TEXT_PADDING_X,
+  })
 }
 
 // Load each replaceElements URL into an HTMLImageElement. A broken image is

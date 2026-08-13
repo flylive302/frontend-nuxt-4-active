@@ -120,6 +120,7 @@ const profileAvatarImg = computed(() =>
             :animated="true"
             defer-frame-animation
             :frame-id="profileFrameId"
+            :user-name="authStore.user?.name"
             :img="profileAvatarImg"
         />
       </NuxtLink>

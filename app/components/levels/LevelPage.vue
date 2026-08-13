@@ -167,6 +167,7 @@ const tableData = computed<LevelRow[]>(() =>
         <UserAvatar
             :animated="true"
             :frame-id="authStore.user?.frame_id"
+            :user-name="user?.name"
             :img="authStore.user?.avatar ?? undefined"
             class="col-span-2"
         />

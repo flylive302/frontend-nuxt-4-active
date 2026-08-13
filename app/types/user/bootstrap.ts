@@ -293,6 +293,31 @@ export interface FrameDisplayConfig {
   padding: number
   top: string
   left: string
+  /**
+   * Dynamic text slots baked into the frame's SVGA. Absent on the vast
+   * majority of frames — only artwork designed with text placeholders has it.
+   */
+  texts?: FrameTextSpec[]
+}
+
+/**
+ * One text slot inside a frame's SVGA. `key` is the image key the designer
+ * baked into the file; the resolved string is drawn to a canvas and injected
+ * there via SvgaPlayer's `dynamicElements`.
+ *
+ * `username` substitutes the wearer's display name client-side — a frame has no
+ * other runtime context, so unlike slides it needs no server-side resolver.
+ */
+export interface FrameTextSpec {
+  key: string
+  source: 'username' | 'static'
+  /** Present only when `source` is `static`. */
+  value?: string
+  /** Hex colour; defaults to white. */
+  color?: string
+  /** Canvas size matching the SVGA placeholder layer; defaults when absent. */
+  width?: number
+  height?: number
 }
 
 /**

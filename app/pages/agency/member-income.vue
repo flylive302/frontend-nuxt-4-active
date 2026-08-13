@@ -201,6 +201,7 @@ onMounted(async () => {
             <!-- Avatar -->
             <UserAvatar
                 :img="member.avatar_url ?? undefined"
+                :user-name="member.name"
                 :animated="true"
                 class="w-12 shrink-0"
             />

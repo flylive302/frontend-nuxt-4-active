@@ -137,6 +137,7 @@ onMounted(() => {
           >
             <UserAvatar
               :img="request.user?.avatar ?? undefined"
+              :user-name="request.user?.name"
               :animated="true"
               class="size-12"
             />

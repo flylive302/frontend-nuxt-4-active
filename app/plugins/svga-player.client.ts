@@ -117,6 +117,47 @@ export default defineNuxtPlugin({
             return out;
         };
 
+        /** Layout box (in SVGA units) of the sprite that uses `imageKey`. */
+        const spriteLayout = (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            videoEntity: any,
+            imageKey: string
+        ): { width: number; height: number } | null => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sprites: any[] = Array.isArray(videoEntity?.sprites) ? videoEntity.sprites : [];
+            const sprite = sprites.find((s) => s?.imageKey === imageKey);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const frame = sprite?.frames?.find((f: any) => f?.alpha > 0.05 && f?.layout?.width > 0 && f?.layout?.height > 0);
+            if (!frame) return null;
+            return {
+                width: Math.max(1, Math.round(frame.layout.width)),
+                height: Math.max(1, Math.round(frame.layout.height))
+            };
+        };
+
+        // A dynamicElement is drawn at its NATURAL size, merely centered
+        // (`drawImage(el, (layout.w - el.width)/2, …)`) — unlike a base or
+        // replace element, which the lib scales to the layout box. A canvas
+        // even slightly larger than its slot therefore overflows and gets
+        // clipped, which reads as "the text never appeared". Factories let the
+        // caller draw at exactly the slot size, which it can't know up front.
+        const resolveDynamicElementFactories = (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            videoEntity: any,
+            factories: Record<string, (width: number, height: number) => HTMLCanvasElement | null>
+        ): Record<string, HTMLCanvasElement> => {
+            const out: Record<string, HTMLCanvasElement> = {};
+
+            for (const [key, factory] of Object.entries(factories)) {
+                const layout = spriteLayout(videoEntity, key);
+                if (!layout) continue;
+                const canvas = factory(layout.width, layout.height);
+                if (canvas) out[key] = canvas;
+            }
+
+            return out;
+        };
+
         const createSvgaPlayer = async (options: {
             canvas: HTMLCanvasElement;
             name: string;
@@ -128,6 +169,13 @@ export default defineNuxtPlugin({
             // Keys must match the placeholder names in the .svga file.
             replaceElements?: Record<string, HTMLImageElement>;
             dynamicElements?: Record<string, HTMLCanvasElement>;
+            /**
+             * Draw a dynamic element once the sprite's slot size is known.
+             * Called with the slot's layout width/height; return null to skip.
+             * Prefer this over `dynamicElements` — see
+             * resolveDynamicElementFactories.
+             */
+            dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>;
         }) => {
             await ensureSvga();
             const player = new _PlayerCtor({
@@ -138,9 +186,12 @@ export default defineNuxtPlugin({
             const sizedReplaceElements = options.replaceElements
                 ? sizeReplaceElementsToLayout(videoEntity, options.replaceElements)
                 : undefined;
+            const factoryElements = options.dynamicElementFactories
+                ? resolveDynamicElementFactories(videoEntity, options.dynamicElementFactories)
+                : undefined;
             // Shallow-copy so the shared cache entry is never mutated.
             const entityToMount =
-                options.replaceElements || options.dynamicElements
+                options.replaceElements || options.dynamicElements || options.dynamicElementFactories
                     ? {
                           ...(videoEntity as object),
                           replaceElements: {
@@ -149,7 +200,8 @@ export default defineNuxtPlugin({
                           },
                           dynamicElements: {
                               ...((videoEntity as Record<string, unknown>).dynamicElements ?? {}),
-                              ...options.dynamicElements
+                              ...options.dynamicElements,
+                              ...factoryElements
                           }
                       }
                     : videoEntity;

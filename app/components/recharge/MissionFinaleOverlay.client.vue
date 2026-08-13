@@ -116,6 +116,7 @@ function rankLabelClass(rank: number): string {
                 <UserAvatar
                   :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                   :frame-id="entry.user.frame_id"
+                  :user-name="entry.user.name"
                   animated
                   class="relative z-10 rounded-full ring-2"
                   :class="[entry.rank === 1 ? 'w-16' : 'w-12', rankRingClass(entry.rank)]"
@@ -174,6 +175,7 @@ function rankLabelClass(rank: number): string {
               <UserAvatar
                 :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                 :frame-id="entry.user.frame_id"
+                :user-name="entry.user.name"
                 animated
                 class="rounded-full ring-2"
                 :class="[entry.rank === 1 ? 'w-16' : 'w-12', rankRingClass(entry.rank)]"

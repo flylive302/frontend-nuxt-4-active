@@ -17,6 +17,7 @@ const isOnline = computed(() => presenceStore.onlineByUserId[Number(props.thread
       <UserAvatar
           :img="thread.participant.avatar"
           :frame-id="thread.participant.frame_id"
+          :user-name="thread.participant.name"
           animated
           class="size-12"
       />

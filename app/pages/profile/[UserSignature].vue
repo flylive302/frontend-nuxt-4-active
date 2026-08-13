@@ -395,6 +395,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           <UserAvatar
             :animated="true"
             :frame-id="profileWritable?.frame_id"
+            :user-name="profileWritable?.name"
             :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             class="w-full"
           />

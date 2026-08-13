@@ -74,6 +74,7 @@ function handleAvatarClick() {
           :img="user.avatar"
           animated
           :frame-id="user.frame_id"
+          :user-name="user.name"
           class="w-14 ml-1 shrink-0"
           @click="handleAvatarClick"
       />

@@ -14,6 +14,12 @@ const props = withDefaults(defineProps<{
   autoplay?: boolean;
   replaceElements?: Record<string, HTMLImageElement>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
+  /**
+   * Draw a dynamic element once its sprite slot size is known. Preferred over
+   * `dynamicElements`, which the lib renders at natural size and clips when it
+   * doesn't match the slot.
+   */
+  dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>;
   motionPause?: boolean;
 }>(), {
   width: '100%',
@@ -22,7 +28,8 @@ const props = withDefaults(defineProps<{
   autoplay: true,
   motionPause: true,
   replaceElements: () => ({}),
-  dynamicElements: () => ({})
+  dynamicElements: () => ({}),
+  dynamicElementFactories: undefined
 });
 
 const emit = defineEmits<{ complete: [] }>();
@@ -36,6 +43,7 @@ const { reload } = useSvgaPlayer(canvas, {
   onComplete: () => emit('complete'),
   replaceElements: props.replaceElements,
   dynamicElements: props.dynamicElements,
+  dynamicElementFactories: props.dynamicElementFactories,
 });
 
 defineExpose({ reload });

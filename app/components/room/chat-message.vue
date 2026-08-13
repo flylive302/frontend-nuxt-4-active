@@ -116,7 +116,7 @@ const charmLevel = computed(() =>
     </div>
     <div v-else class="flex py-3">
       <!-- Avatar -->
-      <UserAvatar :img="displayAvatar" :frame-id="displayFrameId" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
+      <UserAvatar :img="displayAvatar" :frame-id="displayFrameId" :user-name="displayName" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
       <div class="min-w-0">
 
         <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary rounded-md">

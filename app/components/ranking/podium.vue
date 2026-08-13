@@ -75,6 +75,7 @@ function rankAccent(rank: number): { ring: string; text: string; medal: string; 
               :frame-asset-url="rankingPodiumFrame(entry.rank)"
               :img="avatarFor(entry) ?? ASSETS.AVATAR_PLACEHOLDER"
               :frame-display="{ scale: 100, padding: 22, top: '0%', left: '0%' }"
+              :user-name="nameFor(entry)"
               class="w-28"
           />
         </NuxtLink>

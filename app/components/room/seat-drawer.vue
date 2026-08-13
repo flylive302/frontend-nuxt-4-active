@@ -441,6 +441,7 @@ const seatUserAge = computed(() => {
           <LazyUserAvatar
             :img="displayUser.avatar ?? undefined"
             :frame-id="displayUser.frame_id"
+            :user-name="displayUser.name"
             :animated="true" class="size-32"
             @click="handleVisitProfile"
           />

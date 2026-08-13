@@ -21,6 +21,12 @@ export interface UseSvgaPlayerOptions {
   replaceElements?: Record<string, HTMLImageElement>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
   /**
+   * Draw a dynamic element once its sprite slot size is known. The lib draws
+   * dynamic elements at natural size (centered, unscaled), so a canvas that
+   * doesn't match its slot is clipped out of view — a factory sizes it right.
+   */
+  dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>;
+  /**
    * Participate in the global motion-pause registry (room-battery-perf/03).
    * Default true. Set false for one-shot players whose `complete` event gates
    * downstream flow (e.g. the gift playback queue) — freezing those mid-play
@@ -81,6 +87,7 @@ export function useSvgaPlayer(
         autoplay: false,
         replaceElements: options.replaceElements,
         dynamicElements: options.dynamicElements,
+        dynamicElementFactories: options.dynamicElementFactories,
       });
 
       // Guard: component unmounted during async load — discard the player

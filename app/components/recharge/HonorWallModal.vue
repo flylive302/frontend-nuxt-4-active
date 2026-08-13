@@ -183,6 +183,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
                       <UserAvatar
                         :img="entry.user.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                         :frame-id="entry.user.frame_id"
+                        :user-name="entry.user.name"
                         animated
                         :class="entry.rank === 1 ? 'w-16' : 'w-12'"
                         class="rounded-full"

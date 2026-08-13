@@ -147,10 +147,11 @@ onMounted(async () => {
             <!-- Avatar -->
             <UserAvatar
               :img="member.user.avatar ?? undefined"
+              :user-name="member.user.name"
               :animated="true"
               class="w-12 shrink-0"
             />
-            
+
             <!-- Info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">

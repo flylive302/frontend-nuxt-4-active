@@ -123,6 +123,7 @@ function clearActiveReaction(): void {
             :defer-frame-animation="true"
             :static-frame="!frameAnimationAllowed"
             :frame-id="userFrameId"
+            :user-name="seat?.user?.name"
             :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
             class="relative z-20"
         />

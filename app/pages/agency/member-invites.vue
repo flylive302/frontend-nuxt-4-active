@@ -140,6 +140,7 @@ onMounted(() => {
               <div class="flex items-center gap-3">
                 <UserAvatar
                   :img="invitation.user?.avatar ?? undefined"
+                  :user-name="invitation.user?.name"
                   :animated="true"
                   class="w-10 shrink-0"
                 />
@@ -180,6 +181,7 @@ onMounted(() => {
               <div class="flex items-center gap-3">
                 <UserAvatar
                   :img="invitation.user?.avatar ?? undefined"
+                  :user-name="invitation.user?.name"
                   :animated="true"
                   class="w-8 shrink-0"
                 />

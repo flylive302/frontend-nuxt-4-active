@@ -73,6 +73,7 @@ const rankBadgeClass = computed<string>(() => {
         :frame-id="entry.user?.frame_id"
         :img="avatarSrc ?? ASSETS.AVATAR_PLACEHOLDER"
         :frame-display="{ scale: 120, padding: 16, top: '0%', left: '0%' }"
+        :user-name="displayName"
         class="w-12"
     />
     <div class="min-w-0 flex-1">

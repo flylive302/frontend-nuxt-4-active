@@ -157,6 +157,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           <UserAvatar
             :animated="true"
             :frame-id="authStore?.user?.frame_id"
+            :user-name="authStore.user?.name"
             :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
             :img-width="PROFILE_HEADER_AVATAR_WIDTH"
             class="w-full profile-avatar-anchor"

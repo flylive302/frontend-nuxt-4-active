@@ -59,6 +59,7 @@ const presenceStore = usePresenceStore()
                 :animated="true"
                 defer-frame-animation
                 :frame-id="item.frame_id"
+                :user-name="item.name"
                 :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                 class="w-14"
               />
@@ -96,6 +97,7 @@ const presenceStore = usePresenceStore()
                 :animated="true"
                 defer-frame-animation
                 :frame-id="item.frame_id"
+                :user-name="item.name"
                 :img="item.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
                 class="w-14"
               />

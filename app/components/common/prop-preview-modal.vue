@@ -82,6 +82,7 @@ function handleClose(): void {
               <UserAvatar
                 :animated="true"
                 :frame-id="item.prop_id ?? undefined"
+                :user-name="authStore?.user?.name"
                 :frame-asset-url="item.asset_url ?? undefined"
                 :img="authStore?.user?.avatar ?? undefined"
               />

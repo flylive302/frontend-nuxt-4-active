@@ -26,6 +26,7 @@ defineProps<{
       >
         <UserAvatar
           :img="self.user.avatar"
+          :user-name="self.user.name"
           animated
           class="w-10 shrink-0"
         />

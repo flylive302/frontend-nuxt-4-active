@@ -60,7 +60,7 @@ const profileTo = computed(() => (!props.isSystem && props.signature ? `/profile
         >
           <UIcon name="i-lucide-shield-check" class="size-5 text-primary" />
         </div>
-        <UserAvatar v-else :img="avatar" :frame-id="frameId" animated class="size-12" />
+        <UserAvatar v-else :img="avatar" :frame-id="frameId" :user-name="name" animated class="size-12" />
         <span
           v-if="!isSystem && online"
           class="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-success ring-2 ring-default"

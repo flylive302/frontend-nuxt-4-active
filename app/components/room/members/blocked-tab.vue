@@ -36,7 +36,7 @@ const emit = defineEmits<{
       :key="block.id"
       class="flex items-center gap-3 p-2 rounded-lg bg-elevated/30"
     >
-      <LazyUserAvatar :img="block.user?.avatar" class="size-10" />
+      <LazyUserAvatar :img="block.user?.avatar" :user-name="block.user?.name" class="size-10" />
       <div class="flex-1 min-w-0">
         <p class="font-medium truncate">{{ block.user?.name }}</p>
         <p class="text-xs text-muted">

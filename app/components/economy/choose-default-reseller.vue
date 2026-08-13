@@ -313,6 +313,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
         <UserAvatar
             :img="selectedReseller.avatar ?? undefined"
             :frame-display="{ scale: 116, padding: 20, top: '0%', left: '0%' }"
+            :user-name="selectedReseller.name"
             :animated="true"
         />
       </div>

@@ -117,7 +117,7 @@ function getMemberActions(member: RoomMember) {
         :key="member.id"
         class="flex items-center gap-3 p-2 rounded-lg bg-elevated/30 hover:bg-elevated/50 transition"
       >
-        <LazyUserAvatar :img="member.user?.avatar" class="size-10" />
+        <LazyUserAvatar :img="member.user?.avatar" :user-name="member.user?.name" class="size-10" />
         <div class="flex-1 min-w-0">
           <p class="font-medium truncate">{{ member.user?.name }}</p>
           <p class="text-xs text-muted">{{ member.role }}</p>
