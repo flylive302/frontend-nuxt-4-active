@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ROOM_THEME_COLORS } from '~/constants/room'
+import { ROOM_LOGO_ASPECT_RATIO, ROOM_THEME_COLORS } from '~/constants/room'
 import type { SeatPickerOption } from '~/composables/room/useSeatPickerOptions'
 
 // ========================================
@@ -59,15 +59,15 @@ onBeforeUnmount(releasePreviews)
     <template #content>
       <div class="px-3 mt-3 flex flex-col gap-3 pb-4 max-h-[80vh] overflow-y-auto">
         <div class="bg-neutral-800 rounded-lg p-3 space-y-4">
-          <!-- Logo Upload (1:1 square) -->
-          <UFormField label="Room Logo (Square)">
+          <!-- Logo Upload (5:6 portrait — this is the room card's cover image) -->
+          <UFormField label="Room Logo" help="Shown on the room list — portrait works best">
             <div class="flex justify-center">
               <FileUpload
                 :current-image="logoPreview"
                 :loading="isLogoUploading"
                 crop
-                :aspect-ratio="1"
-                shape="circle"
+                :aspect-ratio="ROOM_LOGO_ASPECT_RATIO"
+                shape="rounded"
                 size="lg"
                 label="Room Logo"
                 @file-selected="selectLogoFile"

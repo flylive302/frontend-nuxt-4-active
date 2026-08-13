@@ -7,6 +7,7 @@ import { h, computed, resolveComponent } from 'vue';
 import { ASSETS } from '~/constants/assets';
 import type { ColumnDef } from '@tanstack/vue-table';
 import type { LevelConfig } from '~/types/user/bootstrap';
+import { roomLogoSquareSrc } from '~/utils/imagekit';
 
 // ========================================
 // Stores
@@ -104,6 +105,12 @@ const tableData = computed<RoomLevelRow[]>(() =>
 /** Loading state */
 const loading = computed(() => !bootstrapStore.isReady);
 
+/** Room logo, square-cropped for the circular header avatar (`w-20` → ~200px @2.5x DPR). */
+const roomLogoSrc = computed(() => {
+  const logo = roomStore.currentRoom?.logo;
+  return logo ? roomLogoSquareSrc(logo, 200) : logo;
+});
+
 // ========================================
 // Handlers
 // ========================================
@@ -122,7 +129,7 @@ function handleOpenOwner(): void {
 
 <template>
   <div class="flex gap-1 w-full">
-    <UserAvatar :animated="true" :img="roomStore.currentRoom?.logo" class="w-20"/>
+    <UserAvatar :animated="true" :img="roomLogoSrc" class="w-20"/>
     <div class="w-full">
       <div class="flex justify-between items-baseline">
         <h2 class="text-base font-bold">{{ roomStore.currentRoom?.name || 'Loading...' }}</h2>        

@@ -3,7 +3,7 @@ import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
-import { roomBackgroundImageSrc } from '~/utils/imagekit'
+import { roomLogoCardSrc } from '~/utils/imagekit'
 import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
@@ -199,16 +199,18 @@ watch(
   { flush: 'post' },
 )
 
-function roomBackgroundPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
+function roomLogoPreloadHref(room: (typeof carouselRooms.value)[number] | undefined): string {
   if (!room) return ''
-  // Index 0 is always highFetchPriority — same helper RoomCard uses, so the URL is
-  // byte-identical; any drift makes the browser discard the preload.
-  return roomBackgroundImageSrc(room.background ?? ASSETS.ROOM_BG_PLACEHOLDER, 'carousel', true)
+  // Must be the SAME helper RoomCard's <img> uses, so the URL is byte-identical;
+  // any drift makes the browser discard the preload and log "preloaded ... but not
+  // used". Preloading the BACKGROUND here was exactly that bug — the card paints the
+  // LOGO, so the background preload was always dead weight once that switch landed.
+  return roomLogoCardSrc(room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER)
 }
 
 /** Single high-priority preload — secondary slides stay eager via <img> without competing preloads. */
 const lcpRoomPreloadHrefs = computed(() => {
-  const href = roomBackgroundPreloadHref(carouselRooms.value[0])
+  const href = roomLogoPreloadHref(carouselRooms.value[0])
   return href ? [href] : []
 })
 

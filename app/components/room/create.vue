@@ -4,6 +4,7 @@
 // ========================================
 
 import { z } from 'zod'
+import { ROOM_LOGO_ASPECT_RATIO } from '~/constants/room'
 import { useRoom } from '~/composables/room/useRoom'
 import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 import type { FormError, Form } from '@nuxt/ui'
@@ -169,7 +170,7 @@ onBeforeUnmount(() => {
           :current-image="logoPreview"
           :loading="isUploading"
           crop
-          :aspect-ratio="1"
+          :aspect-ratio="ROOM_LOGO_ASPECT_RATIO"
           shape="rounded"
           label="Room Logo"
           @file-selected="handleFileSelected"
@@ -182,7 +183,7 @@ onBeforeUnmount(() => {
       </div>
 
        <p class="text-sm text-muted text-center max-w-xs">
-        Upload a strict 1:1 circular logo for your room. This will be visible to all users.
+        This is your room's cover — it's what people see on the room list. Portrait works best.
       </p>
     </div>
 

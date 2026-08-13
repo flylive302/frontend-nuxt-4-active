@@ -8,6 +8,7 @@
 // ========================================
 
 import type { Room } from '~/types/room/room'
+import { roomLogoSquareSrc } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -33,6 +34,9 @@ const errorMessage = ref('')
 const showPassword = ref(false)
 
 const { verifyRoomJoinPassword } = useRoomJoinPasswordVerify()
+
+/** Room logo, square-cropped for the circular preview avatar (`w-24` → ~240px @2.5x DPR). */
+const roomLogoSrc = computed(() => (props.room.logo ? roomLogoSquareSrc(props.room.logo, 240) : props.room.logo))
 
 // ========================================
 // Handlers
@@ -73,7 +77,7 @@ watch(open, (isOpen) => {
     <template #content>
       <div class="px-4 mt-3 pb-6 space-y-4">
         <div class="flex items-center gap-3 bg-neutral-800 rounded-lg p-3">
-          <UserAvatar :img="room.logo" :animated="true" class="w-24" />
+          <UserAvatar :img="roomLogoSrc" :animated="true" class="w-24" />
           <div class="w-full">
             <MarqueeName text-class="text-base font-bold" :name="room.name" />
             <UBadge color="warning" variant="subtle" size="sm">

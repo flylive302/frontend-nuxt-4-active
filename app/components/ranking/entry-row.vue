@@ -7,6 +7,7 @@ import type { RankingEntry } from '~/types/ranking'
 import { ASSETS } from '~/constants/assets'
 import type { RankingCategory } from '~/constants/ranking'
 import { formatCurrency } from '~/utils/currency'
+import { roomLogoSquareSrc } from '~/utils/imagekit'
 
 const props = defineProps<{
   entry: RankingEntry
@@ -31,7 +32,8 @@ const displayName = computed<string>(() => {
 const avatarSrc = computed<string>(() => {
   const e = props.entry
   if (e.user) return e.user.avatar ?? ''
-  if (e.room) return e.room.logo ?? ''
+  // Room logos are portrait-cropped now; square-crop for this circular avatar (`w-12` → ~120px @2.5x DPR).
+  if (e.room) return e.room.logo ? roomLogoSquareSrc(e.room.logo, 120) : ''
   if (e.agency) return e.agency.logo ?? ''
   return ''
 })

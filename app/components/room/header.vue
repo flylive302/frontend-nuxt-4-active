@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LevelConfig } from '~/types/user/bootstrap';
 import { ASSETS } from '~/constants/assets';
+import { roomLogoSquareSrc } from '~/utils/imagekit';
 
 
 // ========================================
@@ -24,6 +25,11 @@ const open = ref(false);
 
 const thisRoom = computed(() => roomStore.currentRoom);
 const loading = computed(() => !bootstrapStore.isReady);
+
+/** Room logo, square-cropped for the circular level-drawer avatar (`w-10` → ~100px @2.5x DPR). */
+const roomLogoSrc = computed(() =>
+  thisRoom.value?.logo ? roomLogoSquareSrc(thisRoom.value.logo, 100) : thisRoom.value?.logo
+);
 
 // ========================================
 // Computed - Level Configuration
@@ -136,7 +142,7 @@ const openLeaveDrawer = (event: Event) => {
           style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
       >
         <div class="w-10">
-          <UserAvatar :animated="true" :img="thisRoom?.logo" :frame-id="thisRoom?.owner?.frame_id" :user-name="thisRoom?.owner?.name" />
+          <UserAvatar :animated="true" :img="roomLogoSrc" :frame-id="thisRoom?.owner?.frame_id" :user-name="thisRoom?.owner?.name" />
           <p class="text-xs text-center">LvL. {{ thisRoom?.current_level != null ? thisRoom.current_level : 0 }}</p>
         </div>
 

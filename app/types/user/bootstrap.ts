@@ -232,6 +232,18 @@ export interface BootstrapRoom {
    */
   seat_ladder: SeatLadderLevel[]
   owner_id: number
+  /**
+   * ⚠️ Only the room DETAIL endpoint sends the full `MinimalUser` here. The
+   * paginated room LIST (`GET /rooms`, backend `RoomOwnerSnippetResource`)
+   * deliberately sends a trimmed subset — currently `{ id, signature, avatar }`
+   * — to keep ~12 fields x N rooms off the home-grid payload.
+   *
+   * So on a room that came from a LIST, every other field on this object is
+   * `undefined` at runtime despite type-checking. Read list-sourced owner
+   * fields defensively (see `components/room/card.vue`); the rich consumers
+   * (`room/info.vue`, `room/header.vue`, `room/seat.vue`) are safe because they
+   * all read `roomStore.currentRoom`, which is detail-sourced.
+   */
   owner: MinimalUser
 }
 

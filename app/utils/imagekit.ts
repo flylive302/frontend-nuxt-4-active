@@ -139,9 +139,64 @@ export function avatarImageSrc(url: string | null | undefined, opts?: Partial<Im
 export type RoomCardLayout = 'carousel' | 'grid'
 
 /**
+ * Room-logo card variant — the big image a room card paints (replaced the room
+ * background there; see `components/room/card.vue`).
+ *
+ * ONE variant for BOTH layouts, deliberately. The same room routinely renders
+ * in the carousel and the grid on the same screen (`useRoomExpandTransition`
+ * arbitrates exactly that case), so a single URL means the second card is a
+ * memory-cache hit instead of a second CDN fetch. That halving is worth more
+ * than shaving a few px off either box.
+ *
+ * Requesting `w` AND `h` is the load-bearing part: with both set,
+ * `c-maintain_ratio` CENTER-CROPS to exactly w×h (verified against the live
+ * CDN — it does not pad). Width alone let the source's own aspect decide the
+ * height, so a tall logo shipped ~570px of pixels into a ~224px box and
+ * `object-cover` threw the rest away.
+ *
+ * 360x432 is exactly ROOM_LOGO_ASPECT_RATIO (5:6) — the carousel box, and the
+ * ratio the uploader crops to, so a freshly uploaded logo is framed on the card
+ * exactly as its owner cropped it. The grid box is the slightly taller 5:7 and
+ * `object-cover` absorbs the difference. w=360 matches what the carousel
+ * already requested, so the LCP image does not lose width.
+ *
+ * Measured against the live CDN: 38.7 kB, vs 42.8 kB (old carousel `w-360`) and
+ * 43.1 kB (old grid `w-320,q-85`). The saving is not the width — it is that a
+ * pinned height puts a CEILING on the bytes. Width-only let a tall source
+ * decide, and one did: a 32:57 logo shipped 320x570 into a ~188x224 box.
+ *
+ * Legacy 1:1 logos (uploaded before the crop ratio changed, never migrated)
+ * center-crop into 5:6 with only a slight trim.
+ */
+export function roomLogoCardSrc(logo: string | null | undefined): string {
+  return withImageKitTransform(logo, { w: 360, h: 432, q: 80 })
+}
+
+/**
+ * Room-logo SQUARE variant, for the circular surfaces (`UserAvatar` in the
+ * room header / details / password prompt, ranking rows, the minimized-room
+ * bubble).
+ *
+ * Those boxes are `aspect-square` with `object-contain`, so a portrait source
+ * shrinks to fit and leaves visible gaps inside the circle. Asking the CDN for
+ * a square (`w === h` → center crop) keeps every one of those call sites'
+ * CSS untouched while room logos move to a portrait crop ratio.
+ *
+ * Pass the rendered CSS width; DPR is the caller's business, matching
+ * `avatarImageSrc`'s convention of taking an already-scaled `w`.
+ */
+export function roomLogoSquareSrc(logo: string | null | undefined, w = 256): string {
+  return withImageKitTransform(logo, { w, h: w, q: 75 })
+}
+
+/**
  * Room card background URL. Single source of truth: the rendered <img> and the
  * LCP <link rel=preload> must produce byte-identical URLs or the preload is discarded.
  * Carousel ~240px CSS width — w=360 (~1.5x) balances DPR vs Lighthouse oversize; grid ~160 — w=320.
+ *
+ * ⚠️ No longer rendered by the room card — the card paints the LOGO now. This
+ * survives as the room PAGE's first-frame seed (`useRoomBackground`), which is
+ * still handed over by `card.vue` on tap.
  */
 export function roomBackgroundImageSrc(
   background: string | null | undefined,

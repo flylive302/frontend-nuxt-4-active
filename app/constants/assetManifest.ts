@@ -1,20 +1,21 @@
 import type { AssetScope, AssetType, AssetPriority } from '~/types/asset/asset'
 import { ASSETS } from '~/constants/assets'
-import { roomBackgroundImageSrc } from '~/utils/imagekit'
+import { roomLogoCardSrc } from '~/utils/imagekit'
 
 /**
- * Precached room-background variant.
+ * Precached room-card placeholder variant.
  *
  * `ASSETS.ROOM_BG_PLACEHOLDER` is intentionally base-only (callers size it per layout), so
  * precaching the bare constant downloaded the **full-size original** for every user at
  * bootstrap — bytes no call site ever requests, because a precache entry only serves a render
  * when the two URLs match byte-for-byte.
  *
- * This reproduces the carousel + high-fetch-priority variant, i.e. the same URL the LCP
- * room card requests. Keep it in sync with `roomBackgroundImageSrc`; if that helper's widths
- * change, this follows automatically.
+ * This reproduces the exact URL a logo-less room card requests. The card paints the room LOGO
+ * (not the background) and falls back to this placeholder, so it must go through
+ * `roomLogoCardSrc` — the same helper `components/room/card.vue` and the home page's LCP
+ * preload use. If that helper's dimensions change, all three follow automatically.
  */
-const ROOM_BG_PLACEHOLDER_PRECACHE = roomBackgroundImageSrc(ASSETS.ROOM_BG_PLACEHOLDER, 'carousel', true)
+const ROOM_BG_PLACEHOLDER_PRECACHE = roomLogoCardSrc(ASSETS.ROOM_BG_PLACEHOLDER)
 
 export interface AssetManifestItem {
     url: string

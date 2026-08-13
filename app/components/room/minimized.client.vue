@@ -2,7 +2,7 @@
 import { computed, onMounted, nextTick } from 'vue';
 import { ASSETS } from '~/constants/assets';
 import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
-import { withImageKitTransform } from '~/utils/imagekit';
+import { roomLogoSquareSrc } from '~/utils/imagekit';
 
 const roomStore = useRoomStore();
 const { leaveRoom, isProducing, isLocalMuted, toggleLocalMute } = useRoomAudio();
@@ -17,10 +17,11 @@ const displayRoom = computed(() => roomStore.currentRoom ?? roomStore.minimizedR
 // Mic is audible to the room only while producing AND not locally muted.
 const isMicLive = computed(() => isProducing.value && !isLocalMuted.value);
 
-// Room preview thumbnail — dynamic logo URL needs the transform; the ROOM_CARD_TOP
-// fallback already carries its own `tr` so this no-ops for that branch.
+// Room preview thumbnail — dynamic logo URL needs the square-crop transform (circular
+// `size-16` bubble → ~160px @2.5x DPR); the ROOM_CARD_TOP fallback already carries its
+// own `tr` so this no-ops for that branch.
 const roomPreviewSrc = computed(() =>
-  withImageKitTransform(displayRoom.value?.logo ?? ASSETS.ROOM_CARD_TOP, { w: 64 }),
+  roomLogoSquareSrc(displayRoom.value?.logo ?? ASSETS.ROOM_CARD_TOP, 160),
 );
 
 // Set initial position after mount when element dimensions are known

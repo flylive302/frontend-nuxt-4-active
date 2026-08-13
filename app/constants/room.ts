@@ -182,6 +182,28 @@ export const ROOM_BACKGROUND_WIDTH = 960;
 export const ROOM_BACKGROUND_QUALITY = 75;
 
 // ============================================
+// Room Logo
+// ============================================
+
+/**
+ * Crop aspect ratio offered when uploading a room logo (create + theme drawer).
+ *
+ * The logo is the room CARD's main image, so it is cropped to the card box
+ * rather than to a square. 5:6 is the carousel cell (`max-w-60 h-72`); the
+ * grid cell is the slightly taller 5:7 and `object-cover` absorbs the
+ * difference. 5:6 over 5:7 on purpose — it is the nearer of the two to square,
+ * so the pre-existing 1:1 logos (never migrated) degrade least beside it, and
+ * it is the ratio of the LCP surface.
+ *
+ * The circular surfaces (room header, ranking rows, minimized bubble) stay
+ * square by asking the CDN to center-crop — see `roomLogoSquareSrc`.
+ */
+export const ROOM_LOGO_ASPECT_RATIO = 5 / 6;
+
+/** Rendered CSS width of the owner-avatar chip on a room card (`size-6`), x~2.6 DPR. */
+export const ROOM_CARD_OWNER_AVATAR_WIDTH = 64;
+
+// ============================================
 // Limits
 // ============================================
 

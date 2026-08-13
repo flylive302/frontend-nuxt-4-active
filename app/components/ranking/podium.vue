@@ -8,6 +8,7 @@ import type { RankingEntry } from '~/types/ranking'
 import { ASSETS, rankingPodiumFrame } from '~/constants/assets'
 import type { RankingCategory } from '~/constants/ranking'
 import { formatCurrency } from '~/utils/currency'
+import { roomLogoSquareSrc } from '~/utils/imagekit'
 
 const props = defineProps<{
   /** Ordered top-3 entries (rank 1 first). */
@@ -39,7 +40,8 @@ function nameFor(entry: RankingEntry): string {
 
 function avatarFor(entry: RankingEntry): string | undefined {
   if (entry.user) return entry.user.avatar ?? undefined
-  if (entry.room) return entry.room.logo ?? undefined
+  // Room logos are portrait-cropped now; square-crop for this circular avatar (`w-28` → ~280px @2.5x DPR).
+  if (entry.room) return entry.room.logo ? roomLogoSquareSrc(entry.room.logo, 280) : undefined
   if (entry.agency) return entry.agency.logo ?? undefined
   return undefined
 }

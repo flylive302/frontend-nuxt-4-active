@@ -9,7 +9,8 @@
 
 import type { Room } from '~/types/room/room'
 import { ASSETS } from '~/constants/assets'
-import { roomBackgroundImageSrc, avatarImageSrc } from '~/utils/imagekit'
+import { ROOM_CARD_OWNER_AVATAR_WIDTH } from '~/constants/room'
+import { roomBackgroundImageSrc, roomLogoCardSrc, avatarImageSrc } from '~/utils/imagekit'
 import MarqueeName from "~/components/common/marquee-name.vue";
 
 defineOptions({
@@ -22,7 +23,7 @@ defineOptions({
 
 const props = withDefaults(defineProps<{
   room: Room
-  /** Eager decode for likely-LCP carousel cells (may be multiple while Embla settles). */
+  /** Eager decode for likely-LCP carousel cells (maybe multiple while Embla settles). */
   priorityLcp?: boolean
   /** Only one carousel cell should use fetchpriority=high (true LCP candidate). */
   highFetchPriority?: boolean
@@ -59,7 +60,59 @@ const badgeDisplay = computed(() => {
 })
 
 
-const roomBackgroundSrc = computed(() =>
+/**
+ * The card's main image — the room LOGO, cropped to the card box by the CDN.
+ *
+ * Not the background: that is the room PAGE's image, and painting it here made
+ * every card in the grid a preview of a wallpaper rather than of a room.
+ * `ROOM_BG_PLACEHOLDER` stays the fallback (not the avatar placeholder) because
+ * it is the only card-shaped one.
+ */
+const roomLogoSrc = computed(() =>
+  roomLogoCardSrc(props.room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER),
+)
+
+/**
+ * Owner avatars are NOT all ImageKit URLs — `users.avatar` may hold a Google
+ * OAuth URL (`lh3.googleusercontent.com/...`) that never touched our CDN, which
+ * `withImageKitTransform` correctly passes through untouched. Google expires
+ * those when the account photo changes, and the dead ones 400, so a card would
+ * paint a broken-image icon.
+ *
+ * The room logo this chip used to show was always an ImageKit URL and could not
+ * fail this way, so the fallback is new with the switch to owner avatars.
+ * Mirrors `components/user/avatar.vue` — same reset-on-change so a recycled card
+ * retries the new owner's URL instead of staying stuck on the placeholder.
+ */
+const hasOwnerAvatarError = ref(false)
+watch(() => props.room.owner?.avatar, () => { hasOwnerAvatarError.value = false })
+
+/**
+ * Room owner's avatar for the footer chip.
+ *
+ * Free of extra requests by construction: the rooms-list query already eager
+ * loads the owner and `avatar` is a plain column on it, so this rides along in
+ * the payload the grid was fetching anyway.
+ *
+ * ⚠️ `owner` on a LIST room is a trimmed snippet, and the list response is
+ * edge-cached (`s-maxage=15, stale-while-revalidate=60`) — responses predating
+ * the backend field keep serving for ~75s after a deploy. The placeholder
+ * fallback is what covers that window, so do not drop it.
+ */
+const ownerAvatarSrc = computed(() => {
+  if (hasOwnerAvatarError.value) return avatarImageSrc(ASSETS.AVATAR_PLACEHOLDER)
+  return avatarImageSrc(props.room.owner?.avatar ?? ASSETS.AVATAR_PLACEHOLDER, {
+    w: ROOM_CARD_OWNER_AVATAR_WIDTH,
+  })
+})
+
+/**
+ * Low-res seed handed to the room page so its background has something to paint
+ * during the expand morph. The card no longer renders this, so it is a warm
+ * *prefetch* rather than an already-decoded bitmap — still a faster first frame
+ * than waiting on the full-resolution background, at ~8 kB.
+ */
+const roomBackgroundSeedSrc = computed(() =>
   roomBackgroundImageSrc(
     props.room.background ?? ASSETS.ROOM_BG_PLACEHOLDER,
     props.cardLayout,
@@ -67,7 +120,7 @@ const roomBackgroundSrc = computed(() =>
   ),
 )
 
-/** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 for aspect box + ImageKit requests */
+/** Match tailwind h-72 / h-56 + max-w-60 / max-w-40 so the box reserves space before load. */
 const roomImageWidth = computed(() => (props.cardLayout === 'carousel' ? 240 : 160))
 const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 224))
 
@@ -77,13 +130,13 @@ const roomImageHeight = computed(() => (props.cardLayout === 'carousel' ? 288 : 
 
 /**
  * Handle room card click.
- * Delegates to useRoomEntry for password-protected room handling. The URL this
- * card already painted becomes the room page's first frame, so the card expands
- * into a real background rather than an empty box.
+ * Delegates to useRoomEntry for password-protected room handling. The low-res
+ * background URL seeds the room page's first frame, so the card expands into a
+ * real background rather than an empty box.
  */
 function handleRoomClick(): void {
   claimRoomExpand(cardInstanceKey)
-  void enterRoom(props.room, roomBackgroundSrc.value)
+  void enterRoom(props.room, roomBackgroundSeedSrc.value)
 }
 
 </script>
@@ -101,11 +154,10 @@ function handleRoomClick(): void {
   >
     <figure class="h-full w-full">
       <img
-        :src="roomBackgroundSrc"
+        :src="roomLogoSrc"
         :alt="props.room.name ?? undefined"
         :width="roomImageWidth"
         :height="roomImageHeight"
-        :sizes="props.cardLayout === 'carousel' ? '(max-width: 640px) 72vw, 240px' : '(max-width: 640px) 45vw, 160px'"
         class="h-full min-h-0 w-full object-cover"
         :loading="props.priorityLcp ? 'eager' : 'lazy'"
         :fetchpriority="effectiveHighFetchPriority ? 'high' : undefined"
@@ -134,13 +186,15 @@ function handleRoomClick(): void {
       <div class="backdrop-blur-sm shadow-md border border-primary/10 rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1 max-w-8/12">
           <img
-            :src="avatarImageSrc(props.room.logo ?? ASSETS.AVATAR_PLACEHOLDER, { w: 48 })"
-            alt="Live"
+            :src="ownerAvatarSrc"
+            alt="Room owner"
             width="24"
             height="24"
             class="size-6 object-cover rounded-full ring-2 ring-primary"
+            referrerpolicy="no-referrer"
             loading="lazy"
             decoding="async"
+            @error="hasOwnerAvatarError = true"
           >
 
           <!-- Text -->
