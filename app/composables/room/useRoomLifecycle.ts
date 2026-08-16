@@ -12,6 +12,8 @@ import { useDocumentVisibility, useEventListener, useIntervalFn } from '@vueuse/
 import { createLogger } from '~/utils/logger';
 import { withTimeout } from '~/utils/with-timeout';
 import { evaluateTransportRebuild } from '~/utils/transport-rebuild-budget';
+import { planRoomRepin } from '~/utils/room-repin';
+import { resolveMediaTransportUrl } from '~/utils/mediaTransport';
 import { RoomBlockedError } from '~/utils/socket/socketErrorMessages';
 import { isReloadIntended } from '~/utils/reload-intent';
 import { clearInRoomSnapshot, writeInRoomSnapshot } from '~/utils/reload-telemetry';
@@ -22,12 +24,10 @@ import {
   TRANSPORT_REBUILD_MAX_AUTO,
   TRANSPORT_REBUILD_COOLDOWN_MS,
   ACTIVE_ROOM_HEARTBEAT_MS,
+  RECONNECT_FAILED_TOAST_ID,
 } from '~/constants/room';
 
 const log = createLogger('[RoomLifecycle]');
-
-/** Toast id for the reconnect-failed banner, so it can be dismissed once audio recovers. */
-const RECONNECT_FAILED_TOAST_ID = 'audio-reconnect-failed';
 
 // ============================================
 // State
@@ -99,10 +99,29 @@ export function useRoomLifecycle(): void {
   // our mic if MSAB held our seat through the grace window (the snapshot still
   // lists us as an occupant). A speaker who drops briefly returns to the SAME seat
   // as a speaker; only a drop past the grace window (or a listener) rejoins seatless.
+  /** Producers a rejoin must re-consume — sizes the re-pin budget (aws-production 21). */
+  function speakerCount(): number {
+    return seatsStore.seats.filter((seat) => seat.occupantId != null).length;
+  }
+
   async function rebuildRoomAudio(roomId: string): Promise<void> {
     seatsStore.resetSeats();
     disconnectSocket(true);
-    await connectSocket();
+    // AWAITED refresh before any address is read (aws-production 21): the very
+    // reason this rebuild runs may be that the Room was re-pinned off an
+    // unhealthy instance, and joinRoom reads hosting_url synchronously — the
+    // old floating refresh raced it and rebuilt against the abandoned address.
+    await fetchRoomById(Number(roomId));
+    const room = roomStore.currentRoom;
+    if (!room || String(room.id) !== roomId) return; // left/switched mid-refresh
+
+    const plan = planRoomRepin({
+      trigger: 'health-failure',
+      currentUrl: null, // socket already torn down — no address to keep
+      nextUrl: resolveMediaTransportUrl(room.hosting_url, import.meta.dev) ?? null,
+      speakerCount: speakerCount(),
+    });
+    await connectSocket(plan.repin ? plan.targetUrl : undefined);
     await joinRoom(roomId);
   }
 
@@ -279,8 +298,11 @@ export function useRoomLifecycle(): void {
         // (user leaves while the timeout races) and the catch below would
         // otherwise crash re-reading it (Sentry JAVASCRIPT-VUE-6R).
         const unminimizedRoomId = String(roomStore.currentRoom.id);
-        // Un-minimized → refresh room metadata from API (may be stale)
-        fetchRoomById(roomStore.currentRoom.id);
+        // Un-minimized → metadata-only refresh (roster/name may be stale).
+        // Deliberately unawaited (aws-production 21): the audio path below
+        // refreshes again inside rebuildRoomAudio, AWAITED, before any
+        // address is read — this one never feeds a reconnect target.
+        void fetchRoomById(roomStore.currentRoom.id);
 
         // If socket disconnected while minimized, rejoin the room
         if (connectionStatus.value === 'disconnected') {
@@ -326,11 +348,45 @@ export function useRoomLifecycle(): void {
       // "seat disappears then reappears" flicker for User A on the other end
       // of the room — see §13.8 / F-24 in AUDIT.md.
 
-      // Refresh room metadata from API (may have changed while disconnected)
-      fetchRoomById(roomStore.currentRoom.id);
+      // Address BEFORE the refresh — the pin-comparison input for the planner.
+      const previousUrl
+        = resolveMediaTransportUrl(roomStore.currentRoom.hosting_url, import.meta.dev) ?? null;
 
-      // Re-join the audio room on MSAB server
-      await withTimeout(joinRoom(roomId), ROOM_OP_TIMEOUT_MS, 'joinRoom');
+      // Refresh room metadata from API, AWAITED (aws-production 21): the Room
+      // may have been re-pinned while we were disconnected, and joinRoom reads
+      // hosting_url synchronously — the old floating call raced it, so a moved
+      // Room rejoined the instance it was moved OFF.
+      await fetchRoomById(roomStore.currentRoom.id);
+      const room = roomStore.currentRoom;
+      if (!room || String(room.id) !== roomId) return; // user left mid-refresh
+
+      // Trigger classification: on this path the pin can only differ because
+      // the server re-pinned the Room, and the backend re-pins exclusively on
+      // drain (ticket 20) or health failure (ticket 18) — 'drain' names the
+      // disconnect-then-moved shape. An unchanged pin plans to a no-op and
+      // the rejoin proceeds exactly as before.
+      const plan = planRoomRepin({
+        trigger: 'drain',
+        currentUrl: previousUrl,
+        nextUrl: resolveMediaTransportUrl(room.hosting_url, import.meta.dev) ?? null,
+        speakerCount: speakerCount(),
+      });
+
+      // Re-join the audio room on MSAB server — a re-pin runs under its own
+      // per-speaker-count budget instead of the blanket op ceiling.
+      const budgetMs = plan.repin ? plan.budgetMs : ROOM_OP_TIMEOUT_MS;
+      try {
+        await withTimeout(joinRoom(roomId), budgetMs, 'joinRoom');
+      } catch (error) {
+        if (plan.repin) {
+          // A re-pin exceeding its budget SURFACES and offers retry — it must
+          // not disappear into the unbounded rebuild backoff (aws-production 21).
+          log.warn('Re-pin to moved room blew its budget', { budgetMs, error });
+          showReconnectAffordance();
+          return;
+        }
+        throw error;
+      }
       // If a prior reconnect-failed banner is still up but the socket has since
       // self-healed and rejoined in the background, dismiss it — otherwise the
       // user could tap "Reconnect" and tear down the now-working connection.

@@ -157,6 +157,38 @@ export const AUDIO_REBUILD_RETRY_MAX_MS = 30_000;
 export const TRANSPORT_REBUILD_MAX_AUTO = 1;
 export const TRANSPORT_REBUILD_COOLDOWN_MS = 120_000;
 
+/**
+ * Re-pin budget, stated per speaker count (aws-production 21).
+ *
+ * When a Room is moved to a different instance (drain or health failure — the
+ * exhaustive trigger list, see `utils/room-repin.ts`), the client tears down
+ * and rejoins at the new address. The audio-gap budget scales with the number
+ * of producers to re-consume, against the post-affinity-04 CONCURRENT consume
+ * shape (`ROOM_RECONSUME_CONCURRENCY` at a time), not the old serial one:
+ *
+ *   budget(N) = REPIN_BASE_BUDGET_MS
+ *             + ceil(N / ROOM_RECONSUME_CONCURRENCY) × REPIN_CONSUME_BATCH_BUDGET_MS
+ *
+ * Base covers socket teardown + connect + join ack (each inner deadline is
+ * 10 s, but a healthy target instance answers in well under that — the base is
+ * a budget for the healthy path, not a sum of worst cases). Each consume batch
+ * adds one nominal round-trip window. A blown budget SURFACES with a retry
+ * affordance; it must not disappear into the unbounded rebuild backoff.
+ *
+ * ⚠️ The old ~9 s figure floating around is the ICE-restart budget for an
+ * already-connected transport — it is NOT a measurement of reconnecting to a
+ * different address and must not be cited as this budget's source.
+ */
+export const REPIN_BASE_BUDGET_MS = 15_000;
+export const REPIN_CONSUME_BATCH_BUDGET_MS = 5_000;
+
+/**
+ * Toast id for the reconnect-failed banner, so a later successful rebuild can
+ * dismiss it by id and the socket-failed / transport-exhausted / blown-repin
+ * paths can never stack banners.
+ */
+export const RECONNECT_FAILED_TOAST_ID = 'audio-reconnect-failed';
+
 // ============================================
 // Chat
 // ============================================
