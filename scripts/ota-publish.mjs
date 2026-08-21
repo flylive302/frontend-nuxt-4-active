@@ -130,6 +130,9 @@ const r2 = (src, key, contentType, cacheControl) =>
     [
       's3', 'cp', src, `s3://${bucket}/${key}`,
       '--endpoint-url', endpoint,
+      // Cloudflare R2 accepts only 'auto' — never inherit the shell's AWS
+      // region (e.g. ap-south-1 from the AWS-migration tooling).
+      '--region', 'auto',
       '--content-type', contentType,
       '--cache-control', cacheControl,
     ],
