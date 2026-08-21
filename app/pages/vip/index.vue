@@ -382,7 +382,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
             </span>
         </div>
 
-        <NuxtImg :src="ASSETS.VIP_BACKGROUND" :alt="`VIP Background`" class="absolute inset-0 z-0" />
+        <NuxtImg :src="ASSETS.VIP_BACKGROUND" :alt="`VIP Background`" class="absolute inset-0 w-full z-0" />
         <NuxtImg :src="flagUrl" :alt="`VIP Flag`" class="relative z-20 mx-auto mt-12 max-w-3/4" />
 
         <div class="relative z-20 mx-auto -mt-52 max-w-36">
