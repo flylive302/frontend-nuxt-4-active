@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { computed, effectScope, nextTick, reactive, ref, watch } from 'vue'
 import { RECONNECT_FAILED_TOAST_ID } from '../../app/constants/room'
 
 // ============================================================
@@ -18,11 +18,27 @@ vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('watch', watch)
 
+// mic-fgs-crash 02: visibility is CONTROLLABLE, not pinned.
+// Before this it was `() => ref('visible')`, so Watcher 4 (PWA/mobile resume)
+// had no test in the suite that exercised a visibility change through it. The
+// composable reads visibility through this vueuse composable, so promoting the
+// existing mock to a shared ref is the seam — a hand-rolled fake `document`
+// (the motion-pause spec's shape) would never be consulted by this watcher.
+const visibilityState = ref<'visible' | 'hidden'>('visible')
+
 vi.mock('@vueuse/core', () => ({
-  useDocumentVisibility: () => ref('visible'),
+  useDocumentVisibility: () => visibilityState,
   useEventListener: vi.fn(),
   useIntervalFn: vi.fn(),
 }))
+
+/** Drive a hidden → visible transition and let the watcher's sync half run. */
+async function foregroundApp() {
+  visibilityState.value = 'hidden'
+  await flush()
+  visibilityState.value = 'visible'
+  await flush()
+}
 
 const OLD_URL = 'https://msab-old.audio.flyliveapp.com'
 const NEW_URL = 'https://msab-new.audio.flyliveapp.com'
@@ -35,6 +51,10 @@ let reconnectCb: (() => Promise<void> | void) | null = null
 let reconnectFailedCb: (() => Promise<void> | void) | null = null
 
 const joinRoomMock = vi.fn()
+const drainPendingMicReclaimMock = vi.fn()
+const probeAudioHealthMock = vi.fn()
+/** Call order across the resume path, so D4's ordering is asserted directly. */
+let resumeCalls: string[] = []
 const leaveRoomMock = vi.fn()
 const connectSocketMock = vi.fn()
 const disconnectSocketMock = vi.fn()
@@ -63,7 +83,8 @@ vi.stubGlobal('useRoomAudio', () => ({
   joinRoom: joinRoomMock,
   leaveRoom: leaveRoomMock,
   recoverPlayback: vi.fn(),
-  probeAudioHealth: vi.fn(),
+  probeAudioHealth: probeAudioHealthMock,
+  drainPendingMicReclaim: drainPendingMicReclaimMock,
   connectionStatus: ref('connected'),
   onTransportExhausted: vi.fn(),
 }))
@@ -85,10 +106,19 @@ async function flush(times = 8) {
   }
 }
 
+/**
+ * Scope owning the watchers `useRoomLifecycle()` registers, so each test's
+ * watchers die with it. Without this every `setup()` left its watchers alive on
+ * the shared module refs, and by the Nth test one visibility flip fired N
+ * handlers — which made any call-count assertion measure the leak, not the code.
+ */
+let lifecycleScope: ReturnType<typeof effectScope> | null = null
+
 async function setup() {
   roomStore.currentRoom = { id: ROOM_ID, hosting_url: OLD_URL }
   const { useRoomLifecycle } = await import('../../app/composables/room/useRoomLifecycle')
-  useRoomLifecycle()
+  lifecycleScope = effectScope()
+  lifecycleScope.run(() => { useRoomLifecycle() })
   // Watcher 1 (immediate) joins the room once on setup — let it settle, then
   // clear the mocks so each test only sees its own path.
   await flush()
@@ -119,9 +149,20 @@ beforeEach(() => {
   toastRemove.mockReset()
   roomStore.currentRoom = null
   connectivityStore.isOffline = false
+  visibilityState.value = 'visible'
+  resumeCalls = []
+  drainPendingMicReclaimMock.mockReset().mockImplementation(async () => {
+    resumeCalls.push('drain')
+  })
+  probeAudioHealthMock.mockReset().mockImplementation(async () => {
+    resumeCalls.push('probe')
+    return 'healthy'
+  })
 })
 
 afterEach(() => {
+  lifecycleScope?.stop()
+  lifecycleScope = null
   vi.useRealTimers()
 })
 
@@ -189,5 +230,91 @@ describe('re-pin budget — a blown budget surfaces and offers retry', () => {
 
     expect(vi.getTimerCount()).toBe(1)
     expect(toastAdd).not.toHaveBeenCalled()
+  })
+})
+
+// ============================================================
+// mic-fgs-crash 02 / spec D4 — the drain runs BEFORE the audio-health probe.
+//
+// This is the single most likely thing to get wrong, and getting it wrong
+// produces a fix that looks correct and does nothing: the probe guards every
+// producer check behind "is there a producer", so with the producer
+// deliberately deferred it reports HEALTHY and the resume handler returns
+// early. A drain placed after it never runs.
+//
+// The placement is above the watcher's `isRecovering` / `isJoining` guards too,
+// because the very paths that DEFER a re-claim are the ones holding those
+// guards — see the comment at the top of Watcher 4.
+// ============================================================
+describe('Watcher 4 — a deferred mic re-claim is settled on resume', () => {
+  it('drains the pending re-claim BEFORE probing audio health (fails if the drain moves below the probe)', async () => {
+    await setup()
+
+    await foregroundApp()
+
+    // Ordering, asserted at the point it matters: the drain has already run and
+    // the probe has not been reached yet. Both are awaited in program order, so
+    // this is a guarantee rather than a timer race.
+    expect(drainPendingMicReclaimMock).toHaveBeenCalledTimes(1)
+    expect(probeAudioHealthMock).not.toHaveBeenCalled()
+    expect(resumeCalls).toEqual(['drain'])
+  })
+
+  it('still drains while a rejoin is in flight — the case that CREATES the pending re-claim', async () => {
+    await setup()
+
+    // Watcher 3 holds `isJoining` for the whole rejoin. That rejoin is exactly
+    // what defers the re-claim while the app is hidden, and users foreground the
+    // app during it. A drain below the guards would return without running and
+    // leave a silent Speaker.
+    // Typed with a no-op initializer, not `| null`: TS's control-flow analysis
+    // cannot see the assignment inside the executor and narrows a null-initialised
+    // binding to `never` at the call site.
+    let releaseJoin: () => void = () => {}
+    joinRoomMock.mockImplementation(() => new Promise<void>((resolve) => {
+      releaseJoin = resolve
+    }))
+
+    void reconnectCb!()
+    await flush()
+
+    await foregroundApp()
+
+    expect(drainPendingMicReclaimMock).toHaveBeenCalledTimes(1)
+
+    releaseJoin()
+    await flush()
+  })
+
+  it('still drains while a reconnect-failed rebuild holds isRecovering', async () => {
+    await setup()
+
+    // The other half of the guard pair. `onReconnectFailed` (and the
+    // transport-exhausted path) hold `isRecovering` across a full rebuild, and
+    // that rebuild's rejoin is another route that defers a re-claim. A drain
+    // below the guards would silently skip here too.
+    let releaseConnect: () => void = () => {}
+    connectSocketMock.mockImplementation(() => new Promise<void>((resolve) => {
+      releaseConnect = resolve
+    }))
+
+    void reconnectFailedCb!()
+    await flush()
+
+    await foregroundApp()
+
+    expect(drainPendingMicReclaimMock).toHaveBeenCalledTimes(1)
+
+    releaseConnect()
+    await flush()
+  })
+
+  it('does not run on a visible → hidden transition — backgrounding settles nothing', async () => {
+    await setup()
+
+    visibilityState.value = 'hidden'
+    await flush()
+
+    expect(drainPendingMicReclaimMock).not.toHaveBeenCalled()
   })
 })

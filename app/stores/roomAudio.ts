@@ -15,6 +15,23 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
 
   const messages = ref<ChatMessageEvent[]>([]);
 
+  /**
+   * mic-fgs-crash 02 — a mic re-claim that was owed but deliberately NOT taken.
+   *
+   * Set when a (re)join finds us still seated while the app is hidden: opening
+   * the mic there starts a `microphone` foreground service from the background,
+   * which Android refuses and which killed the process. We rejoin and hold the
+   * Seat as a silent occupant instead, and record the debt here. The resume path
+   * settles it on `hidden → visible`.
+   *
+   * Deliberately its own ref rather than a field on `audioState`: that object is
+   * the audio session's observable shape, and an "I owe you a producer" marker
+   * is not part of it. `clearAudioState()` still clears it, so leaving the Room
+   * drops any pending re-claim through the single existing reset path (spec D3)
+   * and it can never fire later in an unrelated Room.
+   */
+  const pendingMicReclaim = ref(false);
+
   function setAudioConnected(connected: boolean) {
     audioState.value.isConnected = connected;
   }
@@ -31,6 +48,10 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     audioState.value.activeSpeakerIds = userIds;
   }
 
+  function setPendingMicReclaim(pending: boolean) {
+    pendingMicReclaim.value = pending;
+  }
+
   function clearAudioState() {
     audioState.value = {
       isConnected: false,
@@ -39,6 +60,7 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
       activeSpeakerIds: [],
     };
     messages.value = [];
+    pendingMicReclaim.value = false;
   }
 
   function addMessage(message: ChatMessageEvent) {
@@ -69,6 +91,8 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     setProducing,
     setMuted,
     setActiveSpeakers,
+    pendingMicReclaim,
+    setPendingMicReclaim,
     clearAudioState,
     messages,
     addMessage,

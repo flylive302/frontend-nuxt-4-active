@@ -54,16 +54,45 @@ public class MediaPlaybackForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Type-tagged foreground start (required on Android 14+); ServiceCompat
-        // routes to the correct overload per API level.
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            buildNotification(),
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                : 0
-        );
+        // Built OUTSIDE the try on purpose. A notification that fails to build —
+        // a missing drawable, a PendingIntent failure — is OUR bug, not an OS
+        // refusal, and must not be caught below and misreported as one.
+        Notification notification = buildNotification();
+        try {
+            // Type-tagged foreground start (required on Android 14+); ServiceCompat
+            // routes to the correct overload per API level.
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notification,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    : 0
+            );
+        } catch (RuntimeException e) {
+            // RuntimeException, not Exception: SecurityException (type validation)
+            // and IllegalStateException (background-start refusal) are both
+            // RuntimeExceptions, so nothing we mean to survive is lost — while an
+            // unrelated failure still surfaces as itself instead of being relabelled
+            // an Android rejection.
+            // mic-fgs-crash 04 — reviewed alongside the microphone service.
+            //
+            // This one has never appeared in the crash list, and the asymmetry is
+            // explained rather than lucky: `mediaPlayback` is NOT a while-in-use
+            // type and needs no runtime permission, so it has no second TYPE
+            // validation to fail; and it is driven by room presence, which stays
+            // non-null across a reconnect, so it never re-starts from the
+            // background in the first place.
+            //
+            // Guarded identically anyway. Both reasons are properties of TODAY's
+            // callers, not of the OS contract, and an unguarded startForeground is
+            // a process-death primitive whichever service holds it. The cost is
+            // one try/catch; the alternative is discovering the next one in Play
+            // Console a month later.
+            ForegroundServicePlugin.reportServiceFailure("mediaPlayback", e);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         // Do NOT restart automatically if the OS kills us — see class doc.
         return START_NOT_STICKY;
     }

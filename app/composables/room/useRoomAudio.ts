@@ -61,6 +61,11 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   recoverPlayback: () => Promise<boolean>;
   /** Probe audio session health (used by lifecycle resume to avoid unnecessary rebuilds) */
   probeAudioHealth: () => Promise<'healthy' | 'needs-playback-recovery' | 'needs-rebuild'>;
+  /**
+   * Settle a mic re-claim deferred while the app was hidden (mic-fgs-crash 02).
+   * 🔴 The lifecycle resume path must await this BEFORE `probeAudioHealth` — see D4.
+   */
+  drainPendingMicReclaim: () => Promise<void>;
   /** Register the owner for terminal transport failure (audio-pipe-observability 10) */
   onTransportExhausted: (cb: () => void) => void;
   /** Audio player composable for music playback */
@@ -101,6 +106,18 @@ let lastSelfSlideRoomId: string | null = null;
  * rationale as lastSelfEntryRoomId. Cleared in leaveRoom().
  */
 let lastSelfJoinMessageRoomId: string | null = null;
+
+/**
+ * Single-flight guard for `drainPendingMicReclaim` (mic-fgs-crash 02).
+ *
+ * The drain runs from the visibility watcher, and visibility can flip several
+ * times in quick succession while a `getUserMedia` + produce round trip is still
+ * in flight. `startAudio` single-flights itself one layer down, so a doubled
+ * producer was never possible — but without this the mute reconciliation and the
+ * seat-lost toast would fire once per flip. Module-level for the same reason the
+ * FGS scope is: there is one microphone per app process.
+ */
+let _drainInFlight: Promise<void> | null = null;
 
 /**
  * Detached effect scope owning the process-wide microphone foreground-service
@@ -305,6 +322,28 @@ export function useRoomAudio(): UseRoomAudioReturn {
     }
   }
 
+  /**
+   * Re-apply the local mute to a FRESHLY produced mic, on every path that
+   * re-produces automatically (seat-retention reclaim, and its deferred drain).
+   *
+   * A `getUserMedia` track is enabled by default and none of these paths reset
+   * `isLocalMuted` — so a muted user whose mic is rebuilt for them would
+   * silently go LIVE while the UI still shows muted. Disable the new track
+   * locally and reconcile the server plus every other user's mute indicator to
+   * the NEW producer id.
+   *
+   * ⛔ Shared by the immediate and the deferred re-claim on purpose (spec D5): a
+   * hot mic is a worse outcome than a lost one, and a copy of this reconciliation
+   * would drift from the original on the next edit. Deliberately NOT used by
+   * `recoverUnmute`, which intentionally goes live while `isLocalMuted` is still
+   * true.
+   */
+  function reconcileMuteAfterReproduce(): void {
+    if (!isLocalMuted.value) return;
+    reapplyMuteToProducer();
+    emitMuteState(true);
+  }
+
   /** Notify the server of the local mute state so it can pause/resume the producer. */
   function emitMuteState(isMuted: boolean): void {
     const roomId = getCurrentRoomId();
@@ -321,6 +360,82 @@ export function useRoomAudio(): UseRoomAudioReturn {
       .catch((err) => {
         log.warn('Failed to emit mute toggle to server', err)
       });
+  }
+
+  /**
+   * Settle a mic re-claim that was deferred while the app was hidden
+   * (mic-fgs-crash 02). Called by the room-lifecycle composable on the
+   * `hidden → visible` transition.
+   *
+   * 🔴 It MUST run before that path's audio-health probe (spec D4). The probe
+   * guards every producer check behind "is there a producer" — so with the
+   * producer deliberately absent it reports a HEALTHY session and the resume
+   * handler returns early. A drain placed after it never runs, and the fix looks
+   * correct while doing nothing.
+   *
+   * Idempotent and safe to call on every resume: with nothing pending it is a
+   * cheap no-op.
+   */
+  async function drainPendingMicReclaim(): Promise<void> {
+    if (_drainInFlight) return _drainInFlight;
+    if (!audioStore.pendingMicReclaim) return;
+
+    // A disconnected socket means the seat snapshot we hold is a memory, not a
+    // fact — and the seat-lost branch below is user-visible. Keep the debt and
+    // decide on a view we can trust: the resume path continues into its probe
+    // and rebuild, and a rebuild rejoins with the app now visible, which decides
+    // 'reproduce' outright. Nothing is stranded either way.
+    if (!isConnected.value) return;
+
+    const userId = authStore.user?.id;
+    const action = decidePendingDrain({
+      pending: audioStore.pendingMicReclaim,
+      seatedNow: userId !== undefined
+        && seatsStore.seats.some((seat) => seat.occupantId === userId),
+      isProducing: isProducing.value,
+    });
+
+    if (action === 'none') {
+      // Reachable only as "already producing" here — the not-pending case
+      // returned above. The session healed by another route, so drop the debt
+      // rather than leave it to fire on a later resume.
+      audioStore.setPendingMicReclaim(false);
+      return;
+    }
+
+    if (action === 'seat-lost') {
+      // The RARE branch (spec D6): unreachable via the retention window, which
+      // never creates a pending re-claim in the first place. It needs a separate
+      // event — a moderator clearing the Seat, or a second disconnect. Tell the
+      // user rather than leaving a UI that claims a live mic.
+      audioStore.setPendingMicReclaim(false);
+      toast.add({
+        title: 'You lost your seat',
+        description: 'Your seat was no longer yours when you came back.',
+        color: 'warning',
+      });
+      return;
+    }
+
+    _drainInFlight = (async () => {
+      try {
+        await startAudio();
+        reconcileMuteAfterReproduce();
+        audioStore.setPendingMicReclaim(false);
+      } catch (err) {
+        // Keep the debt: the mic did not come back, so the user is still owed
+        // one. The resume path continues into its health probe and rebuild
+        // below, and a rebuild rejoins with the app now visible — which decides
+        // 'reproduce' directly. Either route settles it; neither is shadowed.
+        log.warn('Failed to settle deferred mic re-claim on resume', err);
+      }
+    })();
+
+    try {
+      await _drainInFlight;
+    } finally {
+      _drainInFlight = null;
+    }
   }
 
   // ========================================
@@ -698,35 +813,57 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // never in our own join snapshot) and when already producing (guards a benign
     // rejoin from double-producing). Covers every rejoin path — onReconnect,
     // reconnect-failed rebuild, PWA resume — since they all funnel through joinRoom.
-    if (
+    //
+    // mic-fgs-crash 02: this decision is now gated on VISIBILITY. Every rejoin
+    // path above enters from a socket callback with no user interaction, so this
+    // re-produce ran while the app was backgrounded — and `setProducing(true)`
+    // drives the detached FGS watch, which starts a `microphone`-typed foreground
+    // service. Android refuses a while-in-use service start from the background
+    // and the resulting SecurityException killed the process (Play crash cluster
+    // F6). Hidden ⇒ hold the Seat as a silent occupant and record the debt; the
+    // resume path settles it. See spec D1/D2 — the gate is on the RE-PRODUCE,
+    // never on the foreground service.
+    const reclaim = decideSeatReclaim({
+      seats: response.seats,
+      userId: authStore.user?.id,
       // Guard with the LIVE mediasoup state, not the store flag: the store's
       // isProducing is only cleared by an explicit stopAudio, so it stays
       // stale-true when the producer dies with the old transport on reconnect
       // — which skipped the re-produce and left a silent seat (the
       // long-mute audio-loss bug). The computed reflects the actual producer.
-      shouldReproduceOnReclaim(
-        response.seats,
-        authStore.user?.id,
-        isProducing.value,
-      )
-    ) {
+      isProducing: isProducing.value,
+      // Read the document's own visibility HERE, at decision time, and pass it
+      // in as a plain boolean (spec D2). The VueUse composable in the lifecycle
+      // composable is only the TRIGGER that knocks on resume — one source
+      // answers, the other only asks. Absent a document (non-browser context)
+      // we behave exactly as before this change.
+      isVisible: typeof document === 'undefined' || document.visibilityState === 'visible',
+    });
+
+    if (reclaim === 'reproduce') {
       try {
         await startAudio();
-        // audio-pipe-observability 12: the fresh getUserMedia track is enabled
-        // by default and this rejoin path does NOT reset isLocalMuted — so a
-        // muted user reconnecting would silently go LIVE (hot mic) while the UI
-        // still shows muted. Preserve the mute: disable the new track locally,
-        // and reconcile the server + every other user's mute indicator to the
-        // NEW producer. Scoped here (the single rejoin re-produce funnel) so it
-        // never collides with recoverUnmute, which intentionally goes live while
-        // isLocalMuted is still true.
-        if (isLocalMuted.value) {
-          reapplyMuteToProducer();
-          emitMuteState(true);
-        }
+        reconcileMuteAfterReproduce();
+        // Settle any debt this join just paid off directly. A deferred re-claim
+        // that is later satisfied by a VISIBLE rejoin (the drain declines while
+        // the socket is down, the rebuild path rejoins on screen) would
+        // otherwise leave the flag armed — and it would then fire the seat-lost
+        // toast at a user who simply left their Seat on purpose afterwards.
+        // Deliberately NOT cleared on 'none': there, either the drain's own
+        // already-producing branch clears it, or we are genuinely absent from
+        // the snapshot and the flag is what earns the user an honest message.
+        audioStore.setPendingMicReclaim(false);
       } catch (err) {
+        // Keep any pending flag: the mic did not come back, so the debt stands.
         log.warn('Failed to re-produce audio after seat reclaim', err);
       }
+    } else if (reclaim === 'defer') {
+      // Costs a silent Seat, not a lost one: MSAB clears the retention timestamp
+      // on this very re-join, with no producer term in the reclaim script or the
+      // expiry sweep (spec D6). The user keeps their position for as long as the
+      // socket stays up, however long the app stays backgrounded.
+      audioStore.setPendingMicReclaim(true);
+      log.info('Deferred mic re-claim: app is hidden, will settle on resume');
     }
 
     // 3. Consume existing producers (listen to active speakers).
@@ -885,6 +1022,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
     setVolume,
     recoverPlayback,
     probeAudioHealth,
+
+    // Deferred mic re-claim (mic-fgs-crash 02) — drained on resume, before the probe
+    drainPendingMicReclaim,
 
     // Transport recovery ownership (audio-pipe-observability 10)
     onTransportExhausted,

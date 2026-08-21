@@ -44,16 +44,50 @@ public class MicrophoneForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Type-tagged foreground start (required on Android 14+); ServiceCompat
-        // routes to the correct overload per API level.
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            buildNotification(),
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                : 0
-        );
+        // Built OUTSIDE the try on purpose. A notification that fails to build —
+        // a missing drawable, a PendingIntent failure — is OUR bug, not an OS
+        // refusal, and must not be caught below and misreported as one.
+        Notification notification = buildNotification();
+        try {
+            // Type-tagged foreground start (required on Android 14+); ServiceCompat
+            // routes to the correct overload per API level.
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notification,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    : 0
+            );
+        } catch (RuntimeException e) {
+            // RuntimeException, not Exception: SecurityException (type validation)
+            // and IllegalStateException (background-start refusal) are both
+            // RuntimeExceptions, so nothing we mean to survive is lost — while an
+            // unrelated failure still surfaces as itself instead of being relabelled
+            // an Android rejection.
+            // mic-fgs-crash 04 — survive a REJECTED foreground start.
+            //
+            // `microphone` is a while-in-use type, so Android validates it twice:
+            // the general background-start check throws
+            // ForegroundServiceStartNotAllowedException back at
+            // startForegroundService(), and TYPE validation throws
+            // SecurityException HERE, on a later main-thread dispatch, outside
+            // the plugin's try/catch entirely. Unguarded, that second throw was
+            // uncaught in app code and took the whole process down — the F6 Play
+            // crash cluster.
+            //
+            // The gate that stops us ever asking at the wrong moment lives in the
+            // web layer (`decideSeatReclaim`, shipped separately by OTA). This is
+            // defence in depth: if a future change opens another ungated path, it
+            // must cost a service, not the user's session.
+            //
+            // stopSelf() matters as much as the catch: a service that started but
+            // never reached the foreground lingers half-alive, and on some OS
+            // versions leaves a notification the user cannot dismiss.
+            ForegroundServicePlugin.reportServiceFailure("microphone", e);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         // Do NOT restart automatically if the OS kills us — see class doc (D4).
         return START_NOT_STICKY;
     }

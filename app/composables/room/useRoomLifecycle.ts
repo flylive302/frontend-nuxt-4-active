@@ -74,7 +74,7 @@ export function useRoomLifecycle(): void {
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
-  const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, connectionStatus, onTransportExhausted } = useRoomAudio();
+  const { joinRoom, leaveRoom, recoverPlayback, probeAudioHealth, drainPendingMicReclaim, connectionStatus, onTransportExhausted } = useRoomAudio();
   const { connect: connectSocket, disconnect: disconnectSocket, onReconnect, onReconnectFailed } = useAudioSocket();
   const { fetchRoomById } = useRoom();
   const toast = useToast();
@@ -494,6 +494,30 @@ export function useRoomLifecycle(): void {
 
   watch(visibility, async (state, oldState) => {
     if (state !== 'visible' || oldState !== 'hidden') return;
+
+    // 🔴 mic-fgs-crash 02 / spec D4 — settle a deferred mic re-claim FIRST.
+    //
+    // This sits above BOTH early-return guards on purpose, not merely above the
+    // health probe, because the very situations that create a pending re-claim
+    // are the ones holding those guards:
+    //   • Watcher 3 (onReconnect) holds `isJoining` across its whole rejoin;
+    //   • onReconnectFailed and onTransportExhausted hold `isRecovering`.
+    // A rejoin that defers a re-claim can therefore still be in flight when the
+    // user foregrounds the app — which is exactly when they foreground it — and
+    // a drain placed below would return without running, leaving a silent
+    // Speaker: the very bug the re-claim path was written to prevent.
+    //
+    // The probe below is the second reason: it guards every producer check
+    // behind "is there a producer", so with the producer deliberately absent it
+    // reports a HEALTHY session and this handler returns early. Program order
+    // here makes both orderings a guarantee rather than a timer race.
+    //
+    // Safe this early because `startAudio` is single-flighted one layer down
+    // (`useMediasoupStreaming`), so a drain overlapping an in-flight rebuild
+    // dedupes instead of producing twice; `decidePendingDrain` re-checks the
+    // live producing state as a second belt. It is a cheap no-op with nothing
+    // pending, which is every resume that did not blip.
+    await drainPendingMicReclaim();
 
     if (isRecovering.value) return;
     isRecovering.value = true;

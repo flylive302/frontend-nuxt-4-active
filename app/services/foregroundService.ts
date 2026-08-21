@@ -30,6 +30,22 @@ interface ForegroundServicePlugin {
    * FGS on it (a denied notification still leaves the service running; D3).
    */
   ensureNotificationPermission(): Promise<{ granted: boolean }>
+  /**
+   * Emitted by a service whose foreground start Android REJECTED (mic-fgs-crash
+   * 04). The native side survives the rejection instead of dying, so nothing
+   * else would record it — no process death for Play Console, and this app ships
+   * no native crash reporter.
+   */
+  addListener(
+    event: 'foregroundServiceFailed',
+    handler: (payload: { service: NativeFgsService, error: string }) => void,
+  ): Promise<{ remove: () => Promise<void> }>
+}
+
+/** Payload of a rejected native foreground-service start. */
+export interface ForegroundServiceFailure {
+  service: NativeFgsService
+  error: string
 }
 
 /** Android-only — `true` when the native plugin is actually present. */
@@ -53,4 +69,26 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   if (!isForegroundServiceAvailable()) return false
   const { granted } = await plugin.ensureNotificationPermission()
   return granted
+}
+
+/**
+ * Subscribe to native foreground-service start rejections (mic-fgs-crash 04).
+ *
+ * ⚠️ Inert until the native half ships. This is web-bundle code and reaches
+ * users by OTA; the plugin that emits the event needs a store release (spec
+ * D11). Registering early is deliberate — the listener simply never fires
+ * against an older shell, and the two halves need no coordinated release.
+ *
+ * Never throws: on a shell without the event, `addListener` rejects and we
+ * degrade to no reporting rather than breaking the caller.
+ */
+export async function onForegroundServiceFailure(
+  handler: (failure: ForegroundServiceFailure) => void,
+): Promise<void> {
+  if (!isForegroundServiceAvailable()) return
+  try {
+    await plugin.addListener('foregroundServiceFailed', handler)
+  } catch {
+    // Older native shell: no such event. Nothing to report through.
+  }
 }
