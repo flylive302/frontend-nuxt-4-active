@@ -13,6 +13,7 @@
 import type { Gift } from "~/types/gift/gift";
 import { ASSETS } from '~/constants/assets';
 import { formatCurrency } from '~/utils/currency';
+import { isLuckyCategory } from '~/utils/gift';
 import { useGiftData } from "~/composables/gift/useGiftData";
 import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";

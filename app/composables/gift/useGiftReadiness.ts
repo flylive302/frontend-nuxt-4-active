@@ -1,6 +1,7 @@
 import { ref, watch, onUnmounted, type Ref } from 'vue'
 import type { Gift } from '~/types/gift/gift'
 import { isGiftAssetCached } from '~/services/giftAssetCache'
+import { isLuckyCategory } from '~/utils/gift'
 
 export type GiftReadinessState = 'idle' | 'checking' | 'ready' | 'error'
 

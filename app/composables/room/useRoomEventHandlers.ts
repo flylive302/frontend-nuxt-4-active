@@ -32,6 +32,7 @@ import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap 
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { propToEntryAnimationGift } from '~/utils/prop';
+import { isLuckyCategory } from '~/utils/gift';
 import { createLogger } from '~/utils/logger';
 import { SPEAKER_ACTIVE_TTL_MS, CHAT_MESSAGE_TYPE_GIFT } from '~/constants/room';
 import { COMBO_BUTTON_TIMEOUT_MS } from '~/constants/gift';

@@ -8,6 +8,7 @@ import type { GiftSendAck } from '~/types/room/audio';
 import { announceLocalGiftSend } from '~/composables/room/useRoomEventHandlers';
 import { recordLuckyGiftTap } from '~/composables/lucky/useLuckyGift';
 import { GIFT_FAILURE_TOAST_COOLDOWN_MS, GIFT_SEND_ERROR } from '~/constants/gift';
+import { isLuckyCategory } from '~/utils/gift';
 
 export function useGiftSending() {
   // ========================================
