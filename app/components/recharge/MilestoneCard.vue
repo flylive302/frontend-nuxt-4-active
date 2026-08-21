@@ -3,6 +3,7 @@ import type { MilestoneProgress, MilestoneReward, RewardType } from '~/types/mis
 import { RECHARGE_ACTIVITY, ASSETS } from '~/constants/assets'
 import { resolveRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import type { ResolvedRewardAsset } from '~/utils/mission/resolveRewardAsset'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 
 // ========================================
 // Props
@@ -133,6 +134,16 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
                 <AssetPlayer :src="resolved.thumbnailUrl" :muted="true" class="w-full" />
               </button>
               <AssetPlayer v-else :src="resolved.thumbnailUrl" :muted="true" class="w-20 sm:w-24" />
+            </template>
+
+            <!-- Mice wave: static ring, click opens the animated preview modal -->
+            <template v-else-if="reward.reward_type === 'prop' && resolved.propType === 'mice_wave'">
+              <button
+                class="w-20 sm:w-24 rounded-lg focus:outline-none cursor-pointer"
+                @click="openPreview(reward, resolved)"
+              >
+                <MiceWaveRing :color="resolveMiceWaveRingColor(resolved.metadata)" :animated="false" />
+              </button>
             </template>
 
             <!-- Prop / badge thumbnail: static image -->

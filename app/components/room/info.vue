@@ -235,7 +235,6 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
           <div
             class="p-2 h-[84vh] bg-neutral-800 rounded-lg inset-shadow-sm inset-shadow-neutral-700 overflow-hidden mt-2 relative"
           >
-            <SvgaPlayer v-if="roomStore?.currentRoom?.owner.vip_level" class="absolute bottom-0 left-12 z-0 w-9/12! h-auto! opacity-20" :name="`https://assets.flyliveapp.com/vip/${roomStore?.currentRoom?.owner.vip_level}/emblem.svga`"/>
             <!-- Loading State -->
             <div v-if="leaderboardLoading && !leaderboardItems.length" class="flex items-center justify-center h-full">
               <div class="flex flex-col items-center gap-3 text-gray-400">
@@ -321,7 +320,6 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
           <SectionTitle class="my-3 shrink-0">Users in Room ({{ participantCount }})</SectionTitle>
           <div class="p-2 h-[90vh] bg-neutral-800 rounded-lg inset-shadow-sm inset-shadow-neutral-700 overflow-hidden relative">
 
-            <SvgaPlayer v-if="roomStore?.currentRoom?.owner.vip_level" class="absolute bottom-0 left-12 z-0 w-9/12! h-auto! opacity-20" :name="`https://assets.flyliveapp.com/vip/${roomStore?.currentRoom?.owner.vip_level}/emblem.svga`"/>
             <!-- Active Room Participants List -->
             <DynamicScroller :items="participants" :min-item-size="70" class="h-full" key-field="id">
               <template #default="{ item, index, active }">

@@ -72,7 +72,7 @@ function handleAvatarClick() {
     <div class="flex items-center">
       <UserAvatar
           :img="user.avatar"
-          animated
+          :static-frame="true"
           :frame-id="user.frame_id"
           :user-name="user.name"
           class="w-14 ml-1 shrink-0"

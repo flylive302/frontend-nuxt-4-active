@@ -31,6 +31,12 @@ const authStore = useAuthStore()
 
 const isProp = computed(() => props.rewardType === 'prop')
 const isVip = computed(() => props.rewardType === 'vip')
+
+/**
+ * Mice-wave renders as a ring, not the SVGA `asset_url` — so unlike other
+ * prop types it doesn't need `resolved.assetUrl` to be truthy to preview.
+ */
+const isMiceWave = computed(() => isProp.value && props.resolved?.propType === 'mice_wave')
 </script>
 
 <template>
@@ -59,13 +65,14 @@ const isVip = computed(() => props.rewardType === 'vip')
         <div class="flex items-center justify-center py-4">
           <div class="max-w-60 w-full">
             <!-- Prop: delegate to MallPropAssetView which handles all prop types -->
-            <template v-if="isProp && resolved.propType && resolved.assetUrl">
+            <template v-if="isMiceWave || (isProp && resolved.propType && resolved.assetUrl)">
               <MallPropAssetView
                 :type="(resolved.propType as PropType)"
                 :name="resolved.name"
-                :asset-url="resolved.assetUrl"
+                :asset-url="resolved.assetUrl ?? ''"
                 :thumbnail-url="resolved.thumbnailUrl ?? ''"
                 :prop-id="resolved.propId"
+                :metadata="resolved.metadata"
                 :avatar-img="authStore.user?.avatar ?? undefined"
               />
             </template>

@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import type { UserProp } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/constants/mall'
 import { useAuthStore } from '~/stores/auth'
+import { useMallStore } from '~/stores/mall'
 
 // ========================================
 // Props & Emits
@@ -28,10 +29,21 @@ const emit = defineEmits<{
 // ========================================
 
 const authStore = useAuthStore()
+const mallStore = useMallStore()
 
 // ========================================
 // Computed
 // ========================================
+
+/**
+ * `UserProp` (GET /api/v1/user/props) does not carry `metadata` — resolve the
+ * mice-wave ring color from `propIndex` (seeded at bootstrap / by the
+ * failsafe fetch) instead, keyed by the catalog `prop_id`. Falls back to the
+ * default ring color when the entry isn't indexed yet.
+ */
+const miceWaveMetadata = computed(() =>
+  props.userProp ? mallStore.propIndex[props.userProp.prop_id]?.metadata ?? null : null,
+)
 
 const icon = computed(() => props.userProp ? PROP_TYPE_ICONS[props.userProp.type] : '')
 const iconColor = computed(() => props.userProp ? PROP_TYPE_COLORS[props.userProp.type] : '')
@@ -131,6 +143,7 @@ function handleClose(): void {
               :asset-url="userProp.asset_url"
               :thumbnail-url="userProp.thumbnail_url"
               :prop-id="userProp.prop_id"
+              :metadata="miceWaveMetadata"
               :avatar-img="authStore?.user?.avatar ?? undefined"
             />
           </div>

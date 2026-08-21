@@ -12,6 +12,8 @@ import type { MinimalUser } from '~/types/user/bootstrap'
 import { VIP_PRIVILEGE_LABELS, VIP_PRIVILEGE_ICONS } from '~/types/vip/vip-level'
 import { vipCongratsEvent } from '~/utils/vip-congrats-event'
 import { withImageKitTransform } from '~/utils/imagekit'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { useMallStore } from '~/stores/mall'
 import MarqueeName from "~/components/common/marquee-name.vue";
 
 // ========================================
@@ -44,6 +46,7 @@ const PROP_PRIVILEGE_KEYS = new Set([
 
 const { currentLevel, isVip, expiresAt, fetchLevels, purchaseVip, giftVip, normalizeError } = useVip()
 const bootstrapStore = useBootstrapStore()
+const mallStore = useMallStore()
 
 // ========================================
 // State
@@ -272,6 +275,15 @@ async function handleGiftConfirm(recipient: MinimalUser) {
   }
 }
 
+/**
+ * `VipProp` (this page's tile/grid data) doesn't carry `metadata` — resolve
+ * the mice-wave ring color from `propIndex` (bootstrap / failsafe fetch)
+ * keyed by the same catalog prop id; defaults when not indexed.
+ */
+function tileMiceWaveRingColor(prop: VipProp): string {
+  return resolveMiceWaveRingColor(mallStore.propIndex[prop.id]?.metadata)
+}
+
 function handlePropPreview(prop: VipProp) {
   selectedPreviewItem.value = { kind: 'prop', data: prop }
   isPropPreviewOpen.value = true
@@ -418,13 +430,19 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
                   <div
                       class="
                         flex items-center justify-center aspect-square w-full
-                        rounded-md transition-all duration-300 overflow-hidden
-                        backdrop-blur-xs shadow-md border
+                        rounded-md transition-all duration-300
                       "
+                      :class="{ 'overflow-hidden': !(tile.kind === 'prop' && tile.data.type === 'mice_wave') }"
                       :style="privilegeBoxStyle"
                   >
+                    <!-- Mice wave: static ring (svga-removal 05), not the SVGA thumbnail -->
+                    <MiceWaveRing
+                        v-if="tile.kind === 'prop' && tile.data.type === 'mice_wave'"
+                        :color="tileMiceWaveRingColor(tile.data)"
+                        :animated="false"
+                    />
                     <img
-                        v-if="tile.kind === 'prop' ? tile.data.thumbnail_url : tile.data.icon_url"
+                        v-else-if="tile.kind === 'prop' ? tile.data.thumbnail_url : tile.data.icon_url"
                         :src="tile.kind === 'prop' ? tile.data.thumbnail_url! : tile.data.icon_url!"
                         :alt="tile.data.name"
                         class="w-full h-full object-contain"

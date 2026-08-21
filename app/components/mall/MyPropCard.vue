@@ -4,6 +4,8 @@
 import { computed } from 'vue'
 import type { UserProp } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/constants/mall'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { useMallStore } from '~/stores/mall'
 
 // ========================================
 // Props & Emits
@@ -25,8 +27,20 @@ const emit = defineEmits<{
 // Computed
 // ========================================
 
+const mallStore = useMallStore()
+
 const icon = computed(() => PROP_TYPE_ICONS[props.userProp.type])
 const iconColor = computed(() => PROP_TYPE_COLORS[props.userProp.type])
+
+const isMiceWave = computed(() => props.userProp.type === 'mice_wave')
+
+/**
+ * `UserProp` doesn't carry `metadata` — resolve from `propIndex` (bootstrap /
+ * failsafe fetch) keyed by catalog `prop_id`; defaults when not indexed.
+ */
+const miceWaveRingColor = computed(() =>
+  resolveMiceWaveRingColor(mallStore.propIndex[props.userProp.prop_id]?.metadata),
+)
 
 const isExpired = computed(() => !props.userProp.is_valid)
 const isEquipped = computed(() => props.userProp.is_equipped)
@@ -87,8 +101,9 @@ function handleSelect(): void {
       class="aspect-square relative bg-muted/20 cursor-pointer"
       @click="handleSelect"
     >
+      <MiceWaveRing v-if="isMiceWave" :color="miceWaveRingColor" :animated="false" />
       <img
-        v-if="userProp.thumbnail_url"
+        v-else-if="userProp.thumbnail_url"
         :src="userProp.thumbnail_url"
         :alt="userProp.name"
         class="p-2 w-full h-full object-cover"

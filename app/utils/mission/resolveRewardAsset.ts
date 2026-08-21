@@ -15,6 +15,8 @@ export interface ResolvedRewardAsset {
   propType: string | null
   /** Catalog prop id. Only set when reward_type === 'prop'. */
   propId: number | null
+  /** Free-form prop metadata (e.g. `mice_wave` ring color). Only set when reward_type === 'prop'. */
+  metadata: Record<string, unknown> | null
 }
 
 export function resolveRewardAsset(
@@ -34,6 +36,7 @@ export function resolveRewardAsset(
       assetUrl: prop.asset_url,
       propType: prop.type,
       propId: reward.reward_id,
+      metadata: prop.metadata ?? null,
     }
   }
 
@@ -46,6 +49,7 @@ export function resolveRewardAsset(
       assetUrl: vip.card_animated_url,
       propType: null,
       propId: null,
+      metadata: null,
     }
   }
 
@@ -58,6 +62,7 @@ export function resolveRewardAsset(
       assetUrl: null,
       propType: null,
       propId: null,
+      metadata: null,
     }
   }
 

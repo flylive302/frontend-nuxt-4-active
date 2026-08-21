@@ -402,3 +402,12 @@ export const TRANSPORT_RECOVERY_MAX_ATTEMPTS = 3;
 
 /** Backoff before each successive restart attempt (index = attempt - 1). */
 export const TRANSPORT_RECOVERY_BACKOFF_MS = [1_000, 2_000, 4_000] as const;
+
+// ---- Speaking indicator (svga-removal 01) ----
+
+/**
+ * Fallback ring color for the active-speaker CSS pulse when the equipped
+ * mice-wave prop has no valid `metadata.color` (missing, malformed, or not
+ * yet resolved from `propIndex`). See `~/utils/mice-wave-ring-color`.
+ */
+export const DEFAULT_SPEAKING_RING_COLOR = '#f97316';

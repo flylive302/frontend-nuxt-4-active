@@ -355,6 +355,14 @@ export interface BootstrapProp {
    * locally on join (unified-slide-overlay). Null/absent for every other prop.
    */
   slide?: EntrySlideConfig | null
+  /**
+   * Free-form prop metadata (e.g. `mice_wave` ring color). Absent on the
+   * bootstrap manifest today — only present when a prop is re-fetched via the
+   * `/props/{id}` failsafe path (`usePropLookup.triggerFailsafeFetch`), which
+   * proxies `PropResource` and does emit `metadata`. Always optional so
+   * callers must handle it being missing.
+   */
+  metadata?: Record<string, unknown> | null
 }
 
 /**

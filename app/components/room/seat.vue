@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
 import { withImageKitTransform } from '~/utils/imagekit'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 /**
  * RoomSeat - Individual speaker seat component
  * Shows user avatar, name, and audio status indicators
@@ -11,7 +12,7 @@ const props = defineProps<{
 
 const seatsStore = useRoomSeatsStore();
 const roomStore = useRoomStore();
-const { resolvePropAsset } = usePropLookup();
+const { resolveProp } = usePropLookup();
 const { isFrameAnimationAllowed } = useFrameAnimationBudget();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
@@ -63,9 +64,11 @@ const userFrameId = computed(() => {
 // cached still-frame instead of a live SVGA loop.
 const frameAnimationAllowed = computed(() => isFrameAnimationAllowed(seatIndex.value));
 
-// Mice wave asset — custom if equipped, default otherwise
-const miceWaveAsset = computed(() => {
-  return resolvePropAsset(seat.value?.user?.mice_wave_id) ?? ASSETS.MICE_WAVE_SVGA;
+// Speaking-indicator ring color — from the equipped mice-wave prop's
+// metadata.color, or the default ring color when absent/malformed.
+const speakingRingColor = computed(() => {
+  const metadata = resolveProp(seat.value?.user?.mice_wave_id)?.metadata;
+  return resolveMiceWaveRingColor(metadata);
 });
 
 // Display name
@@ -153,10 +156,12 @@ function clearActiveReaction(): void {
         </span>
       </Transition>
 
-      <!-- Speaking indicator -->
-      <Transition name="seat-fade">
-        <SvgaPlayer v-if="isActiveSpeaker" class="absolute inset-0 scale-150" :name="miceWaveAsset" />
-      </Transition>
+      <!-- Speaking indicator: CSS ring pulse (svga-removal 01, replaces SVGA mice-wave) -->
+      <span
+        v-if="!isEmpty && isActiveSpeaker"
+        class="speaking-ring absolute inset-0 z-10 rounded-full pointer-events-none"
+        :style="{ '--seat-ring-color': speakingRingColor }"
+      />
 
     </div>
 
@@ -195,5 +200,30 @@ function clearActiveReaction(): void {
 .seat-fade-enter-from,
 .seat-fade-leave-to {
   opacity: 0;
+}
+
+/* Speaking indicator: CSS ring pulse (svga-removal 01) */
+.speaking-ring {
+  box-shadow: 0 0 0 2px var(--seat-ring-color, #f97316);
+  animation: seat-ring-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes seat-ring-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--seat-ring-color, #f97316);
+    opacity: 0.9;
+  }
+  50% {
+    box-shadow: 0 0 0 5px var(--seat-ring-color, #f97316);
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speaking-ring {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--seat-ring-color, #f97316);
+    opacity: 0.8;
+  }
 }
 </style>

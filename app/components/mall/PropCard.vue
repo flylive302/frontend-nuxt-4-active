@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import type { Prop } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/constants/mall'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 
 // ========================================
 // Props & Emits
@@ -25,6 +26,11 @@ const emit = defineEmits<{
 
 const icon = computed(() => PROP_TYPE_ICONS[props.prop.type])
 const iconColor = computed(() => PROP_TYPE_COLORS[props.prop.type])
+
+const isMiceWave = computed(() => props.prop.type === 'mice_wave')
+
+/** Static ring color for the listing thumbnail — no SVGA fetched for mice-wave. */
+const miceWaveRingColor = computed(() => resolveMiceWaveRingColor(props.prop.metadata))
 
 const isAvailable = computed(() => props.prop.is_available && props.prop.is_purchasable)
 
@@ -69,8 +75,10 @@ function handleClick(): void {
   >
     <!-- Thumbnail -->
     <div class="aspect-square relative bg-muted/20">
-      <img 
-        v-if="prop.thumbnail_url"
+      <!-- Mice wave: static ring (svga-removal 05) — never fetch SVGA for the listing card -->
+      <MiceWaveRing v-if="isMiceWave" :color="miceWaveRingColor" :animated="false" />
+      <img
+        v-else-if="prop.thumbnail_url"
         :src="prop.thumbnail_url"
         :alt="prop.name"
         class="w-full h-full object-cover"

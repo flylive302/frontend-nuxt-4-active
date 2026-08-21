@@ -7,6 +7,8 @@
 
 import type { VipBadge, VipProp } from '~/types/vip/vip-level'
 import { vipAssetBase } from '~/constants/assets'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { useMallStore } from '~/stores/mall'
 
 // ========================================
 // Props & Emits
@@ -33,6 +35,12 @@ const emit = defineEmits<{
 }>()
 
 // ========================================
+// Stores
+// ========================================
+
+const mallStore = useMallStore()
+
+// ========================================
 // Computed
 // ========================================
 
@@ -42,6 +50,15 @@ const emit = defineEmits<{
 const assetBasePath = computed(() =>
   vipAssetBase(props.vipLevel),
 )
+
+/**
+ * `VipProp` (this modal's payload) doesn't carry `metadata` — resolve the
+ * mice-wave ring color from `propIndex` (bootstrap / failsafe fetch) keyed by
+ * the same catalog prop id; defaults when not indexed.
+ */
+function miceWaveRingColor(vipProp: VipProp): string {
+  return resolveMiceWaveRingColor(mallStore.propIndex[vipProp.id]?.metadata)
+}
 
 // ========================================
 // Handlers
@@ -106,9 +123,11 @@ function handleClose(): void {
               :key="vipProp.id"
               class="flex flex-col items-center gap-1.5"
             >
-              <div class="w-full aspect-square rounded-lg bg-white/10 overflow-hidden flex items-center justify-center p-1">
+              <div class="w-full aspect-square rounded-lg bg-white/10 flex items-center justify-center p-1" :class="{ 'overflow-hidden': vipProp.type !== 'mice_wave' }">
+                <!-- Mice wave: static ring (svga-removal 05), not the SVGA thumbnail -->
+                <MiceWaveRing v-if="vipProp.type === 'mice_wave'" :color="miceWaveRingColor(vipProp)" :animated="false" />
                 <img
-                  v-if="vipProp.thumbnail_url"
+                  v-else-if="vipProp.thumbnail_url"
                   :src="vipProp.thumbnail_url"
                   :alt="vipProp.name"
                   class="w-full h-full object-contain"

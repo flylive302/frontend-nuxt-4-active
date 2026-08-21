@@ -5,6 +5,8 @@
 // View-only modal for previewing VIP props and badges with animation.
 
 import type { VipPreviewItem } from '~/types/vip/vip-level'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { useMallStore } from '~/stores/mall'
 
 // ========================================
 // Props & Emits
@@ -26,6 +28,7 @@ const emit = defineEmits<{
 // ========================================
 
 const authStore = useAuthStore()
+const mallStore = useMallStore()
 
 // ========================================
 // Computed
@@ -35,6 +38,22 @@ const authStore = useAuthStore()
  * Whether this is a frame type prop.
  */
 const isFrame = computed(() => props.item?.kind === 'prop' && props.item.data.type === 'frame')
+
+/**
+ * Whether this is a mice-wave type prop — rendered as a pulsing ring
+ * instead of the SVGA/VAP asset (svga-removal 05).
+ */
+const isMiceWave = computed(() => props.item?.kind === 'prop' && props.item.data.type === 'mice_wave')
+
+/**
+ * Ring color: `VipProp` (GET /api/v1/vip/levels) doesn't carry `metadata`, so
+ * fall back to `propIndex` (bootstrap / failsafe fetch) keyed by the same
+ * catalog prop id; `resolveMiceWaveRingColor` defaults when neither has it.
+ */
+const miceWaveRingColor = computed(() => {
+  if (props.item?.kind !== 'prop') return resolveMiceWaveRingColor(null)
+  return resolveMiceWaveRingColor(mallStore.propIndex[props.item.data.id]?.metadata)
+})
 
 /**
  * Display name for the current preview item.
@@ -114,6 +133,17 @@ function handleClose(): void {
                 :frame-asset-url="animatedUrl ?? undefined"
                 :img="authStore?.user?.avatar ?? undefined"
               />
+            </template>
+
+            <!-- Mice wave: animated ring pulse (svga-removal 05) -->
+            <!-- No `overflow-hidden` — the pulse's box-shadow extends past the -->
+            <!-- ring's own box and would get clipped. -->
+            <template v-else-if="isMiceWave">
+              <!-- Fixed size: the `max-w-60` wrapper is a centering flex item whose
+                   width shrinks to content, so percentage widths collapse here. -->
+              <div class="bg-accented rounded-xl flex items-center justify-center w-60 aspect-square">
+                <MiceWaveRing :color="miceWaveRingColor" :animated="true" />
+              </div>
             </template>
 
             <!-- Animated / static asset (svga · vap · video · image) -->

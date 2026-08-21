@@ -4,6 +4,7 @@ import type { RankingRewardItem, RewardType } from '~/types/mission/recharge'
 import { RECHARGE_ACTIVITY, ASSETS } from '~/constants/assets'
 import { resolveRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import type { ResolvedRewardAsset } from '~/utils/mission/resolveRewardAsset'
+import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 
 // ========================================
 // Props & Emits
@@ -228,6 +229,22 @@ function openPreview(reward: RankingRewardItem, resolved: ResolvedRewardAsset): 
                       <AssetPlayer :src="resolved.thumbnailUrl" :muted="true" class="w-full" />
                     </button>
                     <AssetPlayer v-else :src="resolved.thumbnailUrl" :muted="true" class="w-14" />
+                    <span class="text-xs text-center text-amber-300 font-bold leading-tight">
+                      {{ resolved.name }}
+                    </span>
+                    <span v-if="reward.duration_days" class="text-xs text-white/50 leading-tight">
+                      {{ reward.duration_days }}d
+                    </span>
+                  </template>
+
+                  <!-- Mice wave: static ring, click opens the animated preview modal -->
+                  <template v-else-if="reward.reward_type === 'prop' && resolved?.propType === 'mice_wave'">
+                    <button
+                      class="w-14 rounded-lg focus:outline-none cursor-pointer"
+                      @click="openPreview(reward, resolved)"
+                    >
+                      <MiceWaveRing :color="resolveMiceWaveRingColor(resolved.metadata)" :animated="false" />
+                    </button>
                     <span class="text-xs text-center text-amber-300 font-bold leading-tight">
                       {{ resolved.name }}
                     </span>

@@ -178,10 +178,25 @@ export default defineNuxtPlugin({
             dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>;
         }) => {
             await ensureSvga();
+            // svga-removal 03: viewport gating for every consumer. The lib skips
+            // drawFrame() while the container isn't intersecting the viewport
+            // (closed drawer / scrolled off-screen), but its animation clock keeps
+            // running — so one-shot players still fire `onEnd` on time and the
+            // gift queue can't stall.
             const player = new _PlayerCtor({
                 container: options.canvas,
-                loop: options.loop ?? 0
+                loop: options.loop ?? 0,
+                isUseIntersectionObserver: true
             });
+            // The lib's destroy() never disconnects its IntersectionObserver,
+            // leaking an observer (and a canvas ref) per destroyed player —
+            // disconnect it ourselves.
+            const libDestroy = player.destroy.bind(player);
+            player.destroy = () => {
+                player.intersectionObserver?.disconnect();
+                player.intersectionObserver = null;
+                libDestroy();
+            };
             const videoEntity = await fetchAnimation(options.name);
             const sizedReplaceElements = options.replaceElements
                 ? sizeReplaceElementsToLayout(videoEntity, options.replaceElements)
