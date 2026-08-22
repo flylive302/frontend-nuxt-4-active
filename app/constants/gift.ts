@@ -52,6 +52,18 @@ export const LUCKY_FLY_DURATION_MS = 2000;
 export const LUCKY_FLY_THUMBNAIL_SIZE = 64;
 
 /**
+ * Max lucky fly animations on screen at once. Each fly is a 2 s Web Animation on
+ * its own <img>, and each trigger forces two synchronous layouts
+ * (`getBoundingClientRect` for sender + recipient). Before this cap a 500-tap
+ * lucky combo into a 3-seat room queued ~1,500 concurrent animations and
+ * jammed a low-end phone's main thread for over a minute — long enough to miss
+ * the Socket.IO heartbeat and be dropped from the seat (prod 2026-08-23:
+ * "ping timeout" with giftSendCount 502). Over the cap, flies are dropped —
+ * the visual is decorative; the win/balance path never touches it.
+ */
+export const LUCKY_FLY_MAX_CONCURRENT = 6;
+
+/**
  * `gift:send` ack failure messages, copied verbatim from the audio server's
  * `src/shared/errors.ts`. MSAB acks with the literal message, not a code, so
  * these strings ARE the contract — if one is renamed there, the matching arm in

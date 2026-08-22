@@ -7,7 +7,7 @@
  * Uses Web Animations API for GPU-composited performance (transform + opacity only).
  * Module-level state enables concurrent fly animations without conflicts.
  */
-import { LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
+import { LUCKY_FLY_MAX_CONCURRENT, LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
 import { useFxPreferencesStore } from '~/stores/fxPreferences';
 
 // ========================================
@@ -118,6 +118,11 @@ export function useLuckyFly() {
     // GATE: Gift Mute preference suppresses the fly visual on this device only —
     // the lucky send/win itself (balances, session state) is already booked.
     if (useFxPreferencesStore().muteGiftAnimations) return;
+
+    // GATE: load-shed. Past the cap every extra fly is pure main-thread cost
+    // (two forced layouts + one more concurrent animation) with no visual
+    // gain — the screen is already full of them. See LUCKY_FLY_MAX_CONCURRENT.
+    if (flyItems.value.length >= LUCKY_FLY_MAX_CONCURRENT) return;
 
     const item: LuckyFlyItem = {
       id: generateFlyId(),
