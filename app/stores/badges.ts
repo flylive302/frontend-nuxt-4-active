@@ -249,7 +249,18 @@ export const useBadgesStore = defineStore('badges', () => {
     reset,
   }
 }, {
+  // storage: localStorage, from the nuxt.config default. This was an implicit
+  // COOKIE until 2026-08-22 — see that file's note before changing it.
+  //
+  // ⚠️ `userBadges.items`, NOT `userBadges`. The whole object also carries
+  // `loading` / `error` / `hasMore`, which are transient UI state. The cookie
+  // default set no `maxAge`, so those were session-scoped and self-cleared on
+  // every restart; localStorage is durable, and a persisted `loading: true`
+  // (app killed mid-fetch) would survive forever. `resetUserBadges()` does not
+  // clear `loading`, so `fetchUserBadges`'s gate — `if (!hasMore || loading)
+  // return` — would then reject every subsequent fetch and the badges page
+  // would never load again. Persist the data, never the flags.
   persist: {
-    pick: ['userBadges'],
+    pick: ['userBadges.items'],
   }
 })

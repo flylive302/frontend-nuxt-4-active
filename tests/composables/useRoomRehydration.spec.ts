@@ -6,6 +6,14 @@ import { ACTIVE_ROOM_MARKER_TTL_MS } from '../../app/constants/room'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
+// roomStore's persist config pins cookie storage explicitly (see the note on
+// its `persist:` block), and that call runs at store-definition time — same
+// pattern as authStore/homeFeedStore.
+vi.stubGlobal('piniaPluginPersistedstate', {
+  cookies: () => ({}),
+  localStorage: () => ({}),
+  sessionStorage: () => ({}),
+})
 
 // ============================================================
 // client-session-stability 01 — reload rehydration

@@ -166,7 +166,24 @@ export const useRoomStore = defineStore('roomStore', () => {
     updateParticipantCount,
   };
 }, {
+  // 🔴 Pinned to cookies ON PURPOSE — do not "clean this up" to match the
+  // localStorage default set in nuxt.config.
+  //
+  // `activeRoom` is the marker `useRoomRehydration` reads to put a user back
+  // into their Room after a WebView kill. Switching this store's backend makes
+  // its storage read empty exactly once per user — and because an OTA bundle
+  // swaps on kill+relaunch, that one empty read lands on precisely the boot
+  // where rehydration would have fired. Users would silently not be returned to
+  // their Room, which reads identically to dropping them from it.
+  //
+  // Moving this store needs a read-through shim that seeds localStorage from
+  // the existing cookie on first boot. Tracked as Wave 2 in
+  // docs/issues/android-client-performance/analysis-gift-lag-cookie-persistence.md
+  //
+  // `cookies()` with no argument reproduces the previous implicit default
+  // exactly (no `maxAge` → a session cookie, `path: '/'`).
   persist: {
     pick: ['userRoom', 'previousRoute', 'minimizedRoom', 'activeRoom'],
+    storage: piniaPluginPersistedstate.cookies(),
   },
 });

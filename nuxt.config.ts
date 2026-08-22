@@ -38,6 +38,28 @@ export default defineNuxtConfig({
     pinia: {
         storesDirs: ['./stores/**'],
     },
+
+    // Persisted Pinia stores default to **localStorage**, not cookies.
+    //
+    // The module's own fallback is `storages.cookies()` (see its
+    // `runtime/plugin.js`), so any `persist:` block without an explicit
+    // `storage:` silently became a cookie. That cost was measured, not guessed:
+    // every mutation of a persisted store ran `useCookie()`, which re-parses and
+    // `decodeURIComponent`s the entire cookie jar, deep-clones the value
+    // (`klona`), deep-compares it (`ohash.isEqual`) and installs a fresh
+    // `watch(..., { deep: true })`. During a gift burst that path was ~19 % of
+    // every multi-second main-thread block on a low-end Android device.
+    // Full analysis: docs/issues/android-client-performance/
+    //                analysis-gift-lag-cookie-persistence.md
+    //
+    // Cookies are only correct for state a server must read. This app is a pure
+    // SPA (`ssr: false`), so that set is: `auth.token` (read by the API layer
+    // alongside the Sanctum cookie) and `homeFeed.selectedCountry` — both
+    // already declare `storage:` explicitly, as does `roomStore` (see its own
+    // note). Flipping the default makes the expensive option opt-in.
+    piniaPluginPersistedstate: {
+        storage: 'localStorage',
+    },
     imports: {
         dirs: [
             'composables',

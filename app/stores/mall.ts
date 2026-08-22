@@ -349,6 +349,8 @@ export const useMallStore = defineStore('mall', () => {
   }
 }, {
   // Persist equipped state to avoid flicker on navigation
+  // storage: localStorage, from the nuxt.config default. This was an implicit
+  // COOKIE until 2026-08-22 — see that file's note before changing it.
   persist: {
     pick: ['equipped', 'types', 'propIndex'],
   },

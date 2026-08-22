@@ -38,6 +38,8 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
     toggleEntryMute,
   };
 }, {
+  // storage: localStorage, from the nuxt.config default. This was an implicit
+  // COOKIE until 2026-08-22 — see that file's note before changing it.
   persist: {
     pick: ['muteGiftAnimations', 'muteEntryAnimations'],
   },

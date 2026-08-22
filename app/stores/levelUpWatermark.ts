@@ -80,6 +80,8 @@ export const useLevelUpWatermarkStore = defineStore('levelUpWatermarkStore', () 
     $reset,
   }
 }, {
+  // storage: localStorage, from the nuxt.config default. This was an implicit
+  // COOKIE until 2026-08-22 — see that file's note before changing it.
   persist: {
     pick: ['wealthLevelSeen', 'charmLevelSeen', 'milestoneSeen'],
   },
