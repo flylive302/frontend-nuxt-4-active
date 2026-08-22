@@ -5,9 +5,15 @@
  * and playback triggering.
  */
 import type { GiftSendAck } from '~/types/room/audio';
+import type { Gift } from '~/types/gift/gift';
 import { announceLocalGiftSend } from '~/composables/room/useRoomEventHandlers';
 import { recordLuckyGiftTap } from '~/composables/lucky/useLuckyGift';
-import { GIFT_FAILURE_TOAST_COOLDOWN_MS, GIFT_SEND_ERROR } from '~/constants/gift';
+import {
+  GIFT_COMBO_COALESCE_MS,
+  GIFT_COMBO_MAX_BURST_QUANTITY,
+  GIFT_FAILURE_TOAST_COOLDOWN_MS,
+  GIFT_SEND_ERROR,
+} from '~/constants/gift';
 import { isLuckyCategory } from '~/utils/gift';
 
 export function useGiftSending() {
@@ -52,6 +58,31 @@ export function useGiftSending() {
    */
   let lastReconnectToastAt = 0;
 
+  /**
+   * A run of combo() taps against the SAME gift+recipients, waiting to merge
+   * into one `gift:send` emit (msab-load-stability — combo tap flood).
+   * luckyCombo() does NOT use this — see luckyCombo()'s own comment for why.
+   * Not a ref: nothing renders it, and only this closure ever reads or writes
+   * it between taps.
+   *
+   * THROTTLE, not debounce: `flushAt` is fixed the moment the FIRST tap of a
+   * burst arrives and never moves — later taps in the same window only add
+   * their quantity/refund, they do not push the timer back out. A continuous
+   * run of taps therefore emits one merged batch every GIFT_COMBO_COALESCE_MS
+   * instead of never flushing until taps stop.
+   */
+  let pendingBurst: {
+    key: string;
+    gift: Gift;
+    recipientIds: number[];
+    /** Summed quantity across every tap folded into this burst so far. */
+    totalQuantity: number;
+    batchId: string;
+    /** Summed total refund (all recipients, all taps) tracked for this batchId. */
+    refundTotal: number;
+    timer: ReturnType<typeof setTimeout>;
+  } | null = null;
+
   // ========================================
   // Computed
   // ========================================
@@ -93,6 +124,91 @@ export function useGiftSending() {
    */
   function newBatchId(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  /**
+   * Identity of a combo burst: same gift + same recipient set. Taps sharing a
+   * key merge into the same pending burst; a mismatch (gift or recipients
+   * changed mid-run) flushes whatever was pending before starting a new one.
+   */
+  function burstKey(giftId: number, recipientIds: number[]): string {
+    return `${giftId}:${[...recipientIds].sort((a, b) => a - b).join(',')}`;
+  }
+
+  /**
+   * EXECUTE (deferred): send the coalesced `gift:send` for whatever combo
+   * burst is pending, then REACT-reconcile its refund once the ack resolves.
+   * A no-op if nothing is pending — safe to call unconditionally as a flush
+   * trigger (window expiry, context change, or a plain send()).
+   */
+  function flushComboBurst(): void {
+    const burst = pendingBurst;
+    if (!burst) return;
+    clearTimeout(burst.timer);
+    pendingBurst = null;
+
+    // Per-recipient cost for the WHOLE merged batch — mirrors send()/combo()'s
+    // single-tap perRecipientCost, just scaled by the summed quantity, so
+    // reconcileBurstRefund's partial-drop math (perRecipientCost × droppedCount)
+    // stays correct for a batch built from N taps instead of one.
+    const perRecipientCost = burst.gift.price * burst.totalQuantity;
+
+    emitGift(burst.gift.id, burst.recipientIds, burst.totalQuantity, burst.batchId)
+      .then((ack) => reconcileBurstRefund(burst.batchId, perRecipientCost, burst.recipientIds, ack))
+      .catch((err: unknown) => {
+        log.warn('gift:send (combo burst) failed', err);
+        reconcileBurstRefund(burst.batchId, perRecipientCost, burst.recipientIds, null);
+      });
+  }
+
+  /**
+   * GATE has already passed and this tap's coins are already debited by the
+   * time this runs — this only decides whether the tap's `gift:send` joins an
+   * in-flight burst or starts a new one, arming the throttle timer only on
+   * the burst's first tap (see `pendingBurst`'s comment for why).
+   *
+   * @param tapTotalCost total coin cost of THIS tap alone (all recipients),
+   *   accumulated into the batch's tracked refund amount.
+   */
+  function queueComboBurst(
+    gift: Gift,
+    recipientIds: number[],
+    tapQuantity: number,
+    tapTotalCost: number,
+  ): void {
+    const key = burstKey(gift.id, recipientIds);
+
+    // Same gift+recipients AND under MSAB's wire-level quantity cap (see
+    // GIFT_COMBO_MAX_BURST_QUANTITY) — merge into the pending burst. THROTTLE:
+    // the burst's timer was armed by its FIRST tap and is never reset here, so
+    // a continuous run of taps still flushes every GIFT_COMBO_COALESCE_MS
+    // instead of being pushed out indefinitely.
+    if (
+      pendingBurst
+      && pendingBurst.key === key
+      && pendingBurst.totalQuantity + tapQuantity <= GIFT_COMBO_MAX_BURST_QUANTITY
+    ) {
+      pendingBurst.totalQuantity += tapQuantity;
+      pendingBurst.refundTotal += tapTotalCost;
+      comboStore.setPendingRefund(pendingBurst.batchId, pendingBurst.refundTotal);
+      return;
+    }
+
+    // Different gift/recipients (or nothing pending) — flush whatever was
+    // queued immediately, then start a fresh burst for this tap.
+    flushComboBurst();
+
+    const batchId = newBatchId();
+    comboStore.setPendingRefund(batchId, tapTotalCost);
+    pendingBurst = {
+      key,
+      gift,
+      recipientIds: [...recipientIds],
+      totalQuantity: tapQuantity,
+      batchId,
+      refundTotal: tapTotalCost,
+      timer: setTimeout(flushComboBurst, GIFT_COMBO_COALESCE_MS),
+    };
   }
 
   /**
@@ -213,6 +329,10 @@ export function useGiftSending() {
   async function send(): Promise<boolean> {
     // Prevent double-sending
     if (isSending.value) return false;
+
+    // A non-combo send never waits behind a coalescing window — flush
+    // whatever combo burst is pending immediately, as its own smaller emit.
+    flushComboBurst();
 
     // GATE: refuse before the debit while the socket is down — see gateRoomConnection.
     if (!gateRoomConnection()) return false;
@@ -403,26 +523,15 @@ export function useGiftSending() {
     const sender = authStore.user;
     if (!sender) return false;
 
-    // Fresh batchId per press — each combo is its own queued animation, never
-    // interrupting whatever is currently playing.
-    const batchId = newBatchId();
-    const perRecipientCost = ctx.gift.price * ctx.quantity;
-
-    // Track amount for potential rollback, keyed to THIS batch.
-    comboStore.setPendingRefund(batchId, comboCost);
-
-    // Deduct coins for combo
+    // Deduct coins for combo — PER TAP, optimistic, so the balance moves
+    // instantly even though the network emit below may be coalesced.
     deductCoins(comboCost);
 
-    // Single burst emit for every valid (seated) recipient. emitGift owns the
-    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
-    // REACT: reconcile once the ack resolves — never blocks this function's return.
-    emitGift(ctx.gift.id, validRecipients, ctx.quantity, batchId)
-      .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, validRecipients, ack))
-      .catch((err: unknown) => {
-        log.warn('gift:send (combo) failed', err);
-        reconcileBurstRefund(batchId, perRecipientCost, validRecipients, null);
-      });
+    // Queue (rather than immediately emit) this tap's `gift:send` — taps
+    // landing within GIFT_COMBO_COALESCE_MS of each other merge into one
+    // emit with a summed quantity (msab-load-stability — combo tap flood).
+    // Refund tracking is keyed to the (possibly merged) batch, not this tap.
+    queueComboBurst(ctx.gift, validRecipients, ctx.quantity, comboCost);
 
     // Enqueue a separate playback so the combo plays in order behind whatever is
     // already on screen — same FIFO path as send() and other users' gifts.
@@ -457,6 +566,16 @@ export function useGiftSending() {
 
   /**
    * Handle lucky combo click — resend same lucky gift, deduct coins, trigger fly.
+   *
+   * Deliberately NOT coalesced, unlike combo(). Laravel runs exactly ONE lucky
+   * draw per constituent burst PER `gift:send` emit (see
+   * backend/app/Services/Gift/GiftTransactionService.php:222-228 —
+   * `$drawQuantities` is derived one-for-one from the bursts on the request).
+   * Merging N taps into a single emit with quantity N would collapse N
+   * independent draws into ONE draw staked at N× — a gameplay change, not
+   * just a network optimization. So every tap here sends its own `gift:send`,
+   * same as before combo coalescing was added for the non-lucky path.
+   *
    * @returns true if combo was successful
    */
   async function luckyCombo(): Promise<boolean> {
@@ -486,23 +605,18 @@ export function useGiftSending() {
       return false;
     }
 
-    // Fresh batchId per press, mirroring combo() — each lucky combo press is its
-    // own tracked burst so overlapping presses each reconcile independently.
-    const batchId = newBatchId();
-    const perRecipientCost = ctx.gift.price * ctx.quantity;
-
-    comboStore.setPendingRefund(batchId, comboCost);
-
-    // Deduct coins and play fly animation
+    // EXECUTE: optimistic per-tap deduction, then this tap's own `gift:send`
+    // emit — one draw per tap, never merged (see the function comment above).
     deductCoins(comboCost);
 
-    // Single burst emit for every valid (seated) recipient. emitGift owns the
-    // sender-side optimistic accumulation (see send()) — don't duplicate it here.
-    // REACT: reconcile once the ack resolves — never blocks this function's return.
+    const batchId = newBatchId();
+    const perRecipientCost = ctx.gift.price * ctx.quantity;
+    comboStore.setPendingRefund(batchId, comboCost);
+
     emitGift(ctx.gift.id, validRecipients, ctx.quantity, batchId)
       .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, validRecipients, ack))
       .catch((err: unknown) => {
-        log.warn('gift:send (luckyCombo) failed', err);
+        log.warn('gift:send (lucky combo) failed', err);
         reconcileBurstRefund(batchId, perRecipientCost, validRecipients, null);
       });
 

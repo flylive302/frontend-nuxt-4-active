@@ -73,3 +73,24 @@ export const GIFT_SEND_ERROR = {
  * posture as the deliberately-silent partial-drop refund below it.
  */
 export const GIFT_FAILURE_TOAST_COOLDOWN_MS = 4000;
+
+/**
+ * Combo-tap coalescing window, in milliseconds (msab-load-stability — combo
+ * tap flood). Rapid combo/lucky-combo taps within this window merge into ONE
+ * `gift:send` emit with a summed quantity instead of one emit per tap — on
+ * low-end phones, 100-200 taps/sec of raw emits jams the main thread and drops
+ * the socket to server ping timeouts. Optimistic coin debit and the visual
+ * combo counter still happen per tap; only the network emit and its refund
+ * tracking are batched. See `useGiftSending.ts`.
+ */
+export const GIFT_COMBO_COALESCE_MS = 300;
+
+/**
+ * Hard cap on the summed `quantity` a coalesced combo burst may reach before
+ * it is force-flushed and a new burst starts. Mirrors MSAB's wire-level cap
+ * (`src/socket/schemas.ts`: `quantity: z.number().int().positive().max(9999)`)
+ * — without this, a long tap run at the top quantity option (177) would
+ * exceed the cap after ~57 taps and the whole merged burst would bounce as
+ * `Invalid payload` instead of just being split into two emits.
+ */
+export const GIFT_COMBO_MAX_BURST_QUANTITY = 9999;

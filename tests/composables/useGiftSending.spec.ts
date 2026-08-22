@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, watch, toRef } from 'vue'
 import type { GiftSendAck } from '../../app/types/room/audio'
-import { GIFT_FAILURE_TOAST_COOLDOWN_MS } from '../../app/constants/gift'
+import { GIFT_COMBO_COALESCE_MS, GIFT_FAILURE_TOAST_COOLDOWN_MS } from '../../app/constants/gift'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -304,52 +304,69 @@ describe('useGiftSending — burst rejection feedback', () => {
   })
 
   it('shows ONE toast for a run of rejected combo taps, not one per tap', async () => {
+    // (gift-combo-coalesce) 20 taps this fast now merge into a SINGLE
+    // gift:send burst (see the coalescing describe block below) — one
+    // rejected burst, one toast, which is an even stronger form of the
+    // original "not one per tap" guarantee.
     const sendGiftMock = vi.fn().mockResolvedValue(
       { success: false, error: 'No recipients seated' } satisfies GiftSendAck
     )
-    const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock)
+    vi.useFakeTimers()
+    try {
+      const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock)
 
-    // Freeze the clock inside one cooldown window — this is the reported case:
-    // twenty taps landing far faster than GIFT_FAILURE_TOAST_COOLDOWN_MS.
-    const frozen = 1_700_000_000_000
-    vi.spyOn(Date, 'now').mockReturnValue(frozen)
+      // Freeze the clock inside one cooldown window — this is the reported case:
+      // twenty taps landing far faster than GIFT_FAILURE_TOAST_COOLDOWN_MS.
+      const frozen = 1_700_000_000_000
+      vi.spyOn(Date, 'now').mockReturnValue(frozen)
 
-    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+      comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
 
-    for (let tap = 0; tap < 20; tap++) {
-      await sending.combo()
-      await Promise.resolve()
-      await Promise.resolve()
+      for (let tap = 0; tap < 20; tap++) {
+        await sending.combo()
+      }
+
+      // All 20 taps landed inside one coalesce window — flush it now.
+      await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+
+      expect(sendGiftMock).toHaveBeenCalledTimes(1)
+      const [, , quantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+      expect(quantity).toBe(20)
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
     }
-
-    expect(sendGiftMock).toHaveBeenCalledTimes(20)
-    expect(toastAdd).toHaveBeenCalledTimes(1)
   })
 
   it('toasts again once the cooldown has elapsed', async () => {
     const sendGiftMock = vi.fn().mockResolvedValue(
       { success: false, error: 'No recipients seated' } satisfies GiftSendAck
     )
-    const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock)
+    vi.useFakeTimers()
+    try {
+      const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock)
 
-    const start = 1_700_000_000_000
-    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(start)
+      const start = 1_700_000_000_000
+      const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(start)
 
-    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+      comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
 
-    await sending.combo()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(toastAdd).toHaveBeenCalledTimes(1)
+      await sending.combo()
+      // Let this tap's burst flush on its own before the next one starts, so
+      // it lands as its own separate (rejected) emit.
+      await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+      expect(toastAdd).toHaveBeenCalledTimes(1)
 
-    // One millisecond past the window — the sender is told again, so a problem
-    // that persists across separate attempts never goes quiet forever.
-    nowSpy.mockReturnValue(start + GIFT_FAILURE_TOAST_COOLDOWN_MS + 1)
+      // One millisecond past the window — the sender is told again, so a problem
+      // that persists across separate attempts never goes quiet forever.
+      nowSpy.mockReturnValue(start + GIFT_FAILURE_TOAST_COOLDOWN_MS + 1)
 
-    await sending.combo()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(toastAdd).toHaveBeenCalledTimes(2)
+      await sending.combo()
+      await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+      expect(toastAdd).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
@@ -359,22 +376,28 @@ describe('useGiftSending.combo / luckyCombo', () => {
     vi.clearAllMocks()
   })
 
-  it('combo() carries a batchId on its burst emit', async () => {
+  it('combo() carries a batchId on its (coalesced) burst emit', async () => {
     const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2, 3] } satisfies GiftSendAck)
-    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+    vi.useFakeTimers()
+    try {
+      const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
 
-    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2, 3], quantity: 1 })
+      comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2, 3], quantity: 1 })
 
-    await sending.combo()
+      await sending.combo()
+      await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
 
-    expect(sendGiftMock).toHaveBeenCalledTimes(1)
-    const [, recipientIds, , batchId] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
-    expect(recipientIds).toEqual([2, 3])
-    expect(typeof batchId).toBe('string')
-    expect(batchId.length).toBeGreaterThan(0)
+      expect(sendGiftMock).toHaveBeenCalledTimes(1)
+      const [, recipientIds, , batchId] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+      expect(recipientIds).toEqual([2, 3])
+      expect(typeof batchId).toBe('string')
+      expect(batchId.length).toBeGreaterThan(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it('luckyCombo() carries a batchId on its burst emit', async () => {
+  it('luckyCombo() carries a batchId on its (non-coalesced, per-tap) emit', async () => {
     const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
     const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
 
@@ -387,6 +410,307 @@ describe('useGiftSending.combo / luckyCombo', () => {
     expect(recipientIds).toEqual([2])
     expect(typeof batchId).toBe('string')
     expect(batchId.length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * gift-combo-coalesce: rapid combo/luckyCombo taps merge into ONE `gift:send`
+ * burst instead of one emit per tap — on low-end phones a 100-200 tap combo
+ * run of raw emits jams the main thread and drops the socket to server ping
+ * timeouts. Coins debit and the visual combo counter still move per tap;
+ * only the network emit + its refund tracking are batched.
+ */
+describe('useGiftSending — combo tap coalescing', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('5 taps within the coalesce window merge into ONE emit with quantity 5', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    // All 5 taps land inside a single 300ms window (50ms apart, total 200ms).
+    for (let tap = 0; tap < 5; tap++) {
+      await sending.combo()
+      await vi.advanceTimersByTimeAsync(50)
+    }
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+    const [giftId, recipientIds, quantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+    expect(giftId).toBe(9)
+    expect(recipientIds).toEqual([2])
+    expect(quantity).toBe(5)
+  })
+
+  it('a continuous tap stream flushes every window instead of waiting for taps to stop (THROTTLE, not debounce)', async () => {
+    // 20 taps, 50ms apart (t = 0, 50, 100, ..., 950ms). Each burst's timer is
+    // armed by its FIRST tap and never reset, so it fires at a fixed
+    // (firstTapTime + 300ms) boundary regardless of later taps landing inside
+    // the window:
+    //   burst 1: taps at t=0..250   (6 taps)  → flushes at t=300
+    //   burst 2: taps at t=300..550 (6 taps)  → flushes at t=600
+    //   burst 3: taps at t=600..850 (6 taps)  → flushes at t=900
+    //   burst 4: taps at t=900,950  (2 taps)  → flushes at t=1200 (after the loop)
+    // A debounce (timer reset per tap) would never flush until the taps
+    // stopped — this asserts the opposite: flushes happen DURING the stream.
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    const TAP_COUNT = 20
+    for (let tap = 0; tap < TAP_COUNT; tap++) {
+      await sending.combo()
+      await vi.advanceTimersByTimeAsync(50)
+    }
+
+    // Three windows (300/600/900) have already fired DURING the loop above —
+    // this is the key throttle assertion: flushes happened mid-stream.
+    expect(sendGiftMock).toHaveBeenCalledTimes(3)
+
+    // Drain the final partial window (taps at t=900, 950) so every tap is accounted for.
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    expect(sendGiftMock).toHaveBeenCalledTimes(4)
+
+    const quantities = sendGiftMock.mock.calls.map((call) => call[2] as number)
+    expect(quantities).toEqual([6, 6, 6, 2])
+    expect(quantities.reduce((sum, q) => sum + q, 0)).toBe(TAP_COUNT)
+  })
+
+  it('increments the visual combo counter once per tap, even though the emits are merged', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore, giftStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+    giftStore.resetCombo()
+
+    for (let tap = 0; tap < 5; tap++) {
+      await sending.combo()
+      await vi.advanceTimersByTimeAsync(50)
+    }
+
+    // The counter moved on every tap — only the network emit was batched.
+    expect(giftStore.comboCount).toBe(5)
+
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('GATE runs on every tap: a tap after the socket drops mid-burst neither joins the batch nor debits', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const isConnected = ref(true)
+    const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { useAuthStore } = await import('../../app/stores/auth')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+
+    const comboStore = useGiftComboStore()
+    const giftStore = useGiftStore()
+    const authStore = useAuthStore()
+    const seatsStore = useRoomSeatsStore()
+    authStore.user = { id: 1, name: 'Sender', coins: '1000' } as never
+
+    vi.stubGlobal('useGiftComboStore', () => comboStore)
+    vi.stubGlobal('useGiftStore', () => giftStore)
+    vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
+    vi.stubGlobal('useGiftEligibility', () => ({
+      canAfford: computed(() => true),
+      canSend: computed(() => true),
+    }))
+    vi.stubGlobal('useRoomAudio', () => ({
+      sendGift: sendGiftMock,
+      isConnected: computed(() => isConnected.value),
+    }))
+    seatsStore.updateSeat(0, 2, false)
+
+    const { useGiftSending } = await import('../../app/composables/gift/useGiftSending')
+    const sending = useGiftSending()
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    await sending.combo()
+    expect((authStore.user as { coins?: string } | null)?.coins).toBe('950') // one tap's worth debited
+
+    // Socket drops mid-burst — the very next tap must be gated out, not merged in.
+    isConnected.value = false
+    const result = await sending.combo()
+
+    expect(result).toBe(false)
+    expect((authStore.user as { coins?: string } | null)?.coins).toBe('950') // unchanged — gated tap never debited
+
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    // Only the one gated-in tap's worth (quantity 1) ever reached the wire.
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+    const [, , quantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+    expect(quantity).toBe(1)
+  })
+
+  it('a null/failed ack for the merged batch refunds ALL taps worth of coins, not just one', async () => {
+    let resolveAck!: (ack: GiftSendAck | null) => void
+    const sendGiftMock = vi.fn().mockImplementation(
+      () => new Promise<GiftSendAck | null>((resolve) => { resolveAck = resolve }),
+    )
+    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    // All 5 taps land inside the SAME fixed 300ms throttle window (spaced
+    // 50ms apart, well under the window), so they merge into one batch.
+    for (let tap = 0; tap < 5; tap++) {
+      await sending.combo()
+      await vi.advanceTimersByTimeAsync(50)
+    }
+    // 5 taps × 50 coins/tap = 250 debited, all before any network emit fired.
+    expect(authStore.user?.coins).toBe('750')
+
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+
+    resolveAck(null)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // Full refund of all 5 taps' coins, not just the last one.
+    expect(authStore.user?.coins).toBe('1000')
+  })
+
+  it('switching gifts mid-burst flushes the pending batch immediately, then starts a new one', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const OTHER_GIFT = { id: 11, price: 30, category: 'normal', thumbnail_url: 'y.png' } as never
+    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+    await sending.combo()
+    await sending.combo()
+    // Nothing has flushed yet — both taps are still coalescing.
+    expect(sendGiftMock).not.toHaveBeenCalled()
+
+    // Gift changes before the window expires (a real combo repeats the LAST
+    // send()'s context, so a fresh send() with a different gift is what
+    // changes it mid-burst).
+    comboStore.setNormalContext({ gift: OTHER_GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+    await sending.combo()
+
+    // The first (2-tap) batch flushed immediately as its own smaller emit —
+    // no waiting for the coalesce timer.
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+    const [firstGiftId, , firstQuantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+    expect(firstGiftId).toBe(9)
+    expect(firstQuantity).toBe(2)
+
+    // The new gift's tap is queued, not yet flushed.
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    expect(sendGiftMock).toHaveBeenCalledTimes(2)
+    const [secondGiftId, , secondQuantity] = sendGiftMock.mock.calls[1] as [number, number[], number, string]
+    expect(secondGiftId).toBe(11)
+    expect(secondQuantity).toBe(1)
+  })
+
+  it('recipients changing mid-burst flushes the pending batch immediately, then starts a new one', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2, 3] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+    await sending.combo()
+    expect(sendGiftMock).not.toHaveBeenCalled()
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2, 3], quantity: 1 })
+    await sending.combo()
+
+    // Different recipient set flushed the first (1-tap, recipient [2]) batch.
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+    const [, firstRecipients, firstQuantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+    expect(firstRecipients).toEqual([2])
+    expect(firstQuantity).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    expect(sendGiftMock).toHaveBeenCalledTimes(2)
+    const [, secondRecipients] = sendGiftMock.mock.calls[1] as [number, number[], number, string]
+    expect(secondRecipients).toEqual([2, 3])
+  })
+
+  it('a plain send() flushes any pending combo burst immediately, as its own emit', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore, giftStore } = await setup(sendGiftMock)
+
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+    await sending.combo()
+    await sending.combo()
+    expect(sendGiftMock).not.toHaveBeenCalled()
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+    await sending.send()
+
+    // The 2-tap combo burst flushed first, then send()'s own emit followed.
+    expect(sendGiftMock).toHaveBeenCalledTimes(2)
+    const [, , comboQuantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+    expect(comboQuantity).toBe(2)
+  })
+})
+
+/**
+ * luckyCombo() deliberately does NOT coalesce — see the function's own
+ * comment in useGiftSending.ts. Laravel runs one lucky draw per constituent
+ * burst per `gift:send` emit (GiftTransactionService.php:222-228), so merging
+ * taps would change the stake-to-draw ratio, not just the network shape.
+ */
+describe('useGiftSending — luckyCombo per-tap emit (no coalescing)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('5 rapid taps emit 5 separate gift:send calls, each quantity 1', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+
+    comboStore.setLuckyContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    for (let tap = 0; tap < 5; tap++) {
+      await sending.luckyCombo()
+    }
+
+    expect(sendGiftMock).toHaveBeenCalledTimes(5)
+    for (const call of sendGiftMock.mock.calls) {
+      const [giftId, recipientIds, quantity] = call as [number, number[], number, string]
+      expect(giftId).toBe(9)
+      expect(recipientIds).toEqual([2])
+      expect(quantity).toBe(1)
+    }
+    // Each tap carries its own batchId — never merged into a shared batch.
+    const batchIds = sendGiftMock.mock.calls.map((call) => call[3] as string)
+    expect(new Set(batchIds).size).toBe(5)
+  })
+
+  it('deducts coins per tap and refunds only that tap on a failed ack', async () => {
+    let resolveAck!: (ack: GiftSendAck) => void
+    const sendGiftMock = vi.fn().mockImplementationOnce(
+      () => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }),
+    )
+    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock)
+
+    comboStore.setLuckyContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    await sending.luckyCombo()
+    expect(authStore.user?.coins).toBe('950') // 1000 - 50, this tap's own debit
+
+    resolveAck({ success: false })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(authStore.user?.coins).toBe('1000') // fully refunded, this tap only
   })
 })
 
