@@ -31,6 +31,7 @@ import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
+import { resolveSvgaPlugin } from '../gift/useSvgaPlugin';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import { isLuckyCategory } from '~/utils/gift';
 import { createLogger } from '~/utils/logger';
@@ -332,7 +333,7 @@ export function setupRoomEventHandlers(
         // REACT: start the asset download the moment we learn the animation,
         // not when the modal mounts. Fire-and-forget — never await a ~7MB
         // download here, or it stalls the handler. Deduped with the VAP plugin.
-        void giftAssetCache.preloadGift(giftForPlayback);
+        void giftAssetCache.preloadGift(giftForPlayback, resolveSvgaPlugin());
         giftStore.enqueuePlayback({
           gift: giftForPlayback,
           senderId: event.user.id,
@@ -743,7 +744,7 @@ export function setupRoomEventHandlers(
     if (event.recipientId !== authStore.user?.id) return;
     const gift = getGiftById(event.giftId);
     if (gift) {
-      await giftAssetCache.preloadGift(gift);
+      await giftAssetCache.preloadGift(gift, resolveSvgaPlugin());
     }
   });
 

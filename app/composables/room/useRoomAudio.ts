@@ -25,6 +25,7 @@ import { useBroadcastHlsPlayback } from './audio/useBroadcastHlsPlayback';
 import { selectMediaTransport, planTransportHandoff, type MediaTransport } from '~/utils/mediaTransport';
 import { propToEntryAnimationGift } from '~/utils/prop';
 import * as giftAssetCache from '~/services/giftAssetCache';
+import { resolveSvgaPlugin } from '../gift/useSvgaPlugin';
 import * as fgsCoordinator from '~/services/foregroundServiceCoordinator';
 import { resolveSocketErrorMessage, isRoomBlockedSocketError, RoomBlockedError } from '~/utils/socket/socketErrorMessages';
 
@@ -771,10 +772,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // reusing the same popular prop then hit Cache Storage, not cold network.
     if (entryWarmIds.size > 0) {
       setTimeout(() => {
+        const svga = resolveSvgaPlugin();
         for (const propId of entryWarmIds) {
           const entryProp = resolveProp(propId);
           if (entryProp) {
-            void giftAssetCache.preloadGift(propToEntryAnimationGift(entryProp));
+            void giftAssetCache.preloadGift(propToEntryAnimationGift(entryProp), svga);
           }
         }
       }, 1500);

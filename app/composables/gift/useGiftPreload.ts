@@ -11,6 +11,7 @@ import { watch, type Ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import type { Gift } from '~/types/gift/gift'
 import * as giftAssetCache from '~/services/giftAssetCache'
+import { resolveSvgaPlugin } from './useSvgaPlugin'
 
 // ========================================
 // Module-level Cached Composables
@@ -35,7 +36,7 @@ export function useGiftPreload(
       if (!_roomAudio) _roomAudio = useRoomAudio()
 
       // 1. Preload locally for sender (instant playback)
-      await giftAssetCache.preloadGift(gift)
+      await giftAssetCache.preloadGift(gift, resolveSvgaPlugin())
 
       // 2. Send prepare signal to recipients
       _roomAudio.prepareGift(gift.id, recipients)

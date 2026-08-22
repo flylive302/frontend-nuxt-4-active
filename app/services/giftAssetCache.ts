@@ -127,22 +127,28 @@ export async function preloadVideo(rawUrl: string): Promise<string> {
  * Preload an SVGA asset using the SVGA plugin's cache.
  * The SVGA plugin reference must be passed in by the caller
  * (services must not import from Vue/Nuxt runtime).
+ *
+ * @returns `true` only when the plugin parsed + cached the VideoEntity
+ *   (the asset is genuinely play-ready). `false` when we could only warm the
+ *   HTTP cache (no plugin) or the plugin failed — first play will still be cold.
  */
-export async function preloadSvga(name: string, svgaPlugin?: SvgaPlugin): Promise<void> {
+export async function preloadSvga(name: string, svgaPlugin?: SvgaPlugin): Promise<boolean> {
   if (svgaPlugin?.fetchAnimation) {
     try {
       await svgaPlugin.fetchAnimation(name)
+      return true
     } catch (error) {
       log.warn('Failed to preload SVGA via plugin', error)
-    }
-  } else {
-    // Fallback if plugin not available
-    try {
-      await fetch(name)
-    } catch (error) {
-      log.warn('Failed to preload SVGA via fetch', error)
+      return false
     }
   }
+  // Fallback if plugin not available — bytes only, parse cache stays cold
+  try {
+    await fetch(name)
+  } catch (error) {
+    log.warn('Failed to preload SVGA via fetch', error)
+  }
+  return false
 }
 
 /**
@@ -162,6 +168,11 @@ export async function preloadVap(rawMp4Url: string): Promise<void> {
 
 /**
  * Preload a gift's animation asset.
+ *
+ * Marks the gift in `preloadedGiftIds` (the synchronous "ready" fast path used
+ * by `isGiftAssetCached`) only when the playable asset was actually warmed.
+ * For SVGA that means the plugin parse cache — pass `svgaPlugin`
+ * (`useNuxtApp().$svga`) or the gift is never reported ready.
  */
 export async function preloadGift(
   gift: { id: number; asset_type: string; animation_url: string | null },
@@ -171,14 +182,15 @@ export async function preloadGift(
   if (preloadedGiftIds.has(gift.id)) return
 
   try {
+    let warmed = true
     if (gift.asset_type === 'video') {
       await preloadVideo(gift.animation_url)
     } else if (gift.asset_type === 'svga') {
-      await preloadSvga(gift.animation_url, svgaPlugin)
+      warmed = await preloadSvga(gift.animation_url, svgaPlugin)
     } else if (gift.asset_type === 'vap') {
       await preloadVap(gift.animation_url)
     }
-    preloadedGiftIds.add(gift.id)
+    if (warmed) preloadedGiftIds.add(gift.id)
   } catch (error) {
     log.warn('Failed to preload gift asset', error)
   }

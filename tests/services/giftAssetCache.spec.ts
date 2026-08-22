@@ -166,17 +166,20 @@ describe('giftAssetCache', () => {
         fetchAnimation: vi.fn().mockResolvedValue({}),
       }
 
-      await giftAssetCache.preloadSvga('gift_animation', svgaPlugin)
+      const warmed = await giftAssetCache.preloadSvga('gift_animation', svgaPlugin)
 
       expect(svgaPlugin.fetchAnimation).toHaveBeenCalledWith('gift_animation')
+      expect(warmed).toBe(true)
     })
 
     it('should fallback to fetch() when no SVGA plugin', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true })
 
-      await giftAssetCache.preloadSvga('gift_animation')
+      const warmed = await giftAssetCache.preloadSvga('gift_animation')
 
       expect(mockFetch).toHaveBeenCalledWith('gift_animation')
+      // bytes only — parse cache is still cold, so this must NOT count as ready
+      expect(warmed).toBe(false)
     })
 
     it('should not throw on SVGA plugin error', async () => {
@@ -186,7 +189,7 @@ describe('giftAssetCache', () => {
 
       await expect(
         giftAssetCache.preloadSvga('broken_animation', svgaPlugin)
-      ).resolves.toBeUndefined()
+      ).resolves.toBe(false)
     })
   })
 
@@ -222,6 +225,25 @@ describe('giftAssetCache', () => {
       })
 
       expect(mockFetch).toHaveBeenCalledWith('https://example.com/gift.svga')
+    })
+
+    it('does NOT mark an svga gift ready when only the HTTP cache was warmed (no plugin)', async () => {
+      mockFetch.mockResolvedValue({ ok: true })
+      mockCacheStorage.hasAsset.mockResolvedValue(false)
+      const gift = { id: 77, asset_type: 'svga', animation_url: 'https://example.com/gift.svga' }
+
+      await giftAssetCache.preloadGift(gift)
+
+      expect(
+        await giftAssetCache.isGiftAssetCached({ ...gift, thumbnail_url: 'https://cdn.example.com/t.jpg' }),
+      ).toBe(false)
+      // and a later preload WITH the plugin is not short-circuited by the id set
+      const svgaPlugin = { fetchAnimation: vi.fn().mockResolvedValue({}) }
+      await giftAssetCache.preloadGift(gift, svgaPlugin)
+      expect(svgaPlugin.fetchAnimation).toHaveBeenCalledWith('https://example.com/gift.svga')
+      expect(
+        await giftAssetCache.isGiftAssetCached({ ...gift, thumbnail_url: 'https://cdn.example.com/t.jpg' }),
+      ).toBe(true)
     })
 
     it('should skip gifts with no animation_url', async () => {
@@ -367,14 +389,16 @@ describe('giftAssetCache', () => {
     })
 
     it('returns true for svga when preloaded in this session (L1)', async () => {
-      // preloadSvga calls fetch but doesn't inspect the response — resolve is enough
-      mockFetch.mockResolvedValueOnce({})
+      const svgaPlugin = { fetchAnimation: vi.fn().mockResolvedValue({}) }
 
-      await giftAssetCache.preloadGift({
-        id: 42,
-        asset_type: 'svga',
-        animation_url: 'https://example.com/gift.svga',
-      })
+      await giftAssetCache.preloadGift(
+        {
+          id: 42,
+          asset_type: 'svga',
+          animation_url: 'https://example.com/gift.svga',
+        },
+        svgaPlugin,
+      )
 
       const result = await giftAssetCache.isGiftAssetCached({
         id: 42,

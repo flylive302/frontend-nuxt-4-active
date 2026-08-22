@@ -17,7 +17,6 @@ import { isLuckyCategory } from '~/utils/gift';
 import { useGiftData } from "~/composables/gift/useGiftData";
 import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
 import { useGiftSending } from "~/composables/gift/useGiftSending";
-import { useGiftReadiness } from "~/composables/gift/useGiftReadiness";
 import { GIFT_QUANTITY_OPTIONS, COMBO_BUTTON_TIMEOUT_MS } from "~/constants/gift";
 import { LUCKY_ANIMATION } from "~/constants/lucky-animation";
 import {computed} from "vue";
@@ -33,7 +32,6 @@ const seatsStore = useRoomSeatsStore();
 const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
 const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo } = useGiftSending();
-const { readinessState } = useGiftReadiness(computed(() => giftStore.selectedGift));
 
 useGiftRecipientSync();
 
@@ -401,7 +399,7 @@ async function doLuckySend(): Promise<void> {
         <!-- Category Tabs with Gift Grid -->
         <RoomGiftCategoryTabs v-model:active="activeCategoryTab" :categories="giftsByCategory">
           <template #content="{ item }">
-            <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id" :selected-gift-readiness="readinessState" @select="handleSelectGift" />
+            <RoomGiftGrid :gifts="item.gifts" :selected-gift-id="giftStore.selectedGift?.id" @select="handleSelectGift" />
           </template>
         </RoomGiftCategoryTabs>
 

@@ -13,11 +13,9 @@ withDefaults(
   defineProps<{
     gift: Gift;
     selected?: boolean;
-    readiness?: 'idle' | 'checking' | 'ready' | 'error';
   }>(),
   {
     selected: false,
-    readiness: 'idle',
   }
 );
 
@@ -45,22 +43,8 @@ const { formatGiftPrice } = useGiftData();
         sizes="128px"
         loading="lazy"
       />
-      <div
-        v-if="selected && readiness === 'checking'"
-        class="absolute inset-0 flex items-center justify-center rounded bg-black/40"
-      >
-        <UIcon name="i-lucide-loader-2" class="animate-spin size-5 text-white" />
-      </div>
-      <!-- Preload failed (e.g. asset CDN/CORS) — non-blocking. The gift still
-           sends; playback falls back to the direct asset URL. Show a subtle
-           corner warning rather than a blocking overlay. -->
-      <div
-        v-else-if="selected && readiness === 'error'"
-        class="absolute top-0.5 right-0.5 flex items-center justify-center rounded-full bg-amber-500/90 size-4"
-        :title="'Preview not preloaded — gift will still send'"
-      >
-        <UIcon name="i-lucide-triangle-alert" class="size-2.5 text-white" />
-      </div>
+      <!-- No load/ready indication by design: preloading is silent (ticket 11).
+           If the asset is cold, playback fetches it directly. -->
     </div>
     <MarqueeName
         text-class="text-xs w-full text-center px-1"
