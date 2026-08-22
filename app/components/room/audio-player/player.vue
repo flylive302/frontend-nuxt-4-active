@@ -26,6 +26,7 @@ import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 import { useHoldGesture } from '~/composables/useHoldGesture';
 import { useRoomAudioPlayer } from '~/composables/room/audio/useRoomAudioPlayer';
 import { useRoomMusicLaunch } from '~/composables/room/audio/useRoomMusicLaunch';
+import { useAudioPreferencesStore } from '~/stores/audioPreferences';
 
 // ========================================
 // Constants
@@ -70,7 +71,10 @@ const {
   setVolume,
   duckStart,
   duckEnd,
+  isDucking,
 } = useRoomAudioPlayer(socket);
+
+const audioPrefs = useAudioPreferencesStore();
 
 // Widget-owned instance of the Music drawer (queue + add tracks). The queue
 // state itself is a module-level singleton, so this stays in sync with the
@@ -328,6 +332,13 @@ function handleVolumeChange(vol: number): void {
         v-if="isPlaying"
         class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary animate-pulse ring-2 ring-black/60"
       />
+      <!-- Talk-over duck badge -->
+      <span
+        v-if="isDucking"
+        class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1 rounded-full bg-black/80 ring-1 ring-white/20 text-[8px] leading-tight font-semibold text-primary select-none"
+      >
+        ↓ {{ audioPrefs.duckLevelPercent }}%
+      </span>
     </div>
 
     <!-- ═══ Expanded deck card ═══ -->
@@ -368,6 +379,13 @@ function handleVolumeChange(vol: number): void {
             :stroke-dashoffset="ringOffset"
           />
         </svg>
+        <!-- Talk-over duck badge -->
+        <span
+          v-if="isDucking"
+          class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1 rounded-full bg-black/80 ring-1 ring-white/20 text-[8px] leading-tight font-semibold text-primary select-none"
+        >
+          ↓ {{ audioPrefs.duckLevelPercent }}%
+        </span>
       </div>
 
       <!-- Title + seek + transport -->

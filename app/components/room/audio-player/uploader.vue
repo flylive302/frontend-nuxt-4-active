@@ -11,6 +11,11 @@ import { VueDraggable, type DraggableEvent } from 'vue-draggable-plus';
 import type { Track } from '~/types/room/audio-player';
 import { ASSETS } from '~/constants/assets';
 import { useRoomAudioPlayer } from '~/composables/room/audio/useRoomAudioPlayer';
+import {
+  useAudioPreferencesStore,
+  MIN_DUCK_LEVEL_PERCENT,
+  MAX_DUCK_LEVEL_PERCENT,
+} from '~/stores/audioPreferences';
 
 // ========================================
 // Props & Emits
@@ -39,7 +44,11 @@ const {
   removeTrack,
   reorderTracks,
   playTrack,
+  previewDuck,
+  releasePreview,
 } = useRoomAudioPlayer(socket);
+
+const audioPrefs = useAudioPreferencesStore();
 
 // ========================================
 // State
@@ -165,6 +174,24 @@ function handleReorder(event: DraggableEvent): void {
   reorderModel.value = queueTracks.value.slice() as Track[]; // revert before re-render
   if (from !== to) reorderTracks(from, to);
 }
+
+// ========================================
+// Handlers — duck-level preview
+// ========================================
+
+/** Slider drag: preview the duck live so the user hears the effect. */
+function handleDuckInput(percent: number): void {
+  audioPrefs.setDuckLevelPercent(percent);
+  previewDuck(percent);
+}
+
+// Stop previewing when the drawer closes, and on unmount as a safety net —
+// never leave the music ducked from a preview nobody is looking at.
+watch(open, (isOpen) => {
+  if (!isOpen) releasePreview();
+});
+
+onBeforeUnmount(releasePreview);
 </script>
 
 <template>
@@ -226,6 +253,25 @@ function handleReorder(event: DraggableEvent): void {
           class="hidden"
           @change="handleFileChange"
         >
+
+        <!-- Talk-over duck level -->
+        <div class="rounded-2xl bg-white/5 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-neutral-200">Duck to {{ audioPrefs.duckLevelPercent }}%</span>
+          </div>
+          <USlider
+            :model-value="audioPrefs.duckLevelPercent"
+            :min="MIN_DUCK_LEVEL_PERCENT"
+            :max="MAX_DUCK_LEVEL_PERCENT"
+            :step="5"
+            aria-label="Duck level"
+            @update:model-value="(v: number | undefined) => { if (v !== undefined) handleDuckInput(v) }"
+            @change="releasePreview"
+          />
+          <p class="text-[11px] text-neutral-500">
+            Hold the vinyl to drop the music to this level; release to restore.
+          </p>
+        </div>
 
         <!-- Queue -->
         <div class="flex flex-col gap-2 min-h-0">

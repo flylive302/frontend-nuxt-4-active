@@ -9,6 +9,7 @@
 // - Privacy   → RoomSettingsPrivacyDrawer (owner only)
 // - Block List→ RoomBlockListDrawer (owner/admin)
 // - Music     → RoomAudioPlayerUploader (owner/admin; force-take owner only)
+// - Audio     → RoomSettingsAudioDrawer (everyone; mic noise-filter mode)
 // - Gift Mute / Entry Mute → in-place per-device FX toggles (everyone)
 // ========================================
 
@@ -22,6 +23,7 @@ const showMembers = ref(false)
 const showTheme = ref(false)
 const showPrivacy = ref(false)
 const showBlockList = ref(false)
+const showAudio = ref(false)
 
 // ========================================
 // Stores & Composables
@@ -148,6 +150,16 @@ watch(open, (isOpen) => {
             </span>
           </button>
 
+          <!-- Audio (everyone) -->
+          <button
+            type="button"
+            class="aspect-square rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
+            @click="showAudio = true"
+          >
+            <UIcon name="i-lucide-mic" class="size-7 text-primary" />
+            <span class="text-xs text-neutral-200">Audio</span>
+          </button>
+
           <!-- Gift Mute (everyone; in-place toggle, highlighted when active) -->
           <button
             type="button"
@@ -205,6 +217,8 @@ watch(open, (isOpen) => {
           v-model:open="showBlockList"
           :room-id="thisRoom.id"
         />
+
+        <RoomSettingsAudioDrawer v-model:open="showAudio" />
 
         <RoomAudioPlayerUploader
           v-model:open="showMusicUploader"

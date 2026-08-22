@@ -349,3 +349,95 @@ describe('useMediasoupStreaming — startAudio single-flight', () => {
     expect(produceSpy).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('useMediasoupStreaming — RNNoise mic filter wiring', () => {
+  const AUTH_USER_ID = 1
+
+  let produceSpy: ReturnType<typeof vi.fn>
+
+  function makeStubTrack() {
+    return { kind: 'audio', enabled: true, addEventListener: vi.fn(), stop: vi.fn() }
+  }
+
+  function makeStubStream() {
+    const track = makeStubTrack()
+    return { getAudioTracks: () => [track], getTracks: () => [track] } as unknown as MediaStream
+  }
+
+  let getUserMediaSpy: ReturnType<typeof vi.fn>
+
+  beforeEach(async () => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    setupNuxtMocks({ authStore: createMockAuthStore({ user: { id: AUTH_USER_ID } }) })
+
+    getUserMediaSpy = vi.fn(async () => makeStubStream())
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: getUserMediaSpy } })
+
+    // import.meta.client is falsy under plain `vitest` (node env, no Nuxt
+    // build macro), so `wireMicThroughAudioContext` always takes its
+    // no-AudioContext fallback path here — these tests only need to prove
+    // what `getUserMedia` was asked for, which happens before that branch.
+    produceSpy = vi.fn(async () => ({
+      id: 'producer-1',
+      closed: false,
+      track: makeStubTrack(),
+      close: vi.fn(),
+      on: vi.fn(),
+    }))
+  })
+
+  afterEach(() => {
+    cleanupNuxtMocks()
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  async function setupStreaming() {
+    const socket = ref({ once: vi.fn(), off: vi.fn(), emit: vi.fn() })
+
+    const { producerTransport } = await import('../../app/composables/mediasoup/useMediasoupTransports')
+      .then(m => m.useMediasoupTransports(socket as never))
+    producerTransport.value = {
+      id: 'producer-transport-1',
+      produce: produceSpy,
+    } as unknown as typeof producerTransport.value
+
+    const { useMediasoupStreaming } = await import('../../app/composables/mediasoup/useMediasoupStreaming')
+    return useMediasoupStreaming(socket as never)
+  }
+
+  it('requests browser noiseSuppression:true when the filter is off (no worklet support)', async () => {
+    // No AudioWorkletNode/AudioContext stubbed → isAudioWorkletSupported() is
+    // false → resolveNoiseFilter() is false in every mode except a
+    // meaningless 'on' (still false, unsupported) — browser DSP stays on.
+    const { useAudioPreferencesStore } = await import('../../app/stores/audioPreferences')
+    useAudioPreferencesStore().setNoiseFilterMode('on')
+
+    const streaming = await setupStreaming()
+    await streaming.startAudio()
+
+    expect(getUserMediaSpy).toHaveBeenCalledWith({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    })
+    expect(streaming.isNoiseFilterActive.value).toBe(false)
+  })
+
+  it('requests browser noiseSuppression:false when the filter is forced on and supported', async () => {
+    function FakeAudioWorkletNode() { /* noop stub */ }
+    function FakeAudioContext() { /* noop stub */ }
+    Object.defineProperty(FakeAudioContext.prototype, 'audioWorklet', { get: () => ({}) })
+    vi.stubGlobal('AudioWorkletNode', FakeAudioWorkletNode)
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+
+    const { useAudioPreferencesStore } = await import('../../app/stores/audioPreferences')
+    useAudioPreferencesStore().setNoiseFilterMode('on')
+
+    const streaming = await setupStreaming()
+    await streaming.startAudio()
+
+    expect(getUserMediaSpy).toHaveBeenCalledWith({
+      audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true },
+    })
+  })
+})

@@ -10,7 +10,15 @@ import { useMediasoupTransports } from './useMediasoupTransports';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { storeToRefs } from 'pinia';
+import { watch } from 'vue';
 import { useMediasoupSessionStore } from '~/stores/mediasoupSession';
+import { useAudioPreferencesStore } from '~/stores/audioPreferences';
+import { resolveNoiseFilter, isAudioWorkletSupported } from '~/utils/audio/resolve-noise-filter';
+import { classifyDeviceClass, readDeviceCapabilities } from '~/utils/device-class';
+import { attachNoiseFilter, detachNoiseFilter } from './useMicNoiseFilter';
+
+/** Module-scoped: the noise-filter preference watcher is installed once per page. */
+let _noiseFilterWatcherInstalled = false;
 
 // ---- Mic capture pipeline (Web Audio passthrough) ----
 // We route the raw getUserMedia track through an AudioContext graph before
@@ -120,10 +128,41 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
   const session = useMediasoupSessionStore();
   const { producer, musicProducer, consumers, isLocalMuted, currentVolume, audioElements, consumerProducerByKey } = storeToRefs(session);
 
+  const audioPreferences = useAudioPreferencesStore();
+
+  /** Whether the RNNoise filter is wired into the live mic graph right now. */
+  const isNoiseFilterActive = ref(false);
+
   // ========================================
   // Computed Properties
   // ========================================
   const isProducing = computed(() => producer.value !== null && !producer.value.closed);
+
+  // Live toggle: if the user flips the noise-filter preference while already
+  // producing, rebuild the mic pipeline so the change takes effect without
+  // requiring a leave/rejoin. Registered ONCE per page (module flag): this
+  // composable is instantiated from several callers (useMediasoup,
+  // useRoomAudioPlayer, …) and a per-instance watcher would fire N
+  // concurrent restartAudio() calls for one toggle. Only restarts when the
+  // *effective* state changes — on a low-tier phone auto→off is a no-op.
+  if (!_noiseFilterWatcherInstalled) {
+    _noiseFilterWatcherInstalled = true;
+    watch(() => resolveEffectiveNoiseFilter(), (next, prev) => {
+      if (next === prev) return;
+      if (producer.value && !producer.value.closed) {
+        restartAudio();
+      }
+    });
+  }
+
+  /** GATE: the effective RNNoise decision for the current preference + device. */
+  function resolveEffectiveNoiseFilter(): boolean {
+    return resolveNoiseFilter(
+      audioPreferences.noiseFilterMode,
+      classifyDeviceClass(readDeviceCapabilities()),
+      isAudioWorkletSupported(),
+    );
+  }
 
   // ========================================
   // Public Methods
@@ -179,10 +218,16 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       await createProducerTransport();
     }
 
+    // RNNoise replaces the browser's built-in noiseSuppression when it's
+    // active — running both would double-process the signal. AEC/AGC stay on
+    // either way; only the browser DSP noise suppressor is swapped out.
+    const rnnoiseActive = resolveEffectiveNoiseFilter();
+    isNoiseFilterActive.value = rnnoiseActive;
+
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
-        noiseSuppression: true,
+        noiseSuppression: !rnnoiseActive,
         autoGainControl: true,
       },
     });
@@ -202,20 +247,22 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     rawTrack.addEventListener('ended', () => {
     });
 
-    const trackForProducer = wireMicThroughAudioContext(stream);
+    const trackForProducer = await wireMicThroughAudioContext(stream, rnnoiseActive);
 
-    // Voice mic: mono at a capped 64k target. Without these options the
+    // Voice mic: mono at a capped 96k target (64k until 2026-08-23; raised
+    // after the "A vs A++" audio-quality review). Without these options the
     // router's stereo-forced Opus config encodes the mono mic as uncapped
     // stereo — roughly half the bits go to a phantom second channel and BWE
     // picks an arbitrary rate ("weak audio", 2026-07-10 audio review). FEC on
     // for loss resilience; DTX stays off (it froze the HLS broadcast mix).
+    // Server maxIncomingBitrate (256k) covers mic 96k + DJ music 128k + FEC.
     producer.value = await producerTransport.value!.produce({
       track: trackForProducer,
       codecOptions: {
         opusStereo: false,
         opusFec: true,
         opusDtx: false,
-        opusMaxAverageBitrate: 64000,
+        opusMaxAverageBitrate: 96000,
       },
       appData: { source: 'mic' },
     });
@@ -235,7 +282,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
    * Returns the track that should be handed to mediasoup. See `startAudio()`
    * doc for why this exists.
    */
-  function wireMicThroughAudioContext(stream: MediaStream): MediaStreamTrack {
+  async function wireMicThroughAudioContext(stream: MediaStream, useNoiseFilter: boolean): Promise<MediaStreamTrack> {
     if (!import.meta.client) {
       const fallback = stream.getAudioTracks()[0];
       if (!fallback) throw new Error('No audio track');
@@ -252,12 +299,21 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     teardownMicAudioContext();
 
-    const ctx = new Ctor();
+    const ctx = new Ctor({ sampleRate: 48000 });
     const source = ctx.createMediaStreamSource(stream);
     const gain = ctx.createGain();
     gain.gain.value = 1;
     const destination = ctx.createMediaStreamDestination();
-    source.connect(gain);
+
+    // RNNoise sits between the raw source and the gain stage. Any attach
+    // failure (unsupported browser, module load error) falls back to the
+    // source itself — same passthrough graph as before this filter existed.
+    let upstream: AudioNode = source;
+    if (useNoiseFilter) {
+      upstream = await attachNoiseFilter(ctx, source);
+      isNoiseFilterActive.value = upstream !== source;
+    }
+    upstream.connect(gain);
     gain.connect(destination);
 
     _micAudioContext = ctx;
@@ -296,6 +352,9 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
   /** Tear down the mic AudioContext graph. Safe to call when nothing is set up. */
   function teardownMicAudioContext(): void {
+    detachNoiseFilter();
+    isNoiseFilterActive.value = false;
+
     if (_micVisibilityHandler && typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', _micVisibilityHandler);
     }
@@ -373,7 +432,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     // Music (DJ) producer: true stereo source, higher cap than the voice mic.
     // 128k stereo Opus is transparent for music; server maxIncomingBitrate
-    // (192k) leaves headroom for FEC/overhead.
+    // (256k) covers it alongside the DJ's own 96k mic on the same transport.
     musicProducer.value = await producerTransport.value.produce({
       track,
       codecOptions: {
@@ -940,6 +999,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     isProducing,
     isLocalMuted,
     currentVolume,
+    isNoiseFilterActive,
     startAudio,
     stopAudio,
     restartAudio,

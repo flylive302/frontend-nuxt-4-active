@@ -261,6 +261,9 @@ export function createAudioPlaybackEngine(): AudioPlaybackEngine {
     if (!track) {
       throw new AudioPlaybackError('MediaStreamDestination produced no audio track');
     }
+    // Tell the encoder this is music, not speech — the only place this hint
+    // is set; produceTrack() receives the track already tagged.
+    track.contentHint = 'music';
     return track;
   }
 

@@ -41,8 +41,9 @@ import {
 import { PlaylistQueue } from '~/utils/playlist-queue';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
+import { percentToFraction } from '~/utils/audio/duck-level';
+import { useAudioPreferencesStore } from '~/stores/audioPreferences';
 import {
-  AUDIO_DUCK_FRACTION,
   AUDIO_DUCK_RAMP_DOWN_MS,
   AUDIO_DUCK_RAMP_UP_MS,
 } from '~/constants/room';
@@ -78,6 +79,14 @@ const isPlayerOpen = ref(false);
  */
 const isWaitingForSlot = ref(false);
 const queuePosition = ref<number | null>(null);
+
+/**
+ * Talk-over duck (ADR 0018): true while the music gain is ducked, whether from
+ * a real hold (`duckStart`/`duckEnd`) or a settings-drawer slider preview
+ * (`previewDuck`/`releasePreview`). Module-level like {@link isPlayerOpen} —
+ * one DJ session per tab.
+ */
+const isDucking = ref(false);
 
 // Composed modules (not reactive — internal only).
 const queue = new PlaylistQueue();
@@ -512,12 +521,31 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
    * No-op with nothing playing — there is no engine to duck.
    */
   function duckStart(): void {
-    engine?.duck(AUDIO_DUCK_FRACTION, AUDIO_DUCK_RAMP_DOWN_MS);
+    const fraction = percentToFraction(useAudioPreferencesStore().duckLevelPercent);
+    engine?.duck(fraction, AUDIO_DUCK_RAMP_DOWN_MS);
+    isDucking.value = true;
   }
 
   /** Release the talk-over duck, restoring the pre-duck (slider) volume. */
   function duckEnd(): void {
     engine?.releaseDuck(AUDIO_DUCK_RAMP_UP_MS);
+    isDucking.value = false;
+  }
+
+  /**
+   * Settings-drawer duck-level preview: ducks to `percent` immediately (no
+   * hold gesture) so the user hears the effect while dragging the slider.
+   * No-op with nothing playing — mirrors `duckStart`.
+   */
+  function previewDuck(percent: number): void {
+    engine?.duck(percentToFraction(percent), AUDIO_DUCK_RAMP_DOWN_MS);
+    isDucking.value = true;
+  }
+
+  /** Release a settings-drawer preview duck. Mirrors `duckEnd`. */
+  function releasePreview(): void {
+    engine?.releaseDuck(AUDIO_DUCK_RAMP_UP_MS);
+    isDucking.value = false;
   }
 
   /**
@@ -782,6 +810,9 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     setVolume,
     duckStart,
     duckEnd,
+    previewDuck,
+    releasePreview,
+    isDucking: readonly(isDucking),
 
     // Socket integration
     setupListeners,

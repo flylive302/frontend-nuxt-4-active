@@ -283,10 +283,11 @@ export const PLAYLIST_MAX_TRACKS = 50;
 
 /**
  * Talk-over duck (ADR 0018): holding the player vinyl ramps the music gain
- * down to this fraction of its current effective volume, for the Room and
- * the DJ's own monitor alike (one gain feeds both edges).
+ * down, for the Room and the DJ's own monitor alike (one gain feeds both
+ * edges). The target fraction is user-configurable — see
+ * `stores/audioPreferences.ts` (`duckLevelPercent`) and
+ * `utils/audio/duck-level.ts` (`percentToFraction`).
  */
-export const AUDIO_DUCK_FRACTION = 0.2;
 
 /** Gain ramp duration (ms) when the duck engages (hold-start). */
 export const AUDIO_DUCK_RAMP_DOWN_MS = 150;

@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ref, reactive, computed, readonly, watch, nextTick } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 
 // ============================================
 // Mock Nuxt auto-imports
@@ -529,5 +530,73 @@ describe('useRoomAudioPlayer — queue cancel & re-press (music-dj-queue/05)', (
     expect(player.isPlaying.value).toBe(true)
     expect(produceTrack).toHaveBeenCalledTimes(1)
     expect(emitAsyncMock).toHaveBeenCalledWith('audioPlayer:play', expect.objectContaining({ roomId: 'room-1' }))
+  })
+})
+
+describe('useRoomAudioPlayer — talk-over duck (audio-drawer duck level)', () => {
+  const mockSocket = ref({ emit: vi.fn(), on: vi.fn(), off: vi.fn() })
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.resetModules()
+  })
+
+  it('duckStart ducks by the store percent converted to a fraction, and flips isDucking', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const { useAudioPreferencesStore } = await import('../../app/stores/audioPreferences')
+    const { createAudioPlaybackEngine } = await import('../../app/services/audioPlaybackEngine')
+
+    useAudioPreferencesStore().setDuckLevelPercent(30)
+
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+
+    const engine = (createAudioPlaybackEngine as ReturnType<typeof vi.fn>).mock.results[0]!.value
+
+    expect(player.isDucking.value).toBe(false)
+    player.duckStart()
+    expect(engine.duck).toHaveBeenCalledWith(0.3, expect.any(Number))
+    expect(player.isDucking.value).toBe(true)
+
+    player.duckEnd()
+    expect(engine.releaseDuck).toHaveBeenCalledWith(expect.any(Number))
+    expect(player.isDucking.value).toBe(false)
+  })
+
+  it('previewDuck/releasePreview duck to an explicit percent without touching the store', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const { useAudioPreferencesStore } = await import('../../app/stores/audioPreferences')
+    const { createAudioPlaybackEngine } = await import('../../app/services/audioPlaybackEngine')
+
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+
+    const engine = (createAudioPlaybackEngine as ReturnType<typeof vi.fn>).mock.results[0]!.value
+
+    player.previewDuck(50)
+    expect(engine.duck).toHaveBeenCalledWith(0.5, expect.any(Number))
+    expect(player.isDucking.value).toBe(true)
+    expect(useAudioPreferencesStore().duckLevelPercent).toBe(20) // store default, untouched
+
+    player.releasePreview()
+    expect(engine.releaseDuck).toHaveBeenCalledWith(expect.any(Number))
+    expect(player.isDucking.value).toBe(false)
+  })
+
+  it('previewDuck clamps out-of-range percents the same way the store setter does', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const { createAudioPlaybackEngine } = await import('../../app/services/audioPlaybackEngine')
+
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+
+    const engine = (createAudioPlaybackEngine as ReturnType<typeof vi.fn>).mock.results[0]!.value
+
+    player.previewDuck(999)
+    expect(engine.duck).toHaveBeenCalledWith(0.8, expect.any(Number)) // MAX_DUCK_LEVEL_PERCENT
   })
 })
