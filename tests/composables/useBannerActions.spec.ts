@@ -34,9 +34,11 @@ const toastAdd = vi.fn()
 const navigateTo = vi.fn()
 
 function setupRoomStore(currentRoom: BootstrapRoom | null = null) {
-  const roomStore = { currentRoom, maximizeRoom: vi.fn() }
+  const roomStore = { currentRoom }
+  const roomSession = { maximizeRoom: vi.fn() }
   ;(globalThis as Record<string, unknown>).useRoomStore = () => roomStore
-  return roomStore
+  ;(globalThis as Record<string, unknown>).useRoomSession = () => roomSession
+  return { ...roomStore, ...roomSession }
 }
 
 beforeEach(() => {
@@ -53,6 +55,7 @@ afterEach(() => {
   Reflect.deleteProperty(globalThis, 'useToast')
   Reflect.deleteProperty(globalThis, 'navigateTo')
   Reflect.deleteProperty(globalThis, 'useRoomStore')
+  Reflect.deleteProperty(globalThis, 'useRoomSession')
 })
 
 // ========================================

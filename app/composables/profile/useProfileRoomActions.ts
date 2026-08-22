@@ -9,6 +9,7 @@ export function useProfileRoomActions(
   enterRoomFn: (room: BootstrapRoom) => Promise<void>,
 ) {
   const roomStore = useRoomStore()
+  const roomSession = useRoomSession()
   const { api } = useApi()
   const { socket, connect, isConnected } = useAudioSocket()
   const toast = useToast()
@@ -47,7 +48,7 @@ export function useProfileRoomActions(
     if (!profile.value?.room_id || isJoiningRoom.value) return
 
     if (roomStore.currentRoom && roomStore.currentRoom.id === profile.value.room_id) {
-      roomStore.maximizeRoom()
+      roomSession.maximizeRoom()
       navigateTo(`/room/${profile.value.room_id}`)
       return
     }

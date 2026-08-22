@@ -31,6 +31,7 @@ const ROOM_PATH_PATTERN = /^\/room\/(\d+)\/?$/
  */
 export function useBannerActions(enterRoomFn: (room: BootstrapRoom) => Promise<void>) {
   const roomStore = useRoomStore()
+  const roomSession = useRoomSession()
   const { api } = useApi()
   const toast = useToast()
 
@@ -72,7 +73,7 @@ export function useBannerActions(enterRoomFn: (room: BootstrapRoom) => Promise<v
     try {
       // Already inside this room — just restore it, no leave/rejoin cycle.
       if (roomStore.currentRoom?.id === roomId) {
-        roomStore.maximizeRoom()
+        roomSession.maximizeRoom()
         await navigateTo(`/room/${roomId}`)
         return
       }

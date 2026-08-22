@@ -12,7 +12,7 @@
 //
 // Decision rule (minimize vs leave):
 //   Every explicit Leave path (header Leave, mini-player ✕, room:closed,
-//   room:kicked) clears `currentRoom` via roomStore.leaveRoom() BEFORE it
+//   room:kicked) clears `currentRoom` via roomSession.leaveRoom() BEFORE it
 //   navigates. So if we're leaving the room route while `currentRoom` is still
 //   set, it was NOT an explicit leave → minimize. `minimizeRoom()` is itself a
 //   no-op when `currentRoom` is null, so a leave can never be misread as a
@@ -30,7 +30,9 @@ export default defineNuxtRouteMiddleware((to, from) => {
   if (!useAuthStore().isAuthenticated) return;
 
   const roomStore = useRoomStore();
+
+  const roomSession = useRoomSession();
   if (roomStore.currentRoom && !roomStore.isMinimized) {
-    roomStore.minimizeRoom();
+    roomSession.minimizeRoom();
   }
 });

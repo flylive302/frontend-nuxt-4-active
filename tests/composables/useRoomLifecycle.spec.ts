@@ -65,14 +65,27 @@ const toastRemove = vi.fn()
 const roomStore = reactive({
   currentRoom: null as FakeRoom | null,
   isMinimized: false,
-  previousRoute: null as string | null,
-  leaveRoom: vi.fn(),
-  touchActiveRoom: vi.fn(),
 })
+
+const roomSessionStore = reactive({
+  previousRoute: null as string | null,
+})
+
+const roomSessionLeaveRoom = vi.fn()
+const roomSessionTouchActiveRoom = vi.fn()
 
 const connectivityStore = reactive({ isOffline: false, restoredAt: 0 })
 
 vi.stubGlobal('useRoomStore', () => roomStore)
+vi.stubGlobal('useRoomSessionStore', () => roomSessionStore)
+vi.stubGlobal('useRoomSession', () => ({
+  leaveRoom: roomSessionLeaveRoom,
+  touchActiveRoom: roomSessionTouchActiveRoom,
+  setCurrentRoom: vi.fn(),
+  minimizeRoom: vi.fn(),
+  maximizeRoom: vi.fn(),
+  clearActiveRoom: vi.fn(),
+}))
 vi.stubGlobal('useGiftStore', () => ({ clearPlayback: vi.fn() }))
 vi.stubGlobal('useRoomSeatsStore', () => ({ resetSeats: vi.fn(), seats: [] }))
 vi.stubGlobal('useAuthStore', () => ({ user: null }))
@@ -148,6 +161,9 @@ beforeEach(() => {
   toastAdd.mockReset()
   toastRemove.mockReset()
   roomStore.currentRoom = null
+  roomSessionStore.previousRoute = null
+  roomSessionLeaveRoom.mockReset()
+  roomSessionTouchActiveRoom.mockReset()
   connectivityStore.isOffline = false
   visibilityState.value = 'visible'
   resumeCalls = []

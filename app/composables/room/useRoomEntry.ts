@@ -21,6 +21,7 @@ import { resolveHttpBlockedMessage } from '~/utils/socket/socketErrorMessages'
  */
 export function useRoomEntry() {
   const roomStore = useRoomStore()
+  const roomSession = useRoomSession()
   const authStore = useAuthStore()
   const { api } = useApi()
   const { fetchRoomById } = useRoom()
@@ -56,7 +57,7 @@ export function useRoomEntry() {
     // Same-room shortcut — if already in this room, just navigate back
     // without any leave/rejoin cycle. Preserves seat, owner status, and audio.
     if (roomStore.currentRoom?.id === room.id) {
-      roomStore.maximizeRoom()
+      roomSession.maximizeRoom()
       await doEnterRoom(room, cardSeedSrc, { rejoin: false })
       return
     }
@@ -125,10 +126,10 @@ export function useRoomEntry() {
 
     // Leave current room if switching (lifecycle watcher handles audio cleanup)
     if (roomStore.currentRoom) {
-      roomStore.leaveRoom()
+      roomSession.leaveRoom()
     }
 
-    roomStore.setCurrentRoom(room, fromRoute)
+    roomSession.setCurrentRoom(room, fromRoute)
     await navigateTo(`/room/${room.id}`)
     void fetchRoomById(room.id)
   }

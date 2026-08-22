@@ -19,6 +19,10 @@ definePageMeta({
 
 const roomStore = useRoomStore();
 
+const roomSessionStore = useRoomSessionStore();
+
+const roomSession = useRoomSession();
+
 const { roomExpandStyle } = useRoomExpandTransition();
 const { src: roomBackgroundDisplaySrc } = useRoomBackground(() => roomStore.currentRoom?.background);
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
@@ -41,7 +45,7 @@ const { rehydrateFromRoute, rehydrating } = useRoomRehydration();
  * — that conflation is what silently ejected reloading users.
  */
 function leaveRoomPage(): void {
-  const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+  const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
   navigateTo(target, { replace: true });
 }
 
@@ -65,7 +69,7 @@ watch(
 // ========================================
 onMounted(() => {
   // Being on the room page means the room is open, never minimized
-  if (roomStore.isMinimized) roomStore.maximizeRoom();
+  if (roomStore.isMinimized) roomSession.maximizeRoom();
 
   document.body.removeAttribute('style');
   document.body.classList.remove('unlock-body');

@@ -30,7 +30,7 @@ export function useAuthLifecycle() {
     // Clear room session state before logout so the persisted `minimizedRoom`
     // snapshot doesn't outlive the block and resurrect the mini-player bubble
     // on a later re-login.
-    useRoomStore().leaveRoom()
+    useRoomSession().leaveRoom()
     disconnectSocket()
     authStore.logout()
     await navigateTo('/blocked')

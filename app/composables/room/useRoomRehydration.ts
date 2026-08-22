@@ -29,6 +29,8 @@ interface RoomResponse {
 
 export function useRoomRehydration() {
   const roomStore = useRoomStore()
+  const roomSessionStore = useRoomSessionStore()
+  const roomSession = useRoomSession()
   const { api } = useApi()
 
   /** True while a rehydrate is in flight, so the page can hold a loading state instead of redirecting. */
@@ -63,7 +65,7 @@ export function useRoomRehydration() {
       // ejection from there. Reusing it is what keeps the block gate and the
       // password path identical to a normal entry — a second join path here is
       // exactly how those gates get bypassed by accident.
-      roomStore.setCurrentRoom(room)
+      roomSession.setCurrentRoom(room)
       return true
     } catch (error) {
       log.warn('Room rehydration failed', error)
@@ -87,13 +89,13 @@ export function useRoomRehydration() {
   function isRehydratable(roomId: number): boolean {
     if (roomStore.currentRoom) return false
 
-    const marker = roomStore.activeRoom
+    const marker = roomSessionStore.activeRoom
     if (!marker || marker.id !== roomId) return false
 
     const age = Date.now() - marker.at
     if (age > ACTIVE_ROOM_MARKER_TTL_MS) {
       log.info('Active-room marker too stale to rehydrate', { roomId, age })
-      roomStore.clearActiveRoom()
+      roomSession.clearActiveRoom()
       return false
     }
 
@@ -109,7 +111,7 @@ export function useRoomRehydration() {
    * so the failure branch tells the user before the page's guard redirects.
    */
   function onFailure(description: string): void {
-    roomStore.clearActiveRoom()
+    roomSession.clearActiveRoom()
     useToast().add({ title: 'Could not restore the room', description, color: 'warning' })
   }
 

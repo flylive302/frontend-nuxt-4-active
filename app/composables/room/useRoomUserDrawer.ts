@@ -21,7 +21,7 @@ export interface RoomUserTarget {
 export function useRoomUserDrawer() {
   const seatsStore = useRoomSeatsStore()
   const participantsStore = useRoomParticipantsStore()
-  const roomStore = useRoomStore()
+  const roomSession = useRoomSession()
 
   /**
    * Open `user` the in-room way, falling back to their profile page.
@@ -36,7 +36,7 @@ export function useRoomUserDrawer() {
 
     // Left the room (e.g. a leaderboard contributor) → their profile page.
     if (!user.signature) return
-    roomStore.minimizeRoom()
+    roomSession.minimizeRoom()
     void navigateTo(`/profile/${user.signature}`)
   }
 

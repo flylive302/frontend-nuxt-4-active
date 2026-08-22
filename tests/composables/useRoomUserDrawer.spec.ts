@@ -17,6 +17,7 @@ import type { RoomParticipant } from '../../app/types/room/audio'
 const openProfile = vi.fn()
 const minimizeRoom = vi.fn()
 const navigateTo = vi.fn()
+const useRoomSessionMock = vi.fn(() => ({ minimizeRoom }))
 
 const participants = ref<Map<number, RoomParticipant>>(new Map())
 
@@ -30,7 +31,7 @@ vi.stubGlobal('useRoomParticipantsStore', () => ({
     return participants.value
   },
 }))
-vi.stubGlobal('useRoomStore', () => ({ minimizeRoom }))
+vi.stubGlobal('useRoomSession', useRoomSessionMock)
 
 const { useRoomUserDrawer } = await import('../../app/composables/room/useRoomUserDrawer')
 

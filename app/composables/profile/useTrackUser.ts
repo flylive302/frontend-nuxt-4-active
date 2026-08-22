@@ -11,6 +11,7 @@ import type { BootstrapRoom } from '~/types/user/bootstrap'
  */
 export function useTrackUser(enterRoomFn: (room: BootstrapRoom) => Promise<void>) {
   const roomStore = useRoomStore()
+  const roomSession = useRoomSession()
   const { api } = useApi()
   const { socket, connect, isConnected } = useAudioSocket()
   const toast = useToast()
@@ -99,7 +100,7 @@ export function useTrackUser(enterRoomFn: (room: BootstrapRoom) => Promise<void>
       }
 
       if (roomStore.currentRoom && String(roomStore.currentRoom.id) === String(trackedRoomId)) {
-        roomStore.maximizeRoom()
+        roomSession.maximizeRoom()
         navigateTo(`/room/${trackedRoomId}`)
         return
       }

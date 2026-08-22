@@ -71,6 +71,8 @@ let pendingReconnectAffordance = false;
  */
 export function useRoomLifecycle(): void {
   const roomStore = useRoomStore();
+  const roomSessionStore = useRoomSessionStore();
+  const roomSession = useRoomSession();
   const giftStore = useGiftStore();
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
@@ -265,8 +267,8 @@ export function useRoomLifecycle(): void {
             // back button). Eject instead of degrading to chat-only.
             toast.add({ title: 'Cannot Enter the Room', description: errorMessage, color: 'error' });
             leaveRoom(String(newRoom.id));
-            roomStore.leaveRoom();
-            const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+            roomSession.leaveRoom();
+            const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
             void navigateTo(target, { replace: true });
           } else {
             toast.add({
@@ -585,7 +587,7 @@ export function useRoomLifecycle(): void {
   // behaviour, this one only observes it, and a measurement must not be able to
   // change what it measures.
   useIntervalFn(() => {
-    roomStore.touchActiveRoom();
+    roomSession.touchActiveRoom();
 
     const room = roomStore.currentRoom;
     if (!room) {

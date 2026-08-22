@@ -29,6 +29,8 @@ const SECURITY_FIELDS = ['type', 'password'] as const
  */
 export function useRoomSettingsHandler() {
   const roomStore = useRoomStore()
+  const roomSessionStore = useRoomSessionStore()
+  const roomSession = useRoomSession()
   const authStore = useAuthStore()
   const seatsStore = useRoomSeatsStore()
   const toast = useToast()
@@ -50,9 +52,9 @@ export function useRoomSettingsHandler() {
 
     // EXECUTE — disconnect non-owner if security changed
     if (securityChanged && payload.updated_by !== authStore.user?.id) {
-      roomStore.leaveRoom()
-      const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/')
-        ? roomStore.previousRoute
+      roomSession.leaveRoom()
+      const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/')
+        ? roomSessionStore.previousRoute
         : '/'
       navigateTo(target, { replace: true })
 

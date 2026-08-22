@@ -91,6 +91,8 @@ describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
     vi.stubGlobal('useAuthStore', () => authStore)
     vi.stubGlobal('useRoomStore', () => roomStore)
     vi.stubGlobal('useRoomAudioStore', () => audioStore)
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
 
     const socket = createMockSocket()
     const toast = { add: vi.fn() } as unknown as ReturnType<typeof useToast>

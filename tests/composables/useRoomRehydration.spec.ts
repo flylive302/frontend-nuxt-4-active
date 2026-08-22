@@ -38,10 +38,18 @@ vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 
 async function setup() {
   const { useRoomStore } = await import('../../app/stores/room')
-  const { useRoomRehydration } = await import('../../app/composables/room/useRoomRehydration')
+  const { useRoomSessionStore } = await import('../../app/stores/roomSession')
   const store = useRoomStore()
+  const sessionStore = useRoomSessionStore()
   vi.stubGlobal('useRoomStore', () => store)
-  return { store, ...useRoomRehydration() }
+  vi.stubGlobal('useRoomSessionStore', () => sessionStore)
+
+  const { useRoomSession } = await import('../../app/composables/room/useRoomSession')
+  const roomSession = useRoomSession()
+  vi.stubGlobal('useRoomSession', () => roomSession)
+
+  const { useRoomRehydration } = await import('../../app/composables/room/useRoomRehydration')
+  return { store, sessionStore, roomSession, ...useRoomRehydration() }
 }
 
 beforeEach(() => {
@@ -52,9 +60,9 @@ beforeEach(() => {
 
 describe('rehydrateFromRoute — the regression test for the silent ejection', () => {
   it('rehydrates the room when a fresh marker names it', async () => {
-    const { store, rehydrateFromRoute } = await setup()
+    const { store, roomSession, rehydrateFromRoute } = await setup()
     // Simulate the post-reload world: marker survived, currentRoom did not.
-    store.setCurrentRoom(makeRoom(ROOM_ID))
+    roomSession.setCurrentRoom(makeRoom(ROOM_ID))
     store.currentRoom = null
     apiMock.mockResolvedValue({ status: 'success', data: makeRoom(ROOM_ID) })
 
@@ -76,8 +84,8 @@ describe('rehydrateFromRoute — the regression test for the silent ejection', (
   })
 
   it('does not rehydrate when the marker names a different room', async () => {
-    const { store, rehydrateFromRoute } = await setup()
-    store.setCurrentRoom(makeRoom(999))
+    const { store, roomSession, rehydrateFromRoute } = await setup()
+    roomSession.setCurrentRoom(makeRoom(999))
     store.currentRoom = null
 
     const handled = await rehydrateFromRoute(ROOM_ID)
@@ -87,22 +95,22 @@ describe('rehydrateFromRoute — the regression test for the silent ejection', (
   })
 
   it('ignores a marker older than the TTL, so it can never become a stale auto-join', async () => {
-    const { store, rehydrateFromRoute } = await setup()
-    store.setCurrentRoom(makeRoom(ROOM_ID))
+    const { store, sessionStore, roomSession, rehydrateFromRoute } = await setup()
+    roomSession.setCurrentRoom(makeRoom(ROOM_ID))
     store.currentRoom = null
-    store.activeRoom = { id: ROOM_ID, at: Date.now() - ACTIVE_ROOM_MARKER_TTL_MS - 1 }
+    sessionStore.activeRoom = { id: ROOM_ID, at: Date.now() - ACTIVE_ROOM_MARKER_TTL_MS - 1 }
 
     const handled = await rehydrateFromRoute(ROOM_ID)
 
     expect(handled).toBe(false)
     expect(apiMock).not.toHaveBeenCalled()
-    expect(store.activeRoom).toBeNull()
+    expect(sessionStore.activeRoom).toBeNull()
   })
 
   it('a genuine leave clears the marker, so a later reload does not resurrect the room', async () => {
-    const { store, rehydrateFromRoute } = await setup()
-    store.setCurrentRoom(makeRoom(ROOM_ID))
-    store.leaveRoom()
+    const { store, roomSession, rehydrateFromRoute } = await setup()
+    roomSession.setCurrentRoom(makeRoom(ROOM_ID))
+    roomSession.leaveRoom()
 
     const handled = await rehydrateFromRoute(ROOM_ID)
 
@@ -113,8 +121,8 @@ describe('rehydrateFromRoute — the regression test for the silent ejection', (
 
 describe('rehydrateFromRoute — failure is never silent', () => {
   it('tells the user when the room no longer exists', async () => {
-    const { store, rehydrateFromRoute } = await setup()
-    store.setCurrentRoom(makeRoom(ROOM_ID))
+    const { store, sessionStore, roomSession, rehydrateFromRoute } = await setup()
+    roomSession.setCurrentRoom(makeRoom(ROOM_ID))
     store.currentRoom = null
     apiMock.mockResolvedValue({ status: 'error', data: null })
 
@@ -123,12 +131,12 @@ describe('rehydrateFromRoute — failure is never silent', () => {
     expect(handled).toBe(false)
     // Asserting the ABSENCE of the silent path specifically.
     expect(toastAdd).toHaveBeenCalledTimes(1)
-    expect(store.activeRoom).toBeNull()
+    expect(sessionStore.activeRoom).toBeNull()
   })
 
   it('tells the user when the fetch throws', async () => {
-    const { store, rehydrateFromRoute } = await setup()
-    store.setCurrentRoom(makeRoom(ROOM_ID))
+    const { store, roomSession, rehydrateFromRoute } = await setup()
+    roomSession.setCurrentRoom(makeRoom(ROOM_ID))
     store.currentRoom = null
     apiMock.mockRejectedValue(new Error('network down'))
 

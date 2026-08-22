@@ -298,6 +298,8 @@ export function setupRoomEventHandlers(
 
   // Resolve Pinia stores here — safe outside Vue setup context
   const roomStore = useRoomStore();
+  const roomSessionStore = useRoomSessionStore();
+  const roomSession = useRoomSession();
   const audioStore = useRoomAudioStore();
   const participantsStore = useRoomParticipantsStore();
   const seatsStore = useRoomSeatsStore();
@@ -376,8 +378,8 @@ export function setupRoomEventHandlers(
     // Clear currentRoom so re-opening the SAME room later is a real transition
     // (Watcher 1 only joins when the room id changes). Without this, currentRoom
     // stays set and a return to the same room never re-emits room:join.
-    roomStore.leaveRoom();
-    const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+    roomSession.leaveRoom();
+    const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
     navigateTo(target, { replace: true });
   });
 
@@ -415,9 +417,9 @@ export function setupRoomEventHandlers(
     // Clear currentRoom (see room:closed) — otherwise a kicked user returning to
     // the SAME room never re-joins (currentRoom unchanged → Watcher 1 no-ops),
     // leaving audio stuck on "loading". A different room worked because its id
-    // changed. roomStore.leaveRoom() also re-triggers the lifecycle teardown.
-    roomStore.leaveRoom();
-    const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+    // changed. roomSession.leaveRoom() also re-triggers the lifecycle teardown.
+    roomSession.leaveRoom();
+    const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
     navigateTo(target, { replace: true });
   }
 

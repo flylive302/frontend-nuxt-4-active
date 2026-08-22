@@ -11,35 +11,18 @@ type StatusType = 'idle' | 'loading' | 'error';
 // ============================================
 export const useRoomStore = defineStore('roomStore', () => {
   // ========================================
-  // Core Room State
+  // Core Room State — IN-MEMORY ONLY
   // ========================================
+  // 🔴 This store must never get a `persist:` block. `currentRoom` mutates on
+  // every gift (`room_xp`, `daily_xp`) and every participant-count update, and
+  // Pinia's persistence watcher is `{ deep: true }` over the WHOLE store — so
+  // any persisted key here makes every gift deep-walk, serialise and re-write
+  // storage. The persisted half lives in `roomSessionStore`; cross-store
+  // transitions go through `useRoomSession()`.
+  // See docs/issues/android-client-performance/12-split-room-store-persistence.md
   const currentRoom = ref<Room | null>(null);
-  const userRoom = ref<Room | null>(null);
   const isMinimized = ref(false);
-  const previousRoute = ref('/');
   const status = ref<StatusType>('idle');
-
-  /**
-   * Persisted snapshot of a minimized room. Distinct from `currentRoom`
-   * (in-memory only) on purpose: it survives a cold start so the mini-player
-   * can offer a "tap to rejoin" affordance, WITHOUT the immediate lifecycle
-   * watcher auto-joining on boot. Restore is always an explicit user tap.
-   * Set on minimize; cleared on maximize / leave / entering a new room.
-   */
-  const minimizedRoom = ref<Room | null>(null);
-
-  /**
-   * Persisted marker for the room the user is *actively* in, with the timestamp
-   * of its last heartbeat. Distinct from `minimizedRoom`, which is cleared by
-   * `setCurrentRoom` and so is always null for an active session — precisely the
-   * case a reload has to recover.
-   *
-   * Only a marker whose heartbeat is within ACTIVE_ROOM_MARKER_TTL_MS may
-   * authorise an automatic rehydrate. The TTL is what keeps this from becoming a
-   * "shared links auto-join you" mechanism: a stale marker is ignored, so a cold
-   * link tap behaves exactly as it does today.
-   */
-  const activeRoom = ref<{ id: number; at: number } | null>(null);
 
   // ========================================
   // Actions
@@ -49,75 +32,24 @@ export const useRoomStore = defineStore('roomStore', () => {
     status.value = newStatus;
   }
 
-  /**
-   * Minimize room — sets flag only.
-   * The caller (composable) handles navigateTo().
-   */
-  function minimizeRoom() {
-    if (currentRoom.value) {
-      isMinimized.value = true;
-      minimizedRoom.value = currentRoom.value;
-    }
+  function setMinimized(value: boolean) {
+    isMinimized.value = value;
   }
 
-  function maximizeRoom() {
-    if (currentRoom.value) {
-      isMinimized.value = false;
-      minimizedRoom.value = null;
-    }
-  }
-
-  /**
-   * Set the current room. Caller passes the current route for back-navigation.
-   */
-  function setCurrentRoom(room: Room | null, fromRoute?: string) {
-    if (fromRoute) previousRoute.value = fromRoute;
+  /** Set the current room. Always un-minimizes. */
+  function setCurrentRoom(room: Room | null) {
     currentRoom.value = room;
     isMinimized.value = false;
-    minimizedRoom.value = null;
-    activeRoom.value = room ? { id: room.id, at: Date.now() } : null;
   }
 
   /**
-   * Refresh the active-room marker's heartbeat. Called on an interval by the
-   * room lifecycle so the marker stays inside its TTL for as long as the user is
-   * genuinely in the room, and goes stale on its own once they are not.
-   */
-  function touchActiveRoom() {
-    if (currentRoom.value) {
-      activeRoom.value = { id: currentRoom.value.id, at: Date.now() };
-    }
-  }
-
-  function clearActiveRoom() {
-    activeRoom.value = null;
-  }
-
-  /**
-   * Refresh currentRoom data without resetting isMinimized or previousRoute.
+   * Refresh currentRoom data without resetting isMinimized.
    * Merges into existing state so incomplete payloads (e.g. a response that
    * omits an optional nested relation) can't strip fields already in the store.
    */
   function refreshCurrentRoom(room: Partial<Room>) {
     if (!currentRoom.value) return;
     currentRoom.value = { ...currentRoom.value, ...room };
-  }
-
-  function setUserRoom(room: Room | null) {
-    userRoom.value = room;
-  }
-
-  /**
-   * Clear local room session state. Audio/mediasoup teardown is handled by
-   * useRoomLifecycle watching currentRoom or by useRoomAudio.leaveRoom().
-   */
-  function leaveRoom() {
-    currentRoom.value = null;
-    isMinimized.value = false;
-    minimizedRoom.value = null;
-    // A genuine leave must invalidate the marker immediately — otherwise a
-    // reload moments later would rehydrate a room the user deliberately left.
-    activeRoom.value = null;
   }
 
   /**
@@ -139,51 +71,18 @@ export const useRoomStore = defineStore('roomStore', () => {
     }
   }
 
-  // ========================================
-  // Return
-  // ========================================
   return {
     // State
     currentRoom,
-    userRoom,
     isMinimized,
-    minimizedRoom,
-    activeRoom,
-    previousRoute,
     status,
 
     // Actions
     updateStatus,
-    minimizeRoom,
-    maximizeRoom,
+    setMinimized,
     setCurrentRoom,
-    touchActiveRoom,
-    clearActiveRoom,
     refreshCurrentRoom,
-    setUserRoom,
-    leaveRoom,
     bumpDailyXp,
     updateParticipantCount,
   };
-}, {
-  // 🔴 Pinned to cookies ON PURPOSE — do not "clean this up" to match the
-  // localStorage default set in nuxt.config.
-  //
-  // `activeRoom` is the marker `useRoomRehydration` reads to put a user back
-  // into their Room after a WebView kill. Switching this store's backend makes
-  // its storage read empty exactly once per user — and because an OTA bundle
-  // swaps on kill+relaunch, that one empty read lands on precisely the boot
-  // where rehydration would have fired. Users would silently not be returned to
-  // their Room, which reads identically to dropping them from it.
-  //
-  // Moving this store needs a read-through shim that seeds localStorage from
-  // the existing cookie on first boot. Tracked as Wave 2 in
-  // docs/issues/android-client-performance/analysis-gift-lag-cookie-persistence.md
-  //
-  // `cookies()` with no argument reproduces the previous implicit default
-  // exactly (no `maxAge` → a session cookie, `path: '/'`).
-  persist: {
-    pick: ['userRoom', 'previousRoute', 'minimizedRoom', 'activeRoom'],
-    storage: piniaPluginPersistedstate.cookies(),
-  },
 });

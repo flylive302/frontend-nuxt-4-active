@@ -9,6 +9,10 @@ import { roomLogoSquareSrc } from '~/utils/imagekit';
 // ========================================
 
 const roomStore = useRoomStore();
+
+const roomSessionStore = useRoomSessionStore();
+
+const roomSession = useRoomSession();
 const bootstrapStore = useBootstrapStore();
 const { leaveRoom } = useRoomAudio();
 const { shareRoom, sharing } = useRoomShare();
@@ -125,7 +129,7 @@ const openLeaveDrawer = (event: Event) => {
   target?.blur();
   open.value = true;
   // Prefetch the route we'll navigate to on minimize
-  preloadRouteComponents(roomStore.previousRoute ?? '/');
+  preloadRouteComponents(roomSessionStore.previousRoute ?? '/');
 };
 </script>
 
@@ -226,7 +230,7 @@ const openLeaveDrawer = (event: Event) => {
               <UButton
                 icon="i-lucide-minimize" color="secondary" size="xl" variant="subtle"
                 class="w-full justify-center"
-                @click="() => { const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/'; roomStore.minimizeRoom(); open = false; navigateTo(target); }"
+                @click="() => { const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/'; roomSession.minimizeRoom(); open = false; navigateTo(target); }"
               >
                 Minimize
               </UButton>
@@ -237,9 +241,9 @@ const openLeaveDrawer = (event: Event) => {
                   size="xl" variant="subtle"
                   @click="async () => {
                     try {
-                      const target = roomStore.previousRoute && !roomStore.previousRoute.startsWith('/room/') ? roomStore.previousRoute : '/';
+                      const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
                       leaveRoom();
-                      roomStore.leaveRoom();
+                      roomSession.leaveRoom();
                       open = false;
                       navigateTo(target, { replace: true });
                     } catch (error) {

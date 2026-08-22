@@ -5,7 +5,7 @@ import { createLogger } from '~/utils/logger';
 const log = createLogger('[HomeFooter]');
 
 const authStore = useAuthStore();
-const roomStore = useRoomStore();
+const roomSessionStore = useRoomSessionStore();
 const inboxStore = useInboxStore();
 const route = useRoute();
 const room = useRoom();
@@ -38,8 +38,8 @@ const activeIndex = computed(() => {
 async function handleMyRoomClick() {
   try {
     await room.fetchUserRoom();
-    if (roomStore.userRoom) {
-      doRoomEntry(roomStore.userRoom);
+    if (roomSessionStore.userRoom) {
+      doRoomEntry(roomSessionStore.userRoom);
     } else {
       createRoomOpen.value = true;
     }

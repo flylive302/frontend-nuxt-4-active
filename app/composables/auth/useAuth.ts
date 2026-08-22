@@ -196,7 +196,7 @@ export function useAuthActions() {
       // snapshot survives logout in localStorage and the mini-player bubble
       // reappears on the next login (stale "tap to rejoin"). Setting currentRoom
       // null also drives the lifecycle watcher's audio teardown.
-      useRoomStore().leaveRoom()
+      useRoomSession().leaveRoom()
       authStore.logout()
       // REACT
       await navigateTo('/log-in')

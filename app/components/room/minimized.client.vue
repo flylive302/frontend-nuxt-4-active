@@ -5,6 +5,10 @@ import { useBoundedDrag } from '~/composables/shared/useBoundedDrag';
 import { roomLogoSquareSrc } from '~/utils/imagekit';
 
 const roomStore = useRoomStore();
+
+const roomSessionStore = useRoomSessionStore();
+
+const roomSession = useRoomSession();
 const { leaveRoom, isProducing, isLocalMuted, toggleLocalMute } = useRoomAudio();
 const { returnToRoom: returnToMinimizedRoom } = useRoomEntry();
 
@@ -12,7 +16,7 @@ const { dragEl, position, setPosition, winW, winH, elW, elH } = useBoundedDrag()
 
 // The room to display/return to: the live session if connected, otherwise the
 // persisted snapshot restored after a cold start.
-const displayRoom = computed(() => roomStore.currentRoom ?? roomStore.minimizedRoom);
+const displayRoom = computed(() => roomStore.currentRoom ?? roomSessionStore.minimizedRoom);
 
 // Mic is audible to the room only while producing AND not locally muted.
 const isMicLive = computed(() => isProducing.value && !isLocalMuted.value);
@@ -43,7 +47,7 @@ function returnToRoom(): void {
 function disconnect(): void {
   try {
     leaveRoom();
-    roomStore.leaveRoom();
+    roomSession.leaveRoom();
   } catch {
     // teardown is best-effort
   }

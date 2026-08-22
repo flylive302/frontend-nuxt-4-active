@@ -2,6 +2,8 @@
 import { defineAsyncComponent } from 'vue'
 
 const roomStore = useRoomStore()
+
+const roomSessionStore = useRoomSessionStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const assetStore = useAssetStore()
@@ -16,7 +18,7 @@ const showMiniPlayer = computed(() =>
   && !route.path.startsWith('/room/')
   && (
     (!!roomStore.currentRoom && roomStore.isMinimized)
-    || (!roomStore.currentRoom && !!roomStore.minimizedRoom)
+    || (!roomStore.currentRoom && !!roomSessionStore.minimizedRoom)
   ),
 )
 

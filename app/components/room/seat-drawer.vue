@@ -13,6 +13,7 @@ const log = createLogger('[SeatDrawer]')
 
 const { getLevelFromXp } = useLevelLookup()
 const roomStore = useRoomStore()
+const roomSession = useRoomSession()
 const seatsStore = useRoomSeatsStore()
 const participantsStore = useRoomParticipantsStore()
 const authStore = useAuthStore()
@@ -338,7 +339,7 @@ async function handleInviteToSeat() {
 
 async function handleNavigateAway(path: string) {
   isOpen.value = false
-  roomStore.minimizeRoom()
+  roomSession.minimizeRoom()
   await navigateTo(path)
 }
 

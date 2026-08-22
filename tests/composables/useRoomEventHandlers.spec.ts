@@ -90,6 +90,8 @@ describe('setupRoomEventHandlers — seat reactions', () => {
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
     vi.stubGlobal('useRoomStore', () => roomStore)
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
 
     const socket = createMockSocket()
     const toast = { add: vi.fn() } as unknown as ReturnType<typeof useToast>
@@ -171,6 +173,8 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
     vi.stubGlobal('useRoomParticipantsStore', () => useRoomParticipantsStore())
     vi.stubGlobal('useAuthStore', () => useAuthStore())
     vi.stubGlobal('useRoomStore', () => useRoomStore())
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
 
     const socket = createMockSocket()
     const toast = { add: vi.fn() } as unknown as ReturnType<typeof useToast>
@@ -239,6 +243,8 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
     vi.stubGlobal('useRoomParticipantsStore', () => useRoomParticipantsStore())
     vi.stubGlobal('useAuthStore', () => authStore)
     vi.stubGlobal('useRoomStore', () => useRoomStore())
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
 
     const socket = createMockSocket()
     const toast = { add: vi.fn() }
@@ -342,6 +348,8 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
     vi.stubGlobal('useRoomStore', () => roomStore)
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(gift) }))
 
     const socket = createMockSocket()

@@ -31,7 +31,8 @@ const emit = defineEmits<{
 
 const { getLevelFromXp } = useLevelLookup()
 
-const roomStore = useRoomStore();
+
+const roomSession = useRoomSession();
 
 const slots = useSlots();
 
@@ -61,7 +62,7 @@ function handleAvatarClick() {
     return
   }
 
-  roomStore.minimizeRoom()
+  roomSession.minimizeRoom()
   void navigateTo(`/profile/${props.user.signature}`)
 }
 </script>

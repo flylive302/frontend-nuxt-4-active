@@ -6,6 +6,8 @@ export function useRoom() {
     // ========================================
     const { api, fetchCsrfToken } = useApi()
     const roomStore = useRoomStore();
+    const roomSessionStore = useRoomSessionStore();
+    const roomSession = useRoomSession();
     const toast = useToast()
 
     // ========================================
@@ -25,7 +27,7 @@ export function useRoom() {
             })
 
             if (response.status === 'success') {
-                roomStore.setUserRoom(response.data);
+                roomSessionStore.setUserRoom(response.data);
                 roomStore.updateStatus('idle');
             } else {
                 toast.add({ title: response.message, color: 'error' })
@@ -70,8 +72,8 @@ export function useRoom() {
         });
 
         if (response.status === "success") {
-            roomStore.setUserRoom(response.data);
-            roomStore.setCurrentRoom(response.data);
+            roomSessionStore.setUserRoom(response.data);
+            roomSession.setCurrentRoom(response.data);
             await navigateTo(`/room/${response.data.id}`);
             toast.add({ title: response.message, color: 'success' })
             return response;
