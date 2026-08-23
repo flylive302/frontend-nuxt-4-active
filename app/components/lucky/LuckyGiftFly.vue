@@ -98,7 +98,9 @@ onBeforeUnmount(() => {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 9998;
+  /* Below LuckyMultiplierFloat (50), LuckySenderBands (55) and
+     LuckyCashbackCenter (60): the cashback win must read on top of the stream. */
+  z-index: 49;
   pointer-events: none;
 }
 </style>

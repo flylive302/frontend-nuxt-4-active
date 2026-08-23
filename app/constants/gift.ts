@@ -26,10 +26,6 @@ export const MAX_PLAYBACK_QUEUE_SIZE = 30;
  */
 export const BURST_SHED_QUEUE_DEPTH = 12;
 
-// Main-thread stall thresholds used to live here, from when the monitor was
-// believed to be a gift instrument. It observes every route, so its tuning now
-// sits with the other measurement constants in `constants/telemetry.ts`.
-
 /** Maximum ×N repeats a coalesced identical-gift run can accumulate */
 export const MAX_PLAYBACK_REPEATS = 99;
 
@@ -41,9 +37,6 @@ export const VIDEO_CACHE_MAX_ENTRIES = 20;
  * playback of any duration re-arms the timer, so long animations are never cut off.
  * Error paths advance the queue instantly (player emits `ended` on failure). */
 export const GIFT_PLAYBACK_TIMEOUT_MS = 8000;
-
-/** Default gift category to show when drawer opens */
-export const DEFAULT_GIFT_CATEGORY = 'normal' as const;
 
 /** Duration of lucky gift fly animation in milliseconds (sender → center → receiver) */
 export const LUCKY_FLY_DURATION_MS = 2000;
@@ -106,13 +99,13 @@ export const GIFT_SEND_ERROR = {
 export const GIFT_FAILURE_TOAST_COOLDOWN_MS = 2000;
 
 /**
- * Combo-tap coalescing window, in milliseconds (msab-load-stability — combo
- * tap flood). Rapid combo/lucky-combo taps within this window merge into ONE
- * `gift:send` emit with a summed quantity instead of one emit per tap — on
- * low-end phones, 100-200 taps/sec of raw emits jams the main thread and drops
- * the socket to server ping timeouts. Optimistic coin debit and the visual
- * combo counter still happen per tap; only the network emit and its refund
- * tracking are batched. See `useGiftSending.ts`.
+ * Combo-tap coalescing window, in milliseconds (gift-burst-seat-drop). Rapid
+ * NORMAL combo taps within this window merge into ONE `gift:send` emit with a
+ * summed quantity instead of one emit per tap. Optimistic coin debit and the
+ * visual combo counter still happen per tap; only the network emit and its
+ * refund tracking are batched. Lucky combos are deliberately NOT coalesced —
+ * Laravel runs one lucky draw per emit, so merging taps would merge draws.
+ * See `useGiftSending.ts`.
  */
 export const GIFT_COMBO_COALESCE_MS = 600;
 
