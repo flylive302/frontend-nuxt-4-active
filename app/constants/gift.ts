@@ -52,16 +52,35 @@ export const LUCKY_FLY_DURATION_MS = 2000;
 export const LUCKY_FLY_THUMBNAIL_SIZE = 58;
 
 /**
- * Max lucky fly animations on screen at once. Each fly is a 2 s Web Animation on
- * its own <img>, and each trigger forces two synchronous layouts
- * (`getBoundingClientRect` for sender + recipient). Before this cap a 500-tap
- * lucky combo into a 3-seat room queued ~1,500 concurrent animations and
- * jammed a low-end phone's main thread for over a minute — long enough to miss
- * the Socket.IO heartbeat and be dropped from the seat (prod 2026-08-23:
- * "ping timeout" with giftSendCount 502). Over the cap, flies are dropped —
- * the visual is decorative; the win/balance path never touches it.
+ * Lucky flies render on ONE canvas (see `services/luckyFlyRenderer.ts`), so
+ * there is no concurrency cap and nothing is ever dropped — every tap flies.
+ * Before the canvas, each fly was its own <img> + Web Animation + two forced
+ * layouts; a 500-tap combo into a 3-seat room jammed a low-end phone for over
+ * a minute and it missed the Socket.IO heartbeat (prod 2026-08-23, "ping
+ * timeout" with giftSendCount 502). The stream below is how a burst is paced.
  */
-export const LUCKY_FLY_MAX_CONCURRENT = 20;
+
+/** Gap between consecutive fly launches so a burst reads as a stream, not a blob. */
+export const LUCKY_FLY_STAGGER_MS = 40;
+
+/**
+ * Longest a launch backlog may take to drain. Past this the stagger shrinks
+ * (launches compress) so a 1,000-leg burst still finishes in bounded time.
+ * Compress — never drop.
+ */
+export const LUCKY_FLY_MAX_STREAM_MS = 8000;
+
+/** Random path offset per fly (px) so stacked flies are visibly distinct. */
+export const LUCKY_FLY_PATH_JITTER_PX = 14;
+
+/**
+ * Seat screen positions are cached this long. Measuring a seat forces a
+ * layout, so a burst must not measure per leg — one measure per seat per TTL.
+ */
+export const LUCKY_FLY_SEAT_CACHE_TTL_MS = 1000;
+
+/** Canvas backing-store DPR cap — 3x phones gain nothing visible and pay 2.25x fill. */
+export const LUCKY_FLY_MAX_DPR = 2;
 
 /**
  * `gift:send` ack failure messages, copied verbatim from the audio server's

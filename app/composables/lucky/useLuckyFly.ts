@@ -4,102 +4,59 @@
  * Manages the fly animation for lucky category gifts.
  * Thumbnails fly from sender seat → screen center → receiver seat → disappear.
  *
- * Uses Web Animations API for GPU-composited performance (transform + opacity only).
- * Module-level state enables concurrent fly animations without conflicts.
+ * Rendering is a single canvas driven by `LuckyFlyRenderer`; this composable
+ * only resolves WHERE a fly goes (seat positions) and hands the request over.
+ * Seat positions are cached (`LUCKY_FLY_SEAT_CACHE_TTL_MS`) because measuring
+ * a seat forces a layout and a burst fires hundreds of legs per second.
  */
-import { LUCKY_FLY_MAX_CONCURRENT, LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
+import { LUCKY_FLY_SEAT_CACHE_TTL_MS, LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
+import type { LuckyFlyRenderer } from '~/services/luckyFlyRenderer';
 import { useFxPreferencesStore } from '~/stores/fxPreferences';
-
-// ========================================
-// Types
-// ========================================
-
-/** Coordinates for a position on screen */
-interface FlyPosition {
-  readonly x: number;
-  readonly y: number;
-}
-
-/** A single fly animation item */
-export interface LuckyFlyItem {
-  readonly id: string;
-  readonly thumbnailUrl: string;
-  readonly startPos: FlyPosition;
-  readonly centerPos: FlyPosition;
-  readonly endPos: FlyPosition;
-}
+import type { FlyPoint } from '~/utils/lucky-fly-path';
 
 // ========================================
 // Module-Level State
 // ========================================
 
-/** Active fly animation items (multiple can coexist) */
-const flyItems = ref<LuckyFlyItem[]>([]);
+/** The mounted canvas renderer, or null while no LuckyGiftFly is on screen. */
+let renderer: LuckyFlyRenderer | null = null;
 
-/** Half-size offset for centering thumbnail on a position */
-const HALF_SIZE = LUCKY_FLY_THUMBNAIL_SIZE / 2;
+/** Called after every enqueue so the component can (re)start its frame loop. */
+let onEnqueue: (() => void) | null = null;
+
+interface CachedSeat {
+  readonly point: FlyPoint;
+  readonly measuredAt: number;
+}
+
+const seatCache = new Map<number, CachedSeat>();
 
 // ========================================
 // Position Resolution
 // ========================================
 
 /**
- * Resolve the center position of a user's seat element.
- * Falls back to screen bottom-center if user is not seated.
- *
- * @param userId - The user ID to locate
- * @returns Center coordinates of the user's seat
+ * Center of a user's seat element, cached per TTL. Falls back to
+ * bottom-center of the viewport when the user is not seated.
  */
-function resolveSeatPosition(userId: number): FlyPosition {
+function resolveSeatPosition(userId: number, now: number): FlyPoint {
+  const cached = seatCache.get(userId);
+  if (cached && now - cached.measuredAt < LUCKY_FLY_SEAT_CACHE_TTL_MS) return cached.point;
+
   const el = document.querySelector<HTMLElement>(`[data-user-id="${userId}"]`);
-
-  if (el) {
-    const rect = el.getBoundingClientRect();
-    return {
-      x: rect.left + rect.width / 2 - HALF_SIZE,
-      y: rect.top + rect.height / 2 - HALF_SIZE,
-    };
-  }
-
-  // Fallback: bottom-center of viewport
-  return {
-    x: window.innerWidth / 2 - HALF_SIZE,
-    y: window.innerHeight - LUCKY_FLY_THUMBNAIL_SIZE - 32,
-  };
+  const point: FlyPoint = el
+    ? centerOf(el.getBoundingClientRect())
+    : { x: window.innerWidth / 2, y: window.innerHeight - LUCKY_FLY_THUMBNAIL_SIZE / 2 - 32 };
+  seatCache.set(userId, { point, measuredAt: now });
+  return point;
 }
 
-/**
- * Calculate the center position of the viewport.
- * @returns Center coordinates of the screen
- */
-function getScreenCenter(): FlyPosition {
-  return {
-    x: window.innerWidth / 2 - HALF_SIZE,
-    y: window.innerHeight / 2 - HALF_SIZE,
-  };
+function centerOf(rect: DOMRect): FlyPoint {
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
-// ========================================
-// Fly Lifecycle
-// ========================================
-
-/**
- * Remove a fly item by its ID after animation completes.
- * @param id - The fly item ID to remove
- */
-function removeFlyItem(id: string): void {
-  const index = flyItems.value.findIndex((item) => item.id === id);
-  if (index !== -1) {
-    flyItems.value.splice(index, 1);
-  }
-}
-
-/**
- * Generate a unique ID for a fly item.
- * Uses timestamp + random suffix for uniqueness under rapid fire.
- */
-function generateFlyId(): string {
-  return `fly-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+function getScreenCenter(): FlyPoint {
+  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
 
 // ========================================
@@ -118,29 +75,38 @@ export function useLuckyFly() {
     // GATE: Gift Mute preference suppresses the fly visual on this device only —
     // the lucky send/win itself (balances, session state) is already booked.
     if (useFxPreferencesStore().muteGiftAnimations) return;
+    // GATE: no canvas mounted (not on the room page) — nothing to draw on.
+    if (!renderer) return;
 
-    // GATE: load-shed. Past the cap every extra fly is pure main-thread cost
-    // (two forced layouts + one more concurrent animation) with no visual
-    // gain — the screen is already full of them. See LUCKY_FLY_MAX_CONCURRENT.
-    if (flyItems.value.length >= LUCKY_FLY_MAX_CONCURRENT) return;
-
-    const item: LuckyFlyItem = {
-      id: generateFlyId(),
+    const now = performance.now();
+    renderer.enqueue({
       thumbnailUrl,
-      startPos: resolveSeatPosition(senderId),
-      centerPos: getScreenCenter(),
-      endPos: resolveSeatPosition(recipientId),
-    };
-
-    flyItems.value.push(item);
+      path: {
+        start: resolveSeatPosition(senderId, now),
+        center: getScreenCenter(),
+        end: resolveSeatPosition(recipientId, now),
+      },
+    });
+    onEnqueue?.();
   }
 
-  return {
-    /** Reactive list of active fly items (drives component rendering) */
-    flyItems: readonly(flyItems),
-    /** Trigger a new fly animation */
-    triggerFly,
-    /** Remove a fly item after animation completes (called by component) */
-    removeFlyItem,
-  };
+  /** Component hook: register the mounted renderer and its wake-up callback. */
+  function attachRenderer(next: LuckyFlyRenderer, wake: () => void): void {
+    renderer = next;
+    onEnqueue = wake;
+  }
+
+  /** Component hook: forget the renderer on unmount. */
+  function detachRenderer(): void {
+    renderer = null;
+    onEnqueue = null;
+    seatCache.clear();
+  }
+
+  /** Seats moved (resize, orientation, layout change) — re-measure lazily. */
+  function invalidateSeatPositions(): void {
+    seatCache.clear();
+  }
+
+  return { triggerFly, attachRenderer, detachRenderer, invalidateSeatPositions };
 }
