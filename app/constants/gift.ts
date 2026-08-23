@@ -61,7 +61,7 @@ export const LUCKY_FLY_THUMBNAIL_SIZE = 64;
  * "ping timeout" with giftSendCount 502). Over the cap, flies are dropped —
  * the visual is decorative; the win/balance path never touches it.
  */
-export const LUCKY_FLY_MAX_CONCURRENT = 16;
+export const LUCKY_FLY_MAX_CONCURRENT = 26;
 
 /**
  * `gift:send` ack failure messages, copied verbatim from the audio server's
