@@ -14,7 +14,7 @@ export const STATIC_DISPLAY_DURATION_MS = 3000;
 export const COMBO_BUTTON_TIMEOUT_MS = 5000;
 
 /** Maximum number of gifts in the playback queue (drop-oldest beyond this) */
-export const MAX_PLAYBACK_QUEUE_SIZE = 50;
+export const MAX_PLAYBACK_QUEUE_SIZE = 30;
 
 /**
  * Backlog depth at which burst-mode load-shedding activates (msab-load-stability
@@ -49,7 +49,7 @@ export const DEFAULT_GIFT_CATEGORY = 'normal' as const;
 export const LUCKY_FLY_DURATION_MS = 2000;
 
 /** Size of the lucky gift fly thumbnail in pixels */
-export const LUCKY_FLY_THUMBNAIL_SIZE = 64;
+export const LUCKY_FLY_THUMBNAIL_SIZE = 58;
 
 /**
  * Max lucky fly animations on screen at once. Each fly is a 2 s Web Animation on
@@ -61,7 +61,7 @@ export const LUCKY_FLY_THUMBNAIL_SIZE = 64;
  * "ping timeout" with giftSendCount 502). Over the cap, flies are dropped —
  * the visual is decorative; the win/balance path never touches it.
  */
-export const LUCKY_FLY_MAX_CONCURRENT = 26;
+export const LUCKY_FLY_MAX_CONCURRENT = 20;
 
 /**
  * `gift:send` ack failure messages, copied verbatim from the audio server's
@@ -84,7 +84,7 @@ export const GIFT_SEND_ERROR = {
  * needs to be told once, not twenty times; this keeps the same anti-spam
  * posture as the deliberately-silent partial-drop refund below it.
  */
-export const GIFT_FAILURE_TOAST_COOLDOWN_MS = 4000;
+export const GIFT_FAILURE_TOAST_COOLDOWN_MS = 2000;
 
 /**
  * Combo-tap coalescing window, in milliseconds (msab-load-stability — combo
@@ -95,7 +95,7 @@ export const GIFT_FAILURE_TOAST_COOLDOWN_MS = 4000;
  * combo counter still happen per tap; only the network emit and its refund
  * tracking are batched. See `useGiftSending.ts`.
  */
-export const GIFT_COMBO_COALESCE_MS = 300;
+export const GIFT_COMBO_COALESCE_MS = 600;
 
 /**
  * Hard cap on the summed `quantity` a coalesced combo burst may reach before
