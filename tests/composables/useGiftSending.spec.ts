@@ -454,12 +454,11 @@ describe('useGiftSending — combo tap coalescing', () => {
   it('a continuous tap stream flushes every window instead of waiting for taps to stop (THROTTLE, not debounce)', async () => {
     // 20 taps, 50ms apart (t = 0, 50, 100, ..., 950ms). Each burst's timer is
     // armed by its FIRST tap and never reset, so it fires at a fixed
-    // (firstTapTime + 300ms) boundary regardless of later taps landing inside
-    // the window:
-    //   burst 1: taps at t=0..250   (6 taps)  → flushes at t=300
-    //   burst 2: taps at t=300..550 (6 taps)  → flushes at t=600
-    //   burst 3: taps at t=600..850 (6 taps)  → flushes at t=900
-    //   burst 4: taps at t=900,950  (2 taps)  → flushes at t=1200 (after the loop)
+    // (firstTapTime + GIFT_COMBO_COALESCE_MS) boundary regardless of later taps
+    // landing inside the window. With the loop spanning 1000ms, every full
+    // window boundary inside that span fires DURING the stream; the final
+    // partial window fires after. Counts are derived from the constant so a
+    // retune of GIFT_COMBO_COALESCE_MS does not silently break this test.
     // A debounce (timer reset per tap) would never flush until the taps
     // stopped — this asserts the opposite: flushes happen DURING the stream.
     const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
@@ -473,16 +472,21 @@ describe('useGiftSending — combo tap coalescing', () => {
       await vi.advanceTimersByTimeAsync(50)
     }
 
-    // Three windows (300/600/900) have already fired DURING the loop above —
-    // this is the key throttle assertion: flushes happened mid-stream.
-    expect(sendGiftMock).toHaveBeenCalledTimes(3)
+    // Every full window inside the 1000ms stream has already fired — this is
+    // the key throttle assertion: flushes happened mid-stream.
+    const STREAM_MS = TAP_COUNT * 50
+    const midStreamFlushes = Math.floor(STREAM_MS / GIFT_COMBO_COALESCE_MS)
+    expect(midStreamFlushes).toBeGreaterThan(0)
+    expect(sendGiftMock).toHaveBeenCalledTimes(midStreamFlushes)
 
-    // Drain the final partial window (taps at t=900, 950) so every tap is accounted for.
+    // Drain the final partial window so every tap is accounted for.
     await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
-    expect(sendGiftMock).toHaveBeenCalledTimes(4)
+    expect(sendGiftMock).toHaveBeenCalledTimes(Math.ceil(STREAM_MS / GIFT_COMBO_COALESCE_MS))
 
     const quantities = sendGiftMock.mock.calls.map((call) => call[2] as number)
-    expect(quantities).toEqual([6, 6, 6, 2])
+    // Every window carries the taps that landed inside it (50ms apart).
+    const tapsPerWindow = GIFT_COMBO_COALESCE_MS / 50
+    expect(quantities.slice(0, -1).every((q) => q === tapsPerWindow)).toBe(true)
     expect(quantities.reduce((sum, q) => sum + q, 0)).toBe(TAP_COUNT)
   })
 

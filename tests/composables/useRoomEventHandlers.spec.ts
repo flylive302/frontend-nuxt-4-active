@@ -377,6 +377,9 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
       quantity: 1,
     })
 
+    // XP writes are batched per frame (useRoomXpAccumulator); node has no
+    // requestAnimationFrame so the batch flushes on the microtask queue.
+    await Promise.resolve()
     // Normal gift: seatGiftValue = full GCV = 50.
     expect(roomStore.currentRoom?.daily_xp).toBe('150')
     // Lifetime room_xp bumps by the same amount, unaffected by this change.
@@ -393,6 +396,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
       quantity: 1,
     })
 
+    await Promise.resolve()
     // Lucky gift: seatGiftValue = split base = floor(100 * 0.10) = 10.
     expect(roomStore.currentRoom?.daily_xp).toBe('110')
     expect(roomStore.currentRoom?.room_xp).toBe('510')

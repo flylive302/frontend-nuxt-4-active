@@ -7,6 +7,8 @@
 
 import type { UserLevelUpPayload } from '~/types/room/socket-events'
 import { audioSocketRef } from '~/composables/room/useAudioSocket'
+import { PROFILE_SYNC_THROTTLE_MS } from '~/constants/room'
+import { createTrailingThrottle } from '~/utils/frame-batcher'
 
 // ========================================
 // Composable
@@ -21,6 +23,13 @@ import { audioSocketRef } from '~/composables/room/useAudioSocket'
  * "Stores never import or call methods on other stores —
  *  cross-store coordination belongs in composables."
  */
+/** Throttled MSAB profile sync — module-level so every caller shares one window. */
+const emitProfileSync = createTrailingThrottle<{ wealth_xp: string; charm_xp: string }>((profile) => {
+  if (audioSocketRef.value?.connected) {
+    audioSocketRef.value.emit('user:profileSync', { profile })
+  }
+}, PROFILE_SYNC_THROTTLE_MS)
+
 export function useLevelActions() {
   const authStore = useAuthStore()
   const participantsStore = useRoomParticipantsStore()
@@ -83,11 +92,7 @@ export function useLevelActions() {
       })
     }
 
-    if (audioSocketRef.value?.connected) {
-      audioSocketRef.value.emit('user:profileSync', {
-        profile: { wealth_xp: wealthXp, charm_xp: charmXp },
-      })
-    }
+    emitProfileSync({ wealth_xp: wealthXp, charm_xp: charmXp })
   }
 
   return {

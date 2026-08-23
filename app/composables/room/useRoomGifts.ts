@@ -8,7 +8,7 @@
 import type { Ref } from 'vue';
 import type { AudioSocket, GiftSendAck } from '~/types/room/audio';
 import { createEmitAsync } from '~/utils/socket';
-import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
+import { useRoomXpAccumulator } from './useRoomXpAccumulator';
 
 // ============================================
 // Composable
@@ -39,6 +39,7 @@ export function useRoomGifts({
   getCurrentRoomId,
 }: UseRoomGiftsParams): UseRoomGiftsReturn {
   const emitAsync = createEmitAsync(socket);
+  const { accumulateGiftXp } = useRoomXpAccumulator();
 
   /**
    * Send a gift to every currently-seated recipient in one burst emit.
@@ -76,16 +77,9 @@ export function useRoomGifts({
         // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)), which is
         // exactly what seatGiftValue returns. Using the full GCV here over-counts
         // lucky sends and drifts the sender's bar ahead of the receiver's (and the
-        // authoritative value) until a refetch.
-        const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
-        roomStore.currentRoom.room_xp = (currentXp + addedXpPerRecipient).toString();
-        // Daily XP (prd-daily-room-xp.md) mirrors the same amount, bumped via the
-        // store setter — it also drives the in-room XP button, not the level bar.
-        roomStore.bumpDailyXp(addedXpPerRecipient);
-        // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
-        // landing now counts toward every period, so this applies unconditionally.
-        bumpPeriodTotalXp(addedXpPerRecipient);
-        seatsStore.addSeatGiftValue(recipientId, addedXpPerRecipient);
+        // authoritative value) until a refetch. Writes are batched per frame
+        // (room XP, daily XP, period total, seat total) by useRoomXpAccumulator.
+        accumulateGiftXp(recipientId, addedXpPerRecipient);
       }
     }
 

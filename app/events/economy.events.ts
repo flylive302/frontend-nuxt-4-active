@@ -9,6 +9,7 @@ import type {
   RewardEarnedPayload,
   CoinRequestStatusChangedPayload,
 } from '~/types/room/socket-events'
+import { createFrameCoalescer } from '~/utils/frame-batcher'
 
 
 /**
@@ -28,7 +29,15 @@ export function useEconomyEvents() {
   const toast = useToast()
 
   return function registerEconomyEvents(socket: Socket): void {
-    socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
+    // A gift combo pushes one balance.updated per tap (hundreds per second).
+    // Every payload is absolute, so only the LATEST matters: apply it once
+    // per frame instead of re-rendering every balance consumer per tap.
+    let latestBalance: BalanceUpdatedPayload | null = null
+    const applyBalance = createFrameCoalescer(() => {
+      const payload = latestBalance
+      latestBalance = null
+      if (!payload) return
+
       // Update balance on auth user (coins, diamonds, XP values)
       authStore.updateBalance({
         coins: payload.coins,
@@ -43,6 +52,11 @@ export function useEconomyEvents() {
 
       // Sync fresh XP to participants store and MSAB (composable handles both)
       syncXpFromBalance(payload.wealth_xp, payload.charm_xp)
+    })
+
+    socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
+      latestBalance = payload
+      applyBalance.schedule()
     })
 
     socket.on('reward.earned', (payload: RewardEarnedPayload) => {

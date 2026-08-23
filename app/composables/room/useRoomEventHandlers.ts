@@ -27,7 +27,7 @@ import type {
   SeatReactionEvent,
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
-import { bumpPeriodTotalXp } from './useRoomGiftLeaderboard';
+import { useRoomXpAccumulator } from './useRoomXpAccumulator';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
@@ -310,6 +310,7 @@ export function setupRoomEventHandlers(
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
   const { triggerFly } = useLuckyFly();
+  const { accumulateGiftXp } = useRoomXpAccumulator();
   const { resolvePropAsync } = usePropLookup();
   const { playEntrySlide } = useSlidePlayback();
   const comboStore = useGiftComboStore();
@@ -615,27 +616,17 @@ export function setupRoomEventHandlers(
       : recipientIds;
     const giftForValue = getGiftById(event.giftId);
 
-    // Accumulate gift coin value for seat display, once per (batchId, recipient) leg.
-    if (giftForValue) {
+    // Accumulate gift coin value, once per (batchId, recipient) leg. The four
+    // store writes (room XP, daily XP, period total, seat total) are folded
+    // into one flush per frame by useRoomXpAccumulator — a lucky combo lands
+    // hundreds of legs per second and each write re-rendered the header.
+    if (giftForValue && roomStore.currentRoom) {
       for (const recipientId of newLegs) {
         // Seat total and room XP both credit the split base the backend books
         // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)); seatGiftValue
         // returns exactly that. Must match the sender's optimistic bump in
         // useRoomGifts.sendGift or the two clients' room XP drift apart on lucky sends.
-        const addedXp = seatGiftValue(giftForValue, event.quantity);
-        seatsStore.addSeatGiftValue(recipientId, addedXp);
-
-        // Update room XP
-        if (roomStore.currentRoom) {
-          const currentXp = parseFloat(roomStore.currentRoom.room_xp || '0');
-          roomStore.currentRoom.room_xp = (currentXp + addedXp).toString();
-          // Daily XP (prd-daily-room-xp.md) mirrors the same amount as the
-          // sender's optimistic bump in useRoomGifts.sendGift.
-          roomStore.bumpDailyXp(addedXp);
-          // Drawer's active-tab period total (05-drawer-period-totals.md) — a gift
-          // landing now counts toward every period, so this applies unconditionally.
-          bumpPeriodTotalXp(addedXp);
-        }
+        accumulateGiftXp(recipientId, seatGiftValue(giftForValue, event.quantity));
       }
     }
 

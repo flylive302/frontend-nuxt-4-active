@@ -412,3 +412,11 @@ export const TRANSPORT_RECOVERY_BACKOFF_MS = [1_000, 2_000, 4_000] as const;
  * yet resolved from `propIndex`). See `~/utils/mice-wave-ring-color`.
  */
 export const DEFAULT_SPEAKING_RING_COLOR = '#f97316';
+
+/**
+ * Minimum gap between `user:profileSync` emits driven by balance.updated.
+ * A gift combo updates the balance per tap; other participants only need the
+ * resulting XP a few times a second, not hundreds. Trailing-edge, so the final
+ * value always goes out.
+ */
+export const PROFILE_SYNC_THROTTLE_MS = 500;
