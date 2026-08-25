@@ -7,7 +7,13 @@ Non-obvious commands (the rest are plain `package.json` scripts):
 
 ```bash
 npm run architecture:check   # validate layer boundaries
+npm run typecheck            # full vue-tsc pass — part of the pre-finalize gate set
 ```
+
+Pre-finalize gate set (all must pass before declaring work done): `npm run lint` ·
+`npm test` · `npm run typecheck` · `npm run architecture:check`. The typecheck
+baseline reached **0 errors on 2026-08-26** (`164657a3`) — keep it there; any
+error it reports is yours.
 
 ## Key conventions
 
