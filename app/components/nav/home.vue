@@ -64,7 +64,7 @@ const officialBadge = computed(() => {
           {{ officialBadge }}
         </span>
       </UButton>
-      <UButton aria-label="Search" icon="i-lucide-search" size="xl" color="primary" variant="ghost" @click="open = true" />
+      <UButton aria-label="Search" icon="i-lucide-search" size="xl" color="primary" variant="ghost" @click="() => { open = true }" />
       <UserSearchDrawer v-model:open="open" title="Search User" description="Search users and visit their Profile." />
     </div>
   </header>

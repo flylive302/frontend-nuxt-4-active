@@ -70,7 +70,7 @@ onMounted(async () => {
         class="mt-6"
         variant="solid"
         color="primary"
-        @click="navigateTo('/log-in', { replace: true })"
+        @click="() => { navigateTo('/log-in', { replace: true }) }"
       >
         Back to Login
       </UButton>

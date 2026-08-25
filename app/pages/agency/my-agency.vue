@@ -353,7 +353,7 @@ onMounted(async () => {
                 color="error"
                 class="w-full justify-center mt-4"
                 icon="i-lucide-circle-slash"
-                @click="showCancelModal = true"
+                @click="() => { showCancelModal = true }"
             >
               Cancel Application
             </UButton>
@@ -365,7 +365,7 @@ onMounted(async () => {
                 color="error"
                 class="w-full justify-center mt-4"
                 icon="i-lucide-trash-2"
-                @click="showDissolveModal = true"
+                @click="() => { showDissolveModal = true }"
             >
               Dissolve Agency
             </UButton>
@@ -379,7 +379,7 @@ onMounted(async () => {
                 class="w-full justify-center mt-4"
                 :icon="isLeavePending || isInCooldown ? 'i-lucide-clock' : 'i-lucide-log-out'"
                 :disabled="leaveButtonDisabled"
-                @click="showLeaveModal = true"
+                @click="() => { showLeaveModal = true }"
             >
               {{ leaveButtonLabel }}
             </UButton>
@@ -420,7 +420,7 @@ onMounted(async () => {
             <UButton
               variant="soft"
               color="neutral"
-              @click="showLeaveModal = false"
+              @click="() => { showLeaveModal = false }"
             >
               Cancel
             </UButton>
@@ -470,7 +470,7 @@ onMounted(async () => {
             <UButton
               variant="soft"
               color="neutral"
-              @click="showDissolveModal = false"
+              @click="() => { showDissolveModal = false }"
             >
               Cancel
             </UButton>
@@ -509,7 +509,7 @@ onMounted(async () => {
             <UButton
               variant="soft"
               color="neutral"
-              @click="showCancelModal = false"
+              @click="() => { showCancelModal = false }"
             >
               Keep Application
             </UButton>

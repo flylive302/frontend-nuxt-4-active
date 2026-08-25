@@ -242,7 +242,7 @@ const paletteGroups = computed<CommandGroup[]>(() => [
         trailing-icon="i-lucide-search"
         aria-haspopup="dialog"
         aria-controls="choose-reseller"
-        @click="isModalOpen = true"
+        @click="() => { isModalOpen = true }"
       />
 
       <UDrawer

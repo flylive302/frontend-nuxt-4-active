@@ -169,7 +169,7 @@ onMounted(async () => {
                 <!-- Can Join -->
                 <UButton
                     v-if="canJoin" color="primary" size="xs" class="justify-center" icon="i-lucide-user-plus"
-                    @click="showJoinModal = true"
+                    @click="() => { showJoinModal = true }"
                 >
                   Request to Join
                 </UButton>
@@ -311,7 +311,7 @@ onMounted(async () => {
             <UButton
               variant="subtle"
               color="neutral"
-              @click="showJoinModal = false"
+              @click="() => { showJoinModal = false }"
             >
               Cancel
             </UButton>

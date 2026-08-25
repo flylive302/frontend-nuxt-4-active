@@ -685,7 +685,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
           mice_wave_id: authStore.user.mice_wave_id,
           slides_id: authStore.user.slides_id,
           avatar: authStore.user.avatar,
-          gender: authStore.user.gender,
+          gender: authStore.user.gender === null ? null : String(authStore.user.gender),
           country: authStore.user.country ?? '',
           date_of_birth: authStore.user.date_of_birth,
           wealth_xp: authStore.user.wealth_xp,

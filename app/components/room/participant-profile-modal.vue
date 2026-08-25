@@ -240,7 +240,7 @@ async function handleDemote() {
           color="primary"
           variant="soft"
           class="w-full justify-center"
-          @click="open = false"
+          @click="() => { open = false }"
         >
           View Full Profile
         </UButton>
@@ -285,7 +285,7 @@ async function handleDemote() {
           variant="subtle"
           icon="i-lucide-x"
           class="justify-center mt-2"
-          @click="open = false"
+          @click="() => { open = false }"
         >
           Close
         </UButton>

@@ -5,8 +5,9 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
+import type { AudioSocket } from '../../app/types/room/audio'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -42,7 +43,7 @@ describe('useRoomGifts.sendGift', () => {
     const emit = vi.fn((_event: string, _payload: unknown, ack: (response: unknown) => void) => {
       ack({ success: true, acceptedRecipientIds: seatedRecipientIds })
     })
-    const socket = ref({ emit, once: vi.fn(), off: vi.fn(), on: vi.fn() })
+    const socket = ref({ emit, once: vi.fn(), off: vi.fn(), on: vi.fn() }) as unknown as Ref<AudioSocket | null>
     const { sendGift } = useRoomGifts({ socket, getCurrentRoomId: () => 'room-1' })
 
     return { sendGift, roomStore, emit }

@@ -11,7 +11,7 @@ import { isStaleBundleError } from '~/utils/stale-bundle-error';
 /** The subset of a Sentry event this policy reads or writes. */
 export interface SentryEventLike {
   user?: { id?: string | number } | null;
-  tags?: Record<string, string | number | boolean | undefined>;
+  tags?: Record<string, string | number | boolean | bigint | symbol | null | undefined>;
   exception?: { values?: Array<{ value?: string }> };
 }
 

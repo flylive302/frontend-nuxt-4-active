@@ -130,6 +130,7 @@ export interface CreateSvgaPlayerOptions {
   autoplay?: boolean
   replaceElements?: Record<string, HTMLImageElement>
   dynamicElements?: Record<string, HTMLCanvasElement>
+  dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>
 }
 
 /**

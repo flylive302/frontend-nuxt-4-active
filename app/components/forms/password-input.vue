@@ -83,7 +83,7 @@ const text = computed(() => {
           :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
           :aria-label="show ? 'Hide password' : 'Show password'"
           :aria-pressed="show"
-          @click="show = !show"
+          @click="() => { show = !show }"
         />
       </template>
     </UInput>

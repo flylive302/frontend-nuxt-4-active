@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applySentryEventPolicy } from '~/utils/sentry-event-policy';
+import { applySentryEventPolicy, type SentryEventLike } from '~/utils/sentry-event-policy';
 
 describe('applySentryEventPolicy', () => {
   describe('PII scrubbing', () => {
@@ -12,7 +12,7 @@ describe('applySentryEventPolicy', () => {
     });
 
     it('leaves an event with no user untouched', () => {
-      expect(applySentryEventPolicy({}).user).toBeUndefined();
+      expect(applySentryEventPolicy({} as SentryEventLike).user).toBeUndefined();
     });
   });
 
@@ -22,7 +22,7 @@ describe('applySentryEventPolicy', () => {
     // filename is content-hashed. The tag is what lets the stream filter them.
     it('tags a stale-bundle error from hint.originalException', () => {
       const event = applySentryEventPolicy(
-        {},
+        {} as SentryEventLike,
         { originalException: new Error(`Couldn't resolve component "default" at "/mall"`) },
       );
 
@@ -31,7 +31,7 @@ describe('applySentryEventPolicy', () => {
 
     it('tags the middleware-loader failure behind JAVASCRIPT-VUE-6G', () => {
       const event = applySentryEventPolicy(
-        {},
+        {} as SentryEventLike,
         { originalException: new Error("Cannot read properties of undefined (reading 'default')") },
       );
 
@@ -43,14 +43,14 @@ describe('applySentryEventPolicy', () => {
     it('falls back to the serialised exception message', () => {
       const event = applySentryEventPolicy({
         exception: { values: [{ value: 'Failed to fetch dynamically imported module: /_nuxt/a.js' }] },
-      });
+      } as SentryEventLike);
 
       expect(event.tags?.recovered).toBe('true');
     });
 
     it('does NOT tag an ordinary application error', () => {
       const event = applySentryEventPolicy(
-        {},
+        {} as SentryEventLike,
         { originalException: new Error('Cannot read properties of null (reading "id")') },
       );
 
@@ -59,7 +59,7 @@ describe('applySentryEventPolicy', () => {
 
     it('does not clobber pre-existing tags', () => {
       const event = applySentryEventPolicy(
-        { tags: { route: '/mall' } },
+        { tags: { route: '/mall' } } as SentryEventLike,
         { originalException: new Error('Unable to preload CSS for /_nuxt/a.css') },
       );
 

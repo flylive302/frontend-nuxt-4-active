@@ -118,7 +118,7 @@ onMounted(() => {
           color="primary"
           class="mt-4"
           icon="i-lucide-user-plus"
-          @click="showInviteDialog = true"
+          @click="() => { showInviteDialog = true }"
         >
           Send Invitation
         </UButton>
@@ -243,7 +243,7 @@ onMounted(() => {
             color="primary"
             class="w-full justify-center"
             icon="i-lucide-user-plus"
-            @click="showInviteDialog = true"
+            @click="() => { showInviteDialog = true }"
         >
           Invite A User to Agency
         </UButton>

@@ -19,12 +19,12 @@ vi.stubGlobal('computed', computed)
 function makeTransaction(id: string, overrides: Partial<Transaction> = {}): Transaction {
   return {
     id,
-    type: 'gift_sent',
+    type: 'gift_sent' as unknown as Transaction['type'],
     timestamp: '2026-07-15T10:00:00Z',
     title: 'Gift Sent',
     description: 'Sent a gift',
     status: 'completed',
-    my_role: 'sender',
+    my_role: 'sender' as unknown as Transaction['my_role'],
     amount: { value: 100, currency: 'coins', direction: 'debit' } as unknown as Transaction['amount'],
     my_balance: null,
     my_xp: null,

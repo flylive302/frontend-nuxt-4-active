@@ -81,7 +81,7 @@ function handleConfirm() {
             icon="i-heroicons-x-mark"
             size="sm"
             aria-label="Close"
-            @click="isOpen = false"
+            @click="() => { isOpen = false }"
           />
         </div>
 

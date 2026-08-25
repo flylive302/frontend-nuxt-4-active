@@ -105,7 +105,7 @@ watch(open, (isOpen) => {
                 :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
                 :padded="false"
-                @click="showPassword = !showPassword"
+                @click="() => { showPassword = !showPassword }"
               />
             </template>
           </UInput>
@@ -127,7 +127,7 @@ watch(open, (isOpen) => {
           variant="subtle"
           icon="i-lucide-x"
           class="w-full justify-center"
-          @click="open = false"
+          @click="() => { open = false }"
         >
           Cancel
         </UButton>

@@ -11,7 +11,8 @@
  * must default to `'mic'`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ref, shallowRef, computed } from 'vue'
+import { ref, shallowRef, computed, type Ref } from 'vue'
+import type { AudioSocket } from '../../app/types/room/audio'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('shallowRef', shallowRef)
@@ -78,7 +79,9 @@ describe('useMediasoupTransports — produce() appData.source reaches the audio:
     // them so each test starts from a clean transport-less state (mirrors
     // what leaveRoom()/cleanup() does in the real app).
     const { cleanup } = await import('../../app/composables/mediasoup/useMediasoupTransports')
-      .then(m => m.useMediasoupTransports(ref({ emit: vi.fn(), once: vi.fn(), off: vi.fn() }) as never))
+      .then(m => m.useMediasoupTransports(
+        ref({ emit: vi.fn(), once: vi.fn(), off: vi.fn() }) as unknown as Ref<AudioSocket | null>,
+      ))
     cleanup()
   })
 

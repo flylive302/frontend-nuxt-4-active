@@ -220,7 +220,7 @@ onMounted(async () => {
             <UButton
               variant="soft"
               color="neutral"
-              @click="showKickModal = false"
+              @click="() => { showKickModal = false }"
             >
               Cancel
             </UButton>

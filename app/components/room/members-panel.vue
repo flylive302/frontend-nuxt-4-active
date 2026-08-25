@@ -131,7 +131,7 @@ async function handleUnblock(userId: number) {
             :color="activeTab === tab.value ? 'primary' : 'neutral'"
             :variant="activeTab === tab.value ? 'solid' : 'soft'"
             :icon="tab.icon"
-            @click="activeTab = tab.value"
+            @click="() => { activeTab = tab.value }"
           >
             {{ tab.label }}
             <UBadge v-if="tab.badge" color="error" class="ml-1 font-bold px-1 py-0">{{ tab.badge }}</UBadge>
@@ -197,7 +197,7 @@ async function handleUnblock(userId: number) {
           variant="subtle"
           icon="i-lucide-x"
           class="justify-center mt-4 w-full"
-          @click="open = false"
+          @click="() => { open = false }"
         >
           Close
         </UButton>

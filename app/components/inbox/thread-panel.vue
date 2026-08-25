@@ -390,7 +390,7 @@ onBeforeUnmount(() => {
             block
             variant="ghost"
             color="neutral"
-            @click="showMessageMenu = false"
+            @click="() => { showMessageMenu = false }"
           >
             Cancel
           </UButton>
@@ -407,7 +407,7 @@ onBeforeUnmount(() => {
           <p class="text-sm font-medium">Block {{ thread?.participant.name }}?</p>
           <p class="text-xs text-muted">They won't be able to send you messages or find your profile.</p>
           <div class="flex gap-2">
-            <UButton class="flex-1" color="neutral" variant="outline" @click="showBlockConfirm = false">Cancel</UButton>
+            <UButton class="flex-1" color="neutral" variant="outline" @click="() => { showBlockConfirm = false }">Cancel</UButton>
             <UButton class="flex-1" color="error" @click="confirmBlock">Block</UButton>
           </div>
         </div>
@@ -435,7 +435,7 @@ onBeforeUnmount(() => {
           <p class="text-sm font-medium">Delete this conversation?</p>
           <p class="text-xs text-muted">Messages will be removed for you only. The other person will still see them.</p>
           <div class="flex gap-2">
-            <UButton class="flex-1" color="neutral" variant="outline" @click="showDeleteConfirm = false">Cancel</UButton>
+            <UButton class="flex-1" color="neutral" variant="outline" @click="() => { showDeleteConfirm = false }">Cancel</UButton>
             <UButton class="flex-1" color="error" @click="confirmDeleteChat">Delete</UButton>
           </div>
         </div>

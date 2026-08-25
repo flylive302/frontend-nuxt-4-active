@@ -326,7 +326,7 @@ onMounted(() => {
   // home-room-feed/15: also skipped while the payload is fresher than
   // `CACHE_TTL.HOME_ROOMS_PAYLOAD` — a cold load otherwise paid two identical
   // page-1 requests back to back on the app's most-hit endpoint.
-  if (!countryWasReset && shouldRefreshRoomsOnMount(roomsPayload.value, Date.now())) void refreshRooms()
+  if (!countryWasReset && shouldRefreshRoomsOnMount(roomsPayload.value ?? null, Date.now())) void refreshRooms()
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {

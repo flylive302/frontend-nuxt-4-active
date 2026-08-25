@@ -247,7 +247,7 @@ onMounted(() => {
             <UButton
               variant="ghost"
               color="neutral"
-              @click="showBlockModal = false"
+              @click="() => { showBlockModal = false }"
             >
               Cancel
             </UButton>

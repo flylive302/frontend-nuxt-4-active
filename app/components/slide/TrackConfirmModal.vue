@@ -63,7 +63,7 @@ watch(open, (isOpen) => {
           variant="subtle"
           icon="i-lucide-x"
           class="w-full justify-center"
-          @click="open = false"
+          @click="() => { open = false }"
         >
           Cancel
         </UButton>

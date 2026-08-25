@@ -61,7 +61,7 @@ onMounted(ensureAgencyContext)
       :variant="variant"
       :color="hasInvited ? 'success' : 'primary'"
       class="pl-1 pr-2 gap-1 backdrop-blur-xs"
-      @click="invite"
+      @click="() => { invite() }"
   >
     {{ hasInvited ? invitedLabel : label }}
   </UButton>

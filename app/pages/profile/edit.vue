@@ -474,7 +474,7 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
               size="lg"
               variant="subtle"
               color="error"
-              @click="showDeleteModal = true"
+              @click="() => { showDeleteModal = true }"
             >
               Delete Account
             </UButton>
@@ -499,7 +499,7 @@ async function handlePrivacyToggle(newValue: boolean): Promise<void> {
               color="neutral"
               variant="ghost"
               size="sm"
-              @click="showBlockList = false"
+              @click="() => { showBlockList = false }"
             />
             <div>
               <h3 class="text-sm font-semibold">Blocked Users</h3>

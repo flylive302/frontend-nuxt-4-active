@@ -111,7 +111,7 @@ describe('useDmComposer', () => {
       await vi.waitFor(() => expect(apiMock).toHaveBeenCalled())
 
       expect(store.appendMessage).toHaveBeenCalledTimes(1)
-      const inserted = store.appendMessage.mock.calls[0][0]
+      const inserted = store.appendMessage.mock.calls[0]![0]
       expect(inserted.uploadStatus).toBe('uploading')
       expect(inserted.kind).toBe('media')
 
@@ -147,7 +147,7 @@ describe('useDmComposer', () => {
 
       composer.pickImage('t1', makeFile())
       await vi.waitFor(() => expect(store.appendMessage).toHaveBeenCalled())
-      const tempId = store.appendMessage.mock.calls[0][0].id as string
+      const tempId = store.appendMessage.mock.calls[0]![0].id as string
 
       composer.cancelUpload(tempId)
 
@@ -188,7 +188,7 @@ describe('useDmComposer', () => {
 
       composer.pickImage('t1', makeFile())
       await vi.waitFor(() => expect(store.setMessageUploadState).toHaveBeenCalledWith(expect.any(String), { uploadStatus: 'failed' }))
-      const tempId = store.appendMessage.mock.calls[0][0].id as string
+      const tempId = store.appendMessage.mock.calls[0]![0].id as string
 
       uploadCompressed.mockResolvedValue({ url: 'https://ik.io/x.jpg', mimeType: 'image/jpeg' })
       composer.retryUpload(tempId)
@@ -214,7 +214,7 @@ describe('useDmComposer', () => {
 
       composer.pickImage('t1', makeFile())
       await vi.waitFor(() => expect(store.setMessageUploadState).toHaveBeenCalledWith(expect.any(String), { uploadStatus: 'failed' }))
-      const tempId = store.appendMessage.mock.calls[0][0].id as string
+      const tempId = store.appendMessage.mock.calls[0]![0].id as string
 
       composer.discardFailed(tempId)
 

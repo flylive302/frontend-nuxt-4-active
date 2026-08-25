@@ -196,7 +196,7 @@ function handleConfirm() {
               color="neutral"
               variant="soft"
               class="flex-1 justify-center"
-              @click="selectedUser = null"
+              @click="() => { selectedUser = null }"
             >
               Back to Search
             </UButton>

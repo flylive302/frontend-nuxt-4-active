@@ -97,7 +97,7 @@ watch(
           variant="subtle"
           icon="i-lucide-x"
           class="justify-center mt-4 w-full"
-          @click="open = false"
+          @click="() => { open = false }"
         >
           Close
         </UButton>

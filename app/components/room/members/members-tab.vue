@@ -97,7 +97,7 @@ function getMemberActions(member: RoomMember) {
       color="primary"
       variant="soft"
       class="w-full justify-center mb-2"
-      @click="showInviteModal = true"
+      @click="() => { showInviteModal = true }"
     >
       Invite User
     </UButton>

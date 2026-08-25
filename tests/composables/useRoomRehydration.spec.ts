@@ -69,7 +69,7 @@ describe('rehydrateFromRoute — the regression test for the silent ejection', (
     const handled = await rehydrateFromRoute(ROOM_ID)
 
     expect(handled).toBe(true)
-    expect(store.currentRoom?.id).toBe(ROOM_ID)
+    expect((store.currentRoom as Room | null)?.id).toBe(ROOM_ID)
   })
 
   it('does not rehydrate a room the user was never in (cold deep link)', async () => {

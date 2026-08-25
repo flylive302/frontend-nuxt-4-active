@@ -668,7 +668,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           size="md"
           color="warning"
           class="backdrop-blur-xs"
-          @click="showReportModal = true"
+          @click="() => { showReportModal = true }"
         />
       </div>
     </footer>

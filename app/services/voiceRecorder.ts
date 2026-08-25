@@ -39,8 +39,9 @@ export function pickSupportedVoiceMimeType(): string | null {
  * that as a toast and never enters the `recording` state.
  */
 export async function startVoiceRecording(onHardStop: (result: VoiceRecordingResult) => void): Promise<VoiceRecorderHandle> {
-  const mimeType = pickSupportedVoiceMimeType()
-  if (!mimeType) throw new Error('Voice recording is not supported on this device.')
+  const pickedMimeType = pickSupportedVoiceMimeType()
+  if (!pickedMimeType) throw new Error('Voice recording is not supported on this device.')
+  const mimeType: string = pickedMimeType
 
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
   const recorder = new MediaRecorder(stream, { mimeType })

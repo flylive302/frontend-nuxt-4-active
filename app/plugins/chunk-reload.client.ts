@@ -66,7 +66,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   // Route-component resolution failures never reach the two hooks above.
   // Filtered, so a genuine navigation error still propagates to the error page
   // instead of being masked by a reload loop.
-  nuxtApp.$router.onError((error) => {
+  const router = useRouter()
+  router.onError((error: unknown) => {
     if (!isStaleBundleError(error)) return
     reloadOnce('router-resolve', String(error))
   })

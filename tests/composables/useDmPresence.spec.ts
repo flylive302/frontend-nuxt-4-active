@@ -200,8 +200,8 @@ describe('useDmPresence', () => {
     useDmPresence({ stripUserIds })
     await vi.waitFor(() => expect(mockSocket.emit).toHaveBeenCalled())
 
-    const call = mockSocket.emit.mock.calls[0]
-    const subscribedIds: number[] = call[1].userIds
+    const call = mockSocket.emit.mock.calls[0]!
+    const subscribedIds: number[] = (call[1] as { userIds: number[] }).userIds
     expect(subscribedIds).toHaveLength(50)
     expect(subscribedIds.slice(0, 45)).toEqual(stripUserIds.value)
     expect(subscribedIds.slice(45)).toEqual([2000, 2001, 2002, 2003, 2004])

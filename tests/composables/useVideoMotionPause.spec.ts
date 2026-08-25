@@ -33,7 +33,12 @@ function fireScroll() {
   scrollCallback?.()
 }
 
-function makeVideo() {
+type MockVideo = HTMLVideoElement & {
+  pause: ReturnType<typeof vi.fn<() => void>>
+  play: ReturnType<typeof vi.fn<() => Promise<void>>>
+}
+
+function makeVideo(): MockVideo {
   let paused = true
   return {
     get paused() {
@@ -46,7 +51,7 @@ function makeVideo() {
       paused = false
       return Promise.resolve()
     }),
-  } as unknown as HTMLVideoElement
+  } as unknown as MockVideo
 }
 
 describe('useVideoMotionPause', () => {
