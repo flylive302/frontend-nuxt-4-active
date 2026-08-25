@@ -39,9 +39,11 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   const vapid_public_key = ref<string | null>()
   const vipLevels = ref<VipLevel[]>([])
   const featuredRooms = ref<FeaturedRoom[]>([]);
-  // JoyPlay games kill switch. Defaults FALSE so the button never renders before
-  // the server has said it may — the integration ships inert.
-  const gamesEnabled = ref(false);
+  // JoyPlay games kill switch. `null` = the server has never told us (fresh
+  // install, or persisted state written before this field was persisted) and
+  // forces a bootstrap refetch via `needsRefresh`. Consumers treat only `true`
+  // as enabled, so the button never renders before the server has said it may.
+  const gamesEnabled = ref<boolean | null>(null);
 
   /** Gift catalog (accumulates as user scrolls) */
   const giftCatalog = ref<Gift[]>([])
@@ -66,6 +68,9 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    */
   const needsRefresh = computed(() => {
     if (!lastBootstrapAt.value) return true
+    // Persisted timestamp from before a config field existed — the field is
+    // unknown, not "false"; refetch instead of trusting the TTL.
+    if (gamesEnabled.value === null) return true
     const STALE_TIME = 50 * 60 * 1000 // 50 minutes
     return Date.now() - lastBootstrapAt.value > STALE_TIME
   })
@@ -194,7 +199,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = null
     vipLevels.value = []
     featuredRooms.value = []
-    gamesEnabled.value = false
+    gamesEnabled.value = null
   }
 
   /**

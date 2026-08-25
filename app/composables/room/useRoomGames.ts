@@ -84,7 +84,7 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
    * is visible while the kill switch is off and every tap ends in an error.
    */
   const canPlay = computed<boolean>(
-    () => Boolean(authStore.user?.id) && bootstrapStore.gamesEnabled,
+    () => Boolean(authStore.user?.id) && bootstrapStore.gamesEnabled === true,
   );
 
   // ============================================
