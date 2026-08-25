@@ -115,7 +115,7 @@ describe('createHomeRoomsListFetcher', () => {
 
     const page = await fetcher({ page: 2 })
 
-    expect(fetchRooms).toHaveBeenCalledWith({ page: 2, country: 'US' })
+    expect(fetchRooms).toHaveBeenCalledWith({ page: 2, country: 'US', per_page: 15 })
     expect(page.data.every((r) => r.country === 'US')).toBe(true)
   })
 
@@ -141,7 +141,7 @@ describe('createHomeRoomsListFetcher', () => {
 
     await fetcher({ page: 2 })
 
-    expect(fetchRooms).toHaveBeenCalledWith({ page: 2 })
+    expect(fetchRooms).toHaveBeenCalledWith({ page: 2, per_page: 15 })
   })
 
   it('omits country on page 2 when no payload has resolved', async () => {
@@ -150,7 +150,7 @@ describe('createHomeRoomsListFetcher', () => {
 
     await fetcher({ page: 2 })
 
-    expect(fetchRooms).toHaveBeenCalledWith({ page: 2 })
+    expect(fetchRooms).toHaveBeenCalledWith({ page: 2, per_page: 15 })
   })
 
   // Page 2 returns the backend payload raw, so it carries the identical nested

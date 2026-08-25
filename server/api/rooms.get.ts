@@ -19,18 +19,22 @@ type CloudflareCacheStorage = CacheStorage & { default: Cache }
  * Falls back to direct Laravel call in dev (no caches. default available).
  */
 export default defineEventHandler(async (event) => {
-  const { page, country } = getQuery(event)
+  const { page, country, per_page: perPage } = getQuery(event)
   const pageNum = Number(page) || 1
   const countryStr = country ? String(country) : ''
+  // home-room-feed/10: forward the client's explicit page size (backend clamps
+  // 1–100). 0/absent/NaN → omit, letting the backend default decide as before.
+  const perPageNum = Number(perPage) || 0
 
   const config = useRuntimeConfig()
   const params: Record<string, string | number> = { page: pageNum }
   if (countryStr) params.country = countryStr
+  if (perPageNum) params.per_page = perPageNum
 
   // Cloudflare Cache API — persists across isolate restarts within the same DC
   const cfCaches = (globalThis as Record<string, unknown>).caches as CloudflareCacheStorage | undefined
   if (cfCaches) {
-    const cacheKey = new Request(`https://flylive-cache.internal/rooms/p${pageNum}/c${countryStr}`)
+    const cacheKey = new Request(`https://flylive-cache.internal/rooms/p${pageNum}/c${countryStr}/n${perPageNum}`)
     const hit = await cfCaches.default.match(cacheKey)
     if (hit) {
       return hit.json()

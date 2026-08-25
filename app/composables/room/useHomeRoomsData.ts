@@ -30,6 +30,7 @@
  * `useRoom().fetchRooms` — different endpoint, per-user and uncached. Both are
  * correct; they are not an inconsistency to reconcile.
  */
+import { HOME_ROOMS_PER_PAGE } from '~/constants/room'
 import type { RoomsResponse } from '~/types/room/room'
 import { ROOMS_RETRY_STATUS_CODES } from '~/utils/api/retry-policy'
 
@@ -41,7 +42,9 @@ export function useHomeRoomsData() {
    * @returns The room-list response for that country.
    */
   async function fetchCachedRooms(country: string): Promise<RoomsResponse> {
-    const params: Record<string, string | number> = { page: 1 }
+    // home-room-feed/10: `per_page` sent explicitly so the page size on the wire
+    // is the frontend's constant, not a guess at the backend default.
+    const params: Record<string, string | number> = { page: 1, per_page: HOME_ROOMS_PER_PAGE }
     if (country) {
       params.country = country
     }

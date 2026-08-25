@@ -42,6 +42,23 @@ export const ADMIN_ROSTER_PAGE_SIZE = 100;
 export const FRAME_ANIMATION_BUDGET = 15;
 
 // ============================================
+// Home Feed
+// ============================================
+
+/**
+ * Page size of the home rooms feed (home-room-feed/10).
+ *
+ * Sent explicitly as `per_page` on every home rooms request (page 1 via the
+ * cached BFF route, page 2+ via `useRoom().fetchRooms`), so the wire value is
+ * this one and not a coincidental match with `RoomFilterDTO`'s default.
+ *
+ * ⚠️ Do not retune casually: the carousel/grid split (`HOME_CAROUSEL_ROOM_COUNT`
+ * skimmed off page 1) and `evaluateHasMore`'s fallback arithmetic are tuned
+ * around 15. Backend clamps `per_page` to 1–100 (`ListRoomsRequest`).
+ */
+export const HOME_ROOMS_PER_PAGE = 15;
+
+// ============================================
 // Room Theme
 // ============================================
 

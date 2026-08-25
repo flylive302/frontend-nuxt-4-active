@@ -3,6 +3,7 @@ import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
+import { HOME_ROOMS_PER_PAGE } from '~/constants/room'
 import { roomLogoCardSrc } from '~/utils/imagekit'
 import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldRefreshRoomsOnMount, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
@@ -438,7 +439,7 @@ onMounted(() => {
           :key="loadedCountry || '__all__'"
           :fetcher="infiniteScrollFetcher"
           :initial-page="1"
-          :per-page="15"
+          :per-page="HOME_ROOMS_PER_PAGE"
         >
           <template #cell="{ cell }">
             <div role="listitem">

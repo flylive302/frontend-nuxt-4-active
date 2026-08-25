@@ -1,5 +1,6 @@
 import { CACHE_TTL } from '~/constants/cache'
 import { HOME_CAROUSEL_ROOM_COUNT } from '~/constants/carousel'
+import { HOME_ROOMS_PER_PAGE } from '~/constants/room'
 import type { RoomsResponse } from '~/types/room/room'
 import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 import type { BootstrapRoom } from '~/types/user/bootstrap'
@@ -77,7 +78,7 @@ interface HomeRoomsListDeps {
   /** The payload currently on screen, or `null` before the first one resolves. */
   payload: () => HomeRoomsPayload | null
   /** Transport for page 2 and beyond. */
-  fetchRooms: (params: { page: number; country?: string }) => Promise<RoomsResponse>
+  fetchRooms: (params: { page: number; country?: string; per_page?: number }) => Promise<RoomsResponse>
   /**
    * True while an earlier 429 is still being honoured (home-room-feed/12). When set,
    * page 2+ requests no-op with `RoomsRateLimitedError` instead of touching the
@@ -118,7 +119,12 @@ export function createHomeRoomsListFetcher(
       throw new RoomsRateLimitedError()
     }
 
-    const params: { page: number; country?: string } = { page }
+    // home-room-feed/10: page size is sent explicitly so the offset arithmetic
+    // is anchored to the frontend's constant, same as page 1's request.
+    const params: { page: number; country?: string; per_page: number } = {
+      page,
+      per_page: HOME_ROOMS_PER_PAGE,
+    }
     if (payload?.country) params.country = payload.country
 
     // Page 2+ carries the identical nested shape, so it needs the same

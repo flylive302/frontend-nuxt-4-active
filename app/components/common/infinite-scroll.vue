@@ -5,6 +5,7 @@ import { useInfiniteScroll } from '@vueuse/core'
 import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';
 import { evaluateHasMore, type InfiniteScrollPayload } from '~/utils/infinite-scroll-pagination';
 import { createLoadTracker } from '~/utils/infinite-scroll-load-tracker';
+import { excludeExistingItems } from '~/utils/infinite-scroll-dedupe';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
 // doesn't get linked as render-blocking CSS on routes that don't actually
@@ -151,8 +152,13 @@ async function loadNextPage(): Promise<void> {
 
     const newItems = Array.isArray(response) ? response : response.data
     if (newItems.length > 0) {
-      items.value.push(...newItems)
-      emit('loaded', { page: currentPage.value, items: newItems })
+      // home-room-feed/09: an id already on screen never renders twice (offset
+      // pagination over a moving ranking can hand the same room back).
+      const freshItems = excludeExistingItems(items.value, newItems)
+      if (freshItems.length > 0) {
+        items.value.push(...freshItems)
+        emit('loaded', { page: currentPage.value, items: freshItems })
+      }
     }
 
     const metaReference = { page: currentPage.value, perPage: perPageRef.value }
