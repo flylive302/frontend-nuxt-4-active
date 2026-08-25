@@ -4,6 +4,7 @@ import { defineAsyncComponent } from 'vue'
 import { useInfiniteScroll } from '@vueuse/core'
 import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';
 import { evaluateHasMore, type InfiniteScrollPayload } from '~/utils/infinite-scroll-pagination';
+import { createLoadTracker } from '~/utils/infinite-scroll-load-tracker';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
 // doesn't get linked as render-blocking CSS on routes that don't actually
@@ -110,7 +111,7 @@ function buildRows(source: InfiniteScrollItem[], columns: number): GridRow[] {
 const rows = computed(() => buildRows(items.value, columnCount.value))
 
 
-let abortController: AbortController | null = null
+const loadTracker = createLoadTracker()
 let infiniteScrollController: { reset: () => void } | null = null
 
 const { fetchPage: transportFetchPage } = useInfiniteScrollTransport()
@@ -131,8 +132,7 @@ async function loadNextPage(): Promise<void> {
   isLoading.value = true
   fetchError.value = null
 
-  abortController?.abort()
-  abortController = new AbortController()
+  const ticket = loadTracker.begin()
 
   const fetcher = props.fetcher ?? defaultFetcher
 
@@ -142,8 +142,12 @@ async function loadNextPage(): Promise<void> {
       page: currentPage.value,
       perPage: perPageRef.value,
       query: extraQueryRef.value,
-      signal: abortController.signal
+      signal: ticket.signal
     })
+
+    // A reset() while this fetch was in flight makes its result stale —
+    // even if the fetcher ignored the abort signal.
+    if (!ticket.isCurrent()) return
 
     const newItems = Array.isArray(response) ? response : response.data
     if (newItems.length > 0) {
@@ -155,20 +159,23 @@ async function loadNextPage(): Promise<void> {
     hasMore.value = evaluateHasMore(response, newItems, metaReference)
     currentPage.value += 1
   } catch (error) {
-    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+    if (ticket.isCurrent() && !(error instanceof DOMException && error.name === 'AbortError')) {
       hasMore.value = false
       fetchError.value = error
       emit('error', error)
     }
   } finally {
-    isLoading.value = false
+    // Only the current load may clear the flag — a stale request's late
+    // finally must not end the loading state of the request that replaced it.
+    if (ticket.isCurrent()) isLoading.value = false
   }
 }
 
 function reset(): void {
-  abortController?.abort()
+  loadTracker.invalidate()
   items.value = []
   currentPage.value = props.initialPage
+  isLoading.value = false
   hasMore.value = true
   fetchError.value = null
 }
@@ -179,7 +186,7 @@ async function reload(): Promise<void> {
   infiniteScrollController?.reset()
 }
 
-onBeforeUnmount(() => abortController?.abort())
+onBeforeUnmount(() => loadTracker.abort())
 
 if (import.meta.client) {
   watch([endpointRef, perPageRef, () => props.fetcher, () => props.initialPage], () => {
