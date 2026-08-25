@@ -31,6 +31,7 @@
  * correct; they are not an inconsistency to reconcile.
  */
 import type { RoomsResponse } from '~/types/room/room'
+import { ROOMS_RETRY_STATUS_CODES } from '~/utils/api/retry-policy'
 
 export function useHomeRoomsData() {
   /**
@@ -45,7 +46,13 @@ export function useHomeRoomsData() {
       params.country = country
     }
 
-    return await $fetch<RoomsResponse>('/api/rooms', { params })
+    // home-room-feed/12: this bare `$fetch` is a call site `useApi`'s `retry: 0`
+    // does not cover. `retryStatusCodes` without 429 keeps ofetch's default single
+    // retry for 5xx/408/etc. while never retrying a "slow down" response.
+    return await $fetch<RoomsResponse>('/api/rooms', {
+      params,
+      retryStatusCodes: [...ROOMS_RETRY_STATUS_CODES],
+    })
   }
 
   return { fetchCachedRooms }

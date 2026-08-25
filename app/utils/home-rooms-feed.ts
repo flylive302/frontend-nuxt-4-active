@@ -2,6 +2,22 @@ import { HOME_CAROUSEL_ROOM_COUNT } from '~/constants/carousel'
 import type { RoomsResponse } from '~/types/room/room'
 import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 import type { BootstrapRoom } from '~/types/user/bootstrap'
+import { getRetryAfterSeconds, isTooManyRequestsError } from '~/utils/api/retry-policy'
+
+/**
+ * Thrown by the grid's page fetcher when rooms are currently rate-limited, or when
+ * `fetchRooms` itself came back 429. Shaped like an `ofetch` error (`response.status`)
+ * so `isTooManyRequestsError`/`roomsFetchErrorMessage` classify it the same as a real
+ * network 429 — the grid never needs to tell the two apart.
+ */
+export class RoomsRateLimitedError extends Error {
+  response = { status: 429 as const }
+
+  constructor(message = 'Rooms requests are rate-limited') {
+    super(message)
+    this.name = 'RoomsRateLimitedError'
+  }
+}
 
 /**
  * A resolved home-rooms fetch, tagged with the country it was fetched for.
@@ -56,6 +72,14 @@ interface HomeRoomsListDeps {
   payload: () => HomeRoomsPayload | null
   /** Transport for page 2 and beyond. */
   fetchRooms: (params: { page: number; country?: string }) => Promise<RoomsResponse>
+  /**
+   * True while an earlier 429 is still being honoured (home-room-feed/12). When set,
+   * page 2+ requests no-op with `RoomsRateLimitedError` instead of touching the
+   * network — "block further rooms requests until it elapses."
+   */
+  isRateLimited?: () => boolean
+  /** Called when `fetchRooms` itself comes back 429, so the caller can record the wait. */
+  onRateLimited?: (retryAfterSeconds: number | null) => void
 }
 
 /**
@@ -82,14 +106,30 @@ export function createHomeRoomsListFetcher(
       }
     }
 
+    // home-room-feed/12: a 429 blocks further requests until `Retry-After`
+    // elapses — no-op rather than fire another request into the same limiter.
+    if (deps.isRateLimited?.()) {
+      throw new RoomsRateLimitedError()
+    }
+
     const params: { page: number; country?: string } = { page }
     if (payload?.country) params.country = payload.country
 
     // Page 2+ carries the identical nested shape, so it needs the same
     // normalization — normalizing page 1 alone makes the grid load page 2 and
     // then stop again.
-    const res = await deps.fetchRooms(params)
-    return { data: res.data, meta: toScrollMeta(res.meta) }
+    try {
+      const res = await deps.fetchRooms(params)
+      return { data: res.data, meta: toScrollMeta(res.meta) }
+    } catch (err) {
+      // home-room-feed/13: propagate rather than swallow, so `InfiniteScroll`'s
+      // existing `fetchError` branch fires instead of rendering a false "no
+      // results" page. home-room-feed/12: on a 429, also record the wait.
+      if (isTooManyRequestsError(err)) {
+        deps.onRateLimited?.(getRetryAfterSeconds(err))
+      }
+      throw err
+    }
   }
 }
 

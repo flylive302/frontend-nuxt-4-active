@@ -71,6 +71,12 @@ function getClient(baseURL: string | undefined) {
   _client = ofetch.create({
     baseURL,
     timeout: 10_000,
+    // home-room-feed/12: `ofetch` retries GETs once by default, and 429 is on its
+    // retry list — the exact status where retrying is wrong. `retry: 0` turns that
+    // layer off entirely, leaving `api()`'s own idempotent-only, 429-excluding retry
+    // below as the ONLY retry layer. Without this, a 5xx cost FOUR attempts (ofetch's
+    // one retry inside each of `api()`'s two `tryOnce()` calls); now it costs two.
+    retry: 0,
     onRequest({ options }: FetchContext) {
       const headers = new Headers(options.headers || {})
       const cookieToken = useCookie('sanctum_token')

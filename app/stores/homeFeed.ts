@@ -31,6 +31,15 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
    */
   const lastLoadedAt = ref<number | null>(null);
 
+  /**
+   * The ms-epoch timestamp rooms requests stay blocked until, set from a 429's
+   * `Retry-After` (home-room-feed/12). `null` = not rate-limited. Shared across
+   * the page-1 load and the grid's page 2+ fetcher so a 429 on either one blocks
+   * both — see `isRateLimitActive` / `remainingRateLimitSeconds` in
+   * `~/utils/api/retry-policy`.
+   */
+  const rateLimitedUntil = ref<number | null>(null);
+
   // ========================================
   // Setters
   // ========================================
@@ -52,13 +61,24 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
     selectedCountry.value = '';
   }
 
+  function setRateLimitedUntil(timestamp: number): void {
+    rateLimitedUntil.value = timestamp;
+  }
+
+  function clearRateLimit(): void {
+    rateLimitedUntil.value = null;
+  }
+
   return {
     selectedCountry,
     activeCountries,
     lastLoadedAt,
+    rateLimitedUntil,
     setCountry,
     setActiveCountries,
     resetToAll,
+    setRateLimitedUntil,
+    clearRateLimit,
   };
 }, {
   // Cookie rather than localStorage. This app is `ssr: false` today, so the two

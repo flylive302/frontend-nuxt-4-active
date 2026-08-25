@@ -6,6 +6,14 @@ import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/ca
 import { roomLogoCardSrc } from '~/utils/imagekit'
 import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
+import {
+  getRetryAfterSeconds,
+  isRateLimitActive,
+  isTooManyRequestsError,
+  rateLimitedUntilFromRetryAfter,
+  remainingRateLimitSeconds,
+  roomsFetchErrorMessage,
+} from '~/utils/api/retry-policy'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
 import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 
@@ -66,15 +74,24 @@ const roomsKey = computed(() => `home-rooms-${selectedCountry.value || 'all'}`)
 // `shouldReuseCachedRooms` for why every later resolution must hit the network.
 let hasPaintedRooms = false
 
-const { data: roomsPayload, status: roomsStatus, refresh: refreshRooms } = useAsyncData<HomeRoomsPayload>(
+const { data: roomsPayload, status: roomsStatus, error: roomsError, refresh: refreshRooms } = useAsyncData<HomeRoomsPayload>(
   roomsKey,
   async () => {
     // Tag the payload with the country it was fetched for — everything the grid
     // renders is then derived from this one object, so rows can never belong to
     // a different country than the label they're keyed by.
     const country = selectedCountry.value
-    const res = await fetchCachedRooms(country)
-    return { country, res }
+    try {
+      const res = await fetchCachedRooms(country)
+      return { country, res }
+    } catch (err) {
+      // home-room-feed/12: a page-1 429 blocks the grid's page 2+ fetcher too —
+      // both read the same store timestamp.
+      if (isTooManyRequestsError(err)) {
+        homeFeed.setRateLimitedUntil(rateLimitedUntilFromRetryAfter(getRetryAfterSeconds(err)))
+      }
+      throw err
+    }
   },
   {
     lazy: false,
@@ -155,7 +172,49 @@ watch(roomsPayload, (payload) => {
 const fetchRoomsList = createHomeRoomsListFetcher({
   payload: () => roomsPayload.value ?? null,
   fetchRooms,
+  isRateLimited: () => isRateLimitActive(homeFeed.rateLimitedUntil),
+  onRateLimited: (retryAfterSeconds) => {
+    homeFeed.setRateLimitedUntil(rateLimitedUntilFromRetryAfter(retryAfterSeconds))
+  },
 })
+
+// Ticks once a second only while a rate limit is active, so the "retrying in Ns"
+// copy counts down instead of freezing at the value it had when the 429 landed.
+const rateLimitTick = ref(Date.now())
+let rateLimitTimer: ReturnType<typeof setInterval> | undefined
+watch(
+  () => homeFeed.rateLimitedUntil,
+  (until) => {
+    clearInterval(rateLimitTimer)
+    rateLimitTimer = undefined
+    if (until === null) return
+    rateLimitTimer = setInterval(() => {
+      rateLimitTick.value = Date.now()
+      if (!isRateLimitActive(homeFeed.rateLimitedUntil)) {
+        clearInterval(rateLimitTimer)
+        rateLimitTimer = undefined
+      }
+    }, 1000)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => clearInterval(rateLimitTimer))
+
+/** Seconds left before the next rooms request is allowed, re-evaluated every tick. */
+const rateLimitSecondsRemaining = computed(() => {
+  void rateLimitTick.value
+  return remainingRateLimitSeconds(homeFeed.rateLimitedUntil)
+})
+
+/** Wording for the page-1 error state — distinct for a 429 vs. any other failure. */
+const roomsErrorMessage = computed(() =>
+  roomsFetchErrorMessage(roomsError.value, rateLimitSecondsRemaining.value)
+)
+
+/** Wording for the grid's error slot — same classifier, same store-backed countdown. */
+function gridErrorMessage(error: unknown): string {
+  return roomsFetchErrorMessage(error, rateLimitSecondsRemaining.value)
+}
 
 // Wrapper to satisfy InfiniteScroll prop type requirements and avoid template
 // casting. Only `data` needs the cast — BootstrapRoom can't satisfy
@@ -309,6 +368,20 @@ onMounted(() => {
       </div>
     </template>
 
+    <!-- home-room-feed/13: a failed page-1 load must look like a failure, not an
+         empty feed. Visually distinct from both the skeleton above and the
+         genuinely-empty grid below — real message, working retry. Neither the
+         carousel nor InfiniteScroll mount here, so a page-1 429/5xx can never be
+         mistaken for "no rooms". -->
+    <template v-else-if="roomsStatus === 'error'">
+      <div class="mx-3 mb-6 rounded-2xl bg-white/5 py-10 text-center">
+        <p class="text-md font-semibold text-rose-300">{{ roomsErrorMessage }}</p>
+        <UButton class="mt-4" color="neutral" variant="soft" @click="refreshRooms()">
+          Retry
+        </UButton>
+      </div>
+    </template>
+
     <template v-else>
       <div ref="roomRef">
         <ClientOnly v-if="carouselRooms.length > 0">
@@ -370,6 +443,11 @@ onMounted(() => {
                 class="h-56 w-full mb-4"
               />
             </div>
+          </template>
+          <!-- home-room-feed/12: page 2+ hitting a 429 propagates here instead of
+               a silent empty page — worded distinctly from a generic failure. -->
+          <template #error="{ error }">
+            {{ gridErrorMessage(error) }}
           </template>
         </InfiniteScroll>
       </div>

@@ -1,4 +1,5 @@
 import { getQuery } from 'h3'
+import { ROOMS_RETRY_STATUS_CODES } from '~/utils/api/retry-policy'
 
 // home-room-feed 06: dropped 60 → 30. The ranking is now a stored, recomputed
 // value (rooms.trending_score) rather than a static sort, and the refresh job
@@ -35,7 +36,13 @@ export default defineEventHandler(async (event) => {
       return hit.json()
     }
 
-    const data = await $fetch(`${config.public.apiBase}/rooms`, { params, timeout: 8000 })
+    // home-room-feed/12: exclude 429 from the retry set — this Worker-side call can
+    // otherwise silently retry a "slow down" against Laravel, invisible in DevTools.
+    const data = await $fetch(`${config.public.apiBase}/rooms`, {
+      params,
+      timeout: 8000,
+      retryStatusCodes: [...ROOMS_RETRY_STATUS_CODES],
+    })
 
     const putPromise = cfCaches.default.put(
       cacheKey,
@@ -56,5 +63,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // Fallback: direct fetch (local dev — no caches.default)
-  return await $fetch(`${config.public.apiBase}/rooms`, { params, timeout: 8000 })
+  return await $fetch(`${config.public.apiBase}/rooms`, {
+    params,
+    timeout: 8000,
+    retryStatusCodes: [...ROOMS_RETRY_STATUS_CODES],
+  })
 })

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { evaluateHasMore } from '../../app/utils/infinite-scroll-pagination'
 import {
+  RoomsRateLimitedError,
   createHomeRoomsListFetcher,
   isHomeCountrySettling,
   shouldResetStaleCountry,
@@ -8,6 +9,7 @@ import {
   toScrollMeta,
   type HomeRoomsPayload,
 } from '../../app/utils/home-rooms-feed'
+import { isTooManyRequestsError } from '../../app/utils/api/retry-policy'
 import { HOME_CAROUSEL_ROOM_COUNT } from '../../app/constants/carousel'
 import type { RoomsResponse } from '../../app/types/room/room'
 import type { BootstrapRoom } from '../../app/types/user/bootstrap'
@@ -173,6 +175,93 @@ describe('createHomeRoomsListFetcher', () => {
     const fetcher = createHomeRoomsListFetcher({ payload: () => null, fetchRooms: vi.fn() })
 
     expect((await fetcher({ page: 1 })).meta).toBeUndefined()
+  })
+})
+
+describe('createHomeRoomsListFetcher — 429 handling (home-room-feed/12, /13)', () => {
+  function fetchError429(retryAfter?: string) {
+    return {
+      response: {
+        status: 429,
+        headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? retryAfter ?? null : null) },
+      },
+    }
+  }
+
+  it('propagates a page 2+ 429 rather than returning an empty page', async () => {
+    const err = fetchError429('20')
+    const fetchRooms = vi.fn().mockRejectedValue(err)
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms })
+
+    await expect(fetcher({ page: 2 })).rejects.toBe(err)
+  })
+
+  it('propagates any page 2+ failure, not just 429', async () => {
+    const err = new Error('boom')
+    const fetchRooms = vi.fn().mockRejectedValue(err)
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms })
+
+    await expect(fetcher({ page: 2 })).rejects.toBe(err)
+  })
+
+  it('calls onRateLimited with the parsed Retry-After when fetchRooms 429s', async () => {
+    const fetchRooms = vi.fn().mockRejectedValue(fetchError429('45'))
+    const onRateLimited = vi.fn()
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms, onRateLimited })
+
+    await expect(fetcher({ page: 2 })).rejects.toBeDefined()
+
+    expect(onRateLimited).toHaveBeenCalledWith(45)
+  })
+
+  it('does not call onRateLimited for a non-429 failure', async () => {
+    const fetchRooms = vi.fn().mockRejectedValue(new Error('boom'))
+    const onRateLimited = vi.fn()
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms, onRateLimited })
+
+    await expect(fetcher({ page: 2 })).rejects.toBeDefined()
+
+    expect(onRateLimited).not.toHaveBeenCalled()
+  })
+
+  it('no-ops page 2+ while already rate-limited, without touching the network', async () => {
+    const fetchRooms = vi.fn()
+    const fetcher = createHomeRoomsListFetcher({
+      payload: () => US_PAYLOAD,
+      fetchRooms,
+      isRateLimited: () => true,
+    })
+
+    const err = await fetcher({ page: 2 }).catch((e) => e)
+
+    expect(err).toBeInstanceOf(RoomsRateLimitedError)
+    expect(isTooManyRequestsError(err)).toBe(true) // classifies the same as a real 429
+    expect(fetchRooms).not.toHaveBeenCalled()
+  })
+
+  it('proceeds normally once isRateLimited returns false again', async () => {
+    const fetchRooms = vi.fn().mockResolvedValue(response(rooms('US', 20, 400)))
+    const fetcher = createHomeRoomsListFetcher({
+      payload: () => US_PAYLOAD,
+      fetchRooms,
+      isRateLimited: () => false,
+    })
+
+    const page = await fetcher({ page: 2 })
+
+    expect(fetchRooms).toHaveBeenCalledOnce()
+    expect(page.data).toHaveLength(20)
+  })
+
+  it('never gates page 1 on isRateLimited — page 1 is served from the payload, not the network', async () => {
+    const isRateLimited = vi.fn().mockReturnValue(true)
+    const fetchRooms = vi.fn()
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms, isRateLimited })
+
+    const page = await fetcher({ page: 1 })
+
+    expect(page.data).toEqual(gridRowsOf(US_PAYLOAD))
+    expect(fetchRooms).not.toHaveBeenCalled()
   })
 })
 
