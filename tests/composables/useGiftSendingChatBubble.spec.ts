@@ -47,6 +47,7 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
   authStore.user = { id: 1, name: 'Ali', coins: '100000' } as never
 
   vi.stubGlobal('useGiftComboStore', () => comboStore)
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: false, giftBatch: false }))
   vi.stubGlobal('useGiftStore', () => giftStore)
   vi.stubGlobal('useAuthStore', () => authStore)
   vi.stubGlobal('useRoomSeatsStore', () => seatsStore)

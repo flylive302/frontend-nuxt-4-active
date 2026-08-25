@@ -38,13 +38,26 @@ export function useEconomyEvents() {
       latestBalance = null
       if (!payload) return
 
-      // Update balance on auth user (coins, diamonds, XP values)
-      authStore.updateBalance({
-        coins: payload.coins,
-        diamonds: payload.diamonds,
-        wealth_xp: payload.wealth_xp,
-        charm_xp: payload.charm_xp,
-      })
+      // gift-authority-tick-fanout ticket 13: a push carrying `seq` (i.e. the
+      // connection advertised `ackBalance`) goes through the sequence-guarded
+      // setter so an out-of-order push can never move the balance backwards.
+      // No `seq` ⇒ legacy path, unchanged.
+      if (payload.seq !== undefined) {
+        authStore.applyBalance({
+          coins: payload.coins,
+          diamonds: payload.diamonds,
+          wealth_xp: payload.wealth_xp,
+          charm_xp: payload.charm_xp,
+          seq: payload.seq,
+        })
+      } else {
+        authStore.updateBalance({
+          coins: payload.coins,
+          diamonds: payload.diamonds,
+          wealth_xp: payload.wealth_xp,
+          charm_xp: payload.charm_xp,
+        })
+      }
 
       // Update auth user XP — reactive consumers recompute automatically
       updateWealthXp(parseFloat(payload.wealth_xp))
@@ -55,6 +68,18 @@ export function useEconomyEvents() {
     })
 
     socket.on('balance.updated', (payload: BalanceUpdatedPayload) => {
+      // "Latest wins within a frame, but only if newer" (ticket 13): if a
+      // lower-`seq` payload lands after a higher-`seq` one inside the SAME
+      // frame, keep the higher one — otherwise the frame coalescer would
+      // hand the stale one to `applyBalance`, which drops it, losing the
+      // fresher value entirely instead of merely being a no-op.
+      if (
+        latestBalance?.seq !== undefined
+        && payload.seq !== undefined
+        && payload.seq <= latestBalance.seq
+      ) {
+        return
+      }
       latestBalance = payload
       applyBalance.schedule()
     })

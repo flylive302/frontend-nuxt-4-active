@@ -3,6 +3,7 @@ import type { Socket } from 'socket.io-client';
 import type { MinimalUser } from '../user/bootstrap';
 import type { MusicPlayerJoinState } from './audio-player';
 import type { SlidePlayPayload } from '../slide';
+import type { LuckyRoomResultPayload } from '../lucky';
 
 // Re-export mediasoup types for convenience
 export type RtpCapabilities = mediasoupTypes.RtpCapabilities;
@@ -399,6 +400,32 @@ export interface GiftSendAck {
    * the ack change (built, awaiting AWS cutover).
    */
   transaction_id?: string;
+
+  // ── ackBalance-only fields (ticket 12/13) ──────────────────────────────
+  // Present only when `server:capabilities.ackBalance` is true. Absent on
+  // legacy MSAB instances — every field below is optional so the existing
+  // `success` / `acceptedRecipientIds` / `error` / `transaction_id` shape
+  // stays byte-identical for capability-absent senders.
+
+  /** Mirrors `success` under the ackBalance contract; present together. */
+  ok?: boolean;
+  /** Same value as `transaction_id`, camelCase (ackBalance contract). */
+  transactionId?: string;
+  /**
+   * Spendable coin balance AFTER this ack, authoritative — the client must
+   * apply this through `authStore.applyBalance`, never compute it locally.
+   */
+  balance?: string;
+  /** Monotonic per-user ledger sequence — guards `applyBalance` against stale acks. */
+  seq?: number;
+  /**
+   * Refusal reason, ackBalance-only. One of
+   * `INSUFFICIENT | GIFT_NOT_SENDABLE | LUCKY_DISABLED | GIFT_UNKNOWN | MONEY_UNAVAILABLE`.
+   * Match against `GIFT_REFUSAL_TOAST_MESSAGES` in `~/constants/gift`.
+   */
+  code?: string;
+  /** Human-readable refusal reason (ackBalance-only) — not shown directly; `code` drives the toast copy. */
+  reason?: string;
 }
 
 export interface GiftReceivedEvent {
@@ -416,6 +443,35 @@ export interface GiftReceivedEvent {
    * Optional for backward compatibility with un-upgraded MSAB instances.
    */
   batchId?: string;
+}
+
+/**
+ * One merged tap-set inside a `gift:batch` tick (gift-authority-tick-fanout
+ * ticket 14). Same sender + gift + recipient set collapse into one item;
+ * `count` is how many taps were merged, `quantity` is the per-tap quantity.
+ * `transactionIds.length === count`.
+ */
+export interface GiftBatchItem {
+  senderId: number;
+  giftId: number;
+  recipientIds: number[];
+  quantity: number;
+  count: number;
+  transactionIds: string[];
+}
+
+/**
+ * Payload for `gift:batch` — one per room tick (~100ms), sent to the WHOLE
+ * room including the sender (a merged batch has no single "sender" to
+ * exclude). Clients must skip items whose `senderId` is themselves for the
+ * same rendering-of-own-tap purposes the legacy `gift:received` exclusion
+ * served. `lucky` entries carry the same shape as `lucky:room-result`.
+ */
+export interface GiftBatchEvent {
+  seq: number;
+  roomId: string;
+  items: GiftBatchItem[];
+  lucky: LuckyRoomResultPayload[];
 }
 
 export interface GiftErrorEvent {

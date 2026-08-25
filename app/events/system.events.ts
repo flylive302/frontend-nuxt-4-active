@@ -3,7 +3,7 @@
 // ========================================
 
 import type { Socket } from 'socket.io-client'
-import type { ConfigInvalidatePayload } from '~/types/room/socket-events'
+import type { ConfigInvalidatePayload, ServerCapabilitiesPayload } from '~/types/room/socket-events'
 import type { AssetInvalidatePayload } from '~/types/asset/asset'
 
 
@@ -14,6 +14,7 @@ import type { AssetInvalidatePayload } from '~/types/asset/asset'
 export function useSystemEvents() {
   const bootstrapStore = useBootstrapStore()
   const { invalidateAsset } = useBootstrapAssets()
+  const capabilitiesStore = useServerCapabilitiesStore()
 
   return function registerSystemEvents(socket: Socket): void {
     socket.on('config:invalidate', (payload: ConfigInvalidatePayload) => {
@@ -22,6 +23,17 @@ export function useSystemEvents() {
 
     socket.on('asset:invalidate', (payload: AssetInvalidatePayload) => {
       invalidateAsset(payload)
+    })
+
+    // gift-authority-tick-fanout ticket 13: re-emitted on every (re)connect —
+    // read once per connection, reset on disconnect so a capability never
+    // survives past the socket session that advertised it.
+    socket.on('server:capabilities', (payload: ServerCapabilitiesPayload) => {
+      capabilitiesStore.setCapabilities(payload)
+    })
+
+    socket.on('disconnect', () => {
+      capabilitiesStore.reset()
     })
   }
 }

@@ -17,6 +17,16 @@ export interface BalanceUpdatedPayload {
   diamonds: string
   wealth_xp: string
   charm_xp: string
+  /** Ledger version — legacy field, unrelated to `seq` (ticket 13). */
+  version?: number
+  /**
+   * Monotonic per-user ledger sequence, present only when the connection
+   * advertised `ackBalance` (see `server:capabilities`). When present, `coins`
+   * is already the spendable balance and this push must go through
+   * `authStore.applyBalance` so an out-of-order push can never move the
+   * balance backwards. Absent ⇒ legacy path (`authStore.updateBalance`).
+   */
+  seq?: number
 }
 
 /**
@@ -270,6 +280,16 @@ export interface ConfigInvalidatePayload {
   version?: string
 }
 
+/**
+ * server:capabilities - Fired once after connect, and re-emitted on every
+ * (re)connect (gift-authority-tick-fanout ticket 13). Absent/false capability
+ * ⇒ legacy behaviour must stay byte-identical.
+ */
+export interface ServerCapabilitiesPayload {
+  giftBatch: boolean
+  ackBalance: boolean
+}
+
 // ========================================
 // Mission Events (Recharge Activity)
 // ========================================
@@ -435,6 +455,7 @@ export interface ServerToClientEvents {
 
   // System
   'config:invalidate': (payload: ConfigInvalidatePayload) => void
+  'server:capabilities': (payload: ServerCapabilitiesPayload) => void
 
   // Mission (Recharge Activity)
   'mission.progress.updated': (payload: MissionProgressUpdatedPayload) => void

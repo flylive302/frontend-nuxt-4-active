@@ -12,6 +12,8 @@ import {
   GIFT_COMBO_COALESCE_MS,
   GIFT_COMBO_MAX_BURST_QUANTITY,
   GIFT_FAILURE_TOAST_COOLDOWN_MS,
+  GIFT_REFUSAL_TOAST_GENERIC,
+  GIFT_REFUSAL_TOAST_MESSAGES,
   GIFT_SEND_ERROR,
 } from '~/constants/gift';
 import { isLuckyCategory } from '~/utils/gift';
@@ -24,6 +26,7 @@ export function useGiftSending() {
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
   const seatsStore = useRoomSeatsStore();
+  const capabilitiesStore = useServerCapabilitiesStore();
   const { canAfford, canSend } = useGiftEligibility();
   const { sendGift: emitGift, isConnected } = useRoomAudio();
   const { triggerFly } = useLuckyFly();
@@ -154,11 +157,74 @@ export function useGiftSending() {
     const perRecipientCost = burst.gift.price * burst.totalQuantity;
 
     emitGift(burst.gift.id, burst.recipientIds, burst.totalQuantity, burst.batchId)
-      .then((ack) => reconcileBurstRefund(burst.batchId, perRecipientCost, burst.recipientIds, ack))
+      .then((ack) => reconcileSend(burst.batchId, perRecipientCost, burst.recipientIds, ack))
       .catch((err: unknown) => {
         log.warn('gift:send (combo burst) failed', err);
-        reconcileBurstRefund(burst.batchId, perRecipientCost, burst.recipientIds, null);
+        reconcileSend(burst.batchId, perRecipientCost, burst.recipientIds, null);
       });
+  }
+
+  /**
+   * REACT: dispatch to the ackBalance path or the legacy optimistic-refund
+   * path, whichever the connection advertised. Single choke point so every
+   * emit site (send/combo/luckyCombo) reconciles the same way.
+   */
+  function reconcileSend(
+    batchId: string,
+    perRecipientCost: number,
+    requestedRecipientIds: number[],
+    ack: GiftSendAck | null,
+  ): void {
+    if (capabilitiesStore.ackBalance) {
+      reconcileAckBalance(ack);
+      return;
+    }
+    reconcileBurstRefund(batchId, perRecipientCost, requestedRecipientIds, ack);
+  }
+
+  /**
+   * REACT (ackBalance path): the server is the sole source of the balance —
+   * no optimistic subtract happened, so there is nothing to refund locally.
+   * A success ack's `balance`/`seq` are applied through the sequence-guarded
+   * setter; a refusal applies its own (already-refunded) balance/seq the same
+   * way and maps `code` to a toast. A dropped emit (no ack) leaves the
+   * balance untouched — the next `balance.updated` push self-heals it.
+   */
+  function reconcileAckBalance(ack: GiftSendAck | null): void {
+    if (!ack) {
+      notifyRefusal(null);
+      return;
+    }
+
+    if (ack.balance !== undefined && ack.seq !== undefined) {
+      authStore.applyBalance({ coins: ack.balance, seq: ack.seq });
+    }
+
+    if (!ack.success) {
+      notifyRefusal(ack);
+    }
+  }
+
+  /**
+   * REACT: tell the sender why an ackBalance refusal happened. Throttled on
+   * the SAME cooldown as the legacy burst-rejection toast — a rejected combo
+   * still emits one refusal per tap, so without this a low-balance 100-tap
+   * combo would stack 100 identical toasts.
+   */
+  function notifyRefusal(ack: GiftSendAck | null): void {
+    const now = Date.now();
+    if (now - lastFailureToastAt < GIFT_FAILURE_TOAST_COOLDOWN_MS) return;
+    lastFailureToastAt = now;
+
+    const description = ack?.code
+      ? (GIFT_REFUSAL_TOAST_MESSAGES[ack.code] ?? GIFT_REFUSAL_TOAST_GENERIC)
+      : GIFT_REFUSAL_TOAST_GENERIC;
+
+    toast.add({
+      title: 'Gift not sent',
+      description,
+      color: 'error',
+    });
   }
 
   /**
@@ -190,7 +256,11 @@ export function useGiftSending() {
     ) {
       pendingBurst.totalQuantity += tapQuantity;
       pendingBurst.refundTotal += tapTotalCost;
-      comboStore.setPendingRefund(pendingBurst.batchId, pendingBurst.refundTotal);
+      // ackBalance: nothing was optimistically debited, so there is nothing
+      // to track for a local refund — the server's balance is authoritative.
+      if (!capabilitiesStore.ackBalance) {
+        comboStore.setPendingRefund(pendingBurst.batchId, pendingBurst.refundTotal);
+      }
       return;
     }
 
@@ -199,7 +269,9 @@ export function useGiftSending() {
     flushComboBurst();
 
     const batchId = newBatchId();
-    comboStore.setPendingRefund(batchId, tapTotalCost);
+    if (!capabilitiesStore.ackBalance) {
+      comboStore.setPendingRefund(batchId, tapTotalCost);
+    }
     pendingBurst = {
       key,
       gift,
@@ -377,12 +449,14 @@ export function useGiftSending() {
       const recipientIds = [...selectedRecipients];
       const perRecipientCost = selectedGift.price * selectedQuantity;
 
-      // Track amount for potential rollback, keyed to THIS batch (fixes the
-      // scalar last-write-wins bug when sends overlap).
-      comboStore.setPendingRefund(batchId, totalCost.value);
-
-      // Optimistic coin deduction
-      deductCoins(totalCost.value);
+      // With ackBalance, the server is the sole source of the balance — no
+      // optimistic subtract, no local refund tracking (ticket 13). Without
+      // it, track amount for potential rollback, keyed to THIS batch (fixes
+      // the scalar last-write-wins bug when sends overlap), and debit now.
+      if (!capabilitiesStore.ackBalance) {
+        comboStore.setPendingRefund(batchId, totalCost.value);
+        deductCoins(totalCost.value);
+      }
 
       // Single burst emit for every recipient. emitGift (useRoomGifts.sendGift)
       // owns the sender-side optimistic accumulation (room XP + seat gift value)
@@ -391,10 +465,10 @@ export function useGiftSending() {
       // REACT: reconcile the debit against the ack once it resolves — never
       // blocks this function's optimistic return.
       emitGift(selectedGift.id, recipientIds, selectedQuantity, batchId)
-        .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, recipientIds, ack))
+        .then((ack) => reconcileSend(batchId, perRecipientCost, recipientIds, ack))
         .catch((err: unknown) => {
           log.warn('gift:send failed', err);
-          reconcileBurstRefund(batchId, perRecipientCost, recipientIds, null);
+          reconcileSend(batchId, perRecipientCost, recipientIds, null);
         });
 
       // Start playback immediately (optimistic)
@@ -525,7 +599,11 @@ export function useGiftSending() {
 
     // Deduct coins for combo — PER TAP, optimistic, so the balance moves
     // instantly even though the network emit below may be coalesced.
-    deductCoins(comboCost);
+    // ackBalance: no optimistic subtract at all — the balance only ever moves
+    // via the server's applyBalance-guarded push/ack (ticket 13).
+    if (!capabilitiesStore.ackBalance) {
+      deductCoins(comboCost);
+    }
 
     // Queue (rather than immediately emit) this tap's `gift:send` — taps
     // landing within GIFT_COMBO_COALESCE_MS of each other merge into one
@@ -607,17 +685,19 @@ export function useGiftSending() {
 
     // EXECUTE: optimistic per-tap deduction, then this tap's own `gift:send`
     // emit — one draw per tap, never merged (see the function comment above).
-    deductCoins(comboCost);
-
+    // ackBalance: no optimistic subtract/tracking — see combo()'s comment.
     const batchId = newBatchId();
     const perRecipientCost = ctx.gift.price * ctx.quantity;
-    comboStore.setPendingRefund(batchId, comboCost);
+    if (!capabilitiesStore.ackBalance) {
+      deductCoins(comboCost);
+      comboStore.setPendingRefund(batchId, comboCost);
+    }
 
     emitGift(ctx.gift.id, validRecipients, ctx.quantity, batchId)
-      .then((ack) => reconcileBurstRefund(batchId, perRecipientCost, validRecipients, ack))
+      .then((ack) => reconcileSend(batchId, perRecipientCost, validRecipients, ack))
       .catch((err: unknown) => {
         log.warn('gift:send (lucky combo) failed', err);
-        reconcileBurstRefund(batchId, perRecipientCost, validRecipients, null);
+        reconcileSend(batchId, perRecipientCost, validRecipients, null);
       });
 
     for (const recipientId of validRecipients) {

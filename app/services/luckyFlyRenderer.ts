@@ -86,9 +86,17 @@ export class LuckyFlyRenderer {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  /** Queue a fly. Never rejects, never drops — pacing is handled in `tick`. */
-  enqueue(request: FlyRequest): void {
-    this.pending.push(request);
+  /**
+   * Queue a fly, or `count` identical flies (gift-authority-tick-fanout
+   * ticket 15 — a batch item folds N merged taps into one request). Never
+   * rejects, never drops, and introduces no new concurrency cap — every
+   * copy is paced through the same `pending`/`tick` stream as a single fly
+   * would be.
+   */
+  enqueue(request: FlyRequest, count = 1): void {
+    for (let i = 0; i < count; i++) {
+      this.pending.push(request);
+    }
     // Compress for the whole burst, sized by its peak backlog — recomputing
     // per remaining item would stretch the tail back out past the budget.
     this.burstInterval = Math.min(

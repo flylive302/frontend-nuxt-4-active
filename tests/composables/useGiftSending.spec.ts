@@ -6,7 +6,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, watch, toRef } from 'vue'
 import type { GiftSendAck } from '../../app/types/room/audio'
-import { GIFT_COMBO_COALESCE_MS, GIFT_FAILURE_TOAST_COOLDOWN_MS } from '../../app/constants/gift'
+import {
+  GIFT_COMBO_COALESCE_MS,
+  GIFT_FAILURE_TOAST_COOLDOWN_MS,
+  GIFT_REFUSAL_TOAST_GENERIC,
+  GIFT_REFUSAL_TOAST_MESSAGES,
+} from '../../app/constants/gift'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -33,7 +38,10 @@ vi.mock('../../app/composables/room/useRoomEventHandlers', () => ({
 
 const GIFT = { id: 9, price: 50, category: 'normal', thumbnail_url: 'x.png' } as never
 
-async function setup(sendGiftMock: ReturnType<typeof vi.fn>, options: { connected?: boolean } = {}) {
+async function setup(
+  sendGiftMock: ReturnType<typeof vi.fn>,
+  options: { connected?: boolean; ackBalance?: boolean } = {},
+) {
   const { useGiftComboStore } = await import('../../app/stores/giftCombo')
   const { useGiftStore } = await import('../../app/stores/gift')
   const { useAuthStore } = await import('../../app/stores/auth')
@@ -47,6 +55,7 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>, options: { connecte
   authStore.user = { id: 1, name: 'Sender', coins: '1000' } as never
 
   vi.stubGlobal('useGiftComboStore', () => comboStore)
+  vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: options.ackBalance ?? false, giftBatch: false }))
   vi.stubGlobal('useGiftStore', () => giftStore)
   vi.stubGlobal('useAuthStore', () => authStore)
   vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
@@ -524,6 +533,7 @@ describe('useGiftSending — combo tap coalescing', () => {
     authStore.user = { id: 1, name: 'Sender', coins: '1000' } as never
 
     vi.stubGlobal('useGiftComboStore', () => comboStore)
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: false, giftBatch: false }))
     vi.stubGlobal('useGiftStore', () => giftStore)
     vi.stubGlobal('useAuthStore', () => authStore)
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
@@ -781,5 +791,175 @@ describe('useGiftSending — connection gate', () => {
     expect(result).toBe(false)
     expect(sendGiftMock).not.toHaveBeenCalled()
     expect(authStore.user?.coins).toBe('1000')
+  })
+})
+
+/**
+ * ackBalance (gift-authority-tick-fanout ticket 13): the server is the sole
+ * source of the balance — no optimistic subtract on tap, no local refund
+ * add-back. The ack's `balance`/`seq` apply through `authStore.applyBalance`
+ * (sequence-guarded), and a refusal maps `code` to one of the constants'
+ * messages.
+ */
+describe('useGiftSending — ackBalance path', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('send() does NOT optimistically subtract — the balance only moves once the ack applies it', async () => {
+    let resolveAck!: (ack: GiftSendAck) => void
+    const sendGiftMock = vi.fn().mockImplementation(() => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }))
+    const { useGiftSending: sending, giftStore, authStore } = await setup(sendGiftMock, { ackBalance: true })
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2, 3])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    // No optimistic debit at all — balance is exactly what it started as.
+    expect(authStore.user?.coins).toBe('1000')
+
+    resolveAck({ success: true, ok: true, acceptedRecipientIds: [2, 3], balance: '900', seq: 1 } as GiftSendAck)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(authStore.user?.coins).toBe('900')
+  })
+
+  it('a refusal applies the refused balance/seq and shows the mapped toast — no local refund math', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, ok: false, code: 'INSUFFICIENT', reason: 'insufficient', balance: '1000', seq: 1 } as GiftSendAck,
+    )
+    const { useGiftSending: sending, giftStore, authStore, toastAdd } = await setup(sendGiftMock, { ackBalance: true })
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(authStore.user?.coins).toBe('1000') // unchanged — never subtracted, refusal balance re-applies the same number
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).title).toBe('Gift not sent')
+    expect(toastArg(0).description).toBe(GIFT_REFUSAL_TOAST_MESSAGES.INSUFFICIENT)
+  })
+
+  it('an unmapped refusal code falls back to the generic message', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, ok: false, code: 'SOMETHING_NEW', balance: '1000', seq: 1 } as GiftSendAck,
+    )
+    const { useGiftSending: sending, giftStore } = await setup(sendGiftMock, { ackBalance: true })
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(toastArg(0).description).toBe(GIFT_REFUSAL_TOAST_GENERIC)
+  })
+
+  it('one toast per distinct refusal code (cooldown advanced between taps)', async () => {
+    const codes = Object.keys(GIFT_REFUSAL_TOAST_MESSAGES)
+    let callIndex = 0
+    const sendGiftMock = vi.fn().mockImplementation(() => Promise.resolve(
+      { success: false, ok: false, code: codes[callIndex++], balance: '1000', seq: callIndex } as GiftSendAck,
+    ))
+    vi.useFakeTimers()
+    try {
+      const { useGiftSending: sending, giftStore, toastAdd } = await setup(sendGiftMock, { ackBalance: true })
+      giftStore.selectGift(GIFT)
+      giftStore.setSelectedRecipientIds([2])
+      giftStore.setQuantity(1)
+
+      for (let i = 0; i < codes.length; i++) {
+        await sending.send()
+        await Promise.resolve()
+        await Promise.resolve()
+        // Clear the refusal-toast throttle between taps so each code gets its
+        // own toast — the throttle itself is covered separately below.
+        vi.advanceTimersByTime(GIFT_FAILURE_TOAST_COOLDOWN_MS + 1)
+      }
+
+      expect(toastAdd).toHaveBeenCalledTimes(codes.length)
+      const descriptions = toastAdd.mock.calls.map((call) => (call[0] as { description: string }).description)
+      expect(descriptions).toEqual(codes.map((code) => GIFT_REFUSAL_TOAST_MESSAGES[code]))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a run of rejected combo taps against a low balance produces ONE refusal toast, not one per tap', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue(
+      { success: false, ok: false, code: 'INSUFFICIENT', balance: '5', seq: 1 } as GiftSendAck,
+    )
+    vi.useFakeTimers()
+    try {
+      const { useGiftSending: sending, comboStore, toastAdd } = await setup(sendGiftMock, { ackBalance: true })
+      const frozen = 1_700_000_000_000
+      vi.spyOn(Date, 'now').mockReturnValue(frozen)
+
+      comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+      for (let tap = 0; tap < 20; tap++) {
+        await sending.combo()
+      }
+      await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('combo counter and local on-tap render stay per-tap under ackBalance — no balance movement', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, ok: true, acceptedRecipientIds: [2], balance: '1000', seq: 1 } as GiftSendAck)
+    vi.useFakeTimers()
+    try {
+      const { useGiftSending: sending, comboStore, giftStore, authStore } = await setup(sendGiftMock, { ackBalance: true })
+
+      comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+      giftStore.resetCombo()
+
+      for (let tap = 0; tap < 5; tap++) {
+        await sending.combo()
+        await vi.advanceTimersByTimeAsync(50)
+      }
+
+      // Visual streak still moves once per tap...
+      expect(giftStore.comboCount).toBe(5)
+      // ...even though no coins were ever optimistically subtracted.
+      expect(authStore.user?.coins).toBe('1000')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('legacy path (capability absent) is untouched: optimistic subtract + refund-on-failure still happen', async () => {
+    // Same scenario as the plain (non-ackBalance) `send()` full-failure test —
+    // proves ackBalance:false takes the ORIGINAL code path, not a shared one.
+    let resolveAck!: (ack: GiftSendAck) => void
+    const sendGiftMock = vi.fn().mockImplementation(() => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }))
+    const { useGiftSending: sending, giftStore, authStore } = await setup(sendGiftMock, { ackBalance: false })
+
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+    expect(authStore.user?.coins).toBe('950') // optimistic debit still happens
+
+    resolveAck({ success: false })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(authStore.user?.coins).toBe('1000') // legacy full refund still happens
   })
 })

@@ -69,6 +69,7 @@ describe('setupRoomEventHandlers — seat reactions', () => {
     vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
     vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
     vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ giftBatch: false, ackBalance: false }))
     vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
   })
 
@@ -158,6 +159,7 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
     vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
     vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
     vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ giftBatch: false, ackBalance: false }))
     vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
   })
 
@@ -227,6 +229,7 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
     vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
     vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
     vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ giftBatch: false, ackBalance: false }))
   })
 
   async function setupEviction() {
@@ -328,6 +331,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
     vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
     vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
     vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ giftBatch: false, ackBalance: false }))
     vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
   })
 
@@ -413,5 +417,107 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
     })
 
     expect(roomStore.currentRoom?.daily_xp).toBe('100')
+  })
+})
+
+/**
+ * gift:error after acceptance, ackBalance path (gift-authority-tick-fanout
+ * ticket 13). With ackBalance the refund itself arrives via balance.updated —
+ * this handler must show a throttled toast WITHOUT touching the balance.
+ * Without the capability the legacy consumePendingRefund add-back is
+ * untouched (covered separately in useGiftSending.spec.ts's legacy tests and
+ * implicitly by every other describe block in this file, which all default
+ * the capability to false).
+ */
+describe('setupRoomEventHandlers — gift:error refund toast (ackBalance)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+
+    vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
+    vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
+    vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
+    vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
+    vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+  })
+
+  async function setup(ackBalance: boolean) {
+    const { setupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const { useAuthStore } = await import('../../app/stores/auth')
+    const { useRoomStore } = await import('../../app/stores/room')
+    const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+
+    const seatsStore = useRoomSeatsStore()
+    const participantsStore = useRoomParticipantsStore()
+    const authStore = useAuthStore()
+    const roomStore = useRoomStore()
+    const comboStore = useGiftComboStore()
+    authStore.user = { id: 1, coins: '500' } as never
+    comboStore.setPendingRefund('batch-1', 200)
+
+    vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
+    vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
+    vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useRoomStore', () => roomStore)
+    vi.stubGlobal('useGiftComboStore', () => comboStore)
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance, giftBatch: false }))
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
+
+    const socket = createMockSocket()
+    const toastAdd = vi.fn()
+    const toast = { add: toastAdd } as unknown as ReturnType<typeof useToast>
+    const actions = {
+      leaveRoom: vi.fn(),
+      stopAudio: vi.fn(),
+      consumeProducer: vi.fn(),
+      stopConsumer: vi.fn(),
+      acceptInvite: vi.fn(),
+      declineInvite: vi.fn(),
+      startAudio: vi.fn(),
+    }
+
+    setupRoomEventHandlers(socket as never, actions, toast)
+
+    return { socket, authStore, comboStore, toastAdd }
+  }
+
+  it('ackBalance: shows the refund toast and does NOT touch the balance', async () => {
+    const { socket, authStore, toastAdd } = await setup(true)
+
+    socket.handlers.get('gift:error')?.({ transactionId: 't1', code: 4001, reason: 'refunded', batchId: 'batch-1' })
+
+    expect(authStore.user?.coins).toBe('500') // unchanged — the push, not this handler, moves the balance
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Gift refunded' }))
+  })
+
+  it('ackBalance: a burst of gift:error events is throttled to one toast', async () => {
+    vi.useFakeTimers()
+    try {
+      const { socket, toastAdd } = await setup(true)
+      const frozen = 1_700_000_000_000
+      vi.spyOn(Date, 'now').mockReturnValue(frozen)
+
+      for (let i = 0; i < 10; i++) {
+        socket.handlers.get('gift:error')?.({ transactionId: `t${i}`, code: 4001, reason: 'refunded', batchId: 'batch-1' })
+      }
+
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('legacy (capability absent): the old consumePendingRefund add-back still runs, untouched', async () => {
+    const { socket, authStore, comboStore, toastAdd } = await setup(false)
+
+    socket.handlers.get('gift:error')?.({ transactionId: 't1', code: '4002', reason: 'insufficient_balance', batchId: 'batch-1' })
+
+    expect(authStore.user?.coins).toBe('700') // 500 + 200 tracked refund
+    expect(comboStore.consumePendingRefund('batch-1')).toBe(0) // already consumed
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Insufficient balance' }))
   })
 })

@@ -12,8 +12,9 @@ import { useLuckySessionStore } from '../../../app/stores/luckySession'
 import {
   setupLuckyEventHandlers,
   cleanupLuckyEventHandlers,
+  flushLuckyGiftWrites,
 } from '../../../app/composables/lucky/useLuckyGift'
-import type { LuckyNoDrawReason } from '../../../app/types/lucky'
+import type { LuckyNoDrawReason, LuckyRoomResultPayload } from '../../../app/types/lucky'
 
 // Stub the Nuxt auto-imports the store/composable rely on BEFORE any store is
 // instantiated (the store's setup runs `ref()` at creation time).
@@ -66,6 +67,10 @@ describe('useLuckyGift — no-draw notices + bust duration', () => {
       tier_name: 'T',
       gift_name: 'G',
     })
+    // Center cashback is a STORE WRITE now frame-coalesced (ticket 15) — flush
+    // synchronously so the test can assert against the same event's effect
+    // without waiting a real animation frame.
+    flushLuckyGiftWrites()
   }
 
   it.each([
@@ -153,6 +158,10 @@ describe('useLuckyGift — center cashback state (lucky-animation-ux)', () => {
       tier_name: 'T',
       gift_name: 'G',
     })
+    // Center cashback is a STORE WRITE now frame-coalesced (ticket 15) — flush
+    // synchronously so the test can assert against the same event's effect
+    // without waiting a real animation frame.
+    flushLuckyGiftWrites()
   }
 
   it('rapid wins overwrite the single visual — never a queue', () => {
@@ -204,5 +213,90 @@ describe('useLuckyGift — center cashback state (lucky-animation-ux)', () => {
     expect(store.centerCashback).toBeNull()
     vi.advanceTimersByTime(10_000) // orphaned timers must not resurrect state
     expect(store.centerCashback).toBeNull()
+  })
+})
+
+describe('useLuckyGift — lucky:room-result band writes, frame-coalesced (gift-authority-tick-fanout ticket 15)', () => {
+  let socket: ReturnType<typeof createMockSocket>
+  const addMessageMock = vi.fn()
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    store.$reset()
+    socket = createMockSocket()
+
+    vi.stubGlobal('useRoomAudioStore', () => ({ addMessage: addMessageMock, messages: [] }))
+    vi.stubGlobal('useRoomParticipantsStore', () => ({ participants: new Map([[2, { name: 'Ali' }], [3, { name: 'Sara' }]]) }))
+
+    cleanupLuckyEventHandlers(socket as never)
+    setupLuckyEventHandlers(socket as never)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  function win(senderId: number, coinsWon: number, overrides: Partial<LuckyRoomResultPayload> = {}): LuckyRoomResultPayload {
+    return { sender_id: senderId, gift_id: 11, gift_name: 'Lucky Coin', multiplier: 5, coins_won: coinsWon, tier_name: 'T', room_id: 1, has_slide: false, ...overrides }
+  }
+
+  function fireRoomResult(payload: LuckyRoomResultPayload): void {
+    socket.handlers.get('lucky:room-result')!(payload as never)
+  }
+
+  it('the chat bubble fires immediately per win — never coalesced or dropped, even before a flush', () => {
+    store.upsertBand({ senderId: 2, senderName: 'Ali', senderAvatar: null, giftName: 'Lucky Coin', recipientName: null, recipientCount: 1, quantity: 0, coinsWon: 0, slot: 0, phase: 'visible', lastActivityAt: Date.now() })
+
+    fireRoomResult(win(2, 100))
+    fireRoomResult(win(2, 200))
+    fireRoomResult(win(2, 300))
+
+    // Three distinct wins → three distinct chat bubbles, with NO flush yet.
+    expect(addMessageMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('list-merge: multiple wins for the SAME sender within one frame sum into one flushed store write', () => {
+    store.upsertBand({ senderId: 2, senderName: 'Ali', senderAvatar: null, giftName: 'Lucky Coin', recipientName: null, recipientCount: 1, quantity: 0, coinsWon: 0, slot: 0, phase: 'visible', lastActivityAt: Date.now() })
+
+    fireRoomResult(win(2, 100))
+    fireRoomResult(win(2, 200))
+    fireRoomResult(win(2, 300))
+    // Not flushed yet — the store write is deferred to the next frame.
+    expect(store.senderBands.get(2)?.coinsWon).toBe(0)
+
+    flushLuckyGiftWrites()
+    expect(store.senderBands.get(2)?.coinsWon).toBe(600)
+  })
+
+  it('list-merge: wins for DIFFERENT senders within one frame each apply independently', () => {
+    store.upsertBand({ senderId: 2, senderName: 'Ali', senderAvatar: null, giftName: 'Lucky Coin', recipientName: null, recipientCount: 1, quantity: 0, coinsWon: 0, slot: 0, phase: 'visible', lastActivityAt: Date.now() })
+    store.upsertBand({ senderId: 3, senderName: 'Sara', senderAvatar: null, giftName: 'Lucky Coin', recipientName: null, recipientCount: 1, quantity: 0, coinsWon: 0, slot: 1, phase: 'visible', lastActivityAt: Date.now() })
+
+    fireRoomResult(win(2, 100))
+    fireRoomResult(win(3, 500))
+    flushLuckyGiftWrites()
+
+    expect(store.senderBands.get(2)?.coinsWon).toBe(100)
+    expect(store.senderBands.get(3)?.coinsWon).toBe(500)
+  })
+
+  it('a win for a sender with no live band is a no-op store write (chat bubble still fires)', () => {
+    fireRoomResult(win(99, 100))
+    flushLuckyGiftWrites()
+
+    expect(store.senderBands.has(99)).toBe(false)
+    expect(addMessageMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('cleanup drops any pending (unflushed) coalesced win instead of applying it later', () => {
+    store.upsertBand({ senderId: 2, senderName: 'Ali', senderAvatar: null, giftName: 'Lucky Coin', recipientName: null, recipientCount: 1, quantity: 0, coinsWon: 0, slot: 0, phase: 'visible', lastActivityAt: Date.now() })
+
+    fireRoomResult(win(2, 100))
+    cleanupLuckyEventHandlers(socket as never)
+    flushLuckyGiftWrites() // no-op: cleanup cleared the pending delta and reset the store
+
+    expect(store.senderBands.has(2)).toBe(false)
   })
 })

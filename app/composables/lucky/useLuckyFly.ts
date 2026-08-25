@@ -70,8 +70,12 @@ export function useLuckyFly() {
    * @param thumbnailUrl - CDN URL of the gift thumbnail
    * @param senderId - User ID of the sender (start position)
    * @param recipientId - User ID of the recipient (end position)
+   * @param count - Number of identical flies to queue (gift-authority-tick-fanout
+   *   ticket 15 — a batch item's merged tap count). Defaults to 1 for the
+   *   legacy per-tap call sites. The renderer expands these inside its own
+   *   existing stream pacing — nothing is capped or dropped.
    */
-  function triggerFly(thumbnailUrl: string, senderId: number, recipientId: number): void {
+  function triggerFly(thumbnailUrl: string, senderId: number, recipientId: number, count = 1): void {
     // GATE: Gift Mute preference suppresses the fly visual on this device only —
     // the lucky send/win itself (balances, session state) is already booked.
     if (useFxPreferencesStore().muteGiftAnimations) return;
@@ -86,7 +90,7 @@ export function useLuckyFly() {
         center: getScreenCenter(),
         end: resolveSeatPosition(recipientId, now),
       },
-    });
+    }, count);
     onEnqueue?.();
   }
 

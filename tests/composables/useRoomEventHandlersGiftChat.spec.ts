@@ -63,6 +63,7 @@ describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
     vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
     vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: false, giftBatch: false }))
     vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
     vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
   })

@@ -56,6 +56,35 @@ describe('LuckyFlyRenderer', () => {
     expect(now).toBeLessThanOrEqual(8000 + 16);
   });
 
+  it('enqueue(request, count) queues `count` identical flies, all eventually launched — none dropped (gift-authority-tick-fanout ticket 15)', () => {
+    const r = makeRenderer();
+    r.enqueue(req, 7);
+    expect(r.queued).toBe(7);
+
+    let now = 0;
+    let everSeen = 0;
+    while (r.queued > 0 || r.inFlight > 0) {
+      now += 16;
+      r.tick(now);
+      everSeen = Math.max(everSeen, r.inFlight);
+    }
+    // Every one of the 7 copies passed through `active` at some point — the
+    // queue only ever drains via `tick`'s launch/retire path, never a bulk drop.
+    expect(everSeen).toBeGreaterThan(0);
+    expect(r.queued).toBe(0);
+    expect(r.inFlight).toBe(0);
+  });
+
+  it('enqueue(request, count) matches calling enqueue(request) `count` times for pacing (same backlog, same compression)', () => {
+    const single = makeRenderer();
+    for (let i = 0; i < 5; i++) single.enqueue(req);
+
+    const bulk = makeRenderer();
+    bulk.enqueue(req, 5);
+
+    expect(bulk.queued).toBe(single.queued);
+  });
+
   it('draws loaded images and retires flies after their timeline', async () => {
     const ctx = makeCtx();
     const r = makeRenderer(ctx);

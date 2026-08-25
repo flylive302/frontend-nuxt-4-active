@@ -31,6 +31,7 @@ import type { SvgaPlugin } from '~/types/asset/svga';
 import { LUCKY_ANIMATION } from '~/constants/lucky-animation';
 import { CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room';
 import { resolveCashbackTier, resolveCashbackSvgaUrl } from '~/utils/lucky-cashback';
+import { createFrameCoalescer } from '~/utils/frame-batcher';
 import { createLogger } from '~/utils/logger';
 
 const logger = createLogger('[LuckyGift]');
@@ -99,6 +100,48 @@ function clearBandTimer(senderId: number): void {
     clearTimeout(handle);
     bandTimers.delete(senderId);
   }
+}
+
+// ============================================
+// Frame Coalescer (gift-authority-tick-fanout ticket 15)
+// ============================================
+//
+// A lucky combo (and now a `gift:batch` tick's `lucky[]` fold) can land
+// dozens of `lucky:result`/`lucky:room-result` events between two frames.
+// The visible outcomes (chat bubbles, fly animations) must never be
+// coalesced — every win still announces — but the STORE WRITES they drive
+// (center cashback, sender band coin totals) are folded into one write per
+// frame, exactly like `useRoomXpAccumulator` does for gift XP.
+//
+// Center cashback: latest wins (an overwrite, not a queue — matches
+// `showCenterCashback`'s own "most-recent-wins" contract).
+// Sender bands: list-merge — every sender's coin delta accumulates
+// independently, and is applied against the FRESH store value at flush time
+// (never a stale read), so multiple wins for the same or different senders
+// within one frame all land correctly with a single write each.
+
+/** Pending center-cashback overwrite for the next flush, or none. */
+let pendingCashback: { multiplier: number; coinsWon: number } | null = null;
+
+/** Pending coin deltas per sender for the next flush (list-merge). */
+const pendingBandDeltas = new Map<number, number>();
+
+const luckyWriteCoalescer = createFrameCoalescer(flushLuckyWrites);
+
+function flushLuckyWrites(): void {
+  if (pendingCashback) {
+    showCenterCashback(pendingCashback.multiplier, pendingCashback.coinsWon);
+    pendingCashback = null;
+  }
+  for (const [senderId, coinsWonDelta] of pendingBandDeltas) {
+    applyBandWinDelta(senderId, coinsWonDelta);
+  }
+  pendingBandDeltas.clear();
+}
+
+/** Apply anything pending right now (tests, room leave). */
+export function flushLuckyGiftWrites(): void {
+  luckyWriteCoalescer.flushNow();
 }
 
 // ============================================
@@ -248,6 +291,7 @@ export function recordLuckyGiftActivity(activity: {
   giftName: string;
   recipientName: string | null;
   recipientCount: number;
+  /** Already folded (per-tap quantity × merged tap count) by the caller. */
   quantity: number;
 }): void {
   const store = _store;
@@ -295,6 +339,12 @@ export function recordLuckyGiftTap(params: {
   giftName: string;
   recipientIds: number[];
   quantity: number;
+  /**
+   * Merged tap count (gift-authority-tick-fanout ticket 15 — a `gift:batch`
+   * item folds `count` taps into one call). Defaults to 1 for the legacy
+   * per-tap `gift:received` call site.
+   */
+  count?: number;
 }): void {
   const recipientName = params.recipientIds.length === 1
     ? resolveParticipantName(params.recipientIds[0]!)
@@ -307,23 +357,29 @@ export function recordLuckyGiftTap(params: {
     giftName: params.giftName,
     recipientName,
     recipientCount: params.recipientIds.length,
-    quantity: params.quantity,
+    quantity: params.quantity * (params.count ?? 1),
   });
 }
 
-/** Accumulate a WIN onto the sender's band (wins only — losses never appear) */
-function recordLuckyWin(data: LuckyRoomResultPayload): void {
+/**
+ * Accumulate a WIN delta onto the sender's band (wins only — losses never
+ * appear). Called from `flushLuckyWrites`, once per sender per frame, with
+ * `coinsWonDelta` already summed across every win queued for that sender
+ * this frame — the store read happens HERE, at flush time, so it is always
+ * against the fresh value even when multiple wins land in one frame.
+ */
+function applyBandWinDelta(senderId: number, coinsWonDelta: number): void {
   const store = _store;
   if (!store) return;
 
-  const existing = store.senderBands.get(data.sender_id);
+  const existing = store.senderBands.get(senderId);
   if (existing) {
-    store.patchBand(data.sender_id, {
-      coinsWon: existing.coinsWon + data.coins_won,
+    store.patchBand(senderId, {
+      coinsWon: existing.coinsWon + coinsWonDelta,
       phase: 'visible',
       lastActivityAt: Date.now(),
     });
-    armBandTimer(data.sender_id);
+    armBandTimer(senderId);
   }
   // No band → the tap that produced this win predates us joining the room, or
   // its band already expired; the chat bubble still records the win.
@@ -365,7 +421,9 @@ function formatWinMultiplier(multiplier: number): string {
 /** Sender-private result → the sender's own instant center cashback */
 function handleLuckyResult(data: LuckyDrawResult): void {
   if (!(data.multiplier > 0)) return;
-  showCenterCashback(data.multiplier, data.coins_won);
+  // Store write only — frame-coalesced (latest wins), see luckyWriteCoalescer.
+  pendingCashback = { multiplier: data.multiplier, coinsWon: data.coins_won };
+  luckyWriteCoalescer.schedule();
 }
 
 /** Display name from the live participants map — null-safe outside Nuxt/room */
@@ -377,13 +435,23 @@ function resolveParticipantName(userId: number): string | null {
   }
 }
 
-/** Room-scoped win → band accumulation + small-win chat bubble (all clients) */
-function handleLuckyRoomResult(data: LuckyRoomResultPayload): void {
+/**
+ * Room-scoped win → band accumulation + small-win chat bubble (all clients).
+ * Exported (gift-authority-tick-fanout ticket 15) so `useRoomEventHandlers`
+ * can fold a `gift:batch` tick's `lucky[]` entries through the SAME handler
+ * `lucky:room-result` uses — one call per entry, store writes coalesced.
+ */
+export function handleLuckyRoomResult(data: LuckyRoomResultPayload): void {
   if (!(data.multiplier > 0)) return;
 
   const senderName = resolveParticipantName(data.sender_id) ?? 'A player';
 
-  recordLuckyWin(data);
+  // Chat bubble fires immediately, per event — lucky wins are never
+  // coalesced or dropped. Only the band's coin-total STORE WRITE is deferred
+  // to the next frame, summed with any other win(s) for this sender queued
+  // in the meantime (list-merge — see luckyWriteCoalescer).
+  pendingBandDeltas.set(data.sender_id, (pendingBandDeltas.get(data.sender_id) ?? 0) + data.coins_won);
+  luckyWriteCoalescer.schedule();
 
   if (!data.has_slide) {
     synthesizeSmallWinChatMessage(data, senderName);
@@ -463,6 +531,10 @@ export function cleanupLuckyEventHandlers(socket: AudioSocket): void {
   bandTimers.clear();
   for (const handle of floaterTimers) clearTimeout(handle);
   floaterTimers.clear();
+
+  luckyWriteCoalescer.cancel();
+  pendingCashback = null;
+  pendingBandDeltas.clear();
 
   _store?.$reset();
 }

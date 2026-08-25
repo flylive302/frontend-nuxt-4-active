@@ -118,3 +118,35 @@ export const GIFT_COMBO_COALESCE_MS = 600;
  * `Invalid payload` instead of just being split into two emits.
  */
 export const GIFT_COMBO_MAX_BURST_QUANTITY = 9999;
+
+/**
+ * `gift:send` ack REFUSAL messages under the `ackBalance` contract
+ * (gift-authority-tick-fanout ticket 13). Keyed by `GiftSendAck.code` — one
+ * message per code, plus `GIFT_REFUSAL_TOAST_GENERIC` for anything unmapped.
+ * Reuses `GIFT_FAILURE_TOAST_COOLDOWN_MS` for throttling (a rejected combo
+ * still emits one refusal per tap).
+ */
+export const GIFT_REFUSAL_TOAST_MESSAGES: Record<string, string> = {
+  INSUFFICIENT: 'Not enough coins for this gift.',
+  GIFT_NOT_SENDABLE: 'You do not meet the level or VIP requirement for this gift.',
+  LUCKY_DISABLED: 'Lucky gifts are turned off right now.',
+  GIFT_UNKNOWN: 'This gift is no longer available.',
+  MONEY_UNAVAILABLE: 'The server is busy — try again in a moment.',
+};
+
+/** Fallback refusal message for an unmapped/missing `code`. */
+export const GIFT_REFUSAL_TOAST_GENERIC = 'Gift not sent. Please try again.';
+
+/**
+ * `gift:error` after acceptance (ackBalance-only, ticket 13): the refund
+ * itself arrives via `balance.updated` — this toast only announces it, it
+ * never touches the balance directly.
+ */
+export const GIFT_REFUND_TOAST_MESSAGE = 'Some coins from that gift were refunded.';
+
+/**
+ * Minimum gap between two refund toasts, in milliseconds. Separate timer from
+ * `GIFT_FAILURE_TOAST_COOLDOWN_MS` — a refusal and a post-acceptance refund
+ * are different events and each gets its own throttle.
+ */
+export const GIFT_REFUND_TOAST_COOLDOWN_MS = 3000;

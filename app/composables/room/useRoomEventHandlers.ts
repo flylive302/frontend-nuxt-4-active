@@ -15,6 +15,7 @@ import type {
   ProducerSource,
   ChatMessageEvent,
   GiftReceivedEvent,
+  GiftBatchEvent,
   GiftErrorEvent,
   GiftPrepareEvent,
   ActiveSpeakerEvent,
@@ -28,7 +29,7 @@ import type {
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { useRoomXpAccumulator } from './useRoomXpAccumulator';
-import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap } from '../lucky/useLuckyGift';
+import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap, handleLuckyRoomResult } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { resolveSvgaPlugin } from '../gift/useSvgaPlugin';
@@ -36,7 +37,7 @@ import { propToEntryAnimationGift } from '~/utils/prop';
 import { isLuckyCategory } from '~/utils/gift';
 import { createLogger } from '~/utils/logger';
 import { SPEAKER_ACTIVE_TTL_MS, CHAT_MESSAGE_TYPE_GIFT } from '~/constants/room';
-import { COMBO_BUTTON_TIMEOUT_MS } from '~/constants/gift';
+import { COMBO_BUTTON_TIMEOUT_MS, GIFT_REFUND_TOAST_COOLDOWN_MS, GIFT_REFUND_TOAST_MESSAGE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
 import type { Gift } from '~/types/gift/gift';
 
 const log = createLogger('[RoomEvents]');
@@ -61,6 +62,37 @@ function hasSeenGiftLeg(batchId: string, recipientId: number): boolean {
     seenGiftLegs.delete(seenGiftLegs.values().next().value!);
   }
   return false;
+}
+
+/**
+ * `gift:batch` transaction ids already processed (gift-authority-tick-fanout
+ * ticket 15). Guards against a re-delivered/duplicate tick (reconnect replay)
+ * double-booking XP/chat/playback — the merge key server-side already
+ * guarantees one item per (sender, gift, recipient set) per tick, so this is
+ * a pure safety net, not the primary legacy/batch overlap guard.
+ *
+ * De-dup decision for the legacy+batch rollout overlap (`GIFT_LEGACY_SHAPE`
+ * on together with the tick): legacy `gift:received` carries NO transaction
+ * id (only the `gift:send` ack does), so a transaction-id dedup against
+ * legacy is not possible. Instead, once this connection's `server:capabilities`
+ * says `giftBatch` is true, `gift:batch` becomes this client's SOLE source of
+ * truth for gift XP/chat/playback/lucky taps — the `gift:received` handler
+ * below short-circuits entirely while the capability holds. That is a
+ * deterministic, connection-scoped choice: exactly one of the two shapes is
+ * ever applied, so an overlap during rollout can never double count.
+ */
+const seenGiftBatchTxIds = new Set<string>();
+const SEEN_GIFT_BATCH_TX_IDS_CAP = 2000;
+
+function markGiftBatchTxIdsSeen(transactionIds: string[]): boolean {
+  const allSeen = transactionIds.length > 0 && transactionIds.every((id) => seenGiftBatchTxIds.has(id));
+  for (const id of transactionIds) {
+    seenGiftBatchTxIds.add(id);
+    if (seenGiftBatchTxIds.size > SEEN_GIFT_BATCH_TX_IDS_CAP) {
+      seenGiftBatchTxIds.delete(seenGiftBatchTxIds.values().next().value!);
+    }
+  }
+  return allSeen;
 }
 
 /**
@@ -256,6 +288,7 @@ const ROOM_EVENT_NAMES = [
   'seat:reaction',
   'chat:message',
   'gift:received',
+  'gift:batch',
   'gift:error',
   'gift:prepare',
   'lucky:result',
@@ -306,6 +339,12 @@ export function setupRoomEventHandlers(
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
+  const capabilitiesStore = useServerCapabilitiesStore();
+
+  // Throttle for the ackBalance "gift refunded" toast (ticket 13) — separate
+  // timer from the legacy burst-rejection cooldown; scoped to this room
+  // session like the other per-call state above.
+  let lastRefundToastAt = 0;
 
   // Pre-resolve composables once (avoids calling inject() inside socket callbacks)
   const { getGiftById } = useGiftData();
@@ -606,6 +645,16 @@ export function setupRoomEventHandlers(
   // un-upgraded MSAB (or the N legacy singular siblings of a burst) carry the
   // singular `recipientId`. Normalize to an array up front.
   socket.on('gift:received', (event: GiftReceivedEvent) => {
+    // GATE (gift-authority-tick-fanout ticket 15): once this connection's
+    // `server:capabilities` says `giftBatch` is true, `gift:batch` is the
+    // SOLE source of truth for gift XP/chat/playback/lucky taps on this
+    // client. During rollout a server may send BOTH shapes for the same taps
+    // (`GIFT_LEGACY_SHAPE` on together with the tick) — legacy carries no
+    // transaction id to dedupe against, so the deterministic, double-count-free
+    // choice is to stop processing legacy entirely the moment the capability
+    // is known. See `seenGiftBatchTxIds` above for the full de-dup writeup.
+    if (capabilitiesStore.giftBatch) return;
+
     const recipientIds = event.recipientIds ?? [event.recipientId];
     const batchId = event.batchId;
     // Legs of this batch not yet processed — dedupes the burst-shaped event
@@ -698,10 +747,126 @@ export function setupRoomEventHandlers(
     }
   });
 
+  // `gift:batch` — one merged tick (gift-authority-tick-fanout ticket 14/15).
+  // Sent to the WHOLE room, including the sender. Processed in one pass per
+  // item: XP accumulated once per item (value × count), one chat bubble per
+  // item, one playback enqueue per item (quantity × count folded into the
+  // repeat counter), one lucky-fly request per item (carrying count), one
+  // lucky tap-activity record per item, and the tick's `lucky[]` entries fold
+  // through the existing `lucky:room-result` handler.
+  socket.on('gift:batch', (event: GiftBatchEvent) => {
+    for (const item of event.items) {
+      // Safety-net de-dup only — see `seenGiftBatchTxIds` for why this is not
+      // the primary legacy/batch overlap guard (that's the capability gate on
+      // `gift:received` above). Skips a whole-tick re-delivery (reconnect
+      // replay); the server's own merge key already guarantees one item per
+      // (sender, gift, recipient set) within a single tick.
+      if (markGiftBatchTxIdsSeen(item.transactionIds)) continue;
+
+      const gift = getGiftById(item.giftId);
+      if (!gift) continue;
+
+      // The sender's own client already booked this tap's XP/chat/playback/fly
+      // optimistically at send time (useRoomGifts.sendGift / useGiftSending).
+      // Unlike legacy `gift:received` (which MSAB never sends to the sender),
+      // `gift:batch` is room-wide INCLUDING the sender — so the sender's own
+      // items must be skipped here entirely (XP included), or every one of
+      // those effects double-books on the sender's own screen.
+      if (item.senderId === authStore.user?.id) continue;
+
+      // XP accumulated once per item (value × count).
+      if (roomStore.currentRoom) {
+        const perRecipientXp = seatGiftValue(gift, item.quantity) * item.count;
+        for (const recipientId of item.recipientIds) {
+          accumulateGiftXp(recipientId, perRecipientXp);
+        }
+      }
+
+      // One chat bubble per item — fold count into the announced quantity so
+      // a merged tick still shows the true total, same as N legacy events
+      // patching the same streak bubble in place would have summed to.
+      if (!isLuckyCategory(gift.category)) {
+        synthesizeGiftChatMessage(
+          audioStore,
+          participantsStore,
+          { senderId: item.senderId, giftId: item.giftId, quantity: item.quantity * item.count },
+          gift,
+          item.recipientIds,
+        );
+      }
+
+      if (roomStore.isMinimized) continue;
+
+      const sender = participantsStore.participants.get(item.senderId);
+
+      if (isLuckyCategory(gift.category)) {
+        // One lucky tap-activity record per item — count already folds into
+        // the accumulated xN (see recordLuckyGiftTap's `count` param).
+        recordLuckyGiftTap({
+          senderId: item.senderId,
+          senderName: sender?.name ?? 'Someone',
+          senderAvatar: sender?.avatar ?? null,
+          giftName: gift.label ?? gift.name,
+          recipientIds: item.recipientIds,
+          quantity: item.quantity,
+          count: item.count,
+        });
+
+        // One lucky-fly request per item per recipient, carrying `count` —
+        // the renderer streams the flies with its existing pacing, nothing
+        // capped or dropped.
+        for (const recipientId of item.recipientIds) {
+          triggerFly(gift.thumbnail_url, item.senderId, recipientId, item.count);
+        }
+        continue;
+      }
+
+      // One playback enqueue per item — `count` (merged taps) folded into the
+      // existing repeat counter: legacy coalesces one repeat per EVENT (tap)
+      // regardless of quantity, so a batch item = `count` repeats, clamped to
+      // the same MAX_PLAYBACK_REPEATS the legacy coalescer stops at.
+      giftStore.enqueuePlayback({
+        gift,
+        senderId: item.senderId,
+        senderName: sender?.name ?? 'Unknown',
+        senderAvatar: sender?.avatar ?? undefined,
+        recipientIds: item.recipientIds,
+        quantity: item.quantity,
+        repeats: Math.min(item.count, MAX_PLAYBACK_REPEATS),
+      });
+    }
+
+    // Lucky room-win results ride the same tick — fold each through the
+    // SAME handler `lucky:result`/`lucky:room-result` uses today, so band
+    // accumulation + chat bubble stay byte-identical; only the store writes
+    // are frame-coalesced (see useLuckyGift.flushLuckyGiftWrites).
+    for (const luckyEntry of event.lucky) {
+      handleLuckyRoomResult(luckyEntry);
+    }
+  });
+
   socket.on('gift:error', (event: GiftErrorEvent) => {
-    // Rollback the optimistic coin deduction tracked for THIS batch. A send
-    // without a batchId (shouldn't happen post-burst-migration) has nothing
-    // to key the refund on, so it's skipped rather than guessing.
+    // ackBalance (ticket 13): the batch was already accepted — nothing was
+    // optimistically debited, so there is nothing to add back here. The
+    // refund itself arrives via `balance.updated` (sequence-guarded); this
+    // only announces it, throttled the same way the legacy refund-toast
+    // never was (a burst of these previously stayed silent by design).
+    if (capabilitiesStore.ackBalance) {
+      const now = Date.now();
+      if (now - lastRefundToastAt >= GIFT_REFUND_TOAST_COOLDOWN_MS) {
+        lastRefundToastAt = now;
+        toast.add({
+          title: 'Gift refunded',
+          description: GIFT_REFUND_TOAST_MESSAGE,
+          color: 'warning',
+        });
+      }
+      return;
+    }
+
+    // Legacy path — rollback the optimistic coin deduction tracked for THIS
+    // batch. A send without a batchId (shouldn't happen post-burst-migration)
+    // has nothing to key the refund on, so it's skipped rather than guessing.
     if (event.batchId) {
       const refundAmount = comboStore.consumePendingRefund(event.batchId);
       if (refundAmount > 0) {
