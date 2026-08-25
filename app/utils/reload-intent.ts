@@ -7,7 +7,7 @@
 //
 //  - **close**  → emit `room:leave` so the seat frees instantly for everyone else
 //  - **reload** → stay silent, so MSAB treats it as a disconnect and holds the
-//                 seat through SEAT_RETENTION_GRACE_MS (45s) for the rejoin
+//                 seat through SEAT_RETENTION_GRACE_MS (120s) for the rejoin
 //
 // An app-initiated reload knows its own intent, so it records it here just
 // before reloading. Anything that does NOT set this — a tab close, an OS kill —
