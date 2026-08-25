@@ -110,6 +110,19 @@ describe('useRoomParticipantsStore.reconcileParticipants', () => {
     expect(ids).not.toContain(2)
   })
 
+  it('never lowers wealth/charm XP from an older snapshot', async () => {
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const store = useRoomParticipantsStore()
+
+    store.addParticipant(makeParticipant(1, { wealth_xp: '5000', charm_xp: '700', name: 'old' }))
+    store.reconcileParticipants([makeParticipant(1, { wealth_xp: '10', charm_xp: '900', name: 'new' })])
+
+    const p = store.participants.get(1)!
+    expect(p.wealth_xp).toBe('5000') // stale snapshot ignored
+    expect(p.charm_xp).toBe('900') // newer value accepted
+    expect(p.name).toBe('new') // other fields still overwritten
+  })
+
   it('preserves keepSelfId participant even when absent from snapshot', async () => {
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const store = useRoomParticipantsStore()

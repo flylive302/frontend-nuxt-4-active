@@ -283,6 +283,8 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       'badges',
       'vapid_public_key',
       'vipLevels',
+      'featuredRooms',
+      'gamesEnabled',
       'lastBootstrapAt'
     ],
   },

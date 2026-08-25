@@ -36,9 +36,24 @@ export const useRoomParticipantsStore = defineStore('roomParticipants', () => {
 
     for (const p of snapshot) {
       const existing = participants.value.get(p.id)
-      if (existing) Object.assign(existing, p)
+      if (existing) Object.assign(existing, p, keepNewerXp(existing, p))
       else participants.value.set(p.id, p)
     }
+  }
+
+  /**
+   * XP only grows. A join snapshot can carry a participant's XP from an older
+   * source (MSAB socket state hydrated from a stale JWT) than what a live
+   * balance/profile event already gave us — never let a rejoin lower it.
+   */
+  function keepNewerXp(existing: RoomParticipant, incoming: RoomParticipant): Partial<RoomParticipant> {
+    const out: Partial<RoomParticipant> = {}
+    for (const key of ['wealth_xp', 'charm_xp'] as const) {
+      const cur = Number(existing[key] ?? 0)
+      const next = Number(incoming[key] ?? 0)
+      if (Number.isFinite(cur) && cur > next) out[key] = existing[key]
+    }
+    return out
   }
 
   function updateParticipantProfile(userId: number, profile: Partial<RoomParticipant>): void {
