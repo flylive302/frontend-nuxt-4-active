@@ -1,3 +1,4 @@
+import { CACHE_TTL } from '~/constants/cache'
 import { HOME_CAROUSEL_ROOM_COUNT } from '~/constants/carousel'
 import type { RoomsResponse } from '~/types/room/room'
 import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
@@ -32,6 +33,11 @@ export class RoomsRateLimitedError extends Error {
 export interface HomeRoomsPayload {
   country: string
   res: RoomsResponse
+  /**
+   * Epoch ms when this payload resolved (home-room-feed/15). Optional so an
+   * older cached payload without the tag reads as "age unknown" → refresh.
+   */
+  fetchedAt?: number
 }
 
 /** One page handed to the home grid. Shaped for `InfiniteScroll`'s fetcher contract. */
@@ -177,6 +183,34 @@ export function isHomeCountrySettling(
 ): boolean {
   if (status === 'error') return false
   return loadedCountry !== selectedCountry
+}
+
+/**
+ * Whether the mount-time silent refresh should fire (home-room-feed/15).
+ *
+ * Every home mount used to pay two identical `/api/rooms?page=1` requests:
+ * the `useAsyncData` fetch (or its cached replay) plus an unconditional
+ * `refreshRooms()` in `onMounted`. The refresh only buys fresher participant
+ * counts, so it is skipped while the payload on screen is younger than
+ * `maxAgeMs` — a cold load's payload is milliseconds old and never needs it,
+ * while returning home after time in a room still refreshes as before.
+ *
+ * - `null` payload → `false`: nothing painted, so there is nothing to refresh
+ *   behind — the in-flight initial fetch is the freshness (pre-existing guard).
+ * - Missing `fetchedAt` → `true`: age unknown, treat as stale.
+ *
+ * @param payload  the payload currently on screen, or `null`
+ * @param now      current epoch ms (injected so the decision stays pure)
+ * @param maxAgeMs freshness window, default `CACHE_TTL.HOME_ROOMS_PAYLOAD`
+ */
+export function shouldRefreshRoomsOnMount(
+  payload: HomeRoomsPayload | null,
+  now: number,
+  maxAgeMs: number = CACHE_TTL.HOME_ROOMS_PAYLOAD
+): boolean {
+  if (!payload) return false
+  if (payload.fetchedAt === undefined) return true
+  return now - payload.fetchedAt >= maxAgeMs
 }
 
 /**

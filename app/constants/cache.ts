@@ -21,6 +21,13 @@ export const CACHE_TTL = {
 
   /** Gift animation assets */
   GIFT_ASSETS: 30 * 24 * 60 * 60 * 1000, // 30 days
+
+  /**
+   * Home rooms page-1 payload (home-room-feed/15). Under this age the mount-time
+   * silent refresh is skipped — participant counts this fresh aren't worth a
+   * second hit on the app's most-hit endpoint (60 req/min shared budget).
+   */
+  HOME_ROOMS_PAYLOAD: 15 * 1000, // 15 seconds
 } as const
 
 /**

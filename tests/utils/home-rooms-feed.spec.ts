@@ -4,6 +4,7 @@ import {
   RoomsRateLimitedError,
   createHomeRoomsListFetcher,
   isHomeCountrySettling,
+  shouldRefreshRoomsOnMount,
   shouldResetStaleCountry,
   shouldReuseCachedRooms,
   toScrollMeta,
@@ -458,5 +459,34 @@ describe('shouldResetStaleCountry', () => {
 
   it('matches active countries case-insensitively', () => {
     expect(shouldResetStaleCountry('US', 'US', ['us', 'pk'])).toBe(false)
+  })
+})
+
+describe('shouldRefreshRoomsOnMount (home-room-feed/15)', () => {
+  const NOW = 1_000_000
+  const payloadAt = (fetchedAt?: number): HomeRoomsPayload =>
+    ({ country: '', res: { data: [] } as unknown as RoomsResponse, fetchedAt })
+
+  it('returns false with no payload — the in-flight initial fetch is the freshness', () => {
+    expect(shouldRefreshRoomsOnMount(null, NOW)).toBe(false)
+  })
+
+  it('skips the refresh while the payload is younger than the max age (cold load)', () => {
+    expect(shouldRefreshRoomsOnMount(payloadAt(NOW - 1), NOW, 15_000)).toBe(false)
+    expect(shouldRefreshRoomsOnMount(payloadAt(NOW), NOW, 15_000)).toBe(false)
+  })
+
+  it('refreshes once the payload reaches the max age (returning from a room)', () => {
+    expect(shouldRefreshRoomsOnMount(payloadAt(NOW - 15_000), NOW, 15_000)).toBe(true)
+    expect(shouldRefreshRoomsOnMount(payloadAt(NOW - 60_000), NOW, 15_000)).toBe(true)
+  })
+
+  it('treats a payload without a fetchedAt tag as stale', () => {
+    expect(shouldRefreshRoomsOnMount(payloadAt(undefined), NOW, 15_000)).toBe(true)
+  })
+
+  it('a clock that went backwards reads as fresh, not stale', () => {
+    // Negative age < maxAge → skip; never fire an extra request off a clock skew.
+    expect(shouldRefreshRoomsOnMount(payloadAt(NOW + 5_000), NOW, 15_000)).toBe(false)
   })
 })

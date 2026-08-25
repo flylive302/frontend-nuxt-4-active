@@ -4,7 +4,7 @@ import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { roomLogoCardSrc } from '~/utils/imagekit'
-import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
+import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldRefreshRoomsOnMount, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
 import {
   getRetryAfterSeconds,
@@ -83,7 +83,8 @@ const { data: roomsPayload, status: roomsStatus, error: roomsError, refresh: ref
     const country = selectedCountry.value
     try {
       const res = await fetchCachedRooms(country)
-      return { country, res }
+      // `fetchedAt` feeds the mount-time freshness check (home-room-feed/15).
+      return { country, res, fetchedAt: Date.now() }
     } catch (err) {
       // home-room-feed/12: a page-1 429 blocks the grid's page 2+ fetcher too —
       // both read the same store timestamp.
@@ -320,7 +321,11 @@ onMounted(() => {
   // Skipped when the reset just fired: that re-keys `useAsyncData` and refetches
   // on its own, so refreshing here would be a second request for a payload
   // that is about to be thrown away.
-  if (!countryWasReset && roomsPayload.value) void refreshRooms()
+  //
+  // home-room-feed/15: also skipped while the payload is fresher than
+  // `CACHE_TTL.HOME_ROOMS_PAYLOAD` — a cold load otherwise paid two identical
+  // page-1 requests back to back on the app's most-hit endpoint.
+  if (!countryWasReset && shouldRefreshRoomsOnMount(roomsPayload.value, Date.now())) void refreshRooms()
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
