@@ -33,3 +33,24 @@ describe('useBootstrapStore.needsRefresh', () => {
     expect(store.needsRefresh).toBe(false)
   })
 })
+
+describe('useBootstrapStore.markReadyFromCache', () => {
+  it('flips idle → complete when persisted level config exists, without bumping lastBootstrapAt', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.wealthLevels = [{ level: 1, name: 'L1', required_xp: 0, image_url: null }] as never
+    store.lastBootstrapAt = 123
+    store.markReadyFromCache()
+    expect(store.isReady).toBe(true)
+    expect(store.lastBootstrapAt).toBe(123)
+  })
+
+  it('stays idle when no config is persisted', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.wealthLevels = []
+    store.charmLevels = []
+    store.markReadyFromCache()
+    expect(store.isReady).toBe(false)
+  })
+})

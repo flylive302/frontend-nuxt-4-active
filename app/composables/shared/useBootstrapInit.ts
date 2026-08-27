@@ -69,6 +69,9 @@ export function useBootstrapInit() {
 
     // GATE — check freshness
     if (!bootstrapStore.needsRefresh) {
+      // Config came from localStorage; `phase` did not. Flip it so `isReady`
+      // consumers (level badges, seat drawer, profile) render immediately.
+      bootstrapStore.markReadyFromCache()
       // Still schedule asset downloads — may have new items since last boot
       if (options?.freshAuth) {
         startAssetDownload()

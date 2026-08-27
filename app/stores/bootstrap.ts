@@ -136,6 +136,18 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   }
 
   /**
+   * Mark the store ready from persisted config WITHOUT touching
+   * `lastBootstrapAt`. `phase` is deliberately not persisted, so a cold start
+   * that skips the fetch (config still fresh) must flip it explicitly or every
+   * `isReady` consumer (level/badge lookups) stays dark until the next refetch.
+   */
+  function markReadyFromCache(): void {
+    if (phase.value !== 'idle') return
+    if (!wealthLevels.value?.length && !charmLevels.value?.length) return
+    phase.value = 'complete'
+  }
+
+  /**
    * Set the error message.
    */
   function setError(message: string | null): void {
@@ -264,6 +276,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
 
     // Setters
     setPhase,
+    markReadyFromCache,
     setError,
     setConfig,
     setGifts,
