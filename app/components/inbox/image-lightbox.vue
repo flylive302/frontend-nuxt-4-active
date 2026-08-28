@@ -100,6 +100,9 @@ watch(isOpen, (nowOpen) => {
   if (nowOpen) nextTick(measure)
 })
 
+// Not a Reka layer, so the global back handler cannot reach it via Escape.
+useBackDismiss(isOpen, close)
+
 function onBackdropClick(): void {
   close()
 }

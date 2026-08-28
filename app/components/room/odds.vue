@@ -62,6 +62,10 @@ function handleDismiss(): void {
   emit('dismissed')
 }
 
+// `:dismissible="false"` blocks Escape, so back must be routed to the real
+// dismiss path — it emits `dismissed`, which the caller depends on.
+useBackDismiss(isOpen, handleDismiss)
+
 defineExpose({ show })
 </script>
 

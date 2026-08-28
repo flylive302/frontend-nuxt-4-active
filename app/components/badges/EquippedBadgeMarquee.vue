@@ -16,8 +16,15 @@ const props = withDefaults(defineProps<{
    * change while paused/resumed.
    */
   paused?: boolean
+  /**
+   * Render every badge as its still frame (no animated asset layer). Used on
+   * surfaces that show many rosters at once — room chat renders one of these
+   * per message, so animating them all is a per-message canvas cost.
+   */
+  still?: boolean
 }>(), {
   paused: false,
+  still: false,
 })
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -65,6 +72,7 @@ watch(sorted, async () => {
           :key="`a-${badge.badge_id}`"
           :image-url="badge.image_url"
           :asset-url="badge.asset_url"
+          :still="still"
           img-class="size-8 min-w-8 shrink-0"
           alt=""
       />
@@ -75,6 +83,7 @@ watch(sorted, async () => {
             :key="`b-${badge.badge_id}`"
             :image-url="badge.image_url"
             :asset-url="badge.asset_url"
+            :still="still"
             img-class="size-8 min-w-8 shrink-0"
             aria-hidden="true"
             alt=""

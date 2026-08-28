@@ -28,6 +28,10 @@ const store = useMissionStore()
 const { phase, isOpen, dismiss, burstComplete } = useMissionFinale(props.timeframe)
 const sound = useMissionFinaleSound()
 
+// Raw Teleport, not a Reka layer. Route back through `dismiss()` so the
+// seen-flag still reaches localStorage.
+useBackDismiss(isOpen, dismiss)
+
 // ========================================
 // Data derived from store
 // ========================================

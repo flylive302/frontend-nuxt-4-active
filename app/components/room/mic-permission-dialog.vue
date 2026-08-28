@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   open: boolean
 }>()
 
@@ -20,6 +20,9 @@ function handleCancel() {
   emit('update:open', false)
   emit('cancel')
 }
+
+// `prevent-close` blocks Escape, so back must be routed to the cancel path.
+useBackDismiss(() => props.open, handleCancel)
 </script>
 
 <template>

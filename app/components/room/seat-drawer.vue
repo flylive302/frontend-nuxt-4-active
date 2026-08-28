@@ -41,6 +41,18 @@ watch(
   },
 )
 
+/**
+ * Clears the store when the drawer is dismissed by the user (backdrop tap,
+ * hardware back). Every in-component action already pairs `isOpen = false`
+ * with the matching store clear; this covers the paths that do not run our
+ * own code at all.
+ */
+function handleOpenChange(open: boolean): void {
+  if (open) return
+  seatsStore.closeSeat()
+  seatsStore.closeProfile()
+}
+
 // Profile mode: opened from an avatar tap rather than a seat tap. It shows the
 // same card, minus the seat-slot actions (there is no slot to act on).
 const isProfileMode = computed(() => seatsStore.profileUserId !== null)
@@ -418,6 +430,7 @@ const seatUserAge = computed(() => {
       overlay: 'bg-white/10',
       handle: 'border-4 border-primary',
     }"
+    @update:open="handleOpenChange"
   >
     <template #content>
       <!-- Background Animation -->
