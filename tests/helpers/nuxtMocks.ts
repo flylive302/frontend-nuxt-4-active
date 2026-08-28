@@ -57,6 +57,9 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
     invalidateConfig: vi.fn(),
     setConfig: vi.fn(),
     setPhase: vi.fn(),
+    // Added to the real store in 3bcb1a51; the mock lagged behind and left
+    // useBootstrapInit's cached-boot paths red.
+    markReadyFromCache: vi.fn(),
     setError: vi.fn(),
     setGifts: vi.fn(),
   }

@@ -11,7 +11,7 @@
  * Design: docs/issues/game-integration/03-joyplay-integration-design.md §3.5
  */
 import type { GameLaunchResponse, GamePanelStatus } from '~/types/room/games';
-import { GAME_MESSAGE_IN, GAME_MESSAGE_OUT } from '~/constants/games';
+import { GAME_MESSAGE_IN, GAME_MESSAGE_OUT, MIN_WEALTH_LEVEL_FOR_GAMES } from '~/constants/games';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[RoomGames]');
@@ -47,6 +47,7 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
   const bootstrapStore = useBootstrapStore();
   const roomStore = useRoomStore();
   const router = useRouter();
+  const { getLevelFromXp } = useLevelLookup();
 
   const status = ref<GamePanelStatus>('idle');
   const gameUrl = ref<string | null>(null);
@@ -79,12 +80,31 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
   // ============================================
 
   /**
+   * The player's WEALTH level, derived from their XP against the bootstrap level
+   * table — there is no `wealth_level` field on the user, only `wealth_xp`.
+   *
+   * Reads `authStore.user.wealth_xp`, which `patchBalance` keeps current, so the
+   * button appears on its own the moment a player crosses the threshold mid-room.
+   * Returns 0 while bootstrap is still loading, which fails closed like the kill
+   * switch below.
+   */
+  const wealthLevel = computed<number>(
+    () => getLevelFromXp(authStore.user?.wealth_xp, 'wealth').level,
+  );
+
+  /**
    * `gamesEnabled` comes from bootstrap and defaults to false, so the button does
    * not render until the server says the integration is live. Without it the panel
    * is visible while the kill switch is off and every tap ends in an error.
+   *
+   * The wealth-level floor is a product rule, not a safety one: `/games/launch`
+   * still mints a session for anyone authenticated, so this hides the button
+   * rather than closing the endpoint.
    */
   const canPlay = computed<boolean>(
-    () => Boolean(authStore.user?.id) && bootstrapStore.gamesEnabled === true,
+    () => Boolean(authStore.user?.id)
+      && bootstrapStore.gamesEnabled === true
+      && wealthLevel.value >= MIN_WEALTH_LEVEL_FOR_GAMES,
   );
 
   // ============================================

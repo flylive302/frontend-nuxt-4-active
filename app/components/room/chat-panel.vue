@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { defineAsyncComponent } from 'vue';
-import { useRoomAudio } from '~/composables/room/useRoomAudio';
 import type { StickyScrollTarget } from '~/composables/room/useChatStickyScroll';
 import { filterChatMessages } from '~/utils/chat';
 import { CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_TAB_GIFTS, type ChatTab } from '~/constants/room';
@@ -18,7 +17,6 @@ const DynamicScrollerItem = defineAsyncComponent(async () =>
 );
 
 const audioStore = useRoomAudioStore();
-const { sendChatMessage } = useRoomAudio();
 
 // Filter tabs (All / Chat / Gifts) — local UI-only state, trivial predicate
 // filtering via the pure `filterChatMessages` util (no business logic here).
@@ -29,10 +27,6 @@ const chatTabs: { id: ChatTab; label: string }[] = [
 ];
 const activeChatTab = ref<ChatTab>(CHAT_TAB_ALL);
 const filteredMessages = computed(() => filterChatMessages(audioStore.messages, activeChatTab.value));
-
-// Input state
-const messageInput = ref('');
-const inputRef = ref<{ $el: HTMLElement } | null>(null);
 
 // Sticky-bottom scroll: pinned = auto-follow new messages; unpinned = show pill instead.
 const scrollerRef = ref<{ scrollToBottom?: () => void; $el?: HTMLElement & StickyScrollTarget } | null>(null);
@@ -74,34 +68,14 @@ function handleClearChat() {
   // stale "new messages" pill can't linger over the cleared list.
   scrollToBottomAndPin();
 }
-
-// Send message handler
-function handleSend() {
-  const content = messageInput.value.trim();
-  if (!content) return;
-
-  sendChatMessage(content);
-  messageInput.value = '';
-  // UInput is a Vue component - access the input element via $el
-  const inputEl = inputRef.value?.$el?.querySelector('input') as HTMLInputElement | null;
-  inputEl?.focus();
-}
-
-// Handle enter key
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    handleSend();
-  }
-}
 </script>
 
 <template>
-  <div class="grow overflow-hidden flex flex-col h-full bg-primary/20 ring ring-primary p-2 rounded-xl shadow-xl shadow-neutral-900/40 relative">
+  <div class="grow overflow-hidden flex flex-col h-full relative">
     <!-- Clear chat (local view only) -->
     <UButton
         variant="ghost"
-        class="absolute top-1 right-1 z-10 justify-center p-0"
+        class="absolute top-0 right-0 z-10 justify-center p-0"
         :disabled="audioStore.messages.length === 0"
         aria-label="Clear chat"
         @click="handleClearChat"
@@ -111,7 +85,7 @@ function handleKeydown(event: KeyboardEvent) {
     </UButton>
 
     <!-- Filter tabs: All / Chat / Gifts -->
-    <div class="flex items-center gap-1 mb-1 pr-7" role="tablist" aria-label="Chat filter">
+    <div class="flex items-center gap-1 pl-2" role="tablist" aria-label="Chat filter">
       <button
           v-for="tab in chatTabs"
           :key="tab.id"
@@ -168,31 +142,6 @@ function handleKeydown(event: KeyboardEvent) {
     <p v-else-if="filteredMessages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
       No messages in this view.
     </p>
-
-    <!-- Input -->
-    <div class="flex items-center">
-      <UInput
-          ref="inputRef"
-          v-model="messageInput"
-          :ui="{
-            base: 'rounded-r-none rounded-l-full ring-0'
-          }"
-          class="w-full"
-          size="lg"
-          icon="i-lucide-user"
-          placeholder="Type a message..."
-          @keydown="handleKeydown" />
-      <UButton
-          size="sm"
-          variant="solid"
-          color="neutral"
-          class="size-9 p-2 rounded-l-none rounded-r-full bg-neutral-950!"
-          :disabled="!messageInput.trim()"
-          @click="handleSend"
-      >
-        <UIcon class="size-8 text-primary" name="i-lucide-send" />
-      </UButton>
-    </div>
 
   </div>
 </template>

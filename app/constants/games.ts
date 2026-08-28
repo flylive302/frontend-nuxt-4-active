@@ -52,3 +52,16 @@ export const GAME_MESSAGE_OUT = {
 
 /** Local storage / analytics label for the panel. */
 export const GAME_PANEL_TITLE = 'Games';
+
+/**
+ * Minimum WEALTH level required to see and open the games panel.
+ *
+ * Wealth level 0 is "below the first level definition" on both sides of the wire
+ * (`computeLevelStatus` in `app/utils/levels.ts` and `LevelService::getLevelStatusForType`
+ * both return 0, not 1), so this threshold means "reached level 2", not "reached the
+ * second tier of a 1-indexed scale". Do not change one without the other.
+ *
+ * ⚠️ Client-side only. `/games/launch` gates on the JoyPlay kill switch alone — a
+ * level-0 user calling the endpoint directly is still served a session.
+ */
+export const MIN_WEALTH_LEVEL_FOR_GAMES = 2;

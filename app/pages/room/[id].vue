@@ -187,7 +187,7 @@ onUnmounted(() => {
   <!-- `roomExpandStyle` names this element as the room card's counterpart: the
        card's box is interpolated into this one on entry, and back out on leave. -->
   <div
-    class="absolute inset-0 z-50 p-1 safe-area-top safe-area-bottom max-h-screen max-w-screen overflow-hidden bg-elevated"
+    class="absolute inset-0 z-50 p-1 safe-area-top safe-area-bottom overflow-hidden"
     :style="[roomExpandStyle, roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}]"
   >
     <template v-if="roomStore.currentRoom">
@@ -205,7 +205,7 @@ onUnmounted(() => {
 
       <!-- Content — settles in over the background so lazily-mounted panels
            (drawers, chat, seats) never snap into place on top of it. -->
-      <div class="room-content relative z-10 h-full flex flex-col mt-2">
+      <div class="room-content relative z-10 h-full flex flex-col pt-2">
 
         <!-- Lucky Gift Animations: no-draw notices, the single center cashback
              visual, and the room-visible sender activity bands (state-driven —
@@ -222,7 +222,7 @@ onUnmounted(() => {
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->
-        <div class="scrollbar-hide max-h-[45vh] min-h-[45vh] overflow-scroll scrollbox rounded-xl mb-1">
+        <div class="scrollbar-hide max-h-[40vh] min-h-[40vh] overflow-scroll scrollbox rounded-xl">
           <main class="grid grid-cols-5 gap-x-2">
             <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT)" :key="i" :seat-id="i" />
           </main>
@@ -232,7 +232,7 @@ onUnmounted(() => {
         <LazyRoomChatDrawer />
 
         <!-- Bottom Section: Chat + Controls -->
-        <div class="flex grow gap-1 mt-1 min-h-0 pl-2">
+        <div class="flex grow gap-1 min-h-0 pl-2">
           <!-- Chat Panel -->
           <div class="size-full flex flex-col">
             <RoomChatPanel />
@@ -266,6 +266,9 @@ onUnmounted(() => {
               <UButton v-else size="xl" class="text-primary p-0" variant="ghost" disabled >
                 <UIcon class="size-8" name="i-lucide-mic" />
               </UButton>
+
+              <!-- Chat composer trigger — opens the keyboard-pinned message bar -->
+              <RoomChatComposer />
 
               <!-- Users Inbox Model View -->
               <LazyRoomInboxDrawer />
