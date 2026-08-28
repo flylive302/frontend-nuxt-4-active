@@ -135,7 +135,7 @@ const charmLevel = computed(() =>
              narrower than a fully-badged row (flag 24 + VIP 40 + wealth ~60 +
              charm ~48 ≈ 172px) or nothing ever scrolls. 128px leaves ~44px of travel.
              Users with one or two badges fit, and correctly stay static. -->
-        <MarqueeRow class="mt-1 ml-2 max-w-32">
+        <div class="flex ml-2 mt-2 max-w-32">
           <CountryFlag
               :code="participant?.country"
               class="rounded overflow-hidden h-5 size-6 shadow-lg shrink-0"
@@ -143,14 +143,14 @@ const charmLevel = computed(() =>
           <img
               v-if="participant?.vip_level"
               :src="withImageKitTransform(vipBadgeUIImg(participant?.vip_level), { w: 80 })"
-              class="w-10 shrink-0"
+              class="w-10 shrink-0 ml-3 mr-1"
               alt=""
           >
           <!-- Level badges are height-constrained and wide (aspect ~2.8-3.2), so they size by `h-`, not `w-` -->
           <img v-if="wealthLevel.badge" :src="levelBadgeSrc(wealthLevel.badge.image_url, 20)" class="h-5 shrink-0" alt="users wealth badge">
 
           <img v-if="charmLevel.badge" :src="levelBadgeSrc(charmLevel.badge.image_url, 16)" class="h-4 shrink-0" alt="users charm badge">
-        </MarqueeRow>
+        </div>
 
         <!-- `still`: chat renders one badge row PER MESSAGE, so animated badge assets
              would mean an AssetPlayer per message. Matches the avatar above, which is
@@ -159,7 +159,7 @@ const charmLevel = computed(() =>
             v-if="participant?.equipped_badges?.length"
             :equipped-badges="participant.equipped_badges"
             :still="true"
-            class="ml-1.5 mt-0.5 max-w-48"
+            class="ml-1.5 mt-0.5"
         />
 
         <div v-if="hasChatBubble" class="bubble" :style="bubbleStyle">

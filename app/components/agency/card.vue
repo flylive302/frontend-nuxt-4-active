@@ -6,6 +6,7 @@
 import type { AgencyStatus } from '~/types/agency/agency'
 import { AGENCY_STATUS_CONFIG } from '~/types/agency/agency'
 import { withImageKitTransform } from '~/utils/imagekit'
+import MarqueeName from '~/components/common/marquee-name.vue'
 
 // ========================================
 // Props
@@ -73,7 +74,17 @@ const isApproved = computed(() => props.status === 'approved')
     
     <!-- Info -->
     <div class="p-2 bg-gradient-to-br from-transparent to-primary/40">
-      <h2 class="text-base font-bold truncate">{{ name }}</h2>
+      <!-- Name + public agency number. `min-w-0` is load-bearing: a flex item
+           defaults to `min-width: auto` and would grow to fit the name, so
+           MarqueeName's `scrollWidth > clientWidth` check could never fire. -->
+      <div class="flex items-center gap-1">
+        <MarqueeName
+          :name="name"
+          text-class="text-base font-bold"
+          class="min-w-0 flex-1"
+        />
+        <span class="shrink-0 text-xs font-semibold text-muted tabular-nums">#{{ id }}</span>
+      </div>
       <div class="flex justify-between items-center mt-1">
         <CountryFlag :code="props.countryCode" class="size-8 rounded overflow-hidden h-6 shadow-md shadow-primary/50" />
         <p class="text-2xl font-bold flex gap-2 leading-none items-center">

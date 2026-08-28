@@ -5,6 +5,7 @@
 
 import { onMounted, watch } from 'vue'
 import { useAgencyBrowsing } from '~/composables/agency/useAgencyBrowsing'
+import { useCountries } from '~/composables/shared/useCountries'
 // Note: Agency type only needed for component prop inference, not direct use
 
 // ========================================
@@ -20,13 +21,37 @@ definePageMeta({ layout: 'alt', middleware: 'auth' })
 const agencyStore = useAgencyStore()
 const authStore = useAuthStore()
 const { fetchAgencies } = useAgencyBrowsing()
+const { countries, loading: countriesLoading, ensureLoaded: ensureCountriesLoaded } = useCountries()
+
+// ========================================
+// Constants
+// ========================================
+
+/**
+ * Sentinel for the "no country filter" entry.
+ *
+ * Not `''`: an empty string is not a safe item value for the underlying Reka
+ * select primitive, and it is not a valid ISO-3166 alpha-2 code either, so it
+ * can never collide with a real country. Mapped back to `''` before it reaches
+ * the store, which is what the composable treats as "don't send the param".
+ */
+const ALL_COUNTRIES = 'ALL'
+
+// ========================================
+// Types
+// ========================================
+
+interface CountryFilterItem {
+  name: string
+  code: string
+}
 
 // ========================================
 // Component State
 // ========================================
 
 const searchQuery = ref('')
-const selectedCountry = ref('')
+const selectedCountry = ref(ALL_COUNTRIES)
 const searchDebounced = refDebounced(searchQuery, 300)
 
 // ========================================
@@ -35,7 +60,7 @@ const searchDebounced = refDebounced(searchQuery, 300)
 
 async function handleSearch(): Promise<void> {
   agencyStore.agencies.filters.search = searchDebounced.value
-  agencyStore.agencies.filters.country = selectedCountry.value
+  agencyStore.agencies.filters.country = selectedCountry.value === ALL_COUNTRIES ? '' : selectedCountry.value
   await fetchAgencies(agencyStore.agencies.filters, true)
 }
 
@@ -45,7 +70,7 @@ async function handleLoadMore(): Promise<void> {
 
 function handleResetFilters(): void {
   searchQuery.value = ''
-  selectedCountry.value = ''
+  selectedCountry.value = ALL_COUNTRIES
   handleSearch()
 }
 
@@ -54,6 +79,8 @@ function handleResetFilters(): void {
 // ========================================
 
 onMounted(() => {
+  void ensureCountriesLoaded()
+
   if (agencyStore.agencies.items.length === 0) {
     fetchAgencies({}, true)
   }
@@ -73,8 +100,22 @@ const canCreateAgency = computed(() => {
 })
 
 const hasActiveFilters = computed(() => {
-  return searchQuery.value.length > 0 || selectedCountry.value.length > 0
+  return searchQuery.value.length > 0 || selectedCountry.value !== ALL_COUNTRIES
 })
+
+/**
+ * Country filter options, sourced from the same `countries.json` the create and
+ * profile forms use — so every ISO-2 an agency can actually be registered under
+ * is selectable here, not just a hard-coded handful.
+ *
+ * Re-mapped rather than spread: `useCountries` exposes a `readonly` list, and a
+ * plain spread would make the item type a readonly/mutable union that
+ * `value-key` can no longer narrow.
+ */
+const countryItems = computed<CountryFilterItem[]>(() => [
+  { name: 'All Countries', code: ALL_COUNTRIES },
+  ...countries.value.map(country => ({ name: country.name, code: country.code })),
+])
 </script>
 
 <template>
@@ -84,11 +125,13 @@ const hasActiveFilters = computed(() => {
     <div class="px-3 pt-14 pb-24">
       <!-- Search & Filter Section -->
       <div class="space-y-3 mb-4">
-        <!-- Search Input -->
+        <!-- Search Input — agencies are looked up by their public number (the
+             `#1024` shown on each card), not by name. -->
         <UInput
           v-model="searchQuery"
-          placeholder="Search agencies by name..."
+          placeholder="Search by agency ID, e.g. 1024"
           icon="i-lucide-search"
+          inputmode="numeric"
           size="lg"
           class="w-full"
           :loading="agencyStore.agencies.loading && searchQuery.length > 0"
@@ -96,18 +139,14 @@ const hasActiveFilters = computed(() => {
 
         <!-- Country Filter -->
         <div class="flex gap-2">
-          <USelect
+          <USelectMenu
             v-model="selectedCountry"
+            :items="countryItems"
+            :loading="countriesLoading"
+            value-key="code"
+            label-key="name"
             placeholder="Filter by country"
-            :options="[
-              { label: 'All Countries', value: '' },
-              { label: 'Pakistan', value: 'PK' },
-              { label: 'United States', value: 'US' },
-              { label: 'United Kingdom', value: 'GB' },
-              { label: 'India', value: 'IN' },
-              { label: 'Saudi Arabia', value: 'SA' },
-              { label: 'UAE', value: 'AE' },
-            ]"
+            :search-input="{ icon: 'i-lucide-search', placeholder: 'Search countries...', autocomplete: 'off' }"
             class="flex-1"
             size="md"
           />

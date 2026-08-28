@@ -7,6 +7,15 @@ import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[useAgencyBrowsing]')
 
+/**
+ * Monotonic id for the agency-list request in flight.
+ *
+ * Module scope, not composable scope: the list it guards lives on the (global)
+ * Pinia store, so two component instances sharing that store must share the
+ * generation counter too.
+ */
+let agencyListRequestId = 0
+
 // ========================================
 // GATE Helpers
 // ========================================
@@ -39,6 +48,12 @@ export function useAgencyBrowsing() {
 
   /**
    * Fetch list of approved agencies.
+   *
+   * A `reset` (new search / country filter) always supersedes a request already
+   * in flight — the older response is discarded on arrival. Without that, a
+   * filter change typed while page N was loading was silently dropped by the
+   * `loading` guard and the list kept showing the previous filter's rows.
+   *
    * @param filters - Optional search and country filters
    * @param reset - Whether to reset pagination
    */
@@ -47,9 +62,12 @@ export function useAgencyBrowsing() {
       store.agencies.items = []
       store.agencies.cursor = null
       store.agencies.hasMore = true
+    } else if (!store.agencies.hasMore || store.agencies.loading) {
+      return
     }
 
-    if (!store.agencies.hasMore || store.agencies.loading) return
+    const requestId = ++agencyListRequestId
+    const sentCursor = store.agencies.cursor
 
     store.agencies.loading = true
     store.agencies.error = null
@@ -63,8 +81,8 @@ export function useAgencyBrowsing() {
         per_page: 20,
       }
       
-      if (store.agencies.cursor) {
-        params.cursor = store.agencies.cursor
+      if (sentCursor) {
+        params.cursor = sentCursor
       }
       
       if (mergedFilters.search && mergedFilters.search.trim()) {
@@ -77,17 +95,40 @@ export function useAgencyBrowsing() {
 
       const response = await api<{
         data: Agency[]
-        meta: { next_cursor: string | null }
+        meta?: { next_cursor?: string | null }
       }>('/agencies', { params })
 
-      store.agencies.items.push(...response.data)
-      store.agencies.cursor = response.meta.next_cursor
-      store.agencies.hasMore = response.meta.next_cursor !== null
+      // A newer reset started while this was in flight — its result wins.
+      if (requestId !== agencyListRequestId) return
+
+      const nextCursor = response.meta?.next_cursor ?? null
+
+      // Drop rows already on screen. Duplicate ids break the grid's keyed
+      // reconciliation, and a server that replays a page would otherwise grow
+      // the list forever.
+      const seen = new Set(store.agencies.items.map(agency => agency.id))
+      const fresh = response.data.filter((agency) => {
+        if (seen.has(agency.id)) return false
+        seen.add(agency.id)
+        return true
+      })
+
+      store.agencies.items.push(...fresh)
+      store.agencies.cursor = nextCursor
+      // Termination guard: stop unless the server actually moved us forward.
+      // An absent, null or unchanged cursor — or an empty page — means the next
+      // request would return exactly what we just got.
+      store.agencies.hasMore = nextCursor !== null
+        && nextCursor !== sentCursor
+        && response.data.length > 0
     } catch (error) {
+      if (requestId !== agencyListRequestId) return
       log.warn('Failed to fetch agencies', error)
       store.agencies.error = 'Failed to load agencies'
     } finally {
-      store.agencies.loading = false
+      if (requestId === agencyListRequestId) {
+        store.agencies.loading = false
+      }
     }
   }
 
