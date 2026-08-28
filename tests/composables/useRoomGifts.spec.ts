@@ -100,6 +100,18 @@ describe('useRoomGifts.sendGift', () => {
     expect(roomStore.currentRoom?.room_xp).toBe('510')
   })
 
+  it('self-gifting: bumps daily_xp/room_xp exactly ONCE when the sender is also the (sole) recipient', async () => {
+    // self-gifting epic ticket 04: sendGift accumulates once per seated
+    // recipient id — the sender being in that list is no different from any
+    // other seated recipient, so a self-only send must NOT double-count.
+    const { sendGift, roomStore } = await setup({ category: 'normal', price: 50 }, [1])
+
+    await sendGift(9, [1], 1)
+
+    expect(roomStore.currentRoom?.daily_xp).toBe('150')
+    expect(roomStore.currentRoom?.room_xp).toBe('550')
+  })
+
   it('does not emit or bump daily_xp when no recipient is seated', async () => {
     const { sendGift, roomStore, emit } = await setup({ category: 'normal', price: 50 }, [])
 

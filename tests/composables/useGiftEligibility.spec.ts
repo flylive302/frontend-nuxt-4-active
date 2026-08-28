@@ -33,7 +33,7 @@ afterEach(() => {
 // eligibleRecipients — null lock
 // ============================================================
 describe('useGiftEligibility.eligibleRecipients — lockedRecipientId null', () => {
-  it('returns all seated non-self users', async () => {
+  it('returns all seated users', async () => {
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useGiftEligibility } = await import('../../app/composables/gift/useGiftEligibility')
@@ -46,6 +46,42 @@ describe('useGiftEligibility.eligibleRecipients — lockedRecipientId null', () 
     const { eligibleRecipients } = useGiftEligibility()
 
     expect(eligibleRecipients.value.map(r => r.id).sort((a, b) => a - b)).toEqual([2, 3])
+  })
+})
+
+// ============================================================
+// eligibleRecipients — self-gifting (self-gifting epic ticket 04)
+// ============================================================
+describe('useGiftEligibility.eligibleRecipients — self', () => {
+  it('includes self when the current user is seated', async () => {
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useGiftEligibility } = await import('../../app/composables/gift/useGiftEligibility')
+
+    // Current user (id 1, from the useAuthStore stub in beforeEach) seats
+    // alongside another user.
+    useRoomParticipantsStore().addParticipant(makeParticipant(1))
+    useRoomParticipantsStore().addParticipant(makeParticipant(2))
+    useRoomSeatsStore().updateSeat(0, 1, false)
+    useRoomSeatsStore().updateSeat(1, 2, false)
+
+    const { eligibleRecipients } = useGiftEligibility()
+
+    expect(eligibleRecipients.value.map(r => r.id).sort((a, b) => a - b)).toEqual([1, 2])
+  })
+
+  it('excludes self when the current user is not seated', async () => {
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useGiftEligibility } = await import('../../app/composables/gift/useGiftEligibility')
+
+    // Only the other user is seated — current user (id 1) is not on a seat.
+    useRoomParticipantsStore().addParticipant(makeParticipant(2))
+    useRoomSeatsStore().updateSeat(0, 2, false)
+
+    const { eligibleRecipients } = useGiftEligibility()
+
+    expect(eligibleRecipients.value.map(r => r.id)).toEqual([2])
   })
 })
 
@@ -70,7 +106,7 @@ describe('useGiftEligibility.eligibleRecipients — lockedRecipientId set', () =
     expect(eligibleRecipients.value.map(r => r.id)).toEqual([2])
   })
 
-  it('returns empty when locked id is own user id (self-exclusion still applies)', async () => {
+  it('returns [self] when locked id is own user id and self is seated (self-gifting epic ticket 04)', async () => {
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useGiftStore } = await import('../../app/stores/gift')
@@ -83,7 +119,7 @@ describe('useGiftEligibility.eligibleRecipients — lockedRecipientId set', () =
 
     const { eligibleRecipients } = useGiftEligibility()
 
-    expect(eligibleRecipients.value).toHaveLength(0)
+    expect(eligibleRecipients.value.map(r => r.id)).toEqual([1])
   })
 
   it('returns empty when locked id has no corresponding seated user', async () => {
@@ -125,7 +161,7 @@ describe('useGiftEligibility.selectAllRecipients — locked mode', () => {
 // eligibleRecipients — reactive unlock transition (test 9)
 // ============================================================
 describe('useGiftEligibility.eligibleRecipients — clearLockedRecipient', () => {
-  it('returns all seated non-self users again after clearing the lock', async () => {
+  it('returns all seated users again after clearing the lock', async () => {
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useGiftStore } = await import('../../app/stores/gift')

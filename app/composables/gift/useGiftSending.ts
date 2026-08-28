@@ -103,12 +103,18 @@ export function useGiftSending() {
    * GF-017: Get the set of user IDs currently seated in the room.
    * Reads seatsStore.seats directly (not through Pinia computed indirection)
    * for guaranteed fresh reactivity.
+   *
+   * Self-gifting (self-gifting epic ticket 04): a seated sender is a seated
+   * user like any other, so self is intentionally NOT excluded here anymore —
+   * combo()/luckyCombo() and the auto-end-combo watcher below all read this
+   * set to decide "is this recipient still seated", and a self-only combo/
+   * lucky-combo context must survive that check the same way any other
+   * recipient's does.
    */
   function getSeatedUserIds(): Set<number> {
-    const currentUserId = authStore.user?.id;
     const ids = new Set<number>();
     for (const seat of seatsStore.seats) {
-      if (seat.occupantId !== null && seat.occupantId !== currentUserId) {
+      if (seat.occupantId !== null) {
         ids.add(seat.occupantId);
       }
     }
@@ -472,7 +478,13 @@ export function useGiftSending() {
         });
 
       // Start playback immediately (optimistic)
-      // Lucky gifts use fly animation, all others use fullscreen playback modal
+      // Lucky gifts use fly animation, all others use fullscreen playback modal.
+      // Self-gifting (self-gifting epic ticket 04): these loops/enqueues run
+      // unconditionally over `selectedRecipients`, which now (post-eligibility
+      // fix) may include the sender's own id — so a self leg already gets the
+      // exact same fly/playback FX as every other recipient, with no extra
+      // branch needed. Do not add a separate "is this recipient me" echo path
+      // here — that would double-fire the FX for self.
       if (isLuckyCategory(selectedGift.category)) {
         for (const recipientId of selectedRecipients) {
           triggerFly(selectedGift.thumbnail_url, sender.id, recipientId);
@@ -613,6 +625,8 @@ export function useGiftSending() {
 
     // Enqueue a separate playback so the combo plays in order behind whatever is
     // already on screen — same FIFO path as send() and other users' gifts.
+    // Self-gifting: `validRecipients` may include self (getSeatedUserIds no
+    // longer excludes the sender) — already covered, no extra branch needed.
     giftStore.enqueuePlayback({
       gift: ctx.gift,
       senderId: sender.id,
@@ -700,6 +714,8 @@ export function useGiftSending() {
         reconcileSend(batchId, perRecipientCost, validRecipients, null);
       });
 
+    // Self-gifting: `validRecipients` may include self — already covered by
+    // this unconditional loop, no extra branch needed.
     for (const recipientId of validRecipients) {
       triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
     }

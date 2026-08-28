@@ -19,7 +19,10 @@ vi.stubGlobal('watch', watch)
 vi.stubGlobal('toRef', toRef)
 vi.stubGlobal('createLogger', () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }))
 vi.stubGlobal('useGiftPreload', vi.fn())
-vi.stubGlobal('useLuckyFly', () => ({ triggerFly: vi.fn() }))
+// Stable across `useLuckyFly()` calls so self-gifting fly assertions below
+// can inspect a single fixed mock instance rather than a fresh one per call.
+const triggerFly = vi.fn()
+vi.stubGlobal('useLuckyFly', () => ({ triggerFly }))
 // Stable across `useToast()` calls so the burst-failure tests below can assert
 // on what the sender was actually told.
 const toastAdd = vi.fn()
@@ -961,5 +964,75 @@ describe('useGiftSending — ackBalance path', () => {
     await Promise.resolve()
 
     expect(authStore.user?.coins).toBe('1000') // legacy full refund still happens
+  })
+})
+
+/**
+ * Self-gifting (self-gifting epic ticket 04): once useGiftEligibility allows
+ * the seated sender to be a valid recipient, send()/combo()/luckyCombo() must
+ * already give a self leg the exact same FX as any other recipient — the fly
+ * animation for lucky gifts, the playback modal for normal gifts — with no
+ * double-fire and no separate "self echo" path (see useGiftSending.ts's
+ * self-gifting comments at the 3 call sites: these loops are unconditional
+ * over the recipient array, self included).
+ */
+describe('useGiftSending — self-gifting FX (self-gifting epic ticket 04)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('send() to [self] (lucky gift) triggers the fly animation exactly once', async () => {
+    const LUCKY_GIFT = { id: 5, price: 20, category: 'lucky', thumbnail_url: 'lucky.png' } as never
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [1] } satisfies GiftSendAck)
+    const { useGiftSending: sending, giftStore, seatsStore } = await setup(sendGiftMock)
+
+    // Sender (user 1) is seated, and is the sole recipient.
+    seatsStore.updateSeat(3, 1, false)
+    giftStore.selectGift(LUCKY_GIFT)
+    giftStore.setSelectedRecipientIds([1])
+    giftStore.setQuantity(1)
+
+    await sending.send()
+
+    expect(triggerFly).toHaveBeenCalledTimes(1)
+    expect(triggerFly).toHaveBeenCalledWith('lucky.png', 1, 1)
+  })
+
+  it('send() to [self] (normal gift) enqueues the playback modal exactly once, XP accumulated once', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [1] } satisfies GiftSendAck)
+    const { useGiftSending: sending, giftStore, seatsStore } = await setup(sendGiftMock)
+
+    seatsStore.updateSeat(3, 1, false)
+    giftStore.selectGift(GIFT)
+    giftStore.setSelectedRecipientIds([1])
+    giftStore.setQuantity(1)
+
+    expect(giftStore.currentPlayback).toBeNull()
+    await sending.send()
+
+    // Exactly one playback for this self-send (auto-started, nothing left
+    // queued behind it) — no duplicate enqueue.
+    expect(giftStore.currentPlayback?.recipientIds).toEqual([1])
+    expect(giftStore.playbackQueue).toHaveLength(0)
+
+    // XP accumulation is useRoomGifts.sendGift's job (covered with the real
+    // composable in useRoomGifts.spec.ts's self-gifting test) — here `sendGift`
+    // is mocked, so the only useGiftSending-owned assertion is "exactly one
+    // emit, exactly one local enqueue", i.e. no double-booking for self.
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('luckyCombo() to [self] triggers the fly animation exactly once', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [1] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore, seatsStore } = await setup(sendGiftMock)
+
+    seatsStore.updateSeat(3, 1, false)
+    comboStore.setLuckyContext({ gift: GIFT, senderId: 1, recipientIds: [1], quantity: 1 })
+
+    await sending.luckyCombo()
+
+    expect(triggerFly).toHaveBeenCalledTimes(1)
+    expect(triggerFly).toHaveBeenCalledWith('x.png', 1, 1)
   })
 })
