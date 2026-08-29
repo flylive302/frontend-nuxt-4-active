@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import type { CoinRequest } from '~/types/economy/coin-request'
 import { formatCurrency } from '~/utils/currency'
 import { lastCoinRequestUpdate } from '~/events/economy.events'
+import { isIosNative } from '~/utils/native-platform'
 
 definePageMeta({
   layout: 'alt',
@@ -14,6 +15,8 @@ definePageMeta({
 // Composables
 // ========================================
 const authStore = useAuthStore()
+// App Store 3.1.1: no coin-request UI on iOS; balance/activity stay visible.
+const showCoinRequests = !isIosNative()
 
 // ========================================
 // State
@@ -79,6 +82,7 @@ watch(lastCoinRequestUpdate, () => {
         <UButton icon="i-lucide-history" color="tertiary" variant="soft" class="shadow-xl">Visit</UButton>
       </NuxtLink>
 
+      <template v-if="showCoinRequests">
       <h2 class="text-lg font-bold mt-8"><span class="text-success">Claim your</span> Coins for using the app</h2>
       <p class="text-sm text-muted mb-4">Click the Claim button to request your coins. We'll review your eligibility and automatically add coins to your balance if approved. If rejected, contact support for eligibility details.</p>
       <EconomyChooseDefaultReseller color="tertiary" />
@@ -94,9 +98,10 @@ watch(lastCoinRequestUpdate, () => {
       >
         <EconomyFromConversionRequest v-if="!hasPendingRequest && !isLoadingRequests" class="mt-4" @success="handleRequestCreated" />
       </Transition>
+      </template>
     </section>
 
-    <section class="mx-3">
+    <section v-if="showCoinRequests" class="mx-3">
 
       <!-- Pending Notice -->
       <UAlert
