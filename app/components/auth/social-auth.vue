@@ -7,6 +7,7 @@ const isLoading = ref<SocialProvider | null>(null)
 
 const providers: { name: SocialProvider; icon: string; label: string }[] = [
   { name: 'google', icon: 'i-logos-google-icon', label: 'Google' },
+  { name: 'apple', icon: 'i-logos-apple', label: 'Apple' },
 ]
 
 async function loginWith(provider: SocialProvider) {
