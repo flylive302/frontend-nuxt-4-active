@@ -11,6 +11,7 @@
     "cap:build": "RELEASE=$(git rev-parse HEAD 2>/dev/null || echo '') && NUXT_PUBLIC_SENTRY_RELEASE=$RELEASE NITRO_PRESET=static nuxt generate --dotenv .env.capacitor && printf '%s' \"$RELEASE\" > .output/ota-release.txt && cap sync",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
+    "cap:ios": "cap open ios",
     "cap:sync": "cap sync",
     "cap:publish": "node --env-file-if-exists=.env.ota scripts/ota-publish.mjs",
     "reactions:mirror": "node --env-file-if-exists=.env.reactions scripts/reactions-mirror.mjs",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@capacitor-community/safe-area": "^8.0.1",
     "@capacitor/android": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
     "@capacitor/ios": "^8.4.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8.0.3",

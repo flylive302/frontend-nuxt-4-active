@@ -24,7 +24,7 @@ async function loginWith(provider: SocialProvider) {
 </script>
 
 <template>
-  <div class="flex justify-between">
+  <div class="flex flex-col gap-3 justify-between">
     <div v-for="provider in providers" :key="provider.name" class="rounded-lg w-full glowing-border">
       <UButton
           variant="solid"
