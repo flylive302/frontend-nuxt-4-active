@@ -17,7 +17,8 @@ import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
-import { CONNECTION_TIMEOUT_MS, DEFAULT_SEAT_COUNT } from '~/constants/room';
+import { CONNECTION_TIMEOUT_MS, DEFAULT_SEAT_COUNT, ROOM_JOIN_HANDOVER_RETRY_MS } from '~/constants/room';
+import { shouldRetryJoinAfterHandover } from '~/utils/socket/joinHandoverRetry';
 import { consumeCatchupProducers } from '~/utils/catchup-producers';
 import { useRoomAudioPlayer } from './audio/useRoomAudioPlayer';
 import { useSilentJoinDetection, type SilentJoinWatchHandle } from './useSilentJoinDetection';
@@ -646,10 +647,22 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // undefined
 
-    const response = await emitAsync<{ roomId: string; ownerId: number; seatCount: number }, JoinRoomResponse>(
-      'room:join',
-      { roomId, ownerId: ownerId!, seatCount }
-    );
+    // keep-watching 20: during an MSAB instance refresh the join can land on a
+    // server that just lost the room's ownership claim (`room_handover`). The
+    // owner asserts the pin on its next heartbeat, so one retry after a short
+    // delay reaches the right server. Only that code is retried, and only once.
+    let response: JoinRoomResponse;
+    let handoverRetries = 0;
+    for (;;) {
+      response = await emitAsync<{ roomId: string; ownerId: number; seatCount: number }, JoinRoomResponse>(
+        'room:join',
+        { roomId, ownerId: ownerId!, seatCount }
+      );
+      if (!shouldRetryJoinAfterHandover(response.error, handoverRetries)) break;
+      handoverRetries += 1;
+      log.warn('room:join hit an owner hand-over — retrying once', { roomId, handoverRetries });
+      await new Promise(resolve => setTimeout(resolve, ROOM_JOIN_HANDOVER_RETRY_MS));
+    }
 
     if (response.error || !response.rtpCapabilities) {
       const message = resolveSocketErrorMessage(response.error, 'Failed to join room', {

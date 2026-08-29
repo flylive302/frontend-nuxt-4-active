@@ -45,7 +45,20 @@ export function resolveSocketErrorMessage(
     return 'You have been blocked from this room.'
   }
 
+  if (error === 'room_handover') {
+    return 'The room server is switching over — please try again in a moment.'
+  }
+
   return error
+}
+
+/**
+ * True when MSAB answered `room_handover` (keep-watching 20): the join hit a
+ * server that just lost the room's ownership claim during an instance
+ * refresh. Transient — the caller retries once (`ROOM_JOIN_HANDOVER_RETRY_MS`).
+ */
+export function isRoomHandoverSocketError(error: string | undefined | null): boolean {
+  return error === 'room_handover'
 }
 
 /** True when the socket error is the room-block gate's machine-readable code. */

@@ -103,6 +103,16 @@ export const CONNECTION_TIMEOUT_MS = 10_000;
 export const ROOM_OP_TIMEOUT_MS = 30_000;
 
 /**
+ * keep-watching 20 (room-pin-owner-mismatch): during an MSAB instance refresh
+ * a joiner can be routed to a server that just lost the room's ownership
+ * claim; it answers `room_handover`. The owner asserts the pin on its next
+ * heartbeat, so ONE retry after this delay lands on the right server. Kept
+ * to a single retry: a second failure is a real outage, not a hand-over.
+ */
+export const ROOM_JOIN_HANDOVER_RETRY_MS = 2_000;
+export const ROOM_JOIN_HANDOVER_MAX_RETRIES = 1;
+
+/**
  * How many of a join snapshot's existing producers are re-consumed at once
  * (aws-app-affinity/04).
  *
