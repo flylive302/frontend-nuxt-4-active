@@ -87,8 +87,13 @@ export const ASSETS = {
   COIN_ICON: `${IK}/placeholders/coin-icon.webp?tr=w-96,q-80,c-maintain_ratio,f-auto`,
   /** Reward-hero coin icon for `w-14`/`w-20`/`w-24` renders (56-96 CSS px) at 2x DPR. 13.4 KB. */
   COIN_ICON_LARGE: `${IK}/placeholders/coin-icon.webp?tr=w-192,q-80,c-maintain_ratio,f-auto`,
-  HERO_SECONDARY: `${IK}/placeholders/secondary.webp?tr=w-400,q-75,c-maintain_ratio,f-auto`,
-  HERO_TERTIARY: `${IK}/placeholders/tertiary.webp?tr=w-400,q-75,c-maintain_ratio,f-auto`,
+  /**
+   * Full-bleed heroes on /coins/request and /coins/exchange (`min-w-full`, 412 CSS px).
+   * w-400 covered ~1x DPR and read as blurry on every modern phone; w-1024 matches the
+   * charm/wealth heroes below (~110 KB webp, cached by the asset manifest).
+   */
+  HERO_SECONDARY: `${IK}/placeholders/secondary.webp?tr=w-1024,q-75,c-maintain_ratio,f-auto`,
+  HERO_TERTIARY: `${IK}/placeholders/tertiary.webp?tr=w-1024,q-75,c-maintain_ratio,f-auto`,
   /**
    * Full-bleed hero on the wealth/charm level pages (`components/levels/LevelPage.vue:154`,
    * `min-w-full`). NuxtImg's `width`/`sizes` props are no-ops for absolute CDN URLs, so this
