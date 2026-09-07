@@ -97,6 +97,65 @@ const wealthLevel = computed(() =>
 const charmLevel = computed(() =>
     getLevelFromXp(participant?.value?.charm_xp, 'charm')
 )
+
+// ========================================
+// Report / Block (Apple 1.2) — long-press or right-click
+// ========================================
+// Mobile-first: long-press (~500ms touch hold) or right-click opens a small
+// context menu. Only for a real, non-announcement message from ANOTHER user.
+const authStore = useAuthStore()
+const { blockUser } = useUserBlocking()
+
+const showReportModal = ref(false)
+const menuOpen = ref(false)
+const isSelfMessage = computed(() => props.message.userId === authStore.user?.id)
+const canShowContextMenu = computed(() => !isAnnouncementMessage.value && !isSelfMessage.value)
+
+const reportDescription = computed(() => `Room chat message: ${props.message.content}`)
+
+const contextMenuItems = computed(() => [[
+  {
+    label: 'Report message',
+    icon: 'i-lucide-flag',
+    onSelect: () => { showReportModal.value = true },
+  },
+  {
+    label: 'Block user',
+    icon: 'i-lucide-user-x',
+    color: 'error' as const,
+    onSelect: () => { blockUser(props.message.userId) },
+  },
+]])
+
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+const LONG_PRESS_MS = 500
+
+function clearLongPressTimer() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function handleTouchStart() {
+  if (!canShowContextMenu.value) return
+  clearLongPressTimer()
+  longPressTimer = setTimeout(() => {
+    menuOpen.value = true
+  }, LONG_PRESS_MS)
+}
+
+// Any movement/end cancels the pending long-press so normal scrolling
+// and taps are never hijacked.
+function handleTouchEnd() {
+  clearLongPressTimer()
+}
+
+function handleContextMenu(event: MouseEvent) {
+  if (!canShowContextMenu.value) return
+  event.preventDefault()
+  menuOpen.value = true
+}
 </script>
 
 <template>
@@ -114,62 +173,84 @@ const charmLevel = computed(() =>
     <div v-else-if="isAnnouncementMessage" class="flex justify-center py-2">
       <p :class="announcementClass">{{ message.content }}</p>
     </div>
-    <div v-else class="flex py-3">
-      <!-- Avatar -->
-      <UserAvatar :img="displayAvatar" :frame-id="displayFrameId" :user-name="displayName" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
-      <div class="min-w-0">
+    <UDropdownMenu
+      v-else
+      v-model:open="menuOpen"
+      :items="contextMenuItems"
+      :content="{ side: 'bottom', align: 'start' }"
+    >
+      <div
+          class="flex py-3"
+          @contextmenu="handleContextMenu"
+          @touchstart.passive="handleTouchStart"
+          @touchend.passive="handleTouchEnd"
+          @touchmove.passive="handleTouchEnd"
+          @touchcancel.passive="handleTouchEnd"
+      >
+        <!-- Avatar -->
+        <UserAvatar :img="displayAvatar" :frame-id="displayFrameId" :user-name="displayName" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
+        <div class="min-w-0">
 
-        <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary bg-primary/30 rounded-md">
-          <MarqueeName
-              class="flex-1 max-w-24 mx-auto"
-              text-class="text-sm font-bold leading-none"
-              :name="displayName"
-              delay="0s"
+          <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary bg-primary/30 rounded-md">
+            <MarqueeName
+                class="flex-1 max-w-24 mx-auto"
+                text-class="text-sm font-bold leading-none"
+                :name="displayName"
+                delay="0s"
+            />
+            <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+          </div>
+          <!-- Identity badges (flag, VIP, wealth, charm) scroll horizontally once they
+               outgrow the row. The max-width is load-bearing, not cosmetic, and it is
+               sized against CONTENT, not against the badge row below it: MarqueeRow
+               detects overflow with `scrollWidth > clientWidth`, so the window must be
+               narrower than a fully-badged row (flag 24 + VIP 40 + wealth ~60 +
+               charm ~48 ≈ 172px) or nothing ever scrolls. 128px leaves ~44px of travel.
+               Users with one or two badges fit, and correctly stay static. -->
+          <div class="flex ml-2 mt-2 max-w-32">
+            <CountryFlag
+                :code="participant?.country"
+                class="rounded overflow-hidden h-5 size-6 shadow-lg shrink-0"
+            />
+            <img
+                v-if="participant?.vip_level"
+                :src="withImageKitTransform(vipBadgeUIImg(participant?.vip_level), { w: 80 })"
+                class="w-10 shrink-0 ml-3 mr-1"
+                alt=""
+            >
+            <!-- Level badges are height-constrained and wide (aspect ~2.8-3.2), so they size by `h-`, not `w-` -->
+            <img v-if="wealthLevel.badge" :src="levelBadgeSrc(wealthLevel.badge.image_url, 20)" class="h-5 shrink-0" alt="users wealth badge">
+
+            <img v-if="charmLevel.badge" :src="levelBadgeSrc(charmLevel.badge.image_url, 16)" class="h-4 shrink-0" alt="users charm badge">
+          </div>
+
+          <!-- `still`: chat renders one badge row PER MESSAGE, so animated badge assets
+               would mean an AssetPlayer per message. Matches the avatar above, which is
+               already pinned to its still frame. -->
+          <BadgesEquippedBadgeMarquee
+              v-if="participant?.equipped_badges?.length"
+              :equipped-badges="participant.equipped_badges"
+              :still="true"
+              class="ml-1.5 mt-0.5"
           />
-          <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
-        </div>
-        <!-- Identity badges (flag, VIP, wealth, charm) scroll horizontally once they
-             outgrow the row. The max-width is load-bearing, not cosmetic, and it is
-             sized against CONTENT, not against the badge row below it: MarqueeRow
-             detects overflow with `scrollWidth > clientWidth`, so the window must be
-             narrower than a fully-badged row (flag 24 + VIP 40 + wealth ~60 +
-             charm ~48 ≈ 172px) or nothing ever scrolls. 128px leaves ~44px of travel.
-             Users with one or two badges fit, and correctly stay static. -->
-        <div class="flex ml-2 mt-2 max-w-32">
-          <CountryFlag
-              :code="participant?.country"
-              class="rounded overflow-hidden h-5 size-6 shadow-lg shrink-0"
-          />
-          <img
-              v-if="participant?.vip_level"
-              :src="withImageKitTransform(vipBadgeUIImg(participant?.vip_level), { w: 80 })"
-              class="w-10 shrink-0 ml-3 mr-1"
-              alt=""
-          >
-          <!-- Level badges are height-constrained and wide (aspect ~2.8-3.2), so they size by `h-`, not `w-` -->
-          <img v-if="wealthLevel.badge" :src="levelBadgeSrc(wealthLevel.badge.image_url, 20)" class="h-5 shrink-0" alt="users wealth badge">
 
-          <img v-if="charmLevel.badge" :src="levelBadgeSrc(charmLevel.badge.image_url, 16)" class="h-4 shrink-0" alt="users charm badge">
-        </div>
-
-        <!-- `still`: chat renders one badge row PER MESSAGE, so animated badge assets
-             would mean an AssetPlayer per message. Matches the avatar above, which is
-             already pinned to its still frame. -->
-        <BadgesEquippedBadgeMarquee
-            v-if="participant?.equipped_badges?.length"
-            :equipped-badges="participant.equipped_badges"
-            :still="true"
-            class="ml-1.5 mt-0.5"
-        />
-
-        <div v-if="hasChatBubble" class="bubble" :style="bubbleStyle">
-          <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
-        </div>
-        <div v-else class="w-fit p-2 rounded-md bg-primary/50 ring ring-primary my-2 max-w-10/12 ml-2">
-          <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
+          <div v-if="hasChatBubble" class="bubble" :style="bubbleStyle">
+            <p class="text-sm wrap-break-word font-semibold">{{ message.content }}</p>
+          </div>
+          <div v-else class="w-fit p-2 rounded-md bg-primary/50 ring ring-primary my-2 max-w-10/12 ml-2">
+            <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
+          </div>
         </div>
       </div>
-    </div>
+    </UDropdownMenu>
+
+    <ReportModal
+      v-if="canShowContextMenu"
+      v-model:open="showReportModal"
+      reportable-type="user"
+      :reportable-id="message.userId"
+      :initial-description="reportDescription"
+    />
   </div>
 </template>
 

@@ -72,7 +72,7 @@ useBackDismiss(() => props.open, handleCancel)
           icon="i-lucide-mic"
           @click="handleConfirm"
         >
-          Allow Microphone
+          Continue
         </UButton>
       </div>
     </template>

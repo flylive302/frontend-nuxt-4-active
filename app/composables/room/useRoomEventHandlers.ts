@@ -340,6 +340,7 @@ export function setupRoomEventHandlers(
   const authStore = useAuthStore();
   const giftStore = useGiftStore();
   const capabilitiesStore = useServerCapabilitiesStore();
+  const userBlocksStore = useUserBlocksStore();
 
   // Throttle for the ackBalance "gift refunded" toast (ticket 13) — separate
   // timer from the legacy burst-rejection cooldown; scoped to this room
@@ -638,6 +639,10 @@ export function setupRoomEventHandlers(
 
   // Chat events
   socket.on('chat:message', (event: ChatMessageEvent) => {
+    // GATE (Apple 1.2 — block a user): drop chat lines from a blocked sender
+    // before they ever enter the store. Announcement/system messages carry
+    // no real sender, so this only affects real user messages.
+    if (userBlocksStore.isBlocked(event.userId)) return;
     audioStore.addMessage(event);
   });
 

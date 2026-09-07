@@ -42,6 +42,7 @@ const loading = ref(false)
 // ========================================
 
 const authStore = useAuthStore()
+const userBlocksStore = useUserBlocksStore()
 
 // ========================================
 // Composables
@@ -49,6 +50,7 @@ const authStore = useAuthStore()
 
 const { updateMemberRole } = useRoomMemberActions()
 const { blockUser } = useRoomBlocking()
+const { blockUser: blockUserProfile, unblockUser: unblockUserProfile } = useUserBlocking()
 
 // ========================================
 // Computed
@@ -75,6 +77,14 @@ const showAdminActions = computed(() => {
 
 /** Get a participant's current role */
 const participantRole = computed(() => rankOf(props.participant?.id))
+
+/** Apple 1.2 — report/block are for any regular viewer looking at someone else,
+ *  not gated behind admin permission. */
+const showUserSafetyActions = computed(() => !isOwnProfile.value && !!props.participant)
+
+const isParticipantBlocked = computed(() =>
+  userBlocksStore.isBlocked(props.participant?.id)
+)
 
 /** Kicking is rank-gated — an admin cannot kick the owner or another admin. */
 const canKickParticipant = computed(() => canRemove(props.participant?.id))
@@ -175,6 +185,51 @@ async function handleDemote() {
     loading.value = false
   }
 }
+
+// ========================================
+// Report / Block (Apple 1.2)
+// ========================================
+
+const showReportModal = ref(false)
+const showBlockConfirm = ref(false)
+const blockActionLoading = ref(false)
+
+function handleOpenReport() {
+  showReportModal.value = true
+}
+
+function handleReportSubmitted() {
+  showReportModal.value = false
+}
+
+function handleBlockButtonClick() {
+  if (isParticipantBlocked.value) {
+    handleUnblock()
+    return
+  }
+  showBlockConfirm.value = true
+}
+
+async function handleConfirmBlock() {
+  if (!props.participant) return
+  blockActionLoading.value = true
+  try {
+    await blockUserProfile(props.participant.id)
+  } finally {
+    blockActionLoading.value = false
+    showBlockConfirm.value = false
+  }
+}
+
+async function handleUnblock() {
+  if (!props.participant) return
+  blockActionLoading.value = true
+  try {
+    await unblockUserProfile(props.participant.id)
+  } finally {
+    blockActionLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -244,6 +299,61 @@ async function handleDemote() {
         >
           View Full Profile
         </UButton>
+
+        <!-- Report / Block (Apple 1.2) — visible to any regular member
+             looking at someone else, not gated behind admin permission. -->
+        <div v-if="showUserSafetyActions" class="flex gap-2">
+          <UButton
+            icon="i-lucide-flag"
+            color="warning"
+            variant="soft"
+            class="flex-1 justify-center"
+            @click="handleOpenReport"
+          >
+            Report User
+          </UButton>
+          <UButton
+            :icon="isParticipantBlocked ? 'i-lucide-user-check' : 'i-lucide-user-x'"
+            :color="isParticipantBlocked ? 'neutral' : 'error'"
+            variant="soft"
+            class="flex-1 justify-center"
+            :loading="blockActionLoading"
+            @click="handleBlockButtonClick"
+          >
+            {{ isParticipantBlocked ? 'Unblock User' : 'Block User' }}
+          </UButton>
+        </div>
+
+        <ReportModal
+          v-if="participant"
+          v-model:open="showReportModal"
+          reportable-type="user"
+          :reportable-id="participant.id"
+          @submitted="handleReportSubmitted"
+        />
+
+        <!-- Block confirmation — explains the effect before committing. -->
+        <UModal
+          v-model:open="showBlockConfirm"
+          title="Block this user?"
+          :ui="{ content: 'bg-neutral-900 border border-white/10' }"
+        >
+          <template #body>
+            <p class="text-sm text-neutral-400">
+              You won't see their messages. They can still see the room.
+            </p>
+          </template>
+          <template #footer>
+            <div class="flex gap-3 w-full">
+              <UButton variant="ghost" color="neutral" class="flex-1" @click="() => { showBlockConfirm = false }">
+                Cancel
+              </UButton>
+              <UButton color="error" class="flex-1" :loading="blockActionLoading" @click="handleConfirmBlock">
+                Block
+              </UButton>
+            </div>
+          </template>
+        </UModal>
 
         <!-- Kick — unified kick path (ADR 0017): duration popup, no duration-less kick.
              Rank-gated: never shown for the owner, and never shown to an admin

@@ -14,6 +14,7 @@ const props = defineProps<{
   open: boolean
   reportableType: ReportableType
   reportableId: number
+  initialDescription?: string
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +31,7 @@ const isSubmitting = ref(false)
 watch(() => props.open, (open) => {
   if (open) {
     reason.value = undefined
-    description.value = ''
+    description.value = props.initialDescription || ''
   }
 })
 

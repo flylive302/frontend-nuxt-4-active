@@ -271,10 +271,10 @@ async function onAvatarFileSelected(file: File) {
               <UIcon :name="micGranted ? 'i-lucide-check' : 'i-lucide-mic'" class="size-5 text-primary" />
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-neutral-200 font-medium">{{ micGranted ? 'Microphone enabled' : 'Allow microphone' }}</p>
+              <p class="text-sm text-neutral-200 font-medium">{{ micGranted ? 'Microphone enabled' : 'Enable microphone' }}</p>
               <p class="text-xs text-neutral-400 leading-relaxed">{{ micStatusText }}</p>
             </div>
-            <span v-if="!micGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Allow</span>
+            <span v-if="!micGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Continue</span>
           </button>
 
           <!-- Camera permission — same inline pattern, for DM photo capture -->
@@ -289,10 +289,10 @@ async function onAvatarFileSelected(file: File) {
               <UIcon :name="cameraGranted ? 'i-lucide-check' : 'i-lucide-camera'" class="size-5 text-primary" />
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-neutral-200 font-medium">{{ cameraGranted ? 'Camera enabled' : 'Allow camera' }}</p>
+              <p class="text-sm text-neutral-200 font-medium">{{ cameraGranted ? 'Camera enabled' : 'Enable camera' }}</p>
               <p class="text-xs text-neutral-400 leading-relaxed">{{ cameraStatusText }}</p>
             </div>
-            <span v-if="!cameraGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Allow</span>
+            <span v-if="!cameraGranted" class="text-xs font-medium text-primary-400 flex-shrink-0">Continue</span>
           </button>
         </div>
       </template>

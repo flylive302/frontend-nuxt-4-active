@@ -410,6 +410,18 @@ const seatUserAge = computed(() => {
     : displayUser.value.date_of_birth
   return getAge(dob ?? null)
 })
+
+// ========================================
+// Report (Apple 1.2)
+// ========================================
+// Small icon button alongside follow/chat/gift — any regular member can
+// report the shown/seated user, not just admins.
+const showReportModal = ref(false)
+
+function handleOpenReport() {
+  if (!targetUserId.value) return
+  showReportModal.value = true
+}
 </script>
 
 <template>
@@ -601,7 +613,7 @@ const seatUserAge = computed(() => {
             </div>
           </div>
 
-          <div v-if="canFollow || canChat || canGift" class="gap-1 pl-4 flex items-center justify-center mt-2 w-full">
+          <div v-if="canFollow || canChat || canGift || !isSelfTarget" class="gap-1 pl-4 flex items-center justify-center mt-2 w-full">
 
             <!-- Follow button — needs neither a seat nor room presence -->
             <UButton
@@ -638,10 +650,30 @@ const seatUserAge = computed(() => {
               <img :src="ASSETS.GIFT_DRAWER_ICON" alt="gift" class="max-w-12 min-w-12" >
             </UButton>
 
+            <!-- Report — any regular member, works for a seated or profile-mode user -->
+            <UButton
+                v-if="!isSelfTarget"
+                class="rounded-xl"
+                size="xl"
+                square
+                variant="ghost"
+                icon="i-lucide-flag"
+                color="warning"
+                aria-label="Report user"
+                @click="handleOpenReport"
+            />
+
           </div>
         </div>
 
       </div>
     </template>
   </UDrawer>
+
+  <ReportModal
+    v-if="targetUserId"
+    v-model:open="showReportModal"
+    reportable-type="user"
+    :reportable-id="targetUserId"
+  />
 </template>

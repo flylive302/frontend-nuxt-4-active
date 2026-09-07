@@ -17,6 +17,7 @@ const DynamicScrollerItem = defineAsyncComponent(async () =>
 );
 
 const audioStore = useRoomAudioStore();
+const userBlocksStore = useUserBlocksStore();
 
 // Filter tabs (All / Chat / Gifts) — local UI-only state, trivial predicate
 // filtering via the pure `filterChatMessages` util (no business logic here).
@@ -26,7 +27,13 @@ const chatTabs: { id: ChatTab; label: string }[] = [
   { id: CHAT_TAB_GIFTS, label: 'Gifts' },
 ];
 const activeChatTab = ref<ChatTab>(CHAT_TAB_ALL);
-const filteredMessages = computed(() => filterChatMessages(audioStore.messages, activeChatTab.value));
+// GATE (Apple 1.2): hide already-buffered lines from a user blocked mid-room —
+// the socket handler only stops FUTURE messages, so blocking someone whose
+// earlier messages are already in the store needs this second filter.
+const unblockedMessages = computed(() =>
+  audioStore.messages.filter((m) => !userBlocksStore.isBlocked(m.userId))
+);
+const filteredMessages = computed(() => filterChatMessages(unblockedMessages.value, activeChatTab.value));
 
 // Sticky-bottom scroll: pinned = auto-follow new messages; unpinned = show pill instead.
 const scrollerRef = ref<{ scrollToBottom?: () => void; $el?: HTMLElement & StickyScrollTarget } | null>(null);
