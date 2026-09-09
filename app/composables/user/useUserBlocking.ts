@@ -17,11 +17,16 @@ interface BlockedUserItem {
   blockedAt: string
 }
 
-interface BlockedUsersResponse {
+interface BlockedUsersPage {
   items: BlockedUserItem[]
   total: number
   currentPage: number
   lastPage: number
+}
+
+/** ApiResponse::success envelope — the page lives under `data`. */
+interface BlockedUsersResponse {
+  data: BlockedUsersPage
 }
 
 const log = createLogger('[useUserBlocking]')
@@ -47,8 +52,9 @@ export function useUserBlocking() {
         const res = await api<BlockedUsersResponse>('/profile/blocks', {
           query: { page },
         })
-        ids.push(...res.items.map((item) => item.id))
-        lastPage = res.lastPage || 1
+        const pageData = res.data
+        ids.push(...(pageData?.items ?? []).map((item) => item.id))
+        lastPage = pageData?.lastPage || 1
         page += 1
       } while (page <= lastPage)
 
