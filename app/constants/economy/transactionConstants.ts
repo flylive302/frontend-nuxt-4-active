@@ -29,6 +29,8 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   prop_gift: 'Prop Gift',
   vip_purchase: 'VIP Purchase',
   vip_gift: 'VIP Gift',
+  store_purchase: 'Coin Pack',
+  store_refund: 'Store Refund',
 }
 
 // ========================================
@@ -53,6 +55,8 @@ export const TRANSACTION_TYPE_COLORS: Record<TransactionType, string> = {
   prop_gift: 'text-indigo-400',
   vip_purchase: 'text-amber-600',
   vip_gift: 'text-amber-400',
+  store_purchase: 'text-emerald-400',
+  store_refund: 'text-rose-400',
 }
 
 // ========================================

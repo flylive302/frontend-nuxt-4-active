@@ -85,6 +85,8 @@ export type TransactionType =
   | 'prop_gift'
   | 'vip_purchase'
   | 'vip_gift'
+  | 'store_purchase'
+  | 'store_refund'
 
 /**
  * Filter options for transaction history.
