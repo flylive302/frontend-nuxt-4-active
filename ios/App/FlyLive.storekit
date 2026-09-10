@@ -1,0 +1,13 @@
+{
+  "identifier" : "FLYLIVE-STOREKIT-LOCAL",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [
+    { "displayPrice" : "0.99", "familyShareable" : false, "internalID" : "FL-COINS-1", "localizations" : [ { "description" : "15,000 Coins", "displayName" : "Handful of Coins", "locale" : "en_US" } ], "productID" : "com.flylive.app.coins.15k", "referenceName" : "Coins 15k", "type" : "Consumable" },
+    { "displayPrice" : "4.99", "familyShareable" : false, "internalID" : "FL-COINS-2", "localizations" : [ { "description" : "75,000 Coins", "displayName" : "Pouch of Coins", "locale" : "en_US" } ], "productID" : "com.flylive.app.coins.75k", "referenceName" : "Coins 75k", "type" : "Consumable" },
+    { "displayPrice" : "9.99", "familyShareable" : false, "internalID" : "FL-COINS-3", "localizations" : [ { "description" : "150,000 Coins", "displayName" : "Bag of Coins", "locale" : "en_US" } ], "productID" : "com.flylive.app.coins.150k", "referenceName" : "Coins 150k", "type" : "Consumable" },
+    { "displayPrice" : "49.99", "familyShareable" : false, "internalID" : "FL-COINS-4", "localizations" : [ { "description" : "750,000 Coins", "displayName" : "Chest of Coins", "locale" : "en_US" } ], "productID" : "com.flylive.app.coins.750k", "referenceName" : "Coins 750k", "type" : "Consumable" }
+  ],
+  "settings" : { "_applicationInternalID" : "", "_developerTeamID" : "", "_failTransactionsEnabled" : false, "_locale" : "en_US", "_storefront" : "USA", "_storeKitErrors" : [ ] },
+  "subscriptionGroups" : [ ],
+  "version" : { "major" : 3, "minor" : 0 }
+}

@@ -4,7 +4,7 @@ import { ref, watch } from 'vue'
 import type { CoinRequest } from '~/types/economy/coin-request'
 import { formatCurrency } from '~/utils/currency'
 import { lastCoinRequestUpdate } from '~/events/economy.events'
-import { isIosNative } from '~/utils/native-platform'
+import { isIosNative, storeFor } from '~/utils/native-platform'
 
 definePageMeta({
   layout: 'alt',
@@ -81,6 +81,8 @@ watch(lastCoinRequestUpdate, () => {
         <h2 class="text-md font-semibold">Activity History:</h2>
         <UButton icon="i-lucide-history" color="tertiary" variant="soft" class="shadow-xl">Visit</UButton>
       </NuxtLink>
+
+      <EconomyBuyCoinsPanel v-if="storeFor() !== null" class="mt-6" />
 
       <template v-if="showCoinRequests">
       <h2 class="text-lg font-bold mt-8"><span class="text-success">Claim your</span> Coins for using the app</h2>
