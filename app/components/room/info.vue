@@ -81,7 +81,8 @@ function onTabChange(value: string | number): void {
 // ========================================
 
 const participants = computed(() => participantsStore.participantList)
-const participantCount = computed(() => participantsStore.participantList.length)
+// `.size` on the Map — participantList allocates a full array just to count.
+const participantCount = computed(() => participantsStore.participants.size)
 
 // Owner check and active seat for invite functionality
 const { isRoomOwner } = useRoomPermissions()
@@ -278,7 +279,6 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                         :variant="getRankVariant(entry.rank)"
                         size="sm"
                         class="font-bold"
-                        :class="`text-${getRankColor(entry.rank)}-100`"
                     >
                       {{ entry.rank }}
                     </UBadge>

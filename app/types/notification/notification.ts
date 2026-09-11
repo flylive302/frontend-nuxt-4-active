@@ -122,9 +122,38 @@ export interface NotificationState {
 // UI Helper Types
 // ========================================
 
+export type NotificationColor = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'
+
 export interface NotificationTypeConfig {
   icon: string
-  color: 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'
+  color: NotificationColor
+}
+
+/**
+ * Literal class strings so Tailwind v4 can extract them. A template literal
+ * (`bg-${color}/15`) produces no candidate and the utility is never generated —
+ * the element silently renders unstyled (see grid-cols-6, 2026-09-12).
+ * Typed against NotificationColor so a new colour is a typecheck failure, not
+ * another missing style.
+ */
+export const NOTIFICATION_TINT_CLASS: Record<NotificationColor, string> = {
+  primary: 'bg-primary/15',
+  success: 'bg-success/15',
+  warning: 'bg-warning/15',
+  error: 'bg-error/15',
+  info: 'bg-info/15',
+  // `neutral` is a palette, not a single colour — `bg-neutral/15` is not a
+  // utility Tailwind emits. Use the theme's muted surface token instead.
+  neutral: 'bg-muted',
+}
+
+export const NOTIFICATION_ICON_CLASS: Record<NotificationColor, string> = {
+  primary: 'text-primary',
+  success: 'text-success',
+  warning: 'text-warning',
+  error: 'text-error',
+  info: 'text-info',
+  neutral: 'text-muted',
 }
 
 export const NOTIFICATION_TYPE_CONFIG: Record<NotificationType, NotificationTypeConfig> = {

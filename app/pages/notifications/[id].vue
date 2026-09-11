@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NOTIFICATION_TYPE_CONFIG } from '~/types/notification/notification'
+import { NOTIFICATION_TYPE_CONFIG, NOTIFICATION_TINT_CLASS, NOTIFICATION_ICON_CLASS } from '~/types/notification/notification'
 import { formatRelativeTime } from '~/utils/date'
 import {useInboxActions} from "~/composables/inbox/useInboxActions";
 
@@ -128,12 +128,12 @@ onBeforeUnmount(() => {
             <!-- Icon -->
             <div
               class="size-9 rounded-full shrink-0 flex items-center justify-center mt-0.5"
-              :class="`bg-${NOTIFICATION_TYPE_CONFIG[n.type]?.color ?? 'neutral'}/15`"
+              :class="NOTIFICATION_TINT_CLASS[NOTIFICATION_TYPE_CONFIG[n.type]?.color ?? 'neutral']"
             >
               <icon
                 :name="NOTIFICATION_TYPE_CONFIG[n.type]?.icon ?? 'i-lucide-bell'"
                 class="size-4.5"
-                :class="`text-${NOTIFICATION_TYPE_CONFIG[n.type]?.color ?? 'neutral'}`"
+                :class="NOTIFICATION_ICON_CLASS[NOTIFICATION_TYPE_CONFIG[n.type]?.color ?? 'neutral']"
               />
             </div>
 
