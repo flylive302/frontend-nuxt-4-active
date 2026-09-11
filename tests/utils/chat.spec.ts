@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterChatMessages, shouldRenderChatBubble } from '../../app/utils/chat'
+import { filterChatMessages, shouldRenderChatBubble, formatChatAge } from '../../app/utils/chat'
 import {
   CHAT_TAB_ALL,
   CHAT_TAB_CHAT,
@@ -74,5 +74,35 @@ describe('shouldRenderChatBubble', () => {
 
   it('falls back to the plain box when both values are absent', () => {
     expect(shouldRenderChatBubble(undefined, undefined)).toBe(false)
+  })
+})
+
+describe('formatChatAge', () => {
+  const t0 = 1_700_000_000_000
+
+  it('is "now" under a minute', () => {
+    expect(formatChatAge(t0, t0)).toBe('now')
+    expect(formatChatAge(t0, t0 + 59_000)).toBe('now')
+  })
+
+  it('switches to minutes at exactly 60s', () => {
+    expect(formatChatAge(t0, t0 + 60_000)).toBe('1m')
+    expect(formatChatAge(t0, t0 + 59 * 60_000)).toBe('59m')
+  })
+
+  it('switches to hours at 3600s and days at 86400s', () => {
+    expect(formatChatAge(t0, t0 + 3_600_000)).toBe('1h')
+    expect(formatChatAge(t0, t0 + 23 * 3_600_000)).toBe('23h')
+    expect(formatChatAge(t0, t0 + 86_400_000)).toBe('1d')
+    expect(formatChatAge(t0, t0 + 3 * 86_400_000)).toBe('3d')
+  })
+
+  it('clamps a future timestamp (clock skew) to "now"', () => {
+    expect(formatChatAge(t0 + 5_000, t0)).toBe('now')
+  })
+
+  it('changes as `now` advances for a fixed timestamp (the frozen-clock regression)', () => {
+    expect(formatChatAge(t0, t0 + 10_000)).toBe('now')
+    expect(formatChatAge(t0, t0 + 130_000)).toBe('2m')
   })
 })

@@ -4,7 +4,15 @@
  * (lucky-burst-draw ticket 10 follow-up).
  */
 import type { ChatMessageEvent } from '~/types/room/audio';
-import { CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_MESSAGE_TYPE_TEXT, type ChatTab } from '~/constants/room';
+import {
+  CHAT_TAB_ALL,
+  CHAT_TAB_CHAT,
+  CHAT_MESSAGE_TYPE_TEXT,
+  CHAT_TIME_MINUTE_S,
+  CHAT_TIME_HOUR_S,
+  CHAT_TIME_DAY_S,
+  type ChatTab,
+} from '~/constants/room';
 
 /**
  * Filter a message list down to the given tab:
@@ -37,4 +45,20 @@ export function shouldRenderChatBubble(
   vipLevel?: number | null
 ): boolean {
   return Boolean(chatBubbleId) || Boolean(vipLevel);
+}
+
+/**
+ * Pure relative-time label for a chat timestamp: `now` / `Nm` / `Nh` / `Nd`.
+ *
+ * `now` is a parameter on purpose — reading `Date.now()` inside a Vue computed
+ * gives it no reactive dependency, so the label freezes at first render
+ * (room-child-render-cost ticket 01 step 3). Callers pass a ticking clock.
+ */
+export function formatChatAge(timestamp: number, now: number): string {
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+
+  if (seconds < CHAT_TIME_MINUTE_S) return 'now';
+  if (seconds < CHAT_TIME_HOUR_S) return `${Math.floor(seconds / CHAT_TIME_MINUTE_S)}m`;
+  if (seconds < CHAT_TIME_DAY_S) return `${Math.floor(seconds / CHAT_TIME_HOUR_S)}h`;
+  return `${Math.floor(seconds / CHAT_TIME_DAY_S)}d`;
 }

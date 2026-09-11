@@ -11,7 +11,7 @@ import type { ChatMessageEvent } from '~/types/room/audio';
 import MarqueeName from "~/components/common/marquee-name.vue";
 import { CHAT_MESSAGE_TYPE_SYSTEM, CHAT_MESSAGE_TYPE_GIFT, CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room';
 import { withImageKitTransform, levelBadgeSrc } from '~/utils/imagekit';
-import { shouldRenderChatBubble } from '~/utils/chat';
+import { shouldRenderChatBubble, formatChatAge } from '~/utils/chat';
 import { vipBadgeUIImg } from '~/constants/assets';
 
 const props = defineProps<{
@@ -70,16 +70,10 @@ const hasChatBubble = computed(() =>
 );
 
 // Format timestamp to relative time
-const formattedTime = computed(() => {
-  const now = Date.now();
-  const diff = now - props.message.timestamp;
-  const seconds = Math.floor(diff / 1000);
-
-  if (seconds < 60) return 'now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  return `${Math.floor(seconds / 86400)}d`;
-});
+// Shared ticking clock — a bare Date.now() inside a computed has no reactive
+// dependency and freezes the label at first render.
+const { now: clockNow } = useChatClock();
+const formattedTime = computed(() => formatChatAge(props.message.timestamp, clockNow.value));
 
 const seatsStore = useRoomSeatsStore();
 

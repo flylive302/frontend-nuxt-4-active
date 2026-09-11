@@ -227,6 +227,18 @@ export const RECONNECT_FAILED_TOAST_ID = 'audio-reconnect-failed';
  */
 export const CHAT_STICKY_BOTTOM_THRESHOLD_PX = 80;
 
+/**
+ * How often the shared chat clock ticks, driving relative timestamps ("now" → "1m").
+ * One interval per room, not per message — the finest granularity shown is a minute,
+ * so 30s keeps the label at most half a step stale.
+ */
+export const CHAT_CLOCK_TICK_MS = 30_000;
+
+/** Relative-time thresholds for chat timestamps (seconds). */
+export const CHAT_TIME_MINUTE_S = 60;
+export const CHAT_TIME_HOUR_S = 3_600;
+export const CHAT_TIME_DAY_S = 86_400;
+
 /** Body scroll unlock delay in milliseconds */
 export const BODY_UNLOCK_DELAY_MS = 1_000;
 
