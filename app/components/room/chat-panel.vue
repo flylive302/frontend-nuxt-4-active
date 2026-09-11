@@ -19,6 +19,18 @@ const DynamicScrollerItem = defineAsyncComponent(async () =>
 const audioStore = useRoomAudioStore();
 const userBlocksStore = useUserBlocksStore();
 
+// One shared context menu + report modal for every message row (ticket 01 step 4).
+// The menu anchors to a fixed-position 0-size trigger placed at the gesture point.
+const {
+  target: actionTarget,
+  anchor: menuAnchor,
+  menuOpen,
+  reportOpen,
+  reportDescription,
+  menuItems,
+} = useChatMessageActions();
+const menuAnchorStyle = computed(() => ({ left: `${menuAnchor.value.x}px`, top: `${menuAnchor.value.y}px` }));
+
 // Filter tabs (All / Chat / Gifts) — local UI-only state, trivial predicate
 // filtering via the pure `filterChatMessages` util (no business logic here).
 const chatTabs: { id: ChatTab; label: string }[] = [
@@ -132,6 +144,16 @@ function handleClearChat() {
         </template>
       </DynamicScroller>
 
+      <!-- Shared message context menu: invisible fixed trigger at the long-press /
+           right-click point, so reka positions the menu at the touched message. -->
+      <UDropdownMenu
+        v-model:open="menuOpen"
+        :items="menuItems"
+        :content="{ side: 'bottom', align: 'start' }"
+      >
+        <span class="fixed size-0 pointer-events-none" :style="menuAnchorStyle" aria-hidden="true" />
+      </UDropdownMenu>
+
       <!-- New messages pill -->
       <UButton
           v-if="hasNewMessages"
@@ -152,6 +174,15 @@ function handleClearChat() {
     <p v-else-if="filteredMessages.length === 0" class="font-semibold text-sm text-center pt-12 h-full">
       No messages in this view.
     </p>
+
+    <!-- Shared report modal — mounts on first use, one instance for the panel. -->
+    <ReportModal
+      v-if="actionTarget"
+      v-model:open="reportOpen"
+      reportable-type="user"
+      :reportable-id="actionTarget.userId"
+      :initial-description="reportDescription"
+    />
 
   </div>
 </template>

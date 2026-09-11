@@ -234,6 +234,9 @@ export const CHAT_STICKY_BOTTOM_THRESHOLD_PX = 80;
  */
 export const CHAT_CLOCK_TICK_MS = 30_000;
 
+/** Long-press duration that opens the chat message context menu (report/block). */
+export const CHAT_LONG_PRESS_MS = 500;
+
 /** Relative-time thresholds for chat timestamps (seconds). */
 export const CHAT_TIME_MINUTE_S = 60;
 export const CHAT_TIME_HOUR_S = 3_600;

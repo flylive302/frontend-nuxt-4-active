@@ -9,7 +9,7 @@
  */
 import type { ChatMessageEvent } from '~/types/room/audio';
 import MarqueeName from "~/components/common/marquee-name.vue";
-import { CHAT_MESSAGE_TYPE_SYSTEM, CHAT_MESSAGE_TYPE_GIFT, CHAT_MESSAGE_TYPE_LUCKY_WIN } from '~/constants/room';
+import { CHAT_MESSAGE_TYPE_SYSTEM, CHAT_MESSAGE_TYPE_GIFT, CHAT_MESSAGE_TYPE_LUCKY_WIN, CHAT_LONG_PRESS_MS } from '~/constants/room';
 import { withImageKitTransform, levelBadgeSrc } from '~/utils/imagekit';
 import { shouldRenderChatBubble, formatChatAge } from '~/utils/chat';
 import { vipBadgeUIImg } from '~/constants/assets';
@@ -98,31 +98,14 @@ const charmLevel = computed(() =>
 // Mobile-first: long-press (~500ms touch hold) or right-click opens a small
 // context menu. Only for a real, non-announcement message from ANOTHER user.
 const authStore = useAuthStore()
-const { blockUser } = useUserBlocking()
+const { openMenuFor } = useChatMessageActions()
 
-const showReportModal = ref(false)
-const menuOpen = ref(false)
 const isSelfMessage = computed(() => props.message.userId === authStore.user?.id)
 const canShowContextMenu = computed(() => !isAnnouncementMessage.value && !isSelfMessage.value)
 
-const reportDescription = computed(() => `Room chat message: ${props.message.content}`)
-
-const contextMenuItems = computed(() => [[
-  {
-    label: 'Report message',
-    icon: 'i-lucide-flag',
-    onSelect: () => { showReportModal.value = true },
-  },
-  {
-    label: 'Block user',
-    icon: 'i-lucide-user-x',
-    color: 'error' as const,
-    onSelect: () => { blockUser(props.message.userId) },
-  },
-]])
-
+// INTENT only: gesture detection. The menu and report modal themselves are a
+// single shared pair owned by chat-panel.vue via useChatMessageActions.
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
-const LONG_PRESS_MS = 500
 
 function clearLongPressTimer() {
   if (longPressTimer) {
@@ -131,12 +114,15 @@ function clearLongPressTimer() {
   }
 }
 
-function handleTouchStart() {
+function handleTouchStart(event: TouchEvent) {
   if (!canShowContextMenu.value) return
   clearLongPressTimer()
+  const touch = event.touches[0]
+  if (!touch) return
+  const at = { x: touch.clientX, y: touch.clientY }
   longPressTimer = setTimeout(() => {
-    menuOpen.value = true
-  }, LONG_PRESS_MS)
+    openMenuFor(props.message, at)
+  }, CHAT_LONG_PRESS_MS)
 }
 
 // Any movement/end cancels the pending long-press so normal scrolling
@@ -148,8 +134,10 @@ function handleTouchEnd() {
 function handleContextMenu(event: MouseEvent) {
   if (!canShowContextMenu.value) return
   event.preventDefault()
-  menuOpen.value = true
+  openMenuFor(props.message, { x: event.clientX, y: event.clientY })
 }
+
+onBeforeUnmount(clearLongPressTimer)
 </script>
 
 <template>
@@ -167,14 +155,9 @@ function handleContextMenu(event: MouseEvent) {
     <div v-else-if="isAnnouncementMessage" class="flex justify-center py-2">
       <p :class="announcementClass">{{ message.content }}</p>
     </div>
-    <UDropdownMenu
-      v-else
-      v-model:open="menuOpen"
-      :items="contextMenuItems"
-      :content="{ side: 'bottom', align: 'start' }"
-    >
-      <div
-          class="flex py-3"
+    <div
+        v-else
+        class="flex py-3"
           @contextmenu="handleContextMenu"
           @touchstart.passive="handleTouchStart"
           @touchend.passive="handleTouchEnd"
@@ -235,16 +218,7 @@ function handleContextMenu(event: MouseEvent) {
             <p class="text-sm wrap-break-word font-semibold">{{message.content}}</p>
           </div>
         </div>
-      </div>
-    </UDropdownMenu>
-
-    <ReportModal
-      v-if="canShowContextMenu"
-      v-model:open="showReportModal"
-      reportable-type="user"
-      :reportable-id="message.userId"
-      :initial-description="reportDescription"
-    />
+    </div>
   </div>
 </template>
 
