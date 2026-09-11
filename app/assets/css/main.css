@@ -115,7 +115,7 @@ html {
    (instant swap) or under reduced motion, so no manual reduced-motion rule is
    needed. */
 :root {
-    --page-slide-duration: 400ms;
+    --page-slide-duration: 100ms;
     /* how long the slide takes */
     --page-slide-easing: cubic-bezier(0.33, 1, 0.68, 1);
     /* easeOutCubic — quick out, gentle settle */
@@ -392,7 +392,7 @@ html {
    ───────────────────────────────────────────────────────────────────────── */
 :root {
     /* ── Avatar morph (footer ⇄ header) ── */
-    --profile-avatar-duration: 460ms;
+    --profile-avatar-duration: 260ms;
     /* a touch longer than the slide so the avatar lands after the page settles */
     --profile-avatar-easing: cubic-bezier(0.33, 1, 0.68, 1);
 }

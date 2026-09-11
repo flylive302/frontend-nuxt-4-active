@@ -106,6 +106,14 @@ export const LUCKY_FLY_SEAT_CACHE_TTL_MS = 1000;
 export const LUCKY_FLY_MAX_DPR = 2;
 
 /**
+ * Peak `scale` a fly reaches on its timeline (the center hold — see
+ * `buildFlyTimeline` in `utils/lucky-fly-path.ts`, which imports this so the
+ * two cannot drift). Sizes the pre-resampled thumbnail bitmap: undersize it
+ * and the center hold goes visibly soft.
+ */
+export const LUCKY_FLY_MAX_SCALE = 1.3;
+
+/**
  * `gift:send` ack failure messages, copied verbatim from the audio server's
  * `src/shared/errors.ts`. MSAB acks with the literal message, not a code, so
  * these strings ARE the contract — if one is renamed there, the matching arm in

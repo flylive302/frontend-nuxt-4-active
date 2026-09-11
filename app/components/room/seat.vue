@@ -102,7 +102,7 @@ function clearActiveReaction(): void {
 
 <template>
   <div
-    class="flex flex-col items-center min-h-28 text-center cursor-pointer"
+    class="flex flex-col items-center text-center cursor-pointer"
     :class="{ 'ring-2 ring-secondary bg-secondary/10 animate-pulse': isInviteTarget }"
     :data-user-id="seat?.user?.id ?? undefined"
     @click="openDrawer"

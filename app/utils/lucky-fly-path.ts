@@ -7,6 +7,8 @@
  * to run inside a worker.
  */
 
+import { LUCKY_FLY_MAX_SCALE } from '~/constants/gift';
+
 export interface FlyPoint {
   readonly x: number;
   readonly y: number;
@@ -49,8 +51,8 @@ export function buildFlyTimeline(path: FlyPath, durationMs: number, holdMs: numb
     keyframes: [
       { at: 0, point: path.start, scale: 0.2, opacity: 0 },
       { at: at(0.15), point: path.start, scale: 1.1, opacity: 1 },
-      { at: at(0.5), point: path.center, scale: 1.3, opacity: 1 },
-      { at: at(0.5, holdMs), point: path.center, scale: 1.3, opacity: 1 },
+      { at: at(0.5), point: path.center, scale: LUCKY_FLY_MAX_SCALE, opacity: 1 },
+      { at: at(0.5, holdMs), point: path.center, scale: LUCKY_FLY_MAX_SCALE, opacity: 1 },
       { at: at(0.85, holdMs), point: path.end, scale: 0.9, opacity: 1 },
       { at: 1, point: path.end, scale: 0.2, opacity: 0 },
     ],

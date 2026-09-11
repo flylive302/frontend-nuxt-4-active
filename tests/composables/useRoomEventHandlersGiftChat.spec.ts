@@ -12,6 +12,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
 import { CHAT_MESSAGE_TYPE_GIFT } from '../../app/constants/room'
+import { useUserBlocksStore } from '../../app/stores/userBlocks'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -57,6 +58,9 @@ describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
     vi.useFakeTimers()
 
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(GOLDEN_ROSE) }))

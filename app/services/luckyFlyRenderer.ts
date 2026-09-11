@@ -73,6 +73,12 @@ interface PendingEntry {
 }
 
 const CLEAR_RESERVE_PX = 8;
+/**
+ * Distinct thumbnails held at once. A room sees a handful of lucky gifts, but
+ * the cache used to live for the whole session with no ceiling — and an
+ * `ImageBitmap` holds a real GPU/heap allocation until it is closed.
+ */
+const MAX_CACHED_IMAGES = 24;
 const BADGE_FONT_PX = 13;
 
 export class LuckyFlyRenderer {
@@ -83,6 +89,12 @@ export class LuckyFlyRenderer {
   private readonly images = new Map<string, CanvasImageSource>();
   private readonly loading = new Set<string>();
   private readonly pending: PendingEntry[] = [];
+  /**
+   * Running total of `pending[].count`. Kept incrementally because `enqueue`
+   * reads it on every call — walking `pending` there made a 500-tap burst
+   * O(n²).
+   */
+  private pendingCount = 0;
   private active: ActiveFly[] = [];
   private lastLaunchAt = -Infinity;
   /** Last frame time while the loop was running; -1 while idle (no work). */
@@ -131,6 +143,7 @@ export class LuckyFlyRenderer {
   enqueue(request: FlyRequest, count = 1, queuedAt = Number.NaN): void {
     if (count <= 0) return;
     this.pending.push({ request, count, queuedAt });
+    this.pendingCount += count;
     // Compress for the whole burst, sized by its peak backlog — recomputing
     // per remaining item would stretch the tail back out past the budget.
     this.burstInterval = Math.min(
@@ -147,9 +160,7 @@ export class LuckyFlyRenderer {
 
   /** Backlog count in flies (a folded entry counts once per copy). */
   get queued(): number {
-    let n = 0;
-    for (const entry of this.pending) n += entry.count;
-    return n;
+    return this.pendingCount;
   }
 
   get inFlight(): number {
@@ -202,11 +213,23 @@ export class LuckyFlyRenderer {
   /** Drop everything (component unmount, or the viewer went away). */
   clear(): void {
     this.pending.length = 0;
+    this.pendingCount = 0;
     this.active = [];
     this.burstInterval = this.opts.staggerMs;
     this.lastTickAt = -1;
     this.slowFrames = 0;
     this.ctx.clearRect(0, 0, this.width, this.height);
+  }
+
+  /**
+   * Permanent teardown (component unmount). `clear()` keeps decoded thumbnails
+   * so a later burst in the same room starts warm; this frees them.
+   */
+  destroy(): void {
+    this.clear();
+    for (const image of this.images.values()) this.disposeImage(image);
+    this.images.clear();
+    this.loading.clear();
   }
 
   /** True while frames are being missed or too many flies are in flight. */
@@ -234,6 +257,7 @@ export class LuckyFlyRenderer {
       // replaying it now would be the "pile" — drop, do not launch.
       if (Number.isFinite(entry.queuedAt) && now - entry.queuedAt > maxAge) {
         this.pending.shift();
+        this.pendingCount -= entry.count;
         this.droppedStale += entry.count;
         continue;
       }
@@ -247,9 +271,11 @@ export class LuckyFlyRenderer {
       if (entry.count > 1 && this.underPressure()) {
         count = entry.count;
         this.folded += count - 1;
+        this.pendingCount -= count;
         this.pending.shift();
-      } else if (--entry.count <= 0) {
-        this.pending.shift();
+      } else {
+        this.pendingCount -= 1;
+        if (--entry.count <= 0) this.pending.shift();
       }
       this.active.push({
         url: entry.request.thumbnailUrl,
@@ -286,12 +312,29 @@ export class LuckyFlyRenderer {
     };
   }
 
+  /** Release a decoded source. Only `ImageBitmap` owns memory we must free. */
+  private disposeImage(image: CanvasImageSource): void {
+    if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) image.close();
+  }
+
+  /** Evict least-recently-inserted entries down to the cap (Map keeps order). */
+  private trimImages(): void {
+    while (this.images.size > MAX_CACHED_IMAGES) {
+      const oldest = this.images.keys().next();
+      if (oldest.done) return;
+      const image = this.images.get(oldest.value);
+      this.images.delete(oldest.value);
+      if (image) this.disposeImage(image);
+    }
+  }
+
   private ensureImage(url: string): void {
     if (this.images.has(url) || this.loading.has(url)) return;
     this.loading.add(url);
     this.loadImage(url)
       .then((image) => {
         this.images.set(url, image);
+        this.trimImages();
       })
       .catch(() => {
         /* REACT: a missing thumbnail just draws nothing — the fly still paces the stream */

@@ -447,3 +447,32 @@ export const DEFAULT_SPEAKING_RING_COLOR = '#f97316';
  * value always goes out.
  */
 export const PROFILE_SYNC_THROTTLE_MS = 500;
+
+// ============================================
+// Room Playback Volume
+// ============================================
+
+/** localStorage key holding the listener's room playback volume (0–1). */
+export const ROOM_VOLUME_STORAGE_KEY = 'flylive:room:volume';
+
+/** Volume applied when nothing is persisted, or when the stored value is unusable. */
+export const DEFAULT_ROOM_VOLUME = 0.8;
+
+/** Volume restored by unmute when no non-zero level was ever observed. */
+export const FALLBACK_UNMUTE_VOLUME = 0.5;
+
+/** Below this level the speaker icon switches to its "low" variant. */
+export const LOW_VOLUME_ICON_THRESHOLD = 0.5;
+
+// ============================================
+// Seat Grid Layout
+// ============================================
+
+/** Rooms with more seats than this render six columns instead of five. */
+export const SEAT_GRID_WIDE_THRESHOLD = 15;
+
+/**
+ * Debounce on persisting the volume level. The slider emits on every drag tick;
+ * the pipeline gets each one, localStorage only gets the last.
+ */
+export const VOLUME_PERSIST_DEBOUNCE_MS = 250;

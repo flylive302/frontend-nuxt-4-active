@@ -88,6 +88,30 @@ describe('LuckyFlyRenderer', () => {
     expect(bulk.queued).toBe(single.queued);
   });
 
+  it('`queued` stays exact when flies are enqueued mid-drain (running counter, not an array walk)', () => {
+    const r = makeRenderer();
+    r.enqueue(req, 6, 0);
+    expect(r.queued).toBe(6);
+
+    // Drain part of the backlog, then enqueue on top of the partially
+    // consumed head entry — `enqueue` reads `queued` to size burstInterval,
+    // so an off-by-N here silently changes the whole burst's pacing.
+    r.tick(0);
+    r.tick(40);
+    const afterDrain = r.queued;
+    expect(afterDrain).toBeLessThan(6);
+
+    r.enqueue(req, 4, 80);
+    expect(r.queued).toBe(afterDrain + 4);
+
+    let now = 80;
+    while (r.queued > 0 && now < 20_000) {
+      now += 16;
+      r.tick(now);
+    }
+    expect(r.queued).toBe(0);
+  });
+
   it('draws loaded images and retires flies after their timeline', async () => {
     const ctx = makeCtx();
     const r = makeRenderer(ctx);

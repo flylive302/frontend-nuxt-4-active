@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { DEFAULT_SEAT_COUNT } from '~/constants/room'
 /**
  * Room Page — Full-screen room UI
  *
@@ -7,6 +6,8 @@ import { DEFAULT_SEAT_COUNT } from '~/constants/room'
  * by useRoomLifecycle composable in app.vue. State comes from Pinia store.
  */
 
+import type { StyleValue } from 'vue';
+import { DEFAULT_SEAT_COUNT, SEAT_GRID_WIDE_THRESHOLD } from '~/constants/room';
 import auth from '~/middleware/auth';
 
 definePageMeta({
@@ -17,26 +18,96 @@ definePageMeta({
   // the generic root slide for this nav — see main.css.
 });
 
+// ========================================
+// State
+// ========================================
+
+const settingsOpen = ref(false);
+// Held on the page, not inside the drawer, so leaving the room can close the
+// games panel programmatically — an iframe left mounted keeps a vendor session
+// alive behind a room the player has already left.
+const gamesOpen = ref(false);
+const volumePopoverOpen = ref(false);
+
+// ========================================
+// Composables
+// ========================================
+
+const route = useRoute();
 const roomStore = useRoomStore();
-
 const roomSessionStore = useRoomSessionStore();
-
 const roomSession = useRoomSession();
 
 const { roomExpandStyle } = useRoomExpandTransition();
 const { src: roomBackgroundDisplaySrc } = useRoomBackground(() => roomStore.currentRoom?.background);
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
-
 const { floatingMultipliers } = useLuckyGift();
+const { volume, isMuted, volumeIcon, setLevel, toggleMute, applyStoredLevel } = useRoomVolume(setVolume);
+const { rehydrateFromRoute, rehydrating } = useRoomRehydration();
 
+// ========================================
+// Derived room shape
+// ========================================
 
+/**
+ * Authoritative seat count. Read once here so the grid class and the `v-for`
+ * can never disagree — previously each re-derived the fallback on its own, and
+ * the column branch compared a possibly-`undefined` `max_seats` against 15.
+ */
+const seatCount = computed(() => roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT);
+
+/**
+ * Tailwind only emits classes it can read literally in the source. The previous
+ * `grid-cols-${…}` template literal produced no candidate, so `grid-cols-6` was
+ * never generated and wide rooms fell back to a single stacked column.
+ */
+const seatGridClass = computed(() =>
+  seatCount.value > SEAT_GRID_WIDE_THRESHOLD ? 'grid-cols-6' : 'grid-cols-5',
+);
+
+const roomColor = computed(() => roomStore.currentRoom?.primary_color ?? null);
+useThemeColor(() => roomColor.value ?? '#000000');
+
+/**
+ * Local override for this subtree, driven straight off the room colour.
+ *
+ * The old version gated these on the *truthiness of the CSS variable read back
+ * off the document root* via `useCssVar` — a `getComputedStyle` round-trip that
+ * is empty during the first render, so the room primary colour only flipped in
+ * after mount. Reading the store value directly makes the first paint correct.
+ */
+const roomThemeStyle = computed<StyleValue>(() => {
+  const color = roomColor.value;
+  if (!color) return {};
+  return {
+    '--ui-primary': color,
+    '--ui-color-primary-500': color,
+    '--ui-color-primary-600': color,
+  };
+});
+
+const rootStyle = computed<StyleValue>(() => [roomExpandStyle, roomThemeStyle.value]);
+
+/**
+ * `--room-theme` must live on the document root, not on this subtree: every
+ * room drawer and modal is teleported to `<body>` and reads it from there
+ * (`var(--room-theme, …)`), so scoping it here would silently un-theme them.
+ * Written directly rather than through `useCssVar`, which re-reads computed
+ * styles off the root element on every change.
+ */
+function writeRoomThemeVar(color: string | null): void {
+  if (!import.meta.client) return;
+  const root = document.documentElement;
+  if (color) root.style.setProperty('--room-theme', color);
+  else root.style.removeProperty('--room-theme');
+}
+
+watch(roomColor, writeRoomThemeVar, { immediate: true });
+onUnmounted(() => writeRoomThemeVar(null));
 
 // ========================================
 // Route Guard — rehydrate on cold mount, redirect only on a genuine leave
 // ========================================
-
-const route = useRoute();
-const { rehydrateFromRoute, rehydrating } = useRoomRehydration();
 
 /**
  * A full reload nulls `currentRoom` (it is in-memory only), which is
@@ -45,7 +116,8 @@ const { rehydrateFromRoute, rehydrating } = useRoomRehydration();
  * — that conflation is what silently ejected reloading users.
  */
 function leaveRoomPage(): void {
-  const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
+  const previous = roomSessionStore.previousRoute;
+  const target = previous && !previous.startsWith('/room/') ? previous : '/';
   navigateTo(target, { replace: true });
 }
 
@@ -65,130 +137,38 @@ watch(
 );
 
 // ========================================
-// Body Scroll Lock
+// Lifecycle — body scroll lock + stored volume
 // ========================================
+
 onMounted(() => {
   // Being on the room page means the room is open, never minimized
   if (roomStore.isMinimized) roomSession.maximizeRoom();
 
+  // Clears the inline `overflow`/`padding-right` a closing NuxtUI drawer
+  // leaves on <body>. The `lock-body`/`unlock-body` classes this used to
+  // toggle alongside it were defined nowhere in the app or the built CSS —
+  // removing the attribute is the whole effect.
   document.body.removeAttribute('style');
-  document.body.classList.remove('unlock-body');
-  document.body.classList.add('lock-body');
+
+  applyStoredLevel();
 });
 
 onUnmounted(() => {
   setTimeout(() => {
     document.body.removeAttribute('style');
-    document.body.classList.remove('lock-body');
-    document.body.classList.add('unlock-body');
   }, 100);
-});
-
-
-// Reactive — updates live as the value changes
-const roomColor = computed(() => roomStore.currentRoom?.primary_color ?? '#000000')
-useThemeColor(roomColor)
-
-// ========================================
-// Volume Control State
-// ========================================
-const VOLUME_STORAGE_KEY = 'flylive:room:volume';
-const savedVolume = typeof localStorage !== 'undefined'
-  ? parseFloat(localStorage.getItem(VOLUME_STORAGE_KEY) ?? '0.8')
-  : 0.8;
-const volume = ref(savedVolume);
-const isMuted = ref(false);
-const volumePopoverOpen = ref(false);
-const settingsOpen = ref(false);
-// Held on the page, not inside the drawer, so leaving the room can close the
-// games panel programmatically — an iframe left mounted keeps a vendor session
-// alive behind a room the player has already left.
-const gamesOpen = ref(false);
-const lastNonZeroVolume = ref(savedVolume > 0 ? savedVolume : 0.8);
-
-/**
- * Handle volume slider change.
- */
-function onVolumeChange(value: number | undefined): void {
-  const vol = value ?? 0.8;
-  volume.value = vol;
-  isMuted.value = vol === 0;
-  if (vol > 0) {
-    lastNonZeroVolume.value = vol;
-  }
-  setVolume(vol);
-
-  // Persist to localStorage
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(VOLUME_STORAGE_KEY, String(vol));
-  }
-}
-
-/**
- * Toggle mute/unmute.
- */
-function toggleMute(): void {
-  if (isMuted.value) {
-    // Unmute — restore last known non-zero volume.
-    const restored = lastNonZeroVolume.value > 0 ? lastNonZeroVolume.value : 0.5;
-    volume.value = restored;
-    isMuted.value = false;
-    setVolume(restored);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(VOLUME_STORAGE_KEY, String(restored));
-    }
-  } else {
-    // Mute
-    isMuted.value = true;
-    if (volume.value > 0) {
-      lastNonZeroVolume.value = volume.value;
-    }
-    volume.value = 0;
-    setVolume(0);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(VOLUME_STORAGE_KEY, '0');
-    }
-  }
-}
-
-/**
- * Volume icon based on the current state.
- */
-const volumeIcon = computed(() => {
-  if (isMuted.value || volume.value === 0) return 'i-lucide-volume-x';
-  if (volume.value < 0.5) return 'i-lucide-volume-1';
-  return 'i-lucide-volume-2';
-});
-
-// Apply saved volume on mount
-onMounted(() => {
-  setVolume(volume.value);
-});
-
-// ========================================
-// Global Theme Variable Injection (for Room scope only)
-// ========================================
-const roomThemeVar = useCssVar('--room-theme', typeof document !== 'undefined' ? document.documentElement : null);
-
-watchEffect(() => {
-  if (roomStore.currentRoom?.primary_color) {
-    roomThemeVar.value = roomStore.currentRoom.primary_color;
-  } else {
-    roomThemeVar.value = ''; // Reset when no custom color
-  }
-});
-
-onUnmounted(() => {
-  roomThemeVar.value = ''; // Clean up when leaving room
 });
 </script>
 
 <template>
   <!-- `roomExpandStyle` names this element as the room card's counterpart: the
-       card's box is interpolated into this one on entry, and back out on leave. -->
+       card's box is interpolated into this one on entry, and back out on leave.
+       The NuxtUI primary overrides are set here so they cascade to this
+       subtree; `--room-theme` itself stays on the document root for the
+       teleported drawers. -->
   <div
     class="absolute inset-0 z-50 p-1 safe-area-top safe-area-bottom overflow-hidden"
-    :style="[roomExpandStyle, roomThemeVar ? { '--ui-primary': 'var(--room-theme)', '--ui-color-primary-500': 'var(--room-theme)', '--ui-color-primary-600': 'var(--room-theme)' } : {}]"
+    :style="rootStyle"
   >
     <template v-if="roomStore.currentRoom">
       <!-- Background Image — first frame of the reveal, seeded from the card's cached bitmap -->
@@ -196,7 +176,7 @@ onUnmounted(() => {
         <img
           :src="roomBackgroundDisplaySrc"
           alt=""
-          class="bg-fixed object-cover size-full"
+          class="object-cover size-full"
           loading="eager"
           fetchpriority="high"
           decoding="async"
@@ -222,9 +202,9 @@ onUnmounted(() => {
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->
-        <div class="scrollbar-hide max-h-[40vh] min-h-[40vh] overflow-scroll scrollbox rounded-xl">
-          <main class="grid grid-cols-5 gap-x-2">
-            <RoomSeat v-for="i in (roomStore.currentRoom?.max_seats ?? DEFAULT_SEAT_COUNT)" :key="i" :seat-id="i" />
+        <div class="scrollbar-hide max-h-[60vh] min-h-[40vh] overflow-y-auto scrollbox rounded-xl">
+          <main class="grid gap-x-1" :class="seatGridClass">
+            <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
           </main>
         </div>
 
@@ -232,7 +212,7 @@ onUnmounted(() => {
         <LazyRoomChatDrawer />
 
         <!-- Bottom Section: Chat + Controls -->
-        <div class="flex grow gap-1 min-h-0 pl-2">
+        <div class="flex grow gap-1 min-h-0 pl-2 pt-2">
           <!-- Chat Panel -->
           <div class="size-full flex flex-col">
             <RoomChatPanel />
@@ -287,19 +267,20 @@ onUnmounted(() => {
                 <template #content>
                   <div class="flex flex-col items-center gap-2 py-2 w-8">
                     <USlider
-                        :model-value="isMuted ? 0 : volume"
+                        :model-value="volume"
                         :min="0"
                         :max="1"
                         :step="0.05"
                         orientation="vertical"
                         class="h-24 text-primary"
-                        @update:model-value="onVolumeChange"
+                        @update:model-value="setLevel"
                     />
                     <UButton
                         :icon="volumeIcon"
                         size="xs"
                         variant="ghost"
                         class="text-primary"
+                        :aria-label="isMuted ? 'Unmute room audio' : 'Mute room audio'"
                         @click="toggleMute"
                     />
                   </div>
@@ -348,4 +329,3 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
-

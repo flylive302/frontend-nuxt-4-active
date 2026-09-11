@@ -12,6 +12,7 @@ import {
   LUCKY_FLY_FOLD_ACTIVE_THRESHOLD,
   LUCKY_FLY_MAX_AGE_MS,
   LUCKY_FLY_MAX_DPR,
+  LUCKY_FLY_MAX_SCALE,
   LUCKY_FLY_MAX_STREAM_MS,
   LUCKY_FLY_PATH_JITTER_PX,
   LUCKY_FLY_SLOW_FRAME_MS,
@@ -33,12 +34,42 @@ let frameId = 0;
 // Helpers
 // ========================================
 
-/** Main-thread loader: a plain <img> needs no CORS headers to be drawn. */
-function loadThumbnail(url: string): Promise<CanvasImageSource> {
+/**
+ * Largest size a fly is ever drawn at, in device pixels.
+ *
+ * `giftThumbnailSrc` serves a 256px-wide variant (shared with seats, chat and
+ * member lists, so it is already cached), but a fly peaks at
+ * `LUCKY_FLY_THUMBNAIL_SIZE × LUCKY_FLY_MAX_SCALE` CSS px. Drawing the 256px
+ * source directly made every `drawImage` a downscale — once per fly, per
+ * frame, and a burst runs dozens of flies off the SAME thumbnail.
+ */
+const FLY_BITMAP_PX = Math.ceil(
+  LUCKY_FLY_THUMBNAIL_SIZE * LUCKY_FLY_MAX_SCALE * LUCKY_FLY_MAX_DPR,
+);
+
+/**
+ * Main-thread loader: a plain <img> needs no CORS headers to be drawn.
+ *
+ * Resampled once into an `ImageBitmap` at the exact peak draw size, so each
+ * frame's `drawImage` is a near 1:1 blit. Falls back to the raw element where
+ * `createImageBitmap` resize options are unavailable.
+ */
+async function loadThumbnail(url: string): Promise<CanvasImageSource> {
   const img = new Image();
   img.decoding = "async";
   img.src = giftThumbnailSrc(url);
-  return img.decode().then(() => img);
+  await img.decode();
+
+  if (typeof createImageBitmap !== "function") return img;
+  try {
+    return await createImageBitmap(img, {
+      resizeWidth: FLY_BITMAP_PX,
+      resizeHeight: FLY_BITMAP_PX,
+      resizeQuality: "high",
+    });
+  } catch {
+    return img;
+  }
 }
 
 function frame(now: number): void {
@@ -47,16 +78,56 @@ function frame(now: number): void {
   if (renderer.tick(now)) frameId = requestAnimationFrame(frame);
 }
 
-/** (Re)start the loop — idempotent while a frame is already scheduled. */
-function wake(): void {
+/**
+ * (Re)start the loop — idempotent while a frame is already scheduled.
+ *
+ * Sizes the canvas first: `tick` draws against the renderer's stored
+ * dimensions, so the deferred allocation must land before the first frame.
+ */
+function wakeAndFit(): void {
+  fitToViewport();
   if (frameId === 0) frameId = requestAnimationFrame(frame);
 }
 
+/** Last size the backing store was allocated at, in CSS px. */
+let sizedWidth = 0;
+let sizedHeight = 0;
+
 function fitToViewport(): void {
   if (!renderer) return;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  if (width === sizedWidth && height === sizedHeight) return;
+
   const dpr = Math.min(window.devicePixelRatio || 1, LUCKY_FLY_MAX_DPR);
-  renderer.resize(window.innerWidth, window.innerHeight, dpr);
+  renderer.resize(width, height, dpr);
+  sizedWidth = width;
+  sizedHeight = height;
   invalidateSeatPositions();
+}
+
+/**
+ * `resize` handler.
+ *
+ * Opening the chat composer raises the soft keyboard, which fires `resize`
+ * with a shorter viewport. Re-allocating the backing store there wipes the
+ * canvas mid-animation and costs a full-viewport allocation on the phones
+ * least able to afford it — and the fixed canvas still covers the screen, so
+ * nothing needs to change. Only width and growth are acted on.
+ */
+function onViewportResize(): void {
+  // Never sized — no fly has been queued yet, so leave the allocation to the
+  // first `wakeAndFit`. A resize is not a reason to start paying for it.
+  if (sizedWidth === 0) return;
+
+  const keyboardLikely = window.innerWidth === sizedWidth && window.innerHeight < sizedHeight;
+  if (keyboardLikely) {
+    // Seat boxes still move under a raised keyboard — the cached geometry
+    // must go even though the canvas does not.
+    invalidateSeatPositions();
+    return;
+  }
+  fitToViewport();
 }
 
 // ========================================
@@ -81,18 +152,24 @@ onMounted(() => {
     slowFramesToFold: LUCKY_FLY_SLOW_FRAMES_TO_FOLD,
     foldActiveThreshold: LUCKY_FLY_FOLD_ACTIVE_THRESHOLD,
   });
-  fitToViewport();
-  window.addEventListener("resize", fitToViewport);
-  attachRenderer(renderer, wake);
+  // Sized on the first fly, not here: a room that never sees a lucky gift
+  // never allocates a full-viewport backing store. The component still mounts
+  // and registers, so no first event is lost.
+  window.addEventListener("resize", onViewportResize);
+  attachRenderer(renderer, wakeAndFit);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", fitToViewport);
+  window.removeEventListener("resize", onViewportResize);
   if (frameId !== 0) cancelAnimationFrame(frameId);
   frameId = 0;
   detachRenderer();
-  renderer?.clear();
+  // `destroy` (not `clear`) — the decoded thumbnails are ImageBitmaps and hold
+  // real memory until closed.
+  renderer?.destroy();
   renderer = null;
+  sizedWidth = 0;
+  sizedHeight = 0;
 });
 </script>
 

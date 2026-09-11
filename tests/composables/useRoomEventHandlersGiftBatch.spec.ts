@@ -15,6 +15,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
 import { MAX_PLAYBACK_REPEATS } from '../../app/constants/gift'
+import { useUserBlocksStore } from '../../app/stores/userBlocks'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -71,6 +72,9 @@ describe('setupRoomEventHandlers — gift:batch', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
     vi.useFakeTimers()
 
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))

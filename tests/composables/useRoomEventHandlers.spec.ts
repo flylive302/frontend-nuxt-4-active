@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
+import { useUserBlocksStore } from '../../app/stores/userBlocks'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -61,6 +62,9 @@ describe('setupRoomEventHandlers — seat reactions', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
 
     // Non-reaction Nuxt auto-import globals — stubbed, not exercised here.
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
@@ -153,6 +157,9 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
     vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
@@ -223,6 +230,9 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
     vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
@@ -326,6 +336,9 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
     vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
     vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
@@ -433,6 +446,9 @@ describe('setupRoomEventHandlers — gift:error refund toast (ackBalance)', () =
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
 
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
