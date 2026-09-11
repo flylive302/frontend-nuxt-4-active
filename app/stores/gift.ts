@@ -7,7 +7,8 @@
 import { defineStore } from 'pinia';
 import { useFxPreferencesStore } from '~/stores/fxPreferences';
 import type { Gift, GiftPlaybackItem } from '~/types/gift/gift';
-import { BURST_SHED_QUEUE_DEPTH, MAX_PLAYBACK_QUEUE_SIZE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
+import { BURST_SHED_QUEUE_DEPTH, GIFT_PLAYBACK_MAX_AGE_MS, MAX_PLAYBACK_QUEUE_SIZE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
+import { isAway } from '~/services/motionPauseOrchestrator';
 import type { GIFT_QUANTITY_OPTIONS } from '~/constants/gift';
 
 export const useGiftStore = defineStore('giftStore', () => {
@@ -135,6 +136,11 @@ export const useGiftStore = defineStore('giftStore', () => {
     const fxPrefs = useFxPreferencesStore();
     if (item.isEntryAnimation ? fxPrefs.muteEntryAnimations : fxPrefs.muteGiftAnimations) return;
 
+    // GATE (gift-backlog-and-lag 01): nobody is watching — app backgrounded or
+    // tab hidden. Balances/XP/chat are already booked by the caller; queuing
+    // the visual would only replay it as a pile when the viewer returns.
+    if (isAway()) return;
+
     // GATE: coalesce per-recipient fan-out of a single send into one playback.
     if (item.batchId) {
       if (seenBatchIds.has(item.batchId)) return;
@@ -194,6 +200,13 @@ export const useGiftStore = defineStore('giftStore', () => {
    * Start playing the next item in the queue
    */
   function playNext() {
+    // gift-backlog-and-lag 01: skip items that waited past their max age —
+    // the viewer has moved on; only a fresh item is worth a full-screen play.
+    const cutoff = Date.now() - GIFT_PLAYBACK_MAX_AGE_MS;
+    while (playbackQueue.value.length > 0 && playbackQueue.value[0]!.timestamp < cutoff) {
+      playbackQueue.value.shift();
+    }
+
     if (playbackQueue.value.length === 0) {
       currentPlayback.value = null;
       isPlaying.value = false;
@@ -204,6 +217,15 @@ export const useGiftStore = defineStore('giftStore', () => {
     currentPlayback.value = playbackQueue.value.shift()!;
     isPlaying.value = true;
     isProcessingQueue.value = false;
+  }
+
+  /**
+   * gift-backlog-and-lag 01: drop everything still waiting (the viewer went
+   * away or just came back). The item on screen is left to the motion-pause
+   * registry, which already pauses/resumes the player itself.
+   */
+  function dropQueuedPlayback() {
+    playbackQueue.value = [];
   }
 
   /**
@@ -289,6 +311,7 @@ export const useGiftStore = defineStore('giftStore', () => {
     playNext,
     onPlaybackComplete,
     clearPlayback,
+    dropQueuedPlayback,
 
     // Combo actions
     incrementCombo,

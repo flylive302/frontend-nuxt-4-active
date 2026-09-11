@@ -63,6 +63,36 @@ export const LUCKY_FLY_STAGGER_MS = 40;
  */
 export const LUCKY_FLY_MAX_STREAM_MS = 8000;
 
+/**
+ * gift-backlog-and-lag 01 — a fly that has waited longer than this in the
+ * launch backlog is dropped, not launched. Inside a live burst the compressed
+ * stream never holds a fly longer than `LUCKY_FLY_MAX_STREAM_MS`, so this only
+ * bites when the frame loop was stalled (tab hidden, app backgrounded): the
+ * viewer was not looking, and replaying what they missed is what users report
+ * as "all the gifts play at once when I come back". 1.5× the stream budget
+ * so a full live burst plus frame granularity never trips it.
+ */
+export const LUCKY_FLY_MAX_AGE_MS = LUCKY_FLY_MAX_STREAM_MS * 1.5;
+
+/**
+ * gift-backlog-and-lag 01 — fold under frame pressure. When the fly loop is
+ * missing frames (a frame gap above `LUCKY_FLY_SLOW_FRAME_MS` for
+ * `LUCKY_FLY_SLOW_FRAMES_TO_FOLD` frames in a row) or more than
+ * `LUCKY_FLY_FOLD_ACTIVE_THRESHOLD` flies are in flight, a queued batch item's
+ * N identical flies launch as ONE fly carrying a "×N" badge instead of N
+ * separate flies. Nothing is dropped: every tap is still shown, as a count.
+ */
+export const LUCKY_FLY_SLOW_FRAME_MS = 48;
+export const LUCKY_FLY_SLOW_FRAMES_TO_FOLD = 3;
+export const LUCKY_FLY_FOLD_ACTIVE_THRESHOLD = 40;
+
+/**
+ * gift-backlog-and-lag 01 — a queued full-screen gift older than this is
+ * skipped when its turn comes. Balances/XP/chat were booked at arrival, so
+ * skipping only drops a visual the viewer has already moved past.
+ */
+export const GIFT_PLAYBACK_MAX_AGE_MS = 15000;
+
 /** Random path offset per fly (px) so stacked flies are visibly distinct. */
 export const LUCKY_FLY_PATH_JITTER_PX = 14;
 

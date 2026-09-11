@@ -11,6 +11,7 @@
  */
 import { LUCKY_FLY_SEAT_CACHE_TTL_MS, LUCKY_FLY_THUMBNAIL_SIZE } from '~/constants/gift';
 import type { LuckyFlyRenderer } from '~/services/luckyFlyRenderer';
+import { isAway } from '~/services/motionPauseOrchestrator';
 import { useFxPreferencesStore } from '~/stores/fxPreferences';
 import type { FlyPoint } from '~/utils/lucky-fly-path';
 
@@ -81,6 +82,9 @@ export function useLuckyFly() {
     if (useFxPreferencesStore().muteGiftAnimations) return;
     // GATE: no canvas mounted (not on the room page) — nothing to draw on.
     if (!renderer) return;
+    // GATE (gift-backlog-and-lag 01): nobody is watching — app backgrounded or
+    // tab hidden. Do not queue what would only replay as a pile on return.
+    if (isAway()) return;
 
     const now = performance.now();
     renderer.enqueue({
@@ -90,8 +94,13 @@ export function useLuckyFly() {
         center: getScreenCenter(),
         end: resolveSeatPosition(recipientId, now),
       },
-    }, count);
+    }, count, now);
     onEnqueue?.();
+  }
+
+  /** gift-backlog-and-lag 01: the viewer went away / came back — forget every queued and in-flight fly. */
+  function dropAllFlies(): void {
+    renderer?.clear();
   }
 
   /** Component hook: register the mounted renderer and its wake-up callback. */
@@ -112,5 +121,5 @@ export function useLuckyFly() {
     seatCache.clear();
   }
 
-  return { triggerFly, attachRenderer, detachRenderer, invalidateSeatPositions };
+  return { triggerFly, dropAllFlies, attachRenderer, detachRenderer, invalidateSeatPositions };
 }

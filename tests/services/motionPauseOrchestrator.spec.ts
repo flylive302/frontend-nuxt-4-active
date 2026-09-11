@@ -179,4 +179,96 @@ describe('motionPauseOrchestrator', () => {
 
     expect(mockAddListener).toHaveBeenCalledTimes(1)
   })
+
+  describe('away signal (gift-backlog-and-lag 01)', () => {
+    it('isAway() is false initially', () => {
+      orchestrator.init()
+      expect(orchestrator.isAway()).toBe(false)
+    })
+
+    it('isAway() is true after visibility goes hidden', () => {
+      orchestrator.init()
+      fakeDocument.fireVisibilityChange('hidden')
+      expect(orchestrator.isAway()).toBe(true)
+    })
+
+    it('isAway() is true after Capacitor backgrounds the app', async () => {
+      orchestrator.init()
+      await flushMicrotasks()
+
+      appStateCallback?.({ isActive: false })
+      expect(orchestrator.isAway()).toBe(true)
+    })
+
+    it('isAway() is false again once both signals clear', async () => {
+      orchestrator.init()
+      await flushMicrotasks()
+
+      fakeDocument.fireVisibilityChange('hidden')
+      appStateCallback?.({ isActive: false })
+      expect(orchestrator.isAway()).toBe(true)
+
+      fakeDocument.fireVisibilityChange('visible')
+      expect(orchestrator.isAway()).toBe(true) // background still active
+
+      appStateCallback?.({ isActive: true })
+      expect(orchestrator.isAway()).toBe(false)
+    })
+
+    it('acquireCovered() alone does NOT make isAway() true', () => {
+      orchestrator.init()
+
+      const token = orchestrator.acquireCovered()
+      expect(orchestrator.isAway()).toBe(false)
+
+      orchestrator.releaseCovered(token)
+      expect(orchestrator.isAway()).toBe(false)
+    })
+
+    it('subscribeAway fires once per transition, not on a repeated same-state signal', () => {
+      orchestrator.init()
+
+      const cb = vi.fn()
+      orchestrator.subscribeAway(cb)
+
+      fakeDocument.fireVisibilityChange('hidden')
+      expect(cb).toHaveBeenCalledTimes(1)
+      expect(cb).toHaveBeenLastCalledWith(true)
+
+      // Still hidden — visibilitychange firing again must not re-notify.
+      fakeDocument.fireVisibilityChange('hidden')
+      expect(cb).toHaveBeenCalledTimes(1)
+
+      fakeDocument.fireVisibilityChange('visible')
+      expect(cb).toHaveBeenCalledTimes(2)
+      expect(cb).toHaveBeenLastCalledWith(false)
+    })
+
+    it('unsubscribe stops further callbacks', () => {
+      orchestrator.init()
+
+      const cb = vi.fn()
+      const unsubscribe = orchestrator.subscribeAway(cb)
+      unsubscribe()
+
+      fakeDocument.fireVisibilityChange('hidden')
+      expect(cb).not.toHaveBeenCalled()
+    })
+
+    it('a throwing subscriber does not prevent other subscribers from being notified', () => {
+      orchestrator.init()
+
+      const throwing = vi.fn(() => {
+        throw new Error('boom')
+      })
+      const other = vi.fn()
+      orchestrator.subscribeAway(throwing)
+      orchestrator.subscribeAway(other)
+
+      expect(() => fakeDocument.fireVisibilityChange('hidden')).not.toThrow()
+      expect(throwing).toHaveBeenCalledTimes(1)
+      expect(other).toHaveBeenCalledTimes(1)
+      expect(other).toHaveBeenCalledWith(true)
+    })
+  })
 })

@@ -12,10 +12,12 @@ function makeCtx() {
     setTransform: vi.fn(),
     clearRect: vi.fn(),
     drawImage: vi.fn(),
+    fillText: vi.fn(),
+    strokeText: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 }
 
-function makeRenderer(ctx = makeCtx()) {
+function makeRenderer(ctx = makeCtx(), extra: Partial<ConstructorParameters<typeof LuckyFlyRenderer>[0]> = {}) {
   return new LuckyFlyRenderer({
     ctx,
     loadImage: () => Promise.resolve({} as CanvasImageSource),
@@ -26,6 +28,7 @@ function makeRenderer(ctx = makeCtx()) {
     staggerMs: 40,
     maxStreamMs: 8000,
     jitterPx: 0,
+    ...extra,
   });
 }
 
@@ -97,5 +100,116 @@ describe('LuckyFlyRenderer', () => {
     expect(ctx.drawImage).toHaveBeenCalled();
     expect(r.tick(3000)).toBe(false);
     expect(r.inFlight).toBe(0);
+  });
+
+  // ─── gift-backlog-and-lag 01 ───────────────────────────────────────
+
+  describe('stale drop (viewer was away)', () => {
+    it('drops a fly queued longer than maxAgeMs instead of launching it — the "pile on return"', () => {
+      const r = makeRenderer(makeCtx(), { maxAgeMs: 8000 });
+      // Queued at t=0 while the loop was stalled (hidden tab); first frame at t=60s.
+      r.enqueue(req, 30, 0);
+      expect(r.queued).toBe(30);
+      r.tick(60_000);
+      expect(r.inFlight).toBe(0);
+      expect(r.queued).toBe(0);
+      expect(r.droppedStaleCount).toBe(30);
+      expect(r.hasWork()).toBe(false);
+    });
+
+    it('keeps a fly inside its age budget and one with no queuedAt (unknown clock)', () => {
+      const r = makeRenderer(makeCtx(), { maxAgeMs: 8000 });
+      r.enqueue(req, 1, 1000);
+      r.enqueue(req, 1); // NaN queuedAt: never stale
+      r.tick(5000);
+      r.tick(5100);
+      expect(r.inFlight).toBe(2);
+      expect(r.droppedStaleCount).toBe(0);
+    });
+
+    it('a live burst is never judged stale: it drains inside maxStreamMs, the age budget is 1.5× that', () => {
+      const r = makeRenderer(makeCtx(), { maxAgeMs: 12000 });
+      let now = 0;
+      for (let i = 0; i < 1000; i++) r.enqueue(req, 1, now);
+      while (r.queued > 0) {
+        now += 16;
+        r.tick(now);
+      }
+      expect(r.droppedStaleCount).toBe(0);
+    });
+
+    it('clear() forgets queued and in-flight flies', () => {
+      const r = makeRenderer();
+      r.enqueue(req, 5);
+      r.tick(0);
+      expect(r.inFlight + r.queued).toBe(5);
+      r.clear();
+      expect(r.hasWork()).toBe(false);
+    });
+  });
+
+  describe('fold under frame pressure', () => {
+    const pressureOpts = { slowFrameMs: 48, slowFramesToFold: 3, foldActiveThreshold: 40 };
+
+    it('launches a batch item one copy at a time while frames are healthy', () => {
+      const r = makeRenderer(makeCtx(), pressureOpts);
+      r.enqueue(req, 5);
+      r.tick(0);
+      r.tick(16);
+      r.tick(48);
+      expect(r.inFlight).toBe(2);
+      expect(r.foldedCount).toBe(0);
+    });
+
+    it('after 3 consecutive slow frames a batch item launches as ONE fly with its count — nothing dropped', () => {
+      const ctx = makeCtx();
+      const r = makeRenderer(ctx, pressureOpts);
+      r.enqueue(req, 1); // something in flight so the loop is "running"
+      r.tick(0);
+      // Three slow frames (100 ms gaps) in a row.
+      r.tick(100);
+      r.tick(200);
+      r.tick(300);
+      r.enqueue(req, 7);
+      r.tick(400);
+      expect(r.foldedCount).toBe(6);
+      expect(r.queued).toBe(0);
+      expect(r.inFlight).toBe(2);
+      // The folded fly draws its ×N badge once its image is loaded.
+      return Promise.resolve().then(() => {
+        r.tick(500);
+        expect(ctx.fillText).toHaveBeenCalledWith('×7', expect.any(Number), expect.any(Number));
+      });
+    });
+
+    it('folds once the in-flight count reaches foldActiveThreshold, even at a healthy frame rate', () => {
+      const r = makeRenderer(makeCtx(), { ...pressureOpts, foldActiveThreshold: 3 });
+      r.enqueue(req, 3);
+      r.enqueue(req, 10);
+      let now = 0;
+      while (r.queued > 0) {
+        now += 16;
+        r.tick(now);
+      }
+      expect(r.foldedCount).toBe(9);
+    });
+
+    it('healthy frames after a slow patch return to one-copy launches', () => {
+      const r = makeRenderer(makeCtx(), pressureOpts);
+      r.enqueue(req, 1);
+      r.tick(0);
+      r.tick(100);
+      r.tick(200);
+      r.tick(300);
+      // Six healthy frames decay the slow counter back to 0.
+      for (let t = 316; t <= 400; t += 16) r.tick(t);
+      r.enqueue(req, 4);
+      r.tick(416);
+      expect(r.foldedCount).toBe(0);
+      // Existing catch-up rule: the virtual launch clock lands at most one
+      // interval behind `now`, so a frame may launch two copies — never all.
+      expect(r.queued).toBeGreaterThanOrEqual(2);
+      expect(r.inFlight).toBeLessThanOrEqual(3);
+    });
   });
 });

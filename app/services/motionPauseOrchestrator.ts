@@ -41,6 +41,17 @@ let coveredTokens = new Set<string>();
 let nextCoveredToken = 0;
 
 let appStateListenerHandle: { remove: () => void } | null = null;
+
+/**
+ * gift-backlog-and-lag 01 — "away" = the user cannot see the room at all
+ * (app backgrounded or tab hidden). A covering drawer/sheet is NOT away: the
+ * user is still in the room and may be the one sending. Gift animation
+ * producers gate on this so nothing queues up while nobody is watching, and
+ * subscribers purge what did queue on the transition.
+ */
+type AwaySubscriber = (away: boolean) => void;
+let awaySubscribers = new Set<AwaySubscriber>();
+let lastAway = false;
 let visibilityListenerAttached = false;
 let initialized = false;
 
@@ -64,6 +75,33 @@ function setReason(reason: PauseReason, active: boolean): void {
     reasons.delete(reason);
   }
   recompute();
+  notifyAway();
+}
+
+function notifyAway(): void {
+  const away = reasons.size > 0;
+  if (away === lastAway) return;
+  lastAway = away;
+  for (const cb of awaySubscribers) {
+    try {
+      cb(away);
+    } catch (err) {
+      log.warn('Away subscriber threw', err);
+    }
+  }
+}
+
+/** True while the app is backgrounded or the tab is hidden (never for a covering overlay). */
+export function isAway(): boolean {
+  return reasons.size > 0;
+}
+
+/** Subscribe to away transitions. Returns an unsubscribe function. */
+export function subscribeAway(cb: AwaySubscriber): () => void {
+  awaySubscribers.add(cb);
+  return () => {
+    awaySubscribers.delete(cb);
+  };
 }
 
 // ========================================
@@ -138,6 +176,8 @@ export function __resetForTest(): void {
   visibilityListenerAttached = false;
   appStateListenerHandle?.remove();
   appStateListenerHandle = null;
+  awaySubscribers = new Set<AwaySubscriber>();
+  lastAway = false;
   reasons = new Set<PauseReason>();
   coveredTokens = new Set<string>();
   nextCoveredToken = 0;

@@ -37,6 +37,18 @@ export interface LuckyFlyRendererOptions {
   readonly staggerMs: number;
   readonly maxStreamMs: number;
   readonly jitterPx: number;
+  /**
+   * gift-backlog-and-lag 01 — a pending fly older than this at launch time is
+   * dropped (the loop was stalled: hidden tab / backgrounded app). Omit or
+   * `Infinity` = never drop.
+   */
+  readonly maxAgeMs?: number;
+  /** Frame gap above which a frame counts as slow (fold trigger). */
+  readonly slowFrameMs?: number;
+  /** Consecutive slow frames before folding starts. */
+  readonly slowFramesToFold?: number;
+  /** In-flight count at or above which folding starts regardless of frame rate. */
+  readonly foldActiveThreshold?: number;
 }
 
 export interface FlyRequest {
@@ -48,9 +60,20 @@ interface ActiveFly {
   readonly url: string;
   readonly timeline: FlyTimeline;
   readonly startedAt: number;
+  /** > 1 when several identical flies were folded into this one (drawn as "×N"). */
+  readonly count: number;
+}
+
+/** One queued batch item: `count` identical flies, expanded (or folded) at launch. */
+interface PendingEntry {
+  readonly request: FlyRequest;
+  count: number;
+  /** Renderer-clock time it was queued; NaN = unknown, never considered stale. */
+  readonly queuedAt: number;
 }
 
 const CLEAR_RESERVE_PX = 8;
+const BADGE_FONT_PX = 13;
 
 export class LuckyFlyRenderer {
   private readonly ctx: Fly2DContext;
@@ -59,9 +82,16 @@ export class LuckyFlyRenderer {
   private readonly ease: (t: number) => number;
   private readonly images = new Map<string, CanvasImageSource>();
   private readonly loading = new Set<string>();
-  private readonly pending: FlyRequest[] = [];
+  private readonly pending: PendingEntry[] = [];
   private active: ActiveFly[] = [];
   private lastLaunchAt = -Infinity;
+  /** Last frame time while the loop was running; -1 while idle (no work). */
+  private lastTickAt = -1;
+  /** Consecutive slow frames, saturating at `slowFramesToFold`. */
+  private slowFrames = 0;
+  /** Diagnostics/tests: flies dropped as stale, flies folded into a badge. */
+  private droppedStale = 0;
+  private folded = 0;
   /** Current launch gap. Shrinks as a burst's backlog grows; resets when drained. */
   private burstInterval: number;
   private width = 0;
@@ -89,19 +119,23 @@ export class LuckyFlyRenderer {
   /**
    * Queue a fly, or `count` identical flies (gift-authority-tick-fanout
    * ticket 15 — a batch item folds N merged taps into one request). Never
-   * rejects, never drops, and introduces no new concurrency cap — every
-   * copy is paced through the same `pending`/`tick` stream as a single fly
-   * would be.
+   * rejects and introduces no concurrency cap: every copy is paced through
+   * the same `pending`/`tick` stream. Two exceptions, both gift-backlog-and-lag
+   * 01: a copy still queued after `maxAgeMs` is dropped as stale (the loop
+   * was stalled, nobody was watching), and under frame pressure the `count`
+   * copies launch as ONE fly with a "×N" badge (folded, never dropped).
+   *
+   * @param queuedAt - Renderer-clock time (same clock as `tick`) the fly was
+   *   queued. Omit when the caller has no clock — it is then never stale.
    */
-  enqueue(request: FlyRequest, count = 1): void {
-    for (let i = 0; i < count; i++) {
-      this.pending.push(request);
-    }
+  enqueue(request: FlyRequest, count = 1, queuedAt = Number.NaN): void {
+    if (count <= 0) return;
+    this.pending.push({ request, count, queuedAt });
     // Compress for the whole burst, sized by its peak backlog — recomputing
     // per remaining item would stretch the tail back out past the budget.
     this.burstInterval = Math.min(
       this.burstInterval,
-      launchIntervalMs(this.pending.length, this.opts.staggerMs, this.opts.maxStreamMs),
+      launchIntervalMs(this.queued, this.opts.staggerMs, this.opts.maxStreamMs),
     );
     this.ensureImage(request.thumbnailUrl);
   }
@@ -111,13 +145,25 @@ export class LuckyFlyRenderer {
     return this.pending.length > 0 || this.active.length > 0;
   }
 
-  /** Backlog + in-flight count (for diagnostics/tests). */
+  /** Backlog count in flies (a folded entry counts once per copy). */
   get queued(): number {
-    return this.pending.length;
+    let n = 0;
+    for (const entry of this.pending) n += entry.count;
+    return n;
   }
 
   get inFlight(): number {
     return this.active.length;
+  }
+
+  /** Flies dropped as stale since construction (diagnostics/tests). */
+  get droppedStaleCount(): number {
+    return this.droppedStale;
+  }
+
+  /** Flies folded into a "×N" badge since construction (diagnostics/tests). */
+  get foldedCount(): number {
+    return this.folded;
   }
 
   /**
@@ -126,6 +172,7 @@ export class LuckyFlyRenderer {
    * rest. Returns `hasWork()` so the caller can stop its frame loop.
    */
   tick(now: number): boolean {
+    this.observeFrameGap(now);
     this.launchDue(now);
     this.ctx.clearRect(-CLEAR_RESERVE_PX, -CLEAR_RESERVE_PX, this.width + CLEAR_RESERVE_PX * 2, this.height + CLEAR_RESERVE_PX * 2);
 
@@ -142,36 +189,90 @@ export class LuckyFlyRenderer {
       const drawSize = size * s.scale;
       this.ctx.globalAlpha = s.opacity;
       this.ctx.drawImage(image, s.x - drawSize / 2, s.y - drawSize / 2, drawSize, drawSize);
+      if (fly.count > 1) this.drawBadge(fly.count, s.x + drawSize / 2, s.y - drawSize / 2);
     }
     this.ctx.globalAlpha = 1;
     this.active = survivors;
-    return this.hasWork();
+    const more = this.hasWork();
+    this.lastTickAt = more ? now : -1;
+    if (!more) this.slowFrames = 0;
+    return more;
   }
 
-  /** Drop everything (component unmount). */
+  /** Drop everything (component unmount, or the viewer went away). */
   clear(): void {
     this.pending.length = 0;
     this.active = [];
     this.burstInterval = this.opts.staggerMs;
+    this.lastTickAt = -1;
+    this.slowFrames = 0;
     this.ctx.clearRect(0, 0, this.width, this.height);
+  }
+
+  /** True while frames are being missed or too many flies are in flight. */
+  private underPressure(): boolean {
+    const toFold = this.opts.slowFramesToFold ?? Infinity;
+    const activeCap = this.opts.foldActiveThreshold ?? Infinity;
+    return this.slowFrames >= toFold || this.active.length >= activeCap;
+  }
+
+  private observeFrameGap(now: number): void {
+    const slowMs = this.opts.slowFrameMs;
+    if (slowMs === undefined || this.lastTickAt < 0) return;
+    const toFold = this.opts.slowFramesToFold ?? Infinity;
+    this.slowFrames = now - this.lastTickAt > slowMs
+      ? Math.min(this.slowFrames + 1, Number.isFinite(toFold) ? toFold : this.slowFrames + 1)
+      : Math.max(this.slowFrames - 1, 0);
   }
 
   private launchDue(now: number): void {
     const interval = this.burstInterval;
+    const maxAge = this.opts.maxAgeMs ?? Infinity;
     while (this.pending.length > 0) {
+      const entry = this.pending[0]!;
+      // Stale: queued while the loop was stalled. Nobody saw the gap, so
+      // replaying it now would be the "pile" — drop, do not launch.
+      if (Number.isFinite(entry.queuedAt) && now - entry.queuedAt > maxAge) {
+        this.pending.shift();
+        this.droppedStale += entry.count;
+        continue;
+      }
       const due = this.lastLaunchAt + interval;
       if (due > now) break;
-      const request = this.pending.shift()!;
       // Virtual launch clock: catch up at most one interval behind `now`, so a
       // sub-frame interval launches several per frame but never snowballs.
       this.lastLaunchAt = Number.isFinite(this.lastLaunchAt) ? Math.max(due, now - interval) : now;
+
+      let count = 1;
+      if (entry.count > 1 && this.underPressure()) {
+        count = entry.count;
+        this.folded += count - 1;
+        this.pending.shift();
+      } else if (--entry.count <= 0) {
+        this.pending.shift();
+      }
       this.active.push({
-        url: request.thumbnailUrl,
-        timeline: buildFlyTimeline(this.jitter(request.path), this.opts.durationMs, this.opts.holdMs),
+        url: entry.request.thumbnailUrl,
+        timeline: buildFlyTimeline(this.jitter(entry.request.path), this.opts.durationMs, this.opts.holdMs),
         startedAt: now,
+        count,
       });
     }
     if (this.pending.length === 0) this.burstInterval = this.opts.staggerMs;
+  }
+
+  /** "×N" pill at the fly's top-right corner. */
+  private drawBadge(count: number, x: number, y: number): void {
+    const ctx = this.ctx;
+    const label = `×${count}`;
+    ctx.font = `bold ${BADGE_FONT_PX}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.strokeText(label, x, y);
+    ctx.fillStyle = '#ffd54a';
+    ctx.fillText(label, x, y);
   }
 
   private jitter(path: FlyPath): FlyPath {

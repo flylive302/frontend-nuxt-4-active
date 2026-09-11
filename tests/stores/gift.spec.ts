@@ -5,8 +5,17 @@ import { ref, computed } from 'vue'
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 
+const { mockIsAway } = vi.hoisted(() => ({
+  mockIsAway: vi.fn(() => false),
+}))
+
+vi.mock('~/services/motionPauseOrchestrator', () => ({
+  isAway: mockIsAway,
+}))
+
 beforeEach(() => {
   setActivePinia(createPinia())
+  mockIsAway.mockReset().mockReturnValue(false)
 })
 
 // ============================================================
@@ -258,5 +267,77 @@ describe('useGiftStore playback queue — burst-mode load shedding', () => {
 
     // queue holds one less than the current item, i.e. nothing shed yet
     expect(store.playbackQueue).toHaveLength(BURST_SHED_QUEUE_DEPTH - 2)
+  })
+})
+
+// ============================================================
+// Away gating (gift-backlog-and-lag 01)
+// ============================================================
+describe('useGiftStore playback queue — away gating', () => {
+  it('enqueuePlayback queues nothing while isAway() is true', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    mockIsAway.mockReturnValue(true)
+    store.enqueuePlayback(playback(1, 10))
+
+    expect(store.isPlaying).toBe(false)
+    expect(store.currentPlayback).toBeNull()
+    expect(store.playbackQueue).toHaveLength(0)
+  })
+
+  it('playNext skips queued items older than GIFT_PLAYBACK_MAX_AGE_MS', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { GIFT_PLAYBACK_MAX_AGE_MS } = await import('../../app/constants/gift')
+    const store = useGiftStore()
+
+    // First item plays immediately (auto-start); second sits in the queue and
+    // is aged out directly, simulating it having waited too long.
+    store.enqueuePlayback(playback(1, 10))
+    store.enqueuePlayback(playback(2, 11))
+    expect(store.playbackQueue).toHaveLength(1)
+    store.playbackQueue[0]!.timestamp = Date.now() - GIFT_PLAYBACK_MAX_AGE_MS - 1
+
+    store.onPlaybackComplete() // advances past item 1, playNext() should skip stale item 2
+
+    expect(store.currentPlayback).toBeNull()
+    expect(store.isPlaying).toBe(false)
+    expect(store.playbackQueue).toHaveLength(0)
+  })
+
+  it('a fresh item behind a stale one still plays', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const { GIFT_PLAYBACK_MAX_AGE_MS } = await import('../../app/constants/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback(playback(1, 10))
+    store.enqueuePlayback(playback(2, 11))
+    store.enqueuePlayback(playback(3, 12))
+    expect(store.playbackQueue).toHaveLength(2)
+
+    // Age out only the first queued item; the second is fresh.
+    store.playbackQueue[0]!.timestamp = Date.now() - GIFT_PLAYBACK_MAX_AGE_MS - 1
+
+    store.onPlaybackComplete()
+
+    expect(store.currentPlayback?.gift.id).toBe(3)
+    expect(store.isPlaying).toBe(true)
+    expect(store.playbackQueue).toHaveLength(0)
+  })
+
+  it('dropQueuedPlayback empties the queue but leaves currentPlayback/isPlaying untouched', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback(playback(1, 10))
+    store.enqueuePlayback(playback(2, 11))
+    store.enqueuePlayback(playback(3, 12))
+    expect(store.playbackQueue).toHaveLength(2)
+
+    store.dropQueuedPlayback()
+
+    expect(store.playbackQueue).toHaveLength(0)
+    expect(store.currentPlayback?.gift.id).toBe(1)
+    expect(store.isPlaying).toBe(true)
   })
 })

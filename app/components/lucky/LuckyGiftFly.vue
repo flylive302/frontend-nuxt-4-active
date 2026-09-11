@@ -9,9 +9,13 @@
  */
 import {
   LUCKY_FLY_DURATION_MS,
+  LUCKY_FLY_FOLD_ACTIVE_THRESHOLD,
+  LUCKY_FLY_MAX_AGE_MS,
   LUCKY_FLY_MAX_DPR,
   LUCKY_FLY_MAX_STREAM_MS,
   LUCKY_FLY_PATH_JITTER_PX,
+  LUCKY_FLY_SLOW_FRAME_MS,
+  LUCKY_FLY_SLOW_FRAMES_TO_FOLD,
   LUCKY_FLY_STAGGER_MS,
   LUCKY_FLY_THUMBNAIL_SIZE,
 } from "~/constants/gift";
@@ -72,6 +76,10 @@ onMounted(() => {
     staggerMs: LUCKY_FLY_STAGGER_MS,
     maxStreamMs: LUCKY_FLY_MAX_STREAM_MS,
     jitterPx: LUCKY_FLY_PATH_JITTER_PX,
+    maxAgeMs: LUCKY_FLY_MAX_AGE_MS,
+    slowFrameMs: LUCKY_FLY_SLOW_FRAME_MS,
+    slowFramesToFold: LUCKY_FLY_SLOW_FRAMES_TO_FOLD,
+    foldActiveThreshold: LUCKY_FLY_FOLD_ACTIVE_THRESHOLD,
   });
   fitToViewport();
   window.addEventListener("resize", fitToViewport);
