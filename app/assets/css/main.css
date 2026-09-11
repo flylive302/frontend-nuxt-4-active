@@ -200,6 +200,36 @@ html {
 }
 
 /* ============================================
+   Pinned layout chrome — the shell stays put while only the content slides.
+
+   The root slide above moves the ENTIRE page, fixed header/footer included. For
+   sibling tabs inside one layout (home ⇄ /discover-all-events) that reads wrong:
+   a tab bar should never move. Naming an element lifts it OUT of the root
+   snapshot into its own pair of pseudo-elements, so the root (content) slides
+   underneath while the named chrome holds position.
+
+   Gated on <html data-nav-shell="<layout>"> (middleware/shell-transition.global.ts),
+   which is set ONLY when the outgoing and incoming pages share that layout. A
+   name with no counterpart on the other side would strand the chrome as a fading
+   ghost, so it must never be applied across a layout boundary.
+
+   Named elements paint ABOVE the root snapshot, which is what we want — the
+   content slides beneath the header and the footer nav.
+
+   The old→new pair is left on the UA's default cross-fade on purpose: it is the
+   only thing that differs between the two tabs (the active-tab icon), so fading
+   it is correct. Duration is the UA default (~250ms) and deliberately shorter
+   than --page-slide-duration, so the icon has settled by the time the slide ends.
+   ============================================ */
+:root[data-nav-shell="home"] .nav-home-header {
+    view-transition-name: nav-home-header;
+}
+
+:root[data-nav-shell="home"] .nav-home-footer {
+    view-transition-name: nav-home-footer;
+}
+
+/* ============================================
    View Transitions — the room card expands into the room page
    The card and the room page root share `view-transition-name: room-card`, so
    the browser interpolates one box into the other (and back again on leave).

@@ -11,12 +11,14 @@
  *
  * Sibling TAB navigations are a `push` in BOTH directions, which history cannot
  * tell apart, so their spatial left→right order is looked up in TAB_GROUPS.
- * These mirror the NavAlt `first-link` (left) / `second-link` (right) pairs — add
- * a row here whenever a new linked NavAlt tab bar is introduced.
+ * These mirror the on-screen left→right order of a tab bar's links — the NavAlt
+ * `first-link` / `second-link` pairs, plus the NavHomeFooter home/discover pair.
+ * Add a row here whenever a new linked tab bar is introduced.
  */
 
 // Paths are compared trailing-slash-insensitively (see stripSlash).
 const TAB_GROUPS: string[][] = [
+  ['/', '/discover-all-events'],
   ['/mall', '/mall/my-props'],
   ['/coins/request', '/coins/exchange'],
   ['/levels/wealth', '/levels/charm'],
