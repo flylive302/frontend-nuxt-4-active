@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterChatMessages, shouldRenderChatBubble, formatChatAge } from '../../app/utils/chat'
+import { filterChatMessages, shouldRenderChatBubble, formatChatAge, filterUnblockedMessages } from '../../app/utils/chat'
 import {
   CHAT_TAB_ALL,
   CHAT_TAB_CHAT,
@@ -104,5 +104,22 @@ describe('formatChatAge', () => {
   it('changes as `now` advances for a fixed timestamp (the frozen-clock regression)', () => {
     expect(formatChatAge(t0, t0 + 10_000)).toBe('now')
     expect(formatChatAge(t0, t0 + 130_000)).toBe('2m')
+  })
+})
+
+describe('filterUnblockedMessages', () => {
+  it('returns the identical array reference when nothing is blocked (fast path)', () => {
+    expect(filterUnblockedMessages(messages, new Set())).toBe(messages)
+  })
+
+  it('drops messages from blocked senders and keeps the rest in order', () => {
+    const list = [
+      { ...msg('a', CHAT_MESSAGE_TYPE_TEXT), userId: 1 },
+      { ...msg('b', CHAT_MESSAGE_TYPE_TEXT), userId: 2 },
+      { ...msg('c', CHAT_MESSAGE_TYPE_TEXT), userId: 1 },
+    ]
+    const out = filterUnblockedMessages(list, new Set([1]))
+    expect(out).not.toBe(list)
+    expect(out.map((m) => m.id)).toEqual(['b'])
   })
 })

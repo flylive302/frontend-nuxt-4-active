@@ -2,7 +2,7 @@
 import type { Component } from 'vue';
 import { defineAsyncComponent } from 'vue';
 import type { StickyScrollTarget } from '~/composables/room/useChatStickyScroll';
-import { filterChatMessages } from '~/utils/chat';
+import { filterChatMessages, filterUnblockedMessages } from '~/utils/chat';
 import { CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_TAB_GIFTS, type ChatTab } from '~/constants/room';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
@@ -30,8 +30,11 @@ const activeChatTab = ref<ChatTab>(CHAT_TAB_ALL);
 // GATE (Apple 1.2): hide already-buffered lines from a user blocked mid-room —
 // the socket handler only stops FUTURE messages, so blocking someone whose
 // earlier messages are already in the store needs this second filter.
+// Reads `blockedUserIds` (not `isBlocked`) so the computed tracks the Set and
+// re-runs when someone is blocked mid-room. Empty set → same array reference,
+// so DynamicScroller is not re-diffed on every inbound message.
 const unblockedMessages = computed(() =>
-  audioStore.messages.filter((m) => !userBlocksStore.isBlocked(m.userId))
+  filterUnblockedMessages(audioStore.messages, userBlocksStore.blockedUserIds)
 );
 const filteredMessages = computed(() => filterChatMessages(unblockedMessages.value, activeChatTab.value));
 

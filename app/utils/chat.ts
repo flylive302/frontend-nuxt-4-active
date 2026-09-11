@@ -62,3 +62,20 @@ export function formatChatAge(timestamp: number, now: number): string {
   if (seconds < CHAT_TIME_DAY_S) return `${Math.floor(seconds / CHAT_TIME_HOUR_S)}h`;
   return `${Math.floor(seconds / CHAT_TIME_DAY_S)}d`;
 }
+
+/**
+ * Drop messages from blocked senders (Apple 1.2 moderation path).
+ *
+ * Fast path: when nothing is blocked — the common case — return the **same
+ * array reference**. The 500-message buffer is otherwise re-walked and
+ * re-allocated on every inbound message, which also hands DynamicScroller a
+ * new identity and forces a re-diff. Callers must still read the Set
+ * reactively so a mid-room block re-evaluates.
+ */
+export function filterUnblockedMessages(
+  messages: ChatMessageEvent[],
+  blockedUserIds: ReadonlySet<number>
+): ChatMessageEvent[] {
+  if (blockedUserIds.size === 0) return messages;
+  return messages.filter((m) => !blockedUserIds.has(m.userId));
+}
