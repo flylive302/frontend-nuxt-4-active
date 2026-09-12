@@ -22,15 +22,22 @@ export interface UseRoomChatParams {
 export function useRoomChat({ socket, getCurrentRoomId }: UseRoomChatParams) {
   /**
    * Send a chat message to the current room.
-   * 
+   *
+   * GATE — returns `false` (and emits nothing) when there is no socket, the
+   * socket is not currently connected, or there is no Room. Callers MUST keep
+   * the draft on `false` (room-page-runtime-audit 03): during a mobile
+   * transport reconnect the old `void` return let the composer clear the
+   * input on a message that was never sent.
+   *
    * @param content - Message content
    * @param type - Message type (default: 'text')
+   * @returns whether the message was handed to the socket
    */
-  function sendChatMessage(content: string, type: string = CHAT_MESSAGE_TYPE_TEXT): void {
+  function sendChatMessage(content: string, type: string = CHAT_MESSAGE_TYPE_TEXT): boolean {
     const roomId = getCurrentRoomId();
-    
-    if (!socket.value || !roomId) {
-      return;
+
+    if (!socket.value || !socket.value.connected || !roomId) {
+      return false;
     }
 
     socket.value.emit('chat:message', {
@@ -38,6 +45,7 @@ export function useRoomChat({ socket, getCurrentRoomId }: UseRoomChatParams) {
       content,
       type,
     });
+    return true;
   }
 
   return {

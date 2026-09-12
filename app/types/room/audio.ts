@@ -48,6 +48,8 @@ export interface JoinRoomResponse {
   musicPlayer?: MusicPlayerJoinState | null;
   /** App-scope slides still inside their replay window — shown to this late joiner. */
   activeAppSlides?: SlidePlayPayload[];
+  /** lucky-number/01: MSAB feature flag — hides the start button when false/absent. */
+  luckyNumberEnabled?: boolean;
   error?: string;
   /** Present when `error === 'room_blocked'` (ADR 0017 / room-blocks 03). */
   permanent?: boolean;
@@ -303,6 +305,24 @@ export interface SeatUserMutedEvent {
 export interface SeatReactionEvent {
   userId: number;
   code: string;
+}
+
+/** Broadcast for `luckyNumber:started` (lucky-number/01) — includes the sender. */
+export interface LuckyNumberStartedEvent {
+  roundId: string;
+  /** Server epoch ms — the countdown derives from this, never from a local timer. */
+  endsAt: number;
+}
+
+/** Broadcast for `luckyNumber:result` (lucky-number/01) — fired by the MSAB round timer. */
+export interface LuckyNumberResultEvent {
+  roundId: string;
+  drawn: number;
+  /** userId → picked number. Always empty until ticket 02 lands picks. */
+  picks: Record<string, number>;
+  winners: string[];
+  /** Server-authoritative cooldown (ms) before the next round may start. */
+  cooldownMs?: number;
 }
 
 export interface SeatLockedEvent {

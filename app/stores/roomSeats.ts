@@ -56,6 +56,23 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   const activeReactions = ref<Map<number, { code: string; startedAt: number }>>(new Map());
 
   // ========================================
+  // Lucky Number (ephemeral, lucky-number/01)
+  // ========================================
+  // Same lifetime rules as `activeReactions`: set from broadcasts, cleared on
+  // room leave. MSAB owns the round; this slice only mirrors what it said.
+  const luckyNumberEnabled = ref(false);
+  const luckyNumberRound = ref<{ roundId: string; endsAt: number } | null>(null);
+  const luckyNumberReveal = ref<{
+    roundId: string;
+    drawn: number;
+    picks: Record<string, number>;
+    winners: string[];
+    shownAt: number;
+  } | null>(null);
+  /** Epoch ms until which the start button stays disabled after a round. */
+  const luckyNumberCooldownUntil = ref(0);
+
+  // ========================================
   // Participants store (for seatsWithUsers join)
   // ========================================
   const participantsStore = useRoomParticipantsStore();
@@ -176,6 +193,41 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     activeReactions.value.delete(userId);
   }
 
+  /** From the join snapshot — whether MSAB has the game switched on. */
+  function setLuckyNumberEnabled(enabled: boolean): void {
+    luckyNumberEnabled.value = enabled;
+  }
+
+  /** `luckyNumber:started` — a fresh round replaces any stale round/reveal. */
+  function startLuckyNumberRound(roundId: string, endsAt: number): void {
+    luckyNumberRound.value = { roundId, endsAt };
+    luckyNumberReveal.value = null;
+  }
+
+  /** `luckyNumber:result` — the round is over; show the reveal, arm the cooldown. */
+  function setLuckyNumberReveal(
+    reveal: { roundId: string; drawn: number; picks: Record<string, number>; winners: string[] },
+    cooldownMs: number,
+  ): void {
+    luckyNumberRound.value = null;
+    luckyNumberReveal.value = { ...reveal, shownAt: Date.now() };
+    luckyNumberCooldownUntil.value = Date.now() + cooldownMs;
+  }
+
+  /** Reveal display window elapsed. Ignores a stale timer for an older round. */
+  function clearLuckyNumberReveal(roundId: string): void {
+    if (luckyNumberReveal.value?.roundId === roundId) {
+      luckyNumberReveal.value = null;
+    }
+  }
+
+  /** Drop the whole slice (room leave / round timed out with no result). */
+  function clearLuckyNumber(): void {
+    luckyNumberRound.value = null;
+    luckyNumberReveal.value = null;
+    luckyNumberCooldownUntil.value = 0;
+  }
+
   function setSeatLocked(seatIndex: number, isLocked: boolean): void {
     const seat = seats.value[seatIndex];
     if (seatIndex >= 0 && seatIndex < seats.value.length && seat) {
@@ -258,6 +310,8 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   function resetSeats(): void {
     seatGiftTotals.value.clear();
     activeReactions.value.clear();
+    luckyNumberEnabled.value = false;
+    clearLuckyNumber();
     seats.value = createEmptySeats();
   }
 
@@ -371,5 +425,16 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     activeReactions,
     setReaction,
     clearReaction,
+
+    // Lucky Number
+    luckyNumberEnabled,
+    luckyNumberRound,
+    luckyNumberReveal,
+    luckyNumberCooldownUntil,
+    setLuckyNumberEnabled,
+    startLuckyNumberRound,
+    setLuckyNumberReveal,
+    clearLuckyNumberReveal,
+    clearLuckyNumber,
   };
 });

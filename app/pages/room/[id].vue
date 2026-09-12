@@ -202,10 +202,14 @@ onUnmounted(() => {
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->
-        <div class="scrollbar-hide max-h-[60vh] min-h-[40vh] overflow-y-auto scrollbox rounded-xl">
-          <main class="grid gap-x-1" :class="seatGridClass">
-            <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
-          </main>
+        <div class="relative">
+          <div class="scrollbar-hide max-h-[60vh] min-h-[40vh] overflow-y-auto scrollbox rounded-xl">
+            <main class="grid gap-x-1" :class="seatGridClass">
+              <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
+            </main>
+          </div>
+          <!-- Lucky Number: countdown / drawn-number reveal over the grid (lucky-number/01) -->
+          <RoomLuckyNumberCenter />
         </div>
 
         <LazyRoomSeatDrawer />
@@ -230,6 +234,9 @@ onUnmounted(() => {
 
               <!-- Reaction Drawer trigger (ADR 0015) -->
               <LazyRoomReactionDrawer />
+
+              <!-- Lucky Number start (owner/admin only; hidden when MSAB flag is off) -->
+              <RoomLuckyNumberStartButton />
 
               <!-- Mic Mute/Unmute - only show when producing audio -->
               <UButton

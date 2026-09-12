@@ -26,6 +26,8 @@ import type {
   SeatLockedEvent,
   SeatInviteReceivedEvent,
   SeatReactionEvent,
+  LuckyNumberStartedEvent,
+  LuckyNumberResultEvent,
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
 import { useRoomXpAccumulator } from './useRoomXpAccumulator';
@@ -37,6 +39,7 @@ import { propToEntryAnimationGift } from '~/utils/prop';
 import { isLuckyCategory } from '~/utils/gift';
 import { createLogger } from '~/utils/logger';
 import { SPEAKER_ACTIVE_TTL_MS, CHAT_MESSAGE_TYPE_GIFT } from '~/constants/room';
+import { LUCKY_NUMBER } from '~/constants/lucky-number';
 import { COMBO_BUTTON_TIMEOUT_MS, GIFT_REFUND_TOAST_COOLDOWN_MS, GIFT_REFUND_TOAST_MESSAGE, MAX_PLAYBACK_REPEATS } from '~/constants/gift';
 import type { Gift } from '~/types/gift/gift';
 
@@ -250,6 +253,8 @@ export function announceLocalGiftSend(
  * Module-level because there is a single audio socket per app.
  */
 let speakerDecayTimer: ReturnType<typeof setTimeout> | null = null;
+/** lucky-number/01: the ONE timeout that removes the centre reveal. */
+let luckyNumberRevealTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ============================================
 // Types
@@ -292,6 +297,8 @@ const ROOM_EVENT_NAMES = [
   'gift:error',
   'gift:prepare',
   'lucky:result',
+  'luckyNumber:started',
+  'luckyNumber:result',
 ] as const;
 
 // ============================================
@@ -311,6 +318,11 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
   if (speakerDecayTimer) {
     clearTimeout(speakerDecayTimer);
     speakerDecayTimer = null;
+  }
+
+  if (luckyNumberRevealTimer) {
+    clearTimeout(luckyNumberRevealTimer);
+    luckyNumberRevealTimer = null;
   }
 
   cleanupLuckyEventHandlers(socket);
@@ -600,6 +612,28 @@ export function setupRoomEventHandlers(
   // Seat Reactions (ADR 0015) — store setter only, no business logic here
   socket.on('seat:reaction', (event: SeatReactionEvent) => {
     seatsStore.setReaction(event.userId, event.code);
+  });
+
+  // Lucky Number (lucky-number/01) — socket → store only. MSAB owns the round;
+  // the single reveal timeout lives here (stores hold no timers).
+  socket.on('luckyNumber:started', (event: LuckyNumberStartedEvent) => {
+    if (luckyNumberRevealTimer) {
+      clearTimeout(luckyNumberRevealTimer);
+      luckyNumberRevealTimer = null;
+    }
+    seatsStore.startLuckyNumberRound(event.roundId, event.endsAt);
+  });
+
+  socket.on('luckyNumber:result', (event: LuckyNumberResultEvent) => {
+    seatsStore.setLuckyNumberReveal(
+      { roundId: event.roundId, drawn: event.drawn, picks: event.picks, winners: event.winners },
+      event.cooldownMs ?? LUCKY_NUMBER.cooldownMs,
+    );
+    if (luckyNumberRevealTimer) clearTimeout(luckyNumberRevealTimer);
+    luckyNumberRevealTimer = setTimeout(() => {
+      luckyNumberRevealTimer = null;
+      seatsStore.clearLuckyNumberReveal(event.roundId);
+    }, LUCKY_NUMBER.revealDurationMs);
   });
 
   // Invite events

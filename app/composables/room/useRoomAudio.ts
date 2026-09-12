@@ -43,8 +43,8 @@ export interface UseRoomAudioReturn extends UseSeatActionsReturn, UseRoomGiftsRe
   startAudio: () => Promise<void>;
   /** Stop producing audio */
   stopAudio: () => void;
-  /** Send chat message */
-  sendChatMessage: (content: string, type?: string) => void;
+  /** Send chat message. `false` = not connected / no Room, nothing was sent — keep the draft. */
+  sendChatMessage: (content: string, type?: string) => boolean;
   /** Connection status */
   connectionStatus: Ref<'disconnected' | 'connecting' | 'connected' | 'error'>;
   /** Whether connected to audio server */
@@ -865,6 +865,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
       audioPlayer.initFromJoinState(response.musicPlayer);
     }
     audioPlayer.setupListeners();
+
+    // lucky-number/01: MSAB flag — hides the start button when the game is off.
+    seatsStore.setLuckyNumberEnabled(response.luckyNumberEnabled === true);
 
     // 5. Replay any app-scope slide still playing app-wide, so a late joiner
     // catches it too. Admission gates on currentRoom (set above) and coalesces

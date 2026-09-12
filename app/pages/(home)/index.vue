@@ -159,8 +159,6 @@ function syncCountryFromPayload(payload: HomeRoomsPayload | null | undefined): b
   if (!payload) return false
 
   const codes = payload.res.meta?.active_countries ?? []
-  homeFeed.setActiveCountries(codes)
-
   if (!shouldResetStaleCountry(payload.country, selectedCountry.value, codes)) return false
   homeFeed.resetToAll()
   return true

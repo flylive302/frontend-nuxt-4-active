@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useRoomAudio } from '~/composables/room/useRoomAudio';
 
-const { sendChatMessage } = useRoomAudio();
+const { sendChatMessage, isConnected } = useRoomAudio();
+const toast = useToast();
 
 // State
 const isOpen = ref(false);
@@ -70,7 +71,17 @@ function handleSend(): void {
   const content = messageInput.value.trim();
   if (!content) return;
 
-  sendChatMessage(content);
+  // GATE lives in the composable; `false` = socket not connected, nothing was
+  // sent. Keep the draft and say so (room-page-runtime-audit 03) — the Enter
+  // key reaches here even while the send button is disabled.
+  if (!sendChatMessage(content)) {
+    toast.add({
+      title: 'Not connected',
+      description: 'Reconnecting — your message is kept. Try again in a moment.',
+      color: 'warning',
+    });
+    return;
+  }
   messageInput.value = '';
   // Stay focused so the keyboard survives the send and the next message can be
   // typed straight away.
@@ -192,8 +203,8 @@ onBeforeUnmount(() => {
             variant="solid"
             color="neutral"
             class="size-9 p-2 rounded-l-none rounded-r-full bg-neutral-950!"
-            :disabled="!messageInput.trim()"
-            aria-label="Send message"
+            :disabled="!messageInput.trim() || !isConnected"
+            :aria-label="isConnected ? 'Send message' : 'Not connected'"
             @click="handleSend"
         >
           <UIcon class="size-8 text-primary" name="i-lucide-send" />
