@@ -27,9 +27,11 @@ import type {
   SeatInviteReceivedEvent,
   SeatReactionEvent,
   LuckyNumberStartedEvent,
+  LuckyNumberPickedEvent,
   LuckyNumberResultEvent,
 } from '~/types/room/audio';
 import type { AudioSocket } from './useAudioSocket';
+import { resetChatMessageActions } from './useChatMessageActions';
 import { useRoomXpAccumulator } from './useRoomXpAccumulator';
 import { setupLuckyEventHandlers, cleanupLuckyEventHandlers, recordLuckyGiftTap, handleLuckyRoomResult } from '../lucky/useLuckyGift';
 import { useLuckyFly } from '../lucky/useLuckyFly';
@@ -298,6 +300,7 @@ const ROOM_EVENT_NAMES = [
   'gift:prepare',
   'lucky:result',
   'luckyNumber:started',
+  'luckyNumber:picked',
   'luckyNumber:result',
 ] as const;
 
@@ -326,6 +329,11 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
   }
 
   cleanupLuckyEventHandlers(socket);
+
+  // Module-level chat-menu/report state must not outlive the room
+  // (room-page-runtime-audit 04). giftCombo is already reset by
+  // useRoomAudio.leaveRoom() alongside luckySession — not duplicated here.
+  resetChatMessageActions();
 }
 
 // ============================================
@@ -622,6 +630,10 @@ export function setupRoomEventHandlers(
       luckyNumberRevealTimer = null;
     }
     seatsStore.startLuckyNumberRound(event.roundId, event.endsAt);
+  });
+
+  socket.on('luckyNumber:picked', (event: LuckyNumberPickedEvent) => {
+    seatsStore.addLuckyNumberPick(event.roundId, Number(event.userId));
   });
 
   socket.on('luckyNumber:result', (event: LuckyNumberResultEvent) => {

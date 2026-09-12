@@ -345,17 +345,16 @@ onMounted(() => {
 
 <template>
   <main>
-    <!-- Following vs banners depends on auth-specific API — SSR placeholder avoids branch mismatches -->
-    <ClientOnly>
-      <template #fallback>
-        <div
-          class="pt-4 mx-3 rounded-2xl bg-white/5 animate-pulse"
-          style="min-height: 120px"
-          aria-hidden="true"
-        />
-      </template>
+    <!-- Reserved-height box (home-page-runtime-audit/2). Each banner slide is
+         3/4 of the width and its image is 3:1, so the strip is always exactly
+         1/4 of the width tall. Reserving that here means the country filter
+         and the LCP room carousel never move — not while the banners resolve,
+         and not on the rare visit where there are no banners at all (approved:
+         keep the empty space rather than collapse). No `ClientOnly`: this app
+         is `ssr: false`, the wrapper only cost a throw-away first render. -->
+    <div class="aspect-[4/1]">
       <EventsBanners />
-    </ClientOnly>
+    </div>
 
     <!-- Country Filter -->
     <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />

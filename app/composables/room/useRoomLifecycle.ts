@@ -162,6 +162,20 @@ export function useRoomLifecycle(): void {
   }
 
   /**
+   * Room-scope teardown for the module-level recovery state
+   * (room-page-runtime-audit 04). The transport-rebuild budget and a
+   * suppressed reconnect affordance belong to the room that produced them;
+   * without this, room B inherits room A's spent budget and can re-raise a
+   * toast about room A's audio.
+   */
+  function resetRoomRecoveryState(): void {
+    cancelRebuildRetry();
+    transportRebuildAttempt = 0;
+    lastTransportExhaustionAt = 0;
+    pendingReconnectAffordance = false;
+  }
+
+  /**
    * Settle to a defined chat-only state with an actionable "Reconnect" button —
    * the shared floor for both the socket-failed and transport-exhausted paths.
    * The fixed toast id means the two paths can't stack, and a later successful
@@ -232,7 +246,7 @@ export function useRoomLifecycle(): void {
     async (newRoom, oldRoom) => {
       // Case 1: Room Closed
       if (oldRoom && !newRoom) {
-        cancelRebuildRetry();
+        resetRoomRecoveryState();
         // Pass the explicit ID — currentRoom is already null here, so a bare
         // leaveRoom() can't resolve the room and never emits room:leave,
         // leaving the seat occupied server-side for everyone else.
@@ -242,7 +256,7 @@ export function useRoomLifecycle(): void {
 
       // Case 2: Room Changed (switched rooms)
       if (oldRoom && newRoom && oldRoom.id !== newRoom.id) {
-        cancelRebuildRetry();
+        resetRoomRecoveryState();
         // No await needed (F-72): leaveRoom's mediasoup teardown is synchronous,
         // so the old room is fully torn down before the fall-through joinRoom
         // runs; and the MSAB join handler re-leaves any prior room before

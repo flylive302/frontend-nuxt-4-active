@@ -71,6 +71,8 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   } | null>(null);
   /** Epoch ms until which the start button stays disabled after a round. */
   const luckyNumberCooldownUntil = ref(0);
+  /** Users who locked in a pick this round (lucky-number/02). Numbers stay hidden until reveal. */
+  const luckyNumberPickedUserIds = ref<Set<number>>(new Set());
 
   // ========================================
   // Participants store (for seatsWithUsers join)
@@ -202,6 +204,16 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   function startLuckyNumberRound(roundId: string, endsAt: number): void {
     luckyNumberRound.value = { roundId, endsAt };
     luckyNumberReveal.value = null;
+    luckyNumberPickedUserIds.value = new Set();
+  }
+
+  /** `luckyNumber:picked` — ignored unless it names the live round. */
+  function addLuckyNumberPick(roundId: string, userId: number): void {
+    if (luckyNumberRound.value?.roundId !== roundId) return;
+    if (luckyNumberPickedUserIds.value.has(userId)) return;
+    const next = new Set(luckyNumberPickedUserIds.value);
+    next.add(userId);
+    luckyNumberPickedUserIds.value = next;
   }
 
   /** `luckyNumber:result` — the round is over; show the reveal, arm the cooldown. */
@@ -212,6 +224,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     luckyNumberRound.value = null;
     luckyNumberReveal.value = { ...reveal, shownAt: Date.now() };
     luckyNumberCooldownUntil.value = Date.now() + cooldownMs;
+    luckyNumberPickedUserIds.value = new Set();
   }
 
   /** Reveal display window elapsed. Ignores a stale timer for an older round. */
@@ -226,6 +239,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     luckyNumberRound.value = null;
     luckyNumberReveal.value = null;
     luckyNumberCooldownUntil.value = 0;
+    luckyNumberPickedUserIds.value = new Set();
   }
 
   function setSeatLocked(seatIndex: number, isLocked: boolean): void {
@@ -431,8 +445,10 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     luckyNumberRound,
     luckyNumberReveal,
     luckyNumberCooldownUntil,
+    luckyNumberPickedUserIds,
     setLuckyNumberEnabled,
     startLuckyNumberRound,
+    addLuckyNumberPick,
     setLuckyNumberReveal,
     clearLuckyNumberReveal,
     clearLuckyNumber,

@@ -31,7 +31,7 @@ const authStore = useAuthStore();
 const seatsStore = useRoomSeatsStore();
 const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
-const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo } = useGiftSending();
+const { totalCost, canSend, send, isSending, combo, luckyCombo, endLuckyCombo, flushComboBurst } = useGiftSending();
 
 useGiftRecipientSync();
 
@@ -254,9 +254,13 @@ watch(
   }
 );
 
-// Cleanup on unmount
+// Cleanup on unmount. Flush (not drop) a combo burst still waiting on its
+// coalesce timer — the user tapped, so the gift should go — and clear the
+// timer so it cannot fire later against the next room's id
+// (room-page-runtime-audit 04).
 onBeforeUnmount(() => {
   stopComboProgress();
+  flushComboBurst();
 });
 
 const bootstrapStore = useBootstrapStore();

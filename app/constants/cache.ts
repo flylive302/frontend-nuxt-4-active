@@ -28,6 +28,15 @@ export const CACHE_TTL = {
    * second hit on the app's most-hit endpoint (60 req/min shared budget).
    */
   HOME_ROOMS_PAYLOAD: 15 * 1000, // 15 seconds
+
+  /**
+   * Event-banner payload (home-page-runtime-audit/2). Returning to home reuses
+   * the cached banners so the strip never repaints from empty; a payload older
+   * than this is refreshed silently on mount. Matches the BFF edge cache
+   * (`server/api/banners.get.ts`, 300 s) — refreshing sooner would just hit
+   * the same edge copy.
+   */
+  EVENT_BANNERS: 5 * 60 * 1000, // 5 minutes
 } as const
 
 /**

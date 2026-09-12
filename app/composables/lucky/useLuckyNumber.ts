@@ -21,8 +21,29 @@ export type LuckyNumberStartGateError =
   | 'round-live'
   | 'cooling-down';
 
+export type LuckyNumberPickGateError =
+  | 'not-ready'
+  | 'not-seated'
+  | 'no-round'
+  | 'out-of-range';
+
 export interface UseLuckyNumberReturn {
   startRound: () => void;
+  /**
+   * Lock in a guess (lucky-number/02). Rapid taps are coalesced: the first
+   * goes out at once, later ones inside the window collapse to ONE trailing
+   * emit carrying the latest number. No local echo of the ✓ badge — that
+   * renders from `luckyNumber:picked` like everyone else's.
+   */
+  pick: (n: number) => void;
+  /** Why `pick` would be refused right now (range aside), or null when it can go. */
+  pickGateError: ComputedRef<LuckyNumberPickGateError | null>;
+  /** Viewer is seated and a round is live — the number strip replaces the bottom bar. */
+  canPick: ComputedRef<boolean>;
+  /** The number this viewer last sent for the live round (strip highlight); null when none. */
+  myPick: ComputedRef<number | null>;
+  /** userIds that have locked in a pick this round (✓ badges). */
+  pickedUserIds: ComputedRef<Set<number>>;
   /** Explains why `startRound` would be refused right now, or null when it can go. */
   startGateError: ComputedRef<LuckyNumberStartGateError | null>;
   /** MSAB has the game switched on for this room session. */
@@ -33,7 +54,11 @@ export interface UseLuckyNumberReturn {
   isCoolingDown: ComputedRef<boolean>;
   /** Whole seconds left in the live round; 0 when none. */
   secondsLeft: ComputedRef<number>;
-  reveal: ComputedRef<{ drawn: number; winners: string[] } | null>;
+  reveal: ComputedRef<{
+    drawn: number;
+    winners: string[];
+    picks: Record<string, number>;
+  } | null>;
 }
 
 // ---- shared local clock (module scope, ref-counted) ----
@@ -64,10 +89,24 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
   const { socket } = useAudioSocket();
   const roomStore = useRoomStore();
   const seatsStore = useRoomSeatsStore();
+  const authStore = useAuthStore();
   const { canModerate } = useRoomHierarchy();
 
   let holdsTick = false;
   let cooldownWake: ReturnType<typeof setTimeout> | null = null;
+
+  // Pick coalescing (per component instance): the number chosen locally for
+  // the live round, plus one trailing timer for taps inside the throttle window.
+  const chosen = ref<{ roundId: string; number: number } | null>(null);
+  let pickSentAt = 0;
+  let pickTrailing: ReturnType<typeof setTimeout> | null = null;
+
+  function stopPickTrailing(): void {
+    if (pickTrailing) {
+      clearTimeout(pickTrailing);
+      pickTrailing = null;
+    }
+  }
 
   function stopTick(): void {
     if (holdsTick) {
@@ -96,7 +135,18 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
 
   const reveal = computed(() => {
     const r = seatsStore.luckyNumberReveal;
-    return r ? { drawn: r.drawn, winners: r.winners } : null;
+    return r ? { drawn: r.drawn, winners: r.winners, picks: r.picks } : null;
+  });
+
+  const isSelfSeated = computed(() => {
+    const userId = authStore.user?.id;
+    return userId !== undefined && seatsStore.seats.some((seat) => seat.occupantId === userId);
+  });
+  const canPick = computed(() => isRoundLive.value && isSelfSeated.value);
+  const pickedUserIds = computed(() => seatsStore.luckyNumberPickedUserIds);
+  const myPick = computed(() => {
+    const round = seatsStore.luckyNumberRound;
+    return round && chosen.value?.roundId === round.roundId ? chosen.value.number : null;
   });
 
   watch(
@@ -128,9 +178,19 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
     { immediate: true },
   );
 
+  // A round change drops any pending trailing emit — it named the old round.
+  watch(
+    () => seatsStore.luckyNumberRound?.roundId ?? null,
+    () => {
+      stopPickTrailing();
+      pickSentAt = 0;
+    },
+  );
+
   onScopeDispose(() => {
     stopTick();
     stopCooldownWake();
+    stopPickTrailing();
   });
 
   // ---- GATE ----
@@ -147,14 +207,67 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
     return null;
   });
 
+  const pickGateError = computed<LuckyNumberPickGateError | null>(() => {
+    if (!socket.value || !getCurrentRoomId() || authStore.user?.id === undefined) return 'not-ready';
+    if (!isRoundLive.value) return 'no-round';
+    if (!isSelfSeated.value) return 'not-seated';
+    return null;
+  });
+
+  function isInRange(n: number): boolean {
+    return Number.isInteger(n) && n >= LUCKY_NUMBER.min && n <= LUCKY_NUMBER.max;
+  }
+
   // ---- EXECUTE ----
   function startRound(): void {
     if (startGateError.value) return;
     socket.value!.emit('luckyNumber:start', { roomId: getCurrentRoomId()! });
   }
 
+  function emitPick(roundId: string, number: number): void {
+    pickSentAt = Date.now();
+    socket.value!.emit(
+      'luckyNumber:pick',
+      { roomId: getCurrentRoomId()!, roundId, number },
+      (response?: { success?: boolean }) => {
+        // Server refused (rate limit, round over, unseated): drop the local
+        // highlight so the strip does not claim a pick that was never recorded.
+        if (response?.success) return;
+        if (chosen.value?.roundId === roundId && chosen.value.number === number) {
+          chosen.value = null;
+        }
+      },
+    );
+  }
+
+  function pick(n: number): void {
+    if (pickGateError.value || !isInRange(n)) return;
+    const roundId = seatsStore.luckyNumberRound!.roundId;
+    chosen.value = { roundId, number: n };
+
+    const elapsed = Date.now() - pickSentAt;
+    if (!pickTrailing && elapsed >= LUCKY_NUMBER.pickThrottleMs) {
+      emitPick(roundId, n);
+      return;
+    }
+    // Inside the window: one trailing emit with whatever is chosen by then.
+    if (pickTrailing) return;
+    pickTrailing = setTimeout(() => {
+      pickTrailing = null;
+      const latest = chosen.value;
+      if (!latest || latest.roundId !== seatsStore.luckyNumberRound?.roundId) return;
+      if (pickGateError.value) return;
+      emitPick(latest.roundId, latest.number);
+    }, LUCKY_NUMBER.pickThrottleMs - Math.max(0, elapsed));
+  }
+
   return {
     startRound,
+    pick,
+    pickGateError,
+    canPick,
+    myPick,
+    pickedUserIds,
     startGateError,
     isEnabled,
     canSeeStartButton,

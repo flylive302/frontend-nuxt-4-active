@@ -42,6 +42,7 @@ const { roomExpandStyle } = useRoomExpandTransition();
 const { src: roomBackgroundDisplaySrc } = useRoomBackground(() => roomStore.currentRoom?.background);
 const { isLocalMuted, toggleLocalMute, isProducing, setVolume } = useRoomAudio();
 const { floatingMultipliers } = useLuckyGift();
+const { canPick: showLuckyNumberPickStrip } = useLuckyNumber();
 const { volume, isMuted, volumeIcon, setLevel, toggleMute, applyStoredLevel } = useRoomVolume(setVolume);
 const { rehydrateFromRoute, rehydrating } = useRoomRehydration();
 
@@ -221,7 +222,9 @@ onUnmounted(() => {
           <div class="size-full flex flex-col">
             <RoomChatPanel />
 
-            <div class="flex justify-between py-1 mt-2 mb-3 bg-primary/10 shadow-md ring ring-primary/30 rounded-lg px-3">
+            <!-- Lucky Number (lucky-number/02): seated users pick 1–9 here while a round is live -->
+            <RoomLuckyNumberPickStrip v-if="showLuckyNumberPickStrip" />
+            <div v-else class="flex justify-between py-1 mt-2 mb-3 bg-primary/10 shadow-md ring ring-primary/30 rounded-lg px-3">
               <!-- Room Settings Button -->
               <UButton
                   size="xl"

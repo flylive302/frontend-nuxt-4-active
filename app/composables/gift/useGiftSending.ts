@@ -799,6 +799,7 @@ export function useGiftSending() {
     combo,
     luckyCombo,
     endLuckyCombo,
+    flushComboBurst,
     deductCoins,
   };
 }

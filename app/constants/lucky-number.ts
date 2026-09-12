@@ -22,10 +22,22 @@ export const LUCKY_NUMBER = {
   /** Countdown tick. The ONLY periodic work this game does, and only while a round is live. */
   countdownTickMs: 1_000,
 
-  /** Pickable range (ticket 02 uses it for the strip). */
+  /** Pickable range — mirrors MSAB `LUCKY_NUMBER_MIN/MAX`. */
   min: 1,
   max: 9,
+
+  /** Client-side tap coalescing: at most one `luckyNumber:pick` per window (mirrors MSAB ~1/300 ms). */
+  pickThrottleMs: 300,
+
+  /** How long the winner crown flashes on a Seat at reveal. */
+  crownFlashMs: 1_500,
 } as const;
+
+/** Every pickable number, in strip order. */
+export const LUCKY_NUMBER_CHOICES: readonly number[] = Array.from(
+  { length: LUCKY_NUMBER.max - LUCKY_NUMBER.min + 1 },
+  (_, i) => LUCKY_NUMBER.min + i,
+);
 
 /** Copy shown in the centre reveal when `winners` is empty. */
 export const LUCKY_NUMBER_NO_WINNER_TEXT = 'No winner';

@@ -168,4 +168,27 @@ describe('setupRoomEventHandlers — Lucky Number', () => {
     expect(socket.off).toHaveBeenCalledWith('luckyNumber:started')
     expect(socket.off).toHaveBeenCalledWith('luckyNumber:result')
   })
+
+  it("'luckyNumber:picked' during a live round adds the userId to luckyNumberPickedUserIds", async () => {
+    const { socket, seatsStore } = await setup()
+    socket.handlers.get('luckyNumber:started')?.({ roundId: 'r1', endsAt: Date.now() + 10000 })
+
+    socket.handlers.get('luckyNumber:picked')?.({ roundId: 'r1', userId: 7 })
+
+    expect(seatsStore.luckyNumberPickedUserIds.has(7)).toBe(true)
+  })
+
+  it("'luckyNumber:picked' with a stale roundId is ignored", async () => {
+    const { socket, seatsStore } = await setup()
+    socket.handlers.get('luckyNumber:started')?.({ roundId: 'r1', endsAt: Date.now() + 10000 })
+
+    socket.handlers.get('luckyNumber:picked')?.({ roundId: 'stale', userId: 7 })
+
+    expect(seatsStore.luckyNumberPickedUserIds.size).toBe(0)
+  })
+
+  it("'luckyNumber:picked' is registered as a handled room event", async () => {
+    const { socket } = await setup()
+    expect(socket.handlers.has('luckyNumber:picked')).toBe(true)
+  })
 })

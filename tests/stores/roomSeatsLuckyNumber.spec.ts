@@ -54,4 +54,76 @@ describe('roomSeatsStore — Lucky Number', () => {
 
     expect(store.luckyNumberReveal).toBeNull()
   })
+
+  describe('addLuckyNumberPick (lucky-number/02)', () => {
+    it('ignores when there is no live round', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+
+      store.addLuckyNumberPick('r1', 7)
+
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+
+    it('ignores a pick naming the wrong roundId', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+
+      store.addLuckyNumberPick('other', 7)
+
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+
+    it('adds a userId and dedupes repeated picks for the same userId', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+
+      store.addLuckyNumberPick('r1', 7)
+      store.addLuckyNumberPick('r1', 7)
+      store.addLuckyNumberPick('r1', 9)
+
+      expect(store.luckyNumberPickedUserIds).toEqual(new Set([7, 9]))
+    })
+
+    it('startLuckyNumberRound clears the picked-user set', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+      expect(store.luckyNumberPickedUserIds.size).toBe(1)
+
+      store.startLuckyNumberRound('r2', Date.now() + 10000)
+
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+
+    it('setLuckyNumberReveal clears the picked-user set and stores picks + winners', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+
+      store.setLuckyNumberReveal(
+        { roundId: 'r1', drawn: 5, picks: { '7': 5 }, winners: ['7'] },
+        15000,
+      )
+
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+      expect(store.luckyNumberReveal?.picks).toEqual({ '7': 5 })
+      expect(store.luckyNumberReveal?.winners).toEqual(['7'])
+    })
+
+    it('resetSeats clears the picked-user set', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+
+      store.resetSeats()
+
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+  })
 })

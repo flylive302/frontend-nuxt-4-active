@@ -314,12 +314,19 @@ export interface LuckyNumberStartedEvent {
   endsAt: number;
 }
 
+/** Broadcast for `luckyNumber:picked` (lucky-number/02) — who locked in a pick, never the number. */
+export interface LuckyNumberPickedEvent {
+  roundId: string;
+  userId: number;
+}
+
 /** Broadcast for `luckyNumber:result` (lucky-number/01) — fired by the MSAB round timer. */
 export interface LuckyNumberResultEvent {
   roundId: string;
   drawn: number;
-  /** userId → picked number. Always empty until ticket 02 lands picks. */
+  /** userId (as string key) → picked number. */
   picks: Record<string, number>;
+  /** userIds (as strings) whose pick equals `drawn`. */
   winners: string[];
   /** Server-authoritative cooldown (ms) before the next round may start. */
   cooldownMs?: number;

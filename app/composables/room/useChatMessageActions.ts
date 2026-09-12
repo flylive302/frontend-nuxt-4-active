@@ -38,6 +38,19 @@ const reportDescription = computed(() =>
   target.value ? `Room chat message: ${target.value.content}` : ''
 )
 
+/**
+ * Room-scope teardown (room-page-runtime-audit 04). The state above is
+ * module-level, so a long-pressed message from room A would otherwise keep
+ * `ReportModal` (`v-if="actionTarget"`) mounted against a room-A user after
+ * the page remounts for room B. Called from `cleanupRoomEventHandlers`.
+ */
+export function resetChatMessageActions(): void {
+  target.value = null
+  anchor.value = { x: 0, y: 0 }
+  menuOpen.value = false
+  reportOpen.value = false
+}
+
 export function useChatMessageActions() {
   function openMenuFor(message: ChatMessageEvent, at: MenuAnchor): void {
     target.value = message

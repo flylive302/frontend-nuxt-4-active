@@ -49,6 +49,7 @@ type FakeRoom = { id: number; hosting_url: string }
 // --- collaborator mocks, re-wired per test in setup() ---
 let reconnectCb: (() => Promise<void> | void) | null = null
 let reconnectFailedCb: (() => Promise<void> | void) | null = null
+let transportExhaustedCb: (() => Promise<void> | void) | null = null
 
 const joinRoomMock = vi.fn()
 const drainPendingMicReclaimMock = vi.fn()
@@ -99,7 +100,7 @@ vi.stubGlobal('useRoomAudio', () => ({
   probeAudioHealth: probeAudioHealthMock,
   drainPendingMicReclaim: drainPendingMicReclaimMock,
   connectionStatus: ref('connected'),
-  onTransportExhausted: vi.fn(),
+  onTransportExhausted: (cb: () => Promise<void>) => { transportExhaustedCb = cb },
 }))
 vi.stubGlobal('useAudioSocket', () => ({
   connect: connectSocketMock,
@@ -154,6 +155,7 @@ beforeEach(() => {
   vi.resetModules()
   reconnectCb = null
   reconnectFailedCb = null
+  transportExhaustedCb = null
   joinRoomMock.mockReset().mockResolvedValue(undefined)
   connectSocketMock.mockReset().mockResolvedValue(undefined)
   fetchRoomByIdMock.mockReset().mockResolvedValue(undefined)
@@ -214,6 +216,38 @@ describe('rebuild path — reconnect targets the room\'s new address', () => {
     // Pre-fix: rebuildRoomAudio called connect() with no target, silently
     // rebuilding against the instance the room was moved OFF.
     expect(connectSocketMock).toHaveBeenCalledWith(NEW_URL)
+  })
+})
+
+describe('room-scope recovery state — room B does not inherit room A\'s spent budget (room-page-runtime-audit 04)', () => {
+  it('a second exhaustion in a NEW room auto-rebuilds instead of settling to the affordance', async () => {
+    vi.useFakeTimers()
+    await setup()
+
+    // Room A: first exhaustion spends the one auto-rebuild.
+    await transportExhaustedCb!()
+    await flush()
+    expect(joinRoomMock).toHaveBeenCalledTimes(1)
+    joinRoomMock.mockClear()
+
+    // Room A: second exhaustion inside the cooldown → affordance, no rebuild.
+    await transportExhaustedCb!()
+    await flush()
+    expect(joinRoomMock).not.toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ id: RECONNECT_FAILED_TOAST_ID }))
+    toastAdd.mockClear()
+
+    // Switch to room B (Watcher 1 leaves A, joins B).
+    roomStore.currentRoom = { id: ROOM_ID + 1, hosting_url: OLD_URL }
+    await flush()
+    expect(leaveRoomMock).toHaveBeenCalledWith(String(ROOM_ID))
+    joinRoomMock.mockClear()
+
+    // Room B: a fresh budget → auto-rebuild again, not the affordance.
+    await transportExhaustedCb!()
+    await flush()
+    expect(joinRoomMock).toHaveBeenCalledTimes(1)
+    expect(toastAdd).not.toHaveBeenCalledWith(expect.objectContaining({ id: RECONNECT_FAILED_TOAST_ID }))
   })
 })
 

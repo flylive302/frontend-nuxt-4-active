@@ -10,6 +10,13 @@
 import { LUCKY_NUMBER_NO_WINNER_TEXT } from '~/constants/lucky-number';
 
 const { isRoundLive, secondsLeft, reveal } = useLuckyNumber();
+
+// "No winner" / "1 winner" / "3 winners" — the crowns on the Seats say who.
+const outcomeText = computed(() => {
+  const count = reveal.value?.winners.length ?? 0;
+  if (count === 0) return LUCKY_NUMBER_NO_WINNER_TEXT;
+  return `${count} winner${count === 1 ? '' : 's'}`;
+});
 </script>
 
 <template>
@@ -22,9 +29,7 @@ const { isRoundLive, secondsLeft, reveal } = useLuckyNumber();
       >
         <span class="lucky-number-center__label">Lucky Number</span>
         <span class="lucky-number-center__digit">{{ reveal.drawn }}</span>
-        <span v-if="reveal.winners.length === 0" class="lucky-number-center__label">
-          {{ LUCKY_NUMBER_NO_WINNER_TEXT }}
-        </span>
+        <span class="lucky-number-center__label">{{ outcomeText }}</span>
       </div>
       <div
         v-else-if="isRoundLive"

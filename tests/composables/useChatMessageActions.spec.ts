@@ -11,7 +11,7 @@ vi.stubGlobal('readonly', readonly)
 const blockUser = vi.fn(async () => true)
 vi.stubGlobal('useUserBlocking', () => ({ blockUser }))
 
-const { useChatMessageActions } = await import('~/composables/room/useChatMessageActions')
+const { useChatMessageActions, resetChatMessageActions } = await import('~/composables/room/useChatMessageActions')
 
 const msg = { id: 'm1', userId: 42, content: 'hello', type: 'text', timestamp: 0 }
 
@@ -63,5 +63,20 @@ describe('useChatMessageActions', () => {
   it('menu exposes exactly Report and Block', () => {
     const labels = useChatMessageActions().menuItems.value[0]!.map((i) => i.label)
     expect(labels).toEqual(['Report message', 'Block user'])
+  })
+
+  it('resetChatMessageActions clears target, anchor, menu and report (room-scope teardown)', () => {
+    const a = useChatMessageActions()
+    a.openMenuFor(msg, { x: 5, y: 6 })
+    a.requestReport()
+    expect(a.reportOpen.value).toBe(true)
+
+    resetChatMessageActions()
+
+    expect(a.target.value).toBeNull()
+    expect(a.anchor.value).toEqual({ x: 0, y: 0 })
+    expect(a.menuOpen.value).toBe(false)
+    expect(a.reportOpen.value).toBe(false)
+    expect(a.reportDescription.value).toBe('')
   })
 })

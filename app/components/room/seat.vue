@@ -98,6 +98,23 @@ function clearActiveReaction(): void {
   const userId = seat.value?.user?.id;
   if (userId !== undefined) seatsStore.clearReaction(userId);
 }
+
+// Lucky Number (lucky-number/02): ✓ while the round is live and this user has
+// picked; their number at reveal; a one-shot crown flash when they won.
+const luckyNumberBadge = computed<{ kind: 'picked' } | { kind: 'revealed'; number: number; winner: boolean } | null>(() => {
+  const userId = seat.value?.user?.id;
+  if (userId === undefined) return null;
+  const reveal = seatsStore.luckyNumberReveal;
+  if (reveal) {
+    const number = reveal.picks[String(userId)];
+    if (number === undefined) return null;
+    return { kind: 'revealed', number, winner: reveal.winners.includes(String(userId)) };
+  }
+  if (seatsStore.luckyNumberRound && seatsStore.luckyNumberPickedUserIds.has(userId)) {
+    return { kind: 'picked' };
+  }
+  return null;
+});
 </script>
 
 <template>
@@ -155,6 +172,27 @@ function clearActiveReaction(): void {
           <UIcon name="i-lucide-mic-off" class="size-3 text-red-400" />
         </span>
       </Transition>
+
+      <!-- Lucky Number badge (lucky-number/02): ✓ → picked number → crown flash for winners -->
+      <Transition name="seat-fade">
+        <span
+          v-if="luckyNumberBadge"
+          :key="luckyNumberBadge.kind"
+          class="absolute -top-1 -right-1 z-30 flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-[11px] font-bold leading-none ring-1 ring-white/30"
+          :class="luckyNumberBadge.kind === 'picked' ? 'bg-primary text-white' : 'bg-amber-400 text-neutral-950 tabular-nums'"
+          :aria-label="luckyNumberBadge.kind === 'picked' ? 'Picked a number' : `Picked ${luckyNumberBadge.number}`"
+        >
+          <UIcon v-if="luckyNumberBadge.kind === 'picked'" name="i-lucide-check" class="size-3" />
+          <template v-else>{{ luckyNumberBadge.number }}</template>
+        </span>
+      </Transition>
+      <span
+        v-if="luckyNumberBadge?.kind === 'revealed' && luckyNumberBadge.winner"
+        class="lucky-crown absolute inset-x-0 -top-3 z-30 flex justify-center pointer-events-none"
+        aria-label="Winner"
+      >
+        <UIcon name="i-lucide-crown" class="size-6 text-amber-400 drop-shadow" />
+      </span>
 
       <!-- Speaking indicator: CSS ring pulse (svga-removal 01, replaces SVGA mice-wave) -->
       <span
@@ -219,7 +257,27 @@ function clearActiveReaction(): void {
   }
 }
 
+/* Lucky Number winner crown: one-shot flash, then gone (lucky-number/02) */
+.lucky-crown {
+  animation: lucky-crown-flash 1.5s ease-out both;
+}
+
+@keyframes lucky-crown-flash {
+  0% { opacity: 0; transform: translateY(6px) scale(0.6); }
+  15% { opacity: 1; transform: translateY(0) scale(1.15); }
+  30% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .lucky-crown {
+    animation: lucky-crown-fade 1.5s ease-out both;
+  }
+  @keyframes lucky-crown-fade {
+    0%, 80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
   .speaking-ring {
     animation: none;
     box-shadow: 0 0 0 3px var(--seat-ring-color, #f97316);

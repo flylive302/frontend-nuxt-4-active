@@ -656,6 +656,35 @@ describe('useGiftSending — combo tap coalescing', () => {
     expect(secondRecipients).toEqual([2, 3])
   })
 
+  it('flushComboBurst() sends a pending burst immediately and clears its timer (drawer unmount path)', async () => {
+    const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
+    const { useGiftSending: sending, comboStore } = await setup(sendGiftMock)
+    comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    await sending.combo()
+    await sending.combo()
+    expect(sendGiftMock).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(1)
+
+    sending.flushComboBurst()
+
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+    const [, , quantity] = sendGiftMock.mock.calls[0] as [number, number[], number, string]
+    expect(quantity).toBe(2)
+    expect(vi.getTimerCount()).toBe(0)
+
+    // The window expiring later must not emit a second time.
+    await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('flushComboBurst() with nothing pending is a no-op', async () => {
+    const sendGiftMock = vi.fn()
+    const { useGiftSending: sending } = await setup(sendGiftMock)
+    sending.flushComboBurst()
+    expect(sendGiftMock).not.toHaveBeenCalled()
+  })
+
   it('a plain send() flushes any pending combo burst immediately, as its own emit', async () => {
     const sendGiftMock = vi.fn().mockResolvedValue({ success: true, acceptedRecipientIds: [2] } satisfies GiftSendAck)
     const { useGiftSending: sending, comboStore, giftStore } = await setup(sendGiftMock)
