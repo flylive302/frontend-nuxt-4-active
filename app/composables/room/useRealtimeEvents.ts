@@ -6,8 +6,13 @@ import type { Socket } from 'socket.io-client'
 import { useAllEventHandlers } from '~/events'
 
 
-// Track if handlers are already registered
-let handlersRegistered = false
+// The socket instance the global handlers are registered on. Keyed to the
+// instance, not a boolean, so a brand-new socket can never be skipped by a
+// stale flag — a transport-level reconnect reuses the same instance (its
+// listeners survive), a rebuilt socket is a different object and registers
+// fresh regardless of whether `resetRealtimeHandlers` ran
+// (room-page-runtime-audit 09).
+let registeredSocket: Socket | null = null
 
 /**
  * Register all realtime event handlers on a socket.
@@ -18,13 +23,13 @@ export function useRealtimeEvents() {
   const registerAll = useAllEventHandlers()
 
   function registerRealtimeEventHandlers(socket: Socket): void {
-    if (handlersRegistered) {
+    if (registeredSocket === socket) {
       return
     }
 
     registerAll(socket)
 
-    handlersRegistered = true
+    registeredSocket = socket
   }
 
   return {
@@ -37,5 +42,5 @@ export function useRealtimeEvents() {
  * Reset handler registration state (call on disconnect).
  */
 export function resetRealtimeHandlers(): void {
-  handlersRegistered = false
+  registeredSocket = null
 }

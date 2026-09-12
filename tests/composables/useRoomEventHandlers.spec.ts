@@ -389,6 +389,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
 
     socket.handlers.get('gift:received')?.({
       senderId: 2,
+      roomId: '1',
       recipientId: 3,
       giftId: 9,
       quantity: 1,
@@ -408,6 +409,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
 
     socket.handlers.get('gift:received')?.({
       senderId: 2,
+      roomId: '1',
       recipientId: 3,
       giftId: 9,
       quantity: 1,
@@ -424,6 +426,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
 
     socket.handlers.get('gift:received')?.({
       senderId: 2,
+      roomId: '1',
       recipientId: 3,
       giftId: 9,
       quantity: 1,
@@ -535,5 +538,141 @@ describe('setupRoomEventHandlers — gift:error refund toast (ackBalance)', () =
     expect(authStore.user?.coins).toBe('700') // 500 + 200 tracked refund
     expect(comboStore.consumePendingRefund('batch-1')).toBe(0) // already consumed
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Insufficient balance' }))
+  })
+})
+
+describe('setupRoomEventHandlers — realtime wiring hardening (room-page-runtime-audit 09)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
+    // from blocked users. Real store, empty set = nothing blocked.
+    vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
+
+    // Non-reaction Nuxt auto-import globals — stubbed, not exercised here.
+    vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn() }))
+    vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
+    vi.stubGlobal('useSlidePlayback', () => ({ playEntrySlide: vi.fn() }))
+    vi.stubGlobal('useGiftComboStore', () => ({ consumePendingRefund: vi.fn().mockReturnValue(0) }))
+    vi.stubGlobal('useRoomAudioStore', () => ({ setActiveSpeakers: vi.fn() }))
+    vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: vi.fn(), removeRecipient: vi.fn() }))
+    vi.stubGlobal('useServerCapabilitiesStore', () => ({ giftBatch: false, ackBalance: false }))
+    vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
+  })
+
+  async function setup(roomId: number | null) {
+    const { setupRoomEventHandlers, cleanupRoomEventHandlers } = await import('../../app/composables/room/useRoomEventHandlers')
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const { useAuthStore } = await import('../../app/stores/auth')
+    const { useRoomStore } = await import('../../app/stores/room')
+
+    const seatsStore = useRoomSeatsStore()
+    const participantsStore = useRoomParticipantsStore()
+    const authStore = useAuthStore()
+    const roomStore = useRoomStore()
+    if (roomId !== null) roomStore.setCurrentRoom({ id: roomId, room_xp: '0', daily_xp: '0' } as never)
+    vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
+    vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
+    vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useRoomStore', () => roomStore)
+    vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
+    vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
+
+    const socket = createMockSocket()
+    const toast = { add: vi.fn() } as unknown as ReturnType<typeof useToast>
+    const actions = {
+      leaveRoom: vi.fn(),
+      stopAudio: vi.fn(),
+      consumeProducer: vi.fn(),
+      stopConsumer: vi.fn(),
+      acceptInvite: vi.fn(),
+      declineInvite: vi.fn(),
+      startAudio: vi.fn(),
+    }
+
+    vi.stubGlobal('navigateTo', vi.fn())
+
+    const register = () => setupRoomEventHandlers(socket as never, actions, toast)
+    const cleanup = () => cleanupRoomEventHandlers(socket as never)
+    // Module-level handler ref survives across describes — start from a clean slate.
+    cleanup()
+    socket.on.mockClear()
+    socket.off.mockClear()
+    register()
+
+    return { socket, actions, toast, roomStore, register, cleanup }
+  }
+
+  function memberRemovedOnCalls(socket: ReturnType<typeof createMockSocket>) {
+    return socket.on.mock.calls.filter(([name]) => name === 'room.member_removed')
+  }
+  function memberRemovedOffCalls(socket: ReturnType<typeof createMockSocket>) {
+    return socket.off.mock.calls.filter(([name]) => name === 'room.member_removed')
+  }
+
+  it('room.member_removed: a second setup on the same socket removes the PREVIOUS ejection listener by reference', async () => {
+    const { socket, register } = await setup(1)
+    const first = memberRemovedOnCalls(socket)[0]?.[1]
+    expect(first).toBeTypeOf('function')
+
+    register()
+
+    const offs = memberRemovedOffCalls(socket)
+    expect(offs).toHaveLength(1)
+    expect(offs[0]?.[1]).toBe(first)
+    const second = memberRemovedOnCalls(socket)[1]?.[1]
+    expect(second).toBeTypeOf('function')
+    expect(second).not.toBe(first)
+  })
+
+  it('room.member_removed: cleanup removes the registered ejection listener by reference, never blanket-off', async () => {
+    const { socket, cleanup } = await setup(1)
+    const registered = memberRemovedOnCalls(socket)[0]?.[1]
+
+    cleanup()
+
+    const offs = memberRemovedOffCalls(socket)
+    expect(offs).toHaveLength(1)
+    expect(offs[0]?.[1]).toBe(registered)
+    // No bare socket.off('room.member_removed') — that would strip the global membership listener.
+    expect(socket.off.mock.calls.some(([name, fn]) => name === 'room.member_removed' && fn === undefined)).toBe(false)
+  })
+
+  it('room:closed for ANOTHER room is ignored (no leave, no toast)', async () => {
+    const { socket, actions, toast } = await setup(1)
+
+    socket.handlers.get('room:closed')?.({ roomId: '2', reason: 'host_left', timestamp: Date.now() })
+
+    expect(actions.leaveRoom).not.toHaveBeenCalled()
+    expect(toast.add).not.toHaveBeenCalled()
+  })
+
+  it('room:closed for the CURRENT room still leaves', async () => {
+    const { socket, actions } = await setup(1)
+
+    socket.handlers.get('room:closed')?.({ roomId: '1', reason: 'host_left', timestamp: Date.now() })
+
+    expect(actions.leaveRoom).toHaveBeenCalledTimes(1)
+  })
+
+  it('gift:received / gift:batch for ANOTHER room never reach the stores', async () => {
+    const { socket, roomStore } = await setup(1)
+    const enqueue = vi.fn()
+    vi.stubGlobal('useGiftStore', () => ({ enqueuePlayback: enqueue, removeRecipient: vi.fn() }))
+
+    socket.handlers.get('gift:received')?.({ senderId: 2, roomId: '2', giftId: 9, recipientId: 3, recipientIds: [3], quantity: 1, batchId: 'x' })
+    socket.handlers.get('gift:batch')?.({ seq: 1, roomId: '2', items: [{ senderId: 2, giftId: 9, recipientIds: [3], quantity: 1, txId: 't1', coins: 10 }], lucky: [] })
+
+    expect(enqueue).not.toHaveBeenCalled()
+    expect(roomStore.currentRoom?.daily_xp).toBe('0')
+  })
+
+  it('room-scoped guards are null-safe: with no current room nothing is dropped', async () => {
+    const { socket, actions } = await setup(null)
+
+    socket.handlers.get('room:closed')?.({ roomId: '2', reason: 'host_left', timestamp: Date.now() })
+
+    expect(actions.leaveRoom).toHaveBeenCalledTimes(1)
   })
 })

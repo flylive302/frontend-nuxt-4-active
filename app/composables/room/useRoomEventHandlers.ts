@@ -306,6 +306,16 @@ const ROOM_EVENT_NAMES = [
   'luckyNumber:result',
 ] as const;
 
+/**
+ * The ejection listener for `room.member_removed` registered by the LAST
+ * `setupRoomEventHandlers` call. `room.member_removed` is shared with the
+ * global membership listener, so it can never go through the blanket
+ * `socket.off(name)` in `cleanupRoomEventHandlers` — it must be removed by
+ * reference. A per-call closure would make `.off(name, newClosure)` a no-op
+ * and stack one ejection listener per room switch (room-page-runtime-audit 09).
+ */
+let memberRemovedEjectionHandler: ((event: { room_id: number; user_id: number }) => void) | null = null;
+
 // ============================================
 // Cleanup Function
 // ============================================
@@ -336,6 +346,11 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
   }
 
   cleanupLuckyEventHandlers(socket);
+
+  if (memberRemovedEjectionHandler) {
+    socket.off('room.member_removed', memberRemovedEjectionHandler);
+    memberRemovedEjectionHandler = null;
+  }
 
   // Module-level chat-menu/report state must not outlive the room
   // (room-page-runtime-audit 04). giftCombo is already reset by
@@ -402,6 +417,20 @@ export function setupRoomEventHandlers(
   const { playEntrySlide } = useSlidePlayback();
   const comboStore = useGiftComboStore();
 
+  /**
+   * GATE for the room-scoped events whose payload carries `roomId`
+   * (`room:closed`, `gift:received`, `gift:batch`; `room:mode` has its own).
+   * Correctness otherwise rests on cleanup running before the next setup;
+   * this makes that ordering non-load-bearing. Null-safe: with no current
+   * room nothing is dropped. The other hot events (`speaker:active`,
+   * `seat:*`, `chat:message`, `room:userJoined/Left`) carry no room id and
+   * cannot be guarded client-side (room-page-runtime-audit 09).
+   */
+  function isForCurrentRoom(roomId: string): boolean {
+    const current = roomStore.currentRoom;
+    return !current || roomId === String(current.id);
+  }
+
   // Room events
   socket.on('room:userJoined', async (event: UserJoinedEvent) => {
     // realtime-22: capture presence BEFORE the upsert. A seat-retention reclaim
@@ -458,6 +487,7 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('room:closed', (event: RoomClosedEvent) => {
+    if (!isForCurrentRoom(event.roomId)) return;
     toast.add({
       title: 'Room closed',
       description: `The room has been closed: ${event.reason}`,
@@ -494,11 +524,12 @@ export function setupRoomEventHandlers(
   // that require RoomActions. NOT added to ROOM_EVENT_NAMES/cleanupRoomEventHandlers
   // — that array does a blanket socket.off(eventName) which would also strip the
   // global membership listener sharing this event name. Instead we off/on our own
-  // named handler each setup call to avoid accumulating duplicate listeners.
-  socket.off('room.member_removed', handleMemberRemovedEjection);
-  socket.on('room.member_removed', handleMemberRemovedEjection);
-
-  function handleMemberRemovedEjection(event: { room_id: number; user_id: number }): void {
+  // module-level handler reference each setup call (and in cleanup) so the
+  // previous listener is always the one removed.
+  if (memberRemovedEjectionHandler) {
+    socket.off('room.member_removed', memberRemovedEjectionHandler);
+  }
+  memberRemovedEjectionHandler = (event) => {
     if (authStore.user?.id !== event.user_id) return;
     if (String(event.room_id) !== roomStore.currentRoom?.id?.toString()) return;
 
@@ -510,7 +541,8 @@ export function setupRoomEventHandlers(
     roomSession.leaveRoom();
     const target = roomSessionStore.previousRoute && !roomSessionStore.previousRoute.startsWith('/room/') ? roomSessionStore.previousRoute : '/';
     navigateTo(target, { replace: true });
-  }
+  };
+  socket.on('room.member_removed', memberRemovedEjectionHandler);
 
   // Profile sync — keeps participant data fresh when MSAB broadcasts a profile change.
   // Private balance fields (coins, diamonds) are stripped — they are not stored in
@@ -728,6 +760,7 @@ export function setupRoomEventHandlers(
   // un-upgraded MSAB (or the N legacy singular siblings of a burst) carry the
   // singular `recipientId`. Normalize to an array up front.
   socket.on('gift:received', (event: GiftReceivedEvent) => {
+    if (!isForCurrentRoom(event.roomId)) return;
     // GATE (gift-authority-tick-fanout ticket 15): once this connection's
     // `server:capabilities` says `giftBatch` is true, `gift:batch` is the
     // SOLE source of truth for gift XP/chat/playback/lucky taps on this
@@ -838,6 +871,7 @@ export function setupRoomEventHandlers(
   // lucky tap-activity record per item, and the tick's `lucky[]` entries fold
   // through the existing `lucky:room-result` handler.
   socket.on('gift:batch', (event: GiftBatchEvent) => {
+    if (!isForCurrentRoom(event.roomId)) return;
     for (const item of event.items) {
       // Safety-net de-dup only — see `seenGiftBatchTxIds` for why this is not
       // the primary legacy/batch overlap guard (that's the capability gate on
