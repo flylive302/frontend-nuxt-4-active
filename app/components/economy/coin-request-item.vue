@@ -4,6 +4,7 @@
 import type { CoinRequest, CoinRequestStatus } from '~/types/economy/coin-request'
 import { STATUS_COLORS } from '~/types/economy/coin-request'
 import type { Colors } from '~/types/colors'
+import { COLOR_TEXT_CLASS, COLOR_BG_10_CLASS } from '~/utils/color-classes'
 
 defineOptions({ name: 'CoinRequestItem' })
 
@@ -69,10 +70,10 @@ function getStatusIcon(status: CoinRequestStatus): string {
     </div>
 
     <!-- Amount -->
-    <div :class="`bg-${color}/10`" class="flex items-center justify-between rounded-lg px-3 py-2 mt-2">
+    <div :class="COLOR_BG_10_CLASS[color]" class="flex items-center justify-between rounded-lg px-3 py-2 mt-2">
       <div class="flex items-center gap-2">
-        <UIcon name="i-lucide-coins" :class="`w-5 h-5 text-${color}`" />
-        <span :class="`text-lg font-bold text-${color}`">{{ request.final_amount }}</span>
+        <UIcon name="i-lucide-coins" class="w-5 h-5" :class="COLOR_TEXT_CLASS[color]" />
+        <span class="text-lg font-bold" :class="COLOR_TEXT_CLASS[color]">{{ request.final_amount }}</span>
         <span class="text-sm text-muted">coins</span>
       </div>
       <div class="flex items-center gap-2">

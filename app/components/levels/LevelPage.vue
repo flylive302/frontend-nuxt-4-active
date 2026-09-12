@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { COLOR_TEXT_CLASS, COLOR_BORDER_CLASS, COLOR_BG_10_CLASS } from '~/utils/color-classes'
 // ========================================
 // Shared Level Page Component
 // ========================================
@@ -143,7 +144,7 @@ const tableData = computed<LevelRow[]>(() =>
         // sharp but fetched the full 512px source — ~110 KB per row, once per level in the table.
         // w-128 is still ~2.6x DPR at that box, so sharpness is unchanged.
         badgeSrc: withImageKitTransform(item.image_url || props.defaultBadgeUrl, { w: 128, q: 75 }),
-        class: item.level === currentLevel.value ? `border border-${props.color} bg-${props.color}/10 rounded-md px-2 py-1 inset-shadow-sm` : '',
+        class: item.level === currentLevel.value ? `border ${COLOR_BORDER_CLASS[props.color]} ${COLOR_BG_10_CLASS[props.color]} rounded-md px-2 py-1 inset-shadow-sm` : '',
       },
     }
   })
@@ -161,7 +162,7 @@ const tableData = computed<LevelRow[]>(() =>
         class="min-w-full aspect-rectangle object-cover animate-[zoom_50s_ease-in-out_infinite]"
     />
 
-    <div class="p-2 mx-3 backdrop-blur-xs -mt-26 rounded-xl border" :class="`border-${color}`">
+    <div class="p-2 mx-3 backdrop-blur-xs -mt-26 rounded-xl border" :class="COLOR_BORDER_CLASS[color]">
       <!-- User Info Grid -->
       <div class="grid grid-cols-9 gap-1">
         <UserAvatar
@@ -209,8 +210,8 @@ const tableData = computed<LevelRow[]>(() =>
           v-if="!loading && userXp != null"
           class="text-base font-bold bg-elevated rounded-md px-2 py-1 leading-tight glow-primary"
       >
-        You have <span :class="`text-${color}`">{{ currentXP }} (XP)</span>
-        You Need <span :class="`text-${color}`">{{ xpRemaining }} (XP)</span>
+        You have <span :class="COLOR_TEXT_CLASS[color]">{{ currentXP }} (XP)</span>
+        You Need <span :class="COLOR_TEXT_CLASS[color]">{{ xpRemaining }} (XP)</span>
         Experience Points more to reach Level {{ nextLevel }}
       </p>
       <div v-else-if="loading" class="h-12 bg-muted rounded-md animate-pulse" />
@@ -235,7 +236,7 @@ const tableData = computed<LevelRow[]>(() =>
         :data="tableData"
         sticky
         class="rounded-lg mt-2 w-full border"
-        :class="`border-${color}`"
+        :class="COLOR_BORDER_CLASS[color]"
       />
     </div>
 
