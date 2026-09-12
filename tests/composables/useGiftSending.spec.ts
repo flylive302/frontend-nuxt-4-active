@@ -1008,13 +1008,15 @@ describe('useGiftSending — self-gifting FX (self-gifting epic ticket 04)', () 
     giftStore.setSelectedRecipientIds([1])
     giftStore.setQuantity(1)
 
-    expect(giftStore.currentPlayback).toBeNull()
+    expect(giftStore.currentSides.filter(Boolean)).toHaveLength(0)
     await sending.send()
 
-    // Exactly one playback for this self-send (auto-started, nothing left
-    // queued behind it) — no duplicate enqueue.
-    expect(giftStore.currentPlayback?.recipientIds).toEqual([1])
-    expect(giftStore.playbackQueue).toHaveLength(0)
+    // Exactly one playback for this self-send (auto-started into a side lane
+    // — GIFT is not critical — nothing left queued behind it) — no duplicate
+    // enqueue.
+    expect(giftStore.currentSides.filter(Boolean)).toHaveLength(1)
+    expect(giftStore.currentSides.find(Boolean)?.recipientIds).toEqual([1])
+    expect(giftStore.sideQueue).toHaveLength(0)
 
     // XP accumulation is useRoomGifts.sendGift's job (covered with the real
     // composable in useRoomGifts.spec.ts's self-gifting test) — here `sendGift`

@@ -83,7 +83,7 @@ describe('useGiftPlayback — stall detector', () => {
     const { playback, dispose } = await buildPlayback()
     void playback
 
-    giftStore.currentPlayback = makePlaybackItem('item-1')
+    giftStore.currentCenter = makePlaybackItem('item-1')
     await Promise.resolve()
     await vi.advanceTimersByTimeAsync(GIFT_PLAYBACK_TIMEOUT_MS)
 
@@ -98,7 +98,7 @@ describe('useGiftPlayback — stall detector', () => {
 
     const { playback, dispose } = await buildPlayback()
 
-    giftStore.currentPlayback = makePlaybackItem('item-1')
+    giftStore.currentCenter = makePlaybackItem('item-1')
     await Promise.resolve()
 
     for (let elapsed = 0; elapsed < 20_000; elapsed += 1000) {
@@ -117,7 +117,7 @@ describe('useGiftPlayback — stall detector', () => {
 
     const { playback, dispose } = await buildPlayback()
 
-    giftStore.currentPlayback = makePlaybackItem('item-1')
+    giftStore.currentCenter = makePlaybackItem('item-1')
     await Promise.resolve()
 
     // Three healthy heartbeats spaced 1000ms apart (each re-arms the timer).
@@ -152,6 +152,46 @@ describe('useGiftPlayback — stall detector', () => {
     // Advance well past the timeout window — nothing should fire since no
     // item ever started and handleProgress had nothing to re-arm.
     await vi.advanceTimersByTimeAsync(GIFT_PLAYBACK_TIMEOUT_MS * 2)
+
+    expect(onPlaybackComplete).not.toHaveBeenCalled()
+    dispose()
+  })
+})
+
+// ============================================================
+// Side lanes (gift-backlog-and-lag 06)
+// ============================================================
+describe('useGiftPlayback — side lanes', () => {
+  it('force-advances a stalled side lane independently of the center lane and other side lanes', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const giftStore = useGiftStore()
+    const onPlaybackComplete = vi.spyOn(giftStore, 'onPlaybackComplete')
+
+    const { playback, dispose } = await buildPlayback()
+    void playback
+
+    giftStore.currentSides[0] = makePlaybackItem('side-0')
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(GIFT_PLAYBACK_TIMEOUT_MS)
+
+    expect(onPlaybackComplete).toHaveBeenCalledWith('side', 0)
+    dispose()
+  })
+
+  it('a side-lane heartbeat keeps that lane alive without affecting the center timer', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const giftStore = useGiftStore()
+    const onPlaybackComplete = vi.spyOn(giftStore, 'onPlaybackComplete')
+
+    const { playback, dispose } = await buildPlayback()
+
+    giftStore.currentSides[1] = makePlaybackItem('side-1')
+    await Promise.resolve()
+
+    for (let elapsed = 0; elapsed < 20_000; elapsed += 1000) {
+      await vi.advanceTimersByTimeAsync(1000)
+      playback.handleProgress('side', 1)
+    }
 
     expect(onPlaybackComplete).not.toHaveBeenCalled()
     dispose()

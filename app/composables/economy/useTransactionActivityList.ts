@@ -1,11 +1,11 @@
 // ========================================
 // Transaction Activity List Composable (Data derivation)
 // ========================================
-// Flattens day-grouped transactions into one heterogeneous list so the
-// activity page can feed a single virtual scroller (vue-virtual-scroller)
-// instead of nested UCollapsible loops. Collapse state is a Set of
-// collapsed dates; collapsing a day removes its transaction items from
-// the flattened list while keeping its header item.
+// Flattens day-grouped transactions into one heterogeneous list (header +
+// transaction items) that the activity page renders as a plain list.
+// Collapse state is a Set of collapsed dates; collapsing a day removes its
+// transaction items from the flattened list while keeping its header item.
+// Expanded rows are a Set of transaction ids owned here, not in the row.
 // ========================================
 
 import type { Ref } from 'vue'
@@ -34,6 +34,7 @@ export interface ActivityTransactionItem {
   type: 'transaction'
   key: string
   transaction: Transaction
+  expanded: boolean
 }
 
 export type ActivityListItem = ActivityHeaderItem | ActivityTransactionItem
@@ -50,6 +51,10 @@ export function useTransactionActivityList(
   // ========================================
 
   const collapsedDates = ref<Set<string>>(new Set())
+
+  // Expanded rows live here, keyed by transaction id, so they survive
+  // list re-renders (pagination merges) and are trivially testable.
+  const expandedIds = ref<Set<string>>(new Set())
 
   // ========================================
   // Computed
@@ -77,6 +82,7 @@ export function useTransactionActivityList(
           type: 'transaction',
           key: `${TRANSACTION_KEY_PREFIX}${transaction.id}`,
           transaction,
+          expanded: expandedIds.value.has(transaction.id),
         })
       }
     }
@@ -102,6 +108,19 @@ export function useTransactionActivityList(
   }
 
   /**
+   * Toggle the expanded details of one transaction row.
+   */
+  function toggleExpanded(transactionId: string): void {
+    const next = new Set(expandedIds.value)
+    if (next.has(transactionId)) {
+      next.delete(transactionId)
+    } else {
+      next.add(transactionId)
+    }
+    expandedIds.value = next
+  }
+
+  /**
    * Whether a given day's date is currently collapsed.
    */
   function isCollapsed(date: string): boolean {
@@ -111,7 +130,9 @@ export function useTransactionActivityList(
   return {
     items,
     collapsedDates,
+    expandedIds,
     toggleDate,
+    toggleExpanded,
     isCollapsed,
   }
 }

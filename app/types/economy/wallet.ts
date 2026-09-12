@@ -87,18 +87,44 @@ export type TransactionType =
   | 'vip_gift'
   | 'store_purchase'
   | 'store_refund'
+  | 'game_bet'
+  | 'game_win'
+  | 'lucky_payout'
+  | 'manual_adjustment'
+  | 'diamond_deduction'
+  | 'diamond_to_coin_conversion'
+  | 'diamond_handover'
 
 /**
  * Filter options for transaction history.
+ * User-intent buckets (received/sent/purchases/games/diamonds) are resolved
+ * server-side; legacy keys stay for older app bundles.
  */
 export type TransactionTypeFilter =
   | 'all'
-  | 'coins'
+  | 'received'
+  | 'sent'
+  | 'purchases'
+  | 'games'
   | 'diamonds'
+  | 'coins'
   | 'gift'
   | 'room_commission'
   | 'agency_income'
   | 'coin_transfer'
+
+/**
+ * Money flow from the perspective user's side.
+ */
+export type TransactionDirection = 'in' | 'out'
+
+/**
+ * Room a transaction happened in (gifts, commissions).
+ */
+export interface TransactionRoom {
+  id: number
+  name: string
+}
 
 /**
  * Additional metadata attached to transactions.
@@ -131,6 +157,9 @@ export interface Transaction {
   my_balance: MyBalance | null
   my_xp: MyXP | null
   other_party: OtherParty | null
+  /** Optional until the backend deploy that adds them ships. */
+  direction?: TransactionDirection
+  room?: TransactionRoom | null
   metadata: TransactionMetadata
 }
 

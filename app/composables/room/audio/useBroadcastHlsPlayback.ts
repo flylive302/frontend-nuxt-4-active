@@ -32,6 +32,7 @@
 // a `ref is not defined` ReferenceError.
 import { ref, readonly, type Ref } from 'vue';
 import { createLogger } from '~/utils/logger';
+import { createKeyedSingleFlight } from '~/utils/keyed-single-flight';
 
 const log = createLogger('[BroadcastHls]');
 
@@ -104,10 +105,21 @@ let volume = 1;
 // Backoff timer for the last-resort fatal reload (cleared on stop/teardown).
 let fatalReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
-async function start(playbackUrl: string): Promise<void> {
-  if (!import.meta.client) return;
-  if (isActive.value && currentUrl === playbackUrl) return; // idempotent
-  stop();
+// room-page-runtime-audit 01: coalesce concurrent `start(url)` calls for the
+// SAME url into one run. Before this, N callers landing in one flush (e.g. N
+// watchers on a tier flip) each passed the `isActive` guard — which only flips
+// true AFTER the `await import('hls.js')` — and each built its own `Hls`
+// attached to the one `<audio>`, N−1 of them never destroyed.
+const startFlight = createKeyedSingleFlight<string>(startUncoalesced);
+
+function start(playbackUrl: string): Promise<void> {
+  if (!import.meta.client) return Promise.resolve();
+  if (isActive.value && currentUrl === playbackUrl) return Promise.resolve(); // idempotent
+  return startFlight.start(playbackUrl);
+}
+
+async function startUncoalesced(playbackUrl: string): Promise<void> {
+  stop({ keepFlight: true });
 
   currentUrl = playbackUrl;
   audio = new Audio();
@@ -200,7 +212,14 @@ async function tryPlay(): Promise<void> {
   });
 }
 
-function stop(): void {
+/**
+ * Tear down the player. `keepFlight` is only for the in-flight start itself,
+ * which calls stop() to clear a previous stream and must not forget its own
+ * single-flight entry; every external stop() drops the entry so a later
+ * start(sameUrl) runs fresh instead of joining a run that will bail.
+ */
+function stop(opts: { keepFlight?: boolean } = {}): void {
+  if (!opts.keepFlight) startFlight.clear();
   if (fatalReloadTimer) {
     clearTimeout(fatalReloadTimer);
     fatalReloadTimer = null;
@@ -236,5 +255,5 @@ const readonlyIsActive = readonly(isActive);
  * additional players; they all drive the one module-level `<audio>` element.
  */
 export function useBroadcastHlsPlayback(): UseBroadcastHlsPlaybackReturn {
-  return { start, stop, setVolume, isActive: readonlyIsActive, resume };
+  return { start, stop: () => stop(), setVolume, isActive: readonlyIsActive, resume };
 }

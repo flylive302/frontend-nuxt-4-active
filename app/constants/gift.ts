@@ -29,6 +29,22 @@ export const BURST_SHED_QUEUE_DEPTH = 12;
 /** Maximum ×N repeats a coalesced identical-gift run can accumulate */
 export const MAX_PLAYBACK_REPEATS = 99;
 
+/**
+ * gift-backlog-and-lag 06 — number of concurrent side lanes for non-critical
+ * gifts. Critical gifts (`gift.is_critical`) always play full-screen in the
+ * center lane, one at a time; everything else fills up to this many side
+ * lanes so interleaved senders don't wait on a single FIFO.
+ */
+export const SIDE_LANES = 3;
+
+/**
+ * gift-backlog-and-lag 06 — how far back `enqueuePlayback` searches a lane's
+ * queue for the newest matching (gift, sender) item to merge repeats onto.
+ * Bounded so a long interleaved queue doesn't scan its full depth on every
+ * enqueue.
+ */
+export const MERGE_LOOKBACK = 8;
+
 /** Maximum blob URLs kept in the in-memory video cache (LRU eviction + revoke) */
 export const VIDEO_CACHE_MAX_ENTRIES = 20;
 

@@ -101,6 +101,20 @@ export interface GiftPlaybackItem {
    * join) so the Entry Mute preference can drop it without affecting gifts.
    */
   isEntryAnimation?: boolean;
+  /**
+   * gift-backlog-and-lag 06 — which lane this item plays in. `center` = full
+   * screen, one at a time (`gift.is_critical`); `side` = one of the
+   * `SIDE_LANES` small concurrent players. Set by `enqueuePlayback`, not by
+   * callers.
+   */
+  lane?: 'center' | 'side';
+  /**
+   * gift-backlog-and-lag 06 — side-lane only. Decided once when the item is
+   * assigned a lane slot (not recomputed reactively), so a lane already
+   * playing an SVGA never unmounts mid-animation when the queue grows.
+   * `true` plays the real SVGA; `false`/undefined shows the static thumbnail.
+   */
+  playSvga?: boolean;
 }
 
 // ============================================

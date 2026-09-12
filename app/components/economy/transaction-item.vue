@@ -1,5 +1,9 @@
-<!-- ~/components/transaction-item.vue -->
-<!-- Displays a single transaction with minimal view + expandable details -->
+<!-- ~/components/economy/transaction-item.vue -->
+<!-- One activity row: what happened, with whom, how much — plus an expandable
+     receipt (id, status, balance & XP before/after).
+
+     Controlled component: `expanded` comes from the parent, keyed by
+     transaction id, so open rows survive pagination merges and tab churn. -->
 <script setup lang="ts">
 import type { Transaction, BalanceSnapshot } from '~/types/economy/wallet'
 import { ASSETS } from '~/constants/assets'
@@ -9,92 +13,65 @@ import { formatCurrency } from '~/utils/currency'
 import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
-// Props
+// Props / Emits
 // ========================================
 
 defineOptions({ name: 'TransactionItem' })
 
 const props = defineProps<{
   transaction: Transaction
+  expanded: boolean
 }>()
 
 const emit = defineEmits<{
-  /** Fired when the expand/collapse transition settles at its final height —
-   * virtualized parents (DynamicScroller) re-measure the row on this. */
-  resized: []
+  toggle: []
 }>()
 
 // ========================================
-// State
+// Computed - Row
 // ========================================
 
-const isExpanded = ref(false)
-
-// ========================================
-// Computed - Display Values
-// ========================================
-
-/**
- * Get formatted time from timestamp.
- */
-const formattedTime = computed(() => {
-  const date = new Date(props.transaction.timestamp)
-  return date.toLocaleTimeString('en-US', {
+const formattedTime = computed(() =>
+  new Date(props.transaction.timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-  })
+  }),
+)
+
+/** Primary line: the perspective-aware sentence from the API, else the type label. */
+const headline = computed(() =>
+  props.transaction.description
+  || props.transaction.title
+  || TRANSACTION_TYPE_LABELS[props.transaction.type]
+  || 'Transaction',
+)
+
+/** Secondary line: counterparty and room, joined with a dot. */
+const subline = computed(() => {
+  const parts: string[] = []
+  if (props.transaction.other_party) {
+    parts.push(`${props.transaction.my_role === 'initiator' ? 'To' : 'From'} ${getOtherPartyDisplay(props.transaction)}`)
+  }
+  const room = props.transaction.room?.name ?? props.transaction.metadata?.room_name
+  if (room) parts.push(`in ${room}`)
+  return parts.join(' · ')
 })
 
-/**
- * Get display title for transaction.
- */
-const displayTitle = computed(() => 
-  props.transaction.title || TRANSACTION_TYPE_LABELS[props.transaction.type] || 'Transaction'
-)
+const isPositive = computed(() => isPositiveTransaction(props.transaction))
 
-/**
- * Get the other party display name.
- */
-const otherPartyName = computed(() => getOtherPartyDisplay(props.transaction))
+const amountClass = computed(() => (isPositive.value ? 'text-success-400' : 'text-error-400'))
 
-/**
- * Get change color based on amount value.
- */
-const changeColor = computed(() => 
-  isPositiveTransaction(props.transaction) ? 'success' : 'error'
-)
+const backgroundClass = computed(() => (isPositive.value ? 'to-success-950/60' : 'to-error-950/60'))
 
-/**
- * Get background gradient based on transaction direction.
- */
-const backgroundClass = computed(() => 
-  isPositiveTransaction(props.transaction) ? 'to-success-950' : 'to-error-950'
-)
-
-/**
- * Get thumbnail URL with fallback.
- */
 const thumbnailUrl = computed(() =>
-  withImageKitTransform(props.transaction.thumbnail_url ?? ASSETS.DEFAULT_TRANSACTION_THUMB, { w: 128 })
+  withImageKitTransform(props.transaction.thumbnail_url ?? ASSETS.DEFAULT_TRANSACTION_THUMB, { w: 96 }),
 )
 
-/**
- * Get direction label based on a role.
- */
-const directionLabel = computed(() => 
-  props.transaction.my_role === 'initiator' ? 'To' : 'From'
-)
-
-/**
- * Check if we have any expandable details.
- */
-const hasDetails = computed(() => 
-  props.transaction.my_balance !== null || props.transaction.my_xp !== null
-)
+const isPending = computed(() => props.transaction.status !== 'completed')
 
 // ========================================
-// Computed - Expandable Details
+// Computed - Receipt (expanded)
 // ========================================
 
 interface DetailItem {
@@ -102,204 +79,126 @@ interface DetailItem {
   before: string
   after: string
   change: string
+  positive: boolean
 }
 
-/**
- * Build detail items for balance/XP changes.
- */
+function toDetailItem(label: string, snapshot: BalanceSnapshot): DetailItem {
+  const change = snapshot.after - snapshot.before
+  return {
+    label,
+    before: formatCurrency(snapshot.before),
+    after: formatCurrency(snapshot.after),
+    change: `${change >= 0 ? '+' : ''}${formatCurrency(change)}`,
+    positive: change >= 0,
+  }
+}
+
 const detailItems = computed<DetailItem[]>(() => {
   const items: DetailItem[] = []
   const balance = props.transaction.my_balance
   const xp = props.transaction.my_xp
 
-  // Coins
-  if (balance?.coins) {
-    items.push(formatDetailItem('Coins', balance.coins))
-  }
-
-  // Diamonds
-  if (balance?.diamonds) {
-    items.push(formatDetailItem('Diamonds', balance.diamonds))
-  }
-
-  // Wealth XP
-  if (xp?.wealth) {
-    items.push(formatDetailItem('Wealth XP', xp.wealth))
-  }
-
-  // Charm XP
-  if (xp?.charm) {
-    items.push(formatDetailItem('Charm XP', xp.charm))
-  }
+  if (balance?.coins) items.push(toDetailItem('Coins', balance.coins))
+  if (balance?.diamonds) items.push(toDetailItem('Diamonds', balance.diamonds))
+  if (xp?.wealth) items.push(toDetailItem('Wealth XP', xp.wealth))
+  if (xp?.charm) items.push(toDetailItem('Charm XP', xp.charm))
 
   return items
 })
 
-/**
- * Format a balance snapshot into a detail item.
- */
-function formatDetailItem(label: string, snapshot: BalanceSnapshot): DetailItem {
-  const change = snapshot.after - snapshot.before
-  const changeStr = change >= 0 ? `+${formatCurrency(String(change))}` : formatCurrency(String(change))
-  
-  return {
-    label,
-    before: formatCurrency(String(snapshot.before)),
-    after: formatCurrency(String(snapshot.after)),
-    change: changeStr,
-  }
-}
-
-/**
- * Toggle expanded state.
- */
-function toggleExpand() {
-  if (hasDetails.value) {
-    isExpanded.value = !isExpanded.value
-  }
-}
-
 // ========================================
-// Expand transition hooks (height animation + resize notification)
+// Handlers
 // ========================================
 
-function onExpandEnter(el: Element) {
-  const html = el as HTMLElement
-  html.style.height = '0'
-  void html.offsetHeight
-  html.style.height = `${html.scrollHeight}px`
-}
+const { copy: copyToClipboard, copied } = useClipboard({ copiedDuring: 1500 })
 
-function onExpandAfterEnter(el: Element) {
-  (el as HTMLElement).style.height = 'auto'
-  emit('resized')
-}
-
-function onExpandLeave(el: Element) {
-  const html = el as HTMLElement
-  html.style.height = `${html.scrollHeight}px`
-  void html.offsetHeight
-  html.style.height = '0'
-}
-
-function onExpandAfterLeave() {
-  emit('resized')
+function copyId(event: Event): void {
+  event.stopPropagation()
+  void copyToClipboard(props.transaction.id)
 }
 </script>
 
 <template>
   <div
-    class="overflow-hidden cursor-pointer transition-all duration-200"
-    @click="toggleExpand"
+    class="activity-row cursor-pointer select-none bg-linear-to-br from-neutral-950 shadow-xl shadow-neutral"
+    :class="backgroundClass"
+    role="button"
+    :aria-expanded="expanded"
+    @click="emit('toggle')"
   >
-    <!-- Main Row (Always Visible) -->
-    <div
-      class="grid grid-cols-14 gap-2 p-2 bg-linear-to-br from-neutral-950 shadow-xl shadow-neutral"
-      :class="backgroundClass"
-    >
-      <!-- Thumbnail -->
-      <div class="rounded-full bg-elevated border inset-shadow-sm col-span-2 overflow-hidden aspect-square">
-        <NuxtImg
-          class="h-full mx-auto rounded"
-          :src="thumbnailUrl"
-          :alt="displayTitle"
-        />
+    <!-- Row -->
+    <div class="flex items-center gap-3 px-3 py-2">
+      <div class="size-11 shrink-0 overflow-hidden rounded-full border bg-elevated inset-shadow-sm">
+        <NuxtImg class="size-full object-cover" :src="thumbnailUrl" :alt="headline" />
       </div>
 
-      <!-- Main Info -->
-      <div class="col-span-9 flex flex-col justify-center">
-        <p v-if="transaction.description" class="text-sm font-bold leading-tight truncate">
-          {{ transaction.description }}
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-bold leading-tight">{{ headline }}</p>
+        <p class="truncate text-xs leading-tight text-muted">
+          {{ formattedTime }}<template v-if="subline"> · {{ subline }}</template>
         </p>
-        <p v-else class="text-sm font-bold leading-tight truncate">
-          {{ displayTitle }}
-        </p>
-        <p class="text-xs text-muted leading-tight truncate">
-          {{ directionLabel }}: {{ otherPartyName }}
-        </p>
-         <!-- Transaction ID -->
-        <div class="flex text-xs gap-2">
-          <span class="text-muted">Transaction ID:</span>
-          <span class="font-mono">{{ transaction.id }}</span>
+      </div>
+
+      <div class="flex shrink-0 items-center gap-1">
+        <div class="text-right">
+          <p class="text-sm font-bold tabular-nums leading-tight" :class="amountClass">
+            {{ transaction.amount.formatted }}
+          </p>
+          <UBadge v-if="isPending" color="warning" variant="subtle" size="xs">{{ transaction.status }}</UBadge>
         </div>
-      </div>
-
-      <!-- Amount & Time -->
-      <div class="col-span-3 flex flex-col items-end justify-between">
-        <p class="text-xs text-muted leading-tight">{{ formattedTime }}</p>
-        <UButton
-          class="shadow-lg text-white"
-          size="xs"
-          :trailing-icon="hasDetails ? (isExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down') : undefined"
-          variant="subtle"
-          :color="changeColor"
-        >
-          {{ transaction.amount.formatted }}
-        </UButton>
+        <UIcon
+          name="i-lucide-chevron-down"
+          class="size-4 text-muted transition-transform"
+          :class="{ 'rotate-180': expanded }"
+        />
       </div>
     </div>
 
-    <!-- Expandable Details -->
-    <Transition
-      name="expand"
-      @enter="onExpandEnter"
-      @after-enter="onExpandAfterEnter"
-      @leave="onExpandLeave"
-      @after-leave="onExpandAfterLeave"
-    >
-      <div
-        v-if="isExpanded && hasDetails"
-        class="overflow-hidden bg-linear-to-tr from-neutral-950"
-        :class="backgroundClass"
-      >
-        <!-- Divider -->
-        <USeparator/>
+    <!-- Receipt: grid-template-rows 0fr→1fr gives a real slide without JS
+         height measuring. Safe because the list is plain DOM (no virtual
+         scroller caching row heights). -->
+    <Transition name="receipt">
+      <div v-if="expanded" class="receipt grid">
+        <div class="min-h-0 overflow-hidden">
+          <div class="border-t border-white/5 px-3 py-2 text-xs">
+        <div class="flex items-center justify-between py-1">
+          <span class="text-muted">Transaction ID</span>
+          <button type="button" class="flex items-center gap-1 font-mono" @click="copyId">
+            {{ transaction.id }}
+            <UIcon :name="copied ? 'i-lucide-check' : 'i-lucide-copy'" class="size-3.5 text-muted" />
+          </button>
+        </div>
 
-        <div class="px-3 py-2 space-y-2">
-          <!-- Transaction ID -->
-          <div class="flex justify-between text-xs">
-            <span class="text-muted">Transaction ID</span>
-            <span class="font-mono">{{ transaction.id }}</span>
-          </div>
+        <div class="flex items-center justify-between py-1">
+          <span class="text-muted">Status</span>
+          <UBadge :color="isPending ? 'warning' : 'success'" variant="subtle" size="xs">
+            {{ transaction.status }}
+          </UBadge>
+        </div>
 
-          <!-- Status -->
-          <div class="flex justify-between text-xs">
-            <span class="text-muted">Status</span>
-            <UBadge 
-              :color="transaction.status === 'completed' ? 'success' : 'warning'" 
-              variant="subtle"
-              size="xs"
-            >
-              {{ transaction.status }}
-            </UBadge>
-          </div>
+        <div v-if="transaction.room?.name" class="flex items-center justify-between py-1">
+          <span class="text-muted">Room</span>
+          <span>{{ transaction.room.name }}</span>
+        </div>
 
-          <!-- Divider -->
-          <USeparator />
-
-          <!-- Balance/XP Details -->
+        <template v-if="detailItems.length">
+          <USeparator class="my-1" />
           <div
             v-for="item in detailItems"
             :key="item.label"
-            class="space-y-1"
+            class="flex items-center justify-between py-1 tabular-nums"
           >
-            <p class="text-xs font-semibold text-muted">{{ item.label }}</p>
-            <div class="grid grid-cols-3 gap-2 text-xs">
-              <div class="text-center">
-                <p class="text-muted">Before</p>
-                <p class="font-semibold">{{ item.before }}</p>
-              </div>
-              <div class="text-center">
-                <p class="text-muted">After</p>
-                <p class="font-semibold">{{ item.after }}</p>
-              </div>
-              <div class="text-center">
-                <p class="text-muted">Change</p>
-                <p class="font-semibold" :class="item.change.startsWith('+') ? 'text-success-400' : 'text-error-400'">
-                  {{ item.change }}
-                </p>
-              </div>
-            </div>
+            <span class="text-muted">{{ item.label }}</span>
+            <span>
+              {{ item.before }}
+              <UIcon name="i-lucide-arrow-right" class="mx-1 size-3 text-muted" />
+              {{ item.after }}
+              <span class="ml-2 font-semibold" :class="item.positive ? 'text-success-400' : 'text-error-400'">
+                {{ item.change }}
+              </span>
+            </span>
+          </div>
+        </template>
           </div>
         </div>
       </div>
@@ -308,14 +207,21 @@ function onExpandAfterLeave() {
 </template>
 
 <style scoped>
-.expand-enter-active,
-.expand-leave-active {
-  transition: height 0.2s ease-out;
-  overflow: hidden;
+/* Native lazy rendering: off-screen rows skip layout/paint. The intrinsic
+   size keeps the scrollbar stable before a row is first rendered. */
+.activity-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 60px;
 }
-
-.expand-enter-from,
-.expand-leave-to {
-  height: 0;
+.receipt {
+  grid-template-rows: 1fr;
+}
+.receipt-enter-active,
+.receipt-leave-active {
+  transition: grid-template-rows 0.2s ease-out;
+}
+.receipt-enter-from,
+.receipt-leave-to {
+  grid-template-rows: 0fr;
 }
 </style>

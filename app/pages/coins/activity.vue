@@ -3,20 +3,7 @@
 // Imports
 // ========================================
 
-import type { Component } from 'vue'
-import { defineAsyncComponent } from 'vue'
-import { FILTER_TABS } from '~/constants/economy/transactionConstants'
-
-// Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
-// doesn't get linked as render-blocking CSS on routes that don't reach this
-// page (mirrors app/components/room/chat-panel.vue).
-const DynamicScroller = defineAsyncComponent(async () => {
-  if (import.meta.client) await import('vue-virtual-scroller/dist/vue-virtual-scroller.css')
-  return (await import('vue-virtual-scroller')).DynamicScroller as unknown as Component
-})
-const DynamicScrollerItem = defineAsyncComponent(async () =>
-  (await import('vue-virtual-scroller')).DynamicScrollerItem as unknown as Component,
-)
+import { FILTER_TABS, type FilterTab } from '~/constants/economy/transactionConstants'
 
 // ========================================
 // Page Configuration
@@ -28,17 +15,11 @@ definePageMeta({
 })
 
 // ========================================
-// Constants
-// ========================================
-
-const ACTIVITY_ITEM_MIN_SIZE = 56
-
-// ========================================
 // Store & Composables
 // ========================================
 
 const transactionStore = useTransactionStore()
-const { fetchTransactions, loadMore, changeFilter } = useTransactionData()
+const { fetchTransactions, loadMore, changeFilter, fetchSummary } = useTransactionData()
 
 // ========================================
 // State
@@ -57,12 +38,9 @@ const error = computed(() => transactionStore.transactions.error)
 const isEmpty = computed(() => transactionStore.isEmpty)
 const currentFilter = computed(() => transactionStore.currentFilter)
 
-const { items: activityItems, toggleDate } = useTransactionActivityList(transactionsByDate)
+const { items: activityItems, toggleDate, toggleExpanded } = useTransactionActivityList(transactionsByDate)
 
-// Bumped when a transaction row finishes its expand/collapse transition —
-// DynamicScrollerItem re-measures visible rows via size-dependencies, so a
-// collapsed row can't keep its cached expanded height (ghost gap).
-const resizeTick = ref(0)
+const activeTabConfig = computed<FilterTab>(() => FILTER_TABS[activeTab.value] ?? FILTER_TABS[0]!)
 
 // ========================================
 // SSR Data Loading
@@ -73,6 +51,11 @@ await useAsyncData('coin-activity', async () => {
     await fetchTransactions({ type: 'all' }, true)
   }
   return true
+})
+
+// Summary strip is secondary — load it after the list, never block on it.
+onMounted(() => {
+  if (!transactionStore.summary) void fetchSummary()
 })
 
 // ========================================
@@ -119,15 +102,18 @@ if (import.meta.client) {
     <div class="h-12" />
 
     <!-- Filter Tabs -->
-    <div class="flex overflow-x-auto border-b-2 mb-1 border-black shadow-xl shadow-primary-950/50">
+    <div class="flex overflow-x-auto border-b-2 border-black shadow-xl shadow-primary-950/50">
       <UButton
         v-for="(tab, index) in FILTER_TABS" :key="tab.value" :variant="activeTab === index ? 'subtle' : 'soft'"
         :color="activeTab === index ? 'primary' : 'neutral'" size="lg" class="rounded-none min-w-fit"
+        :icon="tab.icon"
         @click="handleTabChange(index)"
       >
         {{ tab.label }}
       </UButton>
     </div>
+
+    <EconomyActivitySummary />
 
     <!-- Error State -->
     <div v-if="error" class="px-3 py-8 text-center">
@@ -150,36 +136,37 @@ if (import.meta.client) {
 
     <!-- Empty State -->
     <div v-else-if="isEmpty && !isLoading" class="px-3 py-16 text-center">
-      <icon name="i-lucide-receipt" class="size-16 mx-auto text-muted mb-4" />
-      <p class="text-lg font-semibold">No Activity Yet</p>
+      <UIcon :name="activeTabConfig.icon" class="size-16 mx-auto text-muted mb-4" />
+      <p class="text-lg font-semibold">Nothing here yet</p>
       <p class="text-sm text-muted mt-1">
-        Your coin activity will appear here.
+        {{ activeTabConfig.emptyHint }}
       </p>
     </div>
 
     <!-- Transaction List -->
     <template v-else>
-      <DynamicScroller
-        :items="activityItems"
-        :min-item-size="ACTIVITY_ITEM_MIN_SIZE"
-        key-field="key"
-        page-mode
-      >
-        <template #default="{ item, index, active }">
-          <DynamicScrollerItem
-            :item="item"
-            :active="active"
-            :data-index="index"
-            :size-dependencies="[item.type, resizeTick]"
+      <!-- Plain list on purpose: a virtual scroller has to measure every
+           row and mis-caches rows whose height changes (expand/collapse).
+           Rows use `content-visibility: auto` so off-screen ones are skipped
+           by layout/paint natively, which is all 20-per-page needs. -->
+      <div class="activity-list">
+        <template v-for="item in activityItems" :key="item.key">
+          <div
+            v-if="item.type === 'header'"
+            class="flex items-center justify-between px-3 pt-4 pb-2 cursor-pointer"
+            @click="toggleDate(item.date)"
           >
-            <div v-if="item.type === 'header'" class="mb-2 flex items-center justify-between px-3 cursor-pointer" @click="toggleDate(item.date)">
-              <SectionTitle>{{ item.dateFormatted }}</SectionTitle>
-              <icon name="i-lucide-chevron-down" :class="{ 'rotate-180': item.collapsed }" class="transition-transform" />
-            </div>
-            <EconomyTransactionItem v-else :transaction="item.transaction" @resized="resizeTick++" />
-          </DynamicScrollerItem>
+            <SectionTitle>{{ item.dateFormatted }}</SectionTitle>
+            <UIcon name="i-lucide-chevron-down" :class="{ 'rotate-180': item.collapsed }" class="transition-transform" />
+          </div>
+          <EconomyTransactionItem
+            v-else
+            :transaction="item.transaction"
+            :expanded="item.expanded"
+            @toggle="toggleExpanded(item.transaction.id)"
+          />
         </template>
-      </DynamicScroller>
+      </div>
 
       <!-- Loading More -->
       <div v-if="isLoading" class="py-4 text-center">
