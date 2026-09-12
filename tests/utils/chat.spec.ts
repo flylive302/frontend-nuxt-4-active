@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterChatMessages, shouldRenderChatBubble, formatChatAge, filterUnblockedMessages } from '../../app/utils/chat'
+import { filterChatMessages, shouldRenderChatBubble, formatChatAge, filterUnblockedMessages, countVisibleAppends } from '../../app/utils/chat'
 import {
   CHAT_TAB_ALL,
   CHAT_TAB_CHAT,
@@ -121,5 +121,36 @@ describe('filterUnblockedMessages', () => {
     const out = filterUnblockedMessages(list, new Set([1]))
     expect(out).not.toBe(list)
     expect(out.map((m) => m.id)).toEqual(['b'])
+  })
+})
+
+// room-page-runtime-audit 02 — the pill must count what the scroller renders.
+describe('countVisibleAppends', () => {
+  const none = new Set<number>()
+  const buffer: ChatMessageEvent[] = [
+    msg('old-text', CHAT_MESSAGE_TYPE_TEXT),
+    msg('new-gift', CHAT_MESSAGE_TYPE_GIFT),
+    msg('new-text', CHAT_MESSAGE_TYPE_TEXT),
+  ]
+
+  it('counts only the last `added` messages (the tail), never older ones', () => {
+    expect(countVisibleAppends(buffer, 2, CHAT_TAB_ALL, none)).toBe(2)
+    expect(countVisibleAppends(buffer, 1, CHAT_TAB_ALL, none)).toBe(1)
+  })
+
+  it('a gift landing on the Chat tab is not counted (no phantom pill)', () => {
+    expect(countVisibleAppends(buffer, 2, CHAT_TAB_CHAT, none)).toBe(1)
+    expect(countVisibleAppends(buffer, 2, CHAT_TAB_GIFTS, none)).toBe(1)
+  })
+
+  it('a blocked sender\'s line is not counted', () => {
+    const blocked = new Set([1])
+    expect(countVisibleAppends(buffer, 2, CHAT_TAB_ALL, blocked)).toBe(0)
+  })
+
+  it('zero / negative delta and an `added` larger than the buffer are safe', () => {
+    expect(countVisibleAppends(buffer, 0, CHAT_TAB_ALL, none)).toBe(0)
+    expect(countVisibleAppends(buffer, -3, CHAT_TAB_ALL, none)).toBe(0)
+    expect(countVisibleAppends(buffer, 99, CHAT_TAB_ALL, none)).toBe(3)
   })
 })

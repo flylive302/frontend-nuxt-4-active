@@ -2,7 +2,7 @@
 import type { Component } from 'vue';
 import { defineAsyncComponent } from 'vue';
 import type { StickyScrollTarget } from '~/composables/room/useChatStickyScroll';
-import { filterChatMessages, filterUnblockedMessages } from '~/utils/chat';
+import { filterChatMessages, filterUnblockedMessages, countVisibleAppends } from '~/utils/chat';
 import { CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_TAB_GIFTS, type ChatTab } from '~/constants/room';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
@@ -73,13 +73,22 @@ onBeforeUnmount(() => {
   scrollerRef.value?.$el?.removeEventListener('scroll', onScroll);
 });
 
+// Watch the store's append counter, NOT `messages.length`: at the 500 cap the
+// length is pinned (splice+push in one sync call) and a length watcher never
+// fires again (room-page-runtime-audit 02). Count only the appends the active
+// tab + block list will render, so a gift on the Chat tab can't raise the pill.
 watch(
-  () => audioStore.messages.length,
-  (newLength, oldLength) => {
-    const added = newLength - oldLength;
-    if (added <= 0) return;
+  () => audioStore.appendSeq,
+  (newSeq, oldSeq) => {
+    const visible = countVisibleAppends(
+      audioStore.messages,
+      newSeq - oldSeq,
+      activeChatTab.value,
+      userBlocksStore.blockedUserIds
+    );
+    if (visible === 0) return;
     nextTick(() => {
-      onNewMessages(added);
+      onNewMessages(visible);
     });
   }
 );

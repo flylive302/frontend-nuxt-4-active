@@ -79,3 +79,24 @@ export function filterUnblockedMessages(
   if (blockedUserIds.size === 0) return messages;
   return messages.filter((m) => !blockedUserIds.has(m.userId));
 }
+
+/**
+ * How many of the last `added` messages in `messages` are visible under the
+ * active tab and block list (room-page-runtime-audit 02).
+ *
+ * `addMessage()` pushes to the END (and splices the front at the cap), so the
+ * newest `added` messages are always the array tail — even at the 500 cap.
+ * The chat panel uses this so the unseen pill counts what the scroller will
+ * actually render: a gift landing on the Chat tab, or a blocked sender's
+ * line, must not bump the count.
+ */
+export function countVisibleAppends(
+  messages: ChatMessageEvent[],
+  added: number,
+  tab: ChatTab,
+  blockedUserIds: ReadonlySet<number>
+): number {
+  if (added <= 0) return 0;
+  const tail = messages.slice(-Math.min(added, messages.length));
+  return filterChatMessages(filterUnblockedMessages(tail, blockedUserIds), tab).length;
+}

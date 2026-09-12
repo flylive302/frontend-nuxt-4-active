@@ -16,6 +16,18 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
   const messages = ref<ChatMessageEvent[]>([]);
 
   /**
+   * room-page-runtime-audit 02 — monotonic count of `addMessage()` calls.
+   *
+   * The chat panel must NOT watch `messages.length` for "a message arrived":
+   * once the buffer is at `MAX_CHAT_MESSAGES`, every append is a splice+push
+   * in the same sync call, so the length is pinned at 500 and a length watcher
+   * sees 500 → 500 forever — auto-scroll and the unseen pill die for the rest
+   * of the session. This counter always moves by exactly +1 per append.
+   * Never reset (a reset would look like a negative delta to a watcher).
+   */
+  const appendSeq = ref(0);
+
+  /**
    * mic-fgs-crash 02 — a mic re-claim that was owed but deliberately NOT taken.
    *
    * Set when a (re)join finds us still seated while the app is hidden: opening
@@ -68,6 +80,7 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
       messages.value.splice(0, 1);
     }
     messages.value.push(message);
+    appendSeq.value++;
   }
 
   function clearMessages() {
@@ -95,6 +108,7 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     setPendingMicReclaim,
     clearAudioState,
     messages,
+    appendSeq,
     addMessage,
     clearMessages,
     patchMessageContent,
