@@ -146,8 +146,7 @@ onBeforeUnmount(() => {
   <div ref="triggerRef" class="flex">
     <UButton
         size="xl"
-        variant="ghost"
-        class="p-0 text-primary"
+        class="p-1"
         aria-label="Write a message"
         @click="handleTriggerClick"
     >
@@ -163,14 +162,14 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
         ref="barRef"
-        class="fixed inset-x-0 z-[60] flex items-center gap-1 px-2 pt-2 bg-default/95 backdrop-blur-sm border-t border-primary/30 transition-[transform,opacity] duration-150 ease-out"
+        class="fixed inset-x-0 z-60 flex items-center gap-1 px-2 pt-2 bg-default/95 backdrop-blur-sm border-t border-primary/30 transition-[transform,opacity] duration-150 ease-out"
         :class="isOpen ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'"
         :style="barStyle"
     >
       <UButton
           size="sm"
-          variant="ghost"
-          class="size-9 p-2 text-primary shrink-0"
+          variant="soft"
+          class="text-primary"
           aria-label="Close message box"
           @click="handleClose"
       >

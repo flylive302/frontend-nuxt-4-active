@@ -499,8 +499,8 @@ async function doLuckySend(): Promise<void> {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 88px;
-  height: 88px;
+  width: 90px;
+  height: 90px;
   border-radius: 9999px;
   border: 3px solid rgba(253, 224, 71, 0.85);
   background: radial-gradient(circle at 30% 25%, #a855f7, #6d28d9 65%, #4c1d95);

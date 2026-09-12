@@ -47,6 +47,17 @@ export function useRoomMembershipState(roomId: MaybeRefOrGetter<number | null | 
     () => isRoomOwner.value || membershipState.value === 'admin'
   )
 
+  /**
+   * Fetch only the viewer's own membership row. This is what `myRank` /
+   * `canEdit` / `canModerate` need at room mount; invitations and join
+   * requests only matter once the Settings hub is open. Owners hold no
+   * `room_members` row, so the request is skipped for them.
+   */
+  async function refreshOwnRole(): Promise<void> {
+    if (isRoomOwner.value) return
+    await fetchMyMembership()
+  }
+
   /** Fetch everything the derivation depends on */
   async function refresh(): Promise<void> {
     await Promise.all([
@@ -56,5 +67,5 @@ export function useRoomMembershipState(roomId: MaybeRefOrGetter<number | null | 
     ])
   }
 
-  return { membershipState, canEdit, isRoomOwner, refresh }
+  return { membershipState, canEdit, isRoomOwner, refresh, refreshOwnRole }
 }

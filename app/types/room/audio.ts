@@ -50,6 +50,8 @@ export interface JoinRoomResponse {
   activeAppSlides?: SlidePlayPayload[];
   /** lucky-number/01: MSAB feature flag — hides the start button when false/absent. */
   luckyNumberEnabled?: boolean;
+  /** lucky-number/03: live round snapshot for late join/reconnect. Non-null only while a round is live. */
+  luckyNumber?: LuckyNumberSnapshot | null;
   error?: string;
   /** Present when `error === 'room_blocked'` (ADR 0017 / room-blocks 03). */
   permanent?: boolean;
@@ -305,6 +307,13 @@ export interface SeatUserMutedEvent {
 export interface SeatReactionEvent {
   userId: number;
   code: string;
+}
+
+/** lucky-number/03: `room:join` ack snapshot of a live round, for late join/reconnect. userIds are strings (Redis hash keys). */
+export interface LuckyNumberSnapshot {
+  roundId: string;
+  endsAt: number;
+  pickedUserIds: string[];
 }
 
 /** Broadcast for `luckyNumber:started` (lucky-number/01) — includes the sender. */

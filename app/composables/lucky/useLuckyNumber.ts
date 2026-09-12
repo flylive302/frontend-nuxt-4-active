@@ -6,9 +6,9 @@
  * from the `luckyNumber:started` broadcast (no local echo) — see
  * useRoomEventHandlers. MSAB draws the number; the client never does.
  *
- * Countdown: derives from the server's `endsAt` against a local 1 Hz clock
- * that exists ONLY while a round is live (plus one shot at cooldown end).
- * No rAF, no per-frame store writes.
+ * Countdown: derives from the server's `endsAt` (and the cooldown deadline)
+ * against a local 1 Hz clock that exists ONLY while a round is live or
+ * cooling down. No rAF, no per-frame store writes.
  */
 import type { ComputedRef } from 'vue';
 import { useAudioSocket } from '../room/useAudioSocket';
@@ -54,6 +54,8 @@ export interface UseLuckyNumberReturn {
   isCoolingDown: ComputedRef<boolean>;
   /** Whole seconds left in the live round; 0 when none. */
   secondsLeft: ComputedRef<number>;
+  /** Whole seconds until the start button re-enables after a round; 0 when not cooling down. */
+  cooldownSecondsLeft: ComputedRef<number>;
   reveal: ComputedRef<{
     drawn: number;
     winners: string[];
@@ -133,6 +135,13 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
     return Math.max(0, Math.ceil((round.endsAt - now.value) / LUCKY_NUMBER.countdownTickMs));
   });
 
+  const cooldownSecondsLeft = computed(() =>
+    Math.max(
+      0,
+      Math.ceil((seatsStore.luckyNumberCooldownUntil - now.value) / LUCKY_NUMBER.countdownTickMs),
+    ),
+  );
+
   const reveal = computed(() => {
     const r = seatsStore.luckyNumberReveal;
     return r ? { drawn: r.drawn, winners: r.winners, picks: r.picks } : null;
@@ -149,13 +158,15 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
     return round && chosen.value?.roundId === round.roundId ? chosen.value.number : null;
   });
 
+  // The clock runs while there is something to count down: the round, then
+  // the cooldown badge on the start button.
   watch(
-    isRoundLive,
-    (live) => {
-      if (live && !holdsTick) {
+    () => isRoundLive.value || isCoolingDown.value,
+    (counting) => {
+      if (counting && !holdsTick) {
         acquireTick();
         holdsTick = true;
-      } else if (!live) {
+      } else if (!counting) {
         stopTick();
       }
     },
@@ -274,6 +285,7 @@ export function useLuckyNumber(): UseLuckyNumberReturn {
     isRoundLive,
     isCoolingDown,
     secondsLeft,
+    cooldownSecondsLeft,
     reveal,
   };
 }

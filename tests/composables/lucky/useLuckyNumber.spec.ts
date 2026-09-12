@@ -115,6 +115,18 @@ describe('useLuckyNumber', () => {
     expect(mockSocket.emit).toHaveBeenCalledWith('luckyNumber:start', { roomId: '42' })
   })
 
+  it('cooldownSecondsLeft counts down after a result and reaches 0 when the cooldown ends', async () => {
+    const { seatsStore, cooldownSecondsLeft, isCoolingDown } = await setup(true)
+    seatsStore.setLuckyNumberReveal({ roundId: 'r1', drawn: 4, picks: {}, winners: [] }, 15000)
+    await nextTick()
+    expect(cooldownSecondsLeft.value).toBe(15)
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(cooldownSecondsLeft.value).toBe(10)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(cooldownSecondsLeft.value).toBe(0)
+    expect(isCoolingDown.value).toBe(false)
+  })
+
   it('secondsLeft derives from endsAt and ticks down with the local clock', async () => {
     const { seatsStore, secondsLeft } = await setup(true)
     seatsStore.startLuckyNumberRound('r1', Date.now() + 10000)
@@ -219,7 +231,7 @@ describe('useLuckyNumber', () => {
       pick(4)
       expect(myPick.value).toBe(4)
 
-      const ack = mockSocket.emit.mock.calls[0][2] as (r?: { success?: boolean }) => void
+      const ack = mockSocket.emit.mock.calls[0]![2] as (r?: { success?: boolean }) => void
       ack({ success: false })
       expect(myPick.value).toBeNull()
     })

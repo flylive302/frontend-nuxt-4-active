@@ -32,7 +32,7 @@ const showAudio = ref(false)
 const roomStore = useRoomStore()
 const fxPrefs = useFxPreferencesStore()
 const { socket } = useAudioSocket()
-const { canEdit, isRoomOwner, refresh } = useRoomMembershipState(
+const { canEdit, isRoomOwner, refresh, refreshOwnRole } = useRoomMembershipState(
   () => roomStore.currentRoom?.id ?? null
 )
 const {
@@ -66,8 +66,13 @@ function handleMusicClick(): void {
 // Lifecycle
 // ========================================
 
+// Mount-time: own role only (one request, skipped for owners). It is the
+// only thing that loads `myMembership` at join, and useRoomHierarchy's
+// `myRank` (seat drawer, profile modal, lucky number moderation) reads it —
+// so it cannot be dropped, only trimmed. Invitations / join requests are
+// fetched by the full `refresh()` on open (room-page-runtime-audit 05).
 onMounted(() => {
-  refresh()
+  refreshOwnRole()
 })
 
 // Drawer stays mounted across the room session; re-fetch on every open so

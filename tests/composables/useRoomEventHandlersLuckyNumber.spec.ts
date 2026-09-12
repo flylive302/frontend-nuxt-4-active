@@ -191,4 +191,77 @@ describe('setupRoomEventHandlers — Lucky Number', () => {
     const { socket } = await setup()
     expect(socket.handlers.has('luckyNumber:picked')).toBe(true)
   })
+
+  describe('round-ended-without-result fallback (lucky-number/03)', () => {
+    it('clears the round after endsAt + resultGraceMs when no result arrives', async () => {
+      const { socket, seatsStore } = await setup()
+      const endsAt = Date.now() + 10000
+      socket.handlers.get('luckyNumber:started')?.({ roundId: 'r1', endsAt })
+
+      vi.advanceTimersByTime(10000 + LUCKY_NUMBER.resultGraceMs - 1)
+      expect(seatsStore.luckyNumberRound?.roundId).toBe('r1')
+
+      vi.advanceTimersByTime(1)
+      expect(seatsStore.luckyNumberRound).toBeNull()
+      expect(seatsStore.luckyNumberReveal).toBeNull()
+      expect(seatsStore.luckyNumberCooldownUntil).toBe(0)
+    })
+
+    it("a 'luckyNumber:result' arriving before the grace window cancels the fallback", async () => {
+      const { socket, seatsStore } = await setup()
+      const endsAt = Date.now() + 10000
+      socket.handlers.get('luckyNumber:started')?.({ roundId: 'r1', endsAt })
+
+      vi.advanceTimersByTime(10000)
+      socket.handlers.get('luckyNumber:result')?.({ roundId: 'r1', drawn: 5, picks: {}, winners: [] })
+
+      vi.advanceTimersByTime(LUCKY_NUMBER.resultGraceMs)
+
+      expect(seatsStore.luckyNumberReveal?.roundId).toBe('r1')
+      expect(seatsStore.luckyNumberReveal?.drawn).toBe(5)
+    })
+
+    it('a second started round re-arms the fallback for the new round', async () => {
+      const { socket, seatsStore } = await setup()
+      socket.handlers.get('luckyNumber:started')?.({ roundId: 'r1', endsAt: Date.now() + 10000 })
+
+      vi.advanceTimersByTime(5000)
+      socket.handlers.get('luckyNumber:started')?.({ roundId: 'r2', endsAt: Date.now() + 10000 })
+
+      // r1's original fallback would have fired here — must not touch r2.
+      vi.advanceTimersByTime(5000 + LUCKY_NUMBER.resultGraceMs)
+      expect(seatsStore.luckyNumberRound?.roundId).toBe('r2')
+
+      // r2's own fallback fires after its full window.
+      vi.advanceTimersByTime(5000)
+      expect(seatsStore.luckyNumberRound).toBeNull()
+    })
+
+    it('cleanupRoomEventHandlers clears the fallback timer', async () => {
+      const { socket, seatsStore, cleanupRoomEventHandlers } = await setup()
+      const endsAt = Date.now() + 10000
+      socket.handlers.get('luckyNumber:started')?.({ roundId: 'r1', endsAt })
+
+      cleanupRoomEventHandlers(socket as never)
+      vi.advanceTimersByTime(10000 + LUCKY_NUMBER.resultGraceMs + 1000)
+
+      // Fallback was cleared, so the round set before cleanup is untouched.
+      expect(seatsStore.luckyNumberRound?.roundId).toBe('r1')
+    })
+
+    it('armLuckyNumberEndFallback (the join-snapshot path) behaves the same as the started-listener path', async () => {
+      const { seatsStore } = await setup()
+      const { armLuckyNumberEndFallback } = await import('../../app/composables/room/useRoomEventHandlers')
+      const endsAt = Date.now() + 10000
+      seatsStore.hydrateLuckyNumber({ roundId: 'r1', endsAt, pickedUserIds: [] })
+
+      armLuckyNumberEndFallback('r1', endsAt)
+
+      vi.advanceTimersByTime(10000 + LUCKY_NUMBER.resultGraceMs - 1)
+      expect(seatsStore.luckyNumberRound?.roundId).toBe('r1')
+
+      vi.advanceTimersByTime(1)
+      expect(seatsStore.luckyNumberRound).toBeNull()
+    })
+  })
 })

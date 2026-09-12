@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { defineAsyncComponent, nextTick, shallowRef, unref, watch } from 'vue'
-import { useIntersectionObserver } from '@vueuse/core'
 import { ASSETS } from '~/constants/assets'
 import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { HOME_ROOMS_PER_PAGE } from '~/constants/room'
 import { roomLogoCardSrc } from '~/utils/imagekit'
 import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldRefreshRoomsOnMount, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
+import type { CarouselExposeLike } from '~/composables/shared/useCarouselInViewAutoplay'
 import {
   getRetryAfterSeconds,
   isRateLimitActive,
@@ -29,18 +29,21 @@ definePageMeta({
   // activated per-nav by the room/profile transition middleware — see main.css.
 })
 
-// ---- Optimization: Pause Autoplay when off-screen; delay room autoplay until after first paint (LCP)
-const roomRef = ref(null)
-const roomSectionInView = ref(true)
+// ---- Optimization: delay room autoplay until after first paint (LCP); pause it off-screen
+const roomRef = ref<HTMLElement | null>(null)
 /** Embla snap index — LCP image must match the snapped slide, not always index 0 */
 const roomCarouselSnapIndex = ref(0)
-const roomCarouselRef = shallowRef<{ emblaApi?: import('vue').Ref<unknown> } | null>(null)
+const roomCarouselRef = shallowRef<CarouselExposeLike | null>(null)
 const roomAutoplayAfterPaint = ref(false)
 
-const roomAutoplay = computed(() => {
-  if (!roomAutoplayAfterPaint.value || !roomSectionInView.value) return undefined
-  return { delay: ROOM_AUTOPLAY_DELAY_MS }
-})
+// Changes exactly once (undefined → object, after first paint). It must NOT
+// also track visibility: `UCarousel` re-imports its plugins and `reInit`s
+// Embla twice on every change of this prop — on the scroll path. Off-screen
+// pausing goes through the plugin API instead (home-page-runtime-audit/1).
+const roomAutoplay = computed(() =>
+  roomAutoplayAfterPaint.value ? { delay: ROOM_AUTOPLAY_DELAY_MS } : undefined,
+)
+useCarouselInViewAutoplay(roomCarouselRef, roomRef)
 
 // ---- Room Logic
 const { fetchRooms } = useRoom()
@@ -227,10 +230,6 @@ const infiniteScrollFetcher = async (ctx: { page: number }) => {
   }>
 }
 
-useIntersectionObserver(roomRef, ([entry]) => {
-  roomSectionInView.value = entry?.isIntersecting ?? false
-})
-
 function onRoomCarouselSelect(index: number): void {
   roomCarouselSnapIndex.value = index
 }
@@ -241,11 +240,8 @@ function roomCardHighFetchPriority(index: number): boolean {
 }
 
 function syncRoomCarouselSnapFromEmbla(): void {
-  const inst = roomCarouselRef.value
-  const api = inst?.emblaApi ? unref(inst.emblaApi) : null
-  if (api && typeof (api as { selectedScrollSnap?: () => number }).selectedScrollSnap === 'function') {
-    onRoomCarouselSelect((api as { selectedScrollSnap: () => number }).selectedScrollSnap())
-  }
+  const api = unref(roomCarouselRef.value?.emblaApi)
+  if (api) onRoomCarouselSelect(api.selectedScrollSnap())
 }
 
 watch(

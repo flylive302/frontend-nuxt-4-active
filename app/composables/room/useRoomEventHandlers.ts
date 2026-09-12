@@ -257,6 +257,8 @@ export function announceLocalGiftSend(
 let speakerDecayTimer: ReturnType<typeof setTimeout> | null = null;
 /** lucky-number/01: the ONE timeout that removes the centre reveal. */
 let luckyNumberRevealTimer: ReturnType<typeof setTimeout> | null = null;
+/** lucky-number/03: fallback timeout — round ended without a `luckyNumber:result` (MSAB instance restart). */
+let luckyNumberEndFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ============================================
 // Types
@@ -328,12 +330,37 @@ export function cleanupRoomEventHandlers(socket: AudioSocket): void {
     luckyNumberRevealTimer = null;
   }
 
+  if (luckyNumberEndFallbackTimer) {
+    clearTimeout(luckyNumberEndFallbackTimer);
+    luckyNumberEndFallbackTimer = null;
+  }
+
   cleanupLuckyEventHandlers(socket);
 
   // Module-level chat-menu/report state must not outlive the room
   // (room-page-runtime-audit 04). giftCombo is already reset by
   // useRoomAudio.leaveRoom() alongside luckySession — not duplicated here.
   resetChatMessageActions();
+}
+
+/**
+ * lucky-number/03: arm the "round ended without a result" fallback. Used by
+ * both the `luckyNumber:started` listener and the join-snapshot hydration
+ * path (`useRoomAudio.joinRoom`), so a late joiner/reconnect gets the same
+ * safety net as a client that was present for the whole round.
+ */
+export function armLuckyNumberEndFallback(roundId: string, endsAt: number): void {
+  if (luckyNumberEndFallbackTimer) {
+    clearTimeout(luckyNumberEndFallbackTimer);
+    luckyNumberEndFallbackTimer = null;
+  }
+  luckyNumberEndFallbackTimer = setTimeout(
+    () => {
+      luckyNumberEndFallbackTimer = null;
+      useRoomSeatsStore().endLuckyNumberRoundWithoutResult(roundId);
+    },
+    Math.max(0, endsAt - Date.now()) + LUCKY_NUMBER.resultGraceMs,
+  );
 }
 
 // ============================================
@@ -630,6 +657,7 @@ export function setupRoomEventHandlers(
       luckyNumberRevealTimer = null;
     }
     seatsStore.startLuckyNumberRound(event.roundId, event.endsAt);
+    armLuckyNumberEndFallback(event.roundId, event.endsAt);
   });
 
   socket.on('luckyNumber:picked', (event: LuckyNumberPickedEvent) => {
@@ -637,6 +665,10 @@ export function setupRoomEventHandlers(
   });
 
   socket.on('luckyNumber:result', (event: LuckyNumberResultEvent) => {
+    if (luckyNumberEndFallbackTimer) {
+      clearTimeout(luckyNumberEndFallbackTimer);
+      luckyNumberEndFallbackTimer = null;
+    }
     seatsStore.setLuckyNumberReveal(
       { roundId: event.roundId, drawn: event.drawn, picks: event.picks, winners: event.winners },
       event.cooldownMs ?? LUCKY_NUMBER.cooldownMs,

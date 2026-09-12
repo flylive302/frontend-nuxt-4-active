@@ -93,11 +93,8 @@ watch(isOpen, async (open) => {
   >
     <!-- Trigger — mirrors home-footer inbox button (icon + unread badge) -->
     <UButton
-      class="flex-middle relative text-primary p-0"
-      :aria-label="isClientHydrated && inboxBadge ? `Inbox, ${inboxBadge} unread` : 'Inbox'"
-      variant="ghost"
-      square
-      size="xl"
+        class="flex-middle relative p-1" :square="true"
+        :aria-label="isClientHydrated && inboxBadge ? `Inbox, ${inboxBadge} unread` : 'Inbox'"
     >
       <UIcon class="size-8 drop-shadow-md" name="i-lucide-message-circle" />
       <span

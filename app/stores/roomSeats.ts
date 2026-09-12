@@ -156,6 +156,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
       currentSeat.occupantId !== occupantId
     ) {
       clearReaction(currentSeat.occupantId);
+      removeLuckyNumberPick(currentSeat.occupantId);
     }
 
     seats.value[seatIndex] = {
@@ -174,6 +175,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     if (seat?.occupantId !== null && seat?.occupantId !== undefined) {
       seatGiftTotals.value.delete(seat.occupantId);
       clearReaction(seat.occupantId);
+      removeLuckyNumberPick(seat.occupantId);
     }
 
     seats.value[seatIndex] = {
@@ -232,6 +234,37 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     if (luckyNumberReveal.value?.roundId === roundId) {
       luckyNumberReveal.value = null;
     }
+  }
+
+  /** lucky-number/03: `room:join` ack — hydrate a live round for a late joiner/reconnect. Stale snapshots (endsAt already passed) are ignored. */
+  function hydrateLuckyNumber(snapshot: {
+    roundId: string;
+    endsAt: number;
+    pickedUserIds: number[];
+  }): void {
+    if (snapshot.endsAt <= Date.now()) return;
+    // Listeners are live before the join ack resolves: a `started` / `result`
+    // that landed in between is fresher than the ack — never overwrite it.
+    if (luckyNumberRound.value && luckyNumberRound.value.endsAt >= snapshot.endsAt) return;
+    if (luckyNumberReveal.value?.roundId === snapshot.roundId) return;
+    luckyNumberRound.value = { roundId: snapshot.roundId, endsAt: snapshot.endsAt };
+    luckyNumberReveal.value = null;
+    luckyNumberPickedUserIds.value = new Set(snapshot.pickedUserIds);
+  }
+
+  /** Seat vacated (leave/removal/reassignment) — drop the ✓ pick badge, if any. */
+  function removeLuckyNumberPick(userId: number): void {
+    if (!luckyNumberPickedUserIds.value.has(userId)) return;
+    const next = new Set(luckyNumberPickedUserIds.value);
+    next.delete(userId);
+    luckyNumberPickedUserIds.value = next;
+  }
+
+  /** lucky-number/03: `luckyNumber:result` never arrived (MSAB instance restart) — end quietly, no reveal/cooldown. */
+  function endLuckyNumberRoundWithoutResult(roundId: string): void {
+    if (luckyNumberRound.value?.roundId !== roundId) return;
+    luckyNumberRound.value = null;
+    luckyNumberPickedUserIds.value = new Set();
   }
 
   /** Drop the whole slice (room leave / round timed out with no result). */
@@ -388,6 +421,7 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   function clearParticipantFromSeat(userId: number): void {
     seatGiftTotals.value.delete(userId);
     clearReaction(userId);
+    removeLuckyNumberPick(userId);
     const seat = seats.value.find((s) => s.occupantId === userId);
     if (seat) {
       seat.occupantId = null;
@@ -452,5 +486,8 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     setLuckyNumberReveal,
     clearLuckyNumberReveal,
     clearLuckyNumber,
+    hydrateLuckyNumber,
+    removeLuckyNumberPick,
+    endLuckyNumberRoundWithoutResult,
   };
 });

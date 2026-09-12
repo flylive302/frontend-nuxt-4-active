@@ -126,4 +126,143 @@ describe('roomSeatsStore — Lucky Number', () => {
       expect(store.luckyNumberPickedUserIds.size).toBe(0)
     })
   })
+
+  describe('hydrateLuckyNumber (lucky-number/03 — late join/reconnect snapshot)', () => {
+    it('sets the round and picked-user set from a live snapshot', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      const endsAt = Date.now() + 10000
+
+      store.hydrateLuckyNumber({ roundId: 'r1', endsAt, pickedUserIds: [7, 9] })
+
+      expect(store.luckyNumberRound).toEqual({ roundId: 'r1', endsAt })
+      expect(store.luckyNumberPickedUserIds).toEqual(new Set([7, 9]))
+      expect(store.luckyNumberReveal).toBeNull()
+    })
+
+    it('clears a stale reveal when hydrating', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.setLuckyNumberReveal({ roundId: 'old', drawn: 3, picks: {}, winners: [] }, 15000)
+
+      store.hydrateLuckyNumber({ roundId: 'r1', endsAt: Date.now() + 10000, pickedUserIds: [] })
+
+      expect(store.luckyNumberReveal).toBeNull()
+    })
+
+    it('no-ops for a snapshot whose endsAt has already passed', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+
+      store.hydrateLuckyNumber({ roundId: 'r1', endsAt: Date.now() - 1, pickedUserIds: [7] })
+
+      expect(store.luckyNumberRound).toBeNull()
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+  })
+
+  describe('removeLuckyNumberPick (lucky-number/03 — seat vacate drops the pick badge)', () => {
+    it('removes only the given userId', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+      store.addLuckyNumberPick('r1', 9)
+
+      store.removeLuckyNumberPick(7)
+
+      expect(store.luckyNumberPickedUserIds).toEqual(new Set([9]))
+    })
+
+    it('is a no-op when the userId has no pick', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+
+      store.removeLuckyNumberPick(7)
+
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+
+    it('updateSeat reassignment drops the vacated occupant\'s pick', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.updateSeat(0, 7, false)
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+
+      store.updateSeat(0, 8, false)
+
+      expect(store.luckyNumberPickedUserIds.has(7)).toBe(false)
+    })
+
+    it('clearSeat drops the vacated occupant\'s pick', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.updateSeat(0, 7, false)
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+
+      store.clearSeat(0)
+
+      expect(store.luckyNumberPickedUserIds.has(7)).toBe(false)
+    })
+
+    it('clearParticipantFromSeat drops the vacated occupant\'s pick', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.updateSeat(0, 7, false)
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+
+      store.clearParticipantFromSeat(7)
+
+      expect(store.luckyNumberPickedUserIds.has(7)).toBe(false)
+    })
+  })
+
+  describe('endLuckyNumberRoundWithoutResult (lucky-number/03 — result never arrived)', () => {
+    it('clears the live round with the matching roundId, no reveal or cooldown', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+      store.addLuckyNumberPick('r1', 7)
+
+      store.endLuckyNumberRoundWithoutResult('r1')
+
+      expect(store.luckyNumberRound).toBeNull()
+      expect(store.luckyNumberReveal).toBeNull()
+      expect(store.luckyNumberCooldownUntil).toBe(0)
+      expect(store.luckyNumberPickedUserIds.size).toBe(0)
+    })
+
+    it('ignores a stale roundId, leaving the live round untouched', async () => {
+      const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+      const store = useRoomSeatsStore()
+      store.startLuckyNumberRound('r1', Date.now() + 10000)
+
+      store.endLuckyNumberRoundWithoutResult('stale')
+
+      expect(store.luckyNumberRound?.roundId).toBe('r1')
+    })
+  })
+
+  it('hydrateLuckyNumber() never overwrites a fresher round or a reveal that arrived before the join ack', async () => {
+    const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+    const store = useRoomSeatsStore()
+    const now = Date.now()
+
+    // A newer `started` already landed
+    store.startLuckyNumberRound('r2', now + 9000)
+    store.hydrateLuckyNumber({ roundId: 'r1', endsAt: now + 5000, pickedUserIds: [7] })
+    expect(store.luckyNumberRound?.roundId).toBe('r2')
+    expect(store.luckyNumberPickedUserIds.size).toBe(0)
+
+    // `result` for the snapshot's own round already landed
+    store.setLuckyNumberReveal({ roundId: 'r1', drawn: 3, picks: {}, winners: [] }, 15000)
+    store.hydrateLuckyNumber({ roundId: 'r1', endsAt: now + 5000, pickedUserIds: [7] })
+    expect(store.luckyNumberRound).toBeNull()
+    expect(store.luckyNumberReveal?.roundId).toBe('r1')
+  })
+
 })

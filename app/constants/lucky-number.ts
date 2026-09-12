@@ -31,6 +31,9 @@ export const LUCKY_NUMBER = {
 
   /** How long the winner crown flashes on a Seat at reveal. */
   crownFlashMs: 1_500,
+
+  /** lucky-number/03: how long after `endsAt` to wait for `luckyNumber:result` before treating the round as ended without a result (MSAB instance restart). */
+  resultGraceMs: 3_000,
 } as const;
 
 /** Every pickable number, in strip order. */

@@ -74,9 +74,7 @@ watch(isOpen, async (nowOpen) => {
     <UButton
       v-if="canPlay"
       size="xl"
-      variant="ghost"
-      color="primary"
-      class="p-0 text-primary"
+      class="p-1"
       aria-label="Open games"
     >
       <UIcon class="size-8" name="i-lucide-gamepad-2" />

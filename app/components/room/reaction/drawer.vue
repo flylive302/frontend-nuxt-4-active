@@ -85,9 +85,8 @@ watch(isOpen, (open) => {
     <UButton
       v-if="isSelfSeated"
       size="xl"
-      variant="ghost"
       color="primary"
-      class="p-0 text-primary"
+      class="p-1"
       :disabled="isSelfReactionPlaying"
     >
       <UIcon class="size-8" name="i-lucide-laugh" />

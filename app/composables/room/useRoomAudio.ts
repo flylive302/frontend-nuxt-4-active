@@ -11,7 +11,7 @@
 import type { JoinRoomResponse, SelfMutePayload, SelfMuteResponse } from '~/types/room/audio';
 import { userToParticipant } from '~/types/room/audio';
 import type { Ref, ComputedRef, EffectScope } from 'vue';
-import { setupRoomEventHandlers, cleanupRoomEventHandlers } from './useRoomEventHandlers';
+import { setupRoomEventHandlers, cleanupRoomEventHandlers, armLuckyNumberEndFallback } from './useRoomEventHandlers';
 import { useSeatActions, type UseSeatActionsReturn } from './useSeatActions';
 import { useRoomGifts, type UseRoomGiftsReturn } from './useRoomGifts';
 import { useRoomChat } from './useRoomChat';
@@ -868,6 +868,17 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // lucky-number/01: MSAB flag — hides the start button when the game is off.
     seatsStore.setLuckyNumberEnabled(response.luckyNumberEnabled === true);
+
+    // lucky-number/03: late join / reconnect snapshot — both go through this
+    // same joinRoom path, so hydrating here covers a fresh join mid-round and
+    // a reload/reconnect while a round is live. Also re-arms the "round ended
+    // without a result" fallback so this client gets the same safety net as
+    // one that was present for the whole round.
+    if (response.luckyNumber) {
+      const { roundId, endsAt, pickedUserIds } = response.luckyNumber;
+      seatsStore.hydrateLuckyNumber({ roundId, endsAt, pickedUserIds: pickedUserIds.map(Number) });
+      armLuckyNumberEndFallback(roundId, endsAt);
+    }
 
     // 5. Replay any app-scope slide still playing app-wide, so a late joiner
     // catches it too. Admission gates on currentRoom (set above) and coalesces

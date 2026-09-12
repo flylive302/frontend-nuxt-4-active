@@ -13,18 +13,17 @@ const { pick, myPick, secondsLeft } = useLuckyNumber();
 
 <template>
   <div
-    class="flex items-center gap-1 py-1 mt-2 mb-3 bg-primary/10 shadow-md ring ring-primary/30 rounded-lg px-2"
+    class="flex items-center gap-1 py-1 mb-24 shadow-md ring ring-primary/30 rounded-lg bg-primary/10 px-2"
     role="group"
     aria-label="Pick your lucky number"
   >
-    <span class="shrink-0 w-6 text-center text-xs font-bold tabular-nums text-primary">{{ secondsLeft }}</span>
+    <span class="shrink-0 w-6 text-center text-md font-bold tabular-nums text-primary">{{ secondsLeft }}</span>
     <div class="flex flex-1 justify-between gap-1">
       <UButton
         v-for="n in LUCKY_NUMBER_CHOICES"
         :key="n"
         size="lg"
-        :variant="myPick === n ? 'solid' : 'soft'"
-        :color="myPick === n ? 'primary' : 'neutral'"
+        :variant="myPick === n ? 'outline' : 'solid'"
         class="flex-1 min-w-0 justify-center px-0 font-bold tabular-nums"
         :aria-pressed="myPick === n"
         :aria-label="`Pick ${n}`"

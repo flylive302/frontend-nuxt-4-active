@@ -224,12 +224,12 @@ onUnmounted(() => {
 
             <!-- Lucky Number (lucky-number/02): seated users pick 1–9 here while a round is live -->
             <RoomLuckyNumberPickStrip v-if="showLuckyNumberPickStrip" />
-            <div v-else class="flex justify-between py-1 mt-2 mb-3 bg-primary/10 shadow-md ring ring-primary/30 rounded-lg px-3">
+            <div class="flex justify-between py-2 mb-2">
               <!-- Room Settings Button -->
               <UButton
                   size="xl"
-                  variant="ghost"
-                  class="p-0 text-primary"
+                  variant="solid"
+                  class="p-1"
                   @click="() => { settingsOpen = true }"
               >
                 <UIcon class="size-8" name="i-lucide-settings" />
@@ -245,15 +245,14 @@ onUnmounted(() => {
               <UButton
                   v-if="isProducing"
                   size="xl"
-                  variant="ghost"
+                  :square="true"
                   :color="isLocalMuted ? 'error' : 'primary'"
-                  :class="isLocalMuted ? 'text-white' : 'text-primary'"
-                  class="p-0"
+                  class="p-1"
                   @click="() => { toggleLocalMute() }"
               >
                 <UIcon class="size-8" :name="isLocalMuted ? 'i-lucide-mic-off' : 'i-lucide-mic'" />
               </UButton>
-              <UButton v-else size="xl" class="text-primary p-0" variant="ghost" disabled >
+              <UButton v-else size="xl" class="p-1" :disabled="true" >
                 <UIcon class="size-8" name="i-lucide-mic" />
               </UButton>
 
@@ -267,11 +266,10 @@ onUnmounted(() => {
               <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
                 <UButton
                     size="xl"
-                    variant="ghost"
-                    class="p-0 text-primary"
+                    class="p-1"
                     @click.right.prevent="toggleMute"
                 >
-                  <UIcon class="size-8" :name="volumeIcon" />
+                  <UIcon class="size-8 text-white" :name="volumeIcon" />
                 </UButton>
 
                 <template #content>
@@ -282,14 +280,13 @@ onUnmounted(() => {
                         :max="1"
                         :step="0.05"
                         orientation="vertical"
-                        class="h-24 text-primary"
+                        class="h-28"
                         @update:model-value="setLevel"
                     />
                     <UButton
                         :icon="volumeIcon"
                         size="xs"
-                        variant="ghost"
-                        class="text-primary"
+                        class=""
                         :aria-label="isMuted ? 'Unmute room audio' : 'Mute room audio'"
                         @click="toggleMute"
                     />
