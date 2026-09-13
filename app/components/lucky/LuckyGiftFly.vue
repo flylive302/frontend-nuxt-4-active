@@ -10,6 +10,7 @@
 import {
   LUCKY_FLY_DURATION_MS,
   LUCKY_FLY_FOLD_ACTIVE_THRESHOLD,
+  LUCKY_FLY_FOLD_QUEUED_ENTRIES,
   LUCKY_FLY_MAX_AGE_MS,
   LUCKY_FLY_MAX_DPR,
   LUCKY_FLY_MAX_SCALE,
@@ -151,6 +152,7 @@ onMounted(() => {
     slowFrameMs: LUCKY_FLY_SLOW_FRAME_MS,
     slowFramesToFold: LUCKY_FLY_SLOW_FRAMES_TO_FOLD,
     foldActiveThreshold: LUCKY_FLY_FOLD_ACTIVE_THRESHOLD,
+    foldQueuedEntries: LUCKY_FLY_FOLD_QUEUED_ENTRIES,
   });
   // Sized on the first fly, not here: a room that never sees a lucky gift
   // never allocates a full-viewport backing store. The component still mounts

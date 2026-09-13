@@ -215,7 +215,8 @@ describe('LuckyFlyRenderer', () => {
         now += 16;
         r.tick(now);
       }
-      expect(r.foldedCount).toBe(9);
+      // 07 round-robin: A1 B1 A2 launch, then in-flight = 3 → B's remaining 9 fold into one.
+      expect(r.foldedCount).toBe(8);
     });
 
     it('healthy frames after a slow patch return to one-copy launches', () => {
@@ -235,5 +236,69 @@ describe('LuckyFlyRenderer', () => {
       expect(r.queued).toBeGreaterThanOrEqual(2);
       expect(r.inFlight).toBeLessThanOrEqual(3);
     });
+  });
+});
+
+describe('gift-backlog-and-lag 07 — fairness across senders', () => {
+  const reqA = { ...req, thumbnailUrl: 'https://cdn.test/a.png' };
+  const reqB = { ...req, thumbnailUrl: 'https://cdn.test/b.png' };
+  const reqC = { ...req, thumbnailUrl: 'https://cdn.test/c.png' };
+
+  function launchedUrls(r: LuckyFlyRenderer): string[] {
+    return (r as unknown as { active: { url: string }[] }).active.map((f) => f.url);
+  }
+
+  it('round-robins launches across queued entries instead of draining the head first', () => {
+    const r = makeRenderer();
+    r.enqueue(reqA, 50);
+    r.enqueue(reqB, 3);
+    r.tick(1000);
+    r.tick(1040);
+    r.tick(1080);
+    r.tick(1120);
+    expect(launchedUrls(r)).toEqual([reqA.thumbnailUrl, reqB.thumbnailUrl, reqA.thumbnailUrl, reqB.thumbnailUrl]);
+    expect(r.queued).toBe(49);
+  });
+
+  it('a second sender is on screen within one stagger even mid-burst', () => {
+    const r = makeRenderer();
+    r.enqueue(reqA, 200);
+    r.tick(1000);
+    r.tick(1040);
+    r.enqueue(reqB, 1);
+    r.tick(1080);
+    expect(launchedUrls(r)).toContain(reqB.thumbnailUrl);
+  });
+
+  it('continues rotating after an entry drains out', () => {
+    const r = makeRenderer();
+    r.enqueue(reqA, 1);
+    r.enqueue(reqB, 2);
+    r.enqueue(reqC, 2);
+    for (let t = 1000; t <= 1160; t += 40) r.tick(t);
+    expect(launchedUrls(r)).toEqual([
+      reqA.thumbnailUrl, reqB.thumbnailUrl, reqC.thumbnailUrl, reqB.thumbnailUrl, reqC.thumbnailUrl,
+    ]);
+    expect(r.queued).toBe(0);
+  });
+
+  it('folds each entry to one ×N fly once foldQueuedEntries senders are queued (30-sender case)', () => {
+    const r = makeRenderer(makeCtx(), { foldQueuedEntries: 6 });
+    for (let i = 0; i < 30; i++) r.enqueue({ ...req, thumbnailUrl: `https://cdn.test/${i}.png` }, 10);
+    for (let t = 1000; t < 1000 + 30 * 40; t += 40) r.tick(t);
+    // Every sender is on screen within one round; only the last <6 entries
+    // (below the fold threshold) stream as singles.
+    expect(new Set(launchedUrls(r)).size).toBe(30);
+    expect(r.foldedCount).toBeGreaterThanOrEqual(24 * 9);
+  });
+
+  it('does not fold below foldQueuedEntries', () => {
+    const r = makeRenderer(makeCtx(), { foldQueuedEntries: 6 });
+    r.enqueue(reqA, 5);
+    r.enqueue(reqB, 5);
+    r.tick(1000);
+    expect(r.inFlight).toBe(1);
+    expect(r.queued).toBe(9);
+    expect(r.foldedCount).toBe(0);
   });
 });

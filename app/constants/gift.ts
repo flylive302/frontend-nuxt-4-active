@@ -101,6 +101,14 @@ export const LUCKY_FLY_MAX_AGE_MS = LUCKY_FLY_MAX_STREAM_MS * 1.5;
 export const LUCKY_FLY_SLOW_FRAME_MS = 48;
 export const LUCKY_FLY_SLOW_FRAMES_TO_FOLD = 3;
 export const LUCKY_FLY_FOLD_ACTIVE_THRESHOLD = 40;
+/**
+ * gift-backlog-and-lag 07 — many senders at once. Launches already rotate
+ * across queued entries (one per sender+recipient); once this many entries are
+ * queued, each launch folds its entry's whole count into one "×N" fly so every
+ * sender is on screen within one round (entries × stagger) instead of each
+ * getting one fly per round.
+ */
+export const LUCKY_FLY_FOLD_QUEUED_ENTRIES = 6;
 
 /**
  * gift-backlog-and-lag 01 — a queued full-screen gift older than this is

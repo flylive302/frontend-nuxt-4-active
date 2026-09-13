@@ -49,6 +49,12 @@ export interface LuckyFlyRendererOptions {
   readonly slowFramesToFold?: number;
   /** In-flight count at or above which folding starts regardless of frame rate. */
   readonly foldActiveThreshold?: number;
+  /**
+   * gift-backlog-and-lag 07: distinct queued entries (≈ concurrent senders) at
+   * or above which each launch folds its entry's whole count into one "×N"
+   * fly, so 30 senders all land within one round instead of streaming.
+   */
+  readonly foldQueuedEntries?: number;
 }
 
 export interface FlyRequest {
@@ -97,6 +103,12 @@ export class LuckyFlyRenderer {
   private pendingCount = 0;
   private active: ActiveFly[] = [];
   private lastLaunchAt = -Infinity;
+  /**
+   * gift-backlog-and-lag 07: round-robin cursor over `pending`. Launches
+   * rotate across entries (A B A B …) instead of draining the head first, so
+   * one sender's 50-tap tick can no longer hold every other sender's fly back.
+   */
+  private launchCursor = 0;
   /** Last frame time while the loop was running; -1 while idle (no work). */
   private lastTickAt = -1;
   /** Consecutive slow frames, saturating at `slowFramesToFold`. */
@@ -251,14 +263,16 @@ export class LuckyFlyRenderer {
   private launchDue(now: number): void {
     const interval = this.burstInterval;
     const maxAge = this.opts.maxAgeMs ?? Infinity;
+    const foldEntries = this.opts.foldQueuedEntries ?? Infinity;
     while (this.pending.length > 0) {
-      const entry = this.pending[0]!;
-      // Stale: queued while the loop was stalled. Nobody saw the gap, so
-      // replaying it now would be the "pile" — drop, do not launch.
-      if (Number.isFinite(entry.queuedAt) && now - entry.queuedAt > maxAge) {
+      // Stale check on the head only: entries are appended in time order, so
+      // the oldest is always pending[0] regardless of where the cursor is.
+      const head = this.pending[0]!;
+      if (Number.isFinite(head.queuedAt) && now - head.queuedAt > maxAge) {
         this.pending.shift();
-        this.pendingCount -= entry.count;
-        this.droppedStale += entry.count;
+        this.pendingCount -= head.count;
+        this.droppedStale += head.count;
+        if (this.launchCursor > 0) this.launchCursor--;
         continue;
       }
       const due = this.lastLaunchAt + interval;
@@ -267,15 +281,19 @@ export class LuckyFlyRenderer {
       // sub-frame interval launches several per frame but never snowballs.
       this.lastLaunchAt = Number.isFinite(this.lastLaunchAt) ? Math.max(due, now - interval) : now;
 
+      const index = this.launchCursor % this.pending.length;
+      const entry = this.pending[index]!;
       let count = 1;
-      if (entry.count > 1 && this.underPressure()) {
+      if (entry.count > 1 && (this.underPressure() || this.pending.length >= foldEntries)) {
         count = entry.count;
         this.folded += count - 1;
         this.pendingCount -= count;
-        this.pending.shift();
+        this.pending.splice(index, 1);
+        // The next entry slid into `index`; keep the cursor there.
       } else {
         this.pendingCount -= 1;
-        if (--entry.count <= 0) this.pending.shift();
+        if (--entry.count <= 0) this.pending.splice(index, 1);
+        else this.launchCursor = index + 1;
       }
       this.active.push({
         url: entry.request.thumbnailUrl,
@@ -284,7 +302,10 @@ export class LuckyFlyRenderer {
         count,
       });
     }
-    if (this.pending.length === 0) this.burstInterval = this.opts.staggerMs;
+    if (this.pending.length === 0) {
+      this.burstInterval = this.opts.staggerMs;
+      this.launchCursor = 0;
+    }
   }
 
   /** "×N" pill at the fly's top-right corner. */
