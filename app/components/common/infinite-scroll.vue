@@ -244,12 +244,7 @@ defineExpose({
 </script>
 
 <template>
-  <ClientOnly :ssr="false">
-    <template #fallback>
-      <div class="min-h-14 py-6 text-center text-md font-semibold text-white/70">
-        <slot name="loading">Loading…</slot>
-      </div>
-    </template>
+  <!-- No ClientOnly: pure SPA (ssr: false), so there is nothing to hydrate. -->
     <div :aria-busy="isLoading" class="min-h-14">
       <DynamicScroller
           :items="rows"
@@ -305,5 +300,4 @@ defineExpose({
         <slot name="complete">You're all caught up.</slot>
       </div>
     </div>
-  </ClientOnly>
 </template>

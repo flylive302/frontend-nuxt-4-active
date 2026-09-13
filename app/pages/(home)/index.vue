@@ -383,21 +383,10 @@ onMounted(() => {
 
     <template v-else>
       <div ref="roomRef">
-        <ClientOnly v-if="carouselRooms.length > 0">
-          <template #fallback>
-            <div class="mb-6 flex gap-3 overflow-x-auto px-3 scrollbar-hide">
-              <RoomCard
-                v-for="(item, index) in carouselRooms"
-                :key="item.id"
-                :room="item"
-                card-layout="carousel"
-                class="h-72 max-w-60 shrink-0"
-                :priority-lcp="true"
-                :high-fetch-priority="roomCardHighFetchPriority(index)"
-              />
-            </div>
-          </template>
-          <UCarousel
+        <!-- No ClientOnly: pure SPA, nothing to hydrate. The v-if keeps the
+             carousel from mounting Embla on an empty list. -->
+        <UCarousel
+            v-if="carouselRooms.length > 0"
             ref="roomCarouselRef"
             :items="carouselRooms"
             :autoplay="roomAutoplay"
@@ -419,7 +408,6 @@ onMounted(() => {
               />
             </template>
           </UCarousel>
-        </ClientOnly>
       </div>
 
       <div class="mx-3">
