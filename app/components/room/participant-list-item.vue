@@ -7,6 +7,8 @@ defineOptions({ name: 'ParticipantListItem' })
 const { myMembership } = useRoomMembers();
 const seatsStore = useRoomSeatsStore()
 const speakerIds = computed(() => seatsStore.speakerIds)
+const { rankBadgeFor } = useRoomRankBadge()
+const rankBadge = computed(() => rankBadgeFor(props.participant))
 
 // ========================================
 // Props & Emits
@@ -42,6 +44,7 @@ const canManageMembers = computed(() => {
     @avatar-click="emit('openUser', participant)"
   >
     <template #default>
+      <span v-if="rankBadge" class="text-sm leading-none">{{ rankBadge }}</span>
       <UBadge v-if="speakerIds.has(participant.id)" size="sm" color="primary" variant="soft" class="absolute top-0 right-0">Speaker</UBadge>
     </template>
 

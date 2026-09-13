@@ -285,6 +285,7 @@ const ROOM_EVENT_NAMES = [
   'room:closed',
   'room:mode',
   'user:profile_updated',
+  'room:userRole',
   'audio:newProducer',
   'audio:producerClosed',
   'speaker:active',
@@ -568,6 +569,13 @@ export function setupRoomEventHandlers(
     }
 
     // undefined
+  });
+
+  // Rank badge (room-role-badge) — MSAB resolves a joiner's rank once per
+  // join and re-announces it on membership changes. Plain field write; seats
+  // and the participant list re-render only that user.
+  socket.on('room:userRole', (event: { userId: number; role: RoomParticipant['room_role'] }) => {
+    participantsStore.updateParticipantProfile(event.userId, { room_role: event.role });
   });
 
   // Audio events

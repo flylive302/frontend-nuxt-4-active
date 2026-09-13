@@ -123,6 +123,20 @@ describe('useRoomParticipantsStore.reconcileParticipants', () => {
     expect(p.name).toBe('new') // other fields still overwritten
   })
 
+  // room-role-badge: MSAB omits room_role while a rank is still resolving, so
+  // a rejoin snapshot must not wipe a badge already learned via room:userRole.
+  it('keeps a known room_role when the snapshot omits it, but applies an explicit one', async () => {
+    const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
+    const store = useRoomParticipantsStore()
+
+    store.addParticipant(makeParticipant(1, { room_role: 'admin' }))
+    store.addParticipant(makeParticipant(2, { room_role: 'member' }))
+    store.reconcileParticipants([makeParticipant(1), makeParticipant(2, { room_role: null })])
+
+    expect(store.participants.get(1)!.room_role).toBe('admin')
+    expect(store.participants.get(2)!.room_role).toBeNull()
+  })
+
   it('preserves keepSelfId participant even when absent from snapshot', async () => {
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const store = useRoomParticipantsStore()

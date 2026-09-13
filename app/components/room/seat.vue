@@ -14,6 +14,7 @@ const seatsStore = useRoomSeatsStore();
 const roomStore = useRoomStore();
 const { resolveProp } = usePropLookup();
 const { isFrameAnimationAllowed } = useFrameAnimationBudget();
+const { rankBadgeFor } = useRoomRankBadge();
 
 // Seat is 0-indexed internally, but seatId prop is 1-indexed
 const seatIndex = computed(() => props.seatId - 1);
@@ -77,8 +78,8 @@ const displayName = computed(() => {
     return isLocked.value ? 'Locked' : `${props.seatId}`;
   }
   const name = seat.value?.user?.name || 'Unknown';
-  const isOwner = roomStore.currentRoom?.owner_id === seat.value?.user?.id;
-  return isOwner ? `🏠 ${name}` : name;
+  const badge = rankBadgeFor(seat.value?.user);
+  return badge ? `${badge} ${name}` : name;
 });
 
 // Cumulative coin value of gifts received during this session

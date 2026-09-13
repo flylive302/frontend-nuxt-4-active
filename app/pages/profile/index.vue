@@ -207,8 +207,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     </div>
 
     <div class="pb-24 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
-      <SectionTitle>Cp RelationShips</SectionTitle>
-      <EventsProfileCard class="mb-4" />
+<!--      <SectionTitle>Cp RelationShips</SectionTitle>-->
+<!--      <EventsProfileCard class="mb-4" />-->
 
 
       <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />

@@ -535,7 +535,13 @@ export interface GiftPrepareEvent {
  * Participant in a room — identity only.
  * Seat/speaker state is derived from the seats store (Issue 05 will re-introduce those fields).
  */
-export type RoomParticipant = MinimalUser;
+export interface RoomParticipant extends MinimalUser {
+  /**
+   * Rank in the CURRENT room, from MSAB (join snapshot + `room:userRole`).
+   * Absent until MSAB resolves it; null for a visitor with no membership.
+   */
+  room_role?: 'owner' | 'admin' | 'member' | null;
+}
 
 /**
  * State of audio connection

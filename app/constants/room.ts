@@ -34,6 +34,13 @@ export const SEAT_COUNT_STEP = 5;
  */
 export const ADMIN_ROSTER_PAGE_SIZE = 100;
 
+/** Rank badge shown before a user's name on seats and in the participant list. Visitors get none. */
+export const ROOM_RANK_BADGE = {
+  owner: '🏠',
+  admin: '🛡️',
+  member: '⭐',
+} as const;
+
 /**
  * Max seats allowed to run a LIVE animated avatar-frame concurrently
  * (room-battery-perf/02). Active speakers get priority; seats over budget

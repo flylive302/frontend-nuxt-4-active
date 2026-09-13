@@ -442,8 +442,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     </div>
 
     <div ref="profileScrollRef" class="max-h-[58vh] overflow-scroll relative z-50 mt-2">
-      <SectionTitle class="mx-8">Cp RelationShips</SectionTitle>
-      <EventsProfileCard class="mx-4"/>
+<!--      <SectionTitle class="mx-8">Cp RelationShips</SectionTitle>-->
+<!--      <EventsProfileCard class="mx-4"/>-->
 
       <!-- Agency Section (conditional) -->
       <div v-if="hasAgency && profileWritable?.agency" class="relative z-50 mt-4">
