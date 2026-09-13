@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
 import { createLogger } from '~/utils/logger';
 

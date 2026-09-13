@@ -6,6 +6,7 @@ import type { InfiniteScrollItem } from '~/types/ui/infinite-scroll';
 import { evaluateHasMore, type InfiniteScrollPayload } from '~/utils/infinite-scroll-pagination';
 import { createLoadTracker } from '~/utils/infinite-scroll-load-tracker';
 import { excludeExistingItems } from '~/utils/infinite-scroll-dedupe';
+import { createLogger } from '~/utils/logger';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
 // doesn't get linked as render-blocking CSS on routes that don't actually
@@ -49,7 +50,7 @@ const props = withDefaults(defineProps<{
   loadInterval?: number
   initialPage?: number
 }>(), {
-  endpoint: 'https://dummyjson.com/c/0188-d62d-4dd7-9ad2',
+  endpoint: '',
   fetcher: undefined,
   perPage: 10,
   view: 'grid',
@@ -112,6 +113,7 @@ function buildRows(source: InfiniteScrollItem[], columns: number): GridRow[] {
 const rows = computed(() => buildRows(items.value, columnCount.value))
 
 
+const log = createLogger('[InfiniteScroll]')
 const loadTracker = createLoadTracker()
 let infiniteScrollController: { reset: () => void } | null = null
 
@@ -126,6 +128,8 @@ async function loadNextPage(): Promise<void> {
 
   const hasFetchSource = Boolean(props.fetcher) || endpointRef.value.length > 0
   if (!hasFetchSource) {
+    // GATE: no fetch source. Fail loudly — never fall back to an external default.
+    log.error('no fetch source: pass either `fetcher` or `endpoint`')
     hasMore.value = false
     return
   }

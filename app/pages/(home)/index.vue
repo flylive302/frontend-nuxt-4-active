@@ -235,7 +235,7 @@ function onRoomCarouselSelect(index: number): void {
 }
 
 function roomCardHighFetchPriority(index: number): boolean {
-  if (index === 0) return true  // must match the preload URL (q=75) — never downgrade after snap
+  if (index === 0) return true  // must match the preload URL (roomLogoCardSrc, q=80) — never downgrade after snap
   return index === roomCarouselSnapIndex.value
 }
 
@@ -245,7 +245,7 @@ function syncRoomCarouselSnapFromEmbla(): void {
 }
 
 watch(
-  () => [carouselRooms.value.length, roomCarouselRef.value] as const,
+  [() => carouselRooms.value.length, roomCarouselRef],
   async () => {
     if (!import.meta.client || carouselRooms.value.length === 0 || !roomCarouselRef.value) return
     await nextTick()
