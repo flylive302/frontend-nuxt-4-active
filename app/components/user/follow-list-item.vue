@@ -19,7 +19,14 @@ const props = defineProps<{
 // ========================================
 
 
-const { isFollowing, isToggling, statusLoaded, buttonLabel, buttonIcon, isSelf, toggleFollow } = useFollow(props.user.id)
+// Seed from the list row's viewer-relative flags so a page of N rows does not
+// fire N `/users/{id}/follow-status` calls (Sentry JAVASCRIPT-VUE-4Y). The getter
+// re-reads props so a refetch that patches the row in place re-seeds too.
+const { isFollowing, isToggling, statusLoaded, buttonLabel, buttonIcon, isSelf, toggleFollow } = useFollow(
+  () => props.user.id,
+  undefined,
+  { initialStatus: () => ({ is_following: props.user.is_following, is_followed_by: props.user.is_followed_by }) },
+)
 
 // Shared follow celebration (styles live globally in assets/css/main.css)
 const { followAnimating, burst } = useFollowBurst()

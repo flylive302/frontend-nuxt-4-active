@@ -622,10 +622,15 @@ function handleOpenReport() {
             </div>
           </div>
 
-          <div v-if="canFollow || canChat || canGift || !isSelfTarget" class="gap-1 pl-4 flex items-center justify-center mt-2 w-full">
+          <!-- Action row: only for another user. An empty seat has no target
+               (targetUserId === null), so canFollow/canChat/canGift are all false
+               and the row is hidden — otherwise the Follow button would spin forever
+               because useFollow never fetches status for a null id. -->
+          <div v-if="canFollow || canChat || canGift" class="gap-1 pl-4 flex items-center justify-center mt-2 w-full">
 
             <!-- Follow button — needs neither a seat nor room presence -->
             <UButton
+                v-if="canFollow"
                 class="rounded-xl text-white follow-btn transition-all duration-150"
                 :class="{
                   'follow-btn--animating': followAnimating,
@@ -639,6 +644,7 @@ function handleOpenReport() {
 
             <!-- Chat button — DM thread, works for any user -->
             <UButton
+                v-if="canChat"
                 class="rounded-xl"
                 size="xl"
                 variant="subtle"
@@ -650,6 +656,7 @@ function handleOpenReport() {
 
             <!-- Gift button — gift recipients resolve from occupied seats only -->
             <UButton
+              v-if="canGift"
               class="rounded-xl p-0"
               size="xl"
               square
