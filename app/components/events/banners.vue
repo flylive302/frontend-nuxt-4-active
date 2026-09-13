@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CarouselExposeLike } from '~/composables/shared/useCarouselInViewAutoplay'
 // `inheritAttrs: false` because this renders two roots (carousel + password
 // modal) — matching `components/room/card.vue`.
 defineOptions({ name: 'EventBanners', inheritAttrs: false })
@@ -10,11 +11,21 @@ const { banners } = useEventBanners()
 // so a password-protected room banner isn't a silent no-op.
 const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
 const { openBanner, opening } = useBannerActions(enterRoom)
+
+// Pause autoplay while the banners are scrolled off-screen and resume on
+// re-entry (home-page-runtime-audit/5). Same helper as the room carousel on
+// the home page; it drives the Embla plugin, never the `autoplay` prop.
+const bannersRef = ref<HTMLElement | null>(null)
+const carouselRef = shallowRef<CarouselExposeLike | null>(null)
+useCarouselInViewAutoplay(carouselRef, bannersRef)
 </script>
 
 <template>
+  <!-- The wrapper is the intersection target: a component ref only yields the
+       instance, and the observer needs a real element with a layout box. -->
+  <div ref="bannersRef" v-bind="$attrs">
   <UCarousel
-      v-bind="$attrs"
+      ref="carouselRef"
       :autoplay="true"
       :items="banners"
       class-names
@@ -117,6 +128,7 @@ const { openBanner, opening } = useBannerActions(enterRoom)
       </NuxtLink>
     </template>
   </UCarousel>
+  </div>
 
   <!-- Password Prompt Modal (for banners pointing at a password-protected room) -->
   <RoomPasswordPromptModal
