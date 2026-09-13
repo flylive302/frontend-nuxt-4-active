@@ -66,27 +66,35 @@ async function handleDemoteMember(member: RoomMember) {
 }
 
 /**
- * Generate dropdown menu items for a member. Kick/block is handled by the
- * separate KickDurationPopover trigger (unified kick path, ADR 0017) — not a
- * dropdown item, since it requires a duration choice, not a single select.
+ * Dropdown menu items per member, keyed by member id. A computed Map (not a
+ * per-row function call) so the closures are built once per members-list
+ * change instead of twice per row on every render. Kick/block is handled by
+ * the separate KickDurationPopover trigger (unified kick path, ADR 0017) — not
+ * a dropdown item, since it requires a duration choice, not a single select.
  */
-function getMemberActions(member: RoomMember) {
-  return [
-    [
-      member.role === "admin"
-        ? {
-            label: "Demote to Member",
-            icon: "i-lucide-arrow-down",
-            onSelect: () => handleDemoteMember(member),
-          }
-        : {
-            label: "Promote to Admin",
-            icon: "i-lucide-arrow-up",
-            onSelect: () => handlePromoteMember(member),
-          },
-    ],
-  ];
-}
+type MemberActionItems = { label: string; icon: string; onSelect: () => void }[][];
+
+const memberActionsById = computed<Map<number, MemberActionItems>>(() => {
+  const map = new Map<number, MemberActionItems>();
+  for (const member of members.value.items) {
+    map.set(member.id, [
+      [
+        member.role === "admin"
+          ? {
+              label: "Demote to Member",
+              icon: "i-lucide-arrow-down",
+              onSelect: () => handleDemoteMember(member),
+            }
+          : {
+              label: "Promote to Admin",
+              icon: "i-lucide-arrow-up",
+              onSelect: () => handlePromoteMember(member),
+            },
+      ],
+    ]);
+  }
+  return map;
+});
 </script>
 
 <template>
@@ -159,7 +167,7 @@ function getMemberActions(member: RoomMember) {
              and the API refuses it, so the control is not offered. -->
         <UDropdownMenu
           v-if="canManageAdmins && member.role !== 'owner'"
-          :items="getMemberActions(member)"
+          :items="memberActionsById.get(member.id)"
           style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
         >
           <UButton

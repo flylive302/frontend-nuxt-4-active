@@ -1,4 +1,4 @@
-a<!-- ~/components/room/participant-list-item.vue -->
+<!-- ~/components/room/participant-list-item.vue -->
 <script setup lang="ts">
 import type { RoomParticipant } from '~/types/room/audio'
 

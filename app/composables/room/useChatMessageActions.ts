@@ -44,6 +44,29 @@ const reportDescription = computed(() =>
  * `ReportModal` (`v-if="actionTarget"`) mounted against a room-A user after
  * the page remounts for room B. Called from `cleanupRoomEventHandlers`.
  */
+function requestReport(): void {
+  if (!target.value) return
+  menuOpen.value = false
+  reportOpen.value = true
+}
+
+// Resolved lazily so the composable stays importable in specs that do not
+// stub the API/toast globals `useUserBlocking` pulls in.
+async function blockTarget(): Promise<boolean> {
+  if (!target.value) return false
+  menuOpen.value = false
+  const { blockUser } = useUserBlocking()
+  return blockUser(target.value.userId)
+}
+
+// One nested array = one menu group, the shape UDropdownMenu expects. Module
+// level (room-page-runtime-audit 08): the items only close over module state,
+// so one shared computed instead of one per chat-message row.
+const menuItems = computed<ChatMenuItem[][]>(() => [[
+  { label: 'Report message', icon: 'i-lucide-flag', onSelect: requestReport },
+  { label: 'Block user', icon: 'i-lucide-user-x', color: 'error', onSelect: () => { void blockTarget() } },
+]])
+
 export function resetChatMessageActions(): void {
   target.value = null
   anchor.value = { x: 0, y: 0 }
@@ -61,27 +84,6 @@ export function useChatMessageActions() {
   function closeMenu(): void {
     menuOpen.value = false
   }
-
-  function requestReport(): void {
-    if (!target.value) return
-    menuOpen.value = false
-    reportOpen.value = true
-  }
-
-  // Resolved lazily so the composable stays importable in specs that do not
-  // stub the API/toast globals `useUserBlocking` pulls in.
-  async function blockTarget(): Promise<boolean> {
-    if (!target.value) return false
-    menuOpen.value = false
-    const { blockUser } = useUserBlocking()
-    return blockUser(target.value.userId)
-  }
-
-  // One nested array = one menu group, the shape UDropdownMenu expects.
-  const menuItems = computed<ChatMenuItem[][]>(() => [[
-    { label: 'Report message', icon: 'i-lucide-flag', onSelect: requestReport },
-    { label: 'Block user', icon: 'i-lucide-user-x', color: 'error', onSelect: () => { void blockTarget() } },
-  ]])
 
   return {
     target: readonly(target),

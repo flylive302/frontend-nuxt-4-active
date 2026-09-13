@@ -23,9 +23,10 @@ definePageMeta({
 // ========================================
 
 const settingsOpen = ref(false);
-// Held on the page, not inside the drawer, so leaving the room can close the
-// games panel programmatically — an iframe left mounted keeps a vendor session
-// alive behind a room the player has already left.
+// Held on the page (not inside the drawer) so the games iframe is torn down
+// with the page: the room page remounts on every room switch and unmounts on
+// leave, which is what closes the vendor session. Nothing sets this to false
+// programmatically today.
 const gamesOpen = ref(false);
 const volumePopoverOpen = ref(false);
 
@@ -199,7 +200,8 @@ onUnmounted(() => {
 
         <RoomInfo />
 
-        <!-- Audio Player: draggable floating panel, only rendered for the active music controller -->
+        <!-- Audio Player: draggable floating panel. Always mounted; it gates its own
+             visibility internally (isPlayerVisible / isWaiting). -->
         <RoomAudioPlayer />
 
         <!-- Seats Grid -->

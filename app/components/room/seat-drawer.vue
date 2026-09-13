@@ -27,6 +27,11 @@ const toast = useToast()
 const isLoading = ref(false)
 const showMicDialog = ref(false)
 const isKickPopoverOpen = ref(false)
+// Snapshot of the kick target taken when the popover opens (see handleKickUser).
+const kickTargetUserId = ref<number | null>(null)
+watch(isKickPopoverOpen, (open) => {
+  if (open) kickTargetUserId.value = targetUserId.value
+})
 
 // Separate drawer open state from activeSeat (keep seat selected when drawer closes)
 const isOpen = ref(false)
@@ -273,8 +278,12 @@ async function handleToggleLock() {
  * direct socket emit.
  */
 async function handleKickUser(duration: BlockDurationValue) {
-  const userId = targetUserId.value
-  if (!userId) return
+  // Use the id captured when the popover opened, not the live seat occupant:
+  // the drawer tracks the seat, so if the target leaves and someone else takes
+  // the seat while the duration list is open, the newcomer must not be kicked.
+  const userId = kickTargetUserId.value
+  kickTargetUserId.value = null
+  if (!userId || userId !== targetUserId.value) return
 
   isLoading.value = true
   try {

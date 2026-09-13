@@ -228,6 +228,12 @@ export const RECONNECT_FAILED_TOAST_ID = 'audio-reconnect-failed';
 export const CHAT_STICKY_BOTTOM_THRESHOLD_PX = 80;
 
 /**
+ * Initial height estimate (px) the chat DynamicScroller uses for a row before
+ * it is measured — roughly one single-line message with padding.
+ */
+export const CHAT_MIN_ITEM_SIZE_PX = 48;
+
+/**
  * How often the shared chat clock ticks, driving relative timestamps ("now" → "1m").
  * One interval per room, not per message — the finest granularity shown is a minute,
  * so 30s keeps the label at most half a step stale.

@@ -596,14 +596,12 @@ export function setupRoomEventHandlers(
       ? event.activeSpeakers.map((id) => parseInt(id))
       : [parseInt(event.userId)];
 
-    audioStore.setActiveSpeakers(ids);
     seatsStore.syncActiveSpeakers(ids);
 
     // Decay: clear indicators if no fresh speaker:active arrives in time.
     if (speakerDecayTimer) clearTimeout(speakerDecayTimer);
     speakerDecayTimer = setTimeout(() => {
       speakerDecayTimer = null;
-      audioStore.setActiveSpeakers([]);
       seatsStore.syncActiveSpeakers([]);
     }, SPEAKER_ACTIVE_TTL_MS);
   });

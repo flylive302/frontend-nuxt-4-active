@@ -10,7 +10,6 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     isConnected: false,
     isProducing: false,
     isMuted: false,
-    activeSpeakerIds: [],
   });
 
   const messages = ref<ChatMessageEvent[]>([]);
@@ -56,10 +55,6 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     audioState.value.isMuted = muted;
   }
 
-  function setActiveSpeakers(userIds: number[]) {
-    audioState.value.activeSpeakerIds = userIds;
-  }
-
   function setPendingMicReclaim(pending: boolean) {
     pendingMicReclaim.value = pending;
   }
@@ -69,7 +64,6 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
       isConnected: false,
       isProducing: false,
       isMuted: false,
-      activeSpeakerIds: [],
     };
     messages.value = [];
     pendingMicReclaim.value = false;
@@ -103,7 +97,6 @@ export const useRoomAudioStore = defineStore('roomAudioStore', () => {
     setAudioConnected,
     setProducing,
     setMuted,
-    setActiveSpeakers,
     pendingMicReclaim,
     setPendingMicReclaim,
     clearAudioState,

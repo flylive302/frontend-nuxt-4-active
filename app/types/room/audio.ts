@@ -544,7 +544,6 @@ export interface AudioState {
   isConnected: boolean;
   isProducing: boolean;
   isMuted: boolean;
-  activeSpeakerIds: number[];
 }
 
 /**

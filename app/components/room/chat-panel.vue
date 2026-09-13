@@ -3,7 +3,7 @@ import type { Component } from 'vue';
 import { defineAsyncComponent } from 'vue';
 import type { StickyScrollTarget } from '~/composables/room/useChatStickyScroll';
 import { filterChatMessages, filterUnblockedMessages, countVisibleAppends } from '~/utils/chat';
-import { CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_TAB_GIFTS, type ChatTab } from '~/constants/room';
+import { CHAT_MIN_ITEM_SIZE_PX, CHAT_TAB_ALL, CHAT_TAB_CHAT, CHAT_TAB_GIFTS, type ChatTab } from '~/constants/room';
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
 // doesn't get linked as render-blocking CSS on routes that don't reach this
@@ -138,7 +138,7 @@ function handleClearChat() {
       <DynamicScroller
         ref="scrollerRef"
         :items="filteredMessages"
-        :min-item-size="48"
+        :min-item-size="CHAT_MIN_ITEM_SIZE_PX"
         key-field="id"
         class="h-full overflow-y-auto py-10 scrollbar-hide"
       >
