@@ -174,7 +174,7 @@ onUnmounted(() => {
   >
     <template v-if="roomStore.currentRoom">
       <!-- Background Image — first frame of the reveal, seeded from the card's cached bitmap -->
-      <div class="absolute inset-0 z-0 tint-500">
+      <div class="absolute inset-0 z-0">
         <img
           :src="roomBackgroundDisplaySrc"
           alt=""
@@ -206,7 +206,7 @@ onUnmounted(() => {
 
         <!-- Seats Grid -->
         <div class="relative">
-          <div class="scrollbar-hide max-h-[60vh] min-h-[40vh] overflow-y-auto scrollbox rounded-xl">
+          <div class="scrollbar-hide max-h-[60vh] min-h-[40vh] overflow-y-auto rounded-xl">
             <main class="grid gap-x-1" :class="seatGridClass">
               <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
             </main>

@@ -48,32 +48,24 @@ const activeCategoryTab = ref<string>('0');
 
 const isComboMode = ref(false);
 const comboType = ref<'normal' | 'lucky' | null>(null);
-const comboProgress = ref(0);
-let comboAnimFrameId: number | null = null;
-let comboStartTime = 0;
+// Each combo start/restart bumps this key; the fill element is re-keyed so its
+// CSS drain animation restarts from full. The bar is drawn entirely by CSS
+// (room-page-runtime-audit 06) — no per-frame reactive writes during a burst.
+const comboRunId = ref(0);
+let comboTimeoutId: ReturnType<typeof setTimeout> | null = null;
+const comboDurationStyle = { '--combo-ms': `${COMBO_BUTTON_TIMEOUT_MS}ms` };
 
 /**
- * Start the combo progress animation (countdown bar)
+ * Start the combo countdown: restart the CSS drain and arm the timeout that
+ * ends combo mode.
  */
 function startComboProgress() {
   stopComboProgress();
-  comboProgress.value = 0;
-  comboStartTime = performance.now();
-
-  const update = (currentTime: number) => {
-    const elapsed = currentTime - comboStartTime;
-    const ratio = Math.min(elapsed / COMBO_BUTTON_TIMEOUT_MS, 1);
-    comboProgress.value = Math.round(ratio * 100);
-
-    if (ratio < 1) {
-      comboAnimFrameId = requestAnimationFrame(update);
-    } else {
-      comboAnimFrameId = null;
-      onComboTimeout();
-    }
-  };
-
-  comboAnimFrameId = requestAnimationFrame(update);
+  comboRunId.value += 1;
+  comboTimeoutId = setTimeout(() => {
+    comboTimeoutId = null;
+    onComboTimeout();
+  }, COMBO_BUTTON_TIMEOUT_MS);
 }
 
 /**
@@ -84,12 +76,12 @@ function resetComboProgress() {
 }
 
 /**
- * Stop the combo progress animation
+ * Stop the combo countdown
  */
 function stopComboProgress() {
-  if (comboAnimFrameId) {
-    cancelAnimationFrame(comboAnimFrameId);
-    comboAnimFrameId = null;
+  if (comboTimeoutId !== null) {
+    clearTimeout(comboTimeoutId);
+    comboTimeoutId = null;
   }
 }
 
@@ -112,7 +104,6 @@ function exitComboMode() {
   const wasLucky = isLuckyCategory(comboType.value);
   isComboMode.value = false;
   comboType.value = null;
-  comboProgress.value = 0;
   stopComboProgress();
   if (wasLucky) {
     endLuckyCombo();
@@ -374,7 +365,7 @@ async function doLuckySend(): Promise<void> {
           <span class="lucky-combo-float__label">Combo</span>
         </button>
         <div class="lucky-combo-float__track">
-          <div class="lucky-combo-float__fill" :style="{ width: (100 - comboProgress) + '%' }" />
+          <div :key="comboRunId" class="lucky-combo-float__fill" :style="comboDurationStyle" />
         </div>
       </div>
     </Transition>
@@ -438,7 +429,7 @@ async function doLuckySend(): Promise<void> {
               </UButton>
               <!-- Progress bar -->
               <div class="combo-progress-track">
-                <div class="combo-progress-fill" :style="{ width: (100 - comboProgress) + '%' }" />
+                <div :key="comboRunId" class="combo-progress-fill" :style="comboDurationStyle" />
               </div>
             </div>
 
@@ -544,9 +535,11 @@ async function doLuckySend(): Promise<void> {
 
 .lucky-combo-float__fill {
   height: 100%;
+  width: 100%;
   background: linear-gradient(90deg, #fde047, #f59e0b);
   border-radius: 9999px;
-  transition: width 0.1s linear;
+  transform-origin: left;
+  animation: combo-drain var(--combo-ms) linear forwards;
 }
 
 .lucky-combo-float-enter-active,
@@ -617,8 +610,16 @@ async function doLuckySend(): Promise<void> {
 
 .combo-progress-fill {
   height: 100%;
+  width: 100%;
   background: var(--ui-primary);
   border-radius: 9999px;
-  transition: width 0.1s linear;
+  transform-origin: left;
+  animation: combo-drain var(--combo-ms) linear forwards;
+}
+
+/* Full → empty over the combo window; compositor-only (transform), no layout. */
+@keyframes combo-drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }
 </style>
