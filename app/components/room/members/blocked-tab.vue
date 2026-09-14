@@ -38,7 +38,7 @@ const emit = defineEmits<{
     >
       <LazyUserAvatar :img="block.user?.avatar" :user-name="block.user?.name" class="size-10" />
       <div class="flex-1 min-w-0">
-        <p class="font-medium truncate">{{ block.user?.name }}</p>
+        <p class="font-medium truncate"><VipName :name="block.user?.name ?? ''" :vip="block.user?.vip_level" /></p>
         <p class="text-xs text-muted">
           {{
             block.is_permanent

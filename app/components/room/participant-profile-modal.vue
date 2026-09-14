@@ -246,7 +246,7 @@ async function handleUnblock() {
           <div class="flex flex-col items-center text-center relative z-10">
             <LazyUserAvatar :img="participant.avatar ?? undefined" :frame-id="participant.frame_id" :user-name="participant.name" :animated="true" class="size-24" />
 
-            <h3 class="text-xl font-bold mt-2">{{ participant.name }}</h3>
+            <h3 class="text-xl font-bold mt-2"><VipName :name="participant.name" :vip="participant.vip_level" /></h3>
 
             <div class="flex items-center gap-2 mt-1">
               <ProfileBadge v-if="participant.signature" :show-badge="false" :txt="participant.signature" />

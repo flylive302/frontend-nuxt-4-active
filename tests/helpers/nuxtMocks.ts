@@ -45,7 +45,7 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
       { level: 2, name: 'Super Star', required_xp: 200, image_url: 'https://example.com/superstar.webp' },
       { level: 3, name: 'Legend', required_xp: 1000, image_url: 'https://example.com/legend.webp' },
     ] as { level: number; name: string; required_xp: number; image_url: string | null }[],
-    vipLevels: [] as { id: number; level: number; card_animated_url: string | null; emblem_animated_url: string | null }[],
+    vipLevels: [] as { id: number; level: number; color: string; card_animated_url: string | null; emblem_animated_url: string | null }[],
     featuredRooms: [] as { id: number; background: string | null }[],
     badges: [] as { id: number; image_url: string }[],
     getBadgeById: vi.fn((id: number) => ({

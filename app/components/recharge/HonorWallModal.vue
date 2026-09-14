@@ -193,7 +193,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
 
                   <!-- Name -->
                   <p class="text-white text-xs font-semibold truncate max-w-full text-center leading-tight">
-                    {{ entry.user.name }}
+                    <VipName :name="entry.user.name" :vip="entry.user.vip_level" />
                   </p>
 
                   <!-- Volume -->

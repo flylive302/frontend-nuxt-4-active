@@ -79,7 +79,7 @@ const rankBadgeClass = computed<string>(() => {
         class="w-12"
     />
     <div class="min-w-0 flex-1">
-      <p class="truncate text-sm font-medium text-white">{{ displayName }}</p>
+      <p class="truncate text-sm font-medium text-white"><VipName :name="displayName" :vip="entry.user?.vip_level" /></p>
       <profile-badge v-if="entry.user?.signature" :txt="entry.user.signature" :show-badge="false" />
     </div>
 

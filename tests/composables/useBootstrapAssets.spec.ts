@@ -480,8 +480,8 @@ describe('useBootstrapAssets', () => {
     beforeEach(() => {
       vi.clearAllMocks()
       bootstrapStore.vipLevels = [
-        { id: 3, level: 3, card_animated_url: `${R2}/vip/3/card.mp4`, emblem_animated_url: `${R2}/vip/3/emblem.svga` },
-        { id: 5, level: 5, card_animated_url: `${R2}/vip/5/card.mp4`, emblem_animated_url: `${R2}/vip/5/emblem.svga` },
+        { id: 3, level: 3, color: '#000000', card_animated_url: `${R2}/vip/3/card.mp4`, emblem_animated_url: `${R2}/vip/3/emblem.svga` },
+        { id: 5, level: 5, color: '#000000', card_animated_url: `${R2}/vip/5/card.mp4`, emblem_animated_url: `${R2}/vip/5/emblem.svga` },
       ]
       ;(globalThis as Record<string, unknown>).useAuthStore = () => ({ user: { vip_level: 3 } })
     })
@@ -508,7 +508,7 @@ describe('useBootstrapAssets', () => {
 
     it('skips VIP animated assets with null URLs', async () => {
       bootstrapStore.vipLevels = [
-        { id: 2, level: 2, card_animated_url: null, emblem_animated_url: `${R2}/vip/2/emblem.svga` },
+        { id: 2, level: 2, color: '#000000', card_animated_url: null, emblem_animated_url: `${R2}/vip/2/emblem.svga` },
       ]
       ;(globalThis as Record<string, unknown>).useAuthStore = () => ({ user: { vip_level: 2 } })
 

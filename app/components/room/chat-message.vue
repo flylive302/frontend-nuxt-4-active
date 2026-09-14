@@ -173,6 +173,7 @@ onBeforeUnmount(clearLongPressTimer)
                 class="flex-1 max-w-24 mx-auto"
                 text-class="text-sm font-bold leading-none"
                 :name="displayName"
+                :vip="participant?.vip_level"
                 delay="0s"
             />
             <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>

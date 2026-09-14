@@ -31,7 +31,7 @@ const isOnline = computed(() => presenceStore.onlineByUserId[Number(props.thread
     <!-- Content -->
     <div class="flex-1 min-w-0">
       <div class="flex items-center justify-between gap-2">
-        <span class="text-sm font-semibold truncate">{{ thread.participant.name }}</span>
+        <span class="text-sm font-semibold truncate"><VipName :name="thread.participant.name" :vip="thread.participant.vip_level" /></span>
         <div class="flex items-center justify-between gap-2">
           <span
             v-if="thread.unreadCount > 0"

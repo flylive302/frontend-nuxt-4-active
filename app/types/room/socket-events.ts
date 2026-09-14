@@ -368,6 +368,7 @@ export interface DmThreadRequestPayload {
       frame_id: number | null
       signature: string | null
       gender: number | null
+      vip_level?: number
     }
     lastMessage: string | null
     lastMessageAt: string | null

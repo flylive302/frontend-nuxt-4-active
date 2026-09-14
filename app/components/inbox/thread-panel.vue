@@ -208,6 +208,7 @@ onBeforeUnmount(() => {
       :frame-id="thread?.participant.frame_id"
       :signature="thread?.participant.signature"
       :gender="thread?.participant.gender"
+      :vip="thread?.participant.vip_level"
       :online="isPeerOnline"
       :last-seen-at="thread?.participant.lastSeenAt ?? null"
       @block="handleBlock"
@@ -307,7 +308,7 @@ onBeforeUnmount(() => {
     <!-- Request banner — recipient view -->
     <div v-if="isRequest && !thread?.isInitiator" class="px-4 py-3 bg-elevated border-t border-muted/20">
       <p class="text-xs text-muted text-center mb-3">
-        <span class="font-semibold text-default">{{ thread?.participant.name }}</span>
+        <span class="font-semibold text-default"><VipName :name="thread?.participant.name ?? ''" :vip="thread?.participant.vip_level" /></span>
         sent you a message request
         <span v-if="thread?.requestMessageCount">
           ({{ thread.requestMessageCount }} message{{ thread.requestMessageCount > 1 ? 's' : '' }})
@@ -338,7 +339,7 @@ onBeforeUnmount(() => {
     <!-- Request banner — initiator view (waiting) -->
     <div v-else-if="isRequest && thread?.isInitiator" class="px-4 py-2 bg-elevated border-t border-muted/20">
       <p class="text-xs text-muted text-center">
-        Waiting for <span class="font-semibold text-default">{{ thread?.participant.name }}</span> to accept your request
+        Waiting for <span class="font-semibold text-default"><VipName :name="thread?.participant.name ?? ''" :vip="thread?.participant.vip_level" /></span> to accept your request
         <span v-if="thread?.requestMessageCount !== undefined">
           · {{ thread.requestMessageCount }}/{{ 5 }} messages sent
         </span>

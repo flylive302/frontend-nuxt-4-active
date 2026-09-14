@@ -71,7 +71,7 @@ const presenceStore = usePresenceStore()
             </div>
             <div class="marquee-container w-fit -mt-2">
               <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
-                {{ item.name }}
+                <VipName :name="item.name" :vip="item.vip_level" />
               </span>
             </div>
           </component>

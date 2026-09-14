@@ -117,6 +117,19 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   )
 
   /**
+   * VIP level → name colour (hex). Built once per bootstrap payload; O(1)
+   * lookups for every rendered name. Source of truth is the backend
+   * `vip_levels.color` column — never hardcode colours on the frontend.
+   */
+  const vipColorByLevel = computed(() => {
+    const map = new Map<number, string>()
+    for (const l of vipLevels.value) {
+      if (l.color) map.set(l.level, l.color)
+    }
+    return map
+  })
+
+  /**
    * Persistent set of gift IDs for O(1) deduplication.
    */
   const giftIdSet = computed(() => new Set(giftCatalog.value.map(g => g.id)))
@@ -273,6 +286,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     sortedCharmLevels,
     sortedRoomLevels,
     sortedVipLevels,
+    vipColorByLevel,
 
     // Setters
     setPhase,

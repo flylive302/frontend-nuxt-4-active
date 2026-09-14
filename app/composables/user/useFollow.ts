@@ -116,10 +116,15 @@ export function useFollow(
       const response = await api<FollowStatusResponse>(`/users/${id}/follow-status`)
       isFollowing.value = response.data.is_following
       isFollowedBy.value = response.data.is_followed_by
-      statusLoaded.value = true
     }
     catch (err) {
       log.warn('Failed to fetch follow status', err)
+    }
+    finally {
+      // Always unblock the button: a transient failure must not hide the
+      // page's primary action for the whole visit. Worst case it says
+      // "Follow" and the toggle surfaces the server error.
+      statusLoaded.value = true
     }
   }
 

@@ -181,7 +181,7 @@ const tableData = computed<LevelRow[]>(() =>
                 {{ getAge(user.date_of_birth) }}
               </UBadge>
             </div>
-            <p class="text-lg font-bold">{{ user.name }}</p>
+            <p class="text-lg font-bold"><VipName :name="user.name" :vip="user.vip_level" /></p>
           </template>
         </div>
         <div class="col-span-2 flex flex-col justify-center">

@@ -30,7 +30,7 @@ defineProps<{
           animated
           class="w-10 shrink-0"
         />
-        <p class="text-white text-sm font-semibold truncate">{{ self.user.name }}</p>
+        <p class="text-white text-sm font-semibold truncate"><VipName :name="self.user.name" :vip="self.user.vip_level" /></p>
       </NuxtLink>
       <span class="text-sm font-bold text-primary shrink-0">
         {{ formatCurrency(self.volume) }}

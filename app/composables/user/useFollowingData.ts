@@ -5,7 +5,7 @@
 // No store needed — data flows via useAsyncData → props.
 
 /**
- * Slim type matching FollowingCardResource (4 fields only).
+ * Slim type matching FollowingCardResource.
  */
 export interface FollowingCard {
   id: number
@@ -13,6 +13,7 @@ export interface FollowingCard {
   avatar: string | null
   frame_id: number | null
   signature: string
+  vip_level: number
 }
 
 /**

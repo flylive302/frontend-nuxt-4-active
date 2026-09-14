@@ -371,6 +371,8 @@ export interface BootstrapProp {
 export interface VipLevel {
   id: number
   level: number
+  /** Hex name colour (`vip_levels.color`). Source of truth for VIP name tint. */
+  color: string
   card_animated_url: string | null
   emblem_animated_url: string | null
 }

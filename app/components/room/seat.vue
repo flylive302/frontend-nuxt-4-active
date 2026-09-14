@@ -208,6 +208,7 @@ const luckyNumberBadge = computed<{ kind: 'picked' } | { kind: 'revealed'; numbe
       <MarqueeName
           text-class="text-xs font-semibold text-center drop-shadow-lg leading-none"
           :name="displayName"
+          :vip="seat?.user?.vip_level"
       />
     </div>
 

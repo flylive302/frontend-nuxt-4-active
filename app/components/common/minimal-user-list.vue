@@ -86,6 +86,7 @@ function handleAvatarClick() {
               class="flex-1 max-w-24"
               text-class="text-sm leading-none font-semibold"
               :name="user.name"
+              :vip="user.vip_level"
               :delay="marqueeDelay"
           />
           <img v-if="user.vip_level" :src="withImageKitTransform(vipBadgeUIImg(user.vip_level), { w: 72 })" class="w-9" alt="" >

@@ -133,7 +133,7 @@ function rankLabelClass(rank: number): string {
                 </span>
               </div>
               <p class="text-white text-[11px] font-semibold truncate max-w-[64px]">
-                {{ entry.user.name }}
+                <VipName :name="entry.user.name" :vip="entry.user.vip_level" />
               </p>
               <span class="text-[10px]" :class="rankLabelClass(entry.rank)">
                 {{ formatCurrency(entry.volume) }}
@@ -185,7 +185,7 @@ function rankLabelClass(rank: number): string {
                 :class="[entry.rank === 1 ? 'w-16' : 'w-12', rankRingClass(entry.rank)]"
               />
               <p class="text-white text-[11px] font-semibold truncate max-w-[64px]">
-                {{ entry.user.name }}
+                <VipName :name="entry.user.name" :vip="entry.user.vip_level" />
               </p>
               <UBadge
                 icon="i-lucide-coins"

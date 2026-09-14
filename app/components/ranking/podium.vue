@@ -82,7 +82,7 @@ function rankAccent(rank: number): { ring: string; text: string; medal: string; 
           />
         </NuxtLink>
 
-        <p class="text-sm font-medium text-white truncate max-w-full px-1">{{ nameFor(entry) }}</p>
+        <p class="text-sm font-medium text-white truncate max-w-full px-1"><VipName :name="nameFor(entry)" :vip="entry.user?.vip_level" /></p>
         <UBadge icon="i-lucide-coins" variant="outline" class="backdrop-blur-lg font-bold text-md text-white">{{formatCurrency(entry.score)}}</UBadge>
         <profile-badge :txt="entry.user?.signature" />
 

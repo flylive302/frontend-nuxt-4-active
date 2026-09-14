@@ -80,6 +80,7 @@ export function useInboxEvents() {
           frame_id: raw.participant.frame_id,
           signature: raw.participant.signature,
           gender: raw.participant.gender,
+          vip_level: raw.participant.vip_level ?? 0,
           lastSeenAt: null,
         },
         lastMessage: raw.lastMessage,

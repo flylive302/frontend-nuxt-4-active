@@ -11,6 +11,8 @@ export interface ThreadParticipant {
   frame_id: number | null
   signature: string | null
   gender: number | null
+  /** 0 = no VIP. Drives the VIP name colour. */
+  vip_level: number
   /** ISO 8601 timestamp of the participant's last activity; null if never active. */
   lastSeenAt: string | null
 }

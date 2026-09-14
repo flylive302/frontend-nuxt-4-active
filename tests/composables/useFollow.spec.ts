@@ -46,6 +46,21 @@ async function flushMicrotasks(rounds = 4) {
   for (let i = 0; i < rounds; i++) await Promise.resolve()
 }
 
+describe('useFollow — failed status fetch (profile-signature-page-audit step 3)', () => {
+  it('still marks statusLoaded so the Follow button renders', async () => {
+    apiMock.mockRejectedValueOnce(new Error('network'))
+
+    const { useFollow } = await import('~/composables/user/useFollow')
+    const { isFollowing, statusLoaded } = useFollow(() => 5)
+
+    await flushMicrotasks()
+
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(statusLoaded.value).toBe(true)
+    expect(isFollowing.value).toBe(false)
+  })
+})
+
 describe('useFollow — seeded vs unseeded fetch', () => {
   it('performs no /follow-status fetch when seeded', async () => {
     const { useFollow } = await import('~/composables/user/useFollow')

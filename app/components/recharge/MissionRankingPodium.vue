@@ -57,7 +57,7 @@ function avatarSize(rank: number): string {
         </div>
 
         <p class="text-white text-xs font-semibold truncate max-w-full px-1 leading-tight">
-          {{ entry.user.name }}
+          <VipName :name="entry.user.name" :vip="entry.user.vip_level" />
         </p>
         <UBadge
           icon="i-lucide-coins"

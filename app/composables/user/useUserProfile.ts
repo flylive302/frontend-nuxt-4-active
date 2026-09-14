@@ -8,7 +8,6 @@ import type {
   UserProfileResponse,
 } from '~/types/user/user-profile'
 import type { EquippedBadge } from '~/types/progression/badge'
-import type { LevelInfo } from '~/composables/shared/useLevelLookup'
 import { DEFAULT_WEALTH_BADGE, DEFAULT_CHARM_BADGE } from '~/composables/shared/useLevelLookup'
 import { createLogger } from '~/utils/logger'
 
@@ -62,11 +61,6 @@ export function useUserProfile(
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Level info (computed from XP after profile loads)
-  const wealthLevelInfo = ref<LevelInfo | null>(null)
-  const charmLevelInfo = ref<LevelInfo | null>(null)
-  const levelInfoLoading = ref(false)
-
   // Gifts pagination state (for loading beyond initial page)
   const giftsCursor = ref<string | null>(null)
   const giftsLoading = ref(false)
@@ -93,12 +87,22 @@ export function useUserProfile(
   /**
    * Whether the user belongs to an agency.
    */
-  const hasAgency = computed(() => profile.value?.agency !== null)
+  const hasAgency = computed(() => profile.value?.agency != null)
 
   /**
    * Whether the user has a room.
    */
-  const hasRoom = computed(() => profile.value?.room_id !== null)
+  const hasRoom = computed(() => profile.value?.room_id != null)
+
+  // Level info is derived, not stored: `getLevelFromXp` reads the bootstrap
+  // store, so a profile fetched before bootstrap is ready self-corrects once
+  // the level config lands (cold-install deep link).
+  const wealthLevelInfo = computed(() =>
+    profile.value ? getLevelFromXp(profile.value.wealth_xp, 'wealth') : null
+  )
+  const charmLevelInfo = computed(() =>
+    profile.value ? getLevelFromXp(profile.value.charm_xp, 'charm') : null
+  )
 
   /**
    * Wealth badge image URL from computed level info.
@@ -134,23 +138,6 @@ export function useUserProfile(
   // ========================================
 
   /**
-   * Compute level info from XP values (sync, uses bootstrap store config).
-   */
-  function computeLevelInfo(): void {
-    if (!profile.value) return
-
-    levelInfoLoading.value = true
-    try {
-      wealthLevelInfo.value = getLevelFromXp(profile.value.wealth_xp, 'wealth')
-      charmLevelInfo.value = getLevelFromXp(profile.value.charm_xp, 'charm')
-    } catch (err) {
-      log.warn('Failed to compute level info', err)
-    } finally {
-      levelInfoLoading.value = false
-    }
-  }
-
-  /**
    * Fetch user profile by signature.
    * Resets all state before fetching.
    */
@@ -168,8 +155,6 @@ export function useUserProfile(
     additionalGifts.value = []
     giftsCursor.value = null
     giftsHasMore.value = true
-    wealthLevelInfo.value = null
-    charmLevelInfo.value = null
 
     try {
       const response = await api<UserProfileResponse>(
@@ -181,9 +166,6 @@ export function useUserProfile(
 
       giftsCursor.value = response.data.gifts_next_cursor ?? null
       giftsHasMore.value = response.data.gifts_has_more ?? false
-
-      // Compute level info (sync, uses bootstrap store)
-      computeLevelInfo()
     } catch (err) {
       const normalized = normalizeError(err)
       error.value = normalized.message
@@ -271,7 +253,6 @@ export function useUserProfile(
     charmLevel,
     wealthBadgeSrc,
     charmBadgeSrc,
-    levelInfoLoading: readonly(levelInfoLoading),
 
     // Equipped badges
     equippedBadges,

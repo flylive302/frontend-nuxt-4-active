@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { vipNameColor } from '~/constants/vip'
-
 const props = withDefaults(defineProps<{
   name: string
   delay?: string
   textClass?: string
-  vip?: number
+  vip?: number | null
+  /** Animated highlight sweep over the VIP colour. Opt-in (profile headers). */
+  shine?: boolean
   /**
    * Pause the scrolling animation (e.g. while the header is scrolled out of
    * view). Purely visual — `animation-play-state`, no layout/appearance
@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<{
   delay: undefined,
   textClass: undefined,
   vip: undefined,
+  shine: false,
   paused: false,
 })
 
@@ -67,7 +68,13 @@ watch(() => props.name, async () => {
 
 // Computed, not a setup-time snapshot: the parent's `vip` prop changes live
 // (vip.updated socket → authStore.patchVip, or the profile page's syncUser()).
+const { vipNameColor } = useVipNameColor()
 const colorFullName = computed(() => vipNameColor(props.vip))
+const nameClass = computed(() => ['vip-name', { 'vip-name--shine': props.shine && !!colorFullName.value }])
+const nameStyle = computed(() => ({
+  '--vip-color': colorFullName.value || undefined,
+  animationPlayState: props.paused ? 'paused' : 'running',
+}))
 </script>
 
 <template>
@@ -82,16 +89,16 @@ const colorFullName = computed(() => vipNameColor(props.vip))
         }"
     >
       <span
-          :class="textClass"
-          :style="{ color: colorFullName }"
+          :class="[textClass, nameClass]"
+          :style="nameStyle"
       >
         {{ name }}
       </span>
       <!-- Duplicate for seamless loop, gap via padding -->
       <span
           v-if="isOverflowing"
-          :class="textClass"
-          :style="{ color: colorFullName }"
+          :class="[textClass, nameClass]"
+          :style="nameStyle"
           aria-hidden="true"
           class="pl-12"
       >

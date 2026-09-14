@@ -127,7 +127,7 @@ const memberActionsById = computed<Map<number, MemberActionItems>>(() => {
       >
         <LazyUserAvatar :img="member.user?.avatar" :user-name="member.user?.name" class="size-10" />
         <div class="flex-1 min-w-0">
-          <p class="font-medium truncate">{{ member.user?.name }}</p>
+          <p class="font-medium truncate"><VipName :name="member.user?.name ?? ''" :vip="member.user?.vip_level" /></p>
           <p class="text-xs text-muted">{{ member.role }}</p>
         </div>
         <UBadge

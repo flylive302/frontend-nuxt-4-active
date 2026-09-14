@@ -16,13 +16,16 @@ const FOLLOW_BURST_DURATION_MS = 600
 export function useFollowBurst() {
   const followAnimating = ref(false)
   let timer: ReturnType<typeof setTimeout> | null = null
+  let raf = 0
 
   function burst(): void {
     // Re-triggering mid-animation must restart it, not stack timers.
     if (timer) clearTimeout(timer)
+    if (raf) cancelAnimationFrame(raf)
     followAnimating.value = false
     // Next frame, so the removed class actually re-applies.
-    requestAnimationFrame(() => {
+    raf = requestAnimationFrame(() => {
+      raf = 0
       followAnimating.value = true
       timer = setTimeout(() => {
         followAnimating.value = false
@@ -33,6 +36,9 @@ export function useFollowBurst() {
 
   onScopeDispose(() => {
     if (timer) clearTimeout(timer)
+    // A tap followed by back-navigation before the next frame would otherwise
+    // let the rAF fire after dispose and arm a timer nobody clears.
+    if (raf) cancelAnimationFrame(raf)
   })
 
   return { followAnimating, burst }

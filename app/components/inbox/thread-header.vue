@@ -9,6 +9,7 @@ const props = withDefaults(
     frameId?: number | null
     signature?: string | null
     gender?: number | null
+    vip?: number | null
     isSystem?: boolean
     /** Full page pins the header with `position: fixed`; a drawer contains it in-flow instead. */
     fixed?: boolean
@@ -17,7 +18,7 @@ const props = withDefaults(
     /** dm-messenger-v2/07: participant's last-activity timestamp, for the "Last seen …" fallback. */
     lastSeenAt?: string | null
   }>(),
-  { fixed: true, lastSeenAt: null },
+  { fixed: true, vip: null, lastSeenAt: null },
 )
 
 defineEmits<{
@@ -71,7 +72,7 @@ const profileTo = computed(() => (!props.isSystem && props.signature ? `/profile
       <!-- Name + Signature + Gender -->
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-1.5">
-          <span class="text-sm font-semibold truncate">{{ name }}</span>
+          <span class="text-sm font-semibold truncate"><VipName :name="name" :vip="vip" /></span>
           <UIcon
             v-if="gender === 1"
             name="i-lucide-mars"

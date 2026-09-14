@@ -81,7 +81,6 @@ const {
   loading,
   error,
   hasProfile,
-  hasAgency,
   hasRoom,
   allGifts,
   wealthBadgeSrc,
@@ -95,7 +94,7 @@ const {
 // Writable copy for optimistic count updates by useFollow
 const profileWritable = ref<UserProfile | null>(readonlyProfile.value as UserProfile | null)
 watch(readonlyProfile, (v) => {
-  profileWritable.value = v ? { ...v, gifts_received: [...v.gifts_received] } as UserProfile : null
+  profileWritable.value = v ? { ...v } as UserProfile : null
   // Zero-query freshness for the index page: when this IS our own profile, the
   // fetch above already carries the current server-side profile_visits. Push it
   // into the auth store so /profile reflects it instantly on back-navigation
@@ -360,7 +359,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           densities="x1 x2"
           sizes="320px"
           width="100%"
-          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
+          class="min-w-full object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
           :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
           @click="openImagePreview('cover')"
         />
@@ -418,6 +417,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
             class="mx-auto max-w-36"
             text-class="text-lg leading-none font-bold"
             :name="profileWritable?.name || ''"
+            :vip="profileWritable?.vip_level"
+            shine
             delay="0.5s"
             :paused="!headerVisible"
         />
@@ -446,7 +447,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 <!--      <EventsProfileCard class="mx-4"/>-->
 
       <!-- Agency Section (conditional) -->
-      <div v-if="hasAgency && profileWritable?.agency" class="relative z-50 mt-4">
+      <div v-if="profileWritable?.agency" class="relative z-50 mt-4">
         <SectionTitle class="mx-8">Agency</SectionTitle>
         <NuxtLink
           :to="`/agency/${profileWritable.agency.id}`"
@@ -457,11 +458,11 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           </div>
 
           <div class="w-full flex flex-col gap-2 py-1">
-            <p class="text-md font-bold truncate">{{ profileWritable.agency.name }} - ID: {{ profileWritable.agency.id }}</p>
+            <p class="text-base font-bold truncate">{{ profileWritable.agency.name }} - ID: {{ profileWritable.agency.id }}</p>
 
             <div class="flex gap-2 items-center">
               <div class="flex pt-1 gap-1 items-center">
-                <CountryFlag :code="profileWritable.agency.country" class="ssize-6 rounded inline mr-1" />
+                <CountryFlag :code="profileWritable.agency.country" class="size-6 rounded inline mr-1" />
                 <p class="text-sm text-muted! font-semibold truncate">
                   {{ profileWritable.agency.country }}
                 </p>
@@ -616,7 +617,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       aria-label="Primary"
       class="fixed inset-x-2 z-50 bottom-4"
     >
-      <div v-if="profileId !== authStore.user?.id" class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
+      <!-- Only once the profile exists: no dead buttons during the skeleton or on the error card -->
+      <div v-if="hasProfile && !isOwnProfile" class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
         <UserTrackButton :user-id="profileId" :name="profileWritable?.name" />
 
         <!-- Follow Button (hidden for own profile) -->
