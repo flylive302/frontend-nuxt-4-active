@@ -846,9 +846,9 @@ export function setupRoomEventHandlers(
 
         // Only un-seen legs fly — the burst-shaped event and its legacy
         // singular siblings describe the same legs.
-        for (const recipientId of newLegs) {
-          triggerFly(gift.thumbnail_url, event.senderId, recipientId);
-        }
+        // One request for the whole send: one thumbnail to center, then it
+        // splits into one landing per leg.
+        triggerFly(gift.thumbnail_url, event.senderId, newLegs);
         return;
       }
 
@@ -935,12 +935,10 @@ export function setupRoomEventHandlers(
           count: item.count,
         });
 
-        // One lucky-fly request per item per recipient, carrying `count` —
-        // the renderer streams the flies with its existing pacing, nothing
-        // capped or dropped.
-        for (const recipientId of item.recipientIds) {
-          triggerFly(gift.thumbnail_url, item.senderId, recipientId, item.count);
-        }
+        // One lucky-fly request per item (all recipients, carrying `count`) —
+        // the renderer streams the copies with its existing pacing, nothing
+        // capped or dropped; each copy splits at center into every recipient.
+        triggerFly(gift.thumbnail_url, item.senderId, item.recipientIds, item.count);
         continue;
       }
 

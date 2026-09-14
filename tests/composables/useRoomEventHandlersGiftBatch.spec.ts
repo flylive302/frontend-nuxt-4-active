@@ -194,10 +194,9 @@ describe('setupRoomEventHandlers — gift:batch', () => {
     expect(recordLuckyGiftTapMock).toHaveBeenCalledTimes(1)
     expect(recordLuckyGiftTapMock).toHaveBeenCalledWith(expect.objectContaining({ quantity: 2, count: 5, recipientIds: [3, 4] }))
 
-    // One fly request per recipient, each carrying count=5.
-    expect(triggerFlyMock).toHaveBeenCalledTimes(2)
-    expect(triggerFlyMock).toHaveBeenNthCalledWith(1, LUCKY_GIFT.thumbnail_url, 2, 3, 5)
-    expect(triggerFlyMock).toHaveBeenNthCalledWith(2, LUCKY_GIFT.thumbnail_url, 2, 4, 5)
+    // One fly request for the whole item (all recipients), carrying count=5.
+    expect(triggerFlyMock).toHaveBeenCalledTimes(1)
+    expect(triggerFlyMock).toHaveBeenCalledWith(LUCKY_GIFT.thumbnail_url, 2, [3, 4], 5)
   })
 
   it('skips an item whose senderId is the local user entirely (already booked locally on send)', async () => {

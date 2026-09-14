@@ -1025,7 +1025,7 @@ describe('useGiftSending — self-gifting FX (self-gifting epic ticket 04)', () 
     await sending.send()
 
     expect(triggerFly).toHaveBeenCalledTimes(1)
-    expect(triggerFly).toHaveBeenCalledWith('lucky.png', 1, 1)
+    expect(triggerFly).toHaveBeenCalledWith('lucky.png', 1, [1])
   })
 
   it('send() to [self] (normal gift) enqueues the playback modal exactly once, XP accumulated once', async () => {
@@ -1064,6 +1064,6 @@ describe('useGiftSending — self-gifting FX (self-gifting epic ticket 04)', () 
     await sending.luckyCombo()
 
     expect(triggerFly).toHaveBeenCalledTimes(1)
-    expect(triggerFly).toHaveBeenCalledWith('x.png', 1, 1)
+    expect(triggerFly).toHaveBeenCalledWith('x.png', 1, [1])
   })
 })

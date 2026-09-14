@@ -60,6 +60,45 @@ export function buildFlyTimeline(path: FlyPath, durationMs: number, holdMs: numb
 }
 
 /**
+ * Lead leg of a multi-recipient send: ONE thumbnail appears at the sender,
+ * flies to center and holds there. It ends still visible at full center
+ * scale — the renderer then spawns one `buildLandTimeline` per recipient at
+ * exactly that instant, so the visual reads as one image splitting into N.
+ * Duration = the first half of `durationMs` plus the hold.
+ */
+export function buildLeadTimeline(start: FlyPoint, center: FlyPoint, durationMs: number, holdMs: number): FlyTimeline {
+  const totalMs = durationMs * 0.5 + holdMs;
+  const at = (fraction: number, extra = 0): number => (fraction * durationMs + extra) / totalMs;
+  return {
+    totalMs,
+    keyframes: [
+      { at: 0, point: start, scale: 0.2, opacity: 0 },
+      { at: at(0.15), point: start, scale: 1.1, opacity: 1 },
+      { at: at(0.5), point: center, scale: LUCKY_FLY_MAX_SCALE, opacity: 1 },
+      { at: 1, point: center, scale: LUCKY_FLY_MAX_SCALE, opacity: 1 },
+    ],
+  };
+}
+
+/**
+ * Landing leg of a multi-recipient send: starts at center (matching the lead's
+ * final frame) and flies to one recipient, then vanishes. Duration = the second
+ * half of `durationMs`, so lead + land == the single-recipient timeline.
+ */
+export function buildLandTimeline(center: FlyPoint, end: FlyPoint, durationMs: number): FlyTimeline {
+  const totalMs = durationMs * 0.5;
+  const at = (fraction: number): number => ((fraction - 0.5) * durationMs) / totalMs;
+  return {
+    totalMs,
+    keyframes: [
+      { at: 0, point: center, scale: LUCKY_FLY_MAX_SCALE, opacity: 1 },
+      { at: at(0.85), point: end, scale: 0.9, opacity: 1 },
+      { at: 1, point: end, scale: 0.2, opacity: 0 },
+    ],
+  };
+}
+
+/**
  * Cubic-bezier easing (CSS semantics: P0=(0,0), P3=(1,1)). Solved by a few
  * Newton iterations — plenty for animation precision.
  */

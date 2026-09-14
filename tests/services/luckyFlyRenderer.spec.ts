@@ -302,3 +302,48 @@ describe('gift-backlog-and-lag 07 — fairness across senders', () => {
     expect(r.foldedCount).toBe(0);
   });
 });
+
+describe('multi-recipient split (one thumbnail to center, then one landing per seat)', () => {
+  const burst = {
+    thumbnailUrl: 'https://cdn.test/g.png',
+    path: { start: { x: 0, y: 0 }, center: { x: 50, y: 50 }, end: { x: 0, y: 0 } },
+    ends: [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 30 }],
+  };
+
+  it('flies ONE sprite until the hold ends, then exactly one per recipient', () => {
+    const r = makeRenderer();
+    r.enqueue(burst);
+    r.tick(0);
+    expect(r.inFlight).toBe(1);
+    r.tick(1700); // inside lead (1000 fly + 800 hold = 1800)
+    expect(r.inFlight).toBe(1);
+    r.tick(1801);
+    expect(r.inFlight).toBe(3);
+    expect(r.tick(2900)).toBe(false); // landings last 1000 → all done at 2800
+    expect(r.inFlight).toBe(0);
+  });
+
+  it('landings start from center at the split instant, not from the sender', async () => {
+    const ctx = makeCtx();
+    const r = makeRenderer(ctx);
+    r.enqueue(burst);
+    await Promise.resolve();
+    r.tick(0);
+    r.tick(1800);
+    r.tick(1800.5); // ~0 ms into landings → drawn at (almost) center
+    const calls = (ctx.drawImage as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const last = calls[calls.length - 1] as number[];
+    const size = last[3]!;
+    expect(last[1]! + size / 2).toBeCloseTo(50, 0);
+    expect(last[2]! + size / 2).toBeCloseTo(50, 0);
+  });
+
+  it('a single-recipient request is unchanged (plain sender → center → end fly)', () => {
+    const r = makeRenderer();
+    r.enqueue({ ...burst, ends: [burst.ends[0]!] });
+    r.tick(0);
+    r.tick(1801);
+    expect(r.inFlight).toBe(1);
+    expect(r.tick(2801)).toBe(false);
+  });
+});

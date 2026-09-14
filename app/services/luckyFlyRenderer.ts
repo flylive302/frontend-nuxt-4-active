@@ -14,10 +14,13 @@
  */
 import {
   buildFlyTimeline,
+  buildLandTimeline,
+  buildLeadTimeline,
   launchIntervalMs,
   parseEasing,
   sampleFly,
   type FlyPath,
+  type FlyPoint,
   type FlyTimeline,
 } from '~/utils/lucky-fly-path';
 
@@ -60,6 +63,13 @@ export interface LuckyFlyRendererOptions {
 export interface FlyRequest {
   readonly thumbnailUrl: string;
   readonly path: FlyPath;
+  /**
+   * Multi-recipient send: every landing point of ONE send. When two or more
+   * are given, ONE thumbnail flies sender → center, holds, then splits into
+   * one landing fly per point (`path.end` is ignored). Omitted or a single
+   * point = the plain sender → center → end fly.
+   */
+  readonly ends?: readonly FlyPoint[];
 }
 
 interface ActiveFly {
@@ -68,6 +78,12 @@ interface ActiveFly {
   readonly startedAt: number;
   /** > 1 when several identical flies were folded into this one (drawn as "×N"). */
   readonly count: number;
+  /**
+   * Lead fly of a multi-recipient send: when its timeline ends it spawns one
+   * landing fly per point here, from `center`, back-dated to that instant so
+   * the split is seamless. Undefined for plain and landing flies.
+   */
+  readonly split?: { readonly center: FlyPoint; readonly ends: readonly FlyPoint[] };
 }
 
 /** One queued batch item: `count` identical flies, expanded (or folded) at launch. */
@@ -203,7 +219,10 @@ export class LuckyFlyRenderer {
     const survivors: ActiveFly[] = [];
     for (const fly of this.active) {
       const elapsed = now - fly.startedAt;
-      if (elapsed >= fly.timeline.totalMs) continue;
+      if (elapsed >= fly.timeline.totalMs) {
+        if (fly.split) this.spawnLandings(fly, survivors);
+        continue;
+      }
       survivors.push(fly);
       const image = this.images.get(fly.url);
       if (!image) continue;
@@ -295,16 +314,56 @@ export class LuckyFlyRenderer {
         if (--entry.count <= 0) this.pending.splice(index, 1);
         else this.launchCursor = index + 1;
       }
-      this.active.push({
-        url: entry.request.thumbnailUrl,
-        timeline: buildFlyTimeline(this.jitter(entry.request.path), this.opts.durationMs, this.opts.holdMs),
-        startedAt: now,
-        count,
-      });
+      this.active.push(this.launch(entry.request, now, count));
     }
     if (this.pending.length === 0) {
       this.burstInterval = this.opts.staggerMs;
       this.launchCursor = 0;
+    }
+  }
+
+  /**
+   * One request → one in-flight fly. A multi-recipient request launches as a
+   * single lead fly (sender → center → hold) carrying its landing points; the
+   * landings spawn when the lead retires (see `spawnLandings`). Draw work for
+   * a 15-seat send is therefore 1 sprite for the first half, 15 for the second
+   * — instead of 15 the whole way.
+   */
+  private launch(request: FlyRequest, now: number, count: number): ActiveFly {
+    const path = this.jitter(request.path);
+    const ends = request.ends;
+    if (!ends || ends.length < 2) {
+      return {
+        url: request.thumbnailUrl,
+        timeline: buildFlyTimeline(path, this.opts.durationMs, this.opts.holdMs),
+        startedAt: now,
+        count,
+      };
+    }
+    return {
+      url: request.thumbnailUrl,
+      timeline: buildLeadTimeline(path.start, path.center, this.opts.durationMs, this.opts.holdMs),
+      startedAt: now,
+      count,
+      split: { center: path.center, ends },
+    };
+  }
+
+  /** The lead's hold is over: fan one landing fly per recipient out of center. */
+  private spawnLandings(lead: ActiveFly, into: ActiveFly[]): void {
+    const { center, ends } = lead.split!;
+    const startedAt = lead.startedAt + lead.timeline.totalMs;
+    const j = this.opts.jitterPx * 0.5;
+    for (const end of ends) {
+      const landed = j > 0
+        ? { x: end.x + (Math.random() * 2 - 1) * j, y: end.y + (Math.random() * 2 - 1) * j }
+        : end;
+      into.push({
+        url: lead.url,
+        timeline: buildLandTimeline(center, landed, this.opts.durationMs),
+        startedAt,
+        count: lead.count,
+      });
     }
   }
 

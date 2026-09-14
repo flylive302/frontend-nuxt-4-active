@@ -486,9 +486,7 @@ export function useGiftSending() {
       // branch needed. Do not add a separate "is this recipient me" echo path
       // here — that would double-fire the FX for self.
       if (isLuckyCategory(selectedGift.category)) {
-        for (const recipientId of selectedRecipients) {
-          triggerFly(selectedGift.thumbnail_url, sender.id, recipientId);
-        }
+        triggerFly(selectedGift.thumbnail_url, sender.id, selectedRecipients);
 
         // Sender-local band tap — MSAB excludes the sender from
         // `gift:received`, so the sender's own activity band updates here.
@@ -716,9 +714,7 @@ export function useGiftSending() {
 
     // Self-gifting: `validRecipients` may include self — already covered by
     // this unconditional loop, no extra branch needed.
-    for (const recipientId of validRecipients) {
-      triggerFly(ctx.gift.thumbnail_url, ctx.senderId, recipientId);
-    }
+    triggerFly(ctx.gift.thumbnail_url, ctx.senderId, validRecipients);
 
     // Sender-local band tap — same reasoning as send()'s lucky branch.
     recordLuckyGiftTap({

@@ -66,17 +66,25 @@ function getScreenCenter(): FlyPoint {
 
 export function useLuckyFly() {
   /**
-   * Trigger a fly animation for a lucky gift.
+   * Trigger the fly animation for one lucky send.
    *
    * @param thumbnailUrl - CDN URL of the gift thumbnail
    * @param senderId - User ID of the sender (start position)
-   * @param recipientId - User ID of the recipient (end position)
+   * @param recipients - Recipient user ID, or every recipient of ONE send. A
+   *   list of 2+ plays as ONE thumbnail: sender → center → hold → splits into
+   *   one copy per recipient (not N full flights) — cheaper to draw and far
+   *   less clutter on a 15-seat send.
    * @param count - Number of identical flies to queue (gift-authority-tick-fanout
    *   ticket 15 — a batch item's merged tap count). Defaults to 1 for the
    *   legacy per-tap call sites. The renderer expands these inside its own
    *   existing stream pacing — nothing is capped or dropped.
    */
-  function triggerFly(thumbnailUrl: string, senderId: number, recipientId: number, count = 1): void {
+  function triggerFly(
+    thumbnailUrl: string,
+    senderId: number,
+    recipients: number | readonly number[],
+    count = 1,
+  ): void {
     // GATE: Gift Mute preference suppresses the fly visual on this device only —
     // the lucky send/win itself (balances, session state) is already booked.
     if (useFxPreferencesStore().muteGiftAnimations) return;
@@ -85,15 +93,19 @@ export function useLuckyFly() {
     // GATE (gift-backlog-and-lag 01): nobody is watching — app backgrounded or
     // tab hidden. Do not queue what would only replay as a pile on return.
     if (isAway()) return;
+    const recipientIds = typeof recipients === 'number' ? [recipients] : recipients;
+    if (recipientIds.length === 0) return;
 
     const now = performance.now();
+    const ends = recipientIds.map((id) => resolveSeatPosition(id, now));
     renderer.enqueue({
       thumbnailUrl,
       path: {
         start: resolveSeatPosition(senderId, now),
         center: getScreenCenter(),
-        end: resolveSeatPosition(recipientId, now),
+        end: ends[0]!,
       },
+      ends,
     }, count, now);
     onEnqueue?.();
   }

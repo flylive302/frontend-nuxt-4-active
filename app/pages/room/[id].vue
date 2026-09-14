@@ -189,13 +189,6 @@ onUnmounted(() => {
            (drawers, chat, seats) never snap into place on top of it. -->
       <div class="room-content relative z-10 h-full flex flex-col pt-2">
 
-        <!-- Lucky Gift Animations: no-draw notices, the single center cashback
-             visual, and the room-visible sender activity bands (state-driven —
-             see useLuckyGift / constants/lucky-animation.ts). -->
-        <LuckyMultiplierFloat :floaters="floatingMultipliers" />
-        <LuckyCashbackCenter />
-        <LuckySenderBands />
-
         <RoomHeader />
 
         <RoomInfo />
@@ -326,6 +319,18 @@ onUnmounted(() => {
 
       <!-- Lucky Gift Fly Animation (thumbnail: sender → center → receiver) -->
       <LuckyGiftFly />
+
+      <!-- Lucky Gift Animations: no-draw notices, the single center cashback
+           visual, and the room-visible sender activity bands (state-driven —
+           see useLuckyGift / constants/lucky-animation.ts).
+           Mounted OUTSIDE `.room-content` (relative z-10): that wrapper is a
+           stacking context, so inside it their z-50/55/60 were trapped under
+           the fixed LuckyGiftFly canvas (z-49) and the fly stream drew over
+           the cashback win. As siblings of the canvas their z-index competes
+           directly and the win reads on top, as intended. -->
+      <LuckyMultiplierFloat :floaters="floatingMultipliers" />
+      <LuckyCashbackCenter />
+      <LuckySenderBands />
 
 
     </template>
