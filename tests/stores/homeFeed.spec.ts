@@ -56,3 +56,25 @@ describe('homeFeedStore.resetToAll', () => {
     expect(store.rateLimitedUntil).toBe(123)
   })
 })
+
+describe('homeFeedStore.setLiveOnly', () => {
+  it('defaults to ON so a first landing shows only live rooms', async () => {
+    const { useHomeFeedStore } = await import('../../app/stores/homeFeed')
+    expect(useHomeFeedStore().liveOnly).toBe(true)
+  })
+
+  it('switches to all rooms', async () => {
+    const { useHomeFeedStore } = await import('../../app/stores/homeFeed')
+    const store = useHomeFeedStore()
+    store.setLiveOnly(false)
+    expect(store.liveOnly).toBe(false)
+  })
+
+  it('is untouched by resetToAll', async () => {
+    const { useHomeFeedStore } = await import('../../app/stores/homeFeed')
+    const store = useHomeFeedStore()
+    store.setLiveOnly(false)
+    store.resetToAll()
+    expect(store.liveOnly).toBe(false)
+  })
+})

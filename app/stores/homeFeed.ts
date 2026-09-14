@@ -22,6 +22,14 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
   const selectedCountry = ref<string>('');
 
   /**
+   * Live/All chip: when true the feed shows only rooms that are live with at
+   * least one participant. ON by default — a first landing should show rooms
+   * with people in them; "All" is the opt-out. Persisted like the country —
+   * a browse preference, not session state. Sent to the API as `live_only=1`.
+   */
+  const liveOnly = ref<boolean>(true);
+
+  /**
    * The ms-epoch timestamp rooms requests stay blocked until, set from a 429's
    * `Retry-After` (home-room-feed/12). `null` = not rate-limited. Shared across
    * the page-1 load and the grid's page 2+ fetcher so a 429 on either one blocks
@@ -42,6 +50,10 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
     selectedCountry.value = '';
   }
 
+  function setLiveOnly(value: boolean): void {
+    liveOnly.value = value;
+  }
+
   function setRateLimitedUntil(timestamp: number): void {
     rateLimitedUntil.value = timestamp;
   }
@@ -52,9 +64,11 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
 
   return {
     selectedCountry,
+    liveOnly,
     rateLimitedUntil,
     setCountry,
     resetToAll,
+    setLiveOnly,
     setRateLimitedUntil,
     clearRateLimit,
   };
@@ -68,8 +82,8 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
   // going to see, then flash on hydration. Keeping it on a cookie means that
   // switch costs nothing here.
   //
-  // Only `selectedCountry` persists — `rateLimitedUntil` is per-session state,
-  // not a durable user choice.
+  // Only the browse choices (`selectedCountry`, `liveOnly`) persist —
+  // `rateLimitedUntil` is per-session state, not a durable user choice.
   //
   // The cookie is named after the store id: `homeFeed`. There is no global
   // `piniaPluginPersistedstate.key` template in `nuxt.config.ts`, so the id is
@@ -81,7 +95,7 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
   // cookie's value by the time it returns. That is what lets the home page read
   // the country *above* `useAsyncData` and have the key be right first time.
   persist: {
-    pick: ['selectedCountry'],
+    pick: ['selectedCountry', 'liveOnly'],
     storage: piniaPluginPersistedstate.cookies({
       maxAge: 60 * 60 * 24 * 180,
       sameSite: 'lax',

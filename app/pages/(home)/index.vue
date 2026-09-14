@@ -4,7 +4,7 @@ import { ASSETS } from '~/constants/assets'
 import { HOME_CAROUSEL_ROOM_COUNT, ROOM_AUTOPLAY_DELAY_MS } from '~/constants/carousel'
 import { HOME_ROOMS_PER_PAGE } from '~/constants/room'
 import { roomLogoCardSrc } from '~/utils/imagekit'
-import { createHomeRoomsListFetcher, isHomeCountrySettling, shouldRefreshRoomsOnMount, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
+import { createHomeRoomsListFetcher, isHomeFeedSettling, shouldRefreshRoomsOnMount, shouldResetStaleCountry, shouldReuseCachedRooms } from '~/utils/home-rooms-feed'
 import type { HomeRoomsPayload } from '~/utils/home-rooms-feed'
 import type { CarouselExposeLike } from '~/composables/shared/useCarouselInViewAutoplay'
 import {
@@ -16,6 +16,7 @@ import {
   roomsFetchErrorMessage,
 } from '~/utils/api/retry-policy'
 import HomeCountryFilter from '~/components/home/country-filter.vue'
+import HomeLiveOnlyToggle from '~/components/home/live-only-toggle.vue'
 import type { InfiniteScrollPaginationMeta } from '~/types/ui/infinite-scroll'
 
 const InfiniteScroll = defineAsyncComponent(() => import('~/components/common/infinite-scroll.vue'))
@@ -67,11 +68,20 @@ const selectedCountry = computed<string>({
   set: (code) => homeFeed.setCountry(code),
 })
 
-// Per-country key. Load-bearing, not tidiness: `getCachedData` hands back the
+// "Live" chip — same store-backed pattern as the country. On the wire it is
+// `live_only=1`, which the backend serves as a range scan on the trending
+// index (`trending_score >= tier_offset`), so it costs nothing extra per page.
+const liveOnly = computed<boolean>({
+  get: () => homeFeed.liveOnly,
+  set: (value) => homeFeed.setLiveOnly(value),
+})
+
+// Per-filter key. Load-bearing, not tidiness: `getCachedData` hands back the
 // cached payload on first paint, so a single shared key would paint
 // All-country rooms under a highlighted country chip as soon as the filter
 // survives a mount (ticket 03 persists it) — with no refetch to correct it.
-const roomsKey = computed(() => `home-rooms-${selectedCountry.value || 'all'}`)
+// The live flag is part of the key for the same reason.
+const roomsKey = computed(() => `home-rooms-${selectedCountry.value || 'all'}${liveOnly.value ? '-live' : ''}`)
 
 // `getCachedData` may only serve this instance's first paint. Set in onMounted,
 // which runs *after* Nuxt has already queued the initial fetch — see
@@ -85,10 +95,11 @@ const { data: roomsPayload, status: roomsStatus, error: roomsError, refresh: ref
     // renders is then derived from this one object, so rows can never belong to
     // a different country than the label they're keyed by.
     const country = selectedCountry.value
+    const live = liveOnly.value
     try {
-      const res = await fetchCachedRooms(country)
+      const res = await fetchCachedRooms(country, live)
       // `fetchedAt` feeds the mount-time freshness check (home-room-feed/15).
-      return { country, res, fetchedAt: Date.now() }
+      return { country, liveOnly: live, res, fetchedAt: Date.now() }
     } catch (err) {
       // home-room-feed/12: a page-1 429 blocks the grid's page 2+ fetcher too —
       // both read the same store timestamp.
@@ -134,8 +145,14 @@ watch(
 
 /** Country the rooms currently on screen were fetched for; `null` until a payload exists. */
 const loadedCountry = computed(() => roomsPayload.value?.country ?? null)
-const isCountrySettling = computed(() =>
-  isHomeCountrySettling(selectedCountry.value, loadedCountry.value, roomsStatus.value)
+/** Live flag the rooms on screen were fetched with; `null` until a payload exists. */
+const loadedLiveOnly = computed(() => (roomsPayload.value ? roomsPayload.value.liveOnly ?? false : null))
+const isFeedSettling = computed(() =>
+  isHomeFeedSettling(
+    { country: selectedCountry.value, liveOnly: liveOnly.value },
+    { country: loadedCountry.value, liveOnly: loadedLiveOnly.value },
+    roomsStatus.value,
+  )
 )
 
 const carouselRooms = computed(() => roomsPayload.value?.res.data?.slice(0, HOME_CAROUSEL_ROOM_COUNT) || [])
@@ -352,13 +369,16 @@ onMounted(() => {
       <EventsBanners />
     </div>
 
-    <!-- Country Filter -->
-    <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="my-3" />
+    <!-- Country Filter + Live chip -->
+    <div class="flex items-start my-3">
+      <HomeCountryFilter v-model="selectedCountry" :active-countries="activeCountries" class="min-w-0 flex-1" />
+      <HomeLiveOnlyToggle v-model="liveOnly" class="mr-3" />
+    </div>
 
     <!-- Room Section: skeleton on a cold load, and while a freshly-tapped
          country is still resolving — a background refresh of the *same* country
          keeps the already-painted rooms on screen rather than flashing placeholders -->
-    <template v-if="(roomsStatus === 'pending' && !roomsPayload) || isCountrySettling">
+    <template v-if="(roomsStatus === 'pending' && !roomsPayload) || isFeedSettling">
       <div class="flex gap-3 overflow-hidden mb-6 px-3">
         <div v-for="i in 3" :key="i" class="shrink-0 w-2/3 h-72 rounded-2xl bg-white/5 animate-pulse" />
       </div>
@@ -411,13 +431,13 @@ onMounted(() => {
       </div>
 
       <div class="mx-3">
-        <!-- Keyed by the country the data was *loaded* for, never the one just
+        <!-- Keyed by the filter the data was *loaded* for, never the one just
              tapped: remounting on selection would re-seed page 1 from the old
              payload. Still needed alongside the skeleton gate above — revisiting
-             an already-fetched country settles synchronously, so this is the only
+             an already-fetched filter settles synchronously, so this is the only
              thing that re-seeds the grid on that path. -->
         <InfiniteScroll
-          :key="loadedCountry || '__all__'"
+          :key="`${loadedCountry || '__all__'}${loadedLiveOnly ? '-live' : ''}`"
           :fetcher="infiniteScrollFetcher"
           :initial-page="1"
           :per-page="HOME_ROOMS_PER_PAGE"

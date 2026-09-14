@@ -39,14 +39,18 @@ export function useHomeRoomsData() {
    * Fetches page 1 of the room list from the cached BFF route.
    *
    * @param country - ISO-2 country filter; empty string means "all countries".
-   * @returns The room-list response for that country.
+   * @param liveOnly - Only rooms that are live with ≥1 participant.
+   * @returns The room-list response for that filter.
    */
-  async function fetchCachedRooms(country: string): Promise<RoomsResponse> {
+  async function fetchCachedRooms(country: string, liveOnly = false): Promise<RoomsResponse> {
     // home-room-feed/10: `per_page` sent explicitly so the page size on the wire
     // is the frontend's constant, not a guess at the backend default.
     const params: Record<string, string | number> = { page: 1, per_page: HOME_ROOMS_PER_PAGE }
     if (country) {
       params.country = country
+    }
+    if (liveOnly) {
+      params.live_only = 1
     }
 
     // home-room-feed/12: this bare `$fetch` is a call site `useApi`'s `retry: 0`

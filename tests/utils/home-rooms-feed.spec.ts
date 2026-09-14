@@ -4,6 +4,7 @@ import {
   RoomsRateLimitedError,
   createHomeRoomsListFetcher,
   isHomeCountrySettling,
+  isHomeFeedSettling,
   shouldRefreshRoomsOnMount,
   shouldResetStaleCountry,
   shouldReuseCachedRooms,
@@ -488,5 +489,52 @@ describe('shouldRefreshRoomsOnMount (home-room-feed/15)', () => {
   it('a clock that went backwards reads as fresh, not stale', () => {
     // Negative age < maxAge → skip; never fire an extra request off a clock skew.
     expect(shouldRefreshRoomsOnMount(payloadAt(NOW + 5_000), NOW, 15_000)).toBe(false)
+  })
+})
+
+describe('createHomeRoomsListFetcher — live_only', () => {
+  it('sends live_only=1 on page 2+ when the payload was fetched live-only', async () => {
+    const fetchRooms = vi.fn().mockResolvedValue(response(rooms('US', 3, 900)))
+    const fetcher = createHomeRoomsListFetcher({
+      payload: () => ({ ...US_PAYLOAD, liveOnly: true }),
+      fetchRooms,
+    })
+
+    await fetcher({ page: 2 })
+
+    expect(fetchRooms).toHaveBeenCalledWith(expect.objectContaining({ page: 2, country: 'US', live_only: 1 }))
+  })
+
+  it('omits live_only entirely when the payload is unfiltered', async () => {
+    const fetchRooms = vi.fn().mockResolvedValue(response(rooms('US', 3, 900)))
+    const fetcher = createHomeRoomsListFetcher({ payload: () => US_PAYLOAD, fetchRooms })
+
+    await fetcher({ page: 2 })
+
+    expect(fetchRooms.mock.calls[0]?.[0]).not.toHaveProperty('live_only')
+  })
+})
+
+describe('isHomeFeedSettling', () => {
+  const loadedAll = { country: '', liveOnly: false }
+
+  it('settles when country and live flag both match the loaded payload', () => {
+    expect(isHomeFeedSettling({ country: '', liveOnly: false }, loadedAll, 'success')).toBe(false)
+  })
+
+  it('is settling while a just-toggled live flag differs from the loaded one', () => {
+    expect(isHomeFeedSettling({ country: '', liveOnly: true }, loadedAll, 'pending')).toBe(true)
+  })
+
+  it('treats a pre-flag cached payload (liveOnly undefined) as unfiltered', () => {
+    expect(isHomeFeedSettling({ country: '', liveOnly: false }, { country: '', liveOnly: null }, 'success')).toBe(false)
+  })
+
+  it('still defers to the country check', () => {
+    expect(isHomeFeedSettling({ country: 'US', liveOnly: false }, loadedAll, 'pending')).toBe(true)
+  })
+
+  it('never shows the skeleton over an error', () => {
+    expect(isHomeFeedSettling({ country: '', liveOnly: true }, loadedAll, 'error')).toBe(false)
   })
 })

@@ -33,6 +33,11 @@ export class RoomsRateLimitedError extends Error {
  */
 export interface HomeRoomsPayload {
   country: string
+  /**
+   * Whether this payload was fetched with the "Live" chip on (`live_only=1`).
+   * Optional so a payload cached before the flag existed reads as `false`.
+   */
+  liveOnly?: boolean
   res: RoomsResponse
   /**
    * Epoch ms when this payload resolved (home-room-feed/15). Optional so an
@@ -121,11 +126,14 @@ export function createHomeRoomsListFetcher(
 
     // home-room-feed/10: page size is sent explicitly so the offset arithmetic
     // is anchored to the frontend's constant, same as page 1's request.
-    const params: { page: number; country?: string; per_page: number } = {
+    const params: { page: number; country?: string; per_page: number; live_only?: 1 } = {
       page,
       per_page: HOME_ROOMS_PER_PAGE,
     }
     if (payload?.country) params.country = payload.country
+    // Same rule as `country`: read off the payload on screen, never the chip,
+    // so page 2 can never mix live-only rows into an unfiltered grid.
+    if (payload?.liveOnly) params.live_only = 1
 
     // Page 2+ carries the identical nested shape, so it needs the same
     // normalization — normalizing page 1 alone makes the grid load page 2 and
@@ -189,6 +197,21 @@ export function isHomeCountrySettling(
 ): boolean {
   if (status === 'error') return false
   return loadedCountry !== selectedCountry
+}
+
+/**
+ * `isHomeCountrySettling` extended to the "Live" chip: the skeleton also shows
+ * while a just-toggled `liveOnly` differs from the flag the on-screen payload
+ * was fetched with. `loadedLiveOnly` is `null` until a payload exists.
+ */
+export function isHomeFeedSettling(
+  selected: { country: string; liveOnly: boolean },
+  loaded: { country: string | null; liveOnly: boolean | null },
+  status: 'idle' | 'pending' | 'success' | 'error'
+): boolean {
+  if (status === 'error') return false
+  if (isHomeCountrySettling(selected.country, loaded.country, status)) return true
+  return (loaded.liveOnly ?? false) !== selected.liveOnly
 }
 
 /**

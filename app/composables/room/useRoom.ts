@@ -96,10 +96,10 @@ export function useRoom() {
 
     /**
      * Fetch a paginated list of rooms.
-     * @param params - Query parameters (page, country, per_page).
+     * @param params - Query parameters (page, country, per_page, live_only).
      * @returns The API response containing rooms and metadata.
      */
-    async function fetchRooms(params: { page?: number; country?: string; per_page?: number } = {}): Promise<RoomsResponse> {
+    async function fetchRooms(params: { page?: number; country?: string; per_page?: number; live_only?: 1 } = {}): Promise<RoomsResponse> {
         return await api<RoomsResponse>('/rooms', {
             params,
         });
