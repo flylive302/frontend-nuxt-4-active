@@ -9,6 +9,7 @@
 import type { Ref } from 'vue'
 import type { VapPlayer, VapPlugin } from '~/types/asset/vap'
 import { createLogger } from '~/utils/logger'
+import * as motionPauseRegistry from '~/services/motionPauseRegistry'
 
 const log = createLogger('[VapPlayer]')
 
@@ -25,6 +26,11 @@ export interface UseVapPlayerOptions {
   onComplete?: () => void
   /** Called on each rendered frame — playback heartbeat */
   onProcess?: () => void
+  /**
+   * Participate in the global motion-pause registry (app backgrounded /
+   * page hidden / room covered). Default: true. Mirrors useSvgaPlayer.
+   */
+  motionPause?: boolean
 }
 
 export function useVapPlayer(
@@ -111,6 +117,12 @@ export function useVapPlayer(
 
       if (options.autoplay?.value !== false) {
         player.value.start()
+        // A player loaded while the app is already paused must not animate —
+        // the registry's pause() fired before this player existed.
+        if (participatesInMotionPause && motionPauseRegistry.isPaused()) {
+          player.value.pause()
+          pausedByRegistry = true
+        }
       }
     }
     catch (error) {
@@ -147,6 +159,28 @@ export function useVapPlayer(
     isPlaying.value = false
   }
 
+  // Same contract as useSvgaPlayer: resume() only touches a player THIS
+  // registrant paused — one that finished or was stopped while backgrounded
+  // must not be restarted.
+  let pausedByRegistry = false
+  const participatesInMotionPause = options.motionPause !== false
+  const registryId = participatesInMotionPause
+    ? motionPauseRegistry.register({
+        pause: () => {
+          if (player.value && isPlaying.value) {
+            player.value.pause()
+            pausedByRegistry = true
+          }
+        },
+        resume: () => {
+          if (player.value && pausedByRegistry) {
+            player.value.resume()
+          }
+          pausedByRegistry = false
+        },
+      })
+    : null
+
   // Watch for option changes and reload
   watch(
     [options.name, options.loop ?? ref(), options.autoplay ?? ref()],
@@ -159,6 +193,7 @@ export function useVapPlayer(
   // Cleanup on unmount
   onBeforeUnmount(() => {
     isDestroyed = true
+    if (registryId !== null) motionPauseRegistry.unregister(registryId)
     player.value?.destroy()
     player.value = null
   })

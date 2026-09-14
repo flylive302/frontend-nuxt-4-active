@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { vipNameColor } from '~/constants/vip'
+
 const props = withDefaults(defineProps<{
   name: string
   delay?: string
@@ -27,12 +29,31 @@ function checkOverflow() {
   isOverflowing.value = trackRef.value.scrollWidth > containerRef.value.clientWidth
 }
 
+let ro: ResizeObserver | null = null
+let rafHandle: number | null = null
+
+function scheduleCheck() {
+  if (rafHandle !== null) cancelAnimationFrame(rafHandle)
+  rafHandle = requestAnimationFrame(() => {
+    rafHandle = null
+    checkOverflow()
+  })
+}
+
 onMounted(() => {
-  const ro = new ResizeObserver(useDebounceFn(checkOverflow, 80))
+  ro = new ResizeObserver(useDebounceFn(checkOverflow, 80))
   if (containerRef.value) ro.observe(containerRef.value)
   if (trackRef.value) ro.observe(trackRef.value)
-  nextTick(() => requestAnimationFrame(checkOverflow))
-  onUnmounted(() => ro.disconnect())
+  nextTick(scheduleCheck)
+})
+
+// Registered at setup scope (not inside onMounted) so an `async` mounted
+// callback can never silently drop the cleanup.
+onUnmounted(() => {
+  ro?.disconnect()
+  ro = null
+  if (rafHandle !== null) cancelAnimationFrame(rafHandle)
+  rafHandle = null
 })
 
 watch(() => props.name, async () => {
@@ -41,21 +62,12 @@ watch(() => props.name, async () => {
   // and isOverflowing stays true indefinitely.
   isOverflowing.value = false
   await nextTick()
-  requestAnimationFrame(checkOverflow)
+  scheduleCheck()
 })
 
-let colorFullName = '';
-
-if (props.vip && props.vip == 3) { colorFullName = '#6b3293'; }
-if (props.vip && props.vip == 4) { colorFullName = '#ef9d2a'; }
-if (props.vip && props.vip == 5) { colorFullName = '#2d1757'; }
-if (props.vip && props.vip == 6) { colorFullName = '#bd731f'; }
-if (props.vip && props.vip == 7) { colorFullName = '#00bc6f'; }
-if (props.vip && props.vip == 8) { colorFullName = '#098dd9'; }
-if (props.vip && props.vip == 9) { colorFullName = '#cd0e8c'; }
-if (props.vip && props.vip == 10) { colorFullName = '#7e1e07'; }
-if (props.vip && props.vip == 11) { colorFullName = '#43d08a'; }
-if (props.vip && props.vip == 12) { colorFullName = '#468a25'; }
+// Computed, not a setup-time snapshot: the parent's `vip` prop changes live
+// (vip.updated socket → authStore.patchVip, or the profile page's syncUser()).
+const colorFullName = computed(() => vipNameColor(props.vip))
 </script>
 
 <template>

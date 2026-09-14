@@ -43,8 +43,12 @@ const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_
 
 onMounted(() => {
   fetchUserAgency()
-  fetchReceivedInvitations()
-  fetchMyJoinRequests()
+  // `reset = true`: these lists are cursor-paginated and the composables
+  // early-return once `hasMore` is false, so without a reset the counts below
+  // would load exactly once per app session. The socket handlers for
+  // `agency.invitation` / `agency.join_request_*` are toast-only.
+  fetchReceivedInvitations(true)
+  fetchMyJoinRequests(true)
   // profile_visits has no realtime event and is only server-known (incremented
   // when others view us). Re-sync the auth user so the stats reflect visits that
   // landed since bootstrap. Fire-and-forget: the stale value renders instantly
@@ -58,7 +62,9 @@ const dataCardAsset = computed(() =>
 
 const isVap = computed(() => dataCardAsset.value?.endsWith('.mp4') ?? false)
 
-const vip = authStore.user?.vip_level;
+// Computed, not a snapshot: `patchVip` (vip.updated socket) and the mount-time
+// `syncUser()` both change `vip_level` after first render.
+const vip = computed(() => authStore.user?.vip_level)
 
 // Header cover — CDN-transformed (w-800) so the `h-48` box stops fetching the
 // full-resolution original; `withImageKitTransform` returns '' for a nullish
@@ -74,7 +80,7 @@ const coverImageSrc = computed(() =>
 // common/minimal-user-list.vue request `badge.png` unconditionally and are
 // therefore broken for vip 1–2; out of scope to fix here.)
 const vipBadgeSrc = computed(() =>
-  vip ? withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${vip}/badge.${vip > 2 ? 'png' : 'webp'}`, { w: 256 }) : ''
+  vip.value ? withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${vip.value}/badge.${vip.value > 2 ? 'png' : 'webp'}`, { w: 256 }) : ''
 )
 
 // ========================================
@@ -234,7 +240,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/invitations" icon="i-lucide-mail" txt="Agency Invitations" :badge="agencyStore.receivedInvitations.items.length || undefined" />
 
       <!-- My Join Requests (visible if not agency member) -->
-      <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/my-requests" icon="i-lucide-user-plus" txt="My Join Requests" :badge="agencyStore.myJoinRequests.items.filter(r => r.status === 'pending').length || undefined" />
+      <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/my-requests" icon="i-lucide-user-plus" txt="My Join Requests" :badge="agencyStore.pendingJoinRequestCount || undefined" />
 
       <!-- Create Agency (visible if not in agency) -->
       <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/create" icon="i-lucide-plus-circle" txt="Create Agency" />

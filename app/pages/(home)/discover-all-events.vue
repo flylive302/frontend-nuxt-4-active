@@ -9,6 +9,9 @@ definePageMeta({
 
 const { banners } = useEventBanners()
 
+/** Rows that fit a phone viewport on first paint; the rest load as they scroll in. */
+const EAGER_BANNER_COUNT = 3
+
 // Room-targeted banners cannot be opened by a plain link — see useBannerActions.
 const { enterRoom, showPasswordPrompt, pendingRoom, onPasswordSuccess } = useRoomEntry()
 const { openBanner, opening } = useBannerActions(enterRoom)
@@ -22,7 +25,7 @@ const { openBanner, opening } = useBannerActions(enterRoom)
       <!-- `custom` is load-bearing — see useBannerActions: without it RouterLink
            navigates before a room destination can be intercepted. -->
       <NuxtLink
-          v-for="item in banners"
+          v-for="(item, index) in banners"
           :key="item.id"
           v-slot="{ href, navigate }"
           :to="item.navigateTo"
@@ -40,6 +43,8 @@ const { openBanner, opening } = useBannerActions(enterRoom)
               aria-hidden="true"
               width="360"
               height="120"
+              :loading="index < EAGER_BANNER_COUNT ? 'eager' : 'lazy'"
+              decoding="async"
               class="h-full w-full rounded-lg"
               :class="opening && 'opacity-60'"
           >

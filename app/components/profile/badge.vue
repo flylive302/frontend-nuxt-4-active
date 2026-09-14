@@ -14,14 +14,20 @@ const source = computed(() => String(props.txt))
 const { copy } = useClipboard({ source })
 
 const showCopied = ref(false)
+let hideTimer: ReturnType<typeof setTimeout> | null = null
 
 async function onCopy() {
   await copy()
   showCopied.value = false
   await nextTick()
   showCopied.value = true
-  setTimeout(() => { showCopied.value = false }, 800)
+  if (hideTimer !== null) clearTimeout(hideTimer)
+  hideTimer = setTimeout(() => { showCopied.value = false; hideTimer = null }, 800)
 }
+
+onBeforeUnmount(() => {
+  if (hideTimer !== null) clearTimeout(hideTimer)
+})
 </script>
 
 <template>

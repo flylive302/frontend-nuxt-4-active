@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Colors } from '~/types/colors'
-
-// SectionTitle only supports accent colors (primary, secondary, tertiary)
-type SectionTitleType = Extract<Colors, 'primary' | 'secondary' | 'tertiary'>
+import { ACCENT_GRADIENT_CLASS, type AccentColor } from '~/utils/color-classes'
 
 const props = withDefaults(defineProps<{
-  type?: SectionTitleType
+  type?: AccentColor
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'   // heading tag
   height?: number                                 // bar height (px)
   strokeWidth?: number                            // bar thickness (px)
@@ -17,18 +14,10 @@ const props = withDefaults(defineProps<{
   strokeWidth: 5,
 })
 
-// Map variant → gradient classes (from-* and to-* with opacity)
-const gradientClasses = computed(() => {
-  const base = {
-    primary: 'from-primary',
-    secondary: 'from-secondary',
-    tertiary: 'from-tertiary',
-  }[props.type] ?? 'from-primary'
-  
-  // Add to-* class with 10% opacity to match original SVG gradient
-  const toClass = base.replace('from-', 'to-') + '/10'
-  return `${base} ${toClass}`
-})
+// Literal lookup — Tailwind v4 never generates a class built at runtime
+// (see gotchas/frontend.md); the map lives in utils/color-classes.ts so the
+// unit test can guard it.
+const gradientClasses = computed(() => ACCENT_GRADIENT_CLASS[props.type] ?? ACCENT_GRADIENT_CLASS.primary)
 </script>
 
 <template>

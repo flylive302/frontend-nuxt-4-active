@@ -41,3 +41,17 @@ export const COLOR_BG_10_CLASS: Record<Colors, string> = {
   warning: 'bg-warning/10',
   error: 'bg-error/10',
 }
+
+/** Accent colours that carry a gradient bar (`SectionTitle`). */
+export type AccentColor = Extract<Colors, 'primary' | 'secondary' | 'tertiary'>
+
+/**
+ * `from-X` + `to-X/10` pair for `SectionTitle`'s accent bar. Was built by
+ * `replace('from-', 'to-') + '/10'` until 2026-09-15 — `to-primary/10` and
+ * `to-secondary/10` were never in the production CSS.
+ */
+export const ACCENT_GRADIENT_CLASS: Record<AccentColor, string> = {
+  primary: 'from-primary to-primary/10',
+  secondary: 'from-secondary to-secondary/10',
+  tertiary: 'from-tertiary to-tertiary/10',
+}

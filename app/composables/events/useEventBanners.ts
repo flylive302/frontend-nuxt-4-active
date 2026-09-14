@@ -53,14 +53,15 @@ export function useEventBanners() {
     if (shouldRefreshBannersOnMount(data.value ?? null, Date.now())) void refresh()
   })
 
+  // REACT — one warn per failure transition, outside the computed so reading
+  // `banners` never has a side effect.
+  watch(error, (err) => {
+    if (err) log.warn('Failed to load event banners', err)
+  })
+
   const banners = computed<Banner[]>(() => {
     const items = data.value?.res.data
-    if (!items || items.length === 0) {
-      if (error.value) {
-        log.warn('Failed to load event banners', error.value)
-      }
-      return []
-    }
+    if (!items || items.length === 0) return []
 
     return items.map((item) => ({
       id: item.id,

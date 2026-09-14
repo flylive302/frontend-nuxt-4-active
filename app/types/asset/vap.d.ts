@@ -62,6 +62,12 @@ export interface VapPlayer {
   /** Restart the animation from the beginning */
   restart(): void
 
+  /** Pause in place (no reset, no onStop) — used by the motion-pause registry */
+  pause(): void
+
+  /** Continue from where pause() left off */
+  resume(): void
+
   /** Destroy the player, release WebGL context and video element */
   destroy(): void
 

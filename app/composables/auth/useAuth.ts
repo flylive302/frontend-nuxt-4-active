@@ -197,6 +197,12 @@ export function useAuthActions() {
       // reappears on the next login (stale "tap to rejoin"). Setting currentRoom
       // null also drives the lifecycle watcher's audio teardown.
       useRoomSession().leaveRoom()
+      // Neither store is keyed by user, so without this the next account on
+      // the same device sees the previous user's agency rows / equipped
+      // badges until its own fetches land — and the agency lists never
+      // re-fetch at all once `hasMore` is false (profile-page-audit step 1).
+      useAgencyStore().$reset()
+      useBadgesStore().reset()
       authStore.logout()
       // REACT
       await navigateTo('/log-in')

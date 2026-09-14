@@ -156,6 +156,10 @@ export const useAgencyStore = defineStore('agency', () => {
   const canLeaveAgency = computed(() => 
     isAgencyMember.value && !userAgency.value.isOwner
   )
+  /** Count of the viewer's own join requests still awaiting a decision (nav badge). */
+  const pendingJoinRequestCount = computed(() =>
+    myJoinRequests.value.items.filter(r => r.status === 'pending').length
+  )
 
   // ========================================
   // Reset
@@ -250,6 +254,7 @@ export const useAgencyStore = defineStore('agency', () => {
     isAgencyAdmin,
     canManageMembers,
     canLeaveAgency,
+    pendingJoinRequestCount,
 
     // Reset
     $reset,

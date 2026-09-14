@@ -492,6 +492,23 @@ export default defineNuxtPlugin({ name: 'vap-player', parallel: true, setup() {
         })
       },
 
+      // Motion-pause (profile-page-audit step 5): halt decode + upload without
+      // resetting position or firing onStop, so resume() continues in place.
+      pause() {
+        if (destroyed) return
+        cancelRender()
+        video.pause()
+      },
+
+      resume() {
+        if (destroyed) return
+        video.play().then(() => {
+          scheduleFrame()
+        }).catch((err) => {
+          log.warn('Resume blocked', err)
+        })
+      },
+
       destroy() {
         if (destroyed) return
         destroyed = true

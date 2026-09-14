@@ -43,12 +43,19 @@ function checkOverflow() {
   isOverflowing.value = trackRef.value.scrollWidth > containerRef.value.clientWidth
 }
 
+let ro: ResizeObserver | null = null
+
 onMounted(() => {
-  const ro = new ResizeObserver(checkOverflow)
+  ro = new ResizeObserver(checkOverflow)
   if (containerRef.value) ro.observe(containerRef.value)
   if (trackRef.value) ro.observe(trackRef.value)
   checkOverflow()
-  onUnmounted(() => ro.disconnect())
+})
+
+// Setup-scope cleanup — see marquee-name.vue for why it is not inside onMounted.
+onUnmounted(() => {
+  ro?.disconnect()
+  ro = null
 })
 
 watch(sorted, async () => {
