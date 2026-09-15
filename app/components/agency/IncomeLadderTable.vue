@@ -68,7 +68,7 @@ function rowColor(rung: LadderTier): 'success' | 'tertiary' | 'neutral' {
 
       <p class="text-xs text-muted mt-1 text-right">
         <UIcon name="i-lucide-zap" class="size-3 inline-block" />
-        {{ formatCurrency(rung.required_xp) }} XP
+        {{ formatCurrency(rung.required_xp) }} Gift coins
       </p>
     </div>
   </div>

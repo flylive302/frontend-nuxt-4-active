@@ -105,7 +105,7 @@ function onUpdateOpen(value: boolean): void {
             </UBadge>
           </div>
           <p class="text-xs text-muted">
-            T{{ shownSheet.run.current_tier }} · {{ formatXp(shownSheet.run.accumulated_xp) }} XP
+            T{{ shownSheet.run.current_tier }} · {{ formatXp(shownSheet.run.accumulated_xp) }} Gift coins
           </p>
 
           <AgencyIncomeHero :totals="shownSheet.totals" />

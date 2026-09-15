@@ -80,7 +80,7 @@ function onTap(): void {
 
     <p class="text-xs text-muted">
       <template v-if="member.run_id === null">No run</template>
-      <template v-else>T{{ member.current_tier }} · {{ formatXp(member.accumulated_xp) }} XP</template>
+      <template v-else>T{{ member.current_tier }} · {{ formatXp(member.accumulated_xp) }} Gift coins</template>
     </p>
   </component>
 </template>

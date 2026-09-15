@@ -89,7 +89,7 @@ const progressColor = computed(() => {
       <!-- Stats Row -->
       <div class="grid grid-cols-2 gap-3 text-center">
         <div class="bg-tertiary/10 rounded-md p-2 inset-shadow-sm">
-          <p class="text-xs text-muted">{{ isMaxed ? 'Status' : 'XP to Next Tier' }}</p>
+          <p class="text-xs text-muted">{{ isMaxed ? 'Status' : 'Gift coins to next tier' }}</p>
           <p class="text-lg font-bold text-tertiary">
             {{ isMaxed ? 'Maxed' : formatCurrency(xpToNextTier) }}
           </p>
@@ -114,8 +114,8 @@ const progressColor = computed(() => {
           :ui="{ status: 'text-white -mb-1' }"
         />
         <div class="flex justify-between text-sm text-white font-semibold">
-          <span><UIcon name="i-lucide-zap" /> {{ formatCurrency(run?.accumulated_xp ?? 0) }} XP</span>
-          <span v-if="nextTier"><UIcon name="i-lucide-flag" /> {{ formatCurrency(nextTier.required_xp) }} XP</span>
+          <span><UIcon name="i-lucide-zap" /> {{ formatCurrency(run?.accumulated_xp ?? 0) }} Gift coins</span>
+          <span v-if="nextTier"><UIcon name="i-lucide-flag" /> {{ formatCurrency(nextTier.required_xp) }} Gift coins</span>
         </div>
       </div>
     </template>

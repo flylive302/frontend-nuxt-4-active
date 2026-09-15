@@ -20,7 +20,7 @@ const SORT_OPTIONS: { label: string, value: OwnerIncomeMemberSort }[] = [
   { label: 'Earned', value: 'earned' },
   { label: 'Exchanged', value: 'exchanged' },
   { label: 'Deducted', value: 'deducted' },
-  { label: 'XP', value: 'xp' },
+  { label: 'Gift coins', value: 'xp' },
   { label: 'Name', value: 'name' },
 ]
 
