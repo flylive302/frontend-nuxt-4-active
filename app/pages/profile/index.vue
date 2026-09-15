@@ -33,6 +33,11 @@ const { fetchReceivedInvitations } = useAgencyInvitations()
 const { fetchMyJoinRequests } = useAgencyJoinRequests()
 const { resolvePropAsset } = usePropLookup()
 const { syncUser } = useUserSync()
+const incomeStore = useIncomeStore()
+const { checkPastRuns } = useIncomeActions()
+
+// Ex-members with past runs keep access to their income history.
+const showIncomeLink = computed(() => agencyStore.isAgencyMember || incomeStore.hasAnyRun)
 
 const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(authStore.user?.wealth_xp, 'wealth'))
 const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_xp, 'charm'))
@@ -42,7 +47,8 @@ const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_
 // ========================================
 
 onMounted(() => {
-  fetchUserAgency()
+  // Membership must be known before deciding whether to look for past runs.
+  void fetchUserAgency().then(() => checkPastRuns(agencyStore.isAgencyMember))
   // `reset = true`: these lists are cursor-paginated and the composables
   // early-return once `hasMore` is false, so without a reset the counts below
   // would load exactly once per app session. The socket handlers for
@@ -234,8 +240,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       <!-- My Agency (visible if member/owner) -->
       <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-agency" icon="i-lucide-home" txt="My Agency" />
 
-      <!-- My Income (visible if agency member) -->
-      <NavProfileItem v-if="agencyStore.isAgencyMember" to="/agency/my-income" icon="i-lucide-dollar-sign" txt="My Agency Income" />
+      <!-- My Income (visible if agency member, or ex-member with past runs) -->
+      <NavProfileItem v-if="showIncomeLink" to="/agency/my-income" icon="i-lucide-dollar-sign" txt="My Agency Income" />
 
       <!-- Agency Invitations (visible if not agency member) -->
       <NavProfileItem v-if="!agencyStore.isAgencyMember" to="/agency/invitations" icon="i-lucide-mail" txt="Agency Invitations" :badge="agencyStore.receivedInvitations.items.length || undefined" />

@@ -93,6 +93,20 @@ export function useIncomeActions() {
   }
 
   /**
+   * Profile's "My Agency Income" link: current members always see it; anyone
+   * else only when they have past runs (ex-members keep their history). Loads
+   * the overview so `store.hasAnyRun` can answer. Silent on failure — no toast,
+   * the link just stays hidden.
+   */
+  async function checkPastRuns(isAgencyMember: boolean): Promise<void> {
+    // GATE — members get the link anyway; skip the call.
+    if (isAgencyMember || store.isOverviewLoading) return
+
+    // EXECUTE
+    await fetchOverview()
+  }
+
+  /**
    * Realtime fallback: a socket update for a run the client hasn't loaded
    * (lazily opened) refetches the active run. When the income page's overview
    * is loaded and doesn't know that run yet, it is refreshed too so the
@@ -161,6 +175,7 @@ export function useIncomeActions() {
     fetchRunDetail,
     selectRun,
     loadIncomePage,
+    checkPastRuns,
     fetchActiveRun,
     claim,
   }

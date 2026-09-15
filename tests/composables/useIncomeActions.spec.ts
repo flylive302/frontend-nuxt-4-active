@@ -159,6 +159,50 @@ describe('useIncomeActions.loadIncomePage', () => {
   })
 })
 
+describe('useIncomeActions.checkPastRuns', () => {
+  it('makes no request for a current agency member', async () => {
+    routeApi(overview(7, [7]))
+    const { store, actions } = await setup()
+
+    await actions.checkPastRuns(true)
+
+    expect(apiMock).not.toHaveBeenCalled()
+    expect(store.overview).toBeNull()
+  })
+
+  it('loads the overview for a non-member so an ex-member with runs gets the link', async () => {
+    routeApi(overview(null, [5]))
+    const { store, actions } = await setup()
+
+    await actions.checkPastRuns(false)
+
+    expect(callsTo('/user/income/overview')).toBe(1)
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(store.hasAnyRun).toBe(true)
+  })
+
+  it('reports no runs for a user who was never in an agency', async () => {
+    routeApi(overview(null, []))
+    const { store, actions } = await setup()
+
+    await actions.checkPastRuns(false)
+
+    expect(store.hasAnyRun).toBe(false)
+  })
+
+  it('fails silently — no toast, link stays hidden', async () => {
+    routeApi(overview(null, [5]))
+    const { store, actions } = await setup()
+    apiMock.mockRejectedValueOnce(new Error('boom'))
+
+    await expect(actions.checkPastRuns(false)).resolves.toBeUndefined()
+
+    expect(store.hasAnyRun).toBe(false)
+    expect(store.isOverviewLoading).toBe(false)
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+})
+
 describe('useIncomeActions.selectRun', () => {
   it('re-selects a previously viewed run without a request', async () => {
     routeApi(overview(null, [5, 3]))
