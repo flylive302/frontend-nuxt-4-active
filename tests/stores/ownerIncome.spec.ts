@@ -5,7 +5,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed } from 'vue'
-import type { OwnerIncomeCycle, OwnerIncomeCycleSummary } from '../../app/types/income/ownerIncome'
+import type {
+  OwnerIncomeCycle,
+  OwnerIncomeCycleSummary,
+  OwnerIncomeMemberRow,
+} from '../../app/types/income/ownerIncome'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -95,5 +99,107 @@ describe('useOwnerIncomeStore', () => {
     expect(store.selectedSummary).toBeNull()
     expect(store.summaries).toEqual({})
     expect(store.overviewError).toBeNull()
+  })
+})
+
+describe('useOwnerIncomeStore members lists', () => {
+  function row(userId: number): OwnerIncomeMemberRow {
+    return {
+      user_id: userId,
+      name: `Member ${userId}`,
+      avatar_url: null,
+      signature: null,
+      left: false,
+      run_id: null,
+      current_tier: 0,
+      accumulated_xp: 0,
+      earned: 0,
+      exchanged: 0,
+      deducted: 0,
+      income: 0,
+    }
+  }
+
+  const QUERY = { sort: 'income', direction: 'desc', search: '' } as const
+
+  it('keeps one list per cycle and exposes the selected one', async () => {
+    const store = await makeStore()
+
+    store.setMemberListQuery(4, QUERY)
+    store.setMemberListQuery(2, { ...QUERY, sort: 'name' })
+    store.setSelectedCycle(2)
+
+    expect(store.selectedMemberList?.sort).toBe('name')
+    expect(store.memberList(4)?.sort).toBe('income')
+    expect(store.memberList(9)).toBeNull()
+  })
+
+  it('page 1 replaces rows, later pages append without repeating a member', async () => {
+    const store = await makeStore()
+    store.setMemberListQuery(4, QUERY)
+
+    store.setMemberListPage(4, 1, [row(1), row(2)], true)
+    store.setMemberListPage(4, 2, [row(2), row(3)], false)
+    expect(store.memberList(4)?.rows.map((r) => r.user_id)).toEqual([1, 2, 3])
+    expect(store.memberList(4)?.page).toBe(2)
+    expect(store.memberList(4)?.hasMore).toBe(false)
+
+    store.setMemberListPage(4, 1, [row(7)], false)
+    expect(store.memberList(4)?.rows.map((r) => r.user_id)).toEqual([7])
+  })
+
+  it('a new query restarts the list at nothing loaded', async () => {
+    const store = await makeStore()
+    store.setMemberListQuery(4, QUERY)
+    store.setMemberListRequest(4, 5, 2)
+    store.setMemberListPage(4, 2, [row(1)], true)
+    store.setMemberListError(4, 'boom')
+
+    store.setMemberListQuery(4, { ...QUERY, search: 'ali' })
+
+    expect(store.memberList(4)).toEqual({
+      ...QUERY,
+      search: 'ali',
+      rows: [],
+      page: 0,
+      hasMore: false,
+      loadingPage: null,
+      error: null,
+      requestId: 0,
+    })
+  })
+
+  it('tracks the request in flight and clears it on page or error', async () => {
+    const store = await makeStore()
+    store.setMemberListQuery(4, QUERY)
+
+    store.setMemberListRequest(4, 3, 1)
+    expect(store.memberList(4)?.loadingPage).toBe(1)
+    expect(store.memberList(4)?.requestId).toBe(3)
+
+    store.setMemberListError(4, 'boom')
+    expect(store.memberList(4)?.loadingPage).toBeNull()
+    expect(store.memberList(4)?.error).toBe('boom')
+
+    store.setMemberListRequest(4, 4, 1)
+    expect(store.memberList(4)?.error).toBeNull()
+    store.setMemberListPage(4, 1, [row(1)], false)
+    expect(store.memberList(4)?.loadingPage).toBeNull()
+  })
+
+  it('setters on a cycle with no list do nothing, and reset clears every list', async () => {
+    const store = await makeStore()
+
+    store.setMemberListRequest(9, 1, 1)
+    store.setMemberListPage(9, 1, [row(1)], false)
+    store.setMemberListError(9, 'boom')
+    expect(store.memberList(9)).toBeNull()
+
+    store.setMemberListQuery(4, QUERY)
+    store.setSelectedCycle(4)
+    store.reset()
+
+    expect(store.memberLists).toEqual({})
+    expect(store.selectedMemberList).toBeNull()
   })
 })

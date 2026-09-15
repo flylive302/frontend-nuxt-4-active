@@ -112,6 +112,8 @@ onMounted(async () => {
           @update:model-value="onSelectRun"
         />
 
+        <AgencyIncomeInProgressNote v-if="incomeStore.isSelectedRunActive" />
+
         <!-- Selected run -->
         <AgencyIncomeRunViewSkeleton v-if="incomeStore.isSelectedRunLoading" />
 

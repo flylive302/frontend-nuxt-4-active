@@ -57,3 +57,60 @@ export interface OwnerIncomeCycleSummary {
   members: OwnerIncomeMembersTotals
   owner?: OwnerIncomeOwnerTotals
 }
+
+// ========================================
+// Members list — `GET user/agency/income/cycles/{number}/members`
+// ========================================
+
+/** Server-side sort keys (validated by the API; anything else is a 422). */
+export type OwnerIncomeMemberSort = 'income' | 'earned' | 'exchanged' | 'deducted' | 'xp' | 'name'
+
+export type OwnerIncomeSortDirection = 'asc' | 'desc'
+
+/**
+ * One roster row for the cycle (owner never a row). `left` = had a run here in
+ * the cycle but is not an active member now. A current member with no run in
+ * the cycle has `run_id: null`, `current_tier: 0` and zero figures.
+ * `income = earned − exchanged − deducted`.
+ */
+export interface OwnerIncomeMemberRow extends IncomeTotals {
+  user_id: number
+  name: string
+  avatar_url: string | null
+  signature: string | null
+  left: boolean
+  run_id: number | null
+  current_tier: number
+  accumulated_xp: number
+}
+
+/** Page-number pagination, 30 per page; no total (a COUNT would re-run every aggregate). */
+export interface OwnerIncomeMembersMeta {
+  page: number
+  per_page: number
+  has_more: boolean
+}
+
+export interface OwnerIncomeMembersPage {
+  members: OwnerIncomeMemberRow[]
+  meta: OwnerIncomeMembersMeta
+}
+
+/**
+ * Client-side list state for one cycle. `page` = last loaded page (0 = none);
+ * `sort` / `direction` / `search` are the APPLIED query (search is committed
+ * after the debounce). `loadingPage` = the page in flight, null when idle.
+ * `requestId` = the latest request issued for this list; a response carrying
+ * any other id is stale (superseded by a new query or a reset) and is dropped.
+ */
+export interface OwnerIncomeMemberList {
+  rows: OwnerIncomeMemberRow[]
+  page: number
+  hasMore: boolean
+  sort: OwnerIncomeMemberSort
+  direction: OwnerIncomeSortDirection
+  search: string
+  loadingPage: number | null
+  error: string | null
+  requestId: number
+}

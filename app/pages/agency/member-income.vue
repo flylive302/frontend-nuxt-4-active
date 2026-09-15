@@ -2,12 +2,15 @@
 // ========================================
 // Member Income — cycle-centric owner/admin page
 // ========================================
-// Route binding + load only. One overview call on mount, one summary call per
-// cycle switch (cached for the visit). Access: owner or admin of the current
-// managed agency; everyone else sees "Access Denied". The Owner hero renders
-// only when the server sends the `owner` block (owner only, never admins).
+// Route binding + load only. One overview call on mount; per cycle switch one
+// summary call (cached for the visit) plus the members list page 1 (sort,
+// search and paging run on the server via the actions composable). Access:
+// owner or admin of the current managed agency; everyone else sees "Access
+// Denied". The Owner hero renders only when the server sends the `owner` block
+// (owner only, never admins).
 
-import { onMounted, computed, ref } from 'vue'
+import { onBeforeUnmount, onMounted, computed, ref } from 'vue'
+import type { OwnerIncomeMemberSort, OwnerIncomeSortDirection } from '~/types/income/ownerIncome'
 
 definePageMeta({
   layout: 'alt',
@@ -16,13 +19,23 @@ definePageMeta({
 
 const agencyStore = useAgencyStore()
 const ownerIncomeStore = useOwnerIncomeStore()
-const { loadOwnerIncomePage, selectCycle } = useOwnerIncomeActions()
+const {
+  loadOwnerIncomePage,
+  selectCycle,
+  loadMoreMembers,
+  retryMembers,
+  setMembersSort,
+  setMembersDirection,
+  setMembersSearch,
+  cancelPendingSearch,
+} = useOwnerIncomeActions()
 const { fetchUserAgency } = useAgencyMembership()
 
 const isAgencyResolved = ref(false)
 const isOwnerOrAdmin = computed(() => agencyStore.isAgencyOwner || agencyStore.isAgencyAdmin)
 const overview = computed(() => ownerIncomeStore.overview)
 const summary = computed(() => ownerIncomeStore.selectedSummary)
+const memberList = computed(() => ownerIncomeStore.selectedMemberList)
 
 const isFirstLoad = computed(
   () =>
@@ -41,6 +54,24 @@ function onRetryCycle(): void {
 function onRetryPage(): void {
   void loadOwnerIncomePage()
 }
+
+function onMembersSort(sort: OwnerIncomeMemberSort): void {
+  void setMembersSort(sort)
+}
+
+function onMembersDirection(direction: OwnerIncomeSortDirection): void {
+  void setMembersDirection(direction)
+}
+
+function onLoadMoreMembers(): void {
+  void loadMoreMembers()
+}
+
+function onRetryMembers(): void {
+  void retryMembers()
+}
+
+onBeforeUnmount(cancelPendingSearch)
 
 onMounted(async () => {
   if (!agencyStore.userAgency.agency) {
@@ -115,6 +146,29 @@ onMounted(async () => {
         <section v-if="summary" class="space-y-4">
           <AgencyIncomeMembersHero :totals="summary.members" />
           <AgencyIncomeOwnerHero v-if="summary.owner" :totals="summary.owner" />
+
+          <!-- Members list (re-keyed per cycle so the search box shows that cycle's term) -->
+          <div v-if="memberList" class="space-y-3">
+            <h2 class="text-sm font-semibold">Members</h2>
+            <AgencyIncomeMembersToolbar
+              :key="`members-toolbar-${ownerIncomeStore.selectedCycle}`"
+              :search="memberList.search"
+              :sort="memberList.sort"
+              :direction="memberList.direction"
+              @search="setMembersSearch"
+              @sort="onMembersSort"
+              @direction="onMembersDirection"
+            />
+            <AgencyIncomeMembersList
+              :rows="memberList.rows"
+              :has-more="memberList.hasMore"
+              :loading-page="memberList.loadingPage"
+              :search="memberList.search"
+              :error="memberList.error"
+              @load-more="onLoadMoreMembers"
+              @retry="onRetryMembers"
+            />
+          </div>
         </section>
 
         <div v-else-if="ownerIncomeStore.isSelectedCycleLoading" class="space-y-4">
