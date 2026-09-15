@@ -1,112 +1,55 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
 // ========================================
-// Imports & Types
+// Member Income — cycle-centric owner/admin page
 // ========================================
+// Route binding + load only. One overview call on mount, one summary call per
+// cycle switch (cached for the visit). Access: owner or admin of the current
+// managed agency; everyone else sees "Access Denied". The Owner hero renders
+// only when the server sends the `owner` block (owner only, never admins).
 
-import { onMounted, ref, computed } from 'vue'
-import type { MemberIncome } from '~/types/income/memberIncome'
-
-// ========================================
-// Page Configuration
-// ========================================
+import { onMounted, computed, ref } from 'vue'
 
 definePageMeta({
   layout: 'alt',
   middleware: 'auth',
 })
 
-// ========================================
-// Composables / Injected Dependencies
-// ========================================
-
 const agencyStore = useAgencyStore()
-const { fetchPage, normalizeError } = useAgencyMemberIncomeApi()
+const ownerIncomeStore = useOwnerIncomeStore()
+const { loadOwnerIncomePage, selectCycle } = useOwnerIncomeActions()
 const { fetchUserAgency } = useAgencyMembership()
 
-// ========================================
-// State
-// ========================================
+const isAgencyResolved = ref(false)
+const isOwnerOrAdmin = computed(() => agencyStore.isAgencyOwner || agencyStore.isAgencyAdmin)
+const overview = computed(() => ownerIncomeStore.overview)
+const summary = computed(() => ownerIncomeStore.selectedSummary)
 
-const members = ref<MemberIncome[]>([])
-const agencyName = ref<string>('')
-const loading = ref(true)
-const loadingMore = ref(false)
-const error = ref<string | null>(null)
-const cursor = ref<string | null>(null)
-const hasMore = ref(true)
-
-// ========================================
-// Computed
-// ========================================
-
-const isOwnerOrAdmin = computed(() => 
-  agencyStore.isAgencyOwner || agencyStore.isAgencyAdmin
+const isFirstLoad = computed(
+  () =>
+    !isAgencyResolved.value ||
+    (isOwnerOrAdmin.value && overview.value === null && ownerIncomeStore.overviewError === null)
 )
 
-const totalDiamonds = computed(() =>
-  members.value.reduce((sum, m) => sum + m.total_diamonds_earned, 0)
-)
-
-const activeRunsCount = computed(() =>
-  members.value.filter((m) => m.current_run !== null).length
-)
-
-// ========================================
-// Actions
-// ========================================
-
-async function fetchMembersIncome(reset = false): Promise<void> {
-  if (reset) {
-    members.value = []
-    cursor.value = null
-    hasMore.value = true
-  }
-
-  if (!hasMore.value || loadingMore.value) return
-
-  if (members.value.length === 0) {
-    loading.value = true
-  } else {
-    loadingMore.value = true
-  }
-  error.value = null
-
-  try {
-    const page = await fetchPage(cursor.value)
-    agencyName.value = page.agencyName
-    members.value.push(...page.members)
-    cursor.value = page.nextCursor
-    hasMore.value = page.hasMore
-  } catch (err) {
-    const normalized = normalizeError(err)
-    error.value = normalized.message
-  } finally {
-    loading.value = false
-    loadingMore.value = false
-  }
+function onSelectCycle(cycleNumber: number): void {
+  void selectCycle(cycleNumber)
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+function onRetryCycle(): void {
+  if (ownerIncomeStore.selectedCycle !== null) void selectCycle(ownerIncomeStore.selectedCycle)
 }
 
-// ========================================
-// Lifecycle
-// ========================================
+function onRetryPage(): void {
+  void loadOwnerIncomePage()
+}
 
 onMounted(async () => {
-  // Ensure agency data is loaded
   if (!agencyStore.userAgency.agency) {
     await fetchUserAgency()
   }
+  isAgencyResolved.value = true
 
   if (isOwnerOrAdmin.value) {
-    await fetchMembersIncome(true)
+    await loadOwnerIncomePage()
   }
 })
 </script>
@@ -115,8 +58,15 @@ onMounted(async () => {
   <main>
     <NavAlt spacer color="primary" back-to="/agency/my-agency">Member Income</NavAlt>
 
+    <!-- First load -->
+    <div v-if="isFirstLoad" class="px-3 py-14 space-y-4">
+      <USkeleton class="h-12 rounded-lg" />
+      <USkeleton class="h-12 rounded-lg" />
+      <AgencyIncomeCycleSummarySkeleton />
+    </div>
+
     <!-- Not Authorized -->
-    <div v-if="!isOwnerOrAdmin" class="px-3 py-14 text-center">
+    <div v-else-if="!isOwnerOrAdmin" class="px-3 py-14 text-center">
       <icon name="i-lucide-lock" class="size-16 text-muted mb-4" />
       <h2 class="text-lg font-semibold mb-2">Access Denied</h2>
       <p class="text-sm text-muted mb-4">
@@ -127,136 +77,56 @@ onMounted(async () => {
       </UButton>
     </div>
 
-    <!-- Content for Owners/Admins -->
-    <div v-else class="px-3 py-14 space-y-4">
-      <!-- Agency Header -->
-      <div class="text-center">
-        <h1 class="text-xl font-bold">{{ agencyName || 'Agency' }}</h1>
-        <p class="text-sm text-muted">Member income overview</p>
-      </div>
-
-      <!-- Summary Stats -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
-          <div class="flex items-center justify-center gap-2 mb-1">
-            <NuxtImg 
-              :src="ASSETS.DIAMOND_ICON" 
-              class="w-6" 
-              alt="Diamonds"
-            />
-            <p class="text-2xl font-bold text-secondary-400">
-              {{ totalDiamonds.toLocaleString() }}
-            </p>
-          </div>
-          <p class="text-xs text-white">Total Diamonds Gained</p>
-        </div>
-
-        <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 text-center">
-          <div class="flex items-center justify-center gap-2 mb-1">
-            <UIcon name="i-lucide-trending-up" class="size-6 text-tertiary" />
-            <p class="text-2xl font-bold text-tertiary">
-              {{ activeRunsCount.toLocaleString() }}
-            </p>
-          </div>
-          <p class="text-xs text-white">Members with Active Runs</p>
-        </div>
-      </div>
-
-      <!-- Error State -->
+    <!-- Overview failed -->
+    <div v-else-if="ownerIncomeStore.overviewError" class="px-3 py-14 space-y-4">
       <UAlert
-        v-if="error"
         color="error"
         variant="subtle"
         icon="i-lucide-alert-circle"
-        :title="error"
+        :title="ownerIncomeStore.overviewError"
       />
+      <div class="flex justify-center">
+        <UButton size="sm" variant="soft" icon="i-lucide-rotate-cw" @click="onRetryPage">Retry</UButton>
+      </div>
+    </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="space-y-3">
-        <div v-for="i in 5" :key="i" class="animate-pulse flex gap-3 p-3 bg-elevated rounded-lg">
-          <div class="w-12 h-12 bg-muted rounded-full" />
-          <div class="flex-1 space-y-2">
-            <div class="h-4 bg-muted rounded w-3/4" />
-            <div class="h-3 bg-muted rounded w-1/2" />
-          </div>
-        </div>
+    <!-- Content for Owners/Admins -->
+    <div v-else-if="overview" class="px-3 py-14 space-y-4">
+      <AgencyIncomeManagedAgencyHeader :agency="overview.agency" />
+
+      <!-- Agency never had a run -->
+      <div v-if="!ownerIncomeStore.hasCycles" class="text-center py-8 bg-elevated rounded-lg">
+        <UIcon name="i-lucide-trending-up" class="size-12 text-muted mb-2" />
+        <p class="text-sm font-semibold">No runs yet</p>
+        <p class="text-sm text-muted">Income shows here once a member starts a run.</p>
       </div>
 
-      <!-- Members List -->
-      <div v-else-if="members.length > 0" class="space-y-3">
-        <SectionTitle>Members ({{ members.length }})</SectionTitle>
-        
-        <div 
-          v-for="member in members" 
-          :key="member.user_id" 
-          class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-2 relative overflow-hidden"
-        >
-        <!-- Diamonds Earned -->
-          <div class="flex items-center gap-1 justify-center absolute top-0 right-0 bg-secondary/20 px-2 rounded">
-            <UIcon name="i-lucide-gem" class="size-4 text-secondary-400" />
-            <p class="font-semibold">{{ member.total_diamonds_earned }}</p>
-          </div>
+      <template v-else>
+        <AgencyIncomeCycleSelector
+          :cycles="ownerIncomeStore.cycles"
+          :model-value="ownerIncomeStore.selectedCycle"
+          :loading="ownerIncomeStore.isOverviewLoading"
+          @update:model-value="onSelectCycle"
+        />
 
-          <div class="flex gap-2">
-            <!-- Avatar -->
-            <UserAvatar
-                :img="member.avatar_url ?? undefined"
-                :user-name="member.name"
-                :animated="true"
-                class="w-12 shrink-0"
-            />
+        <AgencyIncomeInProgressNote v-if="ownerIncomeStore.isSelectedCycleInProgress" />
 
-            <!-- Info -->
-            <div>
-              <p class="font-semibold truncate">{{ member.name }}</p>
-              <p class="text-xs text-muted">Joined {{ formatDate(member.joined_at) }}</p>
-            </div>
+        <!-- Selected cycle -->
+        <section v-if="summary" class="space-y-4">
+          <AgencyIncomeMembersHero :totals="summary.members" />
+          <AgencyIncomeOwnerHero v-if="summary.owner" :totals="summary.owner" />
+        </section>
 
-          </div>
-
-          <!-- Current Run (lightweight: tier + progress only) -->
-          <div v-if="member.current_run" class="mt-1">
-            <div class="flex justify-between text-xs mb-1">
-              <span class="text-white">Tier {{ member.current_run.current_tier }}</span>
-              <span class="font-semibold">
-                {{ Math.round(member.current_run.progress_percentage ?? 0) }}%
-              </span>
-            </div>
-            <UProgress
-                :model-value="Math.round(member.current_run.progress_percentage ?? 0)"
-                color="primary"
-                size="sm"
-            />
-            <p class="text-xs text-white mt-1">
-              <UIcon name="i-lucide-zap" class="size-3 inline-block" />
-              {{ formatCurrency(member.current_run.accumulated_xp) }} XP
-            </p>
-          </div>
-          <p v-else class="text-xs text-white mt-2">No active run</p>
-
+        <div v-else-if="ownerIncomeStore.isSelectedCycleLoading" class="space-y-4">
+          <AgencyIncomeCycleSummarySkeleton />
+          <AgencyIncomeCycleSummarySkeleton v-if="agencyStore.isAgencyOwner" />
         </div>
 
-        <!-- Load More -->
-        <div v-if="hasMore" class="flex justify-center pt-4">
-          <UButton
-            variant="soft"
-            color="primary"
-            :loading="loadingMore"
-            @click="fetchMembersIncome()"
-          >
-            Load More
-          </UButton>
+        <div v-else-if="ownerIncomeStore.selectedCycle !== null" class="text-center py-6 bg-elevated rounded-lg">
+          <p class="text-sm text-muted mb-2">Could not load this run.</p>
+          <UButton size="sm" variant="soft" icon="i-lucide-rotate-cw" @click="onRetryCycle">Retry</UButton>
         </div>
-      </div>
-
-      <!-- Empty State -->
-      <div 
-        v-else-if="!loading && members.length === 0" 
-        class="text-center py-8 bg-elevated rounded-lg"
-      >
-        <icon name="i-lucide-users" class="size-12 text-muted mb-2" />
-        <p class="text-muted">No members in your agency yet</p>
-      </div>
+      </template>
     </div>
   </main>
 </template>

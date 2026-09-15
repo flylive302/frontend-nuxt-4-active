@@ -13,14 +13,17 @@ import { formatDiamondsExact } from '~/utils/incomeFormat'
 // Props
 // ========================================
 
-defineProps<{
+withDefaults(defineProps<{
   totals: IncomeTotals
-}>()
+  label?: string
+}>(), {
+  label: 'Income',
+})
 </script>
 
 <template>
   <div class="text-center py-4">
-    <p class="text-xs uppercase tracking-wide text-muted font-semibold">Income</p>
+    <p class="text-xs uppercase tracking-wide text-muted font-semibold">{{ label }}</p>
     <p class="text-4xl font-bold flex items-center justify-center gap-2 mt-1">
       <UIcon name="i-lucide-gem" class="size-7 text-secondary" />
       {{ formatDiamondsExact(totals.income) }}

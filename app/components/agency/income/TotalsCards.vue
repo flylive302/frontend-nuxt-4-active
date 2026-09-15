@@ -1,6 +1,8 @@
 <!-- ~/components/agency/income/TotalsCards.vue -->
-<!-- Earned / Exchanged / Deducted breakdown for a run. Exchanged and Deducted
-     collapse to a list of their contributing transactions. -->
+<!-- Earned / Exchanged / Deducted breakdown. When `collapsible` (default),
+     Exchanged and Deducted expand to a list of their contributing
+     transactions. When not collapsible, every row is a plain static figure
+     (used by the owner/member cycle heroes, which have no transaction list). -->
 <script setup lang="ts">
 // ========================================
 // Imports
@@ -14,11 +16,16 @@ import { formatDiamondsExact, formatRunDate } from '~/utils/incomeFormat'
 // Props
 // ========================================
 
-defineProps<{
+withDefaults(defineProps<{
   totals: IncomeTotals
-  exchanges: RunExchange[]
-  deductions: RunDeduction[]
-}>()
+  exchanges?: RunExchange[]
+  deductions?: RunDeduction[]
+  collapsible?: boolean
+}>(), {
+  exchanges: () => [],
+  deductions: () => [],
+  collapsible: true,
+})
 
 // ========================================
 // State
@@ -40,7 +47,7 @@ const deductedOpen = ref(false)
     </div>
 
     <!-- Exchanged -->
-    <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3">
+    <div v-if="collapsible" class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3">
       <button
         type="button"
         class="w-full flex items-center justify-between"
@@ -79,9 +86,16 @@ const deductedOpen = ref(false)
         </p>
       </div>
     </div>
+    <div v-else class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 flex items-center justify-between">
+      <span class="text-sm font-semibold text-muted">Exchanged</span>
+      <span class="flex items-center gap-1 font-bold text-warning">
+        <UIcon name="i-lucide-gem" class="size-4" />
+        {{ formatDiamondsExact(totals.exchanged) }}
+      </span>
+    </div>
 
     <!-- Deducted -->
-    <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3">
+    <div v-if="collapsible" class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3">
       <button
         type="button"
         class="w-full flex items-center justify-between"
@@ -118,6 +132,13 @@ const deductedOpen = ref(false)
           No deductions in this run
         </p>
       </div>
+    </div>
+    <div v-else class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3 flex items-center justify-between">
+      <span class="text-sm font-semibold text-muted">Deducted</span>
+      <span class="flex items-center gap-1 font-bold text-error">
+        <UIcon name="i-lucide-gem" class="size-4" />
+        {{ formatDiamondsExact(totals.deducted) }}
+      </span>
     </div>
   </div>
 </template>
