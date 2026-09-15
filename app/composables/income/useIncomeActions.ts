@@ -1,14 +1,15 @@
 // ========================================
 // Income — GATE / EXECUTE / REACT
 // ========================================
+// Run-centric "My Agency Income" page: one overview call on load, one detail
+// call per run switch (cached by run id), claim from inside the run view.
 
 import { createLogger } from '~/utils/logger'
 import type {
   AgencyRun,
   ClaimResult,
-  IncomeStats,
-  RunOption,
-  RunSnapshot,
+  IncomeOverview,
+  RunDetail,
 } from '~/types/income/income'
 
 const log = createLogger('[useIncomeActions]')
@@ -18,21 +19,85 @@ export function useIncomeActions() {
   const toast = useToast()
   const { api, normalizeError } = useApi()
 
-  async function fetchStats(): Promise<void> {
-    store.setStatsLoading(true)
+  async function fetchOverview(): Promise<void> {
+    store.setOverviewLoading(true)
     store.setError(null)
 
     try {
-      const response = await api<{ success: true; data: IncomeStats }>('/user/income')
-      store.setStats(response.data)
+      const response = await api<{ success: true; data: IncomeOverview }>('/user/income/overview')
+      store.setOverview(response.data)
     } catch (err) {
       const normalized = normalizeError(err)
       store.setError(normalized.message)
     } finally {
-      store.setStatsLoading(false)
+      store.setOverviewLoading(false)
     }
   }
 
+  /**
+   * Fetch one run's detail into the cache. The active run's detail also feeds
+   * the ladder/progress components and the milestone-drain celebration, so it
+   * replaces `activeRun` (it carries every AgencyRun field).
+   */
+  async function fetchRunDetail(runId: number): Promise<void> {
+    store.setLoadingRunId(runId)
+
+    try {
+      const response = await api<{ success: true; data: RunDetail }>(`/user/income/runs/${runId}`)
+      store.setRunDetail(response.data)
+
+      if (response.data.id === store.overview?.active_run_id) {
+        store.setActiveRun(response.data)
+      }
+    } catch (err) {
+      const normalized = normalizeError(err)
+      toast.add({ title: normalized.message, color: 'error' })
+    } finally {
+      if (store.loadingRunId === runId) {
+        store.setLoadingRunId(null)
+      }
+    }
+  }
+
+  async function selectRun(runId: number): Promise<void> {
+    store.setSelectedRunId(runId)
+
+    // GATE — a cached run re-selects instantly, no request.
+    if (store.runDetails[runId] || store.loadingRunId === runId) return
+
+    // EXECUTE
+    await fetchRunDetail(runId)
+  }
+
+  /**
+   * Page load: overview, then the default run (active, else latest). The detail
+   * cache lives for one visit only, so figures are fresh each time the page
+   * opens. With no active run, `activeRun` is cleared so the drain and ladder
+   * stay idle.
+   */
+  async function loadIncomePage(): Promise<void> {
+    store.clearRunDetails()
+    store.setSelectedRunId(null)
+    await fetchOverview()
+
+    if (store.overview?.active_run_id == null) {
+      store.setActiveRun(null)
+    }
+
+    const runId = store.defaultRunId
+    if (runId !== null) {
+      await selectRun(runId)
+    }
+
+    store.setLastFetchedAt(Date.now())
+  }
+
+  /**
+   * Realtime fallback: a socket update for a run the client hasn't loaded
+   * (lazily opened) refetches the active run. When the income page's overview
+   * is loaded and doesn't know that run yet, it is refreshed too so the
+   * selector, banner and "no active run" note don't go stale for the visit.
+   */
   async function fetchActiveRun(): Promise<void> {
     store.setRunLoading(true)
 
@@ -47,38 +112,15 @@ export function useIncomeActions() {
     } finally {
       store.setRunLoading(false)
     }
-  }
 
-  async function fetchHistory(): Promise<void> {
-    store.setHistoryLoading(true)
+    // REACT
+    const activeRunId = store.activeRun?.id ?? null
+    if (store.overview && activeRunId !== store.overview.active_run_id) {
+      await fetchOverview()
 
-    try {
-      const response = await api<{ success: true; data: RunOption[] }>(
-        '/user/income/targets/history'
-      )
-      store.setRunOptions(response.data)
-    } catch (err) {
-      log.warn('Failed to fetch run history', err)
-      store.setRunOptions([])
-    } finally {
-      store.setHistoryLoading(false)
-    }
-  }
-
-  async function fetchSnapshot(runId: number): Promise<void> {
-    store.setSnapshotLoading(true)
-    store.setSelectedSnapshot(null)
-
-    try {
-      const response = await api<{ success: true; data: RunSnapshot }>(
-        `/user/income/targets/${runId}`
-      )
-      store.setSelectedSnapshot(response.data)
-    } catch (err) {
-      const normalized = normalizeError(err)
-      toast.add({ title: normalized.message, color: 'error' })
-    } finally {
-      store.setSnapshotLoading(false)
+      if (store.selectedRunId === null && store.defaultRunId !== null) {
+        await selectRun(store.defaultRunId)
+      }
     }
   }
 
@@ -97,14 +139,15 @@ export function useIncomeActions() {
 
       // REACT
       const { claimed_count, diamonds_claimed } = response.data
-      store.markSnapshotClaimed(runId)
 
       if (claimed_count > 0) {
         toast.add({ title: `Claimed ${diamonds_claimed} 💎`, color: 'success' })
-        await fetchStats()
       } else {
         toast.add({ title: 'Nothing left to claim', color: 'neutral' })
       }
+
+      // Refresh badges, banner and the run's claim states either way.
+      await Promise.all([fetchRunDetail(runId), fetchOverview()])
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: normalized.message, color: 'error' })
@@ -113,17 +156,12 @@ export function useIncomeActions() {
     }
   }
 
-  async function fetchAll(): Promise<void> {
-    await Promise.all([fetchStats(), fetchActiveRun()])
-    store.setLastFetchedAt(Date.now())
-  }
-
   return {
-    fetchStats,
+    fetchOverview,
+    fetchRunDetail,
+    selectRun,
+    loadIncomePage,
     fetchActiveRun,
-    fetchHistory,
-    fetchSnapshot,
     claim,
-    fetchAll,
   }
 }

@@ -26,18 +26,6 @@ export interface LadderTier {
 }
 
 /**
- * A single crossed-milestone record (snapshot view).
- */
-export interface RunMilestone {
-  tier: number
-  required_xp: number
-  member_diamond_reward: number
-  owner_diamond_reward: number
-  member_reward_claimed: boolean
-  crossed_at: string | null
-}
-
-/**
  * A member's agency-XP run with its full tier ladder.
  */
 export interface AgencyRun {
@@ -58,54 +46,107 @@ export interface AgencyRun {
   created_at: string
 }
 
+// ========================================
+// Run-centric income page (member-income-runs epic)
+// ========================================
+// `GET user/income/overview` + `GET user/income/runs/{run}`. Diamond figures are
+// exact integers; Exchanged/Deducted are attributed to a run by the reseller
+// panel's cycle-window rules, so member and reseller totals always agree.
+
 /**
- * A run snapshot — the run plus its crossed-milestone records (claim state).
+ * The agency a run (or the member right now) belongs to.
  */
-export interface RunSnapshot extends AgencyRun {
-  milestones: RunMilestone[]
+export interface IncomeAgency {
+  id: number
+  name: string
+  logo_url: string | null
 }
 
 /**
- * A closed run as a date-range option for the history dropdown.
+ * Per-run (or lifetime) money figures. `income = earned − exchanged − deducted`.
  */
-export interface RunOption {
-  run_id: number
+export interface IncomeTotals {
+  earned: number
+  exchanged: number
+  deducted: number
+  income: number
+}
+
+/**
+ * One run inside the overview's grouped run selector.
+ */
+export interface OverviewRun {
+  id: number
   status: AgencyRunStatus
   status_label: string
+  status_color: string
   started_at: string
   ends_at: string
   label: string
-}
-
-// ========================================
-// Stats summary
-// ========================================
-
-/**
- * Compact active-run view returned inline with the stats summary.
- */
-export interface CompactRun {
-  run_id: number
-  accumulated_xp: number
-  current_tier: number
-  band_floor: number | null
-  band_ceiling: number | null
-  progress_percentage: number | null
-  ends_at: string
+  has_unclaimed: boolean
 }
 
 /**
- * Lifetime income summary for the member.
+ * A group of runs earned under one agency, newest run first.
  */
-export interface IncomeStats {
-  summary: {
-    total_diamonds: number
-    completed_runs: number
-    has_active_run: boolean
-  }
-  active_run: CompactRun | null
-  total_diamonds_earned: number
-  completed_runs: number
+export interface OverviewAgencyGroup extends IncomeAgency {
+  runs: OverviewRun[]
+}
+
+/**
+ * `GET user/income/overview` payload. Groups are ordered by their most recent run.
+ */
+export interface IncomeOverview {
+  lifetime: IncomeTotals & { completed_runs: number }
+  current_agency: IncomeAgency | null
+  active_run_id: number | null
+  unclaimed_runs_count: number
+  agencies: OverviewAgencyGroup[]
+}
+
+/**
+ * A crossed milestone on the run detail, ordered by tier.
+ */
+export interface RunDetailMilestone {
+  tier: number
+  required_xp: number
+  member_diamond_reward: number
+  crossed_at: string | null
+  member_reward_claimed: boolean
+}
+
+/**
+ * A self-exchange of diamonds to coins attributed to the run.
+ */
+export interface RunExchange {
+  id: number
+  at: string
+  diamonds: number
+  coins_received: number
+}
+
+/**
+ * A reseller deduction (diamonds taken for a cash payout) attributed to the run.
+ */
+export interface RunDeduction {
+  id: number
+  at: string
+  diamonds: number
+  cash_paid: number
+  cash_currency: string
+}
+
+/**
+ * `GET user/income/runs/{run}` payload. Carries every `AgencyRun` field, so the
+ * active run's detail can also feed the ladder/progress components and the
+ * milestone-drain celebration.
+ */
+export interface RunDetail extends AgencyRun {
+  agency: IncomeAgency
+  totals: IncomeTotals
+  milestones: RunDetailMilestone[]
+  exchanges: RunExchange[]
+  deductions: RunDeduction[]
 }
 
 // ========================================

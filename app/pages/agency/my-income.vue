@@ -1,78 +1,55 @@
 <script setup lang="ts">
 // ========================================
-// Imports & Types
+// My Agency Income — run-centric
 // ========================================
+// Route binding + load only. One overview call on mount, one detail call per
+// run switch (cached for the visit). Access: current agency member OR has at
+// least one run; everyone else sees "Agency Members Only".
 
-import { onMounted, ref, computed } from 'vue'
-import type { RunOption } from '~/types/income/income'
-
-// ========================================
-// Page Configuration
-// ========================================
+import { onMounted, computed, ref } from 'vue'
 
 definePageMeta({
   layout: 'alt',
   middleware: 'auth',
 })
 
-// ========================================
-// State
-// ========================================
-
-const selectedOption = ref<RunOption | undefined>(undefined)
-
-// ========================================
-// Composables
-// ========================================
-
 const incomeStore = useIncomeStore()
-const { fetchAll, fetchHistory, fetchSnapshot, claim } = useIncomeActions()
+const { loadIncomePage, selectRun, claim } = useIncomeActions()
 const agencyStore = useAgencyStore()
 const { fetchUserAgency } = useAgencyMembership()
 const { currentModal: milestoneModal, drain: drainMilestones, closeModal: closeMilestoneModal } = useMilestoneDrain()
 
-// ========================================
-// Computed
-// ========================================
-
+const isLoaded = ref(false)
 const isAgencyMember = computed(() => agencyStore.isAgencyMember)
-const snapshot = computed(() => incomeStore.selectedSnapshot)
+const canViewIncome = computed(() => isAgencyMember.value || incomeStore.hasAnyRun)
+const overview = computed(() => incomeStore.overview)
+const run = computed(() => incomeStore.selectedRunDetail)
 const hasClaimable = computed(
-  () => snapshot.value?.milestones.some((m) => !m.member_reward_claimed && m.member_diamond_reward > 0) ?? false
+  () => run.value?.milestones.some((m) => !m.member_reward_claimed && m.member_diamond_reward > 0) ?? false
 )
 
-// ========================================
-// Handlers
-// ========================================
+function onSelectRun(runId: number): void {
+  void selectRun(runId)
+}
 
-function onSelectRun(option: RunOption | undefined): void {
-  if (option) fetchSnapshot(option.run_id)
-  else incomeStore.setSelectedSnapshot(null)
+function onRetryRun(): void {
+  if (incomeStore.selectedRunId !== null) void selectRun(incomeStore.selectedRunId)
 }
 
 function onClaim(): void {
-  if (snapshot.value) claim(snapshot.value.id)
+  if (run.value) void claim(run.value.id)
 }
-
-function formatRange(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-// ========================================
-// Lifecycle
-// ========================================
 
 onMounted(async () => {
-  if (!agencyStore.isAgencyMember) {
-    await fetchUserAgency()
-  }
+  await Promise.all([
+    agencyStore.isAgencyMember ? Promise.resolve() : fetchUserAgency(),
+    loadIncomePage(),
+  ])
+  isLoaded.value = true
 
-  if (agencyStore.isAgencyMember) {
-    await Promise.all([fetchAll(), fetchHistory()])
-    // Page-gated: celebrate any tiers crossed since this device's last visit,
-    // now that the active run (and its current_tier) is loaded.
-    drainMilestones()
-  }
+  // Page-gated: celebrate any tiers crossed since this device's last visit,
+  // now that the active run (and its current_tier) is loaded.
+  drainMilestones()
 })
 </script>
 
@@ -80,8 +57,15 @@ onMounted(async () => {
   <main>
     <NavAlt color="tertiary" back-to="/profile">My Agency Income</NavAlt>
 
-    <!-- Not Agency Member -->
-    <div v-if="!isAgencyMember" class="px-3 py-14 text-center">
+    <!-- First load -->
+    <div v-if="!isLoaded" class="px-3 py-14 space-y-4">
+      <USkeleton class="h-20 rounded-lg" />
+      <USkeleton class="h-10 rounded-lg" />
+      <AgencyIncomeRunViewSkeleton />
+    </div>
+
+    <!-- Never a member, no runs -->
+    <div v-else-if="!canViewIncome" class="px-3 py-14 text-center">
       <UIcon name="i-lucide-building-2" class="size-16 text-muted mb-4" />
       <h2 class="text-lg font-semibold mb-2">Agency Members Only</h2>
       <p class="text-sm text-muted mb-4">
@@ -93,89 +77,64 @@ onMounted(async () => {
     </div>
 
     <!-- Income Dashboard -->
-    <div v-else class="px-3 py-14 space-y-6">
-      <!-- Lifetime Summary -->
-      <AgencyRecentEarnings />
+    <div v-else class="px-3 py-14 space-y-4">
+      <AgencyIncomeLifetimeStrip
+        :lifetime="overview?.lifetime ?? null"
+        :current-agency="overview?.current_agency ?? null"
+        :loading="incomeStore.isOverviewLoading && !overview"
+      />
 
-      <!-- Active Run -->
-      <section v-if="incomeStore.hasActiveRun">
-        <SectionTitle type="tertiary">Current Run</SectionTitle>
-        <AgencyIncomeTargetProgress class="mt-2" />
-
-        <SectionTitle type="tertiary" class="mt-4">Milestone Ladder</SectionTitle>
-        <AgencyIncomeLadderTable class="mt-2" />
-      </section>
-
-      <!-- No Active Run -->
+      <!-- Ex-member: past runs stay visible -->
       <div
-        v-else-if="!incomeStore.isRunLoading"
-        class="text-center py-6 bg-elevated rounded-lg"
+        v-if="!isAgencyMember"
+        class="flex items-center justify-between gap-3 bg-elevated rounded-lg p-3"
       >
-        <UIcon name="i-lucide-trending-up" class="size-10 text-muted mb-2" />
-        <p class="text-sm text-muted">No active run</p>
+        <p class="text-sm text-muted">Join an agency to start a new run.</p>
+        <UButton to="/agency/list" size="sm" color="primary">Browse</UButton>
       </div>
 
-      <!-- History -->
-      <section>
-        <SectionTitle type="tertiary">Past Runs</SectionTitle>
+      <AgencyIncomeUnclaimedBanner :count="overview?.unclaimed_runs_count ?? 0" />
 
-        <USelectMenu
-          v-model="selectedOption"
-          :items="incomeStore.runOptions"
-          :loading="incomeStore.isHistoryLoading"
-          label-key="label"
-          placeholder="Select a past run by date"
-          icon="i-lucide-calendar"
-          class="mt-2 w-full"
+      <!-- Member with no active run -->
+      <div
+        v-if="isAgencyMember && overview && overview.active_run_id === null"
+        class="text-center py-4 bg-elevated rounded-lg"
+      >
+        <UIcon name="i-lucide-trending-up" class="size-8 text-muted mb-1" />
+        <p class="text-sm text-muted">No active run — your next gift starts one.</p>
+      </div>
+
+      <template v-if="incomeStore.hasAnyRun">
+        <AgencyIncomeRunSelector
+          :groups="overview?.agencies ?? []"
+          :model-value="incomeStore.selectedRunId"
+          :loading="incomeStore.isOverviewLoading && !overview"
           @update:model-value="onSelectRun"
         />
 
-        <!-- Snapshot -->
-        <div v-if="incomeStore.isSnapshotLoading" class="mt-3 space-y-2">
-          <USkeleton class="h-16 rounded-lg" />
-          <USkeleton class="h-16 rounded-lg" />
-        </div>
+        <!-- Selected run -->
+        <AgencyIncomeRunViewSkeleton v-if="incomeStore.isSelectedRunLoading" />
 
-        <div v-else-if="snapshot" class="mt-3 space-y-3">
-          <div class="bg-linear-to-bl to-neutral-950 border border-neutral-700 rounded-lg p-3">
-            <div class="flex items-center justify-between">
-              <UBadge :color="(snapshot.status_color as 'success' | 'info' | 'warning' | 'error' | 'neutral')" variant="soft" class="font-bold">
-                {{ snapshot.status_label }}
-              </UBadge>
-              <span class="text-xs text-muted">
-                {{ formatRange(snapshot.started_at) }} – {{ formatRange(snapshot.ends_at) }}
-              </span>
-            </div>
-            <div class="flex justify-between text-sm mt-2 text-white">
-              <span><UIcon name="i-lucide-zap" class="size-4" /> {{ formatCurrency(snapshot.accumulated_xp) }} XP</span>
-              <span v-if="snapshot.refunded_coins > 0">
-                <UIcon name="i-lucide-undo-2" class="size-4" /> {{ formatCurrency(snapshot.refunded_coins) }} refunded
-              </span>
-            </div>
-          </div>
+        <section v-else-if="run" class="space-y-4">
+          <AgencyIncomeRunHeader :run="run" />
+          <AgencyIncomeHero :totals="run.totals" />
+          <AgencyIncomeTotalsCards
+            :totals="run.totals"
+            :exchanges="run.exchanges"
+            :deductions="run.deductions"
+          />
 
-          <!-- Milestones -->
-          <div
-            v-for="milestone in snapshot.milestones"
-            :key="milestone.tier"
-            class="flex items-center justify-between bg-elevated rounded-lg p-3"
-          >
-            <div class="flex items-center gap-2">
-              <UBadge color="success" variant="soft" class="font-bold">Tier {{ milestone.tier }}</UBadge>
-              <span class="text-sm text-secondary font-semibold">
-                <UIcon name="i-lucide-gem" class="size-4" /> {{ milestone.member_diamond_reward }}
-              </span>
-            </div>
-            <UBadge :color="milestone.member_reward_claimed ? 'success' : 'warning'" variant="soft">
-              {{ milestone.member_reward_claimed ? 'Claimed' : 'Unclaimed' }}
-            </UBadge>
-          </div>
+          <template v-if="incomeStore.isSelectedRunActive">
+            <SectionTitle type="tertiary">Current Run</SectionTitle>
+            <AgencyIncomeTargetProgress />
 
-          <p v-if="snapshot.milestones.length === 0" class="text-sm text-muted text-center py-2">
-            No milestones crossed in this run.
-          </p>
+            <SectionTitle type="tertiary">Milestone Ladder</SectionTitle>
+            <AgencyIncomeLadderTable />
+          </template>
 
-          <!-- Claim -->
+          <SectionTitle type="tertiary">Milestones</SectionTitle>
+          <AgencyIncomeMilestoneRows :milestones="run.milestones" />
+
           <UButton
             v-if="hasClaimable"
             block
@@ -186,8 +145,13 @@ onMounted(async () => {
           >
             Claim Rewards
           </UButton>
+        </section>
+
+        <div v-else-if="incomeStore.selectedRunId !== null" class="text-center py-6 bg-elevated rounded-lg">
+          <p class="text-sm text-muted mb-2">Could not load this run.</p>
+          <UButton size="sm" variant="soft" icon="i-lucide-rotate-cw" @click="onRetryRun">Retry</UButton>
         </div>
-      </section>
+      </template>
 
       <!-- Error State -->
       <UAlert
