@@ -6,7 +6,8 @@
 // empty state (no summary request), the per-cycle summary cache (re-selecting a
 // viewed cycle makes no request), failure handling, and the members list:
 // load more, sort/direction/search (debounced) restarting at page 1, per-cycle
-// list state, and stale responses being dropped.
+// list state, and stale responses being dropped. Member sheet: one request per
+// (cycle, user), cached reopen, no-run rows ignored, stale responses dropped.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -15,6 +16,7 @@ import type {
   OwnerIncomeCycle,
   OwnerIncomeCycleSummary,
   OwnerIncomeMemberRow,
+  OwnerIncomeMemberSheet,
   OwnerIncomeMembersPage,
   OwnerIncomeOverview,
 } from '../../app/types/income/ownerIncome'
@@ -95,7 +97,29 @@ function membersPage(query: MembersQuery): OwnerIncomeMembersPage {
   }
 }
 
+/** A member's sheet; `earned` encodes the cycle so a sheet from the wrong cycle is visible. */
+function memberSheet(cycleNumber: number, userId: number): OwnerIncomeMemberSheet {
+  return {
+    member: { user_id: userId, name: `Member ${userId}`, avatar_url: null, signature: String(10000 + userId), left: false },
+    run: {
+      id: userId,
+      status: 'closed',
+      status_label: 'Closed',
+      status_color: 'neutral',
+      started_at: '2026-08-11T00:00:00+00:00',
+      ends_at: '2026-08-21T00:00:00+00:00',
+      accumulated_xp: 500,
+      current_tier: 1,
+    },
+    totals: { earned: cycleNumber * 1000, exchanged: 10, deducted: 5, income: cycleNumber * 1000 - 15 },
+    milestones: [],
+    exchanges: [],
+    deductions: [],
+  }
+}
+
 const MEMBERS_URL = /^\/user\/agency\/income\/cycles\/(\d+)\/members$/
+const MEMBER_SHEET_URL = /^\/user\/agency\/income\/cycles\/(\d+)\/members\/(\d+)$/
 
 /** Routes GET URLs to canned payloads. */
 function routeApi(current: OwnerIncomeOverview, withOwner = true) {
@@ -104,6 +128,8 @@ function routeApi(current: OwnerIncomeOverview, withOwner = true) {
     const cycleMatch = url.match(/^\/user\/agency\/income\/cycles\/(\d+)$/)
     if (cycleMatch) return { success: true, data: summary(Number(cycleMatch[1]), withOwner) }
     if (MEMBERS_URL.test(url) && options?.query) return { success: true, data: membersPage(options.query) }
+    const sheetMatch = url.match(MEMBER_SHEET_URL)
+    if (sheetMatch) return { success: true, data: memberSheet(Number(sheetMatch[1]), Number(sheetMatch[2])) }
     throw new Error(`unexpected ${url}`)
   })
 }
@@ -494,5 +520,166 @@ describe('useOwnerIncomeActions members list', () => {
 
     expect(membersCalls(2)).toHaveLength(1)
     expect(store.memberList(2)?.rows).toHaveLength(2)
+  })
+})
+
+describe('useOwnerIncomeActions member sheet', () => {
+  async function loaded(numbers = [IN_PROGRESS, 2]) {
+    routeApi(overview(numbers))
+    const ctx = await setup()
+    await ctx.actions.loadOwnerIncomePage()
+    return ctx
+  }
+
+  function sheetCalls(): string[] {
+    return apiMock.mock.calls.map(([called]) => called as string).filter((url) => MEMBER_SHEET_URL.test(url))
+  }
+
+  it('opens a member with a run and leaves the list untouched', async () => {
+    const { store, actions } = await loaded()
+    const listBefore = store.selectedMemberList
+
+    await actions.openMember(memberRow(11))
+
+    expect(sheetCalls()).toEqual([`/user/agency/income/cycles/${IN_PROGRESS}/members/11`])
+    expect(store.openMember).toEqual({
+      cycle: IN_PROGRESS,
+      member: { user_id: 11, name: 'Member 11', avatar_url: null, signature: '10011', left: false },
+    })
+    expect(store.openMemberSheet?.totals.earned).toBe(IN_PROGRESS * 1000)
+    expect(store.isMemberSheetLoading).toBe(false)
+    expect(store.memberSheetError).toBeNull()
+    expect(store.selectedMemberList).toEqual(listBefore)
+  })
+
+  it('reopening a member already viewed makes no request and shows the sheet at once', async () => {
+    const { store, actions } = await loaded()
+
+    await actions.openMember(memberRow(11))
+    actions.closeMember()
+    expect(store.openMember).toBeNull()
+    expect(store.openMemberSheet).toBeNull()
+
+    const reopen = actions.openMember(memberRow(11))
+    expect(store.openMemberSheet?.member.user_id).toBe(11)
+    expect(store.isMemberSheetLoading).toBe(false)
+    await reopen
+
+    expect(sheetCalls()).toHaveLength(1)
+  })
+
+  it('caches per (cycle, user): the same member on another cycle is a new request', async () => {
+    const { store, actions } = await loaded()
+
+    await actions.openMember(memberRow(11))
+    actions.closeMember()
+    await actions.selectCycle(2)
+    await actions.openMember(memberRow(11))
+
+    expect(sheetCalls()).toEqual([
+      `/user/agency/income/cycles/${IN_PROGRESS}/members/11`,
+      '/user/agency/income/cycles/2/members/11',
+    ])
+    expect(store.openMemberSheet?.totals.earned).toBe(2000)
+    expect(store.memberSheet(IN_PROGRESS, 11)?.totals.earned).toBe(IN_PROGRESS * 1000)
+  })
+
+  it('does nothing for a row with no run in the cycle', async () => {
+    const { store, actions } = await loaded()
+
+    await actions.openMember({ ...memberRow(11), run_id: null })
+
+    expect(sheetCalls()).toEqual([])
+    expect(store.openMember).toBeNull()
+  })
+
+  it('a second tap while the same sheet is loading makes no second request', async () => {
+    const { store, actions } = await loaded()
+    const slow = deferred<unknown>()
+    apiMock.mockImplementationOnce(() => slow.promise)
+
+    const first = actions.openMember(memberRow(11))
+    expect(store.isMemberSheetLoading).toBe(true)
+    await actions.openMember(memberRow(11))
+    slow.resolve({ success: true, data: memberSheet(IN_PROGRESS, 11) })
+    await first
+
+    expect(sheetCalls()).toHaveLength(1)
+    expect(store.openMemberSheet?.member.user_id).toBe(11)
+  })
+
+  it('drops a response for a sheet that was closed', async () => {
+    const { store, actions } = await loaded()
+    const slow = deferred<unknown>()
+    apiMock.mockImplementationOnce(() => slow.promise)
+
+    const stale = actions.openMember(memberRow(11))
+    actions.closeMember()
+    slow.resolve({ success: true, data: memberSheet(IN_PROGRESS, 11) })
+    await stale
+
+    expect(store.memberSheet(IN_PROGRESS, 11)).toBeNull()
+    expect(store.isMemberSheetLoading).toBe(false)
+  })
+
+  it('drops a response superseded by another member, which lands normally', async () => {
+    const { store, actions } = await loaded()
+    const slow = deferred<unknown>()
+    apiMock.mockImplementationOnce(() => slow.promise)
+
+    const stale = actions.openMember(memberRow(11))
+    actions.closeMember()
+    await actions.openMember(memberRow(12))
+    slow.resolve({ success: true, data: memberSheet(IN_PROGRESS, 11) })
+    await stale
+
+    expect(store.openMember?.member.user_id).toBe(12)
+    expect(store.openMemberSheet?.member.user_id).toBe(12)
+    expect(store.memberSheet(IN_PROGRESS, 11)).toBeNull()
+    expect(store.isMemberSheetLoading).toBe(false)
+  })
+
+  it('drops a failure for a sheet that was closed', async () => {
+    const { store, actions } = await loaded()
+    const slow = deferred<unknown>()
+    apiMock.mockImplementationOnce(() => slow.promise)
+
+    const stale = actions.openMember(memberRow(11))
+    actions.closeMember()
+    slow.reject(new Error('late'))
+    await stale
+
+    expect(store.memberSheetError).toBeNull()
+  })
+
+  it('records a failure without a toast, then retry loads the sheet', async () => {
+    const { store, actions } = await loaded()
+    apiMock.mockRejectedValueOnce(new Error('down'))
+
+    await actions.openMember(memberRow(11))
+
+    expect(store.memberSheetError).toBe('Error: down')
+    expect(store.isMemberSheetLoading).toBe(false)
+    expect(store.openMemberSheet).toBeNull()
+    expect(toastAdd).not.toHaveBeenCalled()
+
+    await actions.retryMemberSheet()
+
+    expect(sheetCalls()).toHaveLength(2)
+    expect(store.memberSheetError).toBeNull()
+    expect(store.openMemberSheet?.member.user_id).toBe(11)
+  })
+
+  it('a page reload closes the sheet and forgets every cached sheet', async () => {
+    const { store, actions } = await loaded()
+
+    await actions.openMember(memberRow(11))
+    await actions.loadOwnerIncomePage()
+
+    expect(store.openMember).toBeNull()
+    expect(store.memberSheets).toEqual({})
+
+    await actions.openMember(memberRow(11))
+    expect(sheetCalls()).toHaveLength(2)
   })
 })

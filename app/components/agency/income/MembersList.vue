@@ -25,6 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'load-more': []
   retry: []
+  'open-member': [member: OwnerIncomeMemberRow]
 }>()
 
 // ========================================
@@ -58,7 +59,12 @@ const isLoadingMore = computed(() => props.loadingPage !== null && props.loading
 
   <!-- Rows -->
   <div v-else class="space-y-2">
-    <AgencyIncomeMemberIncomeCard v-for="row in rows" :key="row.user_id" :member="row" />
+    <AgencyIncomeMemberIncomeCard
+      v-for="row in rows"
+      :key="row.user_id"
+      :member="row"
+      @open="emit('open-member', $event)"
+    />
 
     <p v-if="error" class="text-xs text-error text-center">{{ error }}</p>
 

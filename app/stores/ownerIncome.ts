@@ -4,7 +4,8 @@
 // State + computed + setters ONLY — useOwnerIncomeActions for API.
 // Cycle-centric owner/admin "Member Income" page: overview (agency + cycles),
 // the selected cycle, a per-cycle summary cache (Members / Owner heroes) and a
-// per-cycle members list (rows, paging, applied sort/search).
+// per-cycle members list (rows, paging, applied sort/search), and the member
+// bottom sheet (which member is open + a sheet cache keyed by cycle and user).
 // Everything lives for one page visit; the page load resets it.
 
 import { defineStore } from 'pinia'
@@ -13,16 +14,29 @@ import type {
   OwnerIncomeCycleSummary,
   OwnerIncomeMemberList,
   OwnerIncomeMemberRow,
+  OwnerIncomeMemberSheet,
   OwnerIncomeMemberSort,
+  OwnerIncomeOpenMember,
   OwnerIncomeOverview,
   OwnerIncomeSortDirection,
 } from '~/types/income/ownerIncome'
+
+function memberSheetKey(cycleNumber: number, userId: number): string {
+  return `${cycleNumber}:${userId}`
+}
 
 export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
   const overview = ref<OwnerIncomeOverview | null>(null)
   const selectedCycle = ref<number | null>(null)
   const summaries = ref<Record<number, OwnerIncomeCycleSummary>>({})
   const memberLists = ref<Record<number, OwnerIncomeMemberList>>({})
+
+  /** Loaded sheets, keyed `${cycle}:${userId}`. */
+  const memberSheets = ref<Record<string, OwnerIncomeMemberSheet>>({})
+  const openMember = ref<OwnerIncomeOpenMember | null>(null)
+  /** The sheet request allowed to land; 0 = none in flight. */
+  const memberSheetRequestId = ref(0)
+  const memberSheetError = ref<string | null>(null)
 
   const isOverviewLoading = ref(false)
   const loadingCycles = ref<number[]>([])
@@ -50,8 +64,20 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     selectedCycle.value !== null ? (memberLists.value[selectedCycle.value] ?? null) : null
   )
 
+  const openMemberSheet = computed<OwnerIncomeMemberSheet | null>(() =>
+    openMember.value !== null
+      ? (memberSheets.value[memberSheetKey(openMember.value.cycle, openMember.value.member.user_id)] ?? null)
+      : null
+  )
+
+  const isMemberSheetLoading = computed(() => memberSheetRequestId.value !== 0)
+
   function isCycleLoading(cycleNumber: number): boolean {
     return loadingCycles.value.includes(cycleNumber)
+  }
+
+  function memberSheet(cycleNumber: number, userId: number): OwnerIncomeMemberSheet | null {
+    return memberSheets.value[memberSheetKey(cycleNumber, userId)] ?? null
   }
 
   function memberList(cycleNumber: number): OwnerIncomeMemberList | null {
@@ -136,11 +162,43 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     patchMemberList(cycleNumber, { error: message, loadingPage: null })
   }
 
+  function setOpenMember(target: OwnerIncomeOpenMember | null): void {
+    openMember.value = target
+  }
+
+  /** Mark a sheet request in flight under `requestId` (the only response allowed to land). */
+  function setMemberSheetRequest(requestId: number): void {
+    memberSheetRequestId.value = requestId
+    memberSheetError.value = null
+  }
+
+  /** Cache a loaded sheet for `cycleNumber` and end the request. */
+  function setMemberSheet(cycleNumber: number, sheet: OwnerIncomeMemberSheet): void {
+    memberSheets.value = { ...memberSheets.value, [memberSheetKey(cycleNumber, sheet.member.user_id)]: sheet }
+    memberSheetRequestId.value = 0
+    memberSheetError.value = null
+  }
+
+  function setMemberSheetError(message: string): void {
+    memberSheetError.value = message
+    memberSheetRequestId.value = 0
+  }
+
+  /** No request in flight, no error — any response still on the wire is now stale. */
+  function clearMemberSheetRequest(): void {
+    memberSheetRequestId.value = 0
+    memberSheetError.value = null
+  }
+
   function reset(): void {
     overview.value = null
     selectedCycle.value = null
     summaries.value = {}
     memberLists.value = {}
+    memberSheets.value = {}
+    openMember.value = null
+    memberSheetRequestId.value = 0
+    memberSheetError.value = null
     isOverviewLoading.value = false
     loadingCycles.value = []
     overviewError.value = null
@@ -151,6 +209,10 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     selectedCycle,
     summaries,
     memberLists,
+    memberSheets,
+    openMember,
+    memberSheetRequestId,
+    memberSheetError,
     isOverviewLoading,
     loadingCycles,
     overviewError,
@@ -162,8 +224,11 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     isSelectedCycleLoading,
     isSelectedCycleInProgress,
     selectedMemberList,
+    openMemberSheet,
+    isMemberSheetLoading,
     isCycleLoading,
     memberList,
+    memberSheet,
     setOverview,
     setSelectedCycle,
     setSummary,
@@ -174,6 +239,11 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     setMemberListRequest,
     setMemberListPage,
     setMemberListError,
+    setOpenMember,
+    setMemberSheetRequest,
+    setMemberSheet,
+    setMemberSheetError,
+    clearMemberSheetRequest,
     reset,
   }
 })

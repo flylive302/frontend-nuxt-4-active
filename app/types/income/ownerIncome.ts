@@ -6,7 +6,14 @@
 // (every member's run shares it). Diamond figures are exact integers computed
 // by the same repository the reseller panel uses, so the numbers agree.
 
-import type { IncomeAgency, IncomeTotals } from './income'
+import type {
+  AgencyRun,
+  IncomeAgency,
+  IncomeTotals,
+  RunDeduction,
+  RunDetailMilestone,
+  RunExchange,
+} from './income'
 
 /**
  * One global cycle (Run N). `start` inclusive, `end` exclusive (ISO 8601).
@@ -113,4 +120,41 @@ export interface OwnerIncomeMemberList {
   loadingPage: number | null
   error: string | null
   requestId: number
+}
+
+// ========================================
+// Member sheet — `GET user/agency/income/cycles/{number}/members/{user}`
+// ========================================
+
+/** The tapped member, as on their list row. */
+export type OwnerIncomeSheetMember = Pick<OwnerIncomeMemberRow, 'user_id' | 'name' | 'avatar_url' | 'signature' | 'left'>
+
+/**
+ * Run header: the `AgencyRun` fields of the member run detail, without the
+ * ladder (it carries the owner's per-tier reward, which admins must not see).
+ */
+export type OwnerIncomeSheetRun = Pick<
+  AgencyRun,
+  'id' | 'status' | 'status_label' | 'status_color' | 'started_at' | 'ends_at' | 'accumulated_xp' | 'current_tier'
+>
+
+/**
+ * One member's newest run in this agency for the cycle. `totals`, `milestones`,
+ * `exchanges` and `deductions` are exactly the member's own
+ * `GET user/income/runs/{run}` values for the same run. The server 404s for a
+ * member not in the cycle's roster or with no run in it.
+ */
+export interface OwnerIncomeMemberSheet {
+  member: OwnerIncomeSheetMember
+  run: OwnerIncomeSheetRun
+  totals: IncomeTotals
+  milestones: RunDetailMilestone[]
+  exchanges: RunExchange[]
+  deductions: RunDeduction[]
+}
+
+/** The sheet currently open: the cycle it was opened on + the tapped row. */
+export interface OwnerIncomeOpenMember {
+  cycle: number
+  member: OwnerIncomeSheetMember
 }

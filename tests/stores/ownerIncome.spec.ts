@@ -9,6 +9,7 @@ import type {
   OwnerIncomeCycle,
   OwnerIncomeCycleSummary,
   OwnerIncomeMemberRow,
+  OwnerIncomeMemberSheet,
 } from '../../app/types/income/ownerIncome'
 
 vi.stubGlobal('ref', ref)
@@ -201,5 +202,84 @@ describe('useOwnerIncomeStore members lists', () => {
 
     expect(store.memberLists).toEqual({})
     expect(store.selectedMemberList).toBeNull()
+  })
+})
+
+describe('useOwnerIncomeStore member sheets', () => {
+  function sheet(userId: number, earned: number): OwnerIncomeMemberSheet {
+    return {
+      member: { user_id: userId, name: `Member ${userId}`, avatar_url: null, signature: null, left: false },
+      run: {
+        id: userId,
+        status: 'closed',
+        status_label: 'Closed',
+        status_color: 'neutral',
+        started_at: '2026-08-11T00:00:00+00:00',
+        ends_at: '2026-08-21T00:00:00+00:00',
+        accumulated_xp: 0,
+        current_tier: 0,
+      },
+      totals: { earned, exchanged: 0, deducted: 0, income: earned },
+      milestones: [],
+      exchanges: [],
+      deductions: [],
+    }
+  }
+
+  const member = (userId: number) => sheet(userId, 0).member
+
+  it('caches sheets per (cycle, user) and exposes the open one', async () => {
+    const store = await makeStore()
+
+    store.setMemberSheet(4, sheet(7, 40))
+    store.setMemberSheet(2, sheet(7, 20))
+
+    expect(store.memberSheet(4, 7)?.totals.earned).toBe(40)
+    expect(store.memberSheet(2, 7)?.totals.earned).toBe(20)
+    expect(store.memberSheet(4, 8)).toBeNull()
+    expect(store.openMemberSheet).toBeNull()
+
+    store.setOpenMember({ cycle: 2, member: member(7) })
+    expect(store.openMemberSheet?.totals.earned).toBe(20)
+
+    store.setOpenMember({ cycle: 4, member: member(8) })
+    expect(store.openMemberSheet).toBeNull()
+  })
+
+  it('tracks the request in flight and ends it on sheet, error or clear', async () => {
+    const store = await makeStore()
+
+    store.setMemberSheetRequest(3)
+    expect(store.isMemberSheetLoading).toBe(true)
+    expect(store.memberSheetRequestId).toBe(3)
+
+    store.setMemberSheetError('boom')
+    expect(store.isMemberSheetLoading).toBe(false)
+    expect(store.memberSheetError).toBe('boom')
+
+    store.setMemberSheetRequest(4)
+    expect(store.memberSheetError).toBeNull()
+    store.setMemberSheet(4, sheet(7, 1))
+    expect(store.isMemberSheetLoading).toBe(false)
+
+    store.setMemberSheetRequest(5)
+    store.clearMemberSheetRequest()
+    expect(store.isMemberSheetLoading).toBe(false)
+    expect(store.memberSheetError).toBeNull()
+  })
+
+  it('reset closes the sheet and clears the cache and request state', async () => {
+    const store = await makeStore()
+    store.setMemberSheet(4, sheet(7, 1))
+    store.setOpenMember({ cycle: 4, member: member(7) })
+    store.setMemberSheetRequest(9)
+
+    store.reset()
+
+    expect(store.memberSheets).toEqual({})
+    expect(store.openMember).toBeNull()
+    expect(store.openMemberSheet).toBeNull()
+    expect(store.isMemberSheetLoading).toBe(false)
+    expect(store.memberSheetError).toBeNull()
   })
 })

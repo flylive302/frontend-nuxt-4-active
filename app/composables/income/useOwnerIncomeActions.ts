@@ -4,10 +4,13 @@
 // Cycle-centric owner/admin "Member Income" page: one overview call on load,
 // then per cycle one summary call (cached for the visit) and the members list
 // (page 1 on first view, then load more / sort / search — all server-side,
-// every query change restarts at page 1).
+// every query change restarts at page 1). Tapping a member with a run opens
+// their sheet (one call per member per cycle, cached for the visit).
 
 import type {
   OwnerIncomeCycleSummary,
+  OwnerIncomeMemberRow,
+  OwnerIncomeMemberSheet,
   OwnerIncomeMemberSort,
   OwnerIncomeMembersPage,
   OwnerIncomeOverview,
@@ -24,6 +27,8 @@ const DEFAULT_MEMBERS_QUERY = { sort: 'income', direction: 'desc', search: '' } 
  * previous visit can never match a list the new visit created.
  */
 let membersRequestSeq = 0
+/** Same guarantee as `membersRequestSeq`, for member sheet requests. */
+let memberSheetRequestSeq = 0
 
 export function useOwnerIncomeActions() {
   const store = useOwnerIncomeStore()
@@ -214,6 +219,68 @@ export function useOwnerIncomeActions() {
   }
 
   /**
+   * EXECUTE — one member's sheet for a cycle. Only the latest request may
+   * write: a response for a sheet that was closed, replaced by another
+   * member's, or wiped by a page reset is dropped silently.
+   */
+  async function fetchMemberSheet(cycleNumber: number, userId: number): Promise<void> {
+    const requestId = ++memberSheetRequestSeq
+    store.setMemberSheetRequest(requestId)
+    const isCurrent = () => store.memberSheetRequestId === requestId
+
+    try {
+      const response = await api<{ success: true; data: OwnerIncomeMemberSheet }>(
+        `/user/agency/income/cycles/${cycleNumber}/members/${userId}`
+      )
+      if (!isCurrent()) return
+      store.setMemberSheet(cycleNumber, response.data)
+    } catch (err) {
+      if (!isCurrent()) return
+      store.setMemberSheetError(normalizeError(err).message)
+    }
+  }
+
+  /** Open a member's sheet on the selected cycle; a sheet already viewed reopens with no request. */
+  async function openMember(row: OwnerIncomeMemberRow): Promise<void> {
+    const cycleNumber = store.selectedCycle
+
+    // GATE — only rows with a run in the cycle have a sheet.
+    if (cycleNumber === null || row.run_id === null) return
+
+    // GATE — this member's sheet is already open and loading (double tap).
+    const open = store.openMember
+    if (open?.cycle === cycleNumber && open.member.user_id === row.user_id && store.isMemberSheetLoading) return
+
+    store.setOpenMember({
+      cycle: cycleNumber,
+      member: { user_id: row.user_id, name: row.name, avatar_url: row.avatar_url, signature: row.signature, left: row.left },
+    })
+
+    if (store.memberSheet(cycleNumber, row.user_id)) {
+      store.clearMemberSheetRequest()
+      return
+    }
+
+    await fetchMemberSheet(cycleNumber, row.user_id)
+  }
+
+  /** Close the sheet; a request still in flight becomes stale. The cache is kept. */
+  function closeMember(): void {
+    store.setOpenMember(null)
+    store.clearMemberSheetRequest()
+  }
+
+  /** Retry the open sheet after a failed load. */
+  async function retryMemberSheet(): Promise<void> {
+    const open = store.openMember
+
+    // GATE
+    if (open === null || store.isMemberSheetLoading || store.memberSheet(open.cycle, open.member.user_id)) return
+
+    await fetchMemberSheet(open.cycle, open.member.user_id)
+  }
+
+  /**
    * Page load: fresh state, the overview, then the default cycle (in progress,
    * else the newest listed). An agency that never had a run has no default
    * cycle, so no summary is requested and the page shows its empty state.
@@ -239,6 +306,9 @@ export function useOwnerIncomeActions() {
     setMembersDirection,
     setMembersSearch,
     cancelPendingSearch,
+    openMember,
+    closeMember,
+    retryMemberSheet,
     loadOwnerIncomePage,
   }
 }

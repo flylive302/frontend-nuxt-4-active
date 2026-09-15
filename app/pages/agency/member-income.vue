@@ -4,13 +4,18 @@
 // ========================================
 // Route binding + load only. One overview call on mount; per cycle switch one
 // summary call (cached for the visit) plus the members list page 1 (sort,
-// search and paging run on the server via the actions composable). Access:
-// owner or admin of the current managed agency; everyone else sees "Access
-// Denied". The Owner hero renders only when the server sends the `owner` block
-// (owner only, never admins).
+// search and paging run on the server via the actions composable). Tapping a
+// member with a run opens their sheet over the list (the list stays mounted,
+// so its scroll position is kept). Access: owner or admin of the current
+// managed agency; everyone else sees "Access Denied". The Owner hero renders
+// only when the server sends the `owner` block (owner only, never admins).
 
 import { onBeforeUnmount, onMounted, computed, ref } from 'vue'
-import type { OwnerIncomeMemberSort, OwnerIncomeSortDirection } from '~/types/income/ownerIncome'
+import type {
+  OwnerIncomeMemberRow,
+  OwnerIncomeMemberSort,
+  OwnerIncomeSortDirection,
+} from '~/types/income/ownerIncome'
 
 definePageMeta({
   layout: 'alt',
@@ -28,6 +33,9 @@ const {
   setMembersDirection,
   setMembersSearch,
   cancelPendingSearch,
+  openMember,
+  closeMember,
+  retryMemberSheet,
 } = useOwnerIncomeActions()
 const { fetchUserAgency } = useAgencyMembership()
 
@@ -71,7 +79,18 @@ function onRetryMembers(): void {
   void retryMembers()
 }
 
-onBeforeUnmount(cancelPendingSearch)
+function onOpenMember(member: OwnerIncomeMemberRow): void {
+  void openMember(member)
+}
+
+function onRetryMemberSheet(): void {
+  void retryMemberSheet()
+}
+
+onBeforeUnmount(() => {
+  cancelPendingSearch()
+  closeMember()
+})
 
 onMounted(async () => {
   if (!agencyStore.userAgency.agency) {
@@ -167,6 +186,7 @@ onMounted(async () => {
               :error="memberList.error"
               @load-more="onLoadMoreMembers"
               @retry="onRetryMembers"
+              @open-member="onOpenMember"
             />
           </div>
         </section>
@@ -181,6 +201,17 @@ onMounted(async () => {
           <UButton size="sm" variant="soft" icon="i-lucide-rotate-cw" @click="onRetryCycle">Retry</UButton>
         </div>
       </template>
+
+      <!-- Member sheet (one instance, over the list) -->
+      <AgencyIncomeMemberIncomeSheet
+        :open="ownerIncomeStore.openMember !== null"
+        :member="ownerIncomeStore.openMember?.member ?? null"
+        :sheet="ownerIncomeStore.openMemberSheet"
+        :loading="ownerIncomeStore.isMemberSheetLoading"
+        :error="ownerIncomeStore.memberSheetError"
+        @close="closeMember"
+        @retry="onRetryMemberSheet"
+      />
     </div>
   </main>
 </template>
