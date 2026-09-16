@@ -16,6 +16,7 @@ import {
 } from '~/types/asset/upload'
 import { UPLOAD_IMAGE_CAPS } from '~/constants/upload'
 import { downscaleImageForUpload } from '~/utils/image-file'
+import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 
 
 // ========================================
@@ -228,7 +229,17 @@ export function useImageUpload() {
       progress: 0,
     })
 
+    // The File behind the current `success` result. A multi-image form that
+    // aborts on a later failure retries every upload; re-sending an unchanged
+    // file burns another `/uploads/auth-params` call against its 10/min throttle.
+    let uploadedFile: File | null = null
+
     async function upload(file: File, folder: ImageUploadFolder): Promise<ImageUploadResult | null> {
+      if (state.value.status === 'success' && state.value.result && uploadedFile === file) {
+        return state.value.result
+      }
+
+      uploadedFile = null
       state.value = { status: 'uploading', progress: 0 }
 
       try {
@@ -238,16 +249,17 @@ export function useImageUpload() {
           },
         })
 
+        uploadedFile = file
         state.value = { status: 'success', progress: 100, result }
         return result
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Upload failed'
-        state.value = { status: 'error', progress: 0, error: message }
+        state.value = { status: 'error', progress: 0, error: describeUploadError(error) }
         return null
       }
     }
 
     function reset() {
+      uploadedFile = null
       state.value = { status: 'idle', progress: 0 }
     }
 
@@ -256,6 +268,22 @@ export function useImageUpload() {
       upload,
       reset,
     }
+  }
+
+  /**
+   * User-facing message for a failed upload. `getAuthParams` fails with an
+   * ofetch error carrying `response` (e.g. the 429 from the auth-params
+   * throttle); validation and the ImageKit XHR fail with plain `Error`s whose
+   * message is already user-readable.
+   */
+  function describeUploadError(error: unknown): string {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const normalized = normalizeFetchError(error)
+      return normalized.status === 429
+        ? 'Too many upload attempts. Please wait a minute and try again.'
+        : normalized.message
+    }
+    return error instanceof Error ? error.message : 'Upload failed'
   }
 
   // ========================================

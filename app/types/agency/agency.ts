@@ -111,7 +111,7 @@ export interface AgencyMember {
   status_label: string
   joined_at: string
   
-  user: UserReference
+  user?: UserReference // Omitted when the member's account was deleted
   
   // Admin/Owner visible fields
   invited_by?: UserReference | null

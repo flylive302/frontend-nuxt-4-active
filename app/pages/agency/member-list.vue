@@ -4,7 +4,7 @@
 // ========================================
 
 import { onMounted } from 'vue'
-import type { AgencyMember } from '~/types/agency/agency'
+import type { AgencyMember, UserReference } from '~/types/agency/agency'
 import { formatAgencyDate } from '~/utils/agency-format'
 
 // ========================================
@@ -37,7 +37,13 @@ const kickReason = ref('')
 // Computed
 // ========================================
 
-const members = computed(() => agencyStore.currentAgency.members)
+// A deleted account's membership can arrive without `user`; rendering it would
+// crash the whole page on `member.user.signature`.
+const members = computed(() =>
+  agencyStore.currentAgency.members.filter(
+    (m): m is AgencyMember & { user: UserReference } => m.user != null,
+  ),
+)
 const loading = computed(() => agencyStore.currentAgency.membersLoading)
 const hasMore = computed(() => agencyStore.currentAgency.membersHasMore)
 
@@ -206,7 +212,7 @@ onMounted(async () => {
         <div class="p-4 space-y-4">
           <h3 class="text-lg font-semibold">Remove Member?</h3>
           <p class="text-sm text-muted">
-            Are you sure you want to remove <strong>{{ selectedMember?.user.name }}</strong> from the agency?
+            Are you sure you want to remove <strong>{{ selectedMember?.user?.name }}</strong> from the agency?
           </p>
           
           <UTextarea

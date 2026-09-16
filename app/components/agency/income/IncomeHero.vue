@@ -17,7 +17,7 @@ withDefaults(defineProps<{
   totals: IncomeTotals
   label?: string
 }>(), {
-  label: 'Income',
+  label: 'Diamonds Left',
 })
 </script>
 

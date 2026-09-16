@@ -10,6 +10,7 @@ import { navigateTo } from 'nuxt/app'
 import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
 import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
 import type { NationalIdImage } from '~/types/asset/upload'
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE } from '~/types/asset/upload'
 import type { Agency, AgencyNationalIdImage } from '~/types/agency/agency'
 import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 
@@ -27,8 +28,10 @@ definePageMeta({
 // ========================================
 
 const imageFile = z.instanceof(File, { message: 'Only image files are allowed' })
-  .refine(f => /^image\//.test(f.type), 'Only image files are allowed')
-  .refine(f => f.size <= 5 * 1024 * 1024, 'Each file must be ≤ 5MB')
+  // Same allowlist `useImageUpload.validateFile` enforces — anything looser
+  // (e.g. HEIC/GIF from a phone gallery) passes the form, then fails at upload.
+  .refine(f => ALLOWED_IMAGE_TYPES.includes(f.type), 'Please pick a JPG, PNG or WebP image')
+  .refine(f => f.size <= MAX_IMAGE_SIZE, 'Each file must be ≤ 5MB')
 
 // Images are optional at the zod level here — an existing (already-uploaded)
 // image is an acceptable substitute for a freshly picked File. That extra
@@ -207,7 +210,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     if (parsed.data.logo) {
       const logoResult = await logoUpload.upload(parsed.data.logo, 'agencies/logos')
       if (!logoResult) {
-        toast.add({ title: 'Upload Failed', description: 'Failed to upload logo', color: 'error' })
+        toast.add({ title: 'Upload Failed', description: logoUpload.state.value.error ?? 'Failed to upload logo', color: 'error' })
         return
       }
       logoUrl = logoResult.url
@@ -224,7 +227,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     if (parsed.data.idCardFront) {
       const idFrontResult = await idFrontUpload.upload(parsed.data.idCardFront, 'agencies/national-ids')
       if (!idFrontResult) {
-        toast.add({ title: 'Upload Failed', description: 'Failed to upload ID card front', color: 'error' })
+        toast.add({ title: 'Upload Failed', description: idFrontUpload.state.value.error ?? 'Failed to upload ID card front', color: 'error' })
         return
       }
       idFrontImage = { url: idFrontResult.url, file_id: idFrontResult.fileId, side: 'front' }
@@ -239,7 +242,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     if (parsed.data.idCardBack) {
       const idBackResult = await idBackUpload.upload(parsed.data.idCardBack, 'agencies/national-ids')
       if (!idBackResult) {
-        toast.add({ title: 'Upload Failed', description: 'Failed to upload ID card back', color: 'error' })
+        toast.add({ title: 'Upload Failed', description: idBackUpload.state.value.error ?? 'Failed to upload ID card back', color: 'error' })
         return
       }
       idBackImage = { url: idBackResult.url, file_id: idBackResult.fileId, side: 'back' }

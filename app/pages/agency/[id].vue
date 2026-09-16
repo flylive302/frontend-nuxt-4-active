@@ -6,6 +6,7 @@
 import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { withImageKitTransform } from '~/utils/imagekit'
+import type { AgencyMember, UserReference } from '~/types/agency/agency'
 
 // ========================================
 // Page Configuration
@@ -42,7 +43,13 @@ const showJoinModal = ref(false)
 // ========================================
 
 const agency = computed(() => agencyStore.currentAgency.agency)
-const members = computed(() => agencyStore.currentAgency.members)
+// A deleted account's membership can arrive without `user`; rendering it would
+// crash the whole page on `member.user.signature`.
+const members = computed(() =>
+  agencyStore.currentAgency.members.filter(
+    (m): m is AgencyMember & { user: UserReference } => m.user != null,
+  ),
+)
 const loading = computed(() => agencyStore.currentAgency.loading)
 const error = computed(() => agencyStore.currentAgency.error)
 
