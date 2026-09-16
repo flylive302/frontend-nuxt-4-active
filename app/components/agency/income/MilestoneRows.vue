@@ -1,20 +1,22 @@
 <!-- ~/components/agency/income/MilestoneRows.vue -->
-<!-- One row per crossed milestone on a run: tier, required XP, crossed date,
-     member diamond reward, and claim state. -->
+<!-- One row per crossed milestone: tier, required Gift coins, crossed date,
+     member diamond reward, and claim state. A range spans several runs and
+     tiers repeat across them, so rows are keyed on run + tier, not tier. -->
 <script setup lang="ts">
 // ========================================
 // Imports
 // ========================================
 
-import type { RunDetailMilestone } from '~/types/income/income'
+import type { OwnerIncomeSheetMilestone } from '~/types/income/ownerIncome'
 import { formatDiamondsExact, formatRunDate } from '~/utils/incomeFormat'
+import { ownerIncomeMilestoneKey } from '~/utils/ownerIncomeCard'
 
 // ========================================
 // Props
 // ========================================
 
 defineProps<{
-  milestones: RunDetailMilestone[]
+  milestones: OwnerIncomeSheetMilestone[]
 }>()
 </script>
 
@@ -22,7 +24,7 @@ defineProps<{
   <div class="space-y-2">
     <div
       v-for="milestone in milestones"
-      :key="milestone.tier"
+      :key="ownerIncomeMilestoneKey(milestone)"
       class="flex items-center justify-between gap-2 bg-elevated rounded-lg p-3"
     >
       <div class="flex items-center gap-2 min-w-0">
@@ -47,7 +49,7 @@ defineProps<{
     </div>
 
     <p v-if="milestones.length === 0" class="text-sm text-muted text-center py-4">
-      No milestones crossed in this run.
+      No milestones crossed in this window.
     </p>
   </div>
 </template>

@@ -1,21 +1,29 @@
 // ========================================
 // Owner Income — GATE / EXECUTE / REACT
 // ========================================
-// Cycle-centric owner/admin "Member Income" page: one overview call on load,
-// then per cycle one summary call (cached for the visit) and the members list
-// (page 1 on first view, then load more / sort / search — all server-side,
-// every query change restarts at page 1). Tapping a member with a run opens
-// their sheet (one call per member per cycle, cached for the visit).
+// Window-centric owner/admin "Member Income" page. A window is either a Run N
+// preset or a custom range of UTC days; both serve the same shapes from
+// sibling endpoint families, so every call here is built from one
+// `OwnerIncomeWindowSelection` via `ownerIncomeWindowEndpoint()`.
+//
+// One overview call on load, then per window one summary call (cached for the
+// visit) and the members list (page 1 on first view, then load more / sort /
+// search — all server-side, every query change restarts at page 1). Tapping a
+// member opens their sheet (one call per member per window, cached for the
+// visit). Re-selecting a window already loaded, or reopening a sheet already
+// loaded, makes NO request.
 
 import type {
-  OwnerIncomeCycleSummary,
   OwnerIncomeMemberRow,
   OwnerIncomeMemberSheet,
   OwnerIncomeMemberSort,
   OwnerIncomeMembersPage,
   OwnerIncomeOverview,
   OwnerIncomeSortDirection,
+  OwnerIncomeWindowSelection,
+  OwnerIncomeWindowSummary,
 } from '~/types/income/ownerIncome'
+import { checkOwnerIncomeRange, ownerIncomeWindowEndpoint, ownerIncomeWindowKey } from '~/utils/ownerIncomeWindow'
 
 const MEMBERS_SEARCH_DEBOUNCE_MS = 300
 /** Mirrors the API's `search` max length — a longer term would be a 422. */
@@ -52,104 +60,141 @@ export function useOwnerIncomeActions() {
     }
   }
 
-  async function fetchCycleSummary(cycleNumber: number): Promise<void> {
-    store.setCycleLoading(cycleNumber, true)
+  /** EXECUTE — one window's heroes, cached under that window's key. */
+  async function fetchWindowSummary(selection: OwnerIncomeWindowSelection): Promise<void> {
+    const windowKey = ownerIncomeWindowKey(selection)
+    const { url, query } = ownerIncomeWindowEndpoint(selection)
+
+    store.setWindowLoading(windowKey, true)
 
     try {
-      const response = await api<{ success: true; data: OwnerIncomeCycleSummary }>(
-        `/user/agency/income/cycles/${cycleNumber}`
-      )
-      store.setSummary(response.data)
+      const response = await api<{ success: true; data: OwnerIncomeWindowSummary }>(url, { query })
+      store.setSummary(windowKey, response.data)
     } catch (err) {
       const normalized = normalizeError(err)
       toast.add({ title: normalized.message, color: 'error' })
     } finally {
-      store.setCycleLoading(cycleNumber, false)
+      store.setWindowLoading(windowKey, false)
     }
   }
 
   /**
-   * EXECUTE — one page of a cycle's members under the list's applied query.
+   * EXECUTE — one page of a window's members under the list's applied query.
    * Only the latest request for the list may write: a response superseded by a
    * sort/search change, another page 1, or a page reset is dropped silently.
    */
-  async function fetchMembersPage(cycleNumber: number, page: number): Promise<void> {
-    const list = store.memberList(cycleNumber)
+  async function fetchMembersPage(selection: OwnerIncomeWindowSelection, page: number): Promise<void> {
+    const windowKey = ownerIncomeWindowKey(selection)
+    const list = store.memberList(windowKey)
     if (!list) return
 
     const requestId = ++membersRequestSeq
-    store.setMemberListRequest(cycleNumber, requestId, page)
-    const isCurrent = () => store.memberList(cycleNumber)?.requestId === requestId
+    store.setMemberListRequest(windowKey, requestId, page)
+    const isCurrent = () => store.memberList(windowKey)?.requestId === requestId
+
+    const { url, query } = ownerIncomeWindowEndpoint(selection, '/members')
 
     try {
-      const response = await api<{ success: true; data: OwnerIncomeMembersPage }>(
-        `/user/agency/income/cycles/${cycleNumber}/members`,
-        {
-          query: {
-            page,
-            sort: list.sort,
-            direction: list.direction,
-            ...(list.search !== '' ? { search: list.search } : {}),
-          },
-        }
-      )
+      const response = await api<{ success: true; data: OwnerIncomeMembersPage }>(url, {
+        query: {
+          ...query,
+          page,
+          sort: list.sort,
+          direction: list.direction,
+          ...(list.search !== '' ? { search: list.search } : {}),
+        },
+      })
       if (!isCurrent()) return
       const { members, meta } = response.data
-      store.setMemberListPage(cycleNumber, meta.page, members, meta.has_more)
+      store.setMemberListPage(windowKey, meta.page, members, meta.has_more)
     } catch (err) {
       if (!isCurrent()) return
-      store.setMemberListError(cycleNumber, normalizeError(err).message)
+      store.setMemberListError(windowKey, normalizeError(err).message)
     }
   }
 
-  /** EXECUTE — restart a cycle's list under `query` and load its page 1. */
+  /** EXECUTE — restart a window's list under `query` and load its page 1. */
   async function restartMembers(
-    cycleNumber: number,
+    selection: OwnerIncomeWindowSelection,
     query: { sort: OwnerIncomeMemberSort; direction: OwnerIncomeSortDirection; search: string }
   ): Promise<void> {
-    store.setMemberListQuery(cycleNumber, query)
-    await fetchMembersPage(cycleNumber, 1)
+    store.setMemberListQuery(ownerIncomeWindowKey(selection), query)
+    await fetchMembersPage(selection, 1)
   }
 
   /**
-   * First view of a cycle's list (default query), or a retry of a page 1 that
+   * First view of a window's list (default query), or a retry of a page 1 that
    * failed. A list with rows or a request in flight is left alone.
    */
-  async function ensureMembers(cycleNumber: number): Promise<void> {
-    const list = store.memberList(cycleNumber)
+  async function ensureMembers(selection: OwnerIncomeWindowSelection): Promise<void> {
+    const list = store.memberList(ownerIncomeWindowKey(selection))
 
     if (!list) {
-      await restartMembers(cycleNumber, { ...DEFAULT_MEMBERS_QUERY })
+      await restartMembers(selection, { ...DEFAULT_MEMBERS_QUERY })
       return
     }
 
     if (list.page === 0 && list.loadingPage === null) {
-      await fetchMembersPage(cycleNumber, 1)
+      await fetchMembersPage(selection, 1)
     }
   }
 
-  async function selectCycle(cycleNumber: number): Promise<void> {
-    store.setSelectedCycle(cycleNumber)
+  /**
+   * Show a window (run or range). A window already loaded re-selects instantly
+   * — heroes come from the cache and the list keeps its rows, scroll offset and
+   * applied query — so no request is made.
+   */
+  async function selectWindow(selection: OwnerIncomeWindowSelection): Promise<void> {
+    const windowKey = ownerIncomeWindowKey(selection)
+    store.setSelectedWindow(selection)
 
-    // GATE — a cached cycle re-selects instantly; one in flight is not re-requested.
-    const needsSummary = !store.summaries[cycleNumber] && !store.isCycleLoading(cycleNumber)
+    // GATE — a cached window needs no summary; one in flight is not re-requested.
+    const needsSummary = store.summary(windowKey) === null && !store.isWindowLoading(windowKey)
 
     // EXECUTE — summary and members page 1 in parallel.
     await Promise.all([
-      needsSummary ? fetchCycleSummary(cycleNumber) : Promise.resolve(),
-      ensureMembers(cycleNumber),
+      needsSummary ? fetchWindowSummary(selection) : Promise.resolve(),
+      ensureMembers(selection),
     ])
   }
 
-  /** Next page of the selected cycle's members (the "Load more" button). */
+  /** Show Run `cycleNumber`. */
+  async function selectCycle(cycleNumber: number): Promise<void> {
+    await selectWindow({ kind: 'run', number: cycleNumber })
+  }
+
+  /**
+   * Show the custom range `[from, to]` (`YYYY-MM-DD`, UTC days).
+   *
+   * GATE — the feature has to be enabled (every range endpoint 404s otherwise)
+   * and the days must satisfy the bounds the overview published. Both checks
+   * read published state, never a locally computed "today": the device's
+   * calendar day runs ahead of UTC for part of the day, so a local max would
+   * offer a day the server rejects. REACT — an invalid range is a toast, not a
+   * request.
+   */
+  async function applyRange(from: string, to: string): Promise<void> {
+    if (!store.rangesEnabled) return
+
+    const check = checkOwnerIncomeRange(from, to, store.rangeLimits)
+
+    if (!check.valid) {
+      toast.add({ title: check.message, color: 'error' })
+      return
+    }
+
+    await selectWindow({ kind: 'range', from, to })
+  }
+
+  /** Next page of the selected window's members (the "Load more" button). */
   async function loadMoreMembers(): Promise<void> {
-    const cycleNumber = store.selectedCycle
+    const selection = store.selectedWindow
     const list = store.selectedMemberList
 
     // GATE — nothing more to load, or a page already in flight.
-    if (cycleNumber === null || !list || !list.hasMore || list.loadingPage !== null) return
+    if (selection === null || !list || !list.hasMore || list.loadingPage !== null) return
 
-    await fetchMembersPage(cycleNumber, list.page + 1)
+    await fetchMembersPage(selection, list.page + 1)
   }
 
   /**
@@ -157,59 +202,59 @@ export function useOwnerIncomeActions() {
    * next page (the load more that failed).
    */
   async function retryMembers(): Promise<void> {
-    const cycleNumber = store.selectedCycle
+    const selection = store.selectedWindow
     const list = store.selectedMemberList
 
     // GATE
-    if (cycleNumber === null || !list || list.loadingPage !== null) return
+    if (selection === null || !list || list.loadingPage !== null) return
 
-    await fetchMembersPage(cycleNumber, list.page + 1)
+    await fetchMembersPage(selection, list.page + 1)
   }
 
   async function setMembersSort(sort: OwnerIncomeMemberSort): Promise<void> {
-    const cycleNumber = store.selectedCycle
+    const selection = store.selectedWindow
     const list = store.selectedMemberList
 
     // GATE — unchanged sort makes no request.
-    if (cycleNumber === null || !list || list.sort === sort) return
+    if (selection === null || !list || list.sort === sort) return
 
-    await restartMembers(cycleNumber, { sort, direction: list.direction, search: list.search })
+    await restartMembers(selection, { sort, direction: list.direction, search: list.search })
   }
 
   async function setMembersDirection(direction: OwnerIncomeSortDirection): Promise<void> {
-    const cycleNumber = store.selectedCycle
+    const selection = store.selectedWindow
     const list = store.selectedMemberList
 
     // GATE — unchanged direction makes no request.
-    if (cycleNumber === null || !list || list.direction === direction) return
+    if (selection === null || !list || list.direction === direction) return
 
-    await restartMembers(cycleNumber, { sort: list.sort, direction, search: list.search })
+    await restartMembers(selection, { sort: list.sort, direction, search: list.search })
   }
 
-  /** Commit a (trimmed) search term to one cycle's list — page 1 under it. */
-  async function applyMembersSearch(cycleNumber: number, term: string): Promise<void> {
-    const list = store.memberList(cycleNumber)
+  /** Commit a (trimmed) search term to one window's list — page 1 under it. */
+  async function applyMembersSearch(selection: OwnerIncomeWindowSelection, term: string): Promise<void> {
+    const list = store.memberList(ownerIncomeWindowKey(selection))
     const search = term.trim().slice(0, MEMBERS_SEARCH_MAX_LENGTH)
 
     // GATE — unchanged term (e.g. only whitespace typed) makes no request.
     if (!list || list.search === search) return
 
-    await restartMembers(cycleNumber, { sort: list.sort, direction: list.direction, search })
+    await restartMembers(selection, { sort: list.sort, direction: list.direction, search })
   }
 
   /**
-   * Debounced search on the selected cycle. The cycle is captured now, so a
-   * term typed just before a cycle switch still lands on the cycle it was
+   * Debounced search on the selected window. The window is captured now, so a
+   * term typed just before a window switch still lands on the window it was
    * typed for.
    */
   function setMembersSearch(term: string): void {
-    const cycleNumber = store.selectedCycle
-    if (cycleNumber === null) return
+    const selection = store.selectedWindow
+    if (selection === null) return
 
     if (searchTimer !== null) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
       searchTimer = null
-      void applyMembersSearch(cycleNumber, term)
+      void applyMembersSearch(selection, term)
     }, MEMBERS_SEARCH_DEBOUNCE_MS)
   }
 
@@ -219,49 +264,64 @@ export function useOwnerIncomeActions() {
   }
 
   /**
-   * EXECUTE — one member's sheet for a cycle. Only the latest request may
+   * EXECUTE — one member's sheet for a window. Only the latest request may
    * write: a response for a sheet that was closed, replaced by another
    * member's, or wiped by a page reset is dropped silently.
    */
-  async function fetchMemberSheet(cycleNumber: number, userId: number): Promise<void> {
+  async function fetchMemberSheet(selection: OwnerIncomeWindowSelection, userId: number): Promise<void> {
     const requestId = ++memberSheetRequestSeq
     store.setMemberSheetRequest(requestId)
     const isCurrent = () => store.memberSheetRequestId === requestId
 
+    const { url, query } = ownerIncomeWindowEndpoint(selection, `/members/${userId}`)
+
     try {
-      const response = await api<{ success: true; data: OwnerIncomeMemberSheet }>(
-        `/user/agency/income/cycles/${cycleNumber}/members/${userId}`
-      )
+      const response = await api<{ success: true; data: OwnerIncomeMemberSheet }>(url, { query })
       if (!isCurrent()) return
-      store.setMemberSheet(cycleNumber, response.data)
+      store.setMemberSheet(ownerIncomeWindowKey(selection), response.data)
     } catch (err) {
       if (!isCurrent()) return
       store.setMemberSheetError(normalizeError(err).message)
     }
   }
 
-  /** Open a member's sheet on the selected cycle; a sheet already viewed reopens with no request. */
+  /**
+   * Open a member's sheet on the selected window; a sheet already viewed
+   * reopens with no request.
+   *
+   * GATE — in RUN mode only a row with a run has a sheet (the endpoint 404s
+   * otherwise). In RANGE mode `run_id` is null on every row and the endpoint
+   * answers for anyone in the roster, so every row opens — reading `run_id`
+   * here would silently kill the whole feature.
+   */
   async function openMember(row: OwnerIncomeMemberRow): Promise<void> {
-    const cycleNumber = store.selectedCycle
+    const selection = store.selectedWindow
 
-    // GATE — only rows with a run in the cycle have a sheet.
-    if (cycleNumber === null || row.run_id === null) return
+    if (selection === null) return
+    if (selection.kind === 'run' && row.run_id === null) return
+
+    const windowKey = ownerIncomeWindowKey(selection)
 
     // GATE — this member's sheet is already open and loading (double tap).
     const open = store.openMember
-    if (open?.cycle === cycleNumber && open.member.user_id === row.user_id && store.isMemberSheetLoading) return
+    if (
+      open !== null
+      && ownerIncomeWindowKey(open.window) === windowKey
+      && open.member.user_id === row.user_id
+      && store.isMemberSheetLoading
+    ) return
 
     store.setOpenMember({
-      cycle: cycleNumber,
+      window: selection,
       member: { user_id: row.user_id, name: row.name, avatar_url: row.avatar_url, signature: row.signature, left: row.left },
     })
 
-    if (store.memberSheet(cycleNumber, row.user_id)) {
+    if (store.memberSheet(windowKey, row.user_id)) {
       store.clearMemberSheetRequest()
       return
     }
 
-    await fetchMemberSheet(cycleNumber, row.user_id)
+    await fetchMemberSheet(selection, row.user_id)
   }
 
   /** Close the sheet; a request still in flight becomes stale. The cache is kept. */
@@ -275,9 +335,10 @@ export function useOwnerIncomeActions() {
     const open = store.openMember
 
     // GATE
-    if (open === null || store.isMemberSheetLoading || store.memberSheet(open.cycle, open.member.user_id)) return
+    if (open === null || store.isMemberSheetLoading) return
+    if (store.memberSheet(ownerIncomeWindowKey(open.window), open.member.user_id)) return
 
-    await fetchMemberSheet(open.cycle, open.member.user_id)
+    await fetchMemberSheet(open.window, open.member.user_id)
   }
 
   /**
@@ -296,10 +357,21 @@ export function useOwnerIncomeActions() {
     }
   }
 
+  /** Reload the selected window's heroes + list after a failed load. */
+  async function retrySelectedWindow(): Promise<void> {
+    const selection = store.selectedWindow
+    if (selection === null) return
+
+    await selectWindow(selection)
+  }
+
   return {
     fetchOverview,
-    fetchCycleSummary,
+    fetchWindowSummary,
+    selectWindow,
     selectCycle,
+    applyRange,
+    retrySelectedWindow,
     loadMoreMembers,
     retryMembers,
     setMembersSort,

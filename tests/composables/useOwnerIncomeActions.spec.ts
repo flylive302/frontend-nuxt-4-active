@@ -1,24 +1,29 @@
 // ========================================
 // useOwnerIncomeActions Composable Tests
 // ========================================
-// agency-member-income-runs epic: cycle-centric owner/admin page. Verifies the
-// load contract (one overview call, then the default cycle's summary), the
-// empty state (no summary request), the per-cycle summary cache (re-selecting a
-// viewed cycle makes no request), failure handling, and the members list:
-// load more, sort/direction/search (debounced) restarting at page 1, per-cycle
-// list state, and stale responses being dropped. Member sheet: one request per
-// (cycle, user), cached reopen, no-run rows ignored, stale responses dropped.
+// agency-member-income-runs epic: window-centric owner/admin page. A window is
+// a Run N preset or a custom UTC-day range, served by sibling endpoint
+// families (`cycles/{n}…` vs `range…?from&to`). Verifies the load contract,
+// the empty state, the per-window summary/list/sheet caches (re-selecting or
+// reopening something already loaded makes no request — for both window
+// kinds), failure handling, the members list (load more, sort/direction/
+// debounced search, stale-response dropping), range validation (disabled
+// feature, out-of-bounds dates — no request, an error toast), and the
+// run_id-gate difference between run mode (no-run row refused) and range mode
+// (every row opens, run_id always null).
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
   OwnerIncomeCycle,
-  OwnerIncomeCycleSummary,
   OwnerIncomeMemberRow,
   OwnerIncomeMemberSheet,
   OwnerIncomeMembersPage,
   OwnerIncomeOverview,
+  OwnerIncomeRangeLimits,
+  OwnerIncomeWindow,
+  OwnerIncomeWindowSummary,
 } from '../../app/types/income/ownerIncome'
 
 vi.stubGlobal('ref', ref)
@@ -30,6 +35,8 @@ vi.stubGlobal('computed', computed)
 
 const IN_PROGRESS = 4
 
+const RANGE_LIMITS: OwnerIncomeRangeLimits = { min_day: '2026-08-01', max_day: '2026-09-16', max_span_days: 31 }
+
 function cycle(number: number): OwnerIncomeCycle {
   return {
     number,
@@ -40,20 +47,47 @@ function cycle(number: number): OwnerIncomeCycle {
   }
 }
 
-function overview(numbers: number[]): OwnerIncomeOverview {
+function overview(numbers: number[], rangesEnabled = true): OwnerIncomeOverview {
   return {
     agency: { id: 12, name: 'Agency', logo_url: null },
     default_cycle: numbers[0] ?? null,
     cycles: numbers.map(cycle),
+    ranges_enabled: rangesEnabled,
+    range_limits: RANGE_LIMITS,
   }
 }
 
-function summary(number: number, withOwner = true): OwnerIncomeCycleSummary {
+function runWindow(number: number): OwnerIncomeWindow {
+  const c = cycle(number)
+  return { kind: 'run', from: c.start, to: c.end, label: c.label, number, in_progress: c.in_progress }
+}
+
+function rangeWindowObj(from: string, to: string): OwnerIncomeWindow {
   return {
-    cycle: cycle(number),
-    members: { earned: 100 + number, exchanged: 10, deducted: 5, income: 85 + number, members_count: 3, left_count: 1 },
+    kind: 'range',
+    from: `${from}T00:00:00+00:00`,
+    to: `${to}T00:00:00+00:00`,
+    label: '1 Sep – 15 Sep',
+    number: null,
+    in_progress: false,
+  }
+}
+
+function summaryFor(window: OwnerIncomeWindow, withOwner = true): OwnerIncomeWindowSummary {
+  const number = window.number ?? 0
+  return {
+    window,
+    members: {
+      earned: 100 + number,
+      exchanged: 10,
+      deducted: 5,
+      income: 85 + number,
+      members_count: 3,
+      left_count: 1,
+      gift_coins: 7,
+    },
     ...(withOwner
-      ? { owner: { owner_cut: 20, own_hosting: 30, earned: 50, exchanged: 4, deducted: 6, income: 40 } }
+      ? { owner: { owner_cut: 20, own_hosting: 30, earned: 50, exchanged: 4, deducted: 6, income: 40, gift_coins: 3 } }
       : {}),
   }
 }
@@ -70,9 +104,11 @@ interface MembersQuery {
   sort: string
   direction: string
   search?: string
+  from?: string
+  to?: string
 }
 
-function memberRow(userId: number): OwnerIncomeMemberRow {
+function memberRow(userId: number, overrides: Partial<OwnerIncomeMemberRow> = {}): OwnerIncomeMemberRow {
   return {
     user_id: userId,
     name: `Member ${userId}`,
@@ -86,6 +122,8 @@ function memberRow(userId: number): OwnerIncomeMemberRow {
     exchanged: 10,
     deducted: 5,
     income: 85,
+    gift_coins: 2,
+    ...overrides,
   }
 }
 
@@ -97,48 +135,82 @@ function membersPage(query: MembersQuery): OwnerIncomeMembersPage {
   }
 }
 
-/** A member's sheet; `earned` encodes the cycle so a sheet from the wrong cycle is visible. */
-function memberSheet(cycleNumber: number, userId: number): OwnerIncomeMemberSheet {
+/** A member's sheet; `earned` encodes the window so a sheet from the wrong window is visible. */
+function memberSheet(tag: number, userId: number, isRange = false): OwnerIncomeMemberSheet {
   return {
     member: { user_id: userId, name: `Member ${userId}`, avatar_url: null, signature: String(10000 + userId), left: false },
-    run: {
-      id: userId,
-      status: 'closed',
-      status_label: 'Closed',
-      status_color: 'neutral',
-      started_at: '2026-08-11T00:00:00+00:00',
-      ends_at: '2026-08-21T00:00:00+00:00',
-      accumulated_xp: 500,
-      current_tier: 1,
-    },
-    totals: { earned: cycleNumber * 1000, exchanged: 10, deducted: 5, income: cycleNumber * 1000 - 15 },
+    run: isRange
+      ? null
+      : {
+          id: userId,
+          status: 'closed',
+          status_label: 'Closed',
+          status_color: 'neutral',
+          started_at: '2026-08-11T00:00:00+00:00',
+          ends_at: '2026-08-21T00:00:00+00:00',
+          accumulated_xp: 500,
+          current_tier: 1,
+        },
+    totals: { earned: tag * 1000, exchanged: 10, deducted: 5, income: tag * 1000 - 15, ...(isRange ? { gift_coins: 1 } : {}) },
     milestones: [],
     exchanges: [],
     deductions: [],
   }
 }
 
-const MEMBERS_URL = /^\/user\/agency\/income\/cycles\/(\d+)\/members$/
-const MEMBER_SHEET_URL = /^\/user\/agency\/income\/cycles\/(\d+)\/members\/(\d+)$/
+const CYCLE_URL = /^\/user\/agency\/income\/cycles\/(\d+)$/
+const CYCLE_MEMBERS_URL = /^\/user\/agency\/income\/cycles\/(\d+)\/members$/
+const CYCLE_SHEET_URL = /^\/user\/agency\/income\/cycles\/(\d+)\/members\/(\d+)$/
+const RANGE_URL = '/user/agency/income/range'
+const RANGE_MEMBERS_URL = '/user/agency/income/range/members'
+const RANGE_SHEET_URL = /^\/user\/agency\/income\/range\/members\/(\d+)$/
 
 /** Routes GET URLs to canned payloads. */
 function routeApi(current: OwnerIncomeOverview, withOwner = true) {
   apiMock = vi.fn(async (url: string, options?: { query?: MembersQuery }) => {
     if (url === '/user/agency/income/overview') return { success: true, data: current }
-    const cycleMatch = url.match(/^\/user\/agency\/income\/cycles\/(\d+)$/)
-    if (cycleMatch) return { success: true, data: summary(Number(cycleMatch[1]), withOwner) }
-    if (MEMBERS_URL.test(url) && options?.query) return { success: true, data: membersPage(options.query) }
-    const sheetMatch = url.match(MEMBER_SHEET_URL)
-    if (sheetMatch) return { success: true, data: memberSheet(Number(sheetMatch[1]), Number(sheetMatch[2])) }
+
+    const cycleMatch = url.match(CYCLE_URL)
+    if (cycleMatch) return { success: true, data: summaryFor(runWindow(Number(cycleMatch[1])), withOwner) }
+    if (CYCLE_MEMBERS_URL.test(url) && options?.query) return { success: true, data: membersPage(options.query) }
+    const cycleSheetMatch = url.match(CYCLE_SHEET_URL)
+    if (cycleSheetMatch) return { success: true, data: memberSheet(Number(cycleSheetMatch[1]), Number(cycleSheetMatch[2])) }
+
+    if (url === RANGE_URL && options?.query) {
+      return { success: true, data: summaryFor(rangeWindowObj(options.query.from ?? '', options.query.to ?? ''), withOwner) }
+    }
+    if (url === RANGE_MEMBERS_URL && options?.query) {
+      return {
+        success: true,
+        data: {
+          members: membersPage(options.query).members.map((m) => ({ ...m, run_id: null, current_tier: null })),
+          meta: membersPage(options.query).meta,
+        },
+      }
+    }
+    const rangeSheetMatch = url.match(RANGE_SHEET_URL)
+    if (rangeSheetMatch && options?.query) return { success: true, data: memberSheet(1, Number(rangeSheetMatch[1]), true) }
+
     throw new Error(`unexpected ${url}`)
   })
 }
 
-/** The `query` of every members request for one cycle, in call order. */
+/** The `query` of every members request for one run, in call order. */
 function membersCalls(cycleNumber: number): MembersQuery[] {
   return apiMock.mock.calls
     .filter(([called]) => called === `/user/agency/income/cycles/${cycleNumber}/members`)
     .map(([, options]) => (options as { query: MembersQuery }).query)
+}
+
+/** The `query` of every range members request, in call order. */
+function rangeMembersCalls(): MembersQuery[] {
+  return apiMock.mock.calls
+    .filter(([called]) => called === RANGE_MEMBERS_URL)
+    .map(([, options]) => (options as { query: MembersQuery }).query)
+}
+
+function callsTo(url: string): number {
+  return apiMock.mock.calls.filter(([called]) => called === url).length
 }
 
 /** A promise whose resolution the test controls. */
@@ -157,10 +229,6 @@ async function setup() {
   ;(globalThis as Record<string, unknown>).useOwnerIncomeStore = useOwnerIncomeStore
   const { useOwnerIncomeActions } = await import('../../app/composables/income/useOwnerIncomeActions')
   return { store: useOwnerIncomeStore(), actions: useOwnerIncomeActions() }
-}
-
-function callsTo(url: string): number {
-  return apiMock.mock.calls.filter(([called]) => called === url).length
 }
 
 beforeEach(() => {
@@ -199,9 +267,9 @@ describe('useOwnerIncomeActions.loadOwnerIncomePage', () => {
     expect(store.selectedMemberList?.hasMore).toBe(true)
     expect(store.selectedMemberList?.loadingPage).toBeNull()
     expect(store.selectedCycle).toBe(IN_PROGRESS)
-    expect(store.isSelectedCycleInProgress).toBe(true)
+    expect(store.isSelectedWindowInProgress).toBe(true)
     expect(store.selectedSummary?.members.income).toBe(89)
-    expect(store.isSelectedCycleLoading).toBe(false)
+    expect(store.isSelectedWindowLoading).toBe(false)
   })
 
   it('makes only the overview call when the agency never had a run', async () => {
@@ -251,6 +319,18 @@ describe('useOwnerIncomeActions.loadOwnerIncomePage', () => {
 })
 
 describe('useOwnerIncomeActions.selectCycle', () => {
+  it('hits the cycle endpoints with no from/to in the query', async () => {
+    routeApi(overview([IN_PROGRESS, 5]))
+    const { actions } = await setup()
+
+    await actions.selectCycle(5)
+
+    expect(callsTo('/user/agency/income/cycles/5')).toBe(1)
+    expect(membersCalls(5)).toEqual([{ page: 1, sort: 'income', direction: 'desc' }])
+    const [, summaryOptions] = apiMock.mock.calls.find(([url]) => url === '/user/agency/income/cycles/5') ?? []
+    expect((summaryOptions as { query: Record<string, unknown> } | undefined)?.query).toEqual({})
+  })
+
   it('re-selects a previously viewed cycle without a request', async () => {
     routeApi(overview([IN_PROGRESS, 2, 1]))
     const { store, actions } = await setup()
@@ -265,8 +345,8 @@ describe('useOwnerIncomeActions.selectCycle', () => {
     expect(membersCalls(IN_PROGRESS)).toHaveLength(1)
     expect(membersCalls(2)).toHaveLength(1)
     expect(store.selectedCycle).toBe(2)
-    expect(store.isSelectedCycleInProgress).toBe(false)
-    expect(store.selectedSummary?.cycle.number).toBe(2)
+    expect(store.isSelectedWindowInProgress).toBe(false)
+    expect(store.selectedSummary?.window.number).toBe(2)
   })
 
   it('does not request a cycle that is already in flight', async () => {
@@ -288,13 +368,94 @@ describe('useOwnerIncomeActions.selectCycle', () => {
     await actions.selectCycle(2)
 
     expect(store.selectedSummary).toBeNull()
-    expect(store.isSelectedCycleLoading).toBe(false)
+    expect(store.isSelectedWindowLoading).toBe(false)
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
 
     await actions.selectCycle(2)
 
     expect(callsTo('/user/agency/income/cycles/2')).toBe(2)
-    expect(store.selectedSummary?.cycle.number).toBe(2)
+    expect(store.selectedSummary?.window.number).toBe(2)
+  })
+})
+
+describe('useOwnerIncomeActions.applyRange', () => {
+  it('hits the range endpoints and every request carries from/to', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { store, actions } = await setup()
+    await actions.fetchOverview()
+
+    await actions.applyRange('2026-09-01', '2026-09-15')
+
+    expect(callsTo(RANGE_URL)).toBe(1)
+    const [, summaryOptions] = apiMock.mock.calls.find(([url]) => url === RANGE_URL) ?? []
+    expect((summaryOptions as { query: Record<string, unknown> })?.query).toEqual({ from: '2026-09-01', to: '2026-09-15' })
+    expect(rangeMembersCalls()).toEqual([
+      { page: 1, sort: 'income', direction: 'desc', from: '2026-09-01', to: '2026-09-15' },
+    ])
+    expect(store.isRangeSelected).toBe(true)
+    expect(store.selectedCycle).toBeNull()
+
+    await actions.openMember(store.selectedMemberList!.rows[0]!)
+    const [, sheetOptions] = apiMock.mock.calls.find(([url]) => RANGE_SHEET_URL.test(url as string)) ?? []
+    expect((sheetOptions as { query: Record<string, unknown> })?.query).toEqual({ from: '2026-09-01', to: '2026-09-15' })
+  })
+
+  it('is a no-op when ranges are not enabled', async () => {
+    routeApi(overview([IN_PROGRESS], false))
+    const { store, actions } = await setup()
+    await actions.fetchOverview()
+
+    await actions.applyRange('2026-09-01', '2026-09-15')
+
+    expect(apiMock).toHaveBeenCalledTimes(1) // only the overview call from fetchOverview
+    expect(toastAdd).not.toHaveBeenCalled()
+    expect(store.selectedWindow).toBeNull()
+  })
+
+  it.each([
+    ['before min_day', '2026-07-01', '2026-07-05'],
+    ['after max_day', '2026-09-20', '2026-09-25'],
+    ['reversed', '2026-09-10', '2026-09-01'],
+    ['span over max_span_days', '2026-08-01', '2026-09-16'],
+  ])('%s: makes no request and adds an error toast', async (_label, from, to) => {
+    routeApi(overview([IN_PROGRESS]))
+    const { store, actions } = await setup()
+    await actions.fetchOverview()
+
+    await actions.applyRange(from, to)
+
+    expect(callsTo(RANGE_URL)).toBe(0)
+    expect(rangeMembersCalls()).toHaveLength(0)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+    expect(store.selectedWindow).toBeNull()
+  })
+
+  it('re-applying an already loaded range makes no request', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { actions } = await setup()
+    await actions.fetchOverview()
+
+    await actions.applyRange('2026-09-01', '2026-09-15')
+    await actions.applyRange('2026-09-01', '2026-09-15')
+
+    expect(callsTo(RANGE_URL)).toBe(1)
+    expect(rangeMembersCalls()).toHaveLength(1)
+  })
+})
+
+describe('useOwnerIncomeActions window switching', () => {
+  it('switching run -> range -> back to run restores the first window with no request', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { store, actions } = await setup()
+    await actions.loadOwnerIncomePage()
+
+    await actions.applyRange('2026-09-01', '2026-09-15')
+    await actions.selectCycle(IN_PROGRESS)
+
+    expect(callsTo(`/user/agency/income/cycles/${IN_PROGRESS}`)).toBe(1)
+    expect(membersCalls(IN_PROGRESS)).toHaveLength(1)
+    expect(store.selectedCycle).toBe(IN_PROGRESS)
+    expect(store.selectedMemberList?.rows.map((r) => r.user_id)).toEqual([11, 12])
   })
 })
 
@@ -361,7 +522,7 @@ describe('useOwnerIncomeActions members list', () => {
     expect(membersCalls(IN_PROGRESS)).toHaveLength(4)
   })
 
-  it('keeps each cycle\'s own sort and list across cycle switches', async () => {
+  it('keeps each window\'s own sort and list across window switches', async () => {
     const { store, actions } = await loaded()
     await actions.setMembersSort('xp')
 
@@ -410,15 +571,15 @@ describe('useOwnerIncomeActions members list', () => {
       expect(membersCalls(IN_PROGRESS)).toHaveLength(1)
     })
 
-    it('lands on the cycle it was typed for, even after a cycle switch', async () => {
+    it('lands on the window it was typed for, even after a window switch', async () => {
       const { store, actions } = await loaded()
 
       actions.setMembersSearch('bob')
       await actions.selectCycle(2)
       await vi.advanceTimersByTimeAsync(300)
 
-      expect(store.memberList(IN_PROGRESS)?.search).toBe('bob')
-      expect(store.memberList(2)?.search).toBe('')
+      expect(store.memberList('run:4')?.search).toBe('bob')
+      expect(store.memberList('run:2')?.search).toBe('')
       expect(membersCalls(IN_PROGRESS).at(-1)).toEqual({ page: 1, sort: 'income', direction: 'desc', search: 'bob' })
     })
 
@@ -469,7 +630,7 @@ describe('useOwnerIncomeActions members list', () => {
     routeApi(overview([IN_PROGRESS]))
     const { store, actions } = await setup()
     await actions.fetchOverview()
-    store.setSummary(summary(IN_PROGRESS))
+    store.setSummary('run:4', summaryFor(runWindow(IN_PROGRESS)))
     apiMock.mockRejectedValueOnce(new Error('down'))
 
     await actions.selectCycle(IN_PROGRESS)
@@ -502,24 +663,77 @@ describe('useOwnerIncomeActions members list', () => {
     expect(store.selectedMemberList?.rows).toHaveLength(4)
   })
 
-  it('re-selecting a cycle whose page 1 failed tries again', async () => {
+  it('re-selecting a window whose page 1 failed tries again', async () => {
     const { store, actions } = await loaded()
     apiMock.mockImplementation(async (url: string, options?: { query?: MembersQuery }) => {
       if (url === '/user/agency/income/cycles/2/members') throw new Error('down')
-      if (url === '/user/agency/income/cycles/2') return { success: true, data: summary(2) }
-      if (MEMBERS_URL.test(url) && options?.query) return { success: true, data: membersPage(options.query) }
+      if (url === '/user/agency/income/cycles/2') return { success: true, data: summaryFor(runWindow(2)) }
+      if (CYCLE_MEMBERS_URL.test(url) && options?.query) return { success: true, data: membersPage(options.query) }
       throw new Error(`unexpected ${url}`)
     })
 
     await actions.selectCycle(2)
-    expect(store.memberList(2)?.error).toBe('Error: down')
+    expect(store.memberList('run:2')?.error).toBe('Error: down')
 
     routeApi(overview([IN_PROGRESS, 2]))
     await actions.selectCycle(IN_PROGRESS)
     await actions.selectCycle(2)
 
     expect(membersCalls(2)).toHaveLength(1)
-    expect(store.memberList(2)?.rows).toHaveLength(2)
+    expect(store.memberList('run:2')?.rows).toHaveLength(2)
+  })
+})
+
+describe('useOwnerIncomeActions summary/list cache — no refetch for run or range', () => {
+  it('re-selecting a cached run makes no summary or members request', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { actions } = await setup()
+    await actions.loadOwnerIncomePage()
+
+    await actions.selectCycle(IN_PROGRESS)
+
+    expect(callsTo(`/user/agency/income/cycles/${IN_PROGRESS}`)).toBe(1)
+    expect(membersCalls(IN_PROGRESS)).toHaveLength(1)
+  })
+
+  it('re-applying a cached range makes no summary or members request', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { actions } = await setup()
+    await actions.fetchOverview()
+
+    await actions.applyRange('2026-09-01', '2026-09-15')
+    await actions.applyRange('2026-09-01', '2026-09-15')
+
+    expect(callsTo(RANGE_URL)).toBe(1)
+    expect(rangeMembersCalls()).toHaveLength(1)
+  })
+})
+
+describe('useOwnerIncomeActions.openMember run_id gate', () => {
+  it('run mode: a row with run_id null is refused', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { store, actions } = await setup()
+    await actions.loadOwnerIncomePage()
+
+    await actions.openMember(memberRow(11, { run_id: null }))
+
+    expect(store.openMember).toBeNull()
+    expect(apiMock.mock.calls.some(([url]) => CYCLE_SHEET_URL.test(url as string))).toBe(false)
+  })
+
+  it('range mode: a row with run_id null still opens the sheet', async () => {
+    routeApi(overview([IN_PROGRESS]))
+    const { store, actions } = await setup()
+    await actions.fetchOverview()
+    await actions.applyRange('2026-09-01', '2026-09-15')
+
+    const row = store.selectedMemberList!.rows[0]!
+    expect(row.run_id).toBeNull()
+
+    await actions.openMember(row)
+
+    expect(store.openMember?.member.user_id).toBe(row.user_id)
+    expect(apiMock.mock.calls.some(([url]) => RANGE_SHEET_URL.test(url as string))).toBe(true)
   })
 })
 
@@ -532,7 +746,7 @@ describe('useOwnerIncomeActions member sheet', () => {
   }
 
   function sheetCalls(): string[] {
-    return apiMock.mock.calls.map(([called]) => called as string).filter((url) => MEMBER_SHEET_URL.test(url))
+    return apiMock.mock.calls.map(([called]) => called as string).filter((url) => CYCLE_SHEET_URL.test(url))
   }
 
   it('opens a member with a run and leaves the list untouched', async () => {
@@ -543,7 +757,7 @@ describe('useOwnerIncomeActions member sheet', () => {
 
     expect(sheetCalls()).toEqual([`/user/agency/income/cycles/${IN_PROGRESS}/members/11`])
     expect(store.openMember).toEqual({
-      cycle: IN_PROGRESS,
+      window: { kind: 'run', number: IN_PROGRESS },
       member: { user_id: 11, name: 'Member 11', avatar_url: null, signature: '10011', left: false },
     })
     expect(store.openMemberSheet?.totals.earned).toBe(IN_PROGRESS * 1000)
@@ -568,7 +782,7 @@ describe('useOwnerIncomeActions member sheet', () => {
     expect(sheetCalls()).toHaveLength(1)
   })
 
-  it('caches per (cycle, user): the same member on another cycle is a new request', async () => {
+  it('caches per (window, user): the same member on another window is a new request', async () => {
     const { store, actions } = await loaded()
 
     await actions.openMember(memberRow(11))
@@ -581,7 +795,20 @@ describe('useOwnerIncomeActions member sheet', () => {
       '/user/agency/income/cycles/2/members/11',
     ])
     expect(store.openMemberSheet?.totals.earned).toBe(2000)
-    expect(store.memberSheet(IN_PROGRESS, 11)?.totals.earned).toBe(IN_PROGRESS * 1000)
+    expect(store.memberSheet('run:4', 11)?.totals.earned).toBe(IN_PROGRESS * 1000)
+  })
+
+  it('opening the same member under a different window (run to range) requests again', async () => {
+    const { store, actions } = await loaded()
+
+    await actions.openMember(memberRow(11))
+    actions.closeMember()
+    await actions.applyRange('2026-09-01', '2026-09-15')
+    await actions.openMember(memberRow(11, { run_id: null, current_tier: null }))
+
+    expect(sheetCalls()).toHaveLength(1)
+    expect(apiMock.mock.calls.some(([url]) => RANGE_SHEET_URL.test(url as string))).toBe(true)
+    expect(store.openMemberSheet?.member.user_id).toBe(11)
   })
 
   it('does nothing for a row with no run in the cycle', async () => {
@@ -618,7 +845,7 @@ describe('useOwnerIncomeActions member sheet', () => {
     slow.resolve({ success: true, data: memberSheet(IN_PROGRESS, 11) })
     await stale
 
-    expect(store.memberSheet(IN_PROGRESS, 11)).toBeNull()
+    expect(store.memberSheet('run:4', 11)).toBeNull()
     expect(store.isMemberSheetLoading).toBe(false)
   })
 
@@ -635,7 +862,7 @@ describe('useOwnerIncomeActions member sheet', () => {
 
     expect(store.openMember?.member.user_id).toBe(12)
     expect(store.openMemberSheet?.member.user_id).toBe(12)
-    expect(store.memberSheet(IN_PROGRESS, 11)).toBeNull()
+    expect(store.memberSheet('run:4', 11)).toBeNull()
     expect(store.isMemberSheetLoading).toBe(false)
   })
 
@@ -652,7 +879,7 @@ describe('useOwnerIncomeActions member sheet', () => {
     expect(store.memberSheetError).toBeNull()
   })
 
-  it('records a failure without a toast, then retry loads the sheet', async () => {
+  it('records a failure without a toast, then retry loads the sheet using the window it was opened on', async () => {
     const { store, actions } = await loaded()
     apiMock.mockRejectedValueOnce(new Error('down'))
 
@@ -666,6 +893,7 @@ describe('useOwnerIncomeActions member sheet', () => {
     await actions.retryMemberSheet()
 
     expect(sheetCalls()).toHaveLength(2)
+    expect(sheetCalls()[1]).toBe(`/user/agency/income/cycles/${IN_PROGRESS}/members/11`)
     expect(store.memberSheetError).toBeNull()
     expect(store.openMemberSheet?.member.user_id).toBe(11)
   })

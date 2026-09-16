@@ -1,17 +1,19 @@
 <!-- ~/components/agency/income/MemberIncomeCard.vue -->
 <!-- One roster row: avatar/name/signature, income figure, earned/exchanged/
-     deducted breakdown, then tier + XP (or "No run" when the member has no
-     run this cycle). A row with a run is a button that emits `open` (member
-     sheet); a row with no run is not tappable. -->
+     deducted breakdown, then Gift coins. In run mode the line is prefixed with
+     the tier, or "No run" when the member has no run this cycle, and only a
+     row with a run is tappable. In range mode there is no single run, so no
+     tier is shown and every row opens its sheet. -->
 <script setup lang="ts">
 // ========================================
 // Imports
 // ========================================
 
 import { computed } from 'vue'
-import type { OwnerIncomeMemberRow } from '~/types/income/ownerIncome'
+import type { OwnerIncomeMemberRow, OwnerIncomeWindowKind } from '~/types/income/ownerIncome'
 import { formatDiamondsExact } from '~/utils/incomeFormat'
 import { formatXp } from '~/utils/currency'
+import { isOwnerIncomeMemberTappable } from '~/utils/ownerIncomeCard'
 
 // ========================================
 // Props / Emits
@@ -19,6 +21,7 @@ import { formatXp } from '~/utils/currency'
 
 const props = defineProps<{
   member: OwnerIncomeMemberRow
+  windowKind: OwnerIncomeWindowKind
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +33,7 @@ const emit = defineEmits<{
 // ========================================
 
 const fallbackInitial = computed(() => props.member.name.charAt(0).toUpperCase())
-const isTappable = computed(() => props.member.run_id !== null)
+const isTappable = computed(() => isOwnerIncomeMemberTappable(props.windowKind, props.member.run_id))
 
 // ========================================
 // Handlers
@@ -79,8 +82,9 @@ function onTap(): void {
     </p>
 
     <p class="text-xs text-muted">
-      <template v-if="member.run_id === null">No run</template>
-      <template v-else>T{{ member.current_tier }} · {{ formatXp(member.accumulated_xp) }} Gift coins</template>
+      <template v-if="windowKind === 'run' && member.run_id === null">No run · </template>
+      <template v-else-if="windowKind === 'run'">T{{ member.current_tier }} · </template>
+      {{ formatXp(member.gift_coins) }} Gift coins
     </p>
   </component>
 </template>

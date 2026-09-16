@@ -1,16 +1,24 @@
 // ========================================
 // Owner Income Store Tests
 // ========================================
+// Window-centric: everything keyed by a window key string (`run:N` /
+// `range:FROM|TO`) instead of a cycle number. Coverage carried over from the
+// cycle-based version, plus new coverage for run/range coexisting under
+// different keys, `selectedCycle` collapsing to null for a range, and the
+// range-aware label/in-progress/sheet-key computeds.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
   OwnerIncomeCycle,
-  OwnerIncomeCycleSummary,
   OwnerIncomeMemberRow,
   OwnerIncomeMemberSheet,
+  OwnerIncomeWindow,
+  OwnerIncomeWindowSelection,
+  OwnerIncomeWindowSummary,
 } from '../../app/types/income/ownerIncome'
+import { ownerIncomeWindowKey } from '../../app/utils/ownerIncomeWindow'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -23,6 +31,13 @@ beforeEach(() => {
 // Fixtures
 // ========================================
 
+const RUN_SEL = (number: number): OwnerIncomeWindowSelection => ({ kind: 'run', number })
+const RANGE_SEL = (from: string, to: string): OwnerIncomeWindowSelection => ({ kind: 'range', from, to })
+
+const RUN_4 = ownerIncomeWindowKey(RUN_SEL(4))
+const RUN_2 = ownerIncomeWindowKey(RUN_SEL(2))
+const RANGE_A = ownerIncomeWindowKey(RANGE_SEL('2026-09-01', '2026-09-15'))
+
 function cycle(number: number, inProgress = false): OwnerIncomeCycle {
   return {
     number,
@@ -33,10 +48,32 @@ function cycle(number: number, inProgress = false): OwnerIncomeCycle {
   }
 }
 
-function summary(number: number): OwnerIncomeCycleSummary {
+function runWindow(number: number, inProgress = false): OwnerIncomeWindow {
   return {
-    cycle: cycle(number),
-    members: { earned: 1, exchanged: 0, deducted: 0, income: 1, members_count: 1, left_count: 0 },
+    kind: 'run',
+    from: '2026-08-11T00:00:00+00:00',
+    to: '2026-08-21T00:00:00+00:00',
+    label: `Run ${number} · Aug 11 – Aug 20`,
+    number,
+    in_progress: inProgress,
+  }
+}
+
+function rangeWindow(from: string, to: string, inProgress = false): OwnerIncomeWindow {
+  return {
+    kind: 'range',
+    from: `${from}T00:00:00+00:00`,
+    to: `${to}T00:00:00+00:00`,
+    label: '1 Sep – 15 Sep',
+    number: null,
+    in_progress: inProgress,
+  }
+}
+
+function windowSummary(window: OwnerIncomeWindow, income = 1): OwnerIncomeWindowSummary {
+  return {
+    window,
+    members: { earned: income, exchanged: 0, deducted: 0, income, members_count: 1, left_count: 0, gift_coins: 0 },
   }
 }
 
@@ -47,6 +84,8 @@ async function makeStore() {
     agency: { id: 1, name: 'Agency', logo_url: null },
     default_cycle: 4,
     cycles: [cycle(4, true), cycle(2)],
+    ranges_enabled: true,
+    range_limits: { min_day: '2026-01-01', max_day: '2026-09-16', max_span_days: 31 },
   })
   return store
 }
@@ -59,30 +98,56 @@ describe('useOwnerIncomeStore', () => {
   it('derives the selected cycle, its status and its cached summary', async () => {
     const store = await makeStore()
 
-    store.setSelectedCycle(4)
-    expect(store.selectedCycleInfo?.number).toBe(4)
-    expect(store.isSelectedCycleInProgress).toBe(true)
+    // Run 4 is the overview's in-progress cycle — before the summary lands,
+    // isSelectedWindowInProgress falls back to the overview's own cycle entry.
+    store.setSelectedWindow(RUN_SEL(4))
+    expect(store.selectedCycle).toBe(4)
+    expect(store.isSelectedWindowInProgress).toBe(true)
     expect(store.selectedSummary).toBeNull()
 
-    store.setSummary(summary(2))
-    store.setSelectedCycle(2)
-    expect(store.isSelectedCycleInProgress).toBe(false)
-    expect(store.selectedSummary?.cycle.number).toBe(2)
+    store.setSummary(RUN_2, windowSummary(runWindow(2, false)))
+    store.setSelectedWindow(RUN_SEL(2))
+    expect(store.isSelectedWindowInProgress).toBe(false)
+    expect(store.selectedSummary?.window.number).toBe(2)
   })
 
-  it('tracks several cycles loading at once', async () => {
+  it('selectedCycle is the run number for a run and null for a range', async () => {
     const store = await makeStore()
 
-    store.setCycleLoading(4, true)
-    store.setCycleLoading(2, true)
-    store.setSelectedCycle(4)
-    store.setCycleLoading(2, false)
+    store.setSelectedWindow(RUN_SEL(4))
+    expect(store.selectedCycle).toBe(4)
+    expect(store.isRangeSelected).toBe(false)
 
-    expect(store.isCycleLoading(2)).toBe(false)
-    expect(store.isSelectedCycleLoading).toBe(true)
+    store.setSelectedWindow(RANGE_SEL('2026-09-01', '2026-09-15'))
+    expect(store.selectedCycle).toBeNull()
+    expect(store.isRangeSelected).toBe(true)
 
-    store.setCycleLoading(4, false)
-    expect(store.isSelectedCycleLoading).toBe(false)
+    store.setSelectedWindow(null)
+    expect(store.isRangeSelected).toBe(false)
+  })
+
+  it('rangesEnabled and rangeLimits default safely when overview is null', async () => {
+    const { useOwnerIncomeStore } = await import('../../app/stores/ownerIncome')
+    const store = useOwnerIncomeStore()
+
+    expect(store.overview).toBeNull()
+    expect(store.rangesEnabled).toBe(false)
+    expect(store.rangeLimits).toBeNull()
+  })
+
+  it('tracks several windows loading at once', async () => {
+    const store = await makeStore()
+
+    store.setWindowLoading(RUN_4, true)
+    store.setWindowLoading(RUN_2, true)
+    store.setSelectedWindow(RUN_SEL(4))
+    store.setWindowLoading(RUN_2, false)
+
+    expect(store.isWindowLoading(RUN_2)).toBe(false)
+    expect(store.isSelectedWindowLoading).toBe(true)
+
+    store.setWindowLoading(RUN_4, false)
+    expect(store.isSelectedWindowLoading).toBe(false)
   })
 
   it('reports no cycles and no default before an overview, and after reset', async () => {
@@ -90,8 +155,8 @@ describe('useOwnerIncomeStore', () => {
     expect(store.hasCycles).toBe(true)
     expect(store.defaultCycle).toBe(4)
 
-    store.setSummary(summary(4))
-    store.setSelectedCycle(4)
+    store.setSummary(RUN_4, windowSummary(runWindow(4, true)))
+    store.setSelectedWindow(RUN_SEL(4))
     store.setOverviewError('boom')
     store.reset()
 
@@ -100,6 +165,83 @@ describe('useOwnerIncomeStore', () => {
     expect(store.selectedSummary).toBeNull()
     expect(store.summaries).toEqual({})
     expect(store.overviewError).toBeNull()
+  })
+
+  describe('run and range summaries coexisting', () => {
+    it('caches a run and a range summary under distinct keys without collision', async () => {
+      const store = await makeStore()
+
+      store.setSummary(RUN_4, windowSummary(runWindow(4, true), 10))
+      store.setSummary(RANGE_A, windowSummary(rangeWindow('2026-09-01', '2026-09-15'), 20))
+
+      expect(store.summary(RUN_4)?.members.income).toBe(10)
+      expect(store.summary(RANGE_A)?.members.income).toBe(20)
+      expect(store.summary(RUN_4)?.window.number).toBe(4)
+      expect(store.summary(RANGE_A)?.window.number).toBeNull()
+    })
+
+    it('caches a run and a range member list under distinct keys', async () => {
+      const store = await makeStore()
+      const query = { sort: 'income', direction: 'desc', search: '' } as const
+
+      store.setMemberListQuery(RUN_4, query)
+      store.setMemberListQuery(RANGE_A, { ...query, sort: 'name' })
+
+      expect(store.memberList(RUN_4)?.sort).toBe('income')
+      expect(store.memberList(RANGE_A)?.sort).toBe('name')
+    })
+  })
+
+  describe('selectedWindowLabel', () => {
+    it('is null when nothing is selected', async () => {
+      const store = await makeStore()
+      expect(store.selectedWindowLabel).toBeNull()
+    })
+
+    it('for a run: the overview cycle label before the summary lands, then the server label', async () => {
+      const store = await makeStore()
+      store.setSelectedWindow(RUN_SEL(4))
+
+      expect(store.selectedWindowLabel).toBe('Run 4 · Aug 11 – Aug 20')
+
+      store.setSummary(RUN_4, windowSummary({ ...runWindow(4, true), label: 'Run 4 · from server' }))
+      expect(store.selectedWindowLabel).toBe('Run 4 · from server')
+    })
+
+    it('for a range: the locally built label before the summary lands, then the server label', async () => {
+      const store = await makeStore()
+      store.setSelectedWindow(RANGE_SEL('2026-09-01', '2026-09-15'))
+
+      expect(store.selectedWindowLabel).toBe('1 Sep – 15 Sep')
+
+      store.setSummary(RANGE_A, windowSummary(rangeWindow('2026-09-01', '2026-09-15')))
+      expect(store.selectedWindowLabel).toBe('1 Sep – 15 Sep')
+    })
+  })
+
+  describe('isSelectedWindowInProgress', () => {
+    it('reads summary.window.in_progress once it lands; a range has no local fallback so it is false before that', async () => {
+      const store = await makeStore()
+      store.setSelectedWindow(RANGE_SEL('2026-09-01', '2026-09-15'))
+
+      expect(store.isSelectedWindowInProgress).toBe(false)
+
+      store.setSummary(RANGE_A, windowSummary(rangeWindow('2026-09-01', '2026-09-15', true)))
+      expect(store.isSelectedWindowInProgress).toBe(true)
+    })
+
+    it('a run falls back to the overview\'s own cycle entry before the summary lands', async () => {
+      const store = await makeStore()
+
+      store.setSelectedWindow(RUN_SEL(2)) // not in progress per the overview fixture
+      expect(store.isSelectedWindowInProgress).toBe(false)
+
+      store.setSelectedWindow(RUN_SEL(4)) // in progress per the overview fixture
+      expect(store.isSelectedWindowInProgress).toBe(true)
+
+      store.setSummary(RUN_4, windowSummary(runWindow(4, false)))
+      expect(store.isSelectedWindowInProgress).toBe(false)
+    })
   })
 })
 
@@ -118,47 +260,48 @@ describe('useOwnerIncomeStore members lists', () => {
       exchanged: 0,
       deducted: 0,
       income: 0,
+      gift_coins: 0,
     }
   }
 
   const QUERY = { sort: 'income', direction: 'desc', search: '' } as const
 
-  it('keeps one list per cycle and exposes the selected one', async () => {
+  it('keeps one list per window and exposes the selected one', async () => {
     const store = await makeStore()
 
-    store.setMemberListQuery(4, QUERY)
-    store.setMemberListQuery(2, { ...QUERY, sort: 'name' })
-    store.setSelectedCycle(2)
+    store.setMemberListQuery(RUN_4, QUERY)
+    store.setMemberListQuery(RUN_2, { ...QUERY, sort: 'name' })
+    store.setSelectedWindow(RUN_SEL(2))
 
     expect(store.selectedMemberList?.sort).toBe('name')
-    expect(store.memberList(4)?.sort).toBe('income')
-    expect(store.memberList(9)).toBeNull()
+    expect(store.memberList(RUN_4)?.sort).toBe('income')
+    expect(store.memberList('run:9')).toBeNull()
   })
 
   it('page 1 replaces rows, later pages append without repeating a member', async () => {
     const store = await makeStore()
-    store.setMemberListQuery(4, QUERY)
+    store.setMemberListQuery(RUN_4, QUERY)
 
-    store.setMemberListPage(4, 1, [row(1), row(2)], true)
-    store.setMemberListPage(4, 2, [row(2), row(3)], false)
-    expect(store.memberList(4)?.rows.map((r) => r.user_id)).toEqual([1, 2, 3])
-    expect(store.memberList(4)?.page).toBe(2)
-    expect(store.memberList(4)?.hasMore).toBe(false)
+    store.setMemberListPage(RUN_4, 1, [row(1), row(2)], true)
+    store.setMemberListPage(RUN_4, 2, [row(2), row(3)], false)
+    expect(store.memberList(RUN_4)?.rows.map((r) => r.user_id)).toEqual([1, 2, 3])
+    expect(store.memberList(RUN_4)?.page).toBe(2)
+    expect(store.memberList(RUN_4)?.hasMore).toBe(false)
 
-    store.setMemberListPage(4, 1, [row(7)], false)
-    expect(store.memberList(4)?.rows.map((r) => r.user_id)).toEqual([7])
+    store.setMemberListPage(RUN_4, 1, [row(7)], false)
+    expect(store.memberList(RUN_4)?.rows.map((r) => r.user_id)).toEqual([7])
   })
 
   it('a new query restarts the list at nothing loaded', async () => {
     const store = await makeStore()
-    store.setMemberListQuery(4, QUERY)
-    store.setMemberListRequest(4, 5, 2)
-    store.setMemberListPage(4, 2, [row(1)], true)
-    store.setMemberListError(4, 'boom')
+    store.setMemberListQuery(RUN_4, QUERY)
+    store.setMemberListRequest(RUN_4, 5, 2)
+    store.setMemberListPage(RUN_4, 2, [row(1)], true)
+    store.setMemberListError(RUN_4, 'boom')
 
-    store.setMemberListQuery(4, { ...QUERY, search: 'ali' })
+    store.setMemberListQuery(RUN_4, { ...QUERY, search: 'ali' })
 
-    expect(store.memberList(4)).toEqual({
+    expect(store.memberList(RUN_4)).toEqual({
       ...QUERY,
       search: 'ali',
       rows: [],
@@ -172,32 +315,32 @@ describe('useOwnerIncomeStore members lists', () => {
 
   it('tracks the request in flight and clears it on page or error', async () => {
     const store = await makeStore()
-    store.setMemberListQuery(4, QUERY)
+    store.setMemberListQuery(RUN_4, QUERY)
 
-    store.setMemberListRequest(4, 3, 1)
-    expect(store.memberList(4)?.loadingPage).toBe(1)
-    expect(store.memberList(4)?.requestId).toBe(3)
+    store.setMemberListRequest(RUN_4, 3, 1)
+    expect(store.memberList(RUN_4)?.loadingPage).toBe(1)
+    expect(store.memberList(RUN_4)?.requestId).toBe(3)
 
-    store.setMemberListError(4, 'boom')
-    expect(store.memberList(4)?.loadingPage).toBeNull()
-    expect(store.memberList(4)?.error).toBe('boom')
+    store.setMemberListError(RUN_4, 'boom')
+    expect(store.memberList(RUN_4)?.loadingPage).toBeNull()
+    expect(store.memberList(RUN_4)?.error).toBe('boom')
 
-    store.setMemberListRequest(4, 4, 1)
-    expect(store.memberList(4)?.error).toBeNull()
-    store.setMemberListPage(4, 1, [row(1)], false)
-    expect(store.memberList(4)?.loadingPage).toBeNull()
+    store.setMemberListRequest(RUN_4, 4, 1)
+    expect(store.memberList(RUN_4)?.error).toBeNull()
+    store.setMemberListPage(RUN_4, 1, [row(1)], false)
+    expect(store.memberList(RUN_4)?.loadingPage).toBeNull()
   })
 
-  it('setters on a cycle with no list do nothing, and reset clears every list', async () => {
+  it('setters on a window with no list do nothing, and reset clears every list', async () => {
     const store = await makeStore()
 
-    store.setMemberListRequest(9, 1, 1)
-    store.setMemberListPage(9, 1, [row(1)], false)
-    store.setMemberListError(9, 'boom')
-    expect(store.memberList(9)).toBeNull()
+    store.setMemberListRequest('run:9', 1, 1)
+    store.setMemberListPage('run:9', 1, [row(1)], false)
+    store.setMemberListError('run:9', 'boom')
+    expect(store.memberList('run:9')).toBeNull()
 
-    store.setMemberListQuery(4, QUERY)
-    store.setSelectedCycle(4)
+    store.setMemberListQuery(RUN_4, QUERY)
+    store.setSelectedWindow(RUN_SEL(4))
     store.reset()
 
     expect(store.memberLists).toEqual({})
@@ -228,22 +371,37 @@ describe('useOwnerIncomeStore member sheets', () => {
 
   const member = (userId: number) => sheet(userId, 0).member
 
-  it('caches sheets per (cycle, user) and exposes the open one', async () => {
+  it('caches sheets per (window, user) and exposes the open one', async () => {
     const store = await makeStore()
 
-    store.setMemberSheet(4, sheet(7, 40))
-    store.setMemberSheet(2, sheet(7, 20))
+    store.setMemberSheet(RUN_4, sheet(7, 40))
+    store.setMemberSheet(RUN_2, sheet(7, 20))
 
-    expect(store.memberSheet(4, 7)?.totals.earned).toBe(40)
-    expect(store.memberSheet(2, 7)?.totals.earned).toBe(20)
-    expect(store.memberSheet(4, 8)).toBeNull()
+    expect(store.memberSheet(RUN_4, 7)?.totals.earned).toBe(40)
+    expect(store.memberSheet(RUN_2, 7)?.totals.earned).toBe(20)
+    expect(store.memberSheet(RUN_4, 8)).toBeNull()
     expect(store.openMemberSheet).toBeNull()
 
-    store.setOpenMember({ cycle: 2, member: member(7) })
+    store.setOpenMember({ window: RUN_SEL(2), member: member(7) })
     expect(store.openMemberSheet?.totals.earned).toBe(20)
 
-    store.setOpenMember({ cycle: 4, member: member(8) })
+    store.setOpenMember({ window: RUN_SEL(4), member: member(8) })
     expect(store.openMemberSheet).toBeNull()
+  })
+
+  it('does not resolve a sheet cached for the other window for the same user', async () => {
+    const store = await makeStore()
+
+    store.setMemberSheet(RUN_4, sheet(7, 40))
+    store.setMemberSheet(RANGE_A, sheet(7, 999))
+
+    store.setOpenMember({ window: RUN_SEL(4), member: member(7) })
+    expect(store.openMemberSheetKey).toBe(`${RUN_4}:7`)
+    expect(store.openMemberSheet?.totals.earned).toBe(40)
+
+    store.setOpenMember({ window: RANGE_SEL('2026-09-01', '2026-09-15'), member: member(7) })
+    expect(store.openMemberSheetKey).toBe(`${RANGE_A}:7`)
+    expect(store.openMemberSheet?.totals.earned).toBe(999)
   })
 
   it('tracks the request in flight and ends it on sheet, error or clear', async () => {
@@ -259,7 +417,7 @@ describe('useOwnerIncomeStore member sheets', () => {
 
     store.setMemberSheetRequest(4)
     expect(store.memberSheetError).toBeNull()
-    store.setMemberSheet(4, sheet(7, 1))
+    store.setMemberSheet(RUN_4, sheet(7, 1))
     expect(store.isMemberSheetLoading).toBe(false)
 
     store.setMemberSheetRequest(5)
@@ -270,8 +428,8 @@ describe('useOwnerIncomeStore member sheets', () => {
 
   it('reset closes the sheet and clears the cache and request state', async () => {
     const store = await makeStore()
-    store.setMemberSheet(4, sheet(7, 1))
-    store.setOpenMember({ cycle: 4, member: member(7) })
+    store.setMemberSheet(RUN_4, sheet(7, 1))
+    store.setOpenMember({ window: RUN_SEL(4), member: member(7) })
     store.setMemberSheetRequest(9)
 
     store.reset()

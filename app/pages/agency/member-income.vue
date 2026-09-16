@@ -1,20 +1,29 @@
 <script setup lang="ts">
 // ========================================
-// Member Income — cycle-centric owner/admin page
+// Member Income — window-centric owner/admin page
 // ========================================
-// Route binding + load only. One overview call on mount; per cycle switch one
+// Route binding + load only. One overview call on mount; per window switch one
 // summary call (cached for the visit) plus the members list page 1 (sort,
-// search and paging run on the server via the actions composable). Tapping a
-// member with a run opens their sheet over the list (the list stays mounted,
-// so its scroll position is kept). Access: owner or admin of the current
-// managed agency; everyone else sees "Access Denied". The Owner hero renders
-// only when the server sends the `owner` block (owner only, never admins).
+// search and paging run on the server via the actions composable). A window is
+// either a run ("Run N") or a custom date range; the selector offers Custom
+// dates only while the overview says ranges are enabled, because every range
+// endpoint 404s until the operator flips it. Tapping a member opens their sheet
+// over the list (the list stays mounted, so its scroll position is kept).
+// Access: owner or admin of the current managed agency; everyone else sees
+// "Access Denied". The Owner hero renders only when the server sends the
+// `owner` block (owner only, never admins).
+//
+// An agency that never had a run keeps its "No runs yet" empty state with no
+// selector at all — a range can only ever contain runs, so every range would
+// be empty. Custom dates therefore needs at least one run to be reachable.
 
 import { onBeforeUnmount, onMounted, computed, ref } from 'vue'
 import type {
   OwnerIncomeMemberRow,
   OwnerIncomeMemberSort,
   OwnerIncomeSortDirection,
+  OwnerIncomeWindowKind,
+  OwnerIncomeWindowSelection,
 } from '~/types/income/ownerIncome'
 
 definePageMeta({
@@ -27,6 +36,8 @@ const ownerIncomeStore = useOwnerIncomeStore()
 const {
   loadOwnerIncomePage,
   selectCycle,
+  applyRange,
+  retrySelectedWindow,
   loadMoreMembers,
   retryMembers,
   setMembersSort,
@@ -45,18 +56,26 @@ const overview = computed(() => ownerIncomeStore.overview)
 const summary = computed(() => ownerIncomeStore.selectedSummary)
 const memberList = computed(() => ownerIncomeStore.selectedMemberList)
 
+/** Drives every "run mode vs range mode" branch the child components take. */
+const windowKind = computed<OwnerIncomeWindowKind>(() => (ownerIncomeStore.isRangeSelected ? 'range' : 'run'))
+
 const isFirstLoad = computed(
   () =>
     !isAgencyResolved.value ||
     (isOwnerOrAdmin.value && overview.value === null && ownerIncomeStore.overviewError === null)
 )
 
-function onSelectCycle(cycleNumber: number): void {
-  void selectCycle(cycleNumber)
+function onSelectWindow(selection: OwnerIncomeWindowSelection): void {
+  if (selection.kind === 'range') {
+    void applyRange(selection.from, selection.to)
+    return
+  }
+
+  void selectCycle(selection.number)
 }
 
-function onRetryCycle(): void {
-  if (ownerIncomeStore.selectedCycle !== null) void selectCycle(ownerIncomeStore.selectedCycle)
+function onRetryWindow(): void {
+  void retrySelectedWindow()
 }
 
 function onRetryPage(): void {
@@ -154,23 +173,30 @@ onMounted(async () => {
       <template v-else>
         <AgencyIncomeCycleSelector
           :cycles="ownerIncomeStore.cycles"
-          :model-value="ownerIncomeStore.selectedCycle"
+          :selection="ownerIncomeStore.selectedWindow"
+          :label="ownerIncomeStore.selectedWindowLabel"
+          :in-progress="ownerIncomeStore.isSelectedWindowInProgress"
           :loading="ownerIncomeStore.isOverviewLoading"
-          @update:model-value="onSelectCycle"
+          :ranges-enabled="ownerIncomeStore.rangesEnabled"
+          :range-limits="ownerIncomeStore.rangeLimits"
+          @select="onSelectWindow"
         />
 
-        <AgencyIncomeInProgressNote v-if="ownerIncomeStore.isSelectedCycleInProgress" />
+        <AgencyIncomeInProgressNote
+          v-if="ownerIncomeStore.isSelectedWindowInProgress"
+          :window-kind="windowKind"
+        />
 
-        <!-- Selected cycle -->
+        <!-- Selected window -->
         <section v-if="summary" class="space-y-4">
           <AgencyIncomeMembersHero :totals="summary.members" />
           <AgencyIncomeOwnerHero v-if="summary.owner" :totals="summary.owner" />
 
-          <!-- Members list (re-keyed per cycle so the search box shows that cycle's term) -->
+          <!-- Members list (re-keyed per window so the search box shows that window's term) -->
           <div v-if="memberList" class="space-y-3">
             <h2 class="text-sm font-semibold">Members</h2>
             <AgencyIncomeMembersToolbar
-              :key="`members-toolbar-${ownerIncomeStore.selectedCycle}`"
+              :key="`members-toolbar-${ownerIncomeStore.selectedWindowKey}`"
               :search="memberList.search"
               :sort="memberList.sort"
               :direction="memberList.direction"
@@ -184,6 +210,7 @@ onMounted(async () => {
               :loading-page="memberList.loadingPage"
               :search="memberList.search"
               :error="memberList.error"
+              :window-kind="windowKind"
               @load-more="onLoadMoreMembers"
               @retry="onRetryMembers"
               @open-member="onOpenMember"
@@ -191,14 +218,16 @@ onMounted(async () => {
           </div>
         </section>
 
-        <div v-else-if="ownerIncomeStore.isSelectedCycleLoading" class="space-y-4">
+        <div v-else-if="ownerIncomeStore.isSelectedWindowLoading" class="space-y-4">
           <AgencyIncomeCycleSummarySkeleton />
           <AgencyIncomeCycleSummarySkeleton v-if="agencyStore.isAgencyOwner" />
         </div>
 
-        <div v-else-if="ownerIncomeStore.selectedCycle !== null" class="text-center py-6 bg-elevated rounded-lg">
-          <p class="text-sm text-muted mb-2">Could not load this run.</p>
-          <UButton size="sm" variant="soft" icon="i-lucide-rotate-cw" @click="onRetryCycle">Retry</UButton>
+        <div v-else-if="ownerIncomeStore.selectedWindow !== null" class="text-center py-6 bg-elevated rounded-lg">
+          <p class="text-sm text-muted mb-2">
+            {{ windowKind === 'range' ? 'Could not load these dates.' : 'Could not load this run.' }}
+          </p>
+          <UButton size="sm" variant="soft" icon="i-lucide-rotate-cw" @click="onRetryWindow">Retry</UButton>
         </div>
       </template>
 
@@ -207,6 +236,8 @@ onMounted(async () => {
         :open="ownerIncomeStore.openMember !== null"
         :member="ownerIncomeStore.openMember?.member ?? null"
         :sheet="ownerIncomeStore.openMemberSheet"
+        :window-kind="ownerIncomeStore.openMemberWindowKind"
+        :view-key="ownerIncomeStore.openMemberSheetKey ?? ''"
         :loading="ownerIncomeStore.isMemberSheetLoading"
         :error="ownerIncomeStore.memberSheetError"
         @close="closeMember"

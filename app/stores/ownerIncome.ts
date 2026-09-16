@@ -2,36 +2,47 @@
 // Owner Income Store
 // ========================================
 // State + computed + setters ONLY — useOwnerIncomeActions for API.
-// Cycle-centric owner/admin "Member Income" page: overview (agency + cycles),
-// the selected cycle, a per-cycle summary cache (Members / Owner heroes) and a
-// per-cycle members list (rows, paging, applied sort/search), and the member
-// bottom sheet (which member is open + a sheet cache keyed by cycle and user).
+// Window-centric owner/admin "Member Income" page: overview (agency + cycles +
+// the custom-range gate), the selected window, and — all keyed by that
+// window's key — a summary cache (Members / Owner heroes), a members list
+// (rows, paging, applied sort/search) and the member bottom sheet cache.
+//
+// The window key is `run:N` for a Run N preset and `range:FROM|TO` for a
+// custom date range (`ownerIncomeWindowKey`). Every keyed setter takes that
+// key explicitly: a range's `window.number` is null, so nothing here may
+// derive a key from a response.
+//
 // Everything lives for one page visit; the page load resets it.
 
 import { defineStore } from 'pinia'
 import type {
   OwnerIncomeCycle,
-  OwnerIncomeCycleSummary,
   OwnerIncomeMemberList,
   OwnerIncomeMemberRow,
   OwnerIncomeMemberSheet,
   OwnerIncomeMemberSort,
   OwnerIncomeOpenMember,
   OwnerIncomeOverview,
+  OwnerIncomeRangeLimits,
   OwnerIncomeSortDirection,
+  OwnerIncomeWindow,
+  OwnerIncomeWindowKind,
+  OwnerIncomeWindowSelection,
+  OwnerIncomeWindowSummary,
 } from '~/types/income/ownerIncome'
-
-function memberSheetKey(cycleNumber: number, userId: number): string {
-  return `${cycleNumber}:${userId}`
-}
+import {
+  ownerIncomeRangeLabel,
+  ownerIncomeSheetKey,
+  ownerIncomeWindowKey,
+} from '~/utils/ownerIncomeWindow'
 
 export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
   const overview = ref<OwnerIncomeOverview | null>(null)
-  const selectedCycle = ref<number | null>(null)
-  const summaries = ref<Record<number, OwnerIncomeCycleSummary>>({})
-  const memberLists = ref<Record<number, OwnerIncomeMemberList>>({})
+  const selectedWindow = ref<OwnerIncomeWindowSelection | null>(null)
+  const summaries = ref<Record<string, OwnerIncomeWindowSummary>>({})
+  const memberLists = ref<Record<string, OwnerIncomeMemberList>>({})
 
-  /** Loaded sheets, keyed `${cycle}:${userId}`. */
+  /** Loaded sheets, keyed `${windowKey}:${userId}`. */
   const memberSheets = ref<Record<string, OwnerIncomeMemberSheet>>({})
   const openMember = ref<OwnerIncomeOpenMember | null>(null)
   /** The sheet request allowed to land; 0 = none in flight. */
@@ -39,76 +50,140 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
   const memberSheetError = ref<string | null>(null)
 
   const isOverviewLoading = ref(false)
-  const loadingCycles = ref<number[]>([])
+  const loadingWindows = ref<string[]>([])
   const overviewError = ref<string | null>(null)
 
   const cycles = computed<OwnerIncomeCycle[]>(() => overview.value?.cycles ?? [])
   const hasCycles = computed(() => cycles.value.length > 0)
   const defaultCycle = computed<number | null>(() => overview.value?.default_cycle ?? null)
 
-  const selectedCycleInfo = computed<OwnerIncomeCycle | null>(
-    () => cycles.value.find((cycle) => cycle.number === selectedCycle.value) ?? null
+  /** False (and the Custom dates entry hidden) until the operator enables ranges. */
+  const rangesEnabled = computed(() => overview.value?.ranges_enabled ?? false)
+  const rangeLimits = computed<OwnerIncomeRangeLimits | null>(() => overview.value?.range_limits ?? null)
+
+  const selectedWindowKey = computed<string | null>(() =>
+    selectedWindow.value === null ? null : ownerIncomeWindowKey(selectedWindow.value)
   )
 
-  const selectedSummary = computed<OwnerIncomeCycleSummary | null>(() =>
-    selectedCycle.value !== null ? (summaries.value[selectedCycle.value] ?? null) : null
+  const isRangeSelected = computed(() => selectedWindow.value?.kind === 'range')
+
+  /** The selected run number, or null when a range (or nothing) is selected. */
+  const selectedCycle = computed<number | null>(() =>
+    selectedWindow.value?.kind === 'run' ? selectedWindow.value.number : null
   )
 
-  const isSelectedCycleLoading = computed(
-    () => selectedCycle.value !== null && loadingCycles.value.includes(selectedCycle.value)
+  const selectedSummary = computed<OwnerIncomeWindowSummary | null>(() =>
+    selectedWindowKey.value !== null ? (summaries.value[selectedWindowKey.value] ?? null) : null
   )
 
-  const isSelectedCycleInProgress = computed(() => selectedCycleInfo.value?.in_progress ?? false)
+  /** The server's description of the loaded window — null until its summary lands. */
+  const selectedWindowInfo = computed<OwnerIncomeWindow | null>(() => selectedSummary.value?.window ?? null)
+
+  /**
+   * Trigger-button text for the selector. The server's label once the summary
+   * is in; before that the locally built equivalent, so switching windows
+   * never shows a blank or a stale name. Both forms are byte-identical.
+   */
+  const selectedWindowLabel = computed<string | null>(() => {
+    if (selectedWindowInfo.value !== null) return selectedWindowInfo.value.label
+
+    const selection = selectedWindow.value
+    if (selection === null) return null
+
+    return selection.kind === 'run'
+      ? (cycles.value.find((cycle) => cycle.number === selection.number)?.label ?? null)
+      : ownerIncomeRangeLabel(selection.from, selection.to)
+  })
+
+  const isSelectedWindowLoading = computed(
+    () => selectedWindowKey.value !== null && loadingWindows.value.includes(selectedWindowKey.value)
+  )
+
+  /**
+   * Whether the loaded window touches the cycle still in progress. The
+   * summary's own `window` is the source once it lands. Before that, a RUN
+   * falls back to its entry in the overview's cycle list — the same server
+   * resolver produced both, and without the fallback the default (in-progress)
+   * cycle renders as "Closed" for the length of the first summary request. A
+   * range has no local equivalent, so it stays false until the summary lands.
+   */
+  const isSelectedWindowInProgress = computed(() => {
+    if (selectedWindowInfo.value !== null) return selectedWindowInfo.value.in_progress
+
+    const selection = selectedWindow.value
+
+    return selection?.kind === 'run'
+      ? (cycles.value.find((cycle) => cycle.number === selection.number)?.in_progress ?? false)
+      : false
+  })
 
   const selectedMemberList = computed<OwnerIncomeMemberList | null>(() =>
-    selectedCycle.value !== null ? (memberLists.value[selectedCycle.value] ?? null) : null
+    selectedWindowKey.value !== null ? (memberLists.value[selectedWindowKey.value] ?? null) : null
+  )
+
+  const openMemberSheetKey = computed<string | null>(() =>
+    openMember.value === null
+      ? null
+      : ownerIncomeSheetKey(ownerIncomeWindowKey(openMember.value.window), openMember.value.member.user_id)
   )
 
   const openMemberSheet = computed<OwnerIncomeMemberSheet | null>(() =>
-    openMember.value !== null
-      ? (memberSheets.value[memberSheetKey(openMember.value.cycle, openMember.value.member.user_id)] ?? null)
-      : null
+    openMemberSheetKey.value !== null ? (memberSheets.value[openMemberSheetKey.value] ?? null) : null
   )
 
   const isMemberSheetLoading = computed(() => memberSheetRequestId.value !== 0)
 
-  function isCycleLoading(cycleNumber: number): boolean {
-    return loadingCycles.value.includes(cycleNumber)
+  /**
+   * The kind of window the OPEN sheet belongs to — not the selected one. They
+   * can differ (the sheet outlives a window switch), and the sheet's Gift-coins
+   * source and copy must follow the data it is showing.
+   */
+  const openMemberWindowKind = computed<OwnerIncomeWindowKind>(
+    () => openMember.value?.window.kind ?? selectedWindow.value?.kind ?? 'run'
+  )
+
+  function isWindowLoading(windowKey: string): boolean {
+    return loadingWindows.value.includes(windowKey)
   }
 
-  function memberSheet(cycleNumber: number, userId: number): OwnerIncomeMemberSheet | null {
-    return memberSheets.value[memberSheetKey(cycleNumber, userId)] ?? null
+  function summary(windowKey: string): OwnerIncomeWindowSummary | null {
+    return summaries.value[windowKey] ?? null
   }
 
-  function memberList(cycleNumber: number): OwnerIncomeMemberList | null {
-    return memberLists.value[cycleNumber] ?? null
+  function memberSheet(windowKey: string, userId: number): OwnerIncomeMemberSheet | null {
+    return memberSheets.value[ownerIncomeSheetKey(windowKey, userId)] ?? null
   }
 
-  function patchMemberList(cycleNumber: number, patch: Partial<OwnerIncomeMemberList>): void {
-    const list = memberLists.value[cycleNumber]
+  function memberList(windowKey: string): OwnerIncomeMemberList | null {
+    return memberLists.value[windowKey] ?? null
+  }
+
+  function patchMemberList(windowKey: string, patch: Partial<OwnerIncomeMemberList>): void {
+    const list = memberLists.value[windowKey]
     if (!list) return
-    memberLists.value = { ...memberLists.value, [cycleNumber]: { ...list, ...patch } }
+    memberLists.value = { ...memberLists.value, [windowKey]: { ...list, ...patch } }
   }
 
   function setOverview(value: OwnerIncomeOverview | null): void {
     overview.value = value
   }
 
-  function setSelectedCycle(cycleNumber: number | null): void {
-    selectedCycle.value = cycleNumber
+  function setSelectedWindow(selection: OwnerIncomeWindowSelection | null): void {
+    selectedWindow.value = selection
   }
 
-  function setSummary(summary: OwnerIncomeCycleSummary): void {
-    summaries.value = { ...summaries.value, [summary.cycle.number]: summary }
+  /** Cache a window's heroes under its key — never under anything read off the response. */
+  function setSummary(windowKey: string, value: OwnerIncomeWindowSummary): void {
+    summaries.value = { ...summaries.value, [windowKey]: value }
   }
 
   function setOverviewLoading(loading: boolean): void {
     isOverviewLoading.value = loading
   }
 
-  function setCycleLoading(cycleNumber: number, loading: boolean): void {
-    const others = loadingCycles.value.filter((number) => number !== cycleNumber)
-    loadingCycles.value = loading ? [...others, cycleNumber] : others
+  function setWindowLoading(windowKey: string, loading: boolean): void {
+    const others = loadingWindows.value.filter((key) => key !== windowKey)
+    loadingWindows.value = loading ? [...others, windowKey] : others
   }
 
   function setOverviewError(message: string | null): void {
@@ -116,37 +191,37 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
   }
 
   /**
-   * (Re)start a cycle's list under a new applied query: no rows, nothing
+   * (Re)start a window's list under a new applied query: no rows, nothing
    * loaded, nothing in flight. Changing sort/direction/search always lands
    * here, so the next load is page 1.
    */
   function setMemberListQuery(
-    cycleNumber: number,
+    windowKey: string,
     query: { sort: OwnerIncomeMemberSort; direction: OwnerIncomeSortDirection; search: string }
   ): void {
     memberLists.value = {
       ...memberLists.value,
-      [cycleNumber]: { ...query, rows: [], page: 0, hasMore: false, loadingPage: null, error: null, requestId: 0 },
+      [windowKey]: { ...query, rows: [], page: 0, hasMore: false, loadingPage: null, error: null, requestId: 0 },
     }
   }
 
   /** Mark `page` in flight under `requestId` (the only response allowed to land). */
-  function setMemberListRequest(cycleNumber: number, requestId: number, page: number): void {
-    patchMemberList(cycleNumber, { requestId, loadingPage: page, error: null })
+  function setMemberListRequest(windowKey: string, requestId: number, page: number): void {
+    patchMemberList(windowKey, { requestId, loadingPage: page, error: null })
   }
 
   /**
    * Store a loaded page. Page 1 replaces the rows; later pages append, skipping
-   * any member already shown (live figures on the in-progress cycle can shift a
+   * any member already shown (live figures on an in-progress window can shift a
    * row across an offset boundary between requests).
    */
   function setMemberListPage(
-    cycleNumber: number,
+    windowKey: string,
     page: number,
     rows: OwnerIncomeMemberRow[],
     hasMore: boolean
   ): void {
-    const list = memberLists.value[cycleNumber]
+    const list = memberLists.value[windowKey]
     if (!list) return
 
     let nextRows = rows
@@ -155,11 +230,11 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
       nextRows = [...list.rows, ...rows.filter((row) => !shown.has(row.user_id))]
     }
 
-    patchMemberList(cycleNumber, { rows: nextRows, page, hasMore, loadingPage: null, error: null })
+    patchMemberList(windowKey, { rows: nextRows, page, hasMore, loadingPage: null, error: null })
   }
 
-  function setMemberListError(cycleNumber: number, message: string): void {
-    patchMemberList(cycleNumber, { error: message, loadingPage: null })
+  function setMemberListError(windowKey: string, message: string): void {
+    patchMemberList(windowKey, { error: message, loadingPage: null })
   }
 
   function setOpenMember(target: OwnerIncomeOpenMember | null): void {
@@ -172,9 +247,12 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     memberSheetError.value = null
   }
 
-  /** Cache a loaded sheet for `cycleNumber` and end the request. */
-  function setMemberSheet(cycleNumber: number, sheet: OwnerIncomeMemberSheet): void {
-    memberSheets.value = { ...memberSheets.value, [memberSheetKey(cycleNumber, sheet.member.user_id)]: sheet }
+  /** Cache a loaded sheet for `windowKey` and end the request. */
+  function setMemberSheet(windowKey: string, sheet: OwnerIncomeMemberSheet): void {
+    memberSheets.value = {
+      ...memberSheets.value,
+      [ownerIncomeSheetKey(windowKey, sheet.member.user_id)]: sheet,
+    }
     memberSheetRequestId.value = 0
     memberSheetError.value = null
   }
@@ -192,7 +270,7 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
 
   function reset(): void {
     overview.value = null
-    selectedCycle.value = null
+    selectedWindow.value = null
     summaries.value = {}
     memberLists.value = {}
     memberSheets.value = {}
@@ -200,13 +278,13 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     memberSheetRequestId.value = 0
     memberSheetError.value = null
     isOverviewLoading.value = false
-    loadingCycles.value = []
+    loadingWindows.value = []
     overviewError.value = null
   }
 
   return {
     overview,
-    selectedCycle,
+    selectedWindow,
     summaries,
     memberLists,
     memberSheets,
@@ -214,26 +292,35 @@ export const useOwnerIncomeStore = defineStore('ownerIncome', () => {
     memberSheetRequestId,
     memberSheetError,
     isOverviewLoading,
-    loadingCycles,
+    loadingWindows,
     overviewError,
     cycles,
     hasCycles,
     defaultCycle,
-    selectedCycleInfo,
+    rangesEnabled,
+    rangeLimits,
+    selectedWindowKey,
+    selectedCycle,
+    isRangeSelected,
     selectedSummary,
-    isSelectedCycleLoading,
-    isSelectedCycleInProgress,
+    selectedWindowInfo,
+    selectedWindowLabel,
+    isSelectedWindowLoading,
+    isSelectedWindowInProgress,
     selectedMemberList,
+    openMemberSheetKey,
     openMemberSheet,
+    openMemberWindowKind,
     isMemberSheetLoading,
-    isCycleLoading,
+    isWindowLoading,
+    summary,
     memberList,
     memberSheet,
     setOverview,
-    setSelectedCycle,
+    setSelectedWindow,
     setSummary,
     setOverviewLoading,
-    setCycleLoading,
+    setWindowLoading,
     setOverviewError,
     setMemberListQuery,
     setMemberListRequest,

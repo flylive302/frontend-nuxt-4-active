@@ -8,7 +8,7 @@
 // ========================================
 
 import { computed } from 'vue'
-import type { OwnerIncomeMemberRow } from '~/types/income/ownerIncome'
+import type { OwnerIncomeMemberRow, OwnerIncomeWindowKind } from '~/types/income/ownerIncome'
 
 // ========================================
 // Props / Emits
@@ -20,6 +20,7 @@ const props = defineProps<{
   loadingPage: number | null
   search: string
   error: string | null
+  windowKind: OwnerIncomeWindowKind
 }>()
 
 const emit = defineEmits<{
@@ -54,7 +55,7 @@ const isLoadingMore = computed(() => props.loadingPage !== null && props.loading
   <!-- Empty roster -->
   <div v-else-if="rows.length === 0" class="text-center py-8 bg-elevated rounded-lg">
     <UIcon name="i-lucide-users" class="size-12 text-muted mb-2" />
-    <p class="text-sm text-muted">No members in this run</p>
+    <p class="text-sm text-muted">{{ windowKind === 'range' ? 'No members in these dates' : 'No members in this run' }}</p>
   </div>
 
   <!-- Rows -->
@@ -63,6 +64,7 @@ const isLoadingMore = computed(() => props.loadingPage !== null && props.loading
       v-for="row in rows"
       :key="row.user_id"
       :member="row"
+      :window-kind="windowKind"
       @open="emit('open-member', $event)"
     />
 
