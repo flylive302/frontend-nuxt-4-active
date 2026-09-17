@@ -13,7 +13,10 @@ let stop: (() => void) | null = null
 onMounted(async () => {
   stop = start()
   await load()
-  await restorePending()
+  // Silent safety net — the app-level plugin already restores on boot/login/
+  // foreground; this just catches the panel being opened without one of
+  // those triggers having fired yet. Never nags with "nothing to restore".
+  await restorePending('auto')
 })
 
 onUnmounted(() => {
@@ -83,8 +86,9 @@ onUnmounted(() => {
         color="tertiary"
         size="sm"
         class="mt-2"
-        :disabled="store.status === 'purchasing'"
-        @click="restorePending()"
+        :loading="store.isRestoring"
+        :disabled="store.status === 'purchasing' || store.isRestoring"
+        @click="restorePending('manual')"
       >
         Restore purchases
       </UButton>

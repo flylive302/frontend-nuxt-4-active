@@ -5,6 +5,7 @@
 // No imports from stores or composables.
 // ========================================
 
+import type { IapStore } from '~/types/economy/iap'
 import type { TransactionType, TransactionTypeFilter } from '~/types/economy/wallet'
 
 // ========================================
@@ -38,6 +39,26 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   diamond_deduction: 'Diamonds Sold',
   diamond_to_coin_conversion: 'Diamonds Converted',
   diamond_handover: 'Diamond Handover',
+}
+
+// ========================================
+// Store-specific labels (store_purchase / store_refund)
+// ========================================
+// TRANSACTION_TYPE_LABELS above is generic ("Coin Pack", "Store Refund") and
+// has no way to name the store. These are looked up by `transaction.metadata.store`
+// in getTransactionLabel() (utils/economy/transactionHelpers.ts) so history rows
+// can say which store sold or refunded the coins.
+
+/** Labels for `store_purchase`, keyed by `metadata.store`. */
+export const STORE_PURCHASE_LABELS: Record<IapStore, string> = {
+  apple: 'Coin pack (App Store)',
+  google: 'Coin pack (Google Play)',
+}
+
+/** Labels for `store_refund`, keyed by `metadata.store`. */
+export const STORE_REFUND_LABELS: Record<IapStore, string> = {
+  apple: 'Refunded by App Store',
+  google: 'Refunded by Google Play',
 }
 
 // ========================================

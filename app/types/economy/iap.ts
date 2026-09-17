@@ -52,6 +52,41 @@ export interface IapVerifyResponse {
   outcome: 'credited' | 'already_credited' | string
   purchase: IapPurchase
   balance: number | null
+  /**
+   * Whether the device transaction should be finished/acknowledged/consumed.
+   * `true` for a row that is settled either way (credited, already-settled
+   * replay, or a rejected purchase the store should stop nagging about);
+   * `false` while the row is still being retried (daily cap, transient
+   * failure) — finishing it there would silently drop the user's paid coins.
+   */
+  finish: boolean
+}
+
+/**
+ * One item of `POST /iap/{store}/restore`'s `transactions` array.
+ * Per `RestoreStorePurchasesRequest::rules()`, the required fields differ
+ * by store: apple validates `transaction_id` (+ optional `signed_transaction`
+ * / `product_id`); google requires BOTH `purchase_token` and `product_id`.
+ */
+export interface IapRestoreItem {
+  transaction_id?: string
+  signed_transaction?: string
+  purchase_token?: string
+  product_id?: string
+}
+
+/** Per-transaction outcome in a restore response, matched back to the device
+ *  transaction via `transaction_id` (echoes what was sent). */
+export interface IapRestoreResult {
+  transaction_id: string
+  outcome: string
+  finish: boolean
+  purchase: IapPurchase | null
+}
+
+export interface IapRestoreResponse {
+  results: IapRestoreResult[]
+  balance: number | null
 }
 
 export type PurchaseStatus =

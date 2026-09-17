@@ -106,4 +106,30 @@ describe('normalizeFetchError', () => {
       expect(normalizeFetchError(abort).message).toBe('Request was cancelled.');
     });
   });
+
+  describe('meta passthrough (in-app-purchase/09 — ApiResponse::error() puts data:null and moves the extra fields into meta)', () => {
+    it('exposes meta on a 409, e.g. IAP verify\'s finish/outcome/balance flags', () => {
+      const result = normalizeFetchError(
+        fetchError(409, {
+          message: 'Daily limit reached.',
+          errors: {},
+          meta: { finish: false, outcome: 'daily_cap_exceeded', balance: null, timestamp: '2026-09-17T00:00:00Z' },
+        }),
+      );
+
+      expect(result.meta).toEqual({ finish: false, outcome: 'daily_cap_exceeded', balance: null, timestamp: '2026-09-17T00:00:00Z' });
+    });
+
+    it('exposes meta on a 422 too', () => {
+      const result = normalizeFetchError(
+        fetchError(422, { message: 'Nope', errors: {}, meta: { finish: true } }),
+      );
+
+      expect(result.meta).toEqual({ finish: true });
+    });
+
+    it('is undefined when the body has no meta object', () => {
+      expect(normalizeFetchError(fetchError(500, { message: 'Boom' })).meta).toBeUndefined();
+    });
+  });
 });

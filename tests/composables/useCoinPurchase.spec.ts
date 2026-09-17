@@ -51,6 +51,7 @@ function createMockCoinPacksStore() {
     activeProductId: null as string | null,
     lastError: null as string | null,
     lastPurchase: null as unknown,
+    isRestoring: false,
     packsWithPrices: [] as Array<{ pack: CoinPack; product: StoreProduct }>,
     setPacks: vi.fn(),
     setProducts: vi.fn(),
@@ -58,6 +59,9 @@ function createMockCoinPacksStore() {
     setActiveProductId: vi.fn(),
     setError: vi.fn(),
     setLastPurchase: vi.fn(),
+    setRestoring: vi.fn(function (this: { isRestoring: boolean }, value: boolean) {
+      this.isRestoring = value
+    }),
   }
 }
 
@@ -69,9 +73,14 @@ function createMockToast() {
   return { add: vi.fn() }
 }
 
-function makeApiError(status: number, message = 'error') {
-  const err = new Error(message) as Error & { response: { status: number } }
-  err.response = { status }
+/**
+ * `meta` mirrors `ApiResponse::error()`'s envelope — on a real error response
+ * `data` is null and everything (outcome/purchase/balance/finish/error_code)
+ * lives under `meta` instead (see `normalizeFetchError.ts`).
+ */
+function makeApiError(status: number, message = 'error', meta?: Record<string, unknown>) {
+  const err = new Error(message) as Error & { response: { status: number; _data?: { meta?: Record<string, unknown> } } }
+  err.response = { status, _data: meta ? { meta } : undefined }
   return err
 }
 
@@ -79,8 +88,12 @@ function createMockApiModule() {
   return {
     api: vi.fn(),
     normalizeError: vi.fn((e: unknown) => {
-      const err = e as { response?: { status?: number }; message?: string }
-      return { status: err?.response?.status, message: err?.message ?? 'Unknown error' }
+      const err = e as { response?: { status?: number; _data?: { meta?: Record<string, unknown> } }; message?: string }
+      return {
+        status: err?.response?.status,
+        message: err?.message ?? 'Unknown error',
+        meta: err?.response?._data?.meta,
+      }
     }),
   }
 }
@@ -160,7 +173,7 @@ describe('buy', () => {
   })
 
   it('purchase ok: verifies, applies balance, finishes tx, status success', async () => {
-    mockApiModule.api.mockResolvedValue({ data: { outcome: 'credited', purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
+    mockApiModule.api.mockResolvedValue({ data: { outcome: 'credited', finish: true, purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
     const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'ok' })
     const finishSpy = vi.spyOn(adapter, 'finish')
 
@@ -188,7 +201,7 @@ describe('buy', () => {
   })
 
   it('pending: status pending-store, no verify; transactionUpdated later triggers verify + finish', async () => {
-    mockApiModule.api.mockResolvedValue({ data: { outcome: 'credited', purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
+    mockApiModule.api.mockResolvedValue({ data: { outcome: 'credited', finish: true, purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
     const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'pending' })
     const finishSpy = vi.spyOn(adapter, 'finish')
 
@@ -204,8 +217,8 @@ describe('buy', () => {
     expect(finishSpy).toHaveBeenCalled()
   })
 
-  it('verify 422: finish called, status failed', async () => {
-    mockApiModule.api.mockRejectedValue(makeApiError(422))
+  it('verify 422: finish=true in the error meta → finish called, status failed', async () => {
+    mockApiModule.api.mockRejectedValue(makeApiError(422, 'error', { finish: true }))
     const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'ok' })
     const finishSpy = vi.spyOn(adapter, 'finish')
 
@@ -216,7 +229,19 @@ describe('buy', () => {
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('failed')
   })
 
-  it('verify 503: finish NOT called, status failed', async () => {
+  it('verify 409 (daily cap): finish=false in the error meta → finish NOT called, status failed', async () => {
+    mockApiModule.api.mockRejectedValue(makeApiError(409, 'error', { finish: false }))
+    const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'ok' })
+    const finishSpy = vi.spyOn(adapter, 'finish')
+
+    const { buy } = useCoinPurchase(adapter)
+    await buy('coins_100')
+
+    expect(finishSpy).not.toHaveBeenCalled()
+    expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('failed')
+  })
+
+  it('verify 503: no finish in the error meta → treated as false, finish NOT called', async () => {
     mockApiModule.api.mockRejectedValue(makeApiError(503))
     const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'ok' })
     const finishSpy = vi.spyOn(adapter, 'finish')
@@ -227,6 +252,19 @@ describe('buy', () => {
     expect(finishSpy).not.toHaveBeenCalled()
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('failed')
   })
+
+  it('verify 200 already_pending (finish: false): NOT finished, no success toast/balance patch', async () => {
+    mockApiModule.api.mockResolvedValue({ data: { outcome: 'already_pending', finish: false, purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'pending', store_transaction_id: 'tx-1', failure_reason: null }, balance: null } })
+    const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'ok' })
+    const finishSpy = vi.spyOn(adapter, 'finish')
+
+    const { buy } = useCoinPurchase(adapter)
+    await buy('coins_100')
+
+    expect(finishSpy).not.toHaveBeenCalled()
+    expect(mockToast.add).not.toHaveBeenCalled()
+    expect(authStore.patchBalance).not.toHaveBeenCalled()
+  })
 })
 
 // ========================================
@@ -234,29 +272,128 @@ describe('buy', () => {
 // ========================================
 
 describe('restorePending', () => {
-  it('re-submits each pending transaction for verification', async () => {
-    mockApiModule.api.mockResolvedValue({ data: { outcome: 'credited', purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
-    const pending = [
-      { id: 'tx-1', jws: 'jws-1', productId: 'coins_100', pending: false },
-      { id: 'tx-2', jws: 'jws-2', productId: 'coins_200', pending: false },
-    ]
-    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: pending })
+  const PENDING = [
+    { id: 'tx-1', jws: 'jws-1', productId: 'coins_100', pending: false },
+    { id: 'tx-2', jws: 'jws-2', productId: 'coins_200', pending: false },
+  ]
+
+  it('batches through /restore, finishes only finish:true results, one toast, balance patched', async () => {
+    mockApiModule.api.mockResolvedValue({
+      data: {
+        results: [
+          { transaction_id: 'tx-1', outcome: 'credited', finish: true, purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null } },
+          { transaction_id: 'tx-2', outcome: 'daily_cap_exceeded', finish: false, purchase: null },
+        ],
+        balance: 700,
+      },
+    })
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: PENDING })
+    const finishSpy = vi.spyOn(adapter, 'finish')
 
     const { restorePending } = useCoinPurchase(adapter)
-    await restorePending()
+    await restorePending('manual')
 
-    expect(mockApiModule.api).toHaveBeenCalledTimes(2)
-    expect(mockApiModule.api).toHaveBeenNthCalledWith(1, '/iap/apple/verify', expect.objectContaining({
-      body: expect.objectContaining({ transaction_id: 'tx-1' }),
+    expect(mockApiModule.api).toHaveBeenCalledTimes(1)
+    expect(mockApiModule.api).toHaveBeenCalledWith('/iap/apple/restore', expect.objectContaining({
+      method: 'POST',
+      body: { transactions: [
+        { transaction_id: 'tx-1', signed_transaction: 'jws-1', product_id: 'coins_100' },
+        { transaction_id: 'tx-2', signed_transaction: 'jws-2', product_id: 'coins_200' },
+      ] },
     }))
-    expect(mockApiModule.api).toHaveBeenNthCalledWith(2, '/iap/apple/verify', expect.objectContaining({
-      body: expect.objectContaining({ transaction_id: 'tx-2' }),
-    }))
+    expect(finishSpy).toHaveBeenCalledTimes(1)
+    expect(adapter.finished).toEqual(['tx-1'])
+    expect(authStore.patchBalance).toHaveBeenCalledWith({ coins: '700' })
+    expect(mockToast.add).toHaveBeenCalledTimes(1)
+    expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ title: 'Purchases restored' }))
   })
 
-  it('finishes a replayed, already-settled transaction silently', async () => {
+  it('chunks batches of 21 into a 20 + 1 pair', async () => {
+    mockApiModule.api.mockResolvedValue({ data: { results: [], balance: null } })
+    const manyPending = Array.from({ length: 21 }, (_, i) => ({
+      id: `tx-${i}`,
+      jws: `jws-${i}`,
+      productId: 'coins_100',
+      pending: false,
+    }))
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: manyPending })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    await restorePending('auto')
+
+    expect(mockApiModule.api).toHaveBeenCalledTimes(2)
+    const firstBody = mockApiModule.api.mock.calls[0]![1].body as { transactions: unknown[] }
+    const secondBody = mockApiModule.api.mock.calls[1]![1].body as { transactions: unknown[] }
+    expect(firstBody.transactions).toHaveLength(20)
+    expect(secondBody.transactions).toHaveLength(1)
+  })
+
+  it('two concurrent calls in the same tick: only one runs (isRestoring guard set before any await)', async () => {
+    mockApiModule.api.mockResolvedValue({ data: { results: [], balance: null } })
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: PENDING })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    const first = restorePending('auto')
+    const second = restorePending('auto')
+    await Promise.all([first, second])
+
+    expect(mockApiModule.api).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips while a purchase is already in flight (buy() owns that verify)', async () => {
+    coinPacksStore.status = 'purchasing'
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: PENDING })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    await restorePending('manual')
+
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+    expect(mockToast.add).not.toHaveBeenCalled()
+  })
+
+  it('empty pending: no API call', async () => {
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: [] })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    await restorePending('auto')
+
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+    expect(mockToast.add).not.toHaveBeenCalled()
+  })
+
+  it('manual restore with nothing pending: toast "No purchases to restore"', async () => {
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: [] })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    await restorePending('manual')
+
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+    expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ title: 'No purchases to restore' }))
+  })
+
+  it('404 (store flag off): silent no-op, no toast even in manual mode', async () => {
+    mockApiModule.api.mockRejectedValue(makeApiError(404))
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: PENDING })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    await restorePending('manual')
+
+    expect(mockToast.add).not.toHaveBeenCalled()
+  })
+
+  it('auto mode swallows errors silently (fire-and-forget)', async () => {
+    mockApiModule.api.mockRejectedValue(makeApiError(500))
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: PENDING })
+
+    const { restorePending } = useCoinPurchase(adapter)
+    await expect(restorePending('auto')).resolves.toBeUndefined()
+
+    expect(mockToast.add).not.toHaveBeenCalled()
+  })
+
+  it('finishes a replayed, already-settled transaction silently (verify direct)', async () => {
     const adapter = new FakeStoreBillingAdapter({ products: [PRODUCT], purchaseResult: 'ok' })
-    mockApiModule.api.mockResolvedValue({ data: { outcome: 'already_credited', purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
+    mockApiModule.api.mockResolvedValue({ data: { outcome: 'already_credited', finish: true, purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'tx-1', failure_reason: null }, balance: 500 } })
     const { verify } = useCoinPurchase(adapter)
 
     await verify({ id: 'tx-1', jws: 'jws', productId: 'coins_100', pending: false })

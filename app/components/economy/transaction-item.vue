@@ -8,7 +8,7 @@
 import type { Transaction, BalanceSnapshot } from '~/types/economy/wallet'
 import { ASSETS } from '~/constants/assets'
 import { TRANSACTION_TYPE_LABELS } from '~/constants/economy/transactionConstants'
-import { isPositiveTransaction, getOtherPartyDisplay } from '~/utils/economy/transactionHelpers'
+import { isPositiveTransaction, getOtherPartyDisplay, getTransactionLabel } from '~/utils/economy/transactionHelpers'
 import { formatCurrency } from '~/utils/currency'
 import { withImageKitTransform } from '~/utils/imagekit'
 
@@ -39,12 +39,22 @@ const formattedTime = computed(() =>
   }),
 )
 
-/** Primary line: the perspective-aware sentence from the API, else the type label. */
+/** True for the two IAP ledger types, where the store-specific label
+ * (e.g. "Coin pack (App Store)") must win over the backend's generic
+ * description/title so the buyer sees which store they paid. */
+const isStoreTransaction = computed(
+  () => props.transaction.type === 'store_purchase' || props.transaction.type === 'store_refund',
+)
+
+/** Primary line: store-specific label for IAP rows, else the perspective-aware
+ * sentence from the API, else the type label. */
 const headline = computed(() =>
-  props.transaction.description
-  || props.transaction.title
-  || TRANSACTION_TYPE_LABELS[props.transaction.type]
-  || 'Transaction',
+  isStoreTransaction.value
+    ? getTransactionLabel(props.transaction)
+    : props.transaction.description
+      || props.transaction.title
+      || TRANSACTION_TYPE_LABELS[props.transaction.type]
+      || 'Transaction',
 )
 
 /** Secondary line: counterparty and room, joined with a dot. */

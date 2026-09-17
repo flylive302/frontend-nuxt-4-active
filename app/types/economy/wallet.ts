@@ -2,6 +2,8 @@
 // Wallet & Transaction Types (API v2)
 // ========================================
 
+import type { IapStore } from './iap'
+
 // ========================================
 // Balance & XP Types
 // ========================================
@@ -138,6 +140,10 @@ export interface TransactionMetadata {
   diamonds_deducted?: number
   coins_received?: number
   exchange_rate?: number
+  /** `store_purchase` / `store_refund` only — which app store this ran through. */
+  store?: IapStore
+  /** `store_purchase` / `store_refund` only — e.g. `iap_apple`, `iap_google`. */
+  channel?: string
   [key: string]: unknown
 }
 

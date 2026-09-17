@@ -4,6 +4,14 @@ export interface NormalizedError {
   fieldErrors?: Record<string, string[]>
   /** Machine-readable code from the backend `errors.error_code` (e.g. EMAIL_NOT_VERIFIED). */
   errorCode?: string
+  /**
+   * `ApiResponse::error()`'s `meta` bag verbatim (timestamp/correlation_id plus
+   * whatever the endpoint merges in — e.g. IAP verify/restore's `finish`,
+   * `outcome`, `purchase`, `balance`). `data` is null on an error response, so
+   * this is the ONLY place those extra fields live — read it instead of
+   * digging through `raw`.
+   */
+  meta?: Record<string, unknown>
   raw?: unknown
 }
 
@@ -54,11 +62,20 @@ function firstValidationMessage(
   return first ?? fallback
 }
 
+/** `data.meta` when it's a usable object, else undefined. */
+function extractMeta(data: unknown): Record<string, unknown> | undefined {
+  const meta = (data as { meta?: unknown } | undefined)?.meta
+  return meta && typeof meta === 'object' && !Array.isArray(meta)
+    ? (meta as Record<string, unknown>)
+    : undefined
+}
+
 export function normalizeFetchError(error: unknown): NormalizedError {
   const e = error as Record<string, unknown> & { name?: string; message?: string }
   const response = e?.response as { status?: number; _data?: unknown } | undefined
   const status: number | undefined = response?.status
   const data = response?._data ?? (e?.data as Record<string, unknown> | undefined)
+  const meta = extractMeta(data)
 
   if (e?.name === 'AbortError') {
     return { status, message: 'Request was cancelled.', raw: error }
@@ -71,13 +88,13 @@ export function normalizeFetchError(error: unknown): NormalizedError {
       ? d.message
       : 'Please check your profile details and try again.'
     const message = firstValidationMessage(fieldErrors, fallback)
-    return { status, message, fieldErrors, raw: error }
+    return { status, message, fieldErrors, meta, raw: error }
   }
 
   if (status) {
     const d = data as { message?: string; error?: string; errors?: { error_code?: string } } | undefined
     const message: string = d?.message || d?.error || e?.message || 'Request failed.'
-    return { status, message, errorCode: d?.errors?.error_code, raw: error }
+    return { status, message, errorCode: d?.errors?.error_code, meta, raw: error }
   }
 
   return { message: 'Network error. Check your connection.', raw: error }

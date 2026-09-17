@@ -19,6 +19,7 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
   const activeProductId = ref<string | null>(null)
   const lastError = ref<string | null>(null)
   const lastPurchase = ref<IapPurchase | null>(null)
+  const isRestoring = ref(false)
 
   // ========================================
   // Computed
@@ -60,6 +61,10 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
     lastPurchase.value = purchase
   }
 
+  function setRestoring(value: boolean): void {
+    isRestoring.value = value
+  }
+
   return {
     packs,
     products,
@@ -67,6 +72,7 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
     activeProductId,
     lastError,
     lastPurchase,
+    isRestoring,
     packsWithPrices,
     setPacks,
     setProducts,
@@ -74,5 +80,6 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
     setActiveProductId,
     setError,
     setLastPurchase,
+    setRestoring,
   }
 })
