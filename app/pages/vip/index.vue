@@ -100,19 +100,34 @@ const privilegeBoxStyle = computed(() => {
 })
 
 /**
- * Whether the user already owns the currently viewed level.
+ * Whether the currently viewed level is the user's active tier (buying extends it).
  */
 const ownsActiveLevel = computed(() =>
   activeLevel.value
-    ? currentLevel.value >= activeLevel.value.level
+    ? currentLevel.value === activeLevel.value.level
     : false,
 )
 
 /**
- * Purchase button label — "Extend" if user already has VIP, "OWN" otherwise.
+ * Whether the viewed level is below the user's still-running tier. The backend
+ * rejects buying it (a paid term never downgrades), so the button is disabled.
+ * `vip_level` is not cleared on lapse, so the expiry is checked too — a lapsed
+ * higher tier must not block buying a lower one.
+ */
+const isBelowActiveLevel = computed(() =>
+  activeLevel.value !== null
+  && expiresAt.value !== null
+  && new Date(expiresAt.value).getTime() > Date.now()
+  && currentLevel.value > activeLevel.value.level,
+)
+
+/**
+ * Purchase button label — "Extend" on the active tier, the active tier on a
+ * lower one, "OWN" otherwise.
  */
 const purchaseLabel = computed(() => {
   if (!activeLevel.value) return 'OWN'
+  if (isBelowActiveLevel.value) return `Active: VIP ${currentLevel.value}`
   if (ownsActiveLevel.value) return 'Extend'
   return 'OWN'
 })
@@ -225,7 +240,7 @@ function setActiveLevel(index: number) {
 }
 
 async function handlePurchase() {
-  if (!activeLevel.value || isPurchasing.value) return
+  if (!activeLevel.value || isPurchasing.value || isBelowActiveLevel.value) return
   isPurchasing.value = true
 
   try {
@@ -538,6 +553,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
           </UButton>
           <UButton
               size="md" variant="solid" color="tertiary" class="w-full justify-center rounded-xl shadow-md" :loading="isPurchasing"
+              :disabled="isBelowActiveLevel"
               :aria-label="purchaseLabel === 'Extend' ? 'Extend VIP membership' : 'Purchase VIP membership'"
               @click="handlePurchase"
           >
