@@ -28,8 +28,8 @@ const props = withDefaults(
 
 const title = computed(() =>
   props.windowKind === 'range'
-    ? 'These dates include the run in progress — reseller payments for it are counted after it ends.'
-    : 'Run in progress — reseller payments for this run are counted after it ends.'
+    ? 'These dates include the run in progress — reseller payments for it may still be added.'
+    : 'Run in progress — reseller payments for this run may still be added.'
 )
 </script>
 
