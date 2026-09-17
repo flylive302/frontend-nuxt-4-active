@@ -20,6 +20,15 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
   const lastError = ref<string | null>(null)
   const lastPurchase = ref<IapPurchase | null>(null)
   const isRestoring = ref(false)
+  /**
+   * True only when in-store purchase is DEFINITIVELY impossible: a `404`
+   * from `GET /iap/packs?store=<store>` (store flag off) or a native shell
+   * without the billing plugin. Stays `false` while loading, on
+   * network/5xx errors, or when the catalog is available — so a transient
+   * failure can never be read as "catalog confirmed disabled". Consumed by `request.vue` to fail CLOSED:
+   * the reseller "claim coins" UI must never appear because of a fluke.
+   */
+  const catalogDisabled = ref(false)
 
   // ========================================
   // Computed
@@ -65,6 +74,10 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
     isRestoring.value = value
   }
 
+  function setCatalogDisabled(value: boolean): void {
+    catalogDisabled.value = value
+  }
+
   return {
     packs,
     products,
@@ -73,6 +86,7 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
     lastError,
     lastPurchase,
     isRestoring,
+    catalogDisabled,
     packsWithPrices,
     setPacks,
     setProducts,
@@ -81,5 +95,6 @@ export const useCoinPacksStore = defineStore('coinPacks', () => {
     setError,
     setLastPurchase,
     setRestoring,
+    setCatalogDisabled,
   }
 })

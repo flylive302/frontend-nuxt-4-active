@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import type { CoinRequest } from '~/types/economy/coin-request'
 import { formatCurrency } from '~/utils/currency'
 import { lastCoinRequestUpdate } from '~/events/economy.events'
-import { isIosNative, storeFor } from '~/utils/native-platform'
+import { storeFor } from '~/utils/native-platform'
+import { useCoinPurchase } from '~/composables/economy/useCoinPurchase'
+import { useCoinRequestVisibility } from '~/composables/economy/useCoinRequestVisibility'
 
 definePageMeta({
   layout: 'alt',
@@ -15,8 +17,11 @@ definePageMeta({
 // Composables
 // ========================================
 const authStore = useAuthStore()
-// App Store 3.1.1: no coin-request UI on iOS; balance/activity stay visible.
-const showCoinRequests = !isIosNative()
+// App Store 3.1.1: no coin-request UI on iOS. Android native: shown only
+// once in-store purchase is confirmed impossible (Google catalog 404s, or no
+// billing plugin in this shell) — fails closed while loading or on error.
+// Web: unchanged, always shown.
+const { showCoinRequests } = useCoinRequestVisibility()
 
 // ========================================
 // State
@@ -48,6 +53,19 @@ function handleRequestCreated(request: CoinRequest): void {
 // to reflect the updated status (approved/rejected).
 watch(lastCoinRequestUpdate, () => {
   coinRequestsListRef.value?.loadRequests()
+})
+
+// ========================================
+// Native Catalog Load
+// ========================================
+// `EconomyBuyCoinsPanel` also triggers this on its own mount, but that view
+// only renders once `storeFor() !== null` — trigger it here too so
+// `showCoinRequests`'s "confirmed 404" signal resolves even if the panel is
+// ever made conditional independently of this page.
+onMounted(() => {
+  if (storeFor() !== null) {
+    useCoinPurchase().load()
+  }
 })
 </script>
 

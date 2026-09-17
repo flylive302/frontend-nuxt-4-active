@@ -52,6 +52,7 @@ function createMockCoinPacksStore() {
     lastError: null as string | null,
     lastPurchase: null as unknown,
     isRestoring: false,
+    catalogDisabled: false,
     packsWithPrices: [] as Array<{ pack: CoinPack; product: StoreProduct }>,
     setPacks: vi.fn(),
     setProducts: vi.fn(),
@@ -61,6 +62,9 @@ function createMockCoinPacksStore() {
     setLastPurchase: vi.fn(),
     setRestoring: vi.fn(function (this: { isRestoring: boolean }, value: boolean) {
       this.isRestoring = value
+    }),
+    setCatalogDisabled: vi.fn(function (this: { catalogDisabled: boolean }, value: boolean) {
+      this.catalogDisabled = value
     }),
   }
 }
@@ -150,7 +154,7 @@ describe('load', () => {
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('ready')
   })
 
-  it('treats a 404 as unavailable, not an error', async () => {
+  it('treats a 404 as unavailable, not an error, and marks the catalog definitively disabled', async () => {
     mockApiModule.api.mockRejectedValue(makeApiError(404))
     const adapter = new FakeStoreBillingAdapter()
     const listProductsSpy = vi.spyOn(adapter, 'listProducts')
@@ -159,7 +163,38 @@ describe('load', () => {
     await load()
 
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('unavailable')
+    expect(coinPacksStore.setCatalogDisabled).toHaveBeenLastCalledWith(true)
     expect(listProductsSpy).not.toHaveBeenCalled()
+  })
+
+  it('a network/5xx error does NOT mark the catalog disabled (fail closed for the reseller UI)', async () => {
+    mockApiModule.api.mockRejectedValue(makeApiError(503))
+
+    const { load } = useCoinPurchase(new FakeStoreBillingAdapter())
+    await load()
+
+    expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('failed')
+    expect(coinPacksStore.setCatalogDisabled).not.toHaveBeenCalledWith(true)
+  })
+
+  it('an unsupported device (shell without the billing plugin) marks the catalog disabled', async () => {
+    const adapter = new FakeStoreBillingAdapter({ supported: false })
+
+    const { load } = useCoinPurchase(adapter)
+    await load()
+
+    expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('unavailable')
+    expect(coinPacksStore.setCatalogDisabled).toHaveBeenLastCalledWith(true)
+  })
+
+  it('resets catalogDisabled at the start of every load (a later success clears a prior 404)', async () => {
+    mockApiModule.api.mockResolvedValue({ status: 'ok', data: { store: 'apple', packs: [PACK] } })
+    const adapter = new FakeStoreBillingAdapter({ products: [PRODUCT] })
+
+    const { load } = useCoinPurchase(adapter)
+    await load()
+
+    expect(coinPacksStore.setCatalogDisabled).toHaveBeenCalledWith(false)
   })
 })
 
@@ -251,6 +286,20 @@ describe('buy', () => {
 
     expect(finishSpy).not.toHaveBeenCalled()
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('failed')
+  })
+
+  it('verify 200 outcome pending_store: status set to pending-store, not finished, no error toast', async () => {
+    mockApiModule.api.mockResolvedValue({ data: { outcome: 'pending_store', finish: false, purchase: { id: 1, store: 'apple', product_id: 'coins_100', coins: 100, state: 'pending', store_transaction_id: 'tx-1', failure_reason: null }, balance: null } })
+    const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'ok' })
+    const finishSpy = vi.spyOn(adapter, 'finish')
+
+    const { buy } = useCoinPurchase(adapter)
+    await buy('coins_100')
+
+    expect(finishSpy).not.toHaveBeenCalled()
+    expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('pending-store')
+    expect(mockToast.add).not.toHaveBeenCalled()
+    expect(authStore.patchBalance).not.toHaveBeenCalled()
   })
 
   it('verify 200 already_pending (finish: false): NOT finished, no success toast/balance patch', async () => {

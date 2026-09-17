@@ -38,7 +38,7 @@ onUnmounted(() => {
         color="info"
         variant="soft"
         icon="i-lucide-clock"
-        title="Waiting for the App Store to confirm…"
+        title="Waiting for approval…"
         class="mb-3"
       />
       <UAlert

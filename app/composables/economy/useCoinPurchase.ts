@@ -67,13 +67,20 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
 
     store.setStatus('loading')
     store.setError(null)
+    // Reset every load — only a fresh, definitive 404 below may flip this
+    // back on; any other path (including this one re-running) must not
+    // leave a stale "confirmed disabled" signal behind.
+    store.setCatalogDisabled(false)
 
     try {
       // An older native shell without the billing plugin (OTA'd web bundle)
-      // rejects here — that is "unavailable", never an error to show.
+      // rejects here — that is "unavailable", never an error to show. It is
+      // also definitive: this device can never buy in-store, so the reseller
+      // path must stay reachable (Android builds shipped before ticket 08).
       const supported = await adapter.isSupported().catch(() => false)
       if (!supported) {
         store.setStatus('unavailable')
+        store.setCatalogDisabled(true)
         return
       }
 
@@ -90,9 +97,14 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
     } catch (error) {
       const err = normalizeError(error)
       if (err.status === 404) {
+        // Definitive: the backend has no catalog for this store (flag off).
         store.setStatus('unavailable')
+        store.setCatalogDisabled(true)
         return
       }
+      // Network/5xx/anything else — NOT a confirmed-disabled signal. Leave
+      // `catalogDisabled` false so a transient failure can never make the
+      // reseller "claim coins" UI appear on native.
       log.warn('Failed to load coin packs', error)
       store.setStatus('failed')
       store.setError(err.message)
@@ -122,13 +134,11 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
     if (!iapStore) return
 
     try {
+      // Same field shape `restorePending` sends per-transaction — verify and
+      // restore both validate against `RestoreStorePurchasesRequest`'s rules.
       const response = await api<{ data: IapVerifyResponse }>(`/iap/${iapStore}/verify`, {
         method: 'POST',
-        body: {
-          transaction_id: tx.id,
-          signed_transaction: tx.jws,
-          product_id: tx.productId,
-        },
+        body: toRestoreItem(tx, iapStore),
       })
 
       const { data } = response
@@ -136,6 +146,16 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
       // settled either way — a row still pending (e.g. replayed under the
       // daily cap) must stay unfinished so the store retries it later.
       if (data.finish) await finishQuietly(tx)
+
+      if (data.outcome === 'pending_store') {
+        // Google reports the purchase itself is still pending approval
+        // (e.g. a pending payment method) — nothing credited yet, `finish`
+        // is false above so the device keeps the purchase and re-submits it
+        // later (restore-on-foreground). Same UI as the pre-purchase
+        // pending-store state, never an error toast.
+        store.setStatus('pending-store')
+        return
+      }
 
       if (data.outcome !== 'credited') {
         // Replay of a transaction the backend already settled (restore on
@@ -197,7 +217,7 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
 
       if (tx.pending) {
         store.setStatus('pending-store')
-        toast.add({ title: 'Waiting for approval', description: 'Ask to Buy or a similar approval is pending.', color: 'info' })
+        toast.add({ title: 'Waiting for approval', description: 'Your purchase needs approval before it can complete.', color: 'info' })
         return
       }
 
