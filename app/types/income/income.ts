@@ -73,6 +73,15 @@ export interface IncomeTotals {
 }
 
 /**
+ * The two pieces of a run's `earned`. `owner_cut` is non-zero only when the
+ * member owned the agency of runs that crossed milestones in the cycle.
+ */
+export interface EarnedSplit {
+  own_hosting: number
+  owner_cut: number
+}
+
+/**
  * One run inside the overview's grouped run selector.
  */
 export interface OverviewRun {
@@ -144,6 +153,7 @@ export interface RunDeduction {
 export interface RunDetail extends AgencyRun {
   agency: IncomeAgency
   totals: IncomeTotals
+  earned_split: EarnedSplit
   milestones: RunDetailMilestone[]
   exchanges: RunExchange[]
   deductions: RunDeduction[]

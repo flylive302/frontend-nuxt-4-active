@@ -122,6 +122,7 @@ onMounted(async () => {
           <AgencyIncomeHero :totals="run.totals" />
           <AgencyIncomeTotalsCards
             :totals="run.totals"
+            :earned-split="run.earned_split"
             :exchanges="run.exchanges"
             :deductions="run.deductions"
           />

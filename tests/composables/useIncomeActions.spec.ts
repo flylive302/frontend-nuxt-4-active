@@ -66,6 +66,7 @@ function detail(id: number): RunDetail {
     created_at: '2026-08-11T00:00:00+00:00',
     agency: { id: 1, name: 'Agency', logo_url: null },
     totals: { earned: 30, exchanged: 9, deducted: 10, income: 11 },
+    earned_split: { own_hosting: 30, owner_cut: 0 },
     milestones: [],
     exchanges: [],
     deductions: [],
