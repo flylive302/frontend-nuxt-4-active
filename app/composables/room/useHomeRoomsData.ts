@@ -15,7 +15,9 @@
  *
  * arch-allow-bare-fetch: `/api/rooms` is a same-origin Nitro BFF route backed by
  * a SHARED Cloudflare edge cache (`server/api/rooms.get.ts` — 300 s, fixed cache
- * key, no Vary). Routing it through `useApi` would be actively wrong:
+ * key, no Vary). On native (no Nitro server) `~/utils/native-bff`'s `bffUrl`
+ * resolves this to an absolute `apiBase` URL instead — same reasoning, a
+ * different host. Routing it through `useApi` would be actively wrong:
  *   • the response is served to every user, so a per-user `X-Correlation-ID`
  *     would either do nothing (cache hit never reaches Laravel) or stamp one
  *     user's identifier onto everyone's response for the TTL;
@@ -33,6 +35,7 @@
 import { HOME_ROOMS_PER_PAGE } from '~/constants/room'
 import type { RoomsResponse } from '~/types/room/room'
 import { ROOMS_RETRY_STATUS_CODES } from '~/utils/api/retry-policy'
+import { bffUrl } from '~/utils/native-bff'
 
 export function useHomeRoomsData() {
   /**
@@ -56,7 +59,8 @@ export function useHomeRoomsData() {
     // home-room-feed/12: this bare `$fetch` is a call site `useApi`'s `retry: 0`
     // does not cover. `retryStatusCodes` without 429 keeps ofetch's default single
     // retry for 5xx/408/etc. while never retrying a "slow down" response.
-    return await $fetch<RoomsResponse>('/api/rooms', {
+    const apiBase = useRuntimeConfig().public.apiBase
+    return await $fetch<RoomsResponse>(bffUrl('/api/rooms', apiBase), {
       params,
       retryStatusCodes: [...ROOMS_RETRY_STATUS_CODES],
     })

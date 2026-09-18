@@ -1,26 +1,20 @@
 <!-- ~/components/economy/buy-coins-panel.vue -->
 <!-- Native "Buy Coins" panel — binding only. Pipeline lives in useCoinPurchase. -->
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted } from 'vue'
 import { formatCurrency } from '~/utils/currency'
 import { useCoinPurchase } from '~/composables/economy/useCoinPurchase'
 
 const store = useCoinPacksStore()
-const { load, buy, restorePending, start } = useCoinPurchase()
-
-let stop: (() => void) | null = null
+// The store's `transactionUpdated` listener is app-wide (plugins/iap-restore.client.ts), not per panel.
+const { load, buy, restorePending } = useCoinPurchase()
 
 onMounted(async () => {
-  stop = start()
   await load()
   // Silent safety net — the app-level plugin already restores on boot/login/
   // foreground; this just catches the panel being opened without one of
   // those triggers having fired yet. Never nags with "nothing to restore".
   await restorePending('auto')
-})
-
-onUnmounted(() => {
-  stop?.()
 })
 </script>
 

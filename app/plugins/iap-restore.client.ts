@@ -8,6 +8,11 @@
 // concurrency-guarded call, so a crash or network drop right after the
 // store took payment still gets credited without the user doing anything.
 //
+// It also owns the one app-wide `transactionUpdated` listener
+// (`useCoinPurchase().start()`). It used to live in the Buy Coins panel, so
+// an Ask to Buy approval landing anywhere else in the app was dropped — and
+// on iOS the billing plugin has already finished that transaction.
+//
 // Native only — `storeFor()` is null on web, where no store purchase exists.
 // `@capacitor/app` is a real dependency (not `@capgo/native-purchases`,
 // which the adapter dynamic-imports to keep out of the web bundle) — see
@@ -35,6 +40,12 @@ export default defineNuxtPlugin(() => {
     const { restorePending } = useCoinPurchase()
     restorePending('auto').catch(error => log.warn(`Auto restore failed (${reason})`, error))
   }
+
+  // Store-side transaction updates, app-wide, for the app's lifetime. After
+  // first paint for the same reason as `triggerAutoRestore` (toast provider).
+  scheduleAfterFirstPaint(() => {
+    useCoinPurchase().start()
+  })
 
   // Launch with an existing session — deferred past first paint, same as
   // useBootstrapInit's reconcileInbox('bootstrap') call.

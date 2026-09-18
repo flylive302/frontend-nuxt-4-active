@@ -199,3 +199,25 @@ describe('load (google) — 404 marks the catalog definitively disabled', () => 
     expect(coinPacksStore.setCatalogDisabled).toHaveBeenLastCalledWith(true)
   })
 })
+
+describe('restorePending (google)', () => {
+  it('natively finishes (consumes) a store-listed finish:true item even when it is not journaled', async () => {
+    mockApiModule.api.mockResolvedValue({
+      data: {
+        results: [{ transaction_id: 'token-1', outcome: 'credited', finish: true, purchase: { id: 1, store: 'google', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'token-1', failure_reason: null } }],
+        balance: 800,
+      },
+    })
+    const pending = [{ id: 'token-1', purchaseToken: 'token-1', productId: 'coins_100', pending: false }]
+    const adapter = new FakeStoreBillingAdapter({ pendingTransactions: pending })
+    const finishSpy = vi.spyOn(adapter, 'finish')
+
+    // No journal injected — default (node env, no localStorage) is a no-op, so
+    // this item is definitely NOT journaled; google finishes it anyway.
+    const { restorePending } = useCoinPurchase(adapter)
+    await restorePending('manual')
+
+    expect(finishSpy).toHaveBeenCalledTimes(1)
+    expect(adapter.finished).toEqual(['token-1'])
+  })
+})

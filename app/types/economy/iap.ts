@@ -36,6 +36,8 @@ export interface StoreTransaction {
   productId: string
   /** True while the store itself has not finalized the purchase (e.g. Ask to Buy). */
   pending: boolean
+  /** Store purchase date (ISO 8601) when the store reports one — restore submits newest first. */
+  purchasedAt?: string
 }
 
 export interface IapPurchase {

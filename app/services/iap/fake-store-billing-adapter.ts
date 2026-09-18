@@ -6,10 +6,11 @@
 // transactionUpdated listener without the real Capacitor plugin.
 // ========================================
 
-import { PurchaseCancelledError, type StoreBillingAdapter } from './store-billing-adapter'
+import { PurchaseCancelledError, PurchasePendingError, type StoreBillingAdapter } from './store-billing-adapter'
 import type { StoreProduct, StoreTransaction } from '~/types/economy/iap'
 
-export type FakePurchaseResult = 'ok' | 'cancel' | 'pending' | 'error'
+/** `pending` resolves a pending transaction; `deferred` rejects like the real plugin does (Ask to Buy). */
+export type FakePurchaseResult = 'ok' | 'cancel' | 'pending' | 'deferred' | 'error'
 
 export interface FakeStoreBillingAdapterOptions {
   products?: StoreProduct[]
@@ -44,6 +45,7 @@ export class FakeStoreBillingAdapter implements StoreBillingAdapter {
 
   async purchase(productId: string): Promise<StoreTransaction> {
     if (this.purchaseResult === 'cancel') throw new PurchaseCancelledError()
+    if (this.purchaseResult === 'deferred') throw new PurchasePendingError()
     if (this.purchaseResult === 'error') throw new Error('purchase failed')
 
     this.txCounter += 1

@@ -7,7 +7,9 @@
  *
  * arch-allow-bare-fetch: `/api/banners` is a same-origin Nitro BFF route backed
  * by a SHARED Cloudflare edge cache (`server/api/banners.get.ts` — 300 s, fixed
- * cache key, no Vary). Reviewed under observability-audio-quality/12 and
+ * cache key, no Vary). On native (no Nitro server) `~/utils/native-bff`'s
+ * `bffUrl` resolves this to an absolute `apiBase` URL instead — same
+ * reasoning, a different host. Reviewed under observability-audio-quality/12 and
  * deliberately NOT routed through `useApi()`: on a cache hit the request never
  * reaches Laravel, so there is nothing to correlate; on a miss, one user's
  * `X-Correlation-ID` would be stamped onto the response every other user gets
@@ -19,6 +21,7 @@
 import { BANNER_BG_TR } from '~/constants/assets'
 import { createLogger } from '~/utils/logger'
 import { shouldRefreshBannersOnMount, type EventBannersPayload } from '~/utils/event-banners'
+import { bffUrl } from '~/utils/native-bff'
 import type { Banner, BannersApiResponse } from '~/types/banner'
 
 const log = createLogger('[EventBanners]')
@@ -27,7 +30,8 @@ export function useEventBanners() {
   const { data, pending, error, refresh } = useAsyncData<EventBannersPayload>(
     'event-banners',
     async () => {
-      const res = await $fetch<BannersApiResponse>('/api/banners')
+      const apiBase = useRuntimeConfig().public.apiBase
+      const res = await $fetch<BannersApiResponse>(bffUrl('/api/banners', apiBase))
       // `fetchedAt` feeds the mount-time freshness check below.
       return { res, fetchedAt: Date.now() }
     },

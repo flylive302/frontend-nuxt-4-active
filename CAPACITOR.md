@@ -70,12 +70,22 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 - [ ] Log in → join a room → hear other speakers (mediasoup + Reverb connect to remote)
 - [ ] Tapping to speak shows the **mic permission prompt** and, once granted, produces audio
 
-## How the BFF was repointed (no composable changes)
+## How the BFF is repointed
 
-`app/plugins/native-api-shim.client.ts` wraps the global `$fetch` on native platforms
-only and rewrites the two relative BFF paths:
+`app/utils/native-bff.ts` exports `bffUrl(route, apiBase)`. Call sites
+(`useHomeRoomsData`, `useEventBanners`) resolve their own absolute URL and pass
+it straight to `$fetch`, instead of a plugin globally swapping the fetch
+helper (the old `native-api-shim.client.ts` approach — deleted; it broke on
+Nuxt ≥4.5 once the fetch helper became an auto-import bound at module-eval
+time, before the plugin's swap ran):
 
 - `/api/rooms` → `${apiBase}/rooms`
+- `/api/banners` → `${apiBase}/event-banners`
+
+`useGeolocation` calls geojs.io directly on native (no `bffUrl` involved —
+`/api/detect-country` was never proxied to the FlyLive API, so there's no
+`apiBase` hop to repoint):
+
 - `/api/detect-country` → geojs.io, remapping `{ country }` → `{ country_code }`
 
-On web this plugin no-ops and the Nitro routes serve as before.
+On web all three stay on their relative Nitro BFF paths, unchanged.

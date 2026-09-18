@@ -17,6 +17,18 @@ export class PurchaseCancelledError extends Error {
   }
 }
 
+/**
+ * Thrown by `purchase()` when the store accepted the order but has not charged
+ * yet (Ask to Buy, a slow payment method). The transaction arrives later —
+ * `onTransactionUpdated` on iOS, the store's pending list on Android.
+ */
+export class PurchasePendingError extends Error {
+  constructor(message = 'Purchase pending') {
+    super(message)
+    this.name = 'PurchasePendingError'
+  }
+}
+
 export interface StoreBillingAdapter {
   isSupported(): Promise<boolean>
   listProducts(ids: string[]): Promise<StoreProduct[]>

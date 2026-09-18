@@ -3,15 +3,22 @@
 // ========================================
 // GATE → EXECUTE → REACT pipeline for the native "Buy Coins" flow.
 // Each function below is ONE stage — see CLAUDE.md's INTENT/GATE/EXECUTE/REACT rule.
+//
+// Paid-but-uncredited safety (in-app-purchase/09): every store transaction is
+// written to the device's purchase journal before it is sent to the backend,
+// and leaves it only when the backend answers `finish: true`. Restore
+// re-submits the journal plus the store's own list, so a failed verify is
+// retried even after the billing plugin has finished the store transaction.
 // ========================================
 
 import { createNativePurchasesAdapter } from '~/services/iap/native-purchases-adapter'
 import type { StoreBillingAdapter } from '~/services/iap/store-billing-adapter'
-import { PurchaseCancelledError } from '~/services/iap/store-billing-adapter'
+import { PurchaseCancelledError, PurchasePendingError } from '~/services/iap/store-billing-adapter'
+import { createPurchaseJournal, type JournalSnapshot, type PurchaseJournal } from '~/services/iap/purchase-journal'
 import { storeFor } from '~/utils/native-platform'
 import { createLogger } from '~/utils/logger'
 import { formatCurrency as formatCoins } from '~/utils/currency'
-import { IAP_RESTORE_BATCH_SIZE } from '~/constants/economy/iapConstants'
+import { IAP_RESTORE_BATCH_SIZE, IAP_RESTORE_MAX_PER_RUN } from '~/constants/economy/iapConstants'
 import type {
   CoinPack,
   IapRestoreItem,
@@ -48,7 +55,37 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks
 }
 
-export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurchasesAdapter()) {
+/** Store purchase time in epoch ms; unknown sorts last. */
+function purchasedAtMs(tx: StoreTransaction): number {
+  const ms = tx.purchasedAt ? Date.parse(tx.purchasedAt) : Number.NaN
+  return Number.isNaN(ms) ? 0 : ms
+}
+
+/**
+ * What one restore run submits: `userId`'s journaled transactions first (the
+ * ones a failed verify left behind), then the store's own list minus anything
+ * settled or journaled — journaled for anyone: another account's purchase on
+ * this device is never re-submitted under this one — newest first, capped.
+ */
+function restoreCandidates(snapshot: JournalSnapshot, userId: number | null, storeListed: StoreTransaction[]): StoreTransaction[] {
+  const mine = snapshot.unsettled.filter(entry => entry.userId === userId).map(entry => entry.tx)
+  const seen = new Set([...snapshot.unsettled.map(entry => entry.tx.id), ...snapshot.settledIds])
+  const fromStore: StoreTransaction[] = []
+
+  for (const tx of storeListed) {
+    if (tx.id === '' || seen.has(tx.id)) continue
+    seen.add(tx.id)
+    fromStore.push(tx)
+  }
+  fromStore.sort((a, b) => purchasedAtMs(b) - purchasedAtMs(a))
+
+  return [...mine, ...fromStore].slice(0, IAP_RESTORE_MAX_PER_RUN)
+}
+
+export function useCoinPurchase(
+  adapter: StoreBillingAdapter = createNativePurchasesAdapter(),
+  journal: PurchaseJournal = createPurchaseJournal(),
+) {
   const store = useCoinPacksStore()
   const authStore = useAuthStore()
   const { api, normalizeError } = useApi()
@@ -115,6 +152,14 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
   // Helpers
   // ========================================
 
+  /** Journal a store transaction for the signed-in buyer — before any network call can fail. */
+  function remember(tx: StoreTransaction): void {
+    const iapStore = storeFor()
+    const userId = authStore.user?.id
+    if (!iapStore || !userId || !tx.id) return
+    journal.record(iapStore, userId, tx)
+  }
+
   /** `adapter.finish()` never throws into a caller — a plugin/store failure
    *  here must not block the balance update or the caller's own error handling. */
   async function finishQuietly(tx: StoreTransaction): Promise<void> {
@@ -123,6 +168,13 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
     } catch (error) {
       log.warn('Failed to finish transaction', error)
     }
+  }
+
+  /** The backend settled `tx` for good (`finish: true`): drop it from the journal, then finish it at the store. */
+  async function release(tx: StoreTransaction): Promise<void> {
+    const iapStore = storeFor()
+    if (iapStore) journal.settle(iapStore, tx.id)
+    await finishQuietly(tx)
   }
 
   // ========================================
@@ -144,8 +196,8 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
       const { data } = response
       // Only release the store transaction once the backend confirms it is
       // settled either way — a row still pending (e.g. replayed under the
-      // daily cap) must stay unfinished so the store retries it later.
-      if (data.finish) await finishQuietly(tx)
+      // daily cap) must stay unfinished (and journaled) so it is retried.
+      if (data.finish) await release(tx)
 
       if (data.outcome === 'pending_store') {
         // Google reports the purchase itself is still pending approval
@@ -174,12 +226,20 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
       const err = normalizeError(error)
       // The error envelope carries the same `finish` flag under `meta`
       // (`data` is null on an error response) — missing it means "keep unfinished".
-      if (err.meta?.finish === true) await finishQuietly(tx)
+      if (err.meta?.finish === true) await release(tx)
 
       if (err.status === 422) {
         store.setStatus('failed')
         store.setError('Could not verify your purchase.')
         toast.add({ title: 'Purchase failed', description: 'Could not verify your purchase.', color: 'error' })
+        return
+      }
+
+      if (err.status === 409 && err.meta?.error_code === 'in_progress') {
+        // A concurrent verify of this same transaction (buy() and the store's
+        // update event can overlap) holds the backend's lock and settles it;
+        // the journal keeps it until then. Nothing to tell the user.
+        if (store.status === 'pending-store' || store.status === 'purchasing') store.setStatus('ready')
         return
       }
 
@@ -191,11 +251,13 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
         return
       }
 
-      // 503 or anything else — kept unfinished above, allow retry later.
+      // 503, network drop, anything else — the store has the payment and the
+      // journal keeps the transaction, so restore credits it later. Say so:
+      // "try again" here reads as "buy again".
       log.warn('Verify failed, leaving transaction unfinished', error)
       store.setStatus('failed')
-      store.setError(err.message || 'Could not verify your purchase. Please try again.')
-      toast.add({ title: 'Purchase failed', description: 'Please try again later.', color: 'error' })
+      store.setError('Payment received. Your coins will be added automatically.')
+      toast.add({ title: 'Coins on the way', description: 'Payment received. Your coins will be added automatically.', color: 'warning' })
     } finally {
       store.setActiveProductId(null)
     }
@@ -214,6 +276,7 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
 
     try {
       const tx = await adapter.purchase(productId)
+      remember(tx)
 
       if (tx.pending) {
         store.setStatus('pending-store')
@@ -229,6 +292,11 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
         toast.add({ title: 'Purchase cancelled', color: 'neutral' })
         return
       }
+      if (error instanceof PurchasePendingError) {
+        store.setStatus('pending-store')
+        toast.add({ title: 'Waiting for approval', description: 'Your purchase needs approval before it can complete.', color: 'info' })
+        return
+      }
       log.warn('Purchase failed', error)
       store.setStatus('failed')
       store.setError('Could not start the purchase.')
@@ -241,9 +309,10 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
   // ========================================
 
   /**
-   * Re-submits every device transaction the store still has outstanding
-   * against `POST /iap/{store}/restore`, so a crash or network drop right
-   * after payment (before `verify()` ran) still credits the user.
+   * Re-submits every transaction the backend has not settled — this user's
+   * journal plus the store's own list — against `POST /iap/{store}/restore`,
+   * so a crash, network drop or failed verify after payment still credits
+   * the user.
    *
    * `mode: 'auto'` — app boot/login/foreground triggers: silent unless at
    * least one pack was newly credited, never throws.
@@ -273,18 +342,30 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
       const supported = await adapter.isSupported().catch(() => false)
       if (!supported) return
 
-      const pending = await adapter.pendingTransactions()
-      if (pending.length === 0) {
+      const storeListed = await adapter.pendingTransactions().catch((error: unknown) => {
+        // The journal alone still covers what this device bought.
+        log.warn('Failed to list store transactions', error)
+        return [] as StoreTransaction[]
+      })
+      const snapshot = journal.snapshot(iapStore)
+      const candidates = restoreCandidates(snapshot, authStore.user?.id ?? null, storeListed)
+      if (candidates.length === 0) {
         if (mode === 'manual') {
           toast.add({ title: 'No purchases to restore', color: 'info' })
         }
         return
       }
 
+      // iOS: the plugin finishes every unfinished transaction itself at app
+      // launch, so only a journaled one (bought this session) can still need
+      // a store finish; "finishing" the rest would rescan the whole StoreKit
+      // history for nothing. Android: the list holds only unconsumed purchases.
+      const journaledIds = new Set(snapshot.unsettled.map(entry => entry.tx.id))
       let creditedCount = 0
+      let unsettledCount = 0
       let latestBalance: number | null = null
 
-      for (const batch of chunk(pending, IAP_RESTORE_BATCH_SIZE)) {
+      for (const batch of chunk(candidates, IAP_RESTORE_BATCH_SIZE)) {
         const response = await api<{ data: IapRestoreResponse }>(`/iap/${iapStore}/restore`, {
           method: 'POST',
           body: { transactions: batch.map(tx => toRestoreItem(tx, iapStore)) },
@@ -295,9 +376,12 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
         }
 
         for (const result of response.data.results) {
+          const tx = batch.find(t => t.id === result.transaction_id)
           if (result.finish) {
-            const tx = batch.find(t => t.id === result.transaction_id)
-            if (tx) await finishQuietly(tx)
+            journal.settle(iapStore, tx?.id ?? result.transaction_id)
+            if (tx && (iapStore === 'google' || journaledIds.has(tx.id))) await finishQuietly(tx)
+          } else {
+            unsettledCount += 1
           }
           if (result.outcome === 'credited') creditedCount += 1
         }
@@ -313,6 +397,10 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
           description: `${creditedCount} coin pack${creditedCount > 1 ? 's' : ''} added`,
           color: 'success',
         })
+      } else if (mode === 'manual') {
+        toast.add(unsettledCount > 0
+          ? { title: 'Purchase still processing', description: 'Your coins will be added automatically.', color: 'info' }
+          : { title: 'No purchases to restore', color: 'info' })
       }
     } catch (error) {
       const err = normalizeError(error)
@@ -332,8 +420,19 @@ export function useCoinPurchase(adapter: StoreBillingAdapter = createNativePurch
   // REACT — subscribe to native transaction updates
   // ========================================
 
+  /**
+   * App-wide listener (registered once by `plugins/iap-restore.client.ts`) for
+   * transactions the store delivers outside `buy()`: Ask to Buy approvals,
+   * interrupted purchases, unfinished transactions re-delivered at launch.
+   * On iOS the plugin has already FINISHED the transaction before this fires,
+   * so the journal is the only record left — write it before anything can fail.
+   */
   function start(): () => void {
     return adapter.onTransactionUpdated(tx => {
+      remember(tx)
+      // Signed out: nothing to credit it to yet — the journal/store list
+      // brings it back on the next signed-in restore.
+      if (!authStore.token) return
       verify(tx).catch(error => log.warn('Failed to verify updated transaction', error))
     })
   }
