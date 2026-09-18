@@ -47,21 +47,26 @@ function toStoreTransaction(t: NativeTransaction): StoreTransaction {
 }
 
 export function createNativePurchasesAdapter(): StoreBillingAdapter {
+  // Returns the plugin WRAPPED, never bare. A Capacitor plugin is a Proxy that
+  // answers every property with a native-method wrapper — including `then`. An
+  // async function resolving to the bare proxy makes the engine treat it as a
+  // thenable and call `NativePurchases.then()`, which rejects "not implemented"
+  // without ever settling the outer promise: every `await getPlugin()` hangs.
   async function getPlugin() {
     const { NativePurchases } = await import('@capgo/native-purchases')
-    return NativePurchases
+    return { plugin: NativePurchases }
   }
 
   return {
     async isSupported(): Promise<boolean> {
-      const plugin = await getPlugin()
+      const { plugin } = await getPlugin()
       const { isBillingSupported } = await plugin.isBillingSupported()
       return isBillingSupported
     },
 
     async listProducts(ids: string[]): Promise<StoreProduct[]> {
       if (ids.length === 0) return []
-      const plugin = await getPlugin()
+      const { plugin } = await getPlugin()
       const { products } = await plugin.getProducts({ productIdentifiers: ids })
       return (products as NativeProduct[]).map(p => ({
         identifier: p.identifier,
@@ -72,7 +77,7 @@ export function createNativePurchasesAdapter(): StoreBillingAdapter {
     },
 
     async purchase(productId: string): Promise<StoreTransaction> {
-      const plugin = await getPlugin()
+      const { plugin } = await getPlugin()
       try {
         const tx = await plugin.purchaseProduct({
           productIdentifier: productId,
@@ -87,7 +92,7 @@ export function createNativePurchasesAdapter(): StoreBillingAdapter {
     },
 
     async finish(tx: StoreTransaction): Promise<void> {
-      const plugin = await getPlugin()
+      const { plugin } = await getPlugin()
       if (isIosNative()) {
         await plugin.acknowledgePurchase({ purchaseToken: tx.id })
       } else {
@@ -96,14 +101,14 @@ export function createNativePurchasesAdapter(): StoreBillingAdapter {
     },
 
     async pendingTransactions(): Promise<StoreTransaction[]> {
-      const plugin = await getPlugin()
+      const { plugin } = await getPlugin()
       const { purchases } = await plugin.getPurchases({ onlyCurrentEntitlements: false })
       return (purchases as NativeTransaction[]).map(toStoreTransaction)
     },
 
     onTransactionUpdated(cb: (tx: StoreTransaction) => void): () => void {
       let handle: { remove: () => void } | undefined
-      getPlugin().then(plugin => {
+      getPlugin().then(({ plugin }) => {
         plugin.addListener('transactionUpdated', (t: NativeTransaction) => {
           cb(toStoreTransaction(t))
         }).then(h => { handle = h })
