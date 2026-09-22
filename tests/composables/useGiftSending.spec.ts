@@ -48,19 +48,23 @@ async function setup(
   const { useGiftComboStore } = await import('../../app/stores/giftCombo')
   const { useGiftStore } = await import('../../app/stores/gift')
   const { useAuthStore } = await import('../../app/stores/auth')
+  const { useBalanceStore } = await import('../../app/stores/balance')
   const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
 
   const comboStore = useGiftComboStore()
   const giftStore = useGiftStore()
   const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
   const seatsStore = useRoomSeatsStore()
 
-  authStore.user = { id: 1, name: 'Sender', coins: '1000' } as never
+  authStore.user = { id: 1, name: 'Sender' } as never
+  balanceStore.seed({ coins: '1000', diamonds: '0', wealth_xp: '0', charm_xp: '0' })
 
   vi.stubGlobal('useGiftComboStore', () => comboStore)
   vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: options.ackBalance ?? false, giftBatch: false }))
   vi.stubGlobal('useGiftStore', () => giftStore)
   vi.stubGlobal('useAuthStore', () => authStore)
+  vi.stubGlobal('useBalanceStore', () => balanceStore)
   vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
   vi.stubGlobal('useGiftEligibility', () => ({
     canAfford: computed(() => true),
@@ -78,7 +82,7 @@ async function setup(
   seatsStore.updateSeat(2, 4, false)
 
   const { useGiftSending } = await import('../../app/composables/gift/useGiftSending')
-  return { useGiftSending: useGiftSending(), comboStore, giftStore, authStore, seatsStore, toastAdd }
+  return { useGiftSending: useGiftSending(), comboStore, giftStore, authStore, balanceStore, seatsStore, toastAdd }
 }
 
 /** The `{ title, description, color }` object handed to `toast.add`. */
@@ -114,7 +118,7 @@ describe('useGiftSending.send', () => {
     // 3 recipients × 50 = 150 debited; server only accepted 2 → 1 leg refunded (50).
     let resolveAck!: (ack: GiftSendAck) => void
     const sendGiftMock = vi.fn().mockImplementation(() => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }))
-    const { useGiftSending: sending, authStore } = await setup(sendGiftMock)
+    const { useGiftSending: sending, balanceStore } = await setup(sendGiftMock)
     const { useGiftStore } = await import('../../app/stores/gift')
     const giftStore = useGiftStore()
 
@@ -123,20 +127,20 @@ describe('useGiftSending.send', () => {
     giftStore.setQuantity(1)
 
     await sending.send()
-    expect(authStore.user?.coins).toBe('850') // 1000 - 150 (optimistic debit, ack still pending)
+    expect(balanceStore.coins).toBe('850') // 1000 - 150 (optimistic debit, ack still pending)
 
     resolveAck({ success: true, acceptedRecipientIds: [2, 3] })
     // Let the ack .then() reconciliation microtask flush.
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(authStore.user?.coins).toBe('900') // 850 + 50 refund for the dropped leg
+    expect(balanceStore.coins).toBe('900') // 850 + 50 refund for the dropped leg
   })
 
   it('a full failure (success:false) refunds the whole batch', async () => {
     let resolveAck!: (ack: GiftSendAck) => void
     const sendGiftMock = vi.fn().mockImplementation(() => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }))
-    const { useGiftSending: sending, authStore } = await setup(sendGiftMock)
+    const { useGiftSending: sending, balanceStore } = await setup(sendGiftMock)
     const { useGiftStore } = await import('../../app/stores/gift')
     const giftStore = useGiftStore()
 
@@ -145,13 +149,13 @@ describe('useGiftSending.send', () => {
     giftStore.setQuantity(1)
 
     await sending.send()
-    expect(authStore.user?.coins).toBe('950') // 1000 - 50 (optimistic debit, ack still pending)
+    expect(balanceStore.coins).toBe('950') // 1000 - 50 (optimistic debit, ack still pending)
 
     resolveAck({ success: false })
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(authStore.user?.coins).toBe('1000') // fully refunded
+    expect(balanceStore.coins).toBe('1000') // fully refunded
   })
 
   it('overlapping sends each reconcile their own refund independently (regression: scalar last-write-wins bug)', async () => {
@@ -161,7 +165,7 @@ describe('useGiftSending.send', () => {
       .mockImplementationOnce(() => new Promise<GiftSendAck>((resolve) => { resolveFirst = resolve }))
       .mockImplementationOnce(() => new Promise<GiftSendAck>((resolve) => { resolveSecond = resolve }))
 
-    const { useGiftSending: sending, authStore } = await setup(sendGiftMock)
+    const { useGiftSending: sending, balanceStore } = await setup(sendGiftMock)
     const { useGiftStore } = await import('../../app/stores/gift')
     const giftStore = useGiftStore()
 
@@ -175,19 +179,19 @@ describe('useGiftSending.send', () => {
     giftStore.setSelectedRecipientIds([4])
     await sending.send()
 
-    expect(authStore.user?.coins).toBe('850') // 1000 - 100 - 50
+    expect(balanceStore.coins).toBe('850') // 1000 - 100 - 50
 
     // Second batch fails entirely — refund its full 50, must NOT touch the first batch's tracking.
     resolveSecond({ success: false })
     await Promise.resolve()
     await Promise.resolve()
-    expect(authStore.user?.coins).toBe('900') // 850 + 50
+    expect(balanceStore.coins).toBe('900') // 850 + 50
 
     // First batch: server dropped recipient 3 — refund 50.
     resolveFirst({ success: true, acceptedRecipientIds: [2] })
     await Promise.resolve()
     await Promise.resolve()
-    expect(authStore.user?.coins).toBe('950') // 900 + 50
+    expect(balanceStore.coins).toBe('950') // 900 + 50
   })
 })
 
@@ -274,7 +278,7 @@ describe('useGiftSending — burst rejection feedback', () => {
     const sendGiftMock = vi.fn().mockResolvedValue(
       { success: true, acceptedRecipientIds: [2, 3, 4, 5] } satisfies GiftSendAck
     )
-    const { useGiftSending: sending, giftStore, authStore, seatsStore, toastAdd } = await setup(sendGiftMock)
+    const { useGiftSending: sending, giftStore, balanceStore, seatsStore, toastAdd } = await setup(sendGiftMock)
 
     seatsStore.updateSeat(3, 5, false)
     seatsStore.updateSeat(4, 6, false)
@@ -288,7 +292,7 @@ describe('useGiftSending — burst rejection feedback', () => {
     await Promise.resolve()
 
     // 5 × 50 debited, 1 dropped leg refunded — quietly.
-    expect(authStore.user?.coins).toBe('800')
+    expect(balanceStore.coins).toBe('800')
     expect(toastAdd).not.toHaveBeenCalled()
   })
 
@@ -296,7 +300,7 @@ describe('useGiftSending — burst rejection feedback', () => {
     const sendGiftMock = vi.fn().mockResolvedValue(
       { success: false, error: 'No recipients seated' } satisfies GiftSendAck
     )
-    const { useGiftSending: sending, giftStore, authStore, seatsStore, toastAdd } = await setup(sendGiftMock)
+    const { useGiftSending: sending, giftStore, balanceStore, seatsStore, toastAdd } = await setup(sendGiftMock)
 
     seatsStore.updateSeat(3, 5, false)
     seatsStore.updateSeat(4, 6, false)
@@ -310,7 +314,7 @@ describe('useGiftSending — burst rejection feedback', () => {
     await Promise.resolve()
 
     // Nothing landed — full refund, and the sender is told why.
-    expect(authStore.user?.coins).toBe('1000')
+    expect(balanceStore.coins).toBe('1000')
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(toastArg(0).description).toContain('mic seat')
   })
@@ -527,18 +531,22 @@ describe('useGiftSending — combo tap coalescing', () => {
     const { useGiftComboStore } = await import('../../app/stores/giftCombo')
     const { useGiftStore } = await import('../../app/stores/gift')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
 
     const comboStore = useGiftComboStore()
     const giftStore = useGiftStore()
     const authStore = useAuthStore()
+    const balanceStore = useBalanceStore()
     const seatsStore = useRoomSeatsStore()
-    authStore.user = { id: 1, name: 'Sender', coins: '1000' } as never
+    authStore.user = { id: 1, name: 'Sender' } as never
+    balanceStore.seed({ coins: '1000', diamonds: '0', wealth_xp: '0', charm_xp: '0' })
 
     vi.stubGlobal('useGiftComboStore', () => comboStore)
     vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: false, giftBatch: false }))
     vi.stubGlobal('useGiftStore', () => giftStore)
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => balanceStore)
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useGiftEligibility', () => ({
       canAfford: computed(() => true),
@@ -556,14 +564,14 @@ describe('useGiftSending — combo tap coalescing', () => {
     comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
 
     await sending.combo()
-    expect((authStore.user as { coins?: string } | null)?.coins).toBe('950') // one tap's worth debited
+    expect(balanceStore.coins).toBe('950') // one tap's worth debited
 
     // Socket drops mid-burst — the very next tap must be gated out, not merged in.
     isConnected.value = false
     const result = await sending.combo()
 
     expect(result).toBe(false)
-    expect((authStore.user as { coins?: string } | null)?.coins).toBe('950') // unchanged — gated tap never debited
+    expect(balanceStore.coins).toBe('950') // unchanged — gated tap never debited
 
     await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
     // Only the one gated-in tap's worth (quantity 1) ever reached the wire.
@@ -577,7 +585,7 @@ describe('useGiftSending — combo tap coalescing', () => {
     const sendGiftMock = vi.fn().mockImplementation(
       () => new Promise<GiftSendAck | null>((resolve) => { resolveAck = resolve }),
     )
-    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock)
+    const { useGiftSending: sending, comboStore, balanceStore } = await setup(sendGiftMock)
 
     comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
 
@@ -588,7 +596,7 @@ describe('useGiftSending — combo tap coalescing', () => {
       await vi.advanceTimersByTimeAsync(50)
     }
     // 5 taps × 50 coins/tap = 250 debited, all before any network emit fired.
-    expect(authStore.user?.coins).toBe('750')
+    expect(balanceStore.coins).toBe('750')
 
     await vi.advanceTimersByTimeAsync(GIFT_COMBO_COALESCE_MS)
     expect(sendGiftMock).toHaveBeenCalledTimes(1)
@@ -598,7 +606,7 @@ describe('useGiftSending — combo tap coalescing', () => {
     await Promise.resolve()
 
     // Full refund of all 5 taps' coins, not just the last one.
-    expect(authStore.user?.coins).toBe('1000')
+    expect(balanceStore.coins).toBe('1000')
   })
 
   it('switching gifts mid-burst flushes the pending batch immediately, then starts a new one', async () => {
@@ -745,18 +753,18 @@ describe('useGiftSending — luckyCombo per-tap emit (no coalescing)', () => {
     const sendGiftMock = vi.fn().mockImplementationOnce(
       () => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }),
     )
-    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock)
+    const { useGiftSending: sending, comboStore, balanceStore } = await setup(sendGiftMock)
 
     comboStore.setLuckyContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
 
     await sending.luckyCombo()
-    expect(authStore.user?.coins).toBe('950') // 1000 - 50, this tap's own debit
+    expect(balanceStore.coins).toBe('950') // 1000 - 50, this tap's own debit
 
     resolveAck({ success: false })
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(authStore.user?.coins).toBe('1000') // fully refunded, this tap only
+    expect(balanceStore.coins).toBe('1000') // fully refunded, this tap only
   })
 })
 
@@ -768,7 +776,7 @@ describe('useGiftSending — connection gate', () => {
 
   it('send() while the socket is down: no emit, no debit, one reconnect toast', async () => {
     const sendGiftMock = vi.fn()
-    const { useGiftSending: sending, giftStore, authStore } = await setup(sendGiftMock, { connected: false })
+    const { useGiftSending: sending, giftStore, balanceStore } = await setup(sendGiftMock, { connected: false })
 
     giftStore.selectGift(GIFT)
     giftStore.setSelectedRecipientIds([2])
@@ -778,7 +786,7 @@ describe('useGiftSending — connection gate', () => {
 
     expect(result).toBe(false)
     expect(sendGiftMock).not.toHaveBeenCalled()
-    expect(authStore.user?.coins).toBe('1000')
+    expect(balanceStore.coins).toBe('1000')
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(toastArg(0).title).toBe('Reconnecting to the room')
   })
@@ -801,7 +809,7 @@ describe('useGiftSending — connection gate', () => {
 
   it('luckyCombo() while the socket is down: no emit, no debit', async () => {
     const sendGiftMock = vi.fn()
-    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock, { connected: false })
+    const { useGiftSending: sending, comboStore, balanceStore } = await setup(sendGiftMock, { connected: false })
 
     comboStore.setLuckyContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
 
@@ -809,12 +817,12 @@ describe('useGiftSending — connection gate', () => {
 
     expect(result).toBe(false)
     expect(sendGiftMock).not.toHaveBeenCalled()
-    expect(authStore.user?.coins).toBe('1000')
+    expect(balanceStore.coins).toBe('1000')
   })
 
   it('combo() while the socket is down: no emit, no debit', async () => {
     const sendGiftMock = vi.fn()
-    const { useGiftSending: sending, comboStore, authStore } = await setup(sendGiftMock, { connected: false })
+    const { useGiftSending: sending, comboStore, balanceStore } = await setup(sendGiftMock, { connected: false })
 
     comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2, 3], quantity: 1 })
 
@@ -822,14 +830,14 @@ describe('useGiftSending — connection gate', () => {
 
     expect(result).toBe(false)
     expect(sendGiftMock).not.toHaveBeenCalled()
-    expect(authStore.user?.coins).toBe('1000')
+    expect(balanceStore.coins).toBe('1000')
   })
 })
 
 /**
  * ackBalance (gift-authority-tick-fanout ticket 13): the server is the sole
  * source of the balance — no optimistic subtract on tap, no local refund
- * add-back. The ack's `balance`/`seq` apply through `authStore.applyBalance`
+ * add-back. The ack's `balance`/`seq` apply through `balanceStore.apply`
  * (sequence-guarded), and a refusal maps `code` to one of the constants'
  * messages.
  */
@@ -842,7 +850,7 @@ describe('useGiftSending — ackBalance path', () => {
   it('send() does NOT optimistically subtract — the balance only moves once the ack applies it', async () => {
     let resolveAck!: (ack: GiftSendAck) => void
     const sendGiftMock = vi.fn().mockImplementation(() => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }))
-    const { useGiftSending: sending, giftStore, authStore } = await setup(sendGiftMock, { ackBalance: true })
+    const { useGiftSending: sending, giftStore, balanceStore } = await setup(sendGiftMock, { ackBalance: true })
 
     giftStore.selectGift(GIFT)
     giftStore.setSelectedRecipientIds([2, 3])
@@ -850,20 +858,20 @@ describe('useGiftSending — ackBalance path', () => {
 
     await sending.send()
     // No optimistic debit at all — balance is exactly what it started as.
-    expect(authStore.user?.coins).toBe('1000')
+    expect(balanceStore.coins).toBe('1000')
 
     resolveAck({ success: true, ok: true, acceptedRecipientIds: [2, 3], balance: '900', seq: 1 } as GiftSendAck)
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(authStore.user?.coins).toBe('900')
+    expect(balanceStore.coins).toBe('900')
   })
 
   it('a refusal applies the refused balance/seq and shows the mapped toast — no local refund math', async () => {
     const sendGiftMock = vi.fn().mockResolvedValue(
       { success: false, ok: false, code: 'INSUFFICIENT', reason: 'insufficient', balance: '1000', seq: 1 } as GiftSendAck,
     )
-    const { useGiftSending: sending, giftStore, authStore, toastAdd } = await setup(sendGiftMock, { ackBalance: true })
+    const { useGiftSending: sending, giftStore, balanceStore, toastAdd } = await setup(sendGiftMock, { ackBalance: true })
 
     giftStore.selectGift(GIFT)
     giftStore.setSelectedRecipientIds([2])
@@ -873,7 +881,7 @@ describe('useGiftSending — ackBalance path', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(authStore.user?.coins).toBe('1000') // unchanged — never subtracted, refusal balance re-applies the same number
+    expect(balanceStore.coins).toBe('1000') // unchanged — never subtracted, refusal balance re-applies the same number
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(toastArg(0).title).toBe('Gift not sent')
     expect(toastArg(0).description).toBe(GIFT_REFUSAL_TOAST_MESSAGES.INSUFFICIENT)
@@ -955,7 +963,7 @@ describe('useGiftSending — ackBalance path', () => {
     const sendGiftMock = vi.fn().mockResolvedValue({ success: true, ok: true, acceptedRecipientIds: [2], balance: '1000', seq: 1 } as GiftSendAck)
     vi.useFakeTimers()
     try {
-      const { useGiftSending: sending, comboStore, giftStore, authStore } = await setup(sendGiftMock, { ackBalance: true })
+      const { useGiftSending: sending, comboStore, giftStore, balanceStore } = await setup(sendGiftMock, { ackBalance: true })
 
       comboStore.setNormalContext({ gift: GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
       giftStore.resetCombo()
@@ -968,7 +976,7 @@ describe('useGiftSending — ackBalance path', () => {
       // Visual streak still moves once per tap...
       expect(giftStore.comboCount).toBe(5)
       // ...even though no coins were ever optimistically subtracted.
-      expect(authStore.user?.coins).toBe('1000')
+      expect(balanceStore.coins).toBe('1000')
     } finally {
       vi.useRealTimers()
     }
@@ -979,20 +987,20 @@ describe('useGiftSending — ackBalance path', () => {
     // proves ackBalance:false takes the ORIGINAL code path, not a shared one.
     let resolveAck!: (ack: GiftSendAck) => void
     const sendGiftMock = vi.fn().mockImplementation(() => new Promise<GiftSendAck>((resolve) => { resolveAck = resolve }))
-    const { useGiftSending: sending, giftStore, authStore } = await setup(sendGiftMock, { ackBalance: false })
+    const { useGiftSending: sending, giftStore, balanceStore } = await setup(sendGiftMock, { ackBalance: false })
 
     giftStore.selectGift(GIFT)
     giftStore.setSelectedRecipientIds([2])
     giftStore.setQuantity(1)
 
     await sending.send()
-    expect(authStore.user?.coins).toBe('950') // optimistic debit still happens
+    expect(balanceStore.coins).toBe('950') // optimistic debit still happens
 
     resolveAck({ success: false })
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(authStore.user?.coins).toBe('1000') // legacy full refund still happens
+    expect(balanceStore.coins).toBe('1000') // legacy full refund still happens
   })
 })
 

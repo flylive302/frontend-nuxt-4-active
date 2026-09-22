@@ -74,6 +74,7 @@ describe('setupRoomEventHandlers — Lucky Number', () => {
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
     const { useRoomAudioStore } = await import('../../app/stores/roomAudio')
 
@@ -87,6 +88,7 @@ describe('setupRoomEventHandlers — Lucky Number', () => {
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => useBalanceStore())
     vi.stubGlobal('useRoomStore', () => roomStore)
     vi.stubGlobal('useRoomAudioStore', () => audioStore)
     vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))

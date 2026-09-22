@@ -1,9 +1,9 @@
 /**
  * useEconomyEvents (app/events/economy.events.ts) — `balance.updated` routing
  * (gift-authority-tick-fanout ticket 13). A payload carrying `seq` must go
- * through the sequence-guarded `authStore.applyBalance`; one without `seq`
+ * through the sequence-guarded `balanceStore.apply`; one without `seq`
  * (legacy / capability absent) must keep using the unconditional
- * `authStore.updateBalance`, byte-identical to before.
+ * `balanceStore.patch`, byte-identical to before.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
@@ -17,15 +17,13 @@ function createMockSocket() {
   }
 }
 
-const applyBalance = vi.fn()
-const updateBalance = vi.fn()
-const updateWealthXp = vi.fn()
-const updateCharmXp = vi.fn()
+const apply = vi.fn()
+const patch = vi.fn()
 const syncXpFromBalance = vi.fn()
 const toastAdd = vi.fn()
 
-vi.stubGlobal('useAuthStore', () => ({ applyBalance, updateBalance }))
-vi.stubGlobal('useLevelActions', () => ({ updateWealthXp, updateCharmXp, syncXpFromBalance }))
+vi.stubGlobal('useBalanceStore', () => ({ apply, patch }))
+vi.stubGlobal('useLevelActions', () => ({ syncXpFromBalance }))
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 
 describe('useEconomyEvents — balance.updated', () => {
@@ -50,14 +48,14 @@ describe('useEconomyEvents — balance.updated', () => {
     socket.handlers.get('balance.updated')!(payload)
     await flushFrame()
 
-    expect(applyBalance).toHaveBeenCalledWith({
+    expect(apply).toHaveBeenCalledWith({
       coins: '900',
       diamonds: '10',
       wealth_xp: '5',
       charm_xp: '2',
       seq: 7,
     })
-    expect(updateBalance).not.toHaveBeenCalled()
+    expect(patch).not.toHaveBeenCalled()
   })
 
   it('a payload WITHOUT seq stays on the legacy unconditional setter', async () => {
@@ -66,13 +64,13 @@ describe('useEconomyEvents — balance.updated', () => {
     socket.handlers.get('balance.updated')!(payload)
     await flushFrame()
 
-    expect(updateBalance).toHaveBeenCalledWith({
+    expect(patch).toHaveBeenCalledWith({
       coins: '900',
       diamonds: '10',
       wealth_xp: '5',
       charm_xp: '2',
     })
-    expect(applyBalance).not.toHaveBeenCalled()
+    expect(apply).not.toHaveBeenCalled()
   })
 
   it('within one coalesce frame, a lower-seq payload arriving after a higher one does not displace it', async () => {
@@ -83,8 +81,8 @@ describe('useEconomyEvents — balance.updated', () => {
     socket.handlers.get('balance.updated')!(lower) // stale — must not win the frame
     await flushFrame()
 
-    expect(applyBalance).toHaveBeenCalledTimes(1)
-    expect(applyBalance).toHaveBeenCalledWith(expect.objectContaining({ coins: '850', seq: 6 }))
+    expect(apply).toHaveBeenCalledTimes(1)
+    expect(apply).toHaveBeenCalledWith(expect.objectContaining({ coins: '850', seq: 6 }))
   })
 
   it('XP sync still runs on the seq path — level bars must not freeze', async () => {
@@ -93,8 +91,6 @@ describe('useEconomyEvents — balance.updated', () => {
     socket.handlers.get('balance.updated')!(payload)
     await flushFrame()
 
-    expect(updateWealthXp).toHaveBeenCalledWith(5)
-    expect(updateCharmXp).toHaveBeenCalledWith(2)
     expect(syncXpFromBalance).toHaveBeenCalledWith('5', '2')
   })
 })

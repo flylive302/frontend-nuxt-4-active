@@ -82,6 +82,7 @@ describe('setupRoomEventHandlers — seat reactions', () => {
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
 
     // These are real Pinia stores, referenced via Nuxt auto-import globals
@@ -94,6 +95,7 @@ describe('setupRoomEventHandlers — seat reactions', () => {
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => useBalanceStore())
     vi.stubGlobal('useRoomStore', () => roomStore)
     vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
     vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
@@ -175,12 +177,14 @@ describe('setupRoomEventHandlers — seat:cleared self-retake guard (F-24)', () 
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
 
     const seatsStore = useRoomSeatsStore()
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => useRoomParticipantsStore())
     vi.stubGlobal('useAuthStore', () => useAuthStore())
+    vi.stubGlobal('useBalanceStore', () => useBalanceStore())
     vi.stubGlobal('useRoomStore', () => useRoomStore())
     vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
     vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
@@ -247,6 +251,7 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
 
     const seatsStore = useRoomSeatsStore()
@@ -255,6 +260,7 @@ describe('setupRoomEventHandlers — seat eviction (shrink) (room-seat-caps/02)'
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => useRoomParticipantsStore())
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => useBalanceStore())
     vi.stubGlobal('useRoomStore', () => useRoomStore())
     vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
     vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
@@ -353,6 +359,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
 
     const seatsStore = useRoomSeatsStore()
@@ -364,6 +371,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => useBalanceStore())
     vi.stubGlobal('useRoomStore', () => roomStore)
     vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
     vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))
@@ -465,20 +473,24 @@ describe('setupRoomEventHandlers — gift:error refund toast (ackBalance)', () =
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
     const { useGiftComboStore } = await import('../../app/stores/giftCombo')
 
     const seatsStore = useRoomSeatsStore()
     const participantsStore = useRoomParticipantsStore()
     const authStore = useAuthStore()
+    const balanceStore = useBalanceStore()
     const roomStore = useRoomStore()
     const comboStore = useGiftComboStore()
-    authStore.user = { id: 1, coins: '500' } as never
+    authStore.user = { id: 1 } as never
+    balanceStore.seed({ coins: '500', diamonds: '0', wealth_xp: '0', charm_xp: '0' })
     comboStore.setPendingRefund('batch-1', 200)
 
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => balanceStore)
     vi.stubGlobal('useRoomStore', () => roomStore)
     vi.stubGlobal('useGiftComboStore', () => comboStore)
     vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance, giftBatch: false }))
@@ -500,15 +512,15 @@ describe('setupRoomEventHandlers — gift:error refund toast (ackBalance)', () =
 
     setupRoomEventHandlers(socket as never, actions, toast)
 
-    return { socket, authStore, comboStore, toastAdd }
+    return { socket, authStore, balanceStore, comboStore, toastAdd }
   }
 
   it('ackBalance: shows the refund toast and does NOT touch the balance', async () => {
-    const { socket, authStore, toastAdd } = await setup(true)
+    const { socket, balanceStore, toastAdd } = await setup(true)
 
     socket.handlers.get('gift:error')?.({ transactionId: 't1', code: 4001, reason: 'refunded', batchId: 'batch-1' })
 
-    expect(authStore.user?.coins).toBe('500') // unchanged — the push, not this handler, moves the balance
+    expect(balanceStore.coins).toBe('500') // unchanged — the push, not this handler, moves the balance
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Gift refunded' }))
   })
@@ -531,11 +543,11 @@ describe('setupRoomEventHandlers — gift:error refund toast (ackBalance)', () =
   })
 
   it('legacy (capability absent): the old consumePendingRefund add-back still runs, untouched', async () => {
-    const { socket, authStore, comboStore, toastAdd } = await setup(false)
+    const { socket, balanceStore, comboStore, toastAdd } = await setup(false)
 
     socket.handlers.get('gift:error')?.({ transactionId: 't1', code: '4002', reason: 'insufficient_balance', batchId: 'batch-1' })
 
-    expect(authStore.user?.coins).toBe('700') // 500 + 200 tracked refund
+    expect(balanceStore.coins).toBe('700') // 500 + 200 tracked refund
     expect(comboStore.consumePendingRefund('batch-1')).toBe(0) // already consumed
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Insufficient balance' }))
   })
@@ -565,6 +577,7 @@ describe('setupRoomEventHandlers — realtime wiring hardening (room-page-runtim
     const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
     const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
     const { useAuthStore } = await import('../../app/stores/auth')
+    const { useBalanceStore } = await import('../../app/stores/balance')
     const { useRoomStore } = await import('../../app/stores/room')
 
     const seatsStore = useRoomSeatsStore()
@@ -575,6 +588,7 @@ describe('setupRoomEventHandlers — realtime wiring hardening (room-page-runtim
     vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
     vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)
     vi.stubGlobal('useAuthStore', () => authStore)
+    vi.stubGlobal('useBalanceStore', () => useBalanceStore())
     vi.stubGlobal('useRoomStore', () => roomStore)
     vi.stubGlobal('useRoomSessionStore', () => ({ previousRoute: '/' }))
     vi.stubGlobal('useRoomSession', () => ({ leaveRoom: vi.fn(), setCurrentRoom: vi.fn(), minimizeRoom: vi.fn(), maximizeRoom: vi.fn(), touchActiveRoom: vi.fn(), clearActiveRoom: vi.fn() }))

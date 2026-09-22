@@ -11,6 +11,7 @@ import {
   setupNuxtMocks,
   cleanupNuxtMocks,
   createMockAuthStore,
+  createMockBalanceStore,
 } from '../helpers/nuxtMocks'
 
 // Mock logger
@@ -28,10 +29,12 @@ let useLevelActions: () => ReturnType<typeof import('~/composables/shared/useLev
 
 describe('useLevelActions', () => {
   let authStore: ReturnType<typeof createMockAuthStore>
+  let balanceStore: ReturnType<typeof createMockBalanceStore>
 
   beforeEach(async () => {
     authStore = createMockAuthStore({ user: { id: 1, name: 'Test User', wealth_xp: '0', charm_xp: '0' } })
-    setupNuxtMocks({ authStore })
+    balanceStore = createMockBalanceStore()
+    setupNuxtMocks({ authStore, balanceStore })
 
     const mod = await import('~/composables/shared/useLevelActions')
     useLevelActions = mod.useLevelActions
@@ -42,15 +45,13 @@ describe('useLevelActions', () => {
     vi.restoreAllMocks()
   })
 
-  const user = () => authStore.user as { wealth_xp: string; charm_xp: string }
-
   describe('updateWealthXp', () => {
-    it('writes the wealth XP (stringified) onto the auth user', () => {
+    it('patches the balance store with the stringified wealth XP', () => {
       const { updateWealthXp } = useLevelActions()
 
       updateWealthXp(150)
 
-      expect(user().wealth_xp).toBe('150')
+      expect(balanceStore.patch).toHaveBeenCalledWith({ wealth_xp: '150' })
     })
 
     it('no-ops when there is no authenticated user', () => {
@@ -58,16 +59,17 @@ describe('useLevelActions', () => {
       const { updateWealthXp } = useLevelActions()
 
       expect(() => updateWealthXp(150)).not.toThrow()
+      expect(balanceStore.patch).not.toHaveBeenCalled()
     })
   })
 
   describe('updateCharmXp', () => {
-    it('writes the charm XP (stringified) onto the auth user', () => {
+    it('patches the balance store with the stringified charm XP', () => {
       const { updateCharmXp } = useLevelActions()
 
       updateCharmXp(500)
 
-      expect(user().charm_xp).toBe('500')
+      expect(balanceStore.patch).toHaveBeenCalledWith({ charm_xp: '500' })
     })
   })
 
@@ -77,7 +79,7 @@ describe('useLevelActions', () => {
 
       handleLevelUp({ type: 'wealth', previous_level: 1, new_level: 2, current_xp: '600' })
 
-      expect(user().wealth_xp).toBe('600')
+      expect(balanceStore.patch).toHaveBeenCalledWith({ wealth_xp: '600' })
     })
 
     it('routes a charm level.up payload to charm_xp', () => {
@@ -85,7 +87,7 @@ describe('useLevelActions', () => {
 
       handleLevelUp({ type: 'charm', previous_level: 0, new_level: 1, current_xp: '300' })
 
-      expect(user().charm_xp).toBe('300')
+      expect(balanceStore.patch).toHaveBeenCalledWith({ charm_xp: '300' })
     })
   })
 })

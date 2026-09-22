@@ -33,6 +33,7 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
   const { useGiftComboStore } = await import('../../app/stores/giftCombo')
   const { useGiftStore } = await import('../../app/stores/gift')
   const { useAuthStore } = await import('../../app/stores/auth')
+  const { useBalanceStore } = await import('../../app/stores/balance')
   const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
   const { useRoomAudioStore } = await import('../../app/stores/roomAudio')
   const { useRoomParticipantsStore } = await import('../../app/stores/roomParticipants')
@@ -44,12 +45,14 @@ async function setup(sendGiftMock: ReturnType<typeof vi.fn>) {
   const audioStore = useRoomAudioStore()
   const participantsStore = useRoomParticipantsStore()
 
-  authStore.user = { id: 1, name: 'Ali', coins: '100000' } as never
+  authStore.user = { id: 1, name: 'Ali' } as never
+  useBalanceStore().seed({ coins: '100000', diamonds: '0', wealth_xp: '0', charm_xp: '0' })
 
   vi.stubGlobal('useGiftComboStore', () => comboStore)
     vi.stubGlobal('useServerCapabilitiesStore', () => ({ ackBalance: false, giftBatch: false }))
   vi.stubGlobal('useGiftStore', () => giftStore)
   vi.stubGlobal('useAuthStore', () => authStore)
+  vi.stubGlobal('useBalanceStore', () => useBalanceStore())
   vi.stubGlobal('useRoomSeatsStore', () => seatsStore)
   vi.stubGlobal('useRoomAudioStore', () => audioStore)
   vi.stubGlobal('useRoomParticipantsStore', () => participantsStore)

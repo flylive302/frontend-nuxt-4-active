@@ -401,6 +401,7 @@ export function setupRoomEventHandlers(
   const participantsStore = useRoomParticipantsStore();
   const seatsStore = useRoomSeatsStore();
   const authStore = useAuthStore();
+  const balanceStore = useBalanceStore();
   const giftStore = useGiftStore();
   const capabilitiesStore = useServerCapabilitiesStore();
   const userBlocksStore = useUserBlocksStore();
@@ -991,8 +992,8 @@ export function setupRoomEventHandlers(
     if (event.batchId) {
       const refundAmount = comboStore.consumePendingRefund(event.batchId);
       if (refundAmount > 0) {
-        const currentCoins = Number(authStore.user?.coins ?? 0);
-        authStore.patchBalance({ coins: String(currentCoins + refundAmount) });
+        const currentCoins = balanceStore.coinsNumber;
+        balanceStore.patch({ coins: String(currentCoins + refundAmount) });
       }
     }
 

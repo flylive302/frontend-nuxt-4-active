@@ -51,7 +51,7 @@ export interface LevelUpModalItem {
  * Every subsequent visit uses the normal (2 individual + summary) cap rule.
  */
 export function useLevelUpDrain() {
-  const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
   const bootstrapStore = useBootstrapStore()
   const watermarkStore = useLevelUpWatermarkStore()
 
@@ -65,7 +65,7 @@ export function useLevelUpDrain() {
    */
   function drain(category: LevelUpCategory): void {
     // GATE
-    const gate = checkGate(category, authStore, bootstrapStore, watermarkStore)
+    const gate = checkGate(category, balanceStore, bootstrapStore, watermarkStore)
     if (!gate) return
 
     // EXECUTE
@@ -117,14 +117,14 @@ interface DrainGate {
  */
 function checkGate(
   category: LevelUpCategory,
-  authStore: ReturnType<typeof useAuthStore>,
+  balanceStore: ReturnType<typeof useBalanceStore>,
   bootstrapStore: ReturnType<typeof useBootstrapStore>,
   watermarkStore: ReturnType<typeof useLevelUpWatermarkStore>,
 ): DrainGate | null {
   const sortedConfigs = category === 'wealth' ? bootstrapStore.sortedWealthLevels : bootstrapStore.sortedCharmLevels
   if (!sortedConfigs || sortedConfigs.length === 0) return null
 
-  const xp = category === 'wealth' ? authStore.user?.wealth_xp : authStore.user?.charm_xp
+  const xp = category === 'wealth' ? balanceStore.wealthXp : balanceStore.charmXp
   const currentLevel = computeLevelStatus(xp, sortedConfigs).current_level
 
   const storedSeen = category === 'wealth' ? watermarkStore.wealthLevelSeen : watermarkStore.charmLevelSeen

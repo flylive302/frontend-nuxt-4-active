@@ -27,7 +27,7 @@ const quantityOptions = [...GIFT_QUANTITY_OPTIONS];
 
 const giftStore = useGiftStore();
 const comboStore = useGiftComboStore();
-const authStore = useAuthStore();
+const balanceStore = useBalanceStore();
 const seatsStore = useRoomSeatsStore();
 const { eligibleRecipients, selectAllRecipients } = useGiftEligibility();
 const { giftsByCategory, ensureLoaded, isLoading } = useGiftData();
@@ -256,7 +256,7 @@ onBeforeUnmount(() => {
 
 const bootstrapStore = useBootstrapStore();
 
-const userXp = computed(() => authStore.user?.wealth_xp)
+const userXp = computed(() => balanceStore.wealthXp)
 
 const sortedConfigs = computed(() => bootstrapStore.sortedWealthLevels)
 
@@ -415,7 +415,7 @@ async function doLuckySend(): Promise<void> {
                 await navigateTo(`/coins/request`);
               }"
             >
-              {{ formatCurrency(authStore.user?.coins) }}
+              {{ formatCurrency(balanceStore.coins) }}
             </UButton>
           </div>
 

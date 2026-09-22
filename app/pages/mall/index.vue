@@ -47,7 +47,11 @@ useVideoMotionPause(bgVideoRef, () => !!mallStore.selectedProp)
 // Lifecycle
 // ========================================
 
-onMounted(() => initializeCatalog())
+onMounted(() => {
+  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
+  void useUserSync().syncUser()
+  initializeCatalog()
+})
 
 // ========================================
 // Handlers (INTENT — delegate to composables)

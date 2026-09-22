@@ -449,10 +449,10 @@ export interface GiftSendAck {
   transactionId?: string;
   /**
    * Spendable coin balance AFTER this ack, authoritative — the client must
-   * apply this through `authStore.applyBalance`, never compute it locally.
+   * apply this through `useBalanceStore().apply`, never compute it locally.
    */
   balance?: string;
-  /** Monotonic per-user ledger sequence — guards `applyBalance` against stale acks. */
+  /** Monotonic per-user ledger sequence — guards `useBalanceStore().apply` against stale acks. */
   seq?: number;
   /**
    * Refusal reason, ackBalance-only. One of

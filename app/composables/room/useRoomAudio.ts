@@ -85,6 +85,7 @@ let _audioStore: ReturnType<typeof useRoomAudioStore> | null = null;
 let _participantsStore: ReturnType<typeof useRoomParticipantsStore> | null = null;
 let _seatsStore: ReturnType<typeof useRoomSeatsStore> | null = null;
 let _authStore: ReturnType<typeof useAuthStore> | null = null;
+let _balanceStore: ReturnType<typeof useBalanceStore> | null = null;
 let _giftStore: ReturnType<typeof useGiftStore> | null = null;
 let _toast: ReturnType<typeof useToast> | null = null;
 
@@ -187,6 +188,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   if (!_participantsStore) _participantsStore = useRoomParticipantsStore();
   if (!_seatsStore) _seatsStore = useRoomSeatsStore();
   if (!_authStore) _authStore = useAuthStore();
+  if (!_balanceStore) _balanceStore = useBalanceStore();
   if (!_giftStore) _giftStore = useGiftStore();
   if (!_toast) _toast = useToast();
 
@@ -196,6 +198,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
   const participantsStore = _participantsStore;
   const seatsStore = _seatsStore;
   const authStore = _authStore;
+  const balanceStore = _balanceStore;
   const giftStore = _giftStore;
   const toast = _toast;
   const log = createLogger('[RoomAudio]');
@@ -656,8 +659,8 @@ export function useRoomAudio(): UseRoomAudioReturn {
           gender: authStore.user.gender === null ? null : String(authStore.user.gender),
           country: authStore.user.country ?? '',
           date_of_birth: authStore.user.date_of_birth,
-          wealth_xp: authStore.user.wealth_xp,
-          charm_xp: authStore.user.charm_xp,
+          wealth_xp: balanceStore.wealthXp ?? authStore.user.wealth_xp,
+          charm_xp: balanceStore.charmXp ?? authStore.user.charm_xp,
           cover_image: authStore.user.cover_image ?? null,
           vip_level: authStore.user.vip_level ?? 0,
           equipped_badges: authStore.user.equipped_badges,

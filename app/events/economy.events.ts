@@ -24,8 +24,8 @@ export const lastCoinRequestUpdate = ref<CoinRequestStatusChangedPayload | null>
  * Captures store, action, and toast dependencies during setup() phase.
  */
 export function useEconomyEvents() {
-  const authStore = useAuthStore()
-  const { updateWealthXp, updateCharmXp, syncXpFromBalance } = useLevelActions()
+  const balanceStore = useBalanceStore()
+  const { syncXpFromBalance } = useLevelActions()
   const toast = useToast()
 
   return function registerEconomyEvents(socket: Socket): void {
@@ -43,7 +43,7 @@ export function useEconomyEvents() {
       // setter so an out-of-order push can never move the balance backwards.
       // No `seq` ⇒ legacy path, unchanged.
       if (payload.seq !== undefined) {
-        authStore.applyBalance({
+        balanceStore.apply({
           coins: payload.coins,
           diamonds: payload.diamonds,
           wealth_xp: payload.wealth_xp,
@@ -51,17 +51,13 @@ export function useEconomyEvents() {
           seq: payload.seq,
         })
       } else {
-        authStore.updateBalance({
+        balanceStore.patch({
           coins: payload.coins,
           diamonds: payload.diamonds,
           wealth_xp: payload.wealth_xp,
           charm_xp: payload.charm_xp,
         })
       }
-
-      // Update auth user XP — reactive consumers recompute automatically
-      updateWealthXp(parseFloat(payload.wealth_xp))
-      updateCharmXp(parseFloat(payload.charm_xp))
 
       // Sync fresh XP to participants store and MSAB (composable handles both)
       syncXpFromBalance(payload.wealth_xp, payload.charm_xp)

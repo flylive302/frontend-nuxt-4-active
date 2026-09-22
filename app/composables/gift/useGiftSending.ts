@@ -25,6 +25,7 @@ export function useGiftSending() {
   const comboStore = useGiftComboStore();
   const giftStore = useGiftStore();
   const authStore = useAuthStore();
+  const balanceStore = useBalanceStore();
   const seatsStore = useRoomSeatsStore();
   const capabilitiesStore = useServerCapabilitiesStore();
   const { canAfford, canSend } = useGiftEligibility();
@@ -203,7 +204,7 @@ export function useGiftSending() {
     }
 
     if (ack.balance !== undefined && ack.seq !== undefined) {
-      authStore.applyBalance({ coins: ack.balance, seq: ack.seq });
+      balanceStore.apply({ coins: ack.balance, seq: ack.seq });
     }
 
     if (!ack.success) {
@@ -309,8 +310,8 @@ export function useGiftSending() {
       // refund alone used to be the entire response: a rejected burst put the
       // coins back and played the animation, so a run of taps against an
       // unseated recipient looked identical to a run that worked.
-      const currentCoins = Number(authStore.user?.coins ?? 0);
-      authStore.patchBalance({ coins: String(currentCoins + trackedAmount) });
+      const currentCoins = balanceStore.coinsNumber;
+      balanceStore.patch({ coins: String(currentCoins + trackedAmount) });
       notifyBurstFailure(ack);
       return;
     }
@@ -322,8 +323,8 @@ export function useGiftSending() {
     // Silent by design (HITL 2026-07-23): a dropped-leg refund is self-healing
     // bookkeeping — surfacing it as a toast spammed busy rooms.
     const refundAmount = perRecipientCost * droppedCount;
-    const currentCoins = Number(authStore.user?.coins ?? 0);
-    authStore.patchBalance({ coins: String(currentCoins + refundAmount) });
+    const currentCoins = balanceStore.coinsNumber;
+    balanceStore.patch({ coins: String(currentCoins + refundAmount) });
   }
 
   /**
@@ -591,7 +592,7 @@ export function useGiftSending() {
       * validRecipients.length
       * ctx.quantity;
 
-    const coins = Number(authStore.user?.coins ?? 0);
+    const coins = balanceStore.coinsNumber;
 
     if (coins < comboCost) {
       toast.add({
@@ -610,7 +611,7 @@ export function useGiftSending() {
     // Deduct coins for combo — PER TAP, optimistic, so the balance moves
     // instantly even though the network emit below may be coalesced.
     // ackBalance: no optimistic subtract at all — the balance only ever moves
-    // via the server's applyBalance-guarded push/ack (ticket 13).
+    // via the server's apply-guarded push/ack (ticket 13).
     if (!capabilitiesStore.ackBalance) {
       deductCoins(comboCost);
     }
@@ -684,7 +685,7 @@ export function useGiftSending() {
     }
 
     const comboCost = ctx.gift.price * validRecipients.length * ctx.quantity;
-    const coins = Number(authStore.user?.coins ?? 0);
+    const coins = balanceStore.coinsNumber;
 
     if (coins < comboCost) {
       toast.add({
@@ -743,8 +744,8 @@ export function useGiftSending() {
    * Deduct coins from user balance (optimistic update)
    */
   function deductCoins(amount: number): void {
-    const currentCoins = Number(authStore.user?.coins ?? 0);
-    authStore.patchBalance({ coins: String(Math.max(0, currentCoins - amount)) });
+    const currentCoins = balanceStore.coinsNumber;
+    balanceStore.patch({ coins: String(Math.max(0, currentCoins - amount)) });
   }
 
   // ========================================

@@ -32,6 +32,8 @@ const props = defineProps<{
 
 const authStore = useAuthStore()
 const bootstrapStore = useBootstrapStore()
+const balanceStore = useBalanceStore()
+const { syncUser } = useUserSync()
 
 // ========================================
 // Level-Up Celebration (page-gated, own-track only)
@@ -41,6 +43,9 @@ const { currentModal, drain, closeModal } = useLevelUpDrain()
 
 onMounted(() => {
   drain(props.category)
+  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
+  // Shared by both /levels/wealth and /levels/charm (they only render this component).
+  void syncUser()
 })
 
 // ========================================
@@ -91,8 +96,8 @@ const user = computed(() => authStore.user)
 
 const userXp = computed(() =>
   props.category === 'wealth'
-    ? authStore.user?.wealth_xp
-    : authStore.user?.charm_xp
+    ? balanceStore.wealthXp
+    : balanceStore.charmXp
 )
 
 const sortedConfigs = computed(() =>

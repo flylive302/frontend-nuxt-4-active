@@ -8,8 +8,11 @@ import { useCoinPurchase } from '~/composables/economy/useCoinPurchase'
 const store = useCoinPacksStore()
 // The store's `transactionUpdated` listener is app-wide (plugins/iap-restore.client.ts), not per panel.
 const { load, buy, restorePending } = useCoinPurchase()
+const { syncUser } = useUserSync()
 
 onMounted(async () => {
+  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
+  void syncUser()
   await load()
   // Silent safety net — the app-level plugin already restores on boot/login/
   // foreground; this just catches the panel being opened without one of

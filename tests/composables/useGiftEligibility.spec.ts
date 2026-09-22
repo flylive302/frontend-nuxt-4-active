@@ -15,10 +15,12 @@ beforeEach(async () => {
 
   const { useGiftStore } = await import('../../app/stores/gift')
   const { useRoomSeatsStore } = await import('../../app/stores/roomSeats')
+  const { useBalanceStore } = await import('../../app/stores/balance')
 
   // Provide real store factories as Nuxt auto-import globals
   ;(globalThis as Record<string, unknown>).useGiftStore = useGiftStore
   ;(globalThis as Record<string, unknown>).useRoomSeatsStore = useRoomSeatsStore
+  ;(globalThis as Record<string, unknown>).useBalanceStore = useBalanceStore
   // Auth store: plain mock — composable only reads user?.id, no reactivity needed
   ;(globalThis as Record<string, unknown>).useAuthStore = () => ({ user: { id: 1 } })
 })
@@ -27,6 +29,7 @@ afterEach(() => {
   Reflect.deleteProperty(globalThis, 'useGiftStore')
   Reflect.deleteProperty(globalThis, 'useAuthStore')
   Reflect.deleteProperty(globalThis, 'useRoomSeatsStore')
+  Reflect.deleteProperty(globalThis, 'useBalanceStore')
 })
 
 // ============================================================

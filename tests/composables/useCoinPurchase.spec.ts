@@ -72,9 +72,15 @@ function createMockCoinPacksStore() {
 
 function createMockAuthStore() {
   return {
-    patchBalance: vi.fn(),
     token: 'test-token' as string | null,
     user: { id: 7 } as { id: number } | null,
+  }
+}
+
+function createMockBalanceStore() {
+  return {
+    patch: vi.fn(),
+    apply: vi.fn(),
   }
 }
 
@@ -128,18 +134,21 @@ function makeTx(id: string, overrides: Partial<StoreTransaction> = {}): StoreTra
 let useCoinPurchase: typeof import('~/composables/economy/useCoinPurchase')['useCoinPurchase']
 let coinPacksStore: ReturnType<typeof createMockCoinPacksStore>
 let authStore: ReturnType<typeof createMockAuthStore>
+let balanceStore: ReturnType<typeof createMockBalanceStore>
 let mockToast: ReturnType<typeof createMockToast>
 let mockApiModule: ReturnType<typeof createMockApiModule>
 
 beforeEach(async () => {
   coinPacksStore = createMockCoinPacksStore()
   authStore = createMockAuthStore()
+  balanceStore = createMockBalanceStore()
   mockToast = createMockToast()
   mockApiModule = createMockApiModule()
 
   setupNuxtMocks({})
   ;(globalThis as Record<string, unknown>).useCoinPacksStore = () => coinPacksStore
   ;(globalThis as Record<string, unknown>).useAuthStore = () => authStore
+  ;(globalThis as Record<string, unknown>).useBalanceStore = () => balanceStore
   ;(globalThis as Record<string, unknown>).useToast = () => mockToast
   ;(globalThis as Record<string, unknown>).useApi = () => mockApiModule
 
@@ -151,6 +160,7 @@ afterEach(() => {
   cleanupNuxtMocks()
   Reflect.deleteProperty(globalThis, 'useCoinPacksStore')
   Reflect.deleteProperty(globalThis, 'useAuthStore')
+  Reflect.deleteProperty(globalThis, 'useBalanceStore')
   Reflect.deleteProperty(globalThis, 'useToast')
   Reflect.deleteProperty(globalThis, 'useApi')
   vi.restoreAllMocks()
@@ -255,7 +265,7 @@ describe('buy', () => {
       method: 'POST',
       body: expect.objectContaining({ transaction_id: 'tx-1', signed_transaction: 'jws-1' }),
     }))
-    expect(authStore.patchBalance).toHaveBeenCalledWith({ coins: '500' })
+    expect(balanceStore.patch).toHaveBeenCalledWith({ coins: '500' })
     expect(finishSpy).toHaveBeenCalled()
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('success')
   })
@@ -346,7 +356,7 @@ describe('buy', () => {
     expect(finishSpy).not.toHaveBeenCalled()
     expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('pending-store')
     expect(mockToast.add).not.toHaveBeenCalled()
-    expect(authStore.patchBalance).not.toHaveBeenCalled()
+    expect(balanceStore.patch).not.toHaveBeenCalled()
   })
 
   it('verify 200 already_pending (finish: false): NOT finished, no success toast/balance patch', async () => {
@@ -359,7 +369,7 @@ describe('buy', () => {
 
     expect(finishSpy).not.toHaveBeenCalled()
     expect(mockToast.add).not.toHaveBeenCalled()
-    expect(authStore.patchBalance).not.toHaveBeenCalled()
+    expect(balanceStore.patch).not.toHaveBeenCalled()
   })
 })
 
@@ -404,7 +414,7 @@ describe('restorePending', () => {
     expect(adapter.finished).toEqual([])
     expect(journal.snapshot('apple').settledIds.has('tx-1')).toBe(true)
     expect(journal.snapshot('apple').settledIds.has('tx-2')).toBe(false)
-    expect(authStore.patchBalance).toHaveBeenCalledWith({ coins: '700' })
+    expect(balanceStore.patch).toHaveBeenCalledWith({ coins: '700' })
     expect(mockToast.add).toHaveBeenCalledTimes(1)
     expect(mockToast.add).toHaveBeenCalledWith(expect.objectContaining({ title: 'Purchases restored' }))
   })
@@ -524,7 +534,7 @@ describe('restorePending', () => {
 
     expect(adapter.finished).toContain('tx-1')
     expect(mockToast.add).not.toHaveBeenCalled()
-    expect(authStore.patchBalance).not.toHaveBeenCalled()
+    expect(balanceStore.patch).not.toHaveBeenCalled()
   })
 
   it('buy + verify 503 keeps the journal entry; a later auto restore (empty store list) submits and credits it', async () => {

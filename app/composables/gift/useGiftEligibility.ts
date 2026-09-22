@@ -5,7 +5,7 @@ import type { RoomParticipant } from '~/types/room/audio'
 
 export function useGiftEligibility() {
   const giftStore = useGiftStore()
-  const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
   const seatsStore = useRoomSeatsStore()
 
   const eligibleRecipients = computed((): RoomParticipant[] => {
@@ -17,7 +17,7 @@ export function useGiftEligibility() {
   })
 
   const canAfford = computed(() => {
-    const coins = Number(authStore.user?.coins ?? 0)
+    const coins = balanceStore.coinsNumber
     return coins >= giftStore.totalCost
   })
 

@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   setupNuxtMocks,
   cleanupNuxtMocks,
-  createMockAuthStore,
+  createMockBalanceStore,
   createMockBootstrapStore,
   createMockLevelUpWatermarkStore,
 } from '../helpers/nuxtMocks'
@@ -46,7 +46,7 @@ function xpForLevel(level: number): string {
 }
 
 describe('useLevelUpDrain', () => {
-  let authStore: ReturnType<typeof createMockAuthStore>
+  let balanceStore: ReturnType<typeof createMockBalanceStore>
   let bootstrapStore: ReturnType<typeof createMockBootstrapStore>
   let watermarkStore: ReturnType<typeof createMockLevelUpWatermarkStore>
 
@@ -56,10 +56,8 @@ describe('useLevelUpDrain', () => {
       sortedCharmLevels: LEVELS,
     })
     watermarkStore = createMockLevelUpWatermarkStore()
-    authStore = createMockAuthStore({
-      user: { id: 1, name: 'Test User', wealth_xp: xpForLevel(1), charm_xp: xpForLevel(1) },
-    })
-    setupNuxtMocks({ bootstrapStore, authStore, levelUpWatermarkStore: watermarkStore })
+    balanceStore = createMockBalanceStore({ wealthXp: xpForLevel(1), charmXp: xpForLevel(1) })
+    setupNuxtMocks({ bootstrapStore, balanceStore, levelUpWatermarkStore: watermarkStore })
 
     const mod = await import('~/composables/progression/useLevelUpDrain')
     useLevelUpDrain = mod.useLevelUpDrain
@@ -72,7 +70,7 @@ describe('useLevelUpDrain', () => {
 
   it('shows no modal when the derived current level is at or below the watermark', () => {
     watermarkStore.wealthLevelSeen = 3
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(3)
+    balanceStore.wealthXp = xpForLevel(3)
 
     const { drain, currentModal } = useLevelUpDrain()
     drain('wealth')
@@ -83,7 +81,7 @@ describe('useLevelUpDrain', () => {
 
   it('shows one modal per crossed level when the count is within the cap', () => {
     watermarkStore.wealthLevelSeen = 0
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(2)
+    balanceStore.wealthXp = xpForLevel(2)
 
     const { drain, currentModal, closeModal } = useLevelUpDrain()
     drain('wealth')
@@ -104,7 +102,7 @@ describe('useLevelUpDrain', () => {
 
   it('caps at 2 individual modals + 1 summary when more levels than the cap were crossed', () => {
     watermarkStore.wealthLevelSeen = 0
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(12)
+    balanceStore.wealthXp = xpForLevel(12)
 
     const { drain, currentModal, closeModal } = useLevelUpDrain()
     drain('wealth')
@@ -132,7 +130,7 @@ describe('useLevelUpDrain', () => {
 
   it('boundary: shows exactly 3 individual modals with no summary when crossed count equals the cap', () => {
     watermarkStore.wealthLevelSeen = 0
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(3)
+    balanceStore.wealthXp = xpForLevel(3)
 
     const { drain, currentModal, closeModal } = useLevelUpDrain()
     drain('wealth')
@@ -149,7 +147,7 @@ describe('useLevelUpDrain', () => {
 
   it('boundary: collapses to 2 individual + 1 summary as soon as crossed count exceeds the cap', () => {
     watermarkStore.wealthLevelSeen = 0
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(4)
+    balanceStore.wealthXp = xpForLevel(4)
 
     const { drain, currentModal, closeModal } = useLevelUpDrain()
     drain('wealth')
@@ -168,7 +166,7 @@ describe('useLevelUpDrain', () => {
 
   it('advances the watermark to the fully-derived current level even when capped', () => {
     watermarkStore.wealthLevelSeen = 5
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(10)
+    balanceStore.wealthXp = xpForLevel(10)
 
     const { drain } = useLevelUpDrain()
     drain('wealth')
@@ -178,7 +176,7 @@ describe('useLevelUpDrain', () => {
 
   it('first run: collapses an existing user\'s whole history into one summary modal', () => {
     watermarkStore.wealthLevelSeen = null
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(12)
+    balanceStore.wealthXp = xpForLevel(12)
 
     const { drain, currentModal, closeModal } = useLevelUpDrain()
     drain('wealth')
@@ -202,7 +200,7 @@ describe('useLevelUpDrain', () => {
       required_xp: l.level * 100,
     }))
     watermarkStore.wealthLevelSeen = null
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = '0'
+    balanceStore.wealthXp = '0'
 
     const { drain, currentModal } = useLevelUpDrain()
     drain('wealth')
@@ -215,7 +213,7 @@ describe('useLevelUpDrain', () => {
   it('after a first run initialises the mark, later visits use the normal cap rule', () => {
     // Visit 1: fresh device, user already at level 5 -> one summary.
     watermarkStore.wealthLevelSeen = null
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(5)
+    balanceStore.wealthXp = xpForLevel(5)
 
     const first = useLevelUpDrain()
     first.drain('wealth')
@@ -224,7 +222,7 @@ describe('useLevelUpDrain', () => {
 
     // Visit 2: mark now persisted at 5, user climbs to 8 -> 3 individual modals.
     watermarkStore.wealthLevelSeen = 5
-    ;(authStore.user as { wealth_xp: string }).wealth_xp = xpForLevel(8)
+    balanceStore.wealthXp = xpForLevel(8)
 
     const second = useLevelUpDrain()
     second.drain('wealth')
@@ -242,8 +240,8 @@ describe('useLevelUpDrain', () => {
   it('own-track only: a wealth drain never reads or advances charm watermark state', () => {
     watermarkStore.wealthLevelSeen = 0
     watermarkStore.charmLevelSeen = 0
-    ;(authStore.user as { wealth_xp: string; charm_xp: string }).wealth_xp = xpForLevel(2)
-    ;(authStore.user as { wealth_xp: string; charm_xp: string }).charm_xp = xpForLevel(8)
+    balanceStore.wealthXp = xpForLevel(2)
+    balanceStore.charmXp = xpForLevel(8)
 
     const { drain } = useLevelUpDrain()
     drain('wealth')

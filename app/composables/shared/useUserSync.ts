@@ -24,6 +24,7 @@ let inflight: Promise<void> | null = null
 export function useUserSync() {
   const { api } = useApi()
   const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
   const badgesStore = useBadgesStore()
 
   /**
@@ -43,11 +44,12 @@ export function useUserSync() {
 
   async function run(): Promise<void> {
     // The response is a snapshot taken server-side at request time. Any
-    // seq-guarded balance push (`applyBalance`) that lands while we await is
-    // newer than that snapshot; replacing the user wholesale would roll the
-    // balance back until the next push. Remember where the seq was and, if it
-    // moved, keep the store's balance fields instead of the response's.
-    const seqAtStart = authStore.lastBalanceSeq
+    // seq-guarded balance push (`balanceStore.apply`) that lands while we
+    // await is newer than that snapshot; seeding the balance store from it
+    // wholesale would roll the balance back until the next push. Remember
+    // where the seq was and only seed the balance store if nothing pushed
+    // mid-flight — otherwise keep whatever the push left in place.
+    const seqAtStart = balanceStore.seq
 
     try {
       const response = await api<{ data: BootstrapUser }>('/auth/user')
@@ -55,19 +57,8 @@ export function useUserSync() {
       // Logged out (or switched user) while in flight — stale, drop it.
       if (!authStore.token) return
 
-      let next = response.data
-      const current = authStore.user
-      if (current && authStore.lastBalanceSeq > seqAtStart) {
-        next = {
-          ...next,
-          coins: current.coins,
-          diamonds: current.diamonds,
-          wealth_xp: current.wealth_xp,
-          charm_xp: current.charm_xp,
-        }
-      }
-
-      authStore.setUser(next)
+      authStore.setUser(response.data)
+      if (balanceStore.seq === seqAtStart) balanceStore.seed(response.data)
       badgesStore.setEquippedBadges(response.data.equipped_badges)
       badgesStore.setBadgeSlotLimit(response.data.badge_slot_limit)
     } catch (e) {

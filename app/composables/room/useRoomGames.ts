@@ -44,6 +44,7 @@ export interface UseRoomGamesReturn {
 export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesReturn {
   const { api, normalizeError } = useApi();
   const authStore = useAuthStore();
+  const balanceStore = useBalanceStore();
   const bootstrapStore = useBootstrapStore();
   const roomStore = useRoomStore();
   const router = useRouter();
@@ -83,13 +84,13 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
    * The player's WEALTH level, derived from their XP against the bootstrap level
    * table — there is no `wealth_level` field on the user, only `wealth_xp`.
    *
-   * Reads `authStore.user.wealth_xp`, which `patchBalance` keeps current, so the
+   * Reads `balanceStore.wealthXp`, which `apply`/`patch` keep current, so the
    * button appears on its own the moment a player crosses the threshold mid-room.
    * Returns 0 while bootstrap is still loading, which fails closed like the kill
    * switch below.
    */
   const wealthLevel = computed<number>(
-    () => getLevelFromXp(authStore.user?.wealth_xp, 'wealth').level,
+    () => getLevelFromXp(balanceStore.wealthXp, 'wealth').level,
   );
 
   /**
@@ -241,7 +242,7 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
    * send leaves the player looking at a stale number.
    */
   watch(
-    () => authStore.user?.coins,
+    () => balanceStore.coins,
     (next, previous) => {
       if (next === previous) {
         return;

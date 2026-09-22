@@ -32,6 +32,7 @@ const emitProfileSync = createTrailingThrottle<{ wealth_xp: string; charm_xp: st
 
 export function useLevelActions() {
   const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
   const participantsStore = useRoomParticipantsStore()
 
   // ========================================
@@ -46,8 +47,8 @@ export function useLevelActions() {
     // GATE — require authenticated user
     if (!authStore.user) return
 
-    // EXECUTE — update auth store XP
-    authStore.user.wealth_xp = String(currentXp)
+    // EXECUTE — update balance store XP
+    balanceStore.patch({ wealth_xp: String(currentXp) })
   }
 
   /**
@@ -58,8 +59,8 @@ export function useLevelActions() {
     // GATE — require authenticated user
     if (!authStore.user) return
 
-    // EXECUTE — update auth store XP
-    authStore.user.charm_xp = String(currentXp)
+    // EXECUTE — update balance store XP
+    balanceStore.patch({ charm_xp: String(currentXp) })
   }
 
   /**

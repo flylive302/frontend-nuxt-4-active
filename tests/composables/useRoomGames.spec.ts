@@ -11,6 +11,7 @@ import {
   setupNuxtMocks,
   cleanupNuxtMocks,
   createMockAuthStore,
+  createMockBalanceStore,
   createMockBootstrapStore,
 } from '../helpers/nuxtMocks'
 import { MIN_WEALTH_LEVEL_FOR_GAMES } from '~/constants/games'
@@ -48,14 +49,18 @@ async function loadCanPlay(options: {
   } = options
 
   const authStore = createMockAuthStore({
-    user: userId === null ? null : { id: userId, name: 'Test User', wealth_xp: wealthXp, charm_xp: '0' },
+    user: userId === null ? null : { id: userId, name: 'Test User' },
+  })
+  const balanceStore = createMockBalanceStore({
+    wealthXp,
+    charmXp: '0',
   })
   const bootstrapStore = createMockBootstrapStore({
     gamesEnabled,
     isReady: bootstrapReady,
   })
 
-  setupNuxtMocks({ authStore, bootstrapStore })
+  setupNuxtMocks({ authStore, balanceStore, bootstrapStore })
 
   // Auto-imports `useRoomGames` relies on that the shared helper does not provide.
   const { useLevelLookup } = await import('~/composables/shared/useLevelLookup')

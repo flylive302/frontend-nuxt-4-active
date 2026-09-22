@@ -49,7 +49,11 @@ function createMockCoinPacksStore() {
 }
 
 function createMockAuthStore() {
-  return { patchBalance: vi.fn() }
+  return {}
+}
+
+function createMockBalanceStore() {
+  return { patch: vi.fn(), apply: vi.fn() }
 }
 
 function createMockToast() {
@@ -79,18 +83,21 @@ function createMockApiModule() {
 let useCoinPurchase: typeof import('~/composables/economy/useCoinPurchase')['useCoinPurchase']
 let coinPacksStore: ReturnType<typeof createMockCoinPacksStore>
 let authStore: ReturnType<typeof createMockAuthStore>
+let balanceStore: ReturnType<typeof createMockBalanceStore>
 let mockToast: ReturnType<typeof createMockToast>
 let mockApiModule: ReturnType<typeof createMockApiModule>
 
 beforeEach(async () => {
   coinPacksStore = createMockCoinPacksStore()
   authStore = createMockAuthStore()
+  balanceStore = createMockBalanceStore()
   mockToast = createMockToast()
   mockApiModule = createMockApiModule()
 
   setupNuxtMocks({})
   ;(globalThis as Record<string, unknown>).useCoinPacksStore = () => coinPacksStore
   ;(globalThis as Record<string, unknown>).useAuthStore = () => authStore
+  ;(globalThis as Record<string, unknown>).useBalanceStore = () => balanceStore
   ;(globalThis as Record<string, unknown>).useToast = () => mockToast
   ;(globalThis as Record<string, unknown>).useApi = () => mockApiModule
 
@@ -102,6 +109,7 @@ afterEach(() => {
   cleanupNuxtMocks()
   Reflect.deleteProperty(globalThis, 'useCoinPacksStore')
   Reflect.deleteProperty(globalThis, 'useAuthStore')
+  Reflect.deleteProperty(globalThis, 'useBalanceStore')
   Reflect.deleteProperty(globalThis, 'useToast')
   Reflect.deleteProperty(globalThis, 'useApi')
   vi.restoreAllMocks()

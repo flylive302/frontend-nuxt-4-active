@@ -88,6 +88,7 @@ export function useCoinPurchase(
 ) {
   const store = useCoinPacksStore()
   const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
   const { api, normalizeError } = useApi()
   const toast = useToast()
 
@@ -217,7 +218,7 @@ export function useCoinPurchase(
       }
 
       if (data.balance !== null && data.balance !== undefined) {
-        authStore.patchBalance({ coins: String(data.balance) })
+        balanceStore.patch({ coins: String(data.balance) })
       }
       store.setLastPurchase(data.purchase)
       store.setStatus('success')
@@ -388,7 +389,7 @@ export function useCoinPurchase(
       }
 
       if (latestBalance !== null) {
-        authStore.patchBalance({ coins: String(latestBalance) })
+        balanceStore.patch({ coins: String(latestBalance) })
       }
 
       if (creditedCount > 0) {

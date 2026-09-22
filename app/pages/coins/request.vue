@@ -16,12 +16,13 @@ definePageMeta({
 // ========================================
 // Composables
 // ========================================
-const authStore = useAuthStore()
+const balanceStore = useBalanceStore()
 // App Store 3.1.1: no coin-request UI on iOS. Android native: shown only
 // once in-store purchase is confirmed impossible (Google catalog 404s, or no
 // billing plugin in this shell) — fails closed while loading or on error.
 // Web: unchanged, always shown.
 const { showCoinRequests } = useCoinRequestVisibility()
+const { syncUser } = useUserSync()
 
 // ========================================
 // State
@@ -63,6 +64,8 @@ watch(lastCoinRequestUpdate, () => {
 // `showCoinRequests`'s "confirmed 404" signal resolves even if the panel is
 // ever made conditional independently of this page.
 onMounted(() => {
+  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
+  void syncUser()
   if (storeFor() !== null) {
     useCoinPurchase().load()
   }
@@ -90,7 +93,7 @@ onMounted(() => {
           </h1>
           <p class="text-2xl font-bold flex justify-center items-center gap-1">
             <UIcon name="i-streamline-ultimate-color-accounting-coins" class="size-6" />
-            {{ formatCurrency(authStore.user?.coins) }}
+            {{ formatCurrency(balanceStore.coins) }}
           </p>
         </div>
       </div>

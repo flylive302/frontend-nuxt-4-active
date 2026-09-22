@@ -16,13 +16,6 @@ export const useAuthStore = defineStore('auth', () => {
   const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle')
   /** Populated by force-disconnect event; consumed by /blocked page */
   const suspensionInfo = ref<{ reason: string; until: string | null } | null>(null)
-  /**
-   * High watermark for `applyBalance` (gift-authority-tick-fanout ticket 13).
-   * The `seq` is a monotonic per-user ledger counter minted server-side in
-   * Redis (MSAB `domains/gift/ledger.lua-scripts.ts`) — durable across a
-   * socket reconnect, so this is reset only on logout, never on reconnect.
-   */
-  const lastBalanceSeq = ref(0)
 
   // ========================================
   // Getters
@@ -38,16 +31,10 @@ export const useAuthStore = defineStore('auth', () => {
    * Update the authenticated user.
    */
   function setUser(newUser: BootstrapUser | null) {
-    // A user switch that lands here WITHOUT going through logout() first
-    // (e.g. a fresh login while a previous session's user was still set)
-    // must not carry over the previous user's `lastBalanceSeq` watermark —
-    // that seq is per-user, so reusing it would drop every one of the new
-    // user's balance pushes/acks as "not newer," freezing their balance.
-    // A same-user re-set (self-heal resync) must NOT reset it, or an
-    // in-flight ack/push race could re-apply a seq the store already saw.
-    if (newUser && user.value && newUser.id !== user.value.id) {
-      lastBalanceSeq.value = 0
-    }
+    // The balance fields on `newUser` (coins/diamonds/XP) are a SNAPSHOT only.
+    // Live balance lives in `useBalanceStore()`; a user-identity change here
+    // is what seeds/resets it (plugins/balance-seed.client.ts). Never read
+    // `user.coins` etc. for display or gating.
     user.value = newUser
     status.value = newUser ? 'authenticated' : 'unauthenticated'
   }
@@ -83,7 +70,6 @@ export const useAuthStore = defineStore('auth', () => {
     setMsabToken(null)
     status.value = 'unauthenticated'
     suspensionInfo.value = null
-    lastBalanceSeq.value = 0
   }
 
   /**
@@ -92,54 +78,6 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function setSuspensionInfo(info: { reason: string; until: string | null }) {
     suspensionInfo.value = info
-  }
-
-  function updateBalance(balance: {
-    coins: string
-    diamonds: string
-    wealth_xp: string
-    charm_xp: string
-  }) {
-    if (user.value) {
-      user.value = { ...user.value, coins: balance.coins, diamonds: balance.diamonds, wealth_xp: balance.wealth_xp, charm_xp: balance.charm_xp }
-    }
-  }
-
-  function patchBalance(partial: Partial<Pick<BootstrapUser, 'coins' | 'diamonds' | 'wealth_xp' | 'charm_xp'>>) {
-    if (user.value) {
-      user.value = { ...user.value, ...partial }
-    }
-  }
-
-  /**
-   * Sequence-guarded balance setter (gift-authority-tick-fanout ticket 13).
-   * A no-op when `seq` is not strictly newer than the last applied one — this
-   * is what makes ack-then-push and push-then-ack converge on the same
-   * number instead of the later-arriving (but possibly older) message
-   * clobbering the fresher one. Only patches the keys actually present, so an
-   * ack carrying `coins` alone never wipes diamonds/XP.
-   *
-   * This is the ONLY setter that should be used once `ackBalance` is
-   * advertised — `patchBalance`/`updateBalance` remain for the legacy
-   * (no-capability) path, which never has a `seq` to guard with.
-   */
-  function applyBalance(balance: {
-    coins?: string
-    diamonds?: string
-    wealth_xp?: string
-    charm_xp?: string
-    seq: number
-  }): void {
-    if (balance.seq <= lastBalanceSeq.value) return
-    lastBalanceSeq.value = balance.seq
-
-    if (!user.value) return
-    const patch: Partial<BootstrapUser> = {}
-    if (balance.coins !== undefined) patch.coins = balance.coins
-    if (balance.diamonds !== undefined) patch.diamonds = balance.diamonds
-    if (balance.wealth_xp !== undefined) patch.wealth_xp = balance.wealth_xp
-    if (balance.charm_xp !== undefined) patch.charm_xp = balance.charm_xp
-    user.value = { ...user.value, ...patch }
   }
 
   function patchVip(vip: { vip_level: number; vip_level_id: number | null; vip_expires_at: string | null }) {
@@ -188,16 +126,12 @@ export const useAuthStore = defineStore('auth', () => {
     msabToken,
     status,
     suspensionInfo,
-    lastBalanceSeq,
     isAuthenticated,
     setUser,
     setToken,
     setMsabToken,
     logout,
     setSuspensionInfo,
-    updateBalance,
-    patchBalance,
-    applyBalance,
     patchVip,
     patchProfile,
     incrementFollowers,

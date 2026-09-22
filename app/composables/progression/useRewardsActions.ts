@@ -17,7 +17,7 @@ export function useRewardsActions() {
   const store = useRewardsStore()
   const { api, normalizeError } = useApi()
   const toast = useToast()
-  const authStore = useAuthStore()
+  const balanceStore = useBalanceStore()
 
   async function fetchPending(params: GetRewardsParams = {}, reset = false): Promise<void> {
     if (reset) store.resetPendingPagination()
@@ -107,7 +107,7 @@ export function useRewardsActions() {
       store.applyClaimSuccess(rewardId)
 
       if (response.data.new_balance) {
-        authStore.patchBalance({
+        balanceStore.patch({
           ...(response.data.new_balance.coins && { coins: response.data.new_balance.coins }),
           ...(response.data.new_balance.diamonds && { diamonds: response.data.new_balance.diamonds }),
         })

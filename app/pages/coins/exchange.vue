@@ -22,16 +22,19 @@ definePageMeta({
 // Composables / Injected Dependencies
 // ========================================
 
-const authStore = useAuthStore()
+const balanceStore = useBalanceStore()
 const { submitExchange: postExchange, normalizeError } = useDiamondExchangeApi()
 const toast = useToast()
 const { exchangeInfo, isLoading, open } = useDiamondExchangePage()
+const { syncUser } = useUserSync()
 
 // ========================================
 // Access Control + Data Load
 // ========================================
 
 onMounted(() => {
+  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
+  void syncUser()
   open()
 })
 
@@ -67,8 +70,7 @@ const isSubmitting = ref(false)
  */
 const userDiamonds = computed((): number => {
   if (exchangeInfo.value) return exchangeInfo.value.user_diamonds_balance
-  const diamonds = authStore.user?.diamonds
-  return typeof diamonds === 'string' ? parseFloat(diamonds) : (diamonds ?? 0)
+  return balanceStore.diamondsNumber
 })
 
 /**
@@ -78,8 +80,7 @@ const userCoins = computed((): number => {
   if (exchangeInfo.value) {
     return parseFloat(exchangeInfo.value.user_coins_balance)
   }
-  const coins = authStore.user?.coins
-  return typeof coins === 'string' ? parseFloat(coins) : (coins ?? 0)
+  return balanceStore.coinsNumber
 })
 
 /**

@@ -25,6 +25,7 @@ definePageMeta({
 // ========================================
 
 const authStore = useAuthStore()
+const balanceStore = useBalanceStore()
 const agencyStore = useAgencyStore()
 const badgesStore = useBadgesStore()
 const { getBadgeFromXp } = useLevelLookup()
@@ -39,8 +40,8 @@ const { checkPastRuns } = useIncomeActions()
 // Ex-members with past runs keep access to their income history.
 const showIncomeLink = computed(() => agencyStore.isAgencyMember || incomeStore.hasAnyRun)
 
-const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(authStore.user?.wealth_xp, 'wealth'))
-const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(authStore.user?.charm_xp, 'charm'))
+const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(balanceStore.wealthXp, 'wealth'))
+const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(balanceStore.charmXp, 'charm'))
 
 // ========================================
 // Lifecycle
@@ -59,6 +60,7 @@ onMounted(() => {
   // when others view us). Re-sync the auth user so the stats reflect visits that
   // landed since bootstrap. Fire-and-forget: the stale value renders instantly
   // and snaps to fresh when this resolves (also self-heals balance/xp/badges).
+  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
   void syncUser()
 })
 
@@ -205,8 +207,8 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         <div class="rounded-xl glowing-border overflow-hidden relative z-10 my-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
           <UserStats
               class="mt-2"
-              :wealth-xp="authStore.user?.wealth_xp ?? '0'"
-              :charm-xp="authStore.user?.charm_xp ?? '0'"
+              :wealth-xp="balanceStore.wealthXp ?? '0'"
+              :charm-xp="balanceStore.charmXp ?? '0'"
               :followers="String(authStore.user?.followers_count ?? 0)"
               :following="String(authStore.user?.following_count ?? 0)"
               :visits="String(authStore.user?.profile_visits ?? 0)"

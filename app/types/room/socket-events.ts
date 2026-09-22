@@ -23,8 +23,8 @@ export interface BalanceUpdatedPayload {
    * Monotonic per-user ledger sequence, present only when the connection
    * advertised `ackBalance` (see `server:capabilities`). When present, `coins`
    * is already the spendable balance and this push must go through
-   * `authStore.applyBalance` so an out-of-order push can never move the
-   * balance backwards. Absent ⇒ legacy path (`authStore.updateBalance`).
+   * `useBalanceStore().apply` so an out-of-order push can never move the
+   * balance backwards. Absent ⇒ legacy path (`useBalanceStore().patch`).
    */
   seq?: number
 }
