@@ -2,9 +2,13 @@
 // useAvatarStillFrame Composable Tests
 // ========================================
 // Bridges UserAvatar's `staticFrame` prop to the svgaStillFrame service via
-// useNuxtApp().$svga. Covers: resolves a still on URL change, clears while
-// loading a new URL, ignores a stale response after the URL moved on, and
-// no-ops gracefully when the svga plugin isn't available.
+// useNuxtApp().$svga. Covers: resolves a still on URL change, clears
+// immediately when the URL changes to a DIFFERENT frame, keeps the existing
+// still when the URL goes null/undefined (android-client-performance/16: a
+// seat flipping animated → still briefly re-requests the same URL), skips
+// re-resolving when the URL returns to the one already rendered, ignores a
+// stale response after the URL moved on, and no-ops gracefully when the svga
+// plugin isn't available.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
@@ -85,6 +89,75 @@ describe('useAvatarStillFrame', () => {
     resolveFirst('stale-still')
     await nextTick()
     expect(stillUrl.value).toBe('second-still')
+    scope.stop()
+  })
+
+  it('keeps the resolved still when the URL goes null/undefined (android-client-performance/16)', async () => {
+    getSvgaStillFrameMock.mockResolvedValue('still-for-x')
+    const scope = effectScope()
+    const url = ref<string | undefined>('url-x')
+
+    const { stillUrl } = scope.run(() => useAvatarStillFrame(url))!
+    await nextTick()
+    await nextTick()
+    expect(stillUrl.value).toBe('still-for-x')
+
+    url.value = undefined
+    await nextTick()
+
+    expect(stillUrl.value).toBe('still-for-x')
+    scope.stop()
+  })
+
+  it('does not re-resolve when the URL returns to the one already rendered', async () => {
+    getSvgaStillFrameMock.mockResolvedValue('still-for-x')
+    const scope = effectScope()
+    const url = ref<string | undefined>('url-x')
+
+    const { stillUrl } = scope.run(() => useAvatarStillFrame(url))!
+    await nextTick()
+    await nextTick()
+    expect(stillUrl.value).toBe('still-for-x')
+
+    url.value = undefined
+    await nextTick()
+    expect(stillUrl.value).toBe('still-for-x')
+
+    url.value = 'url-x'
+    await nextTick()
+    await nextTick()
+
+    expect(stillUrl.value).toBe('still-for-x')
+    expect(getSvgaStillFrameMock).toHaveBeenCalledTimes(1)
+    scope.stop()
+  })
+
+  it('clears to null immediately when the URL changes to a different frame, then resolves the new still', async () => {
+    let resolveY: (v: string | null) => void = () => {}
+    getSvgaStillFrameMock.mockResolvedValueOnce('still-for-x')
+    getSvgaStillFrameMock.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveY = resolve }),
+    )
+
+    const scope = effectScope()
+    const url = ref<string | undefined>('url-x')
+    const { stillUrl } = scope.run(() => useAvatarStillFrame(url))!
+    await nextTick()
+    await nextTick()
+    expect(stillUrl.value).toBe('still-for-x')
+
+    url.value = 'url-y'
+    await nextTick()
+
+    // Cleared immediately, before url-y's still resolves — one user must
+    // never wear another's frame, even for a tick.
+    expect(stillUrl.value).toBeNull()
+
+    resolveY('still-for-y')
+    await nextTick()
+    await nextTick()
+
+    expect(stillUrl.value).toBe('still-for-y')
     scope.stop()
   })
 

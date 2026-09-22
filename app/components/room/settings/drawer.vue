@@ -11,6 +11,8 @@
 // - Music     → RoomAudioPlayerUploader (owner/admin; force-take owner only)
 // - Audio     → RoomSettingsAudioDrawer (everyone; mic noise-filter mode)
 // - Gift Mute / Entry Mute → in-place per-device FX toggles (everyone)
+// - Frames    → animated seat avatar frames switch (everyone; still by
+//               default on ≤ 4 GB phones — android-client-performance/16)
 // ========================================
 
 // ========================================
@@ -32,6 +34,7 @@ const showAudio = ref(false)
 const roomStore = useRoomStore()
 const fxPrefs = useFxPreferencesStore()
 const { socket } = useAudioSocket()
+const { frameAnimationEnabled, toggleFrameAnimation } = useFrameAnimationBudget()
 const { canEdit, isRoomOwner, refresh, refreshOwnRole } = useRoomMembershipState(
   () => roomStore.currentRoom?.id ?? null
 )
@@ -202,6 +205,26 @@ watch(open, (isOpen) => {
             />
             <span class="text-xs" :class="fxPrefs.muteEntryAnimations ? 'text-primary' : 'text-neutral-200'">
               {{ fxPrefs.muteEntryAnimations ? 'Entries Muted' : 'Entry Mute' }}
+            </span>
+          </button>
+
+          <!-- Frames (everyone; in-place toggle, highlighted while frames are still) -->
+          <button
+            type="button"
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
+            :class="!frameAnimationEnabled
+              ? 'bg-primary/20 ring-2 ring-primary'
+              : 'bg-neutral-800 hover:bg-neutral-700'"
+            :aria-pressed="!frameAnimationEnabled"
+            @click="toggleFrameAnimation"
+          >
+            <UIcon
+              name="i-lucide-sparkles"
+              class="size-7"
+              :class="!frameAnimationEnabled ? 'text-primary' : 'text-neutral-400'"
+            />
+            <span class="text-xs" :class="!frameAnimationEnabled ? 'text-primary' : 'text-neutral-200'">
+              {{ frameAnimationEnabled ? 'Frames' : 'Frames Off' }}
             </span>
           </button>
         </div>

@@ -7,10 +7,12 @@
  * cached still-frame (`staticFrame` on UserAvatar).
  *
  * Rules:
- *  - Hard cap (default FRAME_ANIMATION_BUDGET = 4) on concurrently animated
- *    frames. android-client-performance/14: measured 2026-09-23 on Oppo A6x —
- *    13 live SVGA canvases put the main thread at 96% busy; speakers keep
- *    priority, everyone else shows the cached still frame.
+ *  - Hard cap on concurrently animated frames, passed to every `compute()`
+ *    call because it changes at runtime (device tier × user switch —
+ *    `utils/frame-animation-tier.ts`, android-client-performance/16). A cap
+ *    of 0 admits nobody: every seat shows its cached still frame.
+ *    android-client-performance/14: measured 2026-09-23 on Oppo A6x — 13 live
+ *    SVGA canvases put the main thread at 96% busy; speakers keep priority.
  *  - Active speakers are admitted first (seat-index order among speakers).
  *  - Remaining slots: seats that were ALREADY animating keep their slot
  *    (stability — an unrelated seat joining/leaving or an unrelated speaker
@@ -21,8 +23,6 @@
  * only state is the previous selection, kept for the no-thrash guarantee.
  * `compute()` is idempotent for an unchanged roster.
  */
-import { FRAME_ANIMATION_BUDGET } from '~/constants/room';
-
 export interface EligibleFrameSeat {
   /** 0-based seat index. */
   seatIndex: number;
@@ -33,9 +33,10 @@ export interface EligibleFrameSeat {
 export interface FrameAnimationBudget {
   /**
    * Decide the set of seat indices allowed to animate, given every occupied
-   * seat that has an equipped frame. Returns a new Set on every call.
+   * seat that has an equipped frame and the cap in force for this tick.
+   * Returns a new Set on every call.
    */
-  compute(eligible: readonly EligibleFrameSeat[]): ReadonlySet<number>;
+  compute(eligible: readonly EligibleFrameSeat[], cap: number): ReadonlySet<number>;
   /** Forget the previous selection (e.g. on room leave). */
   reset(): void;
   /**
@@ -46,13 +47,16 @@ export interface FrameAnimationBudget {
   readonly activeCount: number;
 }
 
-export function createFrameAnimationBudget(
-  cap: number = FRAME_ANIMATION_BUDGET,
-): FrameAnimationBudget {
+export function createFrameAnimationBudget(): FrameAnimationBudget {
   let previous = new Set<number>();
 
   return {
-    compute(eligible: readonly EligibleFrameSeat[]): ReadonlySet<number> {
+    compute(eligible: readonly EligibleFrameSeat[], cap: number): ReadonlySet<number> {
+      if (cap <= 0) {
+        previous = new Set<number>();
+        return previous;
+      }
+
       const byIndex = [...eligible].sort((a, b) => a.seatIndex - b.seatIndex);
       const next = new Set<number>();
 
