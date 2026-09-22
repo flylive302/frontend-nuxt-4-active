@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { FRAME_ANIMATION_BUDGET } from '~/constants/room';
 import { createFrameAnimationBudget } from '~/utils/frame-animation-budget';
 
-// room-battery-perf/02: pure budget module — cap 15, speakers first, seat-index
-// fill, and no-thrash stability under roster churn.
+// room-battery-perf/02: pure budget module — cap FRAME_ANIMATION_BUDGET, speakers
+// first, seat-index fill, and no-thrash stability under roster churn.
 
 function seats(indices: number[], speakers: number[] = []) {
   const speakerSet = new Set(speakers);
@@ -18,17 +19,17 @@ describe('createFrameAnimationBudget', () => {
     expect([...selected].sort((a, b) => a - b)).toEqual([0, 3, 7]);
   });
 
-  it('selects exactly 15 when more than 15 framed seats are eligible', () => {
+  it('selects exactly FRAME_ANIMATION_BUDGET when more framed seats are eligible', () => {
     const budget = createFrameAnimationBudget();
     const selected = budget.compute(seats(range(30)));
-    expect(selected.size).toBe(15);
+    expect(selected.size).toBe(FRAME_ANIMATION_BUDGET);
   });
 
   it('always includes active speakers ahead of non-speaking seats', () => {
     const budget = createFrameAnimationBudget();
     // 30 eligible; speakers sit at high indices that plain index-order would drop.
     const selected = budget.compute(seats(range(30), [25, 28, 29]));
-    expect(selected.size).toBe(15);
+    expect(selected.size).toBe(FRAME_ANIMATION_BUDGET);
     expect(selected.has(25)).toBe(true);
     expect(selected.has(28)).toBe(true);
     expect(selected.has(29)).toBe(true);

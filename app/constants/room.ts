@@ -45,8 +45,11 @@ export const ROOM_RANK_BADGE = {
  * Max seats allowed to run a LIVE animated avatar-frame concurrently
  * (room-battery-perf/02). Active speakers get priority; seats over budget
  * render the cached still-frame instead.
+ * android-client-performance/14: measured 2026-09-23 on Oppo A6x — 13 live
+ * SVGA canvases put the main thread at 96% busy; speakers keep priority,
+ * everyone else shows the cached still frame.
  */
-export const FRAME_ANIMATION_BUDGET = 15;
+export const FRAME_ANIMATION_BUDGET = 4;
 
 // ============================================
 // Home Feed

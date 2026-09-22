@@ -13,6 +13,9 @@ import { SystemBarsStyle } from '@capacitor-community/safe-area'
  */
 const config: CapacitorConfig = {
     appId: 'com.flylive.app',
+    // WebView inspectable ONLY for local perf-trace builds (android-client-performance/13):
+    // `CAP_DEBUG_WEBVIEW=1 npm run cap:build`. Never set in release/CI builds.
+    android: { webContentsDebuggingEnabled: process.env.CAP_DEBUG_WEBVIEW === '1' },
     appName: 'FlyLive',
     webDir: '.output/public',
     plugins: {

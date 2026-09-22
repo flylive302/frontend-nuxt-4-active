@@ -15,7 +15,7 @@ import { useMediasoupSessionStore } from '~/stores/mediasoupSession';
 import { useAudioPreferencesStore } from '~/stores/audioPreferences';
 import { resolveNoiseFilter, isAudioWorkletSupported } from '~/utils/audio/resolve-noise-filter';
 import { classifyDeviceClass, readDeviceCapabilities } from '~/utils/device-class';
-import { attachNoiseFilter, detachNoiseFilter } from './useMicNoiseFilter';
+import { attachNoiseFilter, detachNoiseFilter, rewireNoiseFilter } from './useMicNoiseFilter';
 
 /** Module-scoped: the noise-filter preference watcher is installed once per page. */
 let _noiseFilterWatcherInstalled = false;
@@ -32,6 +32,12 @@ let _micSourceNode: MediaStreamAudioSourceNode | null = null;
 let _micGainNode: GainNode | null = null;
 let _micDestinationNode: MediaStreamAudioDestinationNode | null = null;
 let _micVisibilityHandler: (() => void) | null = null;
+// Whether this pipeline's graph wants RNNoise attached when unmuted (set from
+// `resolveEffectiveNoiseFilter()` at build time). `null` = no bypass applied
+// yet this pipeline (forces the first `applyNoiseFilterForMute` call to run
+// even if it matches the initial state).
+let _micNoiseFilterWanted = false;
+let _micFilterBypassed: boolean | null = null;
 
 // ---- Single-flight guards (audio-pipe-observability/15) ----
 // `startAudio()` and `consumeProducer()` both check a "do I already have one?"
@@ -249,6 +255,13 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
 
     const trackForProducer = await wireMicThroughAudioContext(stream, rnnoiseActive);
 
+    // If we start already muted (e.g. a rejoin that preserves mute state),
+    // bypass RNNoise immediately instead of letting it churn until the next
+    // toggle.
+    if (isLocalMuted.value) {
+      await applyNoiseFilterForMute(true);
+    }
+
     // Voice mic: mono at a capped 96k target (64k until 2026-08-23; raised
     // after the "A vs A++" audio-quality review). Without these options the
     // router's stereo-forced Opus config encodes the mono mic as uncapped
@@ -320,6 +333,8 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     _micSourceNode = source;
     _micGainNode = gain;
     _micDestinationNode = destination;
+    _micNoiseFilterWanted = useNoiseFilter;
+    _micFilterBypassed = null;
 
     if (ctx.state === 'suspended') {
       ctx.resume().catch((err) => {
@@ -366,11 +381,42 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     _micSourceNode = null;
     _micGainNode = null;
     _micDestinationNode = null;
+    _micNoiseFilterWanted = false;
+    _micFilterBypassed = null;
 
     const ctx = _micAudioContext;
     _micAudioContext = null;
     if (ctx && ctx.state !== 'closed') {
       ctx.close().catch((err) => { log.warn('Failed to close AudioContext', err) });
+    }
+  }
+
+  /**
+   * EXECUTE: bypass or restore the RNNoise node in the live mic graph without
+   * rebuilding it. While muted, `producer.track.enabled = false` stops audio
+   * leaving the device, but the RNNoise AudioWorkletNode upstream of the gain
+   * node keeps running `process()` on every render quantum — measured ~4s CPU
+   * per 60s on an Oppo A6x while muted. Detaching it while muted (and
+   * re-attaching on unmute) removes that cost.
+   *
+   * No-op when there is no live graph, or when the requested state was
+   * already applied (`_micFilterBypassed` idempotence guard). Never throws —
+   * a mute toggle must not fail because the filter couldn't be rewired.
+   */
+  async function applyNoiseFilterForMute(muted: boolean): Promise<void> {
+    const ctx = _micAudioContext;
+    const source = _micSourceNode;
+    const gain = _micGainNode;
+    if (!ctx || !source || !gain) return;
+    if (_micFilterBypassed === muted) return;
+
+    try {
+      const active = await rewireNoiseFilter({ ctx, source, gain, muted, wanted: _micNoiseFilterWanted });
+      isNoiseFilterActive.value = active;
+      _micFilterBypassed = muted;
+    }
+    catch (err) {
+      log.warn('Failed to apply noise filter mute bypass', err);
     }
   }
 
@@ -522,6 +568,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     if (track) {
       isLocalMuted.value = !isLocalMuted.value;
       track.enabled = !isLocalMuted.value;
+      void applyNoiseFilterForMute(isLocalMuted.value);
     }
 
     return isLocalMuted.value;
@@ -539,6 +586,7 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
     const track = producer.value?.track;
     if (track) {
       track.enabled = !isLocalMuted.value;
+      void applyNoiseFilterForMute(isLocalMuted.value);
     }
   }
 

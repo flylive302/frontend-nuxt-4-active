@@ -7,8 +7,10 @@
  * cached still-frame (`staticFrame` on UserAvatar).
  *
  * Rules:
- *  - Hard cap (default FRAME_ANIMATION_BUDGET = 15) on concurrently animated
- *    frames.
+ *  - Hard cap (default FRAME_ANIMATION_BUDGET = 4) on concurrently animated
+ *    frames. android-client-performance/14: measured 2026-09-23 on Oppo A6x —
+ *    13 live SVGA canvases put the main thread at 96% busy; speakers keep
+ *    priority, everyone else shows the cached still frame.
  *  - Active speakers are admitted first (seat-index order among speakers).
  *  - Remaining slots: seats that were ALREADY animating keep their slot
  *    (stability — an unrelated seat joining/leaving or an unrelated speaker
