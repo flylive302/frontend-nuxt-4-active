@@ -17,6 +17,14 @@
  * @see https://github.com/svga/SVGAPlayer-Web-Lite
  */
 import { resolveSvgaSource, evictSvga } from '~/services/svgaAssetCache'
+import {
+    computeScaledSize,
+    drawFrameScaled,
+    type BitmapsCache,
+    type DynamicElements,
+    type ReplaceElements,
+    type SvgaVideoEntity
+} from '~/utils/svga/scaled-render'
 
 export default defineNuxtPlugin({
     name: 'svga-player',
@@ -158,6 +166,66 @@ export default defineNuxtPlugin({
             return out;
         };
 
+        // android-client-performance/15 — small SVGA players (avatar frames,
+        // 44–66 css px) still draw at full entity resolution (e.g. 413×413)
+        // because the lib always renders an offscreen canvas at entity size
+        // then drawImage()s it 1:1. When the display box is smaller than the
+        // entity, install a scaled drawFrame that renders straight onto a
+        // context pre-scaled to the display size — instance-only, never the
+        // prototype, so full-screen gift players stay untouched.
+        const installScaledDrawFrame = (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            player: any
+        ): void => {
+            const container: HTMLCanvasElement = player.config.container;
+            const ctx = container.getContext('2d');
+            if (!ctx) return;
+
+            const trySetup = (): boolean => {
+                const entity = player.videoEntity as SvgaVideoEntity | undefined;
+                if (!entity) return false;
+                const rect = container.getBoundingClientRect();
+                const size = computeScaledSize({
+                    cssWidth: rect.width,
+                    dpr: window.devicePixelRatio || 1,
+                    entityWidth: entity.size.width,
+                    entityHeight: entity.size.height
+                });
+                if (!size) return false;
+
+                player.drawFrame = (frame: number) => {
+                    drawFrameScaled({
+                        container,
+                        ctx,
+                        entity,
+                        frame,
+                        bitmaps: player.bitmapsCache as BitmapsCache,
+                        replaceElements: (entity as unknown as { replaceElements: ReplaceElements }).replaceElements,
+                        dynamicElements: (entity as unknown as { dynamicElements: DynamicElements }).dynamicElements,
+                        size,
+                        gated: player.config.isUseIntersectionObserver && !player.isBeIntersection
+                    });
+                };
+                return true;
+            };
+
+            if (trySetup()) return;
+            // cssW was 0 (hidden container) — fall back to lib behaviour, and
+            // re-check lazily on the first drawFrame call once the rect is
+            // non-zero.
+            // getBoundingClientRect forces layout, so retry every 30th frame
+            // (~1.5 s at 20 fps), not on every frame.
+            const libDrawFrame = player.drawFrame.bind(player);
+            let calls = 0;
+            player.drawFrame = (frame: number) => {
+                if (calls++ % 30 === 0 && trySetup()) {
+                    player.drawFrame(frame);
+                    return;
+                }
+                libDrawFrame(frame);
+            };
+        };
+
         const createSvgaPlayer = async (options: {
             canvas: HTMLCanvasElement;
             name: string;
@@ -221,6 +289,7 @@ export default defineNuxtPlugin({
                       }
                     : videoEntity;
             await player.mount(entityToMount);
+            installScaledDrawFrame(player);
             if (options.autoplay ?? true) player.start();
             return player;
         };
