@@ -232,7 +232,9 @@ export function createMockTelemetry() {
 
 export function createMockBootstrapAssets() {
   return {
-    startAssetDownload: vi.fn(),
+    startAssetDownload: vi.fn().mockResolvedValue(undefined),
+    startRoomAssetDownload: vi.fn().mockResolvedValue(undefined),
+    evictAssets: vi.fn().mockResolvedValue(undefined),
     enqueueAsset: vi.fn(),
     invalidateAsset: vi.fn(),
     pause: vi.fn(),

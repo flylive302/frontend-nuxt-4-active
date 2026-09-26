@@ -81,6 +81,7 @@ export function useRoomLifecycle(): void {
   const { fetchRoomById } = useRoom();
   const toast = useToast();
   const connectivityStore = useConnectivityStore();
+  const { notifyRoomEntered } = useAssetDeliveryPolicy();
 
   // REACT (ADR 0026) — connectivity came back. If a reconnect affordance was
   // suppressed while the device was offline and audio has NOT healed on its
@@ -295,6 +296,11 @@ export function useRoomLifecycle(): void {
         } finally {
           isJoining.value = false;
         }
+
+        // REACT — gift animations (boot-and-asset-delivery 04). Any finished
+        // join attempt counts: gifts still play in chat-only mode. A blocked
+        // user was ejected above, so currentRoom no longer matches.
+        if (roomStore.currentRoom?.id === newRoom.id) notifyRoomEntered();
       }
     },
     { immediate: true },

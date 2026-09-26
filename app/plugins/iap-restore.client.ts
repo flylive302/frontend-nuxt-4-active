@@ -53,7 +53,7 @@ export default defineNuxtPlugin(() => {
     scheduleAfterFirstPaint(() => triggerAutoRestore('boot'))
   }
 
-  // Login transition (mirrors bootstrap.client.ts's freshAuth watcher).
+  // Login transition (mirrors bootstrap.client.ts's login watcher).
   watch(
     () => authStore.token,
     (token, prevToken) => {

@@ -154,6 +154,15 @@ const isFeedSettling = computed(() =>
     roomsStatus.value,
   )
 )
+/** Skeleton on screen: a cold load, or a freshly tapped country still resolving. */
+const isFeedLoading = computed(() => (roomsStatus.value === 'pending' && !roomsPayload.value) || isFeedSettling.value)
+
+// boot-and-asset-delivery 04: the background animation download waits until the
+// feed has left the skeleton (rooms or the error card on screen).
+const { notifyHomeSettled } = useAssetDeliveryPolicy()
+watch(isFeedLoading, (loading) => {
+  if (!loading) notifyHomeSettled()
+}, { immediate: true })
 
 const carouselRooms = computed(() => roomsPayload.value?.res.data?.slice(0, HOME_CAROUSEL_ROOM_COUNT) || [])
 // The chip row keeps reading the response directly, never the store mirror —
@@ -378,7 +387,7 @@ onMounted(() => {
     <!-- Room Section: skeleton on a cold load, and while a freshly-tapped
          country is still resolving — a background refresh of the *same* country
          keeps the already-painted rooms on screen rather than flashing placeholders -->
-    <template v-if="(roomsStatus === 'pending' && !roomsPayload) || isFeedSettling">
+    <template v-if="isFeedLoading">
       <div class="flex gap-3 overflow-hidden mb-6 px-3">
         <div v-for="i in 3" :key="i" class="shrink-0 w-2/3 h-72 rounded-2xl bg-white/5 animate-pulse" />
       </div>

@@ -10,6 +10,7 @@ import {
   createMockAssetStore,
   createMockMallStore,
 } from '../helpers/nuxtMocks'
+import type { Gift } from '~/types/gift/gift'
 
 // ========================================
 // Mocks
@@ -72,10 +73,9 @@ describe('useBootstrapAssets', () => {
         { id: 2, animation_url: 'https://cdn.example.com/gift2.svga', asset_type: 'svga', sort_order: 2 },
         { id: 3, animation_url: null, asset_type: 'image', sort_order: 3 }, // Filtered out
       ],
-      badges: [],
+      badges: [{ id: 9, image_url: 'https://example.com/badge_9.webp' }],
     })
     assetStore = createMockAssetStore()
-    // Non-home, non-scoped route so getRouteScope()→null and gift videos aren't skipped
     setupNuxtMocks({ bootstrapStore, assetStore, route: { path: '/explore', meta: { middleware: [] } } })
 
     vi.clearAllMocks()
@@ -102,15 +102,23 @@ describe('useBootstrapAssets', () => {
     })
 
     it('EXECUTE: completes without downloading when there is nothing to fetch', async () => {
-      // Static UI pictures ship in the bundle (boot-and-asset-delivery 02), so the manual
-      // manifest is empty: no gifts and no other catalog media means an empty queue.
+      // Isolate from the real PAGE_ASSET_MANIFESTS (which always carries the mall
+      // video) so the queue can genuinely be empty: no gifts, no page items.
+      vi.resetModules()
+      vi.doMock('~/constants/assetManifest', () => ({ MANUAL_ASSET_MANIFEST: [], PAGE_ASSET_MANIFESTS: {} }))
       bootstrapStore.gifts = []
-      const { startAssetDownload } = useBootstrapAssets()
+      const mod = await import('~/composables/shared/useBootstrapAssets')
+      const { startAssetDownload } = mod.useBootstrapAssets()
 
       await startAssetDownload()
 
       expect(mockAssetDownloader.enqueue).not.toHaveBeenCalled()
       expect(assetStore.setPhase).toHaveBeenCalledWith('complete')
+
+      vi.doUnmock('~/constants/assetManifest')
+      vi.resetModules()
+      const freshMod = await import('~/composables/shared/useBootstrapAssets')
+      useBootstrapAssets = freshMod.useBootstrapAssets
     })
 
     it('EXECUTE: should init services before enqueuing', async () => {
@@ -133,6 +141,43 @@ describe('useBootstrapAssets', () => {
       const enqueuedItems = mockAssetDownloader.enqueue.mock.calls[0]![0] as { scope: string }[]
       const giftItems = enqueuedItems.filter((i) => i.scope === 'gift')
       expect(giftItems).toHaveLength(2)
+    })
+
+    it('EXECUTE: never enqueues a badge picture, even though badges exist in the bootstrap catalog', async () => {
+      const { startAssetDownload } = useBootstrapAssets()
+
+      await startAssetDownload()
+
+      const enqueuedItems = mockAssetDownloader.enqueue.mock.calls[0]![0] as { scope: string; assetType: string }[]
+      expect(enqueuedItems.some((i) => i.scope === 'badge')).toBe(false)
+      // Mutation check: only 'svga' | 'video' | 'vap' should ever reach the queue.
+      for (const item of enqueuedItems) {
+        expect(['svga', 'video', 'vap']).toContain(item.assetType)
+      }
+    })
+
+    it('EXECUTE: skips a gift whose asset_type is "image"', async () => {
+      bootstrapStore.gifts = [
+        { id: 4, animation_url: 'https://cdn.example.com/gift4.png', asset_type: 'image', sort_order: 1 },
+      ] as unknown as Gift[]
+      const { startAssetDownload } = useBootstrapAssets()
+
+      await startAssetDownload()
+
+      // Mall page video still queues (page manifests aren't route/catalog-scoped);
+      // the image gift itself never enters the queue.
+      const enqueuedItems = mockAssetDownloader.enqueue.mock.calls[0]![0] as { scope: string }[]
+      expect(enqueuedItems.some((i) => i.scope === 'gift')).toBe(false)
+    })
+
+    it('EXECUTE: queues the mall page video regardless of the current route', async () => {
+      setupNuxtMocks({ bootstrapStore, assetStore, route: { path: '/wallet', meta: { middleware: [] } } })
+      const { startAssetDownload } = useBootstrapAssets()
+
+      await startAssetDownload()
+
+      const enqueuedItems = mockAssetDownloader.enqueue.mock.calls[0]![0] as { scope: string; groupKey?: string }[]
+      expect(enqueuedItems.some((i) => i.groupKey === 'page-mall')).toBe(true)
     })
 
     it('EXECUTE: should set phase to downloading and call start', async () => {
@@ -177,16 +222,163 @@ describe('useBootstrapAssets', () => {
       Reflect.deleteProperty(globalThis, 'requestIdleCallback')
     })
 
-    it('REACT: does not schedule stale eviction in giftBootstrapVideosOnly mode', async () => {
-      ;(globalThis as Record<string, unknown>).requestIdleCallback = vi.fn()
+    it('quiet mode: enqueues and starts, but never touches assetStore or subscribes callbacks', async () => {
+      const { startAssetDownload } = useBootstrapAssets()
+      await startAssetDownload({ quiet: true })
+
+      expect(mockAssetDownloader.enqueue).toHaveBeenCalledTimes(1)
+      expect(mockAssetDownloader.start).toHaveBeenCalled()
+      expect(assetStore.setPhase).not.toHaveBeenCalled()
+      expect(mockAssetDownloader.onProgress).not.toHaveBeenCalled()
+      expect(mockAssetDownloader.onComplete).not.toHaveBeenCalled()
+      expect(mockAssetDownloader.onItemResult).not.toHaveBeenCalled()
+    })
+
+    it('quiet mode: an empty queue just returns, without enqueueing or starting', async () => {
+      vi.resetModules()
+      vi.doMock('~/constants/assetManifest', () => ({ MANUAL_ASSET_MANIFEST: [], PAGE_ASSET_MANIFESTS: {} }))
+      bootstrapStore.gifts = []
+      const mod = await import('~/composables/shared/useBootstrapAssets')
+      const { startAssetDownload } = mod.useBootstrapAssets()
+
+      await startAssetDownload({ quiet: true })
+
+      expect(mockAssetDownloader.enqueue).not.toHaveBeenCalled()
+      expect(mockAssetDownloader.start).not.toHaveBeenCalled()
+      expect(assetStore.setPhase).not.toHaveBeenCalled()
+
+      vi.doUnmock('~/constants/assetManifest')
+      vi.resetModules()
+      const freshMod = await import('~/composables/shared/useBootstrapAssets')
+      useBootstrapAssets = freshMod.useBootstrapAssets
+    })
+    // Defence in depth: a miscategorised manifest entry must still never
+    // reach the queue as a picture (Cache Storage copies of pictures are never read).
+    it('drops a picture-typed manifest entry before it reaches the queue', async () => {
+      vi.resetModules()
+      vi.doMock('~/constants/assetManifest', () => ({
+        MANUAL_ASSET_MANIFEST: [
+          { url: 'https://ik.imagekit.io/x/pic.webp', assetType: 'image', scope: 'manual', priority: 'high' },
+        ],
+        PAGE_ASSET_MANIFESTS: {},
+      }))
+      bootstrapStore.gifts = []
+      try {
+        const mod = await import('~/composables/shared/useBootstrapAssets')
+        const { startAssetDownload } = mod.useBootstrapAssets()
+
+        await startAssetDownload({ quiet: true })
+
+        expect(mockAssetDownloader.enqueue).not.toHaveBeenCalled()
+      } finally {
+        vi.doUnmock('~/constants/assetManifest')
+        vi.resetModules()
+        const freshMod = await import('~/composables/shared/useBootstrapAssets')
+        useBootstrapAssets = freshMod.useBootstrapAssets
+      }
+    })
+  })
+
+  describe('startRoomAssetDownload', () => {
+    it('enqueues gift animations only — no props, VIP, or page items — and runs no eviction', async () => {
+      const mallStore = createMockMallStore({
+        propIndex: {
+          1: { id: 1, type: 'frame', asset_url: 'https://assets.flyliveapp.com/frames/1.svga', thumbnail_url: '', name: 'Frame' },
+        },
+      })
+      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
+      bootstrapStore.vipLevels = [
+        { id: 3, level: 3, color: '#000000', card_animated_url: 'https://assets.flyliveapp.com/vip/3/card.mp4', emblem_animated_url: null },
+      ]
+
+      const { startRoomAssetDownload } = useBootstrapAssets()
+      await startRoomAssetDownload()
+
+      expect(mockAssetDownloader.enqueue).toHaveBeenCalledTimes(1)
+      const items = mockAssetDownloader.enqueue.mock.calls[0]![0] as { scope: string }[]
+      expect(items.every((i) => i.scope === 'gift')).toBe(true)
+      expect(items).toHaveLength(2)
+      expect(mockAssetDownloader.start).toHaveBeenCalled()
+
+      // Quiet + no eviction.
+      expect(assetStore.setPhase).not.toHaveBeenCalled()
+      expect(mockAssetIndex.getStale).not.toHaveBeenCalled()
+      expect(mockAssetIndex.getAllByPriority).not.toHaveBeenCalled()
+    })
+
+    it('an empty gift queue just returns', async () => {
+      bootstrapStore.gifts = []
+      const { startRoomAssetDownload } = useBootstrapAssets()
+      await startRoomAssetDownload()
+
+      expect(mockAssetDownloader.enqueue).not.toHaveBeenCalled()
+      expect(mockAssetDownloader.start).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('evictAssets — catalog-diff pass', () => {
+    beforeEach(() => {
+      ;(globalThis as Record<string, unknown>).requestIdleCallback = (cb: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void) => {
+        cb({ didTimeout: false, timeRemaining: () => 50 })
+        return 1
+      }
+    })
+
+    afterEach(() => {
+      Reflect.deleteProperty(globalThis, 'requestIdleCallback')
+    })
+
+    it('with a populated catalog: deletes a badge-image entry, keeps a catalog gift entry, keeps a runtime entry', async () => {
+      const mallStore = createMockMallStore({
+        propIndex: { 1: { id: 1, type: 'frame', asset_url: 'https://assets.flyliveapp.com/frames/1.svga', thumbnail_url: '', name: 'Frame' } },
+      })
+      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
+
+      mockAssetIndex.getAllByPriority.mockResolvedValue([
+        { url: 'https://example.com/badge_9.webp', scope: 'badge', assetType: 'image' },
+        { url: 'https://cdn.example.com/gift1.webm', scope: 'gift', assetType: 'video' },
+        { url: 'https://cdn.example.com/some-runtime.svga', scope: 'runtime', assetType: 'svga' },
+      ])
 
       const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload({ giftBootstrapVideosOnly: true })
+      await startAssetDownload()
 
-      expect(mockAssetIndex.getStale).not.toHaveBeenCalled()
-      expect(globalThis.requestIdleCallback).not.toHaveBeenCalled()
+      await vi.waitFor(() => expect(mockAssetIndex.getAllByPriority).toHaveBeenCalled())
+      await vi.waitFor(() => expect(mockCacheStorage.deleteAsset).toHaveBeenCalledWith('https://example.com/badge_9.webp'))
+      expect(mockCacheStorage.deleteAsset).not.toHaveBeenCalledWith('https://cdn.example.com/gift1.webm')
+      expect(mockCacheStorage.deleteAsset).not.toHaveBeenCalledWith('https://cdn.example.com/some-runtime.svga')
+    })
 
-      Reflect.deleteProperty(globalThis, 'requestIdleCallback')
+    it('GATE: empty gifts skips the catalog-diff pass entirely (no deleteAsset from it)', async () => {
+      bootstrapStore.gifts = []
+      const mallStore = createMockMallStore({
+        propIndex: { 1: { id: 1, type: 'frame', asset_url: 'https://assets.flyliveapp.com/frames/1.svga', thumbnail_url: '', name: 'Frame' } },
+      })
+      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
+      mockAssetIndex.getAllByPriority.mockResolvedValue([
+        { url: 'https://example.com/badge_9.webp', scope: 'badge', assetType: 'image' },
+      ])
+
+      const { startAssetDownload } = useBootstrapAssets()
+      await startAssetDownload()
+
+      // Give any scheduled idle callbacks a tick to run.
+      await new Promise((r) => setTimeout(r, 0))
+      expect(mockAssetIndex.getAllByPriority).not.toHaveBeenCalled()
+    })
+
+    it('GATE: empty propIndex skips the catalog-diff pass entirely (no deleteAsset from it)', async () => {
+      const mallStore = createMockMallStore({ propIndex: {} })
+      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
+      mockAssetIndex.getAllByPriority.mockResolvedValue([
+        { url: 'https://example.com/badge_9.webp', scope: 'badge', assetType: 'image' },
+      ])
+
+      const { startAssetDownload } = useBootstrapAssets()
+      await startAssetDownload()
+
+      await new Promise((r) => setTimeout(r, 0))
+      expect(mockAssetIndex.getAllByPriority).not.toHaveBeenCalled()
     })
   })
 
@@ -218,6 +410,16 @@ describe('useBootstrapAssets', () => {
 
       expect(mockAssetDownloader.enqueueManual).not.toHaveBeenCalled()
     })
+
+    it('should NOT re-download a critical badge (badges are pictures)', async () => {
+      const { invalidateAsset } = useBootstrapAssets()
+
+      await invalidateAsset({ url: 'https://example.com/badge_9.webp', priority: 'critical', badgeId: 9 })
+
+      expect(mockCacheStorage.deleteAsset).toHaveBeenCalledWith('https://example.com/badge_9.webp')
+      expect(mockAssetIndex.remove).toHaveBeenCalledWith('https://example.com/badge_9.webp')
+      expect(mockAssetDownloader.enqueueManual).not.toHaveBeenCalled()
+    })
   })
 
   describe('pause / resume', () => {
@@ -238,9 +440,9 @@ describe('useBootstrapAssets', () => {
     const R2 = 'https://assets.flyliveapp.com'
     const IK = 'https://ik.imagekit.io/flylive'
 
-    function getPropItems(calls: unknown[][]): { url: string; priority: string; scope: string; assetType: string }[] {
-      const enqueuedItems = (calls[0]?.[0] ?? []) as { url: string; priority: string; scope: string; assetType: string }[]
-      return enqueuedItems.filter(i => i.scope === 'mall')
+    function getPropItems(calls: unknown[][]): { url: string; priority: string; scope: string; assetType: string; groupKey?: string }[] {
+      const enqueuedItems = (calls[0]?.[0] ?? []) as { url: string; priority: string; scope: string; assetType: string; groupKey?: string }[]
+      return enqueuedItems.filter(i => i.groupKey === 'bootstrap-props')
     }
 
     async function runAndAssertOnlyR2Frame2(mallStore: ReturnType<typeof createMockMallStore>): Promise<void> {
@@ -349,21 +551,6 @@ describe('useBootstrapAssets', () => {
 
       const propItems = getPropItems(mockAssetDownloader.enqueue.mock.calls)
       expect(propItems[0]?.priority).toBe('normal')
-    })
-
-    it('does not enqueue props in giftBootstrapVideosOnly mode', async () => {
-      const mallStore = createMockMallStore({
-        propIndex: {
-          1: { id: 1, type: 'frame', asset_url: `${R2}/frames/1.svga`, thumbnail_url: '', name: 'Frame' },
-        },
-      })
-      ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload({ giftBootstrapVideosOnly: true })
-
-      const propItems = getPropItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(propItems).toHaveLength(0)
     })
   })
 

@@ -202,6 +202,35 @@ describe('networkDetector', () => {
 
       expect(isMeteredConnection()).toBe(false)
     })
+
+    it('should return false on ethernet without saveData', () => {
+      Object.defineProperty(global, 'navigator', {
+        value: { onLine: true, connection: { type: 'ethernet', saveData: false } },
+        writable: true,
+      })
+
+      expect(isMeteredConnection()).toBe(false)
+    })
+
+    // iOS WKWebView and most desktop browsers expose no connection type:
+    // unknown is treated as metered so nobody pays for a surprise download.
+    it('should return true when the connection type is unknown (no Network Information API)', () => {
+      Object.defineProperty(global, 'navigator', {
+        value: { onLine: true, connection: undefined },
+        writable: true,
+      })
+
+      expect(isMeteredConnection()).toBe(true)
+    })
+
+    it('should return true when the connection exposes no type (desktop Chrome)', () => {
+      Object.defineProperty(global, 'navigator', {
+        value: { onLine: true, connection: { effectiveType: '4g', saveData: false } },
+        writable: true,
+      })
+
+      expect(isMeteredConnection()).toBe(true)
+    })
   })
 
   describe('onConnectionChange', () => {

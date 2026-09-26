@@ -591,40 +591,34 @@ describe('useBootstrapInit', () => {
   // REACT Tests
   // ========================================
 
-  describe('REACT: Asset downloads', () => {
-    beforeEach(() => {
-      vi.stubGlobal('requestIdleCallback', (cb: () => void) => {
-        cb()
-        return 0
+  describe('Asset downloads', () => {
+    // boot-and-asset-delivery 04: init never starts the downloader. The delivery
+    // policy waits for a ready catalog + a settled first screen (its own spec).
+    it.each([
+      ['a cold fetch on a non-home route', '/mall'],
+      ['a cold fetch on home', '/'],
+    ])('does not start an asset download after %s', async (_label, path) => {
+      const bootstrapAssets = createMockBootstrapAssets()
+      const api = createMockApi()
+      api.api.mockResolvedValue({ data: { user: {}, config: {}, gifts: { catalog: [{ id: 1 }] } } })
+      _mocks = setupNuxtMocks({
+        bootstrapAssets,
+        api,
+        authStore: gatePassingAuthStore(),
+        bootstrapStore: gatePassingBootstrapStore(),
+        route: { path, meta: { middleware: [] } },
       })
+
+      const { init } = useBootstrapInit()
+      await init()
+      expect(bootstrapAssets.startAssetDownload).not.toHaveBeenCalled()
+      expect(bootstrapAssets.startRoomAssetDownload).not.toHaveBeenCalled()
     })
 
-    // A failed cold fetch leaves gifts/badges/VIP discarded; an asset pass would
-    // run the catalog-diff eviction against that empty catalog and delete every
-    // cached animation.
-    it('should NOT start asset download when the cold fetch fails (fresh auth)', async () => {
-      const bootstrapAssets = createMockBootstrapAssets()
+    it('leaves phase at error after a failed cold fetch (the policy waits for isReady)', async () => {
       const api = createMockApi()
       api.api.mockRejectedValue(new Error('Network error'))
       _mocks = setupNuxtMocks({
-        bootstrapAssets,
-        api,
-        authStore: gatePassingAuthStore(),
-        bootstrapStore: gatePassingBootstrapStore(),
-        route: { path: '/mall', meta: { middleware: [] } },
-      })
-
-      const { init } = useBootstrapInit()
-      await init({ freshAuth: true })
-      expect(bootstrapAssets.startAssetDownload).not.toHaveBeenCalled()
-    })
-
-    it('should NOT schedule asset download when the cold fetch fails (non-home route)', async () => {
-      const bootstrapAssets = createMockBootstrapAssets()
-      const api = createMockApi()
-      api.api.mockRejectedValue(new Error('Network error'))
-      _mocks = setupNuxtMocks({
-        bootstrapAssets,
         api,
         authStore: gatePassingAuthStore(),
         bootstrapStore: gatePassingBootstrapStore(),
@@ -633,62 +627,7 @@ describe('useBootstrapInit', () => {
 
       const { init } = useBootstrapInit()
       await init()
-      expect(bootstrapAssets.startAssetDownload).not.toHaveBeenCalled()
-    })
-
-    it('should trigger startAssetDownload when gifts present in response', async () => {
-      const bootstrapAssets = createMockBootstrapAssets()
-      const api = createMockApi()
-      api.api.mockResolvedValue({
-        data: { user: {}, config: {}, gifts: { catalog: [{ id: 1 }] } },
-      })
-      _mocks = setupNuxtMocks({
-        bootstrapAssets,
-        api,
-        authStore: gatePassingAuthStore(),
-        bootstrapStore: gatePassingBootstrapStore(),
-        route: { path: '/mall', meta: { middleware: [] } },
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(bootstrapAssets.startAssetDownload).toHaveBeenCalled()
-    })
-
-    it('should trigger startAssetDownload when gifts already in store', async () => {
-      const bootstrapAssets = createMockBootstrapAssets()
-      const api = createMockApi()
-      api.api.mockResolvedValue({ data: { user: {}, config: {} } })
-      _mocks = setupNuxtMocks({
-        bootstrapAssets,
-        bootstrapStore: gatePassingBootstrapStore({
-          giftCatalog: [{ id: 1, name: 'Gift 1' }],
-        }),
-        authStore: gatePassingAuthStore(),
-        api,
-        route: { path: '/mall', meta: { middleware: [] } },
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(bootstrapAssets.startAssetDownload).toHaveBeenCalled()
-    })
-
-    it('should NOT trigger startAssetDownload on home path (perf)', async () => {
-      const bootstrapAssets = createMockBootstrapAssets()
-      const api = createMockApi()
-      api.api.mockResolvedValue({ data: { user: {}, config: {} } })
-      _mocks = setupNuxtMocks({
-        bootstrapAssets,
-        bootstrapStore: gatePassingBootstrapStore({ giftCatalog: [{ id: 1 }] }),
-        authStore: gatePassingAuthStore(),
-        api,
-        route: { path: '/', meta: { middleware: [] } },
-      })
-
-      const { init } = useBootstrapInit()
-      await init()
-      expect(bootstrapAssets.startAssetDownload).not.toHaveBeenCalled()
+      expect(_mocks.bootstrapStore.setPhase).toHaveBeenLastCalledWith('error')
     })
   })
 

@@ -41,6 +41,19 @@ export const ASSET_CONFIG = {
 
   /** Days before asset considered stale */
   STALE_DAYS: 30,
+
+  /**
+   * Wait after a delivery trigger (home settled / room entered) before the
+   * automatic pass starts, so its first tasks land after the screen's own work
+   * (boot-and-asset-delivery 04; the 09 cold-boot settle rule is "last long task").
+   */
+  PASS_START_DELAY_MS: 3000,
+
+  /**
+   * If the first screen never reports settled (deep link, push tap, a stuck
+   * feed), the boot pass starts this long after the catalog is ready.
+   */
+  BOOT_SETTLE_FALLBACK_MS: 30_000,
 } as const
 
 /**

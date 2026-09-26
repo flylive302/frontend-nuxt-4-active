@@ -31,6 +31,18 @@ export const useAssetStore = defineStore('asset', () => {
   /** URLs of assets that exhausted retries; reset when retry is triggered */
   const failedUrls = ref<string[]>([])
 
+  /**
+   * Delivery triggers (boot-and-asset-delivery 04), one-way for the session.
+   * `bootSettled`: the first screen has settled (home feed on screen, or the
+   * fallback timer). `roomEntered`: the user entered a room.
+   */
+  const bootSettled = ref(false)
+  const roomEntered = ref(false)
+
+  /** Once-per-session markers for the automatic passes. */
+  const bootPassStarted = ref(false)
+  const roomPassStarted = ref(false)
+
   // ========================================
   // Computed
   // ========================================
@@ -87,6 +99,26 @@ export const useAssetStore = defineStore('asset', () => {
     failedUrls.value = []
   }
 
+  /** Mark the first screen settled (home feed on screen, or the fallback timer) */
+  function markBootSettled(): void {
+    bootSettled.value = true
+  }
+
+  /** Mark that the user entered a room this session */
+  function markRoomEntered(): void {
+    roomEntered.value = true
+  }
+
+  /** Mark the automatic boot pass as started */
+  function markBootPassStarted(): void {
+    bootPassStarted.value = true
+  }
+
+  /** Mark the automatic room-entry pass as started */
+  function markRoomPassStarted(): void {
+    roomPassStarted.value = true
+  }
+
   /** Reset store state */
   function reset(): void {
     phase.value = 'idle'
@@ -107,6 +139,10 @@ export const useAssetStore = defineStore('asset', () => {
     error,
     failedTotal,
     failedUrls,
+    bootSettled,
+    roomEntered,
+    bootPassStarted,
+    roomPassStarted,
 
     // Computed
     isDownloading,
@@ -122,6 +158,10 @@ export const useAssetStore = defineStore('asset', () => {
     setError,
     markFailed,
     resetFailures,
+    markBootSettled,
+    markRoomEntered,
+    markBootPassStarted,
+    markRoomPassStarted,
     reset,
   }
 })

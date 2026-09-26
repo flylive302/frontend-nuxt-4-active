@@ -116,11 +116,15 @@ export function isCellular(): boolean {
 }
 
 /**
- * Check if connection is metered (cellular or save data).
+ * Check if the connection may cost the user money. Conservative: only a known
+ * Wi-Fi or ethernet link without Data Saver counts as unmetered. `unknown`
+ * (iOS WKWebView and most desktop browsers expose no connection type) and
+ * `none` are treated as metered (boot-and-asset-delivery 04, operator decision).
  */
 export function isMeteredConnection(): boolean {
   const info = getNetworkInfo()
-  return info.connectionType === 'cellular' || info.saveData
+  if (info.saveData) return true
+  return info.connectionType !== 'wifi' && info.connectionType !== 'ethernet'
 }
 
 /**

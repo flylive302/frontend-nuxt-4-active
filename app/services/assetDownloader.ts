@@ -14,7 +14,7 @@ import type {
 import { ASSET_CONFIG } from '~/constants/asset'
 import * as cacheStorage from '~/services/cacheStorage'
 import * as assetIndex from '~/services/assetIndex'
-import { getNetworkInfo } from '~/services/networkDetector'
+import { getNetworkInfo, isMeteredConnection } from '~/services/networkDetector'
 import { normalizeAssetUrl, rewriteR2UrlForDevFetch } from '~/utils/asset-url'
 
 
@@ -175,9 +175,13 @@ export function resume(): void {
   void processQueue()
 }
 
+/**
+ * Metered links run two at a time: on mobile data the room-entry gift pass
+ * shares the link with live room audio (boot-and-asset-delivery 04).
+ */
 function getEffectiveConcurrency(): number {
-  const { effectiveType, saveData } = getNetworkInfo()
-  if (effectiveType === '2g' || effectiveType === 'slow-2g' || saveData) {
+  const { effectiveType } = getNetworkInfo()
+  if (effectiveType === '2g' || effectiveType === 'slow-2g' || isMeteredConnection()) {
     return ASSET_CONFIG.MAX_CONCURRENT_METERED
   }
   return ASSET_CONFIG.MAX_CONCURRENT

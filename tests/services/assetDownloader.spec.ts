@@ -53,6 +53,7 @@ const { mockCacheStorage, mockAssetIndex, mockNetworkDetector, mockSentry } = vi
       effectiveType: 'unknown',
       saveData: false,
     }),
+    isMeteredConnection: vi.fn().mockReturnValue(false),
   },
   mockSentry: {
     captureException: vi.fn(),
@@ -124,6 +125,7 @@ describe('assetDownloader', () => {
       effectiveType: 'unknown',
       saveData: false,
     })
+    mockNetworkDetector.isMeteredConnection.mockReturnValue(false)
     // No service worker by default
     Object.defineProperty(navigator, 'serviceWorker', {
       value: { controller: null },
@@ -598,13 +600,16 @@ describe('assetDownloader', () => {
       expect(peakConcurrent).toBeGreaterThan(2)
     })
 
-    it('should cap at MAX_CONCURRENT_METERED when saveData is true', async () => {
+    // Metered = cellular, Data Saver or unknown type (networkDetector.isMeteredConnection):
+    // the room-entry gift pass must not saturate a link carrying live room audio.
+    it('should cap at MAX_CONCURRENT_METERED on a metered 4G connection', async () => {
       mockNetworkDetector.getNetworkInfo.mockReturnValue({
         isOnline: true,
         connectionType: 'cellular',
         effectiveType: '4g',
-        saveData: true,
+        saveData: false,
       })
+      mockNetworkDetector.isMeteredConnection.mockReturnValue(true)
 
       let concurrentCount = 0
       let peakConcurrent = 0
@@ -626,7 +631,7 @@ describe('assetDownloader', () => {
       )
 
       const items: EnqueueItem[] = Array.from({ length: 6 }, (_, i) => ({
-        url: `https://example.com/savedata-asset${i}.webm`,
+        url: `https://example.com/metered-asset${i}.webm`,
         assetType: 'video' as const,
         priority: 'normal' as const,
         scope: 'global' as const,

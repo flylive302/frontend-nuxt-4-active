@@ -42,7 +42,6 @@ export function useBootstrapInit() {
   const authStore = useAuthStore()
   const mallStore = useMallStore()
   const { trackBootstrapStarted, trackBootstrapCompleted, trackBootstrapFailed } = useTelemetry()
-  const { startAssetDownload } = useBootstrapAssets()
   const { syncUser } = useUserSync()
   const { reconcileInbox } = useInboxReconcile()
 
@@ -58,9 +57,11 @@ export function useBootstrapInit() {
    *
    * GATE: skip the OAuth callback, pick the warm or cold path
    * EXECUTE: warm → ready from cache + background revalidate; cold → fetch and seed
-   * REACT: Start asset downloads (via caller)
+   *
+   * Asset downloads are not started here: `useAssetDeliveryPolicy` starts them
+   * once the catalog is ready AND the first screen has settled (04).
    */
-  async function init(options?: { freshAuth?: boolean }): Promise<BootstrapConfig | null> {
+  async function init(): Promise<BootstrapConfig | null> {
     // Capture route synchronously before any await — calling useRoute() after an
     // await can land in a middleware execution context and trigger a Nuxt warning.
     const route = useRoute()
@@ -94,12 +95,6 @@ export function useBootstrapInit() {
       scheduleAfterFirstPaint(() => {
         void revalidate()
       })
-      // Still schedule asset downloads — may have new items since last boot
-      if (options?.freshAuth) {
-        startAssetDownload()
-      } else {
-        scheduleAssetDownload(route)
-      }
       return null
     }
 
@@ -127,21 +122,9 @@ export function useBootstrapInit() {
       trackBootstrapFailed(bootstrapStore.error ?? 'Unknown error')
     }
 
-    // GATE — no catalog, no asset pass. The discard above emptied gifts, badges
-    // and VIP levels; the downloader's catalog-diff eviction would read that as
-    // "all removed" and delete every cached animation. The next open retries.
-    if (!data) {
-      return null
-    }
-
-    // REACT — fresh auth (registration/OAuth): start immediately so the profile wizard's
-    // interaction time is used as free download time. Returning users stay idle-deferred.
-    if (options?.freshAuth) {
-      startAssetDownload()
-    } else {
-      scheduleAssetDownload(route)
-    }
-
+    // A failed cold fetch leaves `phase` at 'error', so the asset delivery
+    // policy (which waits for `isReady`) never runs an asset pass against the
+    // discarded catalog. The next open retries.
     return data
   }
 
@@ -253,27 +236,6 @@ export function useBootstrapInit() {
    */
   function isFetchInProgress(): boolean {
     return bootstrapStore.phase === 'loading'
-  }
-
-  /**
-   * Schedule asset download during idle time.
-   * Uses requestIdleCallback where available, falls back to setTimeout.
-   * PERF: never blocks the main thread during boot.
-   * PERF: skipped for unauthenticated users — gifts/badges are irrelevant on guest routes.
-   */
-  function scheduleAssetDownload(route: ReturnType<typeof useRoute>): void {
-    if (!authStore.token) return
-    // Home is on the critical perf path: avoid boot-time badge/image floods there.
-    // Route-scoped assets still load when users navigate to their feature pages.
-    if (route.path === '/' || route.path === '') return
-
-    const schedule = typeof requestIdleCallback !== 'undefined'
-      ? requestIdleCallback
-      : (cb: () => void) => setTimeout(cb, 100)
-
-    schedule(() => {
-      startAssetDownload()
-    })
   }
 
   return { init }

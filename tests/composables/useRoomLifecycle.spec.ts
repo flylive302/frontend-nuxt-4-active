@@ -62,6 +62,7 @@ const disconnectSocketMock = vi.fn()
 const fetchRoomByIdMock = vi.fn()
 const toastAdd = vi.fn()
 const toastRemove = vi.fn()
+const notifyRoomEnteredMock = vi.fn()
 
 const roomStore = reactive({
   currentRoom: null as FakeRoom | null,
@@ -109,6 +110,7 @@ vi.stubGlobal('useAudioSocket', () => ({
   onReconnectFailed: (cb: () => Promise<void>) => { reconnectFailedCb = cb },
 }))
 vi.stubGlobal('useRoom', () => ({ fetchRoomById: fetchRoomByIdMock }))
+vi.stubGlobal('useAssetDeliveryPolicy', () => ({ notifyRoomEntered: notifyRoomEnteredMock }))
 // node env has no window; the pagehide listener target just needs to exist
 // (the vueuse useEventListener mock never attaches it).
 vi.stubGlobal('window', { location: { pathname: '/' } })
@@ -162,6 +164,7 @@ beforeEach(() => {
   disconnectSocketMock.mockReset()
   toastAdd.mockReset()
   toastRemove.mockReset()
+  notifyRoomEnteredMock.mockReset()
   roomStore.currentRoom = null
   roomSessionStore.previousRoute = null
   roomSessionLeaveRoom.mockReset()
@@ -182,6 +185,39 @@ afterEach(() => {
   lifecycleScope?.stop()
   lifecycleScope = null
   vi.useRealTimers()
+})
+
+// boot-and-asset-delivery 04: on mobile data, gift animations download on the
+// first room entry — so the signal must fire once per entry, never on a rejoin.
+describe('Watcher 1 — room entry signals the asset delivery policy', () => {
+  it('signals once after a successful join', async () => {
+    await setup()
+    expect(notifyRoomEnteredMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('still signals when audio fails — gifts play in chat-only mode', async () => {
+    joinRoomMock.mockRejectedValue(new Error('transport failed'))
+    await setup()
+    expect(notifyRoomEnteredMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not signal for a blocked user who is ejected', async () => {
+    // Import after beforeEach's resetModules so `instanceof` in the composable
+    // sees the same class instance.
+    const { RoomBlockedError } = await import('../../app/utils/socket/socketErrorMessages')
+    joinRoomMock.mockRejectedValue(new RoomBlockedError('blocked'))
+    roomSessionLeaveRoom.mockImplementation(() => { roomStore.currentRoom = null })
+    await setup()
+    expect(notifyRoomEnteredMock).not.toHaveBeenCalled()
+  })
+
+  it('does not signal again on a socket reconnect rejoin', async () => {
+    await setup()
+    await reconnectCb!()
+    await flush()
+    expect(joinRoomMock).toHaveBeenCalled()
+    expect(notifyRoomEnteredMock).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('Watcher 3 — the metadata refresh is awaited before the rejoin reads the address', () => {
