@@ -40,6 +40,7 @@ const { checkPastRuns } = useIncomeActions()
 // Ex-members with past runs keep access to their income history.
 const showIncomeLink = computed(() => agencyStore.isAgencyMember || incomeStore.hasAnyRun)
 
+// Raw URL on purpose — near-native profile slot; see `wealthBadgeSrc` in useUserProfile.ts.
 const CURRENT_WEALTH_BADGE = computed(() => getBadgeFromXp(balanceStore.wealthXp, 'wealth'))
 const CURRENT_CHARM_BADGE = computed(() => getBadgeFromXp(balanceStore.charmXp, 'charm'))
 

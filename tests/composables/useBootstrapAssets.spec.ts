@@ -37,7 +37,6 @@ const mockAssetDownloader = {
   onProgress: vi.fn(),
   onComplete: vi.fn(),
   onItemResult: vi.fn(),
-  getCriticalQueuedCount: vi.fn().mockReturnValue(0),
 }
 
 const mockCacheStorage = {
@@ -102,16 +101,16 @@ describe('useBootstrapAssets', () => {
       expect(mockAssetDownloader.start).not.toHaveBeenCalled()
     })
 
-    it('EXECUTE: still downloads app-shell assets when there are no gifts', async () => {
-      // The manual (app-shell) manifest keeps the queue non-empty even with no
-      // gifts, so the pipeline downloads rather than short-circuiting to complete.
+    it('EXECUTE: completes without downloading when there is nothing to fetch', async () => {
+      // Static UI pictures ship in the bundle (boot-and-asset-delivery 02), so the manual
+      // manifest is empty: no gifts and no other catalog media means an empty queue.
       bootstrapStore.gifts = []
       const { startAssetDownload } = useBootstrapAssets()
 
       await startAssetDownload()
 
-      expect(mockAssetDownloader.enqueue).toHaveBeenCalledTimes(1)
-      expect(assetStore.setPhase).toHaveBeenCalledWith('downloading')
+      expect(mockAssetDownloader.enqueue).not.toHaveBeenCalled()
+      expect(assetStore.setPhase).toHaveBeenCalledWith('complete')
     })
 
     it('EXECUTE: should init services before enqueuing', async () => {
@@ -368,104 +367,23 @@ describe('useBootstrapAssets', () => {
     })
   })
 
-  describe('buildAssetQueue — featured room backgrounds', () => {
-    function getFeaturedRoomItems(calls: unknown[][]): { url: string; priority: string; scope: string; groupKey: string }[] {
-      const enqueuedItems = (calls[0]?.[0] ?? []) as { url: string; priority: string; scope: string; groupKey: string }[]
-      return enqueuedItems.filter(i => i.groupKey === 'featured-rooms')
-    }
-
+  describe('buildAssetQueue — bundled static UI pictures', () => {
     beforeEach(() => {
       vi.clearAllMocks()
     })
 
-    it('enqueues non-null backgrounds as low priority with global scope', async () => {
-      bootstrapStore.featuredRooms = [
-        { id: 1, background: 'https://cdn.example.com/room1-bg.webp' },
-        { id: 2, background: 'https://cdn.example.com/room2-bg.webp' },
-      ]
-
+    it('never queues a bundled picture (they load from disk; a Cache Storage copy is never read)', async () => {
       const { startAssetDownload } = useBootstrapAssets()
       await startAssetDownload()
 
-      const items = getFeaturedRoomItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(items).toHaveLength(2)
-      expect(items.every(i => i.priority === 'low')).toBe(true)
-      expect(items.every(i => i.scope === 'global')).toBe(true)
-    })
-
-    it('excludes rooms with null backgrounds', async () => {
-      bootstrapStore.featuredRooms = [
-        { id: 1, background: 'https://cdn.example.com/room1-bg.webp' },
-        { id: 2, background: null },
-        { id: 3, background: null },
-      ]
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      const items = getFeaturedRoomItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(items).toHaveLength(1)
-      expect(items[0]!.url).toBe('https://cdn.example.com/room1-bg.webp')
-    })
-
-    it('enqueues nothing when all backgrounds are null', async () => {
-      bootstrapStore.featuredRooms = [
-        { id: 1, background: null },
-        { id: 2, background: null },
-      ]
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      const items = getFeaturedRoomItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(items).toHaveLength(0)
-    })
-
-    it('enqueues nothing when featuredRooms is empty', async () => {
-      bootstrapStore.featuredRooms = []
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      const items = getFeaturedRoomItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(items).toHaveLength(0)
-    })
-
-    it('does not enqueue featured rooms in giftBootstrapVideosOnly mode', async () => {
-      bootstrapStore.featuredRooms = [
-        { id: 1, background: 'https://cdn.example.com/room1-bg.webp' },
-      ]
-
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload({ giftBootstrapVideosOnly: true })
-
-      const items = getFeaturedRoomItems(mockAssetDownloader.enqueue.mock.calls)
-      expect(items).toHaveLength(0)
-    })
-  })
-
-  describe('buildAssetQueue — critical manual assets', () => {
-    beforeEach(() => {
-      vi.clearAllMocks()
-    })
-
-    it('includes DEFAULT_SEAT_IMG, LOCK_SEAT_IMG, and COIN_ICON with priority critical', async () => {
-      const { startAssetDownload } = useBootstrapAssets()
-      await startAssetDownload()
-
-      const enqueuedItems = mockAssetDownloader.enqueue.mock.calls[0]![0] as { url: string; priority: string }[]
-
-      const seatItem = enqueuedItems.find(i => i.url.includes('seat.webp') && !i.url.includes('locked'))
-      expect(seatItem).toBeDefined()
-      expect(seatItem?.priority).toBe('critical')
-
-      const lockItem = enqueuedItems.find(i => i.url.includes('seat-locked.webp'))
-      expect(lockItem).toBeDefined()
-      expect(lockItem?.priority).toBe('critical')
-
-      const coinItem = enqueuedItems.find(i => i.url.includes('coin-icon.webp'))
-      expect(coinItem).toBeDefined()
-      expect(coinItem?.priority).toBe('critical')
+      const enqueuedItems = mockAssetDownloader.enqueue.mock.calls[0]![0] as { url: string }[]
+      expect(enqueuedItems.length).toBeGreaterThan(0)
+      for (const item of enqueuedItems) {
+        expect(item.url).toMatch(/^https:\/\//)
+      }
+      for (const name of ['seat-default.webp', 'seat-locked.webp', 'coin-icon.webp', 'avatar-placeholder.webp']) {
+        expect(enqueuedItems.some(i => i.url.includes(name))).toBe(false)
+      }
     })
   })
 

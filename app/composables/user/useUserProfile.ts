@@ -106,13 +106,21 @@ export function useUserProfile(
 
   /**
    * Wealth badge image URL from computed level info.
+   *
+   * ⚠️ Deliberately the raw URL (the documented exception to "catalog pictures go through
+   * `~/utils/imagekit`", boot-and-asset-delivery 05): `pages/profile/[UserSignature].vue`
+   * paints it at `w-7/12` (~240 CSS px), which needs the native file (512 px wide for level 1).
+   * A smaller `w-` is visibly blurry (a baked w-48 was shipped and reviewed as such), and a
+   * larger one makes ImageKit UPSCALE — more bytes, no sharpness. Measured 2026-09-26: native
+   * 110.7 KB vs w-512 106.3 KB, so a transform buys nothing here. Cut bytes by re-authoring
+   * the animated art (20 frames dominate), not by under-sizing the request.
    */
   const wealthBadgeSrc = computed(() =>
     wealthLevelInfo.value?.badge?.image_url ?? DEFAULT_WEALTH_BADGE
   )
 
   /**
-   * Charm badge image URL from computed level info.
+   * Charm badge image URL from computed level info — raw on purpose, see `wealthBadgeSrc`.
    */
   const charmBadgeSrc = computed(() =>
     charmLevelInfo.value?.badge?.image_url ?? DEFAULT_CHARM_BADGE

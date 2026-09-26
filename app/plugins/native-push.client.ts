@@ -16,49 +16,56 @@ import { usePushSubscription } from '~/composables/notification/usePushSubscript
  *
  * This plugin owns the persistent tap listener AND the boot-time token sync.
  * No-ops on the web build.
+ *
+ * `parallel: true` (boot-and-asset-delivery 08): it has no ordering dependency on any other
+ * plugin, so the native bridge round trips below no longer serialize the plugin chain.
  */
-export default defineNuxtPlugin(async (nuxtApp) => {
-  if (!Capacitor.isNativePlatform()) return
+export default defineNuxtPlugin({
+  name: 'native-push',
+  parallel: true,
+  async setup(nuxtApp) {
+    if (!Capacitor.isNativePlatform()) return
 
-  const log = createLogger('[NativePush]')
+    const log = createLogger('[NativePush]')
 
-  await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-    const url = action.notification.data?.url
-    if (typeof url !== 'string' || url === '') return
+    await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      const url = action.notification.data?.url
+      if (typeof url !== 'string' || url === '') return
 
-    Promise.resolve(nuxtApp.runWithContext(() => navigateTo(url))).catch((err: unknown) => {
-      log.warn('Failed to navigate from push tap', err)
-    })
-  })
-
-  // Re-sync this device's FCM token on every cold start with a live session.
-  //
-  // Registration used to fire only on login / verifyEmail / OAuth callback, which
-  // left two holes: sessions predating the push feature never registered at all,
-  // and FCM *rotates* tokens (reinstall, device restore, its own refresh cycle)
-  // with no event we can passively observe — the `registration` event fires in
-  // response to `register()`, not spontaneously. Both holes are silent: the user
-  // simply stops receiving pushes and nothing anywhere reports it.
-  //
-  // Re-registering each boot closes both without a re-login. The backend upserts
-  // by token, so repeating it (and overlapping with the login-path call) is a
-  // no-op rather than a duplicate row.
-  //
-  // Gated on a watch rather than a bare `if`: auth hydrates from persisted state
-  // after plugins run, so reading `isAuthenticated` directly here would be false
-  // on every boot and quietly skip registration forever.
-  const authStore = useAuthStore()
-  const { register } = usePushSubscription()
-
-  watch(
-    () => authStore.isAuthenticated,
-    (isAuth, wasAuth) => {
-      if (!isAuth || wasAuth) return
-
-      register().catch((err: unknown) => {
-        log.warn('Boot-time push registration failed', err)
+      Promise.resolve(nuxtApp.runWithContext(() => navigateTo(url))).catch((err: unknown) => {
+        log.warn('Failed to navigate from push tap', err)
       })
-    },
-    { immediate: true }
-  )
+    })
+
+    // Re-sync this device's FCM token on every cold start with a live session.
+    //
+    // Registration used to fire only on login / verifyEmail / OAuth callback, which
+    // left two holes: sessions predating the push feature never registered at all,
+    // and FCM *rotates* tokens (reinstall, device restore, its own refresh cycle)
+    // with no event we can passively observe — the `registration` event fires in
+    // response to `register()`, not spontaneously. Both holes are silent: the user
+    // simply stops receiving pushes and nothing anywhere reports it.
+    //
+    // Re-registering each boot closes both without a re-login. The backend upserts
+    // by token, so repeating it (and overlapping with the login-path call) is a
+    // no-op rather than a duplicate row.
+    //
+    // Gated on a watch rather than a bare `if`: auth hydrates from persisted state
+    // after plugins run, so reading `isAuthenticated` directly here would be false
+    // on every boot and quietly skip registration forever.
+    const authStore = useAuthStore()
+    const { register } = usePushSubscription()
+
+    watch(
+      () => authStore.isAuthenticated,
+      (isAuth, wasAuth) => {
+        if (!isAuth || wasAuth) return
+
+        register().catch((err: unknown) => {
+          log.warn('Boot-time push registration failed', err)
+        })
+      },
+      { immediate: true }
+    )
+  },
 })

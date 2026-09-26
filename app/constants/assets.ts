@@ -43,74 +43,68 @@ export const ASSETS = {
   MUSIC_PLAYER: `${IK}/placeholders/music-player.gif?tr=w-112,q-75,f-auto`,
   // ── Logos (self-hosted, critical path) ──
   LOGO_MAIN: '/logos/flylive-logo-wide.png',
-  LOGO_XL: '/logos/logo-full.png',
+  LOGO_XL: '/logos/logo-full.webp',
 
   // ── R2 CDN — Binary / Animations ──
   MICE_WAVE_SVGA: `${R2}/vip/1/mice-wave.svga`,
 
-  // ── ImageKit CDN — level badge fallbacks ──
-  /**
-   * ⚠️ BASE URL ONLY — do not bake a width in here. Callers size it themselves.
-   *
-   * These render across an enormous range: ~16 CSS px tall in a chat row, but `w-7/12` of the
-   * viewport (~240 CSS px) on the profile page (`pages/profile/[UserSignature].vue:406-407`).
-   * A baked `w-48` was shipped and reviewed as visibly blurry on profile — a 5x upscale.
-   *
-   * Consumers: `levelBadgeSrc()` for height-constrained rows, `withImageKitTransform()`
-   * elsewhere. The source is 512x158, so profile-sized renders legitimately need close to the
-   * native file; there is no width that serves both ends. Fix the byte cost by re-authoring the
-   * art (these are 20-frame ANIMATED WebP — frame count, not resolution, dominates), not by
-   * under-sizing the request.
-   */
-  DEFAULT_WEALTH_BADGE: `${IK}/badges/wealth/1.webp`,
-  DEFAULT_CHARM_BADGE: `${IK}/badges/charm/1.webp`,
-  DEFAULT_TRANSACTION_THUMB: `${IK}/badges/charm/1.webp?tr=w-128,q-75,c-maintain_ratio,f-auto`,
+  // ── Bundled static UI (boot-and-asset-delivery, ticket 02) ──
+  // These never change per-user, so they ship inside the app bundle instead of the CDN —
+  // see `scripts/export-static-ui-images.mjs` for provenance (source URL, chosen width, and
+  // why) and re-run it to refresh a file. Local paths pass through `withImageKitTransform`
+  // untouched (it only rewrites `ik.imagekit.io` hosts), so every helper that sizes these via
+  // `tr` at runtime is a safe no-op on the exported file.
 
-  // ── ImageKit CDN — UI Images ──
-  GIFT_DRAWER_ICON: `${IK}/placeholders/gift-icon.webp?tr=w-64,q-75,c-maintain_ratio,f-auto`,
-  DEFAULT_SEAT_IMG: `${IK}/placeholders/seat.webp?tr=w-96,q-75,c-maintain_ratio,f-auto`,
-  LOCK_SEAT_IMG: `${IK}/placeholders/seat-locked.webp?tr=w-96,q-75,c-maintain_ratio,f-auto`,
+  // Level badge fallbacks
   /**
-   * Same source file as `COIN_ICON` — the `tr` params MUST stay identical so one cached
-   * variant serves both. Divergence is what produced the 508-requests-at-81 KB vs
-   * 314-requests-at-1.4 KB split measured on this exact file.
+   * Widest real render is the profile page's `w-7/12` badge row (~240 CSS px) x 2.5 DPR,
+   * which exceeds the 512x158 native wealth badge, so the export is capped at native — see
+   * `scripts/export-static-ui-images.mjs`. 20-frame animated WebP; frame count verified
+   * preserved by the export script's assertion. Shared file with `DEFAULT_WEALTH_LEVEL_BADGE`.
    */
-  ROOM_CARD_TOP: `${IK}/placeholders/coin-icon.webp?tr=w-96,q-80,c-maintain_ratio,f-auto`,
-  DIAMOND_ICON: `${IK}/placeholders/diamond-icon.webp?tr=w-64,q-80,c-maintain_ratio,f-auto`,
+  DEFAULT_WEALTH_BADGE: '/images/ui/badge-wealth-default.webp',
+  /** Same reasoning as `DEFAULT_WEALTH_BADGE`, charm source (374x136 native). Shared file with `DEFAULT_CHARM_LEVEL_BADGE`. */
+  DEFAULT_CHARM_BADGE: '/images/ui/badge-charm-default.webp',
+  DEFAULT_TRANSACTION_THUMB: '/images/ui/transaction-thumb-default.webp',
+
+  // UI images
+  GIFT_DRAWER_ICON: '/images/ui/gift-drawer-icon.webp',
+  DEFAULT_SEAT_IMG: '/images/ui/seat-default.webp',
+  LOCK_SEAT_IMG: '/images/ui/seat-locked.webp',
+  /** Same source file as `COIN_ICON` — both point at the same bundled file so there is exactly one copy. */
+  ROOM_CARD_TOP: '/images/ui/coin-icon.webp',
+  DIAMOND_ICON: '/images/ui/diamond-icon.webp',
   /**
-   * Small/default coin icon — covers every `size-4`/`size-5`/`w-8` render (16-32 CSS px)
-   * at 2x DPR. 41.1 KB raw → 4.4 KB.
+   * Small/default coin icon — covers every `size-4`/`size-5`/`w-8` render (16-32 CSS px) at 2x DPR.
    *
    * ⚠️ This icon is genuinely multi-size, so it ships TWO variants rather than one. Anything
    * rendered larger than ~48 CSS px must use `COIN_ICON_LARGE` or it will visibly upscale.
    */
-  COIN_ICON: `${IK}/placeholders/coin-icon.webp?tr=w-96,q-80,c-maintain_ratio,f-auto`,
-  /** Reward-hero coin icon for `w-14`/`w-20`/`w-24` renders (56-96 CSS px) at 2x DPR. 13.4 KB. */
-  COIN_ICON_LARGE: `${IK}/placeholders/coin-icon.webp?tr=w-192,q-80,c-maintain_ratio,f-auto`,
+  COIN_ICON: '/images/ui/coin-icon.webp',
+  /** Reward-hero coin icon for `w-14`/`w-20`/`w-24` renders (56-96 CSS px) at 2x DPR. */
+  COIN_ICON_LARGE: '/images/ui/coin-icon-large.webp',
+  /** Full-bleed heroes on /coins/request and /coins/exchange (`min-w-full`, 412 CSS px). w-1024 matches the charm/wealth heroes below. */
+  HERO_SECONDARY: '/images/ui/hero-secondary.webp',
+  HERO_TERTIARY: '/images/ui/hero-tertiary.webp',
   /**
-   * Full-bleed heroes on /coins/request and /coins/exchange (`min-w-full`, 412 CSS px).
-   * w-400 covered ~1x DPR and read as blurry on every modern phone; w-1024 matches the
-   * charm/wealth heroes below (~110 KB webp, cached by the asset manifest).
+   * Full-bleed heroes on the wealth/charm level pages (`components/levels/LevelPage.vue`,
+   * `min-w-full`). w-1024 covers a 412 CSS px viewport up to ~2.5x DPR.
    */
-  HERO_SECONDARY: `${IK}/placeholders/secondary.webp?tr=w-1024,q-75,c-maintain_ratio,f-auto`,
-  HERO_TERTIARY: `${IK}/placeholders/tertiary.webp?tr=w-1024,q-75,c-maintain_ratio,f-auto`,
+  HERO_WEALTH: '/images/ui/hero-wealth.webp',
+  HERO_CHARM: '/images/ui/hero-charm.webp',
+  /** Not base-only — existing tr=w-48 slot, kept as-is. */
+  DEFAULT_ROOM_BADGE: '/images/ui/badge-room-default.webp',
   /**
-   * Full-bleed hero on the wealth/charm level pages (`components/levels/LevelPage.vue:154`,
-   * `min-w-full`). NuxtImg's `width`/`sizes` props are no-ops for absolute CDN URLs, so this
-   * `tr` is the only thing that sets the fetched resolution.
-   *
-   * w-1024 covers a 412 CSS px viewport up to ~2.5x DPR. w-400 was shipped first and reviewed
-   * as visibly blurry — it only covered ~1x. Still ~50% under the native file.
+   * ⚠️ Old CDN source (`${IK}/profile-1.webp`) 404s — verified against the live CDN
+   * 2026-09-26 (`ik-error: ENOENT`), a pre-existing bug predating this ticket. The real asset
+   * is `badges/profile-1.webp` (same `badges/<name>` convention as the room/wealth/charm
+   * badges above) — see `scripts/export-static-ui-images.mjs`. Flagged for confirmation.
    */
-  HERO_CHARM: `${IK}/placeholders/charm.webp?tr=w-1024,q-75,c-maintain_ratio,f-auto`,
-  HERO_WEALTH: `${IK}/placeholders/wealth.webp?tr=w-1024,q-75,c-maintain_ratio,f-auto`,
-  DEFAULT_ROOM_BADGE: `${IK}/badges/room/1.webp?tr=w-48,q-75,c-maintain_ratio,f-auto`,
-  /** Thumbnail params keep home/bootstrap badge decode small vs. full ~1MB source */
-  DEFAULT_PROFILE_BADGE: `${IK}/profile-1.webp?tr=w-64,q-75,f-webp`,
-  DEFAULT_HISTORY_BADGE: `${IK}/profile-1.webp?tr=w-64,q-75,f-webp`,
-  /** ⚠️ Base URL only — same reasoning as `DEFAULT_WEALTH_BADGE`; `LevelPage.vue` sizes these. */
-  DEFAULT_CHARM_LEVEL_BADGE: `${IK}/badges/charm/1.webp`,
-  DEFAULT_WEALTH_LEVEL_BADGE: `${IK}/badges/wealth/1.webp`,
+  DEFAULT_PROFILE_BADGE: '/images/ui/badge-profile-default.webp',
+  DEFAULT_HISTORY_BADGE: '/images/ui/badge-profile-default.webp',
+  /** Same file/reasoning as `DEFAULT_CHARM_BADGE` above; `LevelPage.vue` sizes these via its own transform (no-op on a local path). */
+  DEFAULT_CHARM_LEVEL_BADGE: '/images/ui/badge-charm-default.webp',
+  DEFAULT_WEALTH_LEVEL_BADGE: '/images/ui/badge-wealth-default.webp',
 
   // ── Auth page cards (mobile-optimized: 250px wide, q70, WebP) ──
   AUTH_CARD_1: `${IK}/placeholders/1.webp?tr=w-250,q-70,f-webp`,
@@ -120,30 +114,27 @@ export const ASSETS = {
   AUTH_CARD_5: `${IK}/placeholders/5.webp?tr=w-250,q-70,f-webp`,
   AUTH_CARD_6: `${IK}/placeholders/6.webp?tr=w-250,q-70,f-webp`,
 
-  COVER_PLACEHOLDER: `${IK}/placeholders/auth-bg.webp?tr=w-420,q-60,f-webp`,
+  COVER_PLACEHOLDER: '/images/ui/cover-placeholder.webp',
 
   // ── Gender (onboarding cards, ~200 CSS px wide → w-400 at 2x DPR) ──
-  GENDER_FEMALE: `${IK}/gender/female.webp?tr=w-400,q-75,c-maintain_ratio,f-auto`,
-  GENDER_MALE: `${IK}/gender/male.webp?tr=w-400,q-75,c-maintain_ratio,f-auto`,
+  GENDER_FEMALE: '/images/ui/gender-female.webp',
+  GENDER_MALE: '/images/ui/gender-male.webp',
 
-  // ── Placeholders & Fallbacks (precached by SW) ──
+  // ── Placeholders & Fallbacks ──
   /**
    * Width is baked in deliberately, and `w-256` deliberately matches
    * `AVATAR_DEFAULT_WIDTH` in `~/utils/imagekit` so the constant and the helper agree.
-   *
-   * `withImageKitTransform` returns early when a `tr` is already present, so every
-   * `avatarImageSrc(user.avatar ?? ASSETS.AVATAR_PLACEHOLDER)` call site resolves this to
-   * exactly one cached variant — including the profile hero that passes `w: 512` for real
-   * avatars (this is a flat silhouette; 256 is ample).
-   *
-   * ⚠️ Do NOT make this base-only. It is a fallback path and it is SW-precached, so a
-   * call site that forgot to transform would silently serve the 1024x1024 / 41 KB original.
    */
-  AVATAR_PLACEHOLDER: `${IK}/placeholders/avatar.webp?tr=w-256,q-75,c-maintain_ratio,f-auto`,
-  /** Base URL only — callers use `withImageKitTransform` so card width matches layout (no stuck w-520). */
-  ROOM_BG_PLACEHOLDER: `${IK}/placeholders/room-background.webp`,
+  AVATAR_PLACEHOLDER: '/images/ui/avatar-placeholder.webp',
+  /**
+   * Base URL only in spirit — callers still size it via `withImageKitTransform` (a no-op on
+   * this local path, since that helper only rewrites `ik.imagekit.io` hosts). Widest real
+   * caller is `useRoomBackground`'s full-bleed room-page background (`ROOM_BACKGROUND_WIDTH`
+   * = 960), so the export is sized at 960 — see `scripts/export-static-ui-images.mjs`.
+   */
+  ROOM_BG_PLACEHOLDER: '/images/ui/room-background.webp',
   /** Full-bleed profile cover. w-1200 covers a 412 CSS px viewport to ~2.9x DPR. */
-  PROFILE_COVER_PLACEHOLDER: `${IK}/placeholders/profile-bg.jpeg?tr=w-1200,q-70,c-maintain_ratio,f-auto`,
+  PROFILE_COVER_PLACEHOLDER: '/images/ui/profile-cover-placeholder.webp',
 
   // ── Videos (on ImageKit; migration to R2 tracked in docs/issues/cdn-bandwidth ticket 03) ──
   /** 1.65 MB x 241 requests = ~397 MB/mo. `tr` does not apply to video delivery. */

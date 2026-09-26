@@ -23,12 +23,9 @@ export const headConfig: HeadConfig = {
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' }
     ],
     link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/pwa-assets/android/launchericon-48x48.png' },
-        { rel: 'icon', type: 'image/png', sizes: '72x72', href: '/pwa-assets/android/launchericon-72x72.png' },
-        { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/pwa-assets/android/launchericon-96x96.png' },
-        { rel: 'icon', type: 'image/png', sizes: '144x144', href: '/pwa-assets/android/launchericon-144x144.png' },
-        { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/pwa-assets/android/launchericon-192x192.png' },
-        { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/pwa-assets/android/launchericon-512x512.png' }
+        // favicon.ico alone (32 + 48 px inside). The six PNG launcher-icon links pointed at the
+        // retired PWA asset folder and cost the Android WebView ~12 uncached requests on every
+        // route change (boot-and-asset-delivery 01/02).
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
     ]
 }

@@ -14,6 +14,7 @@ import type { LuckyFlyRenderer } from '~/services/luckyFlyRenderer';
 import { isAway } from '~/services/motionPauseOrchestrator';
 import { useFxPreferencesStore } from '~/stores/fxPreferences';
 import type { FlyPoint } from '~/utils/lucky-fly-path';
+import { giftThumbnailSrc } from '~/utils/imagekit';
 
 // ========================================
 // Module-Level State
@@ -99,7 +100,11 @@ export function useLuckyFly() {
     const now = performance.now();
     const ends = recipientIds.map((id) => resolveSeatPosition(id, now));
     renderer.enqueue({
-      thumbnailUrl,
+      // Canvas draws this at LUCKY_FLY_THUMBNAIL_SIZE (58 CSS px) — reuse the
+      // gift drawer's 192px variant (giftThumbnailSrc) rather than a new size:
+      // same cached CDN entry the drawer/playback already warmed, one fewer
+      // variant, still >3x DPR at 58px.
+      thumbnailUrl: giftThumbnailSrc(thumbnailUrl),
       path: {
         start: resolveSeatPosition(senderId, now),
         center: getScreenCenter(),

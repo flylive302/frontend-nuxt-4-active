@@ -290,7 +290,6 @@ export interface BootstrapConfig {
   vapid_public_key: string | null
   props: BootstrapProp[]
   vip_levels: VipLevel[]
-  featured_rooms: FeaturedRoom[]
   /** JoyPlay games kill switch. Sent uncached so a flip reaches clients immediately. */
   games_enabled?: boolean
 }
@@ -377,12 +376,4 @@ export interface VipLevel {
   emblem_animated_url: string | null
 }
 
-/**
- * Minimal room shape for background pre-warming.
- * Seeded from bootstrap; null background is included (frontend skips null URLs).
- */
-export interface FeaturedRoom {
-  id: number
-  background: string | null
-}
 

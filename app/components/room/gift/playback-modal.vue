@@ -5,6 +5,12 @@
  * Thin presentation component for gift animations.
  * Click to minimize into a draggable pip, click again to restore.
  * All business logic lives in useGiftPlayback composable.
+ *
+ * arch-allow-raw-catalog-picture: the two `:src="....gift.thumbnail_url"` bindings below
+ * (static-image playback) pass the raw URL into `RoomGiftStaticDisplay`, which applies
+ * `giftStaticDisplaySrc` (w-512,q-80) itself — wrapping here too would set an existing
+ * `tr` param, making the inner transform a no-op and silently downgrading these to
+ * `giftThumbnailSrc`'s smaller drawer-sized variant.
  */
 import { resolveVideoUrl } from '~/utils/platform';
 import { giftThumbnailSrc } from '~/utils/imagekit';

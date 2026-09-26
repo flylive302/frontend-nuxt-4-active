@@ -1,8 +1,3 @@
-<script setup lang="ts">
-const assetStore = useAssetStore()
-const { hasDegradedAssets } = storeToRefs(assetStore)
-</script>
-
 <template>
   <div>
     <div class="fixed inset-0 -z-10 overflow-hidden bg-neutral-900">
@@ -12,14 +7,6 @@ const { hasDegradedAssets } = storeToRefs(assetStore)
     <NavHome />
 
     <div class="h-[calc(4rem+env(safe-area-inset-top,0))]"/>
-
-    <div
-      v-if="hasDegradedAssets"
-      class="flex items-center gap-2 bg-yellow-500/10 px-4 py-2.5 text-sm text-yellow-400"
-    >
-      <UIcon name="i-lucide-triangle-alert" class="size-4 shrink-0" />
-      <span>Some assets couldn't load — visuals in rooms may be missing.</span>
-    </div>
 
     <slot />
 

@@ -6,11 +6,19 @@
  * once (no error UI), and tear itself down — the caller (seat.vue) clears
  * the store entry from `onDone`, so a store-level assertion covers the
  * REACT-stage contract without a browser test.
+ *
+ * boot-and-asset-delivery/08: `init()` now resolves `dotlottie-web` via a
+ * dynamic `import()` (lazy-load on first use, see useSeatReactionPlayer.ts),
+ * so construction of the DotLottie instance happens after a microtask —
+ * tests `await flush()` once after `init()` before asserting on it.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ref } from 'vue'
 
 vi.stubGlobal('ref', ref)
+
+/** Let the pending dynamic `import('@lottiefiles/dotlottie-web')` settle. */
+const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
 
 // ============================================
 // Fake DotLottie — captures listeners, lets tests fire events synchronously
@@ -64,6 +72,7 @@ describe('useSeatReactionPlayer — fetch failure no-op', () => {
 
     const player = useSeatReactionPlayer(canvas, { code: '1f602', onDone })
     player.init()
+    await flush()
 
     expect(lastInstance).not.toBeNull()
 
@@ -80,6 +89,7 @@ describe('useSeatReactionPlayer — fetch failure no-op', () => {
 
     const player = useSeatReactionPlayer(canvas, { code: '1f602', onDone })
     player.init()
+    await flush()
     lastInstance!.fire('loadError')
 
     expect(lastInstance!.destroyed).toBe(true)
@@ -92,6 +102,7 @@ describe('useSeatReactionPlayer — fetch failure no-op', () => {
 
     const player = useSeatReactionPlayer(canvas, { code: '1f602', onDone })
     player.init()
+    await flush()
     lastInstance!.fire('loadError')
     player.destroy() // caller-side redundant teardown (e.g. component unmount)
 
@@ -108,5 +119,18 @@ describe('useSeatReactionPlayer — fetch failure no-op', () => {
 
     expect(onDone).toHaveBeenCalledTimes(1)
     expect(lastInstance).toBeNull() // never constructed
+  })
+
+  it('does not construct a DotLottie instance if destroy() runs before the lazy chunk resolves', async () => {
+    const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
+    const canvas = ref({} as HTMLCanvasElement)
+    const onDone = vi.fn()
+
+    const player = useSeatReactionPlayer(canvas, { code: '1f602', onDone })
+    player.init() // kicks off the dynamic import('@lottiefiles/dotlottie-web')
+    player.destroy() // unmounted before the chunk settles (e.g. seat re-rendered fast)
+    await flush()
+
+    expect(lastInstance).toBeNull() // never constructed after teardown
   })
 })

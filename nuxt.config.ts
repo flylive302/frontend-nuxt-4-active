@@ -210,13 +210,17 @@ export default defineNuxtConfig({
         }
     },
     image: {
-        // Capacitor bundle has no server, so default-provider (ipx) URLs like
-        // /_ipx/... 404 inside the APK. .env.capacitor sets NUXT_IMAGE_PROVIDER=none
-        // to pass src through untouched; web builds keep ipx (undefined = default).
-        provider: process.env.NUXT_IMAGE_PROVIDER || undefined,
-        imagekit: {
-            baseURL: 'https://ik.imagekit.io/flylive'
-        },
+        // Always 'none' — web and app share one image path (boot-and-asset-delivery
+        // ticket 03). We don't whitelist `image.domains`, so ipx's provider already
+        // passed every absolute CDN (ImageKit/R2) URL through untouched (see
+        // `@nuxt/image` runtime/image.js validateDomains gate) — those are sized via
+        // ImageKit `tr` params instead (`~/utils/imagekit`), where NuxtImg's
+        // width/sizes/densities props are no-ops. The only URLs ipx actually
+        // resized on web were LOCAL static assets (`/logos/*`), each hitting the
+        // uncached `/_ipx/...` Cloudflare Pages function per request. 'none' drops
+        // that route from the Nitro build entirely and serves those full-size,
+        // matching Capacitor (no server there, so ipx was always a 404 in the app).
+        provider: 'none',
         quality: 75,
         format: ['webp'],
         densities: [1, 2],

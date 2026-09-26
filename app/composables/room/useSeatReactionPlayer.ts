@@ -10,14 +10,30 @@
  * `dotlottie-web` only exposes a boolean `loop` (no native loop-count), so
  * loops are counted manually via the `loop` event and `setLoop(false)` is
  * called on the final pass so `complete` fires exactly once, at the end.
+ *
+ * boot-and-asset-delivery/08: `dotlottie-web` is lazy-loaded on first use
+ * (mirrors `useMediasoupDevice`'s `getDeviceClass` / `svga-player.client.ts`'s
+ * `ensureSvga` pattern) so it never ships in the room bundle for a session
+ * that never plays a seat reaction.
  */
 import type { Ref } from 'vue';
-import { DotLottie } from '@lottiefiles/dotlottie-web';
 import { getReactionLottieUrl } from '~/constants/reactions';
 import { planReactionPlayback } from '~/utils/planReactionPlayback';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[SeatReactionPlayer]');
+
+type DotLottieCtor = typeof import('@lottiefiles/dotlottie-web')['DotLottie'];
+type DotLottieInstance = InstanceType<DotLottieCtor>;
+
+let _DotLottieCtor: DotLottieCtor | null = null;
+async function getDotLottieCtor(): Promise<DotLottieCtor> {
+  if (!_DotLottieCtor) {
+    const mod = await import('@lottiefiles/dotlottie-web');
+    _DotLottieCtor = mod.DotLottie;
+  }
+  return _DotLottieCtor;
+}
 
 export interface UseSeatReactionPlayerOptions {
   code: string;
@@ -36,10 +52,12 @@ export function useSeatReactionPlayer(
   canvas: Ref<HTMLCanvasElement | null>,
   options: UseSeatReactionPlayerOptions,
 ): UseSeatReactionPlayerReturn {
-  let instance: DotLottie | null = null;
+  let instance: DotLottieInstance | null = null;
   let completedLoops = 0;
   let targetLoops = 1;
   let done = false;
+  /** Set by destroy() — guards against the lazy chunk resolving after teardown. */
+  let cancelled = false;
 
   function reportDone(): void {
     if (done) return;
@@ -80,20 +98,33 @@ export function useSeatReactionPlayer(
       return;
     }
 
-    instance = new DotLottie({
-      canvas: canvas.value,
-      src: getReactionLottieUrl(options.code),
-      autoplay: true,
-      loop: true,
-    });
+    // Fire-and-forget: init() stays sync for the caller (onMounted); the
+    // dotlottie-web chunk loads on first reaction, not on module import.
+    void getDotLottieCtor()
+      .then((DotLottie) => {
+        // Torn down (or already done) while the chunk was loading.
+        if (cancelled || done || !canvas.value) return;
 
-    instance.addEventListener('load', onLoad);
-    instance.addEventListener('loop', onLoop);
-    instance.addEventListener('complete', onComplete);
-    instance.addEventListener('loadError', onLoadError);
+        instance = new DotLottie({
+          canvas: canvas.value,
+          src: getReactionLottieUrl(options.code),
+          autoplay: true,
+          loop: true,
+        });
+
+        instance.addEventListener('load', onLoad);
+        instance.addEventListener('loop', onLoop);
+        instance.addEventListener('complete', onComplete);
+        instance.addEventListener('loadError', onLoadError);
+      })
+      .catch((error) => {
+        log.warn('Failed to load dotlottie-web', { error, code: options.code });
+        reportDone();
+      });
   }
 
   function destroy(): void {
+    cancelled = true;
     instance?.removeEventListener('load', onLoad);
     instance?.removeEventListener('loop', onLoop);
     instance?.removeEventListener('complete', onComplete);

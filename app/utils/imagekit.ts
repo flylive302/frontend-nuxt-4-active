@@ -86,9 +86,24 @@ export function levelBadgeSrc(url: string | null | undefined, cssHeightPx: numbe
  * gift means one cached copy serves all surfaces. NuxtImg's width/format props
  * are no-ops for absolute CDN URLs (no `domains` config), so the `tr` param
  * here is what actually resizes.
+ *
+ * w=192 (boot-and-asset-delivery 05): derived from the drawer grid, the
+ * biggest of the small surfaces — `grid.vue`'s `grid-cols-4 gap-2 p-2!` plus
+ * `gift-card.vue`'s own `p-1` puts the image box at ~76 CSS px at the 375px
+ * baseline viewport (`nuxt.config.ts` `image.screens.sm`); 76 x DPR_FACTOR
+ * (2.5) = 190, rounded up. Lucky fly (58px) and the profile history card
+ * (~56px) are both smaller, so this one variant still covers them.
+ * Previously 256px, which measured ≤15 KB for only 48/89 real catalog gifts
+ * (median ~14.7 KB, max ~35 KB) — 192px clears 80/89 (median ~9.7 KB, max
+ * ~20 KB); the remaining 9 are reported in the ticket, not fixed here by
+ * shrinking further, because 256/76 was already ~2x DPR and going below that
+ * reverses the DPR_FACTOR quality call below. The fullscreen video-playback
+ * poster (`playback-modal.vue`, `inset-0`, ~375px) is under-served by this
+ * shared variant either way — a pre-existing gap, not introduced here;
+ * candidate fix is its own `giftStaticDisplaySrc`-sized poster variant.
  */
 export function giftThumbnailSrc(url: string | null | undefined): string {
-  return withImageKitTransform(url, { w: 256, q: 75 })
+  return withImageKitTransform(url, { w: 192, q: 75 })
 }
 
 /**
@@ -97,6 +112,16 @@ export function giftThumbnailSrc(url: string | null | undefined): string {
  */
 export function giftStaticDisplaySrc(url: string | null | undefined): string {
   return withImageKitTransform(url, { w: 512, q: 80 })
+}
+
+/**
+ * Prop/badge preview-modal thumbnail (boot-and-asset-delivery 05) — shared by
+ * `common/prop-preview-modal.vue` and `vip/VipPropPreviewModal.vue`, both a
+ * `max-w-60` (240 CSS px) centered preview box for a prop's `thumbnail_url`
+ * or a VIP badge's `icon_url`. One variant for both call sites.
+ */
+export function propPreviewThumbnailSrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 600, q: 75 })
 }
 
 /** Default avatar variant width — see `avatarImageSrc` for the sizing rationale. */

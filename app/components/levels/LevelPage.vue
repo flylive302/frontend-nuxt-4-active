@@ -147,7 +147,9 @@ const tableData = computed<LevelRow[]>(() =>
       badge: {
         // Painted at `max-w-12` (48 CSS px) below. Previously passed through raw, which looked
         // sharp but fetched the full 512px source — ~110 KB per row, once per level in the table.
-        // w-128 is still ~2.6x DPR at that box, so sharpness is unchanged.
+        // w-128 is still ~2.6x DPR at that box, so sharpness is unchanged. The default-badge
+        // fallback is a bundled file (read from disk; the transform no-ops on it) — every
+        // catalog level carries its own `image_url`, so rows rarely reach it.
         badgeSrc: withImageKitTransform(item.image_url || props.defaultBadgeUrl, { w: 128, q: 75 }),
         class: item.level === currentLevel.value ? `border ${COLOR_BORDER_CLASS[props.color]} ${COLOR_BG_10_CLASS[props.color]} rounded-md px-2 py-1 inset-shadow-sm` : '',
       },
@@ -158,14 +160,11 @@ const tableData = computed<LevelRow[]>(() =>
 
 <template>
   <div>
-    <NuxtImg
+    <img
         :src="heroImage"
-        format="webp"
-        densities="x1 x2"
-        sizes="320px"
-        width="100%"
+        alt=""
         class="min-w-full aspect-rectangle object-cover animate-[zoom_50s_ease-in-out_infinite]"
-    />
+    >
 
     <div class="p-2 mx-3 backdrop-blur-xs -mt-26 rounded-xl border" :class="COLOR_BORDER_CLASS[color]">
       <!-- User Info Grid -->

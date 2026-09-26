@@ -4,6 +4,7 @@ import { RECHARGE_ACTIVITY, ASSETS } from '~/constants/assets'
 import { resolveRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import type { ResolvedRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props
@@ -67,6 +68,11 @@ const rewardEntries = computed(() =>
 
 function openPreview(reward: MilestoneReward, resolved: ResolvedRewardAsset): void {
   previewReward.value = { reward, resolved }
+}
+
+/** Reward tiles below are `w-20` (80 CSS px; `sm:w-24` is a desktop-only bump, not the mobile-first target). */
+function tileThumbnailSrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 200, q: 75 })
 }
 
 // ========================================
@@ -154,14 +160,14 @@ const taskCardStyle = { borderImageSource: `url(${RECHARGE_ACTIVITY.taskBg})` }
                 @click="openPreview(reward, resolved)"
               >
                 <img
-                  :src="resolved.thumbnailUrl"
+                  :src="tileThumbnailSrc(resolved.thumbnailUrl)"
                   :alt="resolved.name"
                   class="w-full rounded-lg"
                 >
               </button>
               <img
                 v-else
-                :src="resolved.thumbnailUrl"
+                :src="tileThumbnailSrc(resolved.thumbnailUrl)"
                 :alt="resolved.name"
                 class="w-20 sm:w-24 rounded-lg"
               >

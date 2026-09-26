@@ -47,9 +47,6 @@ const progressCallbacks = new Set<ProgressCallback>()
 const completeCallbacks = new Set<CompleteCallback>()
 const itemResultCallbacks = new Set<ItemResultCallback>()
 
-/** Tracks critical-priority items actually pushed to the queue (post cache-filter) */
-let criticalQueued = 0
-
 /** Flow control */
 let isPaused = false
 let isProcessing = false
@@ -86,7 +83,6 @@ export async function enqueue(items: EnqueueItem[]): Promise<void> {
     }
 
     queue.push(queueItem)
-    if (item.priority === 'critical') criticalQueued++
   }
 
   queue.sort((a, b) => {
@@ -155,7 +151,6 @@ export function resetAll(): void {
   progressCallbacks.clear()
   completeCallbacks.clear()
   itemResultCallbacks.clear()
-  criticalQueued = 0
   isPaused = false
   isProcessing = false
 }
@@ -370,11 +365,6 @@ function notifyItemResult(url: string, priority: AssetPriority, succeeded: boole
 
 export function getProgress(): DownloadProgress {
   return { ...progress }
-}
-
-/** Number of critical-priority items actually pushed to the queue this session (post cache-filter). */
-export function getCriticalQueuedCount(): number {
-  return criticalQueued
 }
 
 export function isDownloading(): boolean {

@@ -9,6 +9,7 @@ import type { VipBadge, VipProp } from '~/types/vip/vip-level'
 import { vipAssetBase } from '~/constants/assets'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 import { useMallStore } from '~/stores/mall'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -58,6 +59,16 @@ const assetBasePath = computed(() =>
  */
 function miceWaveRingColor(vipProp: VipProp): string {
   return resolveMiceWaveRingColor(mallStore.propIndex[vipProp.id]?.metadata)
+}
+
+/**
+ * Unlocked-props/badges tiles below are `grid-cols-3 gap-3` inside a
+ * fullscreen modal with `px-6` padding — ~101 CSS px per tile at the 375px
+ * baseline viewport. w=256 is that slot x DPR_FACTOR (2.5), rounded up to
+ * the shared 256px bucket (`giftThumbnailSrc`, `avatarImageSrc`).
+ */
+function catalogTileSrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 256, q: 75 })
 }
 
 // ========================================
@@ -128,7 +139,7 @@ function handleClose(): void {
                 <MiceWaveRing v-if="vipProp.type === 'mice_wave'" :color="miceWaveRingColor(vipProp)" :animated="false" />
                 <img
                   v-else-if="vipProp.thumbnail_url"
-                  :src="vipProp.thumbnail_url"
+                  :src="catalogTileSrc(vipProp.thumbnail_url)"
                   :alt="vipProp.name"
                   class="w-full h-full object-contain"
                 >
@@ -151,7 +162,7 @@ function handleClose(): void {
               <div class="w-full aspect-square rounded-lg bg-white/10 overflow-hidden flex items-center justify-center p-1">
                 <img
                   v-if="vipBadge.icon_url"
-                  :src="vipBadge.icon_url"
+                  :src="catalogTileSrc(vipBadge.icon_url)"
                   :alt="vipBadge.name"
                   class="w-full h-full object-contain"
                 >

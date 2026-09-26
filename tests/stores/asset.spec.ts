@@ -1,6 +1,9 @@
 // ========================================
-// Asset Store Tests — critical gate logic
+// Asset Store Tests — download progress + failure tracking
 // ========================================
+// The first-install download gate (critical tier, route guard, full-screen screen) was
+// removed in boot-and-asset-delivery 02: static UI pictures ship in the bundle, so no
+// asset is critical to first paint any more.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -13,109 +16,52 @@ beforeEach(() => {
   setActivePinia(createPinia())
 })
 
-// ============================================================
-// isCriticalGateOpen
-// ============================================================
-
-describe('useAssetStore.isCriticalGateOpen', () => {
-  it('opens when criticalSucceeded reaches criticalTotal', async () => {
+describe('useAssetStore failure tracking', () => {
+  it('accumulates failed URLs and the failed total', async () => {
     const { useAssetStore } = await import('../../app/stores/asset')
     const store = useAssetStore()
 
-    store.setCriticalTotal(3)
-    store.markCriticalSucceeded()
-    store.markCriticalSucceeded()
-    store.markCriticalSucceeded()
+    store.markFailed('https://example.com/a.svga')
+    store.markFailed('https://example.com/b.mp4')
 
-    expect(store.isCriticalGateOpen).toBe(true)
+    expect(store.failedUrls).toEqual(['https://example.com/a.svga', 'https://example.com/b.mp4'])
+    expect(store.failedTotal).toBe(2)
   })
 
-  it('stays closed on partial success', async () => {
+  it('resetFailures clears the list and the total for a retry', async () => {
     const { useAssetStore } = await import('../../app/stores/asset')
     const store = useAssetStore()
 
-    store.setCriticalTotal(3)
-    store.markCriticalSucceeded()
-    store.markCriticalSucceeded()
+    store.markFailed('https://example.com/a.svga')
+    store.resetFailures()
 
-    expect(store.isCriticalGateOpen).toBe(false)
+    expect(store.failedUrls).toEqual([])
+    expect(store.failedTotal).toBe(0)
   })
 
-  it('stays closed when criticalTotal === 0 (bootstrap not yet started)', async () => {
+  it('reset returns the store to idle with no progress or failures', async () => {
     const { useAssetStore } = await import('../../app/stores/asset')
     const store = useAssetStore()
 
-    expect(store.criticalTotal).toBe(0)
-    expect(store.isCriticalGateOpen).toBe(false)
-  })
+    store.setPhase('downloading')
+    store.setProgress({ total: 4, completed: 1, failed: 0, currentUrl: null, bytesDownloaded: 0, bytesTotal: 0 })
+    store.markFailed('https://example.com/a.svga')
+    store.reset()
 
-  it('opens via cacheSweptAndConfirmed regardless of counters', async () => {
-    const { useAssetStore } = await import('../../app/stores/asset')
-    const store = useAssetStore()
-
-    store.setCacheSweptAndConfirmed(true)
-
-    expect(store.isCriticalGateOpen).toBe(true)
-  })
-
-  it('non-critical failures do not open or close the gate', async () => {
-    const { useAssetStore } = await import('../../app/stores/asset')
-    const store = useAssetStore()
-
-    store.setCriticalTotal(1)
-    store.markFailed('https://example.com/normal.webm')
-
-    expect(store.isCriticalGateOpen).toBe(false)
-    expect(store.hasCriticalFailures).toBe(false)
+    expect(store.phase).toBe('idle')
+    expect(store.progress).toBeNull()
+    expect(store.failedTotal).toBe(0)
+    expect(store.downloadPercent).toBe(0)
   })
 })
 
-// ============================================================
-// hasCriticalFailures
-// ============================================================
-
-describe('useAssetStore.hasCriticalFailures', () => {
-  it('is true when a critical asset exhausts retries', async () => {
+describe('useAssetStore download gate removal', () => {
+  it('exposes no download-gate state', async () => {
     const { useAssetStore } = await import('../../app/stores/asset')
-    const store = useAssetStore()
+    const store = useAssetStore() as unknown as Record<string, unknown>
 
-    store.markCriticalFailed('https://example.com/critical.webm')
-
-    expect(store.hasCriticalFailures).toBe(true)
-  })
-
-  it('stays false when only non-critical assets fail', async () => {
-    const { useAssetStore } = await import('../../app/stores/asset')
-    const store = useAssetStore()
-
-    store.markFailed('https://example.com/non-critical.webm')
-
-    expect(store.hasCriticalFailures).toBe(false)
-  })
-
-  it('criticalFailedUrls and failedUrls accumulate correctly', async () => {
-    const { useAssetStore } = await import('../../app/stores/asset')
-    const store = useAssetStore()
-
-    store.markCriticalFailed('https://example.com/c1.webm')
-    store.markFailed('https://example.com/c1.webm')
-    store.markFailed('https://example.com/n1.webm')
-
-    expect(store.criticalFailedUrls).toEqual(['https://example.com/c1.webm'])
-    expect(store.failedUrls).toEqual(['https://example.com/c1.webm', 'https://example.com/n1.webm'])
-    expect(store.failedTotal).toBe(2)
-    expect(store.criticalFailed).toBe(1)
-  })
-
-  it('resetFailedUrls clears both URL lists', async () => {
-    const { useAssetStore } = await import('../../app/stores/asset')
-    const store = useAssetStore()
-
-    store.markCriticalFailed('https://example.com/c1.webm')
-    store.markFailed('https://example.com/n1.webm')
-    store.resetFailedUrls()
-
-    expect(store.criticalFailedUrls).toEqual([])
-    expect(store.failedUrls).toEqual([])
+    for (const key of ['showDownloadGate', 'isCriticalGateOpen', 'hasDegradedAssets', 'criticalTotal', 'hasCriticalFailures']) {
+      expect(store[key]).toBeUndefined()
+    }
   })
 })

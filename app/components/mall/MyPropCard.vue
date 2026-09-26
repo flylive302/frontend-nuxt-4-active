@@ -6,6 +6,7 @@ import type { UserProp } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/constants/mall'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 import { useMallStore } from '~/stores/mall'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -40,6 +41,15 @@ const isMiceWave = computed(() => props.userProp.type === 'mice_wave')
  */
 const miceWaveRingColor = computed(() =>
   resolveMiceWaveRingColor(mallStore.propIndex[props.userProp.prop_id]?.metadata),
+)
+
+/**
+ * `my-props.vue` renders these 2-up (`grid-cols-2`) inside `px-3` — ~171 CSS
+ * px per card at the 375px baseline viewport (`nuxt.config.ts` devtools `sm`
+ * breakpoint). w=432 is that slot x DPR_FACTOR (2.5), rounded up.
+ */
+const thumbnailSrc = computed(() =>
+  withImageKitTransform(props.userProp.thumbnail_url, { w: 432, q: 75 }),
 )
 
 const isExpired = computed(() => !props.userProp.is_valid)
@@ -104,7 +114,7 @@ function handleSelect(): void {
       <MiceWaveRing v-if="isMiceWave" :color="miceWaveRingColor" :animated="false" />
       <img
         v-else-if="userProp.thumbnail_url"
-        :src="userProp.thumbnail_url"
+        :src="thumbnailSrc"
         :alt="userProp.name"
         class="p-2 w-full h-full object-cover"
         loading="lazy"

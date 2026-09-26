@@ -6,3 +6,9 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss://audio.flyliveapp.com wss://*.audio.flyliveapp.com wss://*.laravel.cloud; font-src 'self' data: https:; worker-src 'self' blob:; frame-src https://joysdk.com https://joyplay.cn; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+
+# Bundled static UI pictures (boot-and-asset-delivery 02). Immutable for a year, like the
+# ImageKit URLs they replaced: a changed picture MUST ship under a new filename
+# (see scripts/export-static-ui-images.mjs).
+/images/ui/*
+  Cache-Control: public, max-age=31536000, immutable

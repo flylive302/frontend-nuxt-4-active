@@ -24,6 +24,7 @@ error it reports is yours.
 - TypeScript strict mode — no `any`, fully typed props/emits/refs/returns.
 - File naming: components/types = PascalCase, composables = `useCamelCase`, files = kebab-case, vars/functions = camelCase, constants = SCREAMING_SNAKE_CASE.
 - Vue file section order: Imports → Config → Constants → Types → State → Composables → Handlers → Helpers.
+- **Catalog pictures are never rendered from the raw URL** — gift thumbnails, prop images, badge images, VIP cards always go through `~/utils/imagekit` (`withImageKitTransform` or a named helper like `giftThumbnailSrc`) at the rendered slot's CSS px × 2.5, q75 (boot-and-asset-delivery 05). Known gap: the ~32 R2-hosted (`assets.flyliveapp.com`) frame-prop `thumbnail_url`s — the helper no-ops on non-ImageKit hosts, so those still ship full-size; resizing them is out of scope until server-side resizing exists. Deliberate exception: the profile-page level badges (`useUserProfile.ts` `wealthBadgeSrc`) paint near native size, so they stay raw — ImageKit upscales past native, and under-sizing blurs them.
 
 ## Directory responsibilities
 

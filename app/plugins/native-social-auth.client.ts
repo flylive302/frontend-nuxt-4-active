@@ -8,9 +8,16 @@ import { Capacitor } from '@capacitor/core'
  * of native social auth (ADR 0011, capacitor-10).
  *
  * No-ops on the web build; the popup/redirect flow handles OAuth there.
+ *
+ * `parallel: true` (boot-and-asset-delivery 08): it has no ordering dependency on any other
+ * plugin, so the native bridge round trips below no longer serialize the plugin chain.
  */
-export default defineNuxtPlugin(async () => {
-  if (!Capacitor.isNativePlatform()) return
+export default defineNuxtPlugin({
+  name: 'native-social-auth',
+  parallel: true,
+  async setup() {
+    if (!Capacitor.isNativePlatform()) return
 
-  await useNativeSocialAuth().registerDeepLinkListener()
+    await useNativeSocialAuth().registerDeepLinkListener()
+  },
 })

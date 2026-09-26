@@ -6,6 +6,7 @@ import { computed } from 'vue'
 import type { PropType } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/constants/mall'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 defineOptions({ name: 'MallPropAssetView' })
 
@@ -27,6 +28,16 @@ const iconColor = computed(() => PROP_TYPE_COLORS[props.type])
 
 /** Ring color for the mice-wave preview — same resolver as the seat's speaking ring. */
 const miceWaveRingColor = computed(() => resolveMiceWaveRingColor(props.metadata))
+
+/**
+ * Both callers (`PropDetailModal`, `MyPropDetailModal`) wrap this in a
+ * `max-w-50` (200 CSS px) box. w=512 ~= 200 x DPR_FACTOR (2.5), rounded to
+ * the same bucket already cached for other 500-ish px catalog previews.
+ */
+const thumbnailSrc = computed(() => withImageKitTransform(props.thumbnailUrl, { w: 512, q: 75 }))
+/** `asset_url` is animation-only for every seeded prop type today (svga/mp4 on R2) except
+ * `room_theme`, which has no live catalog rows — kept as an image fallback defensively. */
+const assetImageSrc = computed(() => withImageKitTransform(props.assetUrl, { w: 512, q: 75 }))
 </script>
 
 <template>
@@ -55,7 +66,7 @@ const miceWaveRingColor = computed(() => resolveMiceWaveRingColor(props.metadata
       <AssetPlayer
         class="relative min-w-full z-10"
         :src="assetUrl"
-        :thumbnail-src="thumbnailUrl || undefined"
+        :thumbnail-src="thumbnailSrc || undefined"
         :muted="false"
       />
     </div>
@@ -66,14 +77,14 @@ const miceWaveRingColor = computed(() => resolveMiceWaveRingColor(props.metadata
     <div class="space-y-2">
       <img
         v-if="thumbnailUrl"
-        :src="thumbnailUrl"
+        :src="thumbnailSrc"
         :alt="name"
         class="w-full h-auto object-contain rounded-xl"
         referrerpolicy="no-referrer"
       >
       <img
         v-if="assetUrl"
-        :src="assetUrl"
+        :src="assetImageSrc"
         :alt="name"
         class="w-full h-auto object-contain rounded-xl"
         referrerpolicy="no-referrer"

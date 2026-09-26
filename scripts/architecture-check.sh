@@ -61,6 +61,57 @@ check_bare_api_fetch() {
 
 check_bare_api_fetch app
 
+# boot-and-asset-delivery/02: bundled pictures (`/images/ui/…`, `/logos/…` — any root-relative
+# path) load from disk. The asset downloader stores into Cache Storage, which `<img>` never
+# reads, so a manifest entry for a bundled file is a pure extra download. Two ways one sneaks
+# in: a literal root-relative `url:`, or an `ASSETS.X` whose value in constants/assets.ts is one.
+check_manifest_bundle_paths() {
+  local manifest=app/constants/assetManifest.ts
+  local hits name
+  hits=$(grep -nE "url:[[:space:]]*['\"\`]/" "$manifest" || true)
+  for name in $(grep -oE "^[[:space:]]+[A-Z0-9_]+:[[:space:]]*['\"\`]/" app/constants/assets.ts | grep -oE '[A-Z0-9_]+' || true); do
+    hits+=$'\n'$(grep -nE "ASSETS\.${name}\b" "$manifest" || true)
+  done
+  hits=$(printf '%s\n' "$hits" | sed '/^$/d')
+  if [[ -n "$hits" ]]; then
+    echo "FAIL: Asset manifest must not list bundled (root-relative) files — they load from disk"
+    printf '%s\n' "$hits"
+    violations=$((violations + 1))
+  fi
+}
+
+check_manifest_bundle_paths
+
+# boot-and-asset-delivery/05: catalog pictures (gift thumbnails, prop images, badge images,
+# VIP cards) are never rendered from the raw URL — raw gift thumbnails were ~160 KB each.
+# Route them through `~/utils/imagekit` at the slot's CSS px × 2.5. A helper call breaks the
+# plain member chain these patterns match, so wrapped bindings pass.
+#
+# Deliberate exceptions opt out with a file-scoped `arch-allow-raw-catalog-picture:` marker
+# plus a reason (e.g. the child component applies the transform itself).
+#
+# ⚠️ Known limitation: only a DIRECT field read at the sink is caught. A value renamed on the
+# way (`:src="resolved.thumbnailUrl"`) passes silently — review those by hand.
+check_raw_catalog_pictures() {
+  local target="$1"
+  local hits
+  hits=$(grep -R -nE \
+    -e ':(src|poster|thumbnail-src|image-url)="[A-Za-z_$][A-Za-z0-9_$.?!]*\.(thumbnail_url|image_url|icon_url)' \
+    -e '\b(src|poster):[[:space:]]*[A-Za-z_$][A-Za-z0-9_$.?!]*\.(thumbnail_url|image_url|icon_url)\b' \
+    "$target" 2>/dev/null | while IFS= read -r line; do
+    file="${line%%:*}"
+    grep -q 'arch-allow-raw-catalog-picture' "$file" || printf '%s\n' "$line"
+  done)
+  if [[ -n "$hits" ]]; then
+    echo "FAIL: Catalog picture rendered from its raw URL — wrap it in a ~/utils/imagekit helper at slot size"
+    printf '%s\n' "$hits"
+    echo "      If deliberate, add an 'arch-allow-raw-catalog-picture: <reason>' comment to the file."
+    violations=$((violations + 1))
+  fi
+}
+
+check_raw_catalog_pictures app
+
 if [[ $violations -gt 0 ]]; then
   echo "Frontend architecture checks failed with $violations violation group(s)."
   exit 1

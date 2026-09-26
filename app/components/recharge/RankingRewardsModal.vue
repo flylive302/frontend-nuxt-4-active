@@ -5,6 +5,7 @@ import { RECHARGE_ACTIVITY, ASSETS } from '~/constants/assets'
 import { resolveRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import type { ResolvedRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -102,6 +103,12 @@ function rankIcon(rank: number): string {
 
 function openPreview(reward: RankingRewardItem, resolved: ResolvedRewardAsset): void {
   previewReward.value = { reward, resolved }
+}
+
+/** Reward row tiles below are `w-14` (56 CSS px) — w=140 is that slot x DPR_FACTOR (2.5), matching the
+ * `BadgeEquipSlots.vue` bucket for the same 56px badge-tile size. */
+function tileThumbnailSrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 140, q: 75 })
 }
 </script>
 
@@ -260,9 +267,9 @@ function openPreview(reward: RankingRewardItem, resolved: ResolvedRewardAsset): 
                       class="w-14 focus:outline-none cursor-pointer"
                       @click="openPreview(reward, resolved)"
                     >
-                      <img :src="resolved.thumbnailUrl" :alt="resolved.name" class="w-full rounded-lg">
+                      <img :src="tileThumbnailSrc(resolved.thumbnailUrl)" :alt="resolved.name" class="w-full rounded-lg">
                     </button>
-                    <img v-else :src="resolved.thumbnailUrl" :alt="resolved.name" class="w-14 rounded-lg">
+                    <img v-else :src="tileThumbnailSrc(resolved.thumbnailUrl)" :alt="resolved.name" class="w-14 rounded-lg">
                     <span class="text-xs text-center text-amber-300 font-bold leading-tight">
                       {{ resolved.name }}
                     </span>

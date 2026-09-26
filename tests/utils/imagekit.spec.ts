@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { avatarImageSrc, giftThumbnailSrc, levelBadgeSrc, roomLogoCardSrc, roomLogoSquareSrc, withImageKitTransform } from '../../app/utils/imagekit'
+import { avatarImageSrc, giftThumbnailSrc, levelBadgeSrc, propPreviewThumbnailSrc, roomBackgroundImageSrc, roomLogoCardSrc, roomLogoSquareSrc, withImageKitTransform } from '../../app/utils/imagekit'
 import { ROOM_LOGO_ASPECT_RATIO } from '../../app/constants/room'
 
 // ========================================
@@ -10,6 +10,7 @@ const IK_AVATAR_URL = 'https://ik.imagekit.io/flylive/avatars/user-123.webp'
 const IK_AVATAR_URL_WITH_TR = 'https://ik.imagekit.io/flylive/avatars/user-123.webp?tr=w-128,q-75,c-maintain_ratio,f-auto'
 const NON_IK_URL = 'https://cdn.example.com/avatars/user-123.webp'
 const IK_ROOM_LOGO_URL = 'https://ik.imagekit.io/flylive/rooms/logo-456.jpg'
+const R2_PROP_URL = 'https://assets.flyliveapp.com/props/frame-789.png'
 
 // ========================================
 // Tests
@@ -45,7 +46,7 @@ describe('avatarImageSrc', () => {
 describe('withImageKitTransform (shared helper, sanity-checked via giftThumbnailSrc)', () => {
   it('resizes ImageKit URLs', () => {
     const params = new URL(giftThumbnailSrc(IK_AVATAR_URL)).searchParams
-    expect(params.get('tr')).toBe('w-256,q-75,c-maintain_ratio,f-auto')
+    expect(params.get('tr')).toBe('w-192,q-75,c-maintain_ratio,f-auto')
   })
 
   it('is a no-op for malformed URLs', () => {
@@ -149,5 +150,70 @@ describe('roomLogoSquareSrc', () => {
   it('returns an empty string for a missing logo', () => {
     expect(roomLogoSquareSrc(null)).toBe('')
     expect(roomLogoSquareSrc(undefined)).toBe('')
+  })
+})
+
+describe('propPreviewThumbnailSrc', () => {
+  // `common/prop-preview-modal.vue` and `vip/VipPropPreviewModal.vue` share this
+  // exact `max-w-60` (240 CSS px) preview box for a prop's thumbnail_url or a
+  // VIP badge's icon_url — one variant for both (boot-and-asset-delivery 05).
+  it('resizes an ImageKit URL to the shared 600px preview-modal variant', () => {
+    const params = new URL(propPreviewThumbnailSrc(IK_AVATAR_URL)).searchParams
+    expect(params.get('tr')).toBe('w-600,q-75,c-maintain_ratio,f-auto')
+  })
+
+  // R2-hosted pictures (e.g. some prop thumbnail_urls — frame-type props are ~36%
+  // R2 today) cannot be resized in this ticket; the helper must no-op, not error.
+  it('passes an R2-hosted URL through unchanged (out of scope for this ticket)', () => {
+    expect(propPreviewThumbnailSrc(R2_PROP_URL)).toBe(R2_PROP_URL)
+  })
+
+  it('returns an empty string for a missing thumbnail', () => {
+    expect(propPreviewThumbnailSrc(null)).toBe('')
+    expect(propPreviewThumbnailSrc(undefined)).toBe('')
+  })
+})
+
+// ========================================
+// Bundled static UI passthrough (boot-and-asset-delivery ticket 02)
+// ========================================
+//
+// `app/constants/assets.ts` now points several constants at local bundled files
+// (`/images/ui/*.webp`) instead of ImageKit. Every helper below is still called with those
+// constants as a fallback (`avatarImageSrc(user.avatar ?? ASSETS.AVATAR_PLACEHOLDER)` etc.), so
+// each one must hand a relative path through byte-for-byte instead of mangling it — the `new
+// URL(...)` parse inside `withImageKitTransform` throws for a relative path and is caught,
+// returning the input untouched.
+
+describe('bundled static UI passthrough (relative /images/ui/ paths)', () => {
+  const LOCAL_PATH = '/images/ui/avatar-placeholder.webp'
+
+  it('withImageKitTransform leaves a relative local path untouched', () => {
+    expect(withImageKitTransform(LOCAL_PATH, { w: 256 })).toBe(LOCAL_PATH)
+  })
+
+  it('avatarImageSrc leaves a relative local path untouched', () => {
+    expect(avatarImageSrc(LOCAL_PATH)).toBe(LOCAL_PATH)
+  })
+
+  it('giftThumbnailSrc leaves a relative local path untouched', () => {
+    expect(giftThumbnailSrc(LOCAL_PATH)).toBe(LOCAL_PATH)
+  })
+
+  it('levelBadgeSrc leaves a relative local path untouched', () => {
+    expect(levelBadgeSrc(LOCAL_PATH, 20)).toBe(LOCAL_PATH)
+  })
+
+  it('roomLogoCardSrc leaves a relative local path untouched', () => {
+    expect(roomLogoCardSrc(LOCAL_PATH)).toBe(LOCAL_PATH)
+  })
+
+  it('roomLogoSquareSrc leaves a relative local path untouched', () => {
+    expect(roomLogoSquareSrc(LOCAL_PATH)).toBe(LOCAL_PATH)
+  })
+
+  it('roomBackgroundImageSrc leaves a relative local path untouched (carousel and grid)', () => {
+    expect(roomBackgroundImageSrc(LOCAL_PATH, 'carousel', false)).toBe(LOCAL_PATH)
+    expect(roomBackgroundImageSrc(LOCAL_PATH, 'grid', true)).toBe(LOCAL_PATH)
   })
 })

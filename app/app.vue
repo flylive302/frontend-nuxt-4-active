@@ -10,11 +10,9 @@ const route = useRoute()
 const isAuthRoute = computed(() => /^\/(log-in|sign-up|forgot-password)(\/|$)/.test(route.path))
 
 // `/offline` is a standalone screen (`layout: false`) reached on a native cold
-// boot with NO network — ADR 0026. GlobalShell must not mount over it: it owns
-// `SystemDownloadScreen`, a `fixed inset-0` overlay, and with no network the
-// asset sweep is exactly what would open that gate — putting the stuck
-// "Preparing… 64/245" overlay on top of the screen that exists to explain the
-// outage. The room lifecycle has nothing to do there either.
+// boot with NO network — ADR 0026. GlobalShell must not mount over it: its
+// overlays (download progress, mini-player) would sit on top of the screen that
+// exists to explain the outage, and the room lifecycle has nothing to do there.
 const isOfflineRoute = computed(() => route.path === '/offline')
 
 // Preconnect to image CDN + R2 only on routes that actually fetch from them.
@@ -33,8 +31,8 @@ const GlobalShell = defineAsyncComponent(() => import('~/components/system/globa
 
 // Maintenance wall: the whole app is one static page, so GlobalShell must not
 // mount. It owns the room lifecycle (which would try to rejoin a persisted room
-// over a socket that is intentionally never opened) and the asset-download gate,
-// a `fixed inset-0` overlay that would render ON TOP of the maintenance page.
+// over a socket that is intentionally never opened) and overlays that would
+// render ON TOP of the maintenance page.
 const { maintenanceMode } = useRuntimeConfig().public
 </script>
 

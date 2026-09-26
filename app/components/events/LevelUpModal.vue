@@ -37,8 +37,9 @@ const badgeImage = computed(() => {
   if (!props.modal) return null
   const url = props.modal.imageUrl
     ?? (props.modal.category === 'wealth' ? DEFAULT_WEALTH_BADGE : DEFAULT_CHARM_BADGE)
-  // Painted at `h-20 w-20` (80 CSS px) below. The default-badge constants are base URLs, so
-  // without this the modal would pull the full 512px source (~106 KB) for an 80px render.
+  // Painted at `h-20 w-20` (80 CSS px) below; the transform keeps the level's CDN art from
+  // pulling its full 512px source (~106 KB). The default-badge fallback is a bundled file
+  // (boot-and-asset-delivery 02) — read from disk, so the transform is a no-op on it.
   return withImageKitTransform(url, { w: 200, q: 75 })
 })
 

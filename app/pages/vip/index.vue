@@ -360,6 +360,15 @@ const entryAnimationThumbnailSrc = computed(() =>
   withImageKitTransform(entryAnimationProp.value?.thumbnail_url, { w: 512 })
 )
 
+/**
+ * VIP Props tile grid below (`grid-cols-3 gap-2`, nested `px-14` + `px-3`
+ * padding) — ~74 CSS px per tile at the 375px baseline viewport. w=192 is
+ * that slot x DPR_FACTOR (2.5), rounded up.
+ */
+function tileImageSrc(url: string | null | undefined): string {
+  return withImageKitTransform(url, { w: 192, q: 75 })
+}
+
 const url = computed(() => bootstrapVipLevel.value?.card_animated_url ?? '')
 
 const isSvga = computed(() => url.value.endsWith('.svga'))
@@ -458,7 +467,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
                     />
                     <img
                         v-else-if="tile.kind === 'prop' ? tile.data.thumbnail_url : tile.data.icon_url"
-                        :src="tile.kind === 'prop' ? tile.data.thumbnail_url! : tile.data.icon_url!"
+                        :src="tileImageSrc(tile.kind === 'prop' ? tile.data.thumbnail_url : tile.data.icon_url)"
                         :alt="tile.data.name"
                         class="w-full h-full object-contain"
                     >

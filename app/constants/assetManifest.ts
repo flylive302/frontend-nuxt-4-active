@@ -1,21 +1,5 @@
 import type { AssetScope, AssetType, AssetPriority } from '~/types/asset/asset'
 import { ASSETS } from '~/constants/assets'
-import { roomLogoCardSrc } from '~/utils/imagekit'
-
-/**
- * Precached room-card placeholder variant.
- *
- * `ASSETS.ROOM_BG_PLACEHOLDER` is intentionally base-only (callers size it per layout), so
- * precaching the bare constant downloaded the **full-size original** for every user at
- * bootstrap — bytes no call site ever requests, because a precache entry only serves a render
- * when the two URLs match byte-for-byte.
- *
- * This reproduces the exact URL a logo-less room card requests. The card paints the room LOGO
- * (not the background) and falls back to this placeholder, so it must go through
- * `roomLogoCardSrc` — the same helper `components/room/card.vue` and the home page's LCP
- * preload use. If that helper's dimensions change, all three follow automatically.
- */
-const ROOM_BG_PLACEHOLDER_PRECACHE = roomLogoCardSrc(ASSETS.ROOM_BG_PLACEHOLDER)
 
 export interface AssetManifestItem {
     url: string
@@ -28,80 +12,14 @@ export interface AssetManifestItem {
     sortOrder?: number
 }
 
-export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = [
-    {
-        url: ROOM_BG_PLACEHOLDER_PRECACHE,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'critical',
-        groupKey: 'app-shell',
-        sortOrder: 0,
-    },
-    {
-        url: ASSETS.PROFILE_COVER_PLACEHOLDER,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'critical',
-        groupKey: 'app-shell',
-        sortOrder: 1,
-    },
-    {
-        url: ASSETS.HERO_SECONDARY,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'low',
-        groupKey: 'app-shell',
-        sortOrder: 2,
-    },
-    {
-        url: ASSETS.DIAMOND_ICON,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'low',
-        groupKey: 'app-shell',
-        sortOrder: 3,
-    },
-    {
-        url: ASSETS.HERO_TERTIARY,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'low',
-        groupKey: 'app-shell',
-        sortOrder: 4,
-    },
-    {
-        url: ASSETS.AVATAR_PLACEHOLDER,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'critical',
-        groupKey: 'app-shell',
-        sortOrder: 5,
-    },
-    {
-        url: ASSETS.DEFAULT_SEAT_IMG,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'critical',
-        groupKey: 'app-shell',
-        sortOrder: 6,
-    },
-    {
-        url: ASSETS.LOCK_SEAT_IMG,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'critical',
-        groupKey: 'app-shell',
-        sortOrder: 7,
-    },
-    {
-        url: ASSETS.COIN_ICON,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'critical',
-        groupKey: 'app-shell',
-        sortOrder: 8,
-    },
-]
+/**
+ * Empty since boot-and-asset-delivery ticket 02: every entry that used to live here
+ * (room-bg placeholder, profile cover, heroes, avatar/seat placeholders, coin icon) is now
+ * bundled static UI (`app/constants/assets.ts` → `/images/ui/*.webp`), shipped inside the app
+ * itself instead of precached from the CDN. Precaching a bundled file was also never correct:
+ * `<img>` never reads Cache Storage, and the precache URL didn't match the render URL anyway.
+ */
+export const MANUAL_ASSET_MANIFEST: AssetManifestItem[] = []
 
 
 export const PAGE_ASSET_MANIFESTS: Record<string, AssetManifestItem[]> = {
@@ -113,51 +31,11 @@ export const PAGE_ASSET_MANIFESTS: Record<string, AssetManifestItem[]> = {
             priority: 'high',
             groupKey: 'page-mall',
         },
-        {
-            url: ASSETS.GIFT_DRAWER_ICON,
-            assetType: 'image',
-            scope: 'mall',
-            priority: 'normal',
-            groupKey: 'page-mall',
-        },
+        // GIFT_DRAWER_ICON moved to bundled static UI (boot-and-asset-delivery ticket 02).
     ],
-    wallet: [
-        {
-            url: ASSETS.DEFAULT_TRANSACTION_THUMB,
-            assetType: 'image',
-            scope: 'wallet',
-            priority: 'high',
-            groupKey: 'page-wallet',
-        },
-    ],
-    badges: [
-        {
-            url: ASSETS.DEFAULT_CHARM_BADGE,
-            assetType: 'image',
-            scope: 'badge',
-            priority: 'high',
-            groupKey: 'page-badges',
-        },
-        {
-            url: ASSETS.DEFAULT_WEALTH_BADGE,
-            assetType: 'image',
-            scope: 'badge',
-            priority: 'high',
-            groupKey: 'page-badges',
-        },
-        {
-            url: ASSETS.DEFAULT_ROOM_BADGE,
-            assetType: 'image',
-            scope: 'badge',
-            priority: 'normal',
-            groupKey: 'page-badges',
-        },
-        {
-            url: ASSETS.DEFAULT_PROFILE_BADGE,
-            assetType: 'image',
-            scope: 'badge',
-            priority: 'normal',
-            groupKey: 'page-badges',
-        },
-    ],
+    // DEFAULT_TRANSACTION_THUMB moved to bundled static UI (boot-and-asset-delivery ticket 02).
+    wallet: [],
+    // DEFAULT_CHARM_BADGE / DEFAULT_WEALTH_BADGE / DEFAULT_ROOM_BADGE / DEFAULT_PROFILE_BADGE
+    // all moved to bundled static UI (boot-and-asset-delivery ticket 02).
+    badges: [],
 }

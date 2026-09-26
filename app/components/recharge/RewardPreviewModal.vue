@@ -2,6 +2,7 @@
 import type { RewardType } from '~/types/mission/recharge'
 import type { ResolvedRewardAsset } from '~/utils/mission/resolveRewardAsset'
 import type { PropType } from '~/types/mall/prop'
+import { propPreviewThumbnailSrc } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -37,6 +38,9 @@ const isVip = computed(() => props.rewardType === 'vip')
  * prop types it doesn't need `resolved.assetUrl` to be truthy to preview.
  */
 const isMiceWave = computed(() => isProp.value && props.resolved?.propType === 'mice_wave')
+
+/** Badge / static-fallback branch below — same `max-w-60` (240 CSS px) slot as the other preview modals. */
+const badgeThumbnailSrc = computed(() => propPreviewThumbnailSrc(props.resolved?.thumbnailUrl))
 </script>
 
 <template>
@@ -92,7 +96,7 @@ const isMiceWave = computed(() => isProp.value && props.resolved?.propType === '
             <!-- Badge / static fallback -->
             <template v-else-if="resolved.thumbnailUrl">
               <img
-                :src="resolved.thumbnailUrl"
+                :src="badgeThumbnailSrc"
                 :alt="resolved.name"
                 class="w-full h-auto object-contain rounded-xl"
               >

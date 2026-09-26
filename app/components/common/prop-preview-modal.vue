@@ -6,6 +6,7 @@
 // viewer's avatar, animated assets via AssetPlayer, otherwise thumbnail.
 
 import type { PropPreviewItem } from '~/types/user/user-profile'
+import { propPreviewThumbnailSrc } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -40,6 +41,9 @@ const authStore = useAuthStore()
  * Whether this is a frame type prop.
  */
 const isFrame = computed(() => props.item?.type === 'frame')
+
+/** Preview box below is `max-w-60` (240 CSS px) — see `propPreviewThumbnailSrc`. */
+const thumbnailSrc = computed(() => propPreviewThumbnailSrc(props.item?.thumbnail_url))
 
 // ========================================
 // Handlers
@@ -94,7 +98,7 @@ function handleClose(): void {
                 <AssetPlayer
                   class="relative min-w-full z-10"
                   :src="item.asset_url"
-                  :thumbnail-src="item.thumbnail_url ?? undefined"
+                  :thumbnail-src="thumbnailSrc || undefined"
                   :muted="false"
                 />
               </div>
@@ -103,7 +107,7 @@ function handleClose(): void {
             <!-- Thumbnail-only fallback -->
             <template v-else-if="item.thumbnail_url">
               <img
-                :src="item.thumbnail_url"
+                :src="thumbnailSrc"
                 :alt="item.name"
                 class="w-full h-auto object-contain rounded-xl"
               >

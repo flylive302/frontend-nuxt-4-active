@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import type { Prop } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/constants/mall'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -28,6 +29,15 @@ const icon = computed(() => PROP_TYPE_ICONS[props.prop.type])
 const iconColor = computed(() => PROP_TYPE_COLORS[props.prop.type])
 
 const isMiceWave = computed(() => props.prop.type === 'mice_wave')
+
+/**
+ * `mall/index.vue` renders these 2-up (`grid-cols-2`) inside `px-3` — ~171 CSS
+ * px per card at the 375px baseline viewport. w=432 is that slot x
+ * DPR_FACTOR (2.5), rounded up — see `MyPropCard.vue` (same slot math).
+ */
+const thumbnailSrc = computed(() =>
+  withImageKitTransform(props.prop.thumbnail_url, { w: 432, q: 75 }),
+)
 
 /** Static ring color for the listing thumbnail — no SVGA fetched for mice-wave. */
 const miceWaveRingColor = computed(() => resolveMiceWaveRingColor(props.prop.metadata))
@@ -79,7 +89,7 @@ function handleClick(): void {
       <MiceWaveRing v-if="isMiceWave" :color="miceWaveRingColor" :animated="false" />
       <img
         v-else-if="prop.thumbnail_url"
-        :src="prop.thumbnail_url"
+        :src="thumbnailSrc"
         :alt="prop.name"
         class="w-full h-full object-cover"
         loading="lazy"

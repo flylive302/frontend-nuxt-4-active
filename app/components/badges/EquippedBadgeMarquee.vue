@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { EquippedBadge } from '~/types/progression/badge'
+import { withImageKitTransform } from '~/utils/imagekit'
 
 type SlottedBadge = {
   slot_position: number
@@ -36,6 +37,11 @@ const sorted = computed<SlottedBadge[]>(() =>
         .filter((b): b is SlottedBadge => b.image_url !== null)
         .sort((a, b) => a.slot_position - b.slot_position)
 )
+
+/** Rendered at `size-8` (32 CSS px) below — w=80 is that slot x DPR_FACTOR (2.5). */
+function badgeImageSrc(imageUrl: string): string {
+  return withImageKitTransform(imageUrl, { w: 80, q: 75 })
+}
 
 // Check if the track overflows the container
 function checkOverflow() {
@@ -77,7 +83,7 @@ watch(sorted, async () => {
       <BadgeVisual
           v-for="badge in sorted"
           :key="`a-${badge.badge_id}`"
-          :image-url="badge.image_url"
+          :image-url="badgeImageSrc(badge.image_url)"
           :asset-url="badge.asset_url"
           :still="still"
           img-class="size-8 min-w-8 shrink-0"
@@ -88,7 +94,7 @@ watch(sorted, async () => {
         <BadgeVisual
             v-for="badge in sorted"
             :key="`b-${badge.badge_id}`"
-            :image-url="badge.image_url"
+            :image-url="badgeImageSrc(badge.image_url)"
             :asset-url="badge.asset_url"
             :still="still"
             img-class="size-8 min-w-8 shrink-0"

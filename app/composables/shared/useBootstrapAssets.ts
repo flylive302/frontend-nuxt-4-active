@@ -164,22 +164,6 @@ export function useBootstrapAssets(routePath?: string) {
     return items
   }
 
-  function getFeaturedRoomAssets(): AssetManifestItem[] {
-    const rooms = bootstrapStore.featuredRooms ?? []
-    const items: AssetManifestItem[] = []
-    for (const room of rooms) {
-      if (!room.background) continue
-      items.push({
-        url: room.background,
-        assetType: 'image',
-        scope: 'global',
-        priority: 'low',
-        groupKey: 'featured-rooms',
-      })
-    }
-    return items
-  }
-
   function getBootstrapPropAssets(): AssetManifestItem[] {
     const items: AssetManifestItem[] = []
     for (const prop of Object.values(mallStore.propIndex)) {
@@ -208,7 +192,6 @@ export function useBootstrapAssets(routePath?: string) {
           ...getBootstrapPropAssets(),
           ...getVipAnimatedAssets(),
           ...getPageAssets(),
-          ...getFeaturedRoomAssets(),
         ]
 
     const seen = new Set<string>()
@@ -265,7 +248,6 @@ export function useBootstrapAssets(routePath?: string) {
             ...getBootstrapAssets(),
             ...getBootstrapPropAssets(),
             ...getVipAnimatedAssets(),
-            ...getFeaturedRoomAssets(),
           ].map((i) => normalizeUrl(i.url)))
           const indexed = await assetIndex.getAllByPriority()
           for (const entry of indexed) {
@@ -324,19 +306,13 @@ export function useBootstrapAssets(routePath?: string) {
       }
     })
 
-    assetDownloader.onItemResult((url, priority, succeeded) => {
-      if (succeeded) {
-        if (priority === 'critical') assetStore.markCriticalSucceeded()
-      } else {
-        assetStore.markFailed(url)
-        if (priority === 'critical') assetStore.markCriticalFailed(url)
-      }
+    assetDownloader.onItemResult((url, _priority, succeeded) => {
+      if (!succeeded) assetStore.markFailed(url)
     })
 
     assetStore.setPhase('downloading')
 
     await assetDownloader.enqueue(items)
-    assetStore.setCriticalTotal(assetDownloader.getCriticalQueuedCount())
 
     assetDownloader.start()
   }
@@ -369,34 +345,14 @@ export function useBootstrapAssets(routePath?: string) {
   }
 
   /**
-   * Re-enqueue only the critical assets that exhausted retries.
-   * Rebuilds their metadata from the current bootstrap data to get the correct
-   * assetType/scope without guessing from the URL. Does NOT touch criticalTotal
-   * (the gate's denominator stays fixed). Resets only the critical failure tracking.
-   */
-  async function retryFailedCriticals(): Promise<void> {
-    const failedSet = new Set(assetStore.criticalFailedUrls.map(normalizeUrl))
-    if (failedSet.size === 0) return
-
-    assetStore.resetCriticalFailures()
-
-    const allItems = buildAssetQueue()
-    const retryItems = allItems.filter((item) => failedSet.has(normalizeUrl(item.url)))
-    if (retryItems.length === 0) return
-
-    await assetDownloader.enqueue(retryItems)
-    assetDownloader.start()
-  }
-
-  /**
-   * Re-enqueue only the non-critical assets that exhausted retries, then reset the failure tracking.
+   * Re-enqueue the assets that exhausted retries, then reset the failure tracking.
    * Uses the full asset queue to recover original metadata (assetType, scope, priority).
    */
   async function retryFailedAssets(): Promise<void> {
     const failedSet = new Set(assetStore.failedUrls.map(normalizeUrl))
     if (failedSet.size === 0) return
 
-    assetStore.resetNonCriticalFailures()
+    assetStore.resetFailures()
     assetStore.setPhase('downloading')
 
     const allItems = buildAssetQueue()
@@ -419,7 +375,6 @@ export function useBootstrapAssets(routePath?: string) {
     startAssetDownload,
     enqueueAsset,
     invalidateAsset,
-    retryFailedCriticals,
     retryFailedAssets,
     pause,
     resume,

@@ -24,7 +24,7 @@ const EventsBanners = defineAsyncComponent(() => import('~/components/events/ban
 
 definePageMeta({
   layout: 'home',
-  middleware: ['auth', 'critical-assets'],
+  middleware: ['auth'],
   // Transitions are global (nuxt.config `app.viewTransition: true`): every nav is
   // a View Transition. The home⇄room card morph and home⇄profile avatar morph are
   // activated per-nav by the room/profile transition middleware — see main.css.

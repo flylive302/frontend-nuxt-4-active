@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { ASSETS, vipBadgeUIImg } from '../../app/constants/assets'
+
+const PUBLIC_DIR = fileURLToPath(new URL('../../public', import.meta.url))
 
 // ========================================
 // vipBadgeUIImg — extension split
@@ -48,28 +53,27 @@ describe('vipBadgeUIImg', () => {
  * The CDN bandwidth incident (2026-07-30) was caused by static art served with no `tr=` at
  * all — 84% of requests, ~96% of bytes. These guards stop a new untransformed constant
  * being added back without a deliberate opt-out.
+ *
+ * Most static UI pictures moved OFF ImageKit entirely in boot-and-asset-delivery ticket 02
+ * (they ship bundled at `/images/ui/*.webp` instead — see `scripts/export-static-ui-images.mjs`),
+ * so this file's `tr=` coverage guard now only applies to what is still remote.
  */
 describe('ASSETS transform coverage', () => {
   /** Base-only by design: callers size these per layout via `withImageKitTransform`. */
   const INTENTIONALLY_UNTRANSFORMED = new Set<string>([
-    'ROOM_BG_PLACEHOLDER',
     // `tr` does not apply to video delivery; tracked for R2 migration instead.
     'MALL_BG_VIDEO',
-    // Level badges span ~16 CSS px (chat row) to ~240 CSS px (`w-7/12` on the profile page).
-    // A baked width shipped at w-48 and was reviewed as visibly blurry on profile. No single
-    // width serves both ends — each call site sizes these itself.
-    'DEFAULT_WEALTH_BADGE',
-    'DEFAULT_CHARM_BADGE',
-    'DEFAULT_WEALTH_LEVEL_BADGE',
-    'DEFAULT_CHARM_LEVEL_BADGE',
   ])
 
   const imageKitEntries = Object.entries(ASSETS).filter(
     ([, url]) => typeof url === 'string' && url.includes('ik.imagekit.io'),
   )
 
-  it('covers a meaningful number of ImageKit constants', () => {
-    expect(imageKitEntries.length).toBeGreaterThan(10)
+  it('covers a meaningful number of remaining ImageKit constants', () => {
+    // Most static UI moved to bundled `/images/ui/` files (boot-and-asset-delivery ticket 02);
+    // what is left is genuinely per-user/dynamic-sized content (auth cards, VIP art, the
+    // music-player GIF).
+    expect(imageKitEntries.length).toBeGreaterThan(5)
   })
 
   it.each(imageKitEntries)('%s carries a tr= transform', (key, url) => {
@@ -86,10 +90,10 @@ describe('ASSETS transform coverage', () => {
     }
   })
 
-  it('keeps the two coin-icon variants distinct and correctly ordered', () => {
-    // Same source file, two deliberate variants — small for icons, large for reward heroes.
-    expect(ASSETS.COIN_ICON).toContain('w-96')
-    expect(ASSETS.COIN_ICON_LARGE).toContain('w-192')
+  it('keeps the two coin-icon variants distinct, sharing one bundled source file', () => {
+    // Same bundled source file, two deliberate variants — small for icons, large for reward heroes.
+    expect(ASSETS.COIN_ICON).toBe('/images/ui/coin-icon.webp')
+    expect(ASSETS.COIN_ICON_LARGE).toBe('/images/ui/coin-icon-large.webp')
     expect(ASSETS.ROOM_CARD_TOP).toBe(ASSETS.COIN_ICON)
   })
 
@@ -98,5 +102,50 @@ describe('ASSETS transform coverage', () => {
     // Dropping f-auto here silently restores a multi-megabyte fetch inside every room.
     expect(ASSETS.MUSIC_PLAYER).toContain('f-auto')
     expect(ASSETS.MUSIC_PLAYER).toContain('w-112')
+  })
+})
+
+// ========================================
+// Bundled static UI (boot-and-asset-delivery ticket 02)
+// ========================================
+
+describe('ASSETS bundled static UI', () => {
+  const BUNDLED_CONSTANTS = [
+    'HERO_SECONDARY',
+    'HERO_TERTIARY',
+    'HERO_WEALTH',
+    'HERO_CHARM',
+    'AVATAR_PLACEHOLDER',
+    'COVER_PLACEHOLDER',
+    'PROFILE_COVER_PLACEHOLDER',
+    'ROOM_BG_PLACEHOLDER',
+    'DEFAULT_SEAT_IMG',
+    'LOCK_SEAT_IMG',
+    'COIN_ICON',
+    'COIN_ICON_LARGE',
+    'ROOM_CARD_TOP',
+    'DIAMOND_ICON',
+    'GENDER_FEMALE',
+    'GENDER_MALE',
+    'DEFAULT_WEALTH_BADGE',
+    'DEFAULT_CHARM_BADGE',
+    'DEFAULT_WEALTH_LEVEL_BADGE',
+    'DEFAULT_CHARM_LEVEL_BADGE',
+    'DEFAULT_ROOM_BADGE',
+    'DEFAULT_PROFILE_BADGE',
+    'DEFAULT_HISTORY_BADGE',
+    'DEFAULT_TRANSACTION_THUMB',
+    'GIFT_DRAWER_ICON',
+  ] as const
+
+  it.each(BUNDLED_CONSTANTS)('%s points at a local /images/ui/ path', (key) => {
+    expect(ASSETS[key]).toMatch(/^\/images\/ui\/[a-z0-9-]+\.webp$/)
+  })
+
+  // A typo here is a silent broken image in production — every entry must have a real file
+  // on disk under `public/`, not just a plausible-looking string.
+  it.each(BUNDLED_CONSTANTS)('%s resolves to a file that actually exists in public/', (key) => {
+    const filePath = path.join(PUBLIC_DIR, ASSETS[key])
+    expect(existsSync(filePath)).toBe(true)
   })
 })

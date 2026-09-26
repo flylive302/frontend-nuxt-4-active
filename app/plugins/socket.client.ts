@@ -13,6 +13,14 @@
  *
  * Room-specific lifecycle (join/leave/reconnect) is handled by
  * useRoomLifecycle composable in app.vue.
+ *
+ * ⚠️ Connects EAGERLY for a restored session — do not defer it past first paint.
+ * The Laravel→MSAB bridge is at-most-once with no replay, and `useAudioSocket`
+ * skips its self-heal resync on the first connect because bootstrap's
+ * after-first-paint `syncUser()` snapshot is assumed to start once the socket is
+ * already live. Deferring the connect puts that snapshot ahead of the socket on
+ * nearly every cold start, so a balance/badge/DM push landing in between is lost
+ * (boot-and-asset-delivery 08 tried it and dropped it for this reason).
  */
 export default defineNuxtPlugin({
   name: 'audio-socket',

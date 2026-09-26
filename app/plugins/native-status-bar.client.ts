@@ -18,21 +18,28 @@ import { StatusBar, Style } from '@capacitor/status-bar'
  * platform capability never blocks bootstrap.
  *
  * No-ops on the web build.
+ *
+ * `parallel: true` (boot-and-asset-delivery 08): it has no ordering dependency on any other
+ * plugin, so the native bridge round trips below no longer serialize the plugin chain.
  */
-export default defineNuxtPlugin(async () => {
-  if (!Capacitor.isNativePlatform()) return
+export default defineNuxtPlugin({
+  name: 'native-status-bar',
+  parallel: true,
+  async setup() {
+    if (!Capacitor.isNativePlatform()) return
 
-  const log = createLogger('[StatusBar]')
+    const log = createLogger('[StatusBar]')
 
-  try {
-    await StatusBar.setStyle({ style: Style.Dark })
-  } catch (error) {
-    log.warn('setStyle failed', error)
-  }
+    try {
+      await StatusBar.setStyle({ style: Style.Dark })
+    } catch (error) {
+      log.warn('setStyle failed', error)
+    }
 
-  try {
-    await StatusBar.setOverlaysWebView({ overlay: true })
-  } catch (error) {
-    log.warn('setOverlaysWebView unavailable (expected on Android 15+)', error)
-  }
+    try {
+      await StatusBar.setOverlaysWebView({ overlay: true })
+    } catch (error) {
+      log.warn('setOverlaysWebView unavailable (expected on Android 15+)', error)
+    }
+  },
 })

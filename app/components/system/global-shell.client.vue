@@ -7,7 +7,7 @@ const roomSessionStore = useRoomSessionStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const assetStore = useAssetStore()
-const { progress, phase, showDownloadGate } = storeToRefs(assetStore)
+const { progress, phase } = storeToRefs(assetStore)
 
 const RoomMinimized = defineAsyncComponent(() => import('~/components/room/minimized.client.vue'))
 
@@ -35,11 +35,9 @@ initMediaSession()
   <div>
     <RoomMinimized v-if="showMiniPlayer" />
 
-    <SystemDownloadScreen v-if="showDownloadGate" />
-
     <SystemDownloadProgressBar
       :progress="progress"
-      :visible="phase === 'downloading' && !showDownloadGate"
+      :visible="phase === 'downloading'"
     />
 
     <SystemStoragePermissionBanner />

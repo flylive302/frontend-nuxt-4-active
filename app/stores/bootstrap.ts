@@ -6,7 +6,6 @@
 import { defineStore } from 'pinia'
 import type {
   BootstrapConfig,
-  FeaturedRoom,
   LevelConfig,
   VipLevel,
 } from '~/types/user/bootstrap'
@@ -38,7 +37,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   const gifts = ref<Gift[] | null>([]);
   const vapid_public_key = ref<string | null>()
   const vipLevels = ref<VipLevel[]>([])
-  const featuredRooms = ref<FeaturedRoom[]>([]);
   // JoyPlay games kill switch. `null` = the server has never told us (fresh
   // install, or persisted state written before this field was persisted) and
   // forces a bootstrap refetch via `needsRefresh`. Consumers treat only `true`
@@ -181,7 +179,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     gifts.value = newConfig.gifts
     vapid_public_key.value = newConfig.vapid_public_key
     vipLevels.value = newConfig.vip_levels ?? []
-    featuredRooms.value = newConfig.featured_rooms ?? []
     gamesEnabled.value = newConfig.games_enabled ?? false
   }
 
@@ -223,7 +220,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     gifts.value = null
     vapid_public_key.value = null
     vipLevels.value = []
-    featuredRooms.value = []
     gamesEnabled.value = null
   }
 
@@ -273,7 +269,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     badges,
     vapid_public_key,
     vipLevels,
-    featuredRooms,
     gamesEnabled,
     lastBootstrapAt,
 
@@ -315,7 +310,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       'badges',
       'vapid_public_key',
       'vipLevels',
-      'featuredRooms',
       'gamesEnabled',
       'lastBootstrapAt'
     ],

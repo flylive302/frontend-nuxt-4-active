@@ -7,6 +7,7 @@
 import type { VipPreviewItem } from '~/types/vip/vip-level'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 import { useMallStore } from '~/stores/mall'
+import { propPreviewThumbnailSrc } from '~/utils/imagekit'
 
 // ========================================
 // Props & Emits
@@ -81,6 +82,9 @@ const thumbnailUrl = computed(() => {
   return props.item.kind === 'prop' ? props.item.data.thumbnail_url : props.item.data.icon_url
 })
 
+/** Preview box below is `max-w-60` (240 CSS px) — same slot as `common/prop-preview-modal.vue`. */
+const thumbnailSrc = computed(() => propPreviewThumbnailSrc(thumbnailUrl.value))
+
 /**
  * Footer label depending on item kind.
  */
@@ -152,7 +156,7 @@ function handleClose(): void {
                 <AssetPlayer
                   class="relative min-w-full z-10"
                   :src="animatedUrl"
-                  :thumbnail-src="thumbnailUrl ?? undefined"
+                  :thumbnail-src="thumbnailSrc || undefined"
                   :muted="false"
                 />
               </div>
@@ -161,7 +165,7 @@ function handleClose(): void {
             <!-- Thumbnail-only fallback -->
             <template v-else-if="thumbnailUrl">
               <img
-                :src="thumbnailUrl"
+                :src="thumbnailSrc"
                 :alt="itemName"
                 class="w-full h-auto object-contain rounded-xl"
               >

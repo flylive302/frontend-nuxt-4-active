@@ -66,7 +66,9 @@ const badgeDisplay = computed(() => {
  * Not the background: that is the room PAGE's image, and painting it here made
  * every card in the grid a preview of a wallpaper rather than of a room.
  * `ROOM_BG_PLACEHOLDER` stays the fallback (not the avatar placeholder) because
- * it is the only card-shaped one.
+ * it is the only card-shaped one. It is a bundled file (boot-and-asset-delivery
+ * 02), so the CDN crop no-ops on it: logo-less cards paint the full 960px file
+ * from disk — no network, one decode shared by every such card.
  */
 const roomLogoSrc = computed(() =>
   roomLogoCardSrc(props.room.logo ?? ASSETS.ROOM_BG_PLACEHOLDER),
@@ -110,7 +112,8 @@ const ownerAvatarSrc = computed(() => {
  * Low-res seed handed to the room page so its background has something to paint
  * during the expand morph. The card no longer renders this, so it is a warm
  * *prefetch* rather than an already-decoded bitmap — still a faster first frame
- * than waiting on the full-resolution background, at ~8 kB.
+ * than waiting on the full-resolution background, at ~8 kB. A room with no
+ * background falls back to the bundled placeholder, read from disk as-is.
  */
 const roomBackgroundSeedSrc = computed(() =>
   roomBackgroundImageSrc(

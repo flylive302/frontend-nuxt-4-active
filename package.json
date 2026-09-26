@@ -15,6 +15,7 @@
     "cap:publish": "node --env-file-if-exists=.env.ota scripts/ota-publish.mjs",
     "reactions:mirror": "node --env-file-if-exists=.env.reactions scripts/reactions-mirror.mjs",
     "flags:generate": "node scripts/generate-flags.mjs",
+    "bundle:budget": "node scripts/bundle-budget.mjs",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
