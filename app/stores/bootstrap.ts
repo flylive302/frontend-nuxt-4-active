@@ -11,6 +11,7 @@ import type {
 } from '~/types/user/bootstrap'
 import type { Gift } from '~/types/gift/gift'
 import type { Badge } from "~/types/progression/badge";
+import { BOOTSTRAP_SHAPE_VERSION } from '~/constants/bootstrap'
 
 // ========================================
 // Store Definition
@@ -38,19 +39,24 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   const vapid_public_key = ref<string | null>()
   const vipLevels = ref<VipLevel[]>([])
   // JoyPlay games kill switch. `null` = the server has never told us (fresh
-  // install, or persisted state written before this field was persisted) and
-  // forces a bootstrap refetch via `needsRefresh`. Consumers treat only `true`
-  // as enabled, so the button never renders before the server has said it may.
+  // install, or a discarded catalog). Consumers treat only `true` as enabled,
+  // so the button never renders before the server has said it may.
   const gamesEnabled = ref<boolean | null>(null);
+
+  /**
+   * Validator from the last 200 of `/bootstrap`, verbatim (the edge serves the
+   * weak `W/` form; the server weak-compares) — sent back as `If-None-Match`.
+   */
+  const etag = ref<string | null>(null)
+
+  /** `BOOTSTRAP_SHAPE_VERSION` of the client that wrote the persisted catalog. */
+  const shapeVersion = ref<number | null>(null)
 
   /** Gift catalog (accumulates as user scrolls) */
   const giftCatalog = ref<Gift[]>([])
 
   /** Total gift count from the server */
   const giftTotal = ref<number>(0)
-
-  /** Last bootstrap timestamp */
-  const lastBootstrapAt = ref<number | null>(null)
 
   // ========================================
   // Getters
@@ -62,16 +68,15 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   const isReady = computed(() => phase.value === 'complete')
 
   /**
-   * Check if config needs refresh based on TTL.
+   * Whether the persisted catalog can render this open before any request:
+   * written by a client of the current shape, with levels present. Anything
+   * else (fresh install, pre-shape-version state, a bumped version) takes the
+   * cold path.
    */
-  const needsRefresh = computed(() => {
-    if (!lastBootstrapAt.value) return true
-    // Persisted timestamp from before a config field existed — the field is
-    // unknown, not "false"; refetch instead of trusting the TTL.
-    if (gamesEnabled.value === null) return true
-    const STALE_TIME = 50 * 60 * 1000 // 50 minutes
-    return Date.now() - lastBootstrapAt.value > STALE_TIME
-  })
+  const hasUsableCache = computed(() =>
+    shapeVersion.value === BOOTSTRAP_SHAPE_VERSION
+    && Boolean(wealthLevels.value?.length || charmLevels.value?.length)
+  )
 
   /**
    * Badge map for O(1) lookup by ID.
@@ -141,20 +146,17 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    */
   function setPhase(newPhase: typeof phase.value): void {
     phase.value = newPhase
-    if (newPhase === 'complete') {
-      lastBootstrapAt.value = Date.now()
-    }
   }
 
   /**
-   * Mark the store ready from persisted config WITHOUT touching
-   * `lastBootstrapAt`. `phase` is deliberately not persisted, so a cold start
-   * that skips the fetch (config still fresh) must flip it explicitly or every
-   * `isReady` consumer (level/badge lookups) stays dark until the next refetch.
+   * Mark the store ready from the persisted catalog. `phase` is deliberately
+   * not persisted, so every open that renders from cache must flip it
+   * explicitly or every `isReady` consumer (level/badge lookups) stays dark —
+   * the "LV 1 everywhere" trap.
    */
   function markReadyFromCache(): void {
     if (phase.value !== 'idle') return
-    if (!wealthLevels.value?.length && !charmLevels.value?.length) return
+    if (!hasUsableCache.value) return
     phase.value = 'complete'
   }
 
@@ -180,6 +182,15 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = newConfig.vapid_public_key
     vipLevels.value = newConfig.vip_levels ?? []
     gamesEnabled.value = newConfig.games_enabled ?? false
+    shapeVersion.value = BOOTSTRAP_SHAPE_VERSION
+  }
+
+  /**
+   * Set the validator that came with the payload just stored (null when the
+   * response carried none).
+   */
+  function setEtag(tag: string | null): void {
+    etag.value = tag
   }
 
   /**
@@ -221,15 +232,16 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = null
     vipLevels.value = []
     gamesEnabled.value = null
+    etag.value = null
+    shapeVersion.value = null
   }
 
   /**
-   * Invalidate config (force refresh on next boot).
+   * Invalidate config. `all` discards the persisted catalog and its validator,
+   * so the next fetch is unconditional.
    */
-
   function invalidateConfig(type: 'levels' | 'badges' | 'gifts' | 'all'): void {
     if (type === 'all') {
-      lastBootstrapAt.value = null
       clearBootstrapConfig()
     }
     if (type === 'all' || type === 'gifts') {
@@ -247,7 +259,6 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     giftCatalog.value = []
     giftTotal.value = 0
     badges.value = []
-    lastBootstrapAt.value = null
   }
 
   // ========================================
@@ -270,12 +281,13 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key,
     vipLevels,
     gamesEnabled,
-    lastBootstrapAt,
+    etag,
+    shapeVersion,
 
     // Getters
     phase,
     isReady,
-    needsRefresh,
+    hasUsableCache,
     badgeMap,
     sortedWealthLevels,
     sortedCharmLevels,
@@ -288,6 +300,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     markReadyFromCache,
     setError,
     setConfig,
+    setEtag,
     setGifts,
     appendGifts,
     getBadgeById,
@@ -311,7 +324,8 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       'vapid_public_key',
       'vipLevels',
       'gamesEnabled',
-      'lastBootstrapAt'
+      'etag',
+      'shapeVersion',
     ],
   },
 })

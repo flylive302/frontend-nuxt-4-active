@@ -33,7 +33,8 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
     gifts: null as Gift[] | null,
     giftCatalog: [] as unknown[],
     isReady: true,
-    needsRefresh: false,
+    hasUsableCache: true,
+    etag: null as string | null,
     phase: 'idle' as string,
     sortedWealthLevels: [
       { level: 1, name: 'Bronze', required_xp: 0, image_url: 'https://example.com/bronze.webp' },
@@ -61,6 +62,7 @@ export function createMockBootstrapStore(overrides: Record<string, unknown> = {}
     markReadyFromCache: vi.fn(),
     setError: vi.fn(),
     setGifts: vi.fn(),
+    setEtag: vi.fn(),
   }
   // Spread overrides separately so TypeScript infers the return type from `base`
   // (spreading Record<string,unknown> inline widens all named property types to unknown)
