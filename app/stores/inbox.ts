@@ -99,8 +99,23 @@ export const useInboxStore = defineStore('inbox', () => {
     requestThreads.value = requestThreads.value.filter(t => String(t.id) !== sid)
   }
 
-  function setMessages(threadId: string, msgs: ThreadMessage[], cursor: string | null, hasMore: boolean): void {
+  /**
+   * The thread whose view is open — the only thread whose messages may live in
+   * `messages`, and the send target for voice notes. Set/cleared by the
+   * open/close actions in useInboxActions, never as a side effect of a fetch.
+   */
+  function setActiveThread(threadId: string | null): void {
     activeThreadId.value = threadId
+  }
+
+  /** Drops the loaded message list (another thread's view is about to open). */
+  function clearMessages(): void {
+    messages.value = []
+    messagesCursor.value = null
+    messagesHasMore.value = true
+  }
+
+  function setMessages(msgs: ThreadMessage[], cursor: string | null, hasMore: boolean): void {
     messages.value = [...msgs].reverse() // API returns newest-first; reverse for chronological display
     messagesCursor.value = cursor
     messagesHasMore.value = hasMore
@@ -238,6 +253,8 @@ export const useInboxStore = defineStore('inbox', () => {
     setDmNextCursor,
     upsertThread,
     removeThread,
+    setActiveThread,
+    clearMessages,
     setMessages,
     prependMessages,
     appendMessage,

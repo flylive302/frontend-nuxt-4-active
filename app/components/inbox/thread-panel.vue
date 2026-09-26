@@ -22,7 +22,7 @@ const emit = defineEmits<{ (e: 'exit'): void }>()
 
 // ── Composables ───────────────────────────────────────
 const store = useInboxStore()
-const { loadOlderMessages, sendMessage, markRead } = useInboxActions()
+const { openThread, closeThread, loadOlderMessages, sendMessage, markRead } = useInboxActions()
 const { pickImage, cancelUpload, retryUpload, discardFailed } = useDmComposer()
 const { reconcileInbox } = useInboxReconcile()
 const { acceptRequest, denyRequest, unsendMessage, deleteMessage, deleteThread, blockUser } = useInboxThread()
@@ -184,7 +184,7 @@ onMounted(async () => {
   // Thread-open reconcile trigger (issue 03, dm-realtime-platform): refetches
   // thread list + unread counts (covers metadata like kind/isInitiator) and,
   // since activeThreadId is now set, this thread's tail.
-  store.activeThreadId = props.threadId
+  openThread(props.threadId)
   await reconcileInbox('thread-open')
   await markRead(props.threadId)
   listenForTyping(props.threadId)
@@ -194,7 +194,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopListening(props.threadId)
   // Clear active thread so incoming messages correctly bump unread badge
-  if (store.activeThreadId === props.threadId) store.activeThreadId = null
+  closeThread(props.threadId)
 })
 </script>
 

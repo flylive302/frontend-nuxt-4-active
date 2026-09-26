@@ -17,8 +17,16 @@ import { ref } from 'vue'
 
 vi.stubGlobal('ref', ref)
 
-/** Let the pending dynamic `import('@lottiefiles/dotlottie-web')` settle. */
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+/**
+ * Let the pending dynamic `import('@lottiefiles/dotlottie-web')` settle, then the
+ * composable's continuation run. A bare `setTimeout(0)` was not enough under a
+ * loaded full-suite run: the first import resolved after the assertion and the
+ * late instance leaked into the next test.
+ */
+const flush = async (): Promise<void> => {
+  await vi.dynamicImportSettled()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
 
 // ============================================
 // Fake DotLottie — captures listeners, lets tests fire events synchronously

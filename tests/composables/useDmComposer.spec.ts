@@ -38,6 +38,9 @@ function createMockStore() {
   const messages: Record<string, unknown>[] = []
   return {
     messages,
+    // Voice-note upload only appends if the thread is still active on completion
+    // (dm-messenger stale-content fix) — tests use thread 't1' throughout.
+    activeThreadId: 't1' as string | null,
     appendMessage: vi.fn((msg: Record<string, unknown>) => { messages.push(msg) }),
     setMessageUploadState: vi.fn((id: string, patch: Record<string, unknown>) => {
       const msg = messages.find(m => m.id === id)
@@ -277,6 +280,20 @@ describe('useDmComposer', () => {
         body: expect.objectContaining({ type: 'voice' }),
       }))
       expect(store.appendMessage).toHaveBeenCalledWith({ id: 'voice-1', kind: 'voice' })
+      expect(composer.state.value).toBe('idle')
+    })
+
+    it('does not append the voice message if the thread view moved on before upload finished', async () => {
+      const stop = vi.fn().mockResolvedValue({ blob: new Blob(['x'], { type: 'audio/webm' }), mimeType: 'audio/webm', durationMs: 3000 })
+      startVoiceRecording.mockResolvedValue({ stop, cancel: vi.fn(), elapsedMs: () => 3000 })
+      apiMock.mockResolvedValue({ data: { id: 'voice-1', kind: 'voice' } })
+      const composer = await setup()
+
+      await composer.startRecording('t1')
+      store.activeThreadId = 't2' // user switched threads while stop()/upload was in flight
+      await composer.stopRecording('t1')
+
+      expect(store.appendMessage).not.toHaveBeenCalled()
       expect(composer.state.value).toBe('idle')
     })
 

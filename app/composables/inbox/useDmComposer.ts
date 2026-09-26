@@ -300,7 +300,8 @@ export function useDmComposer() {
         method: 'POST',
         body: { content: JSON.stringify(payload), type: 'voice' },
       })
-      store.appendMessage(res.data)
+      // The upload can outlast the thread view; the list may now hold another thread.
+      if (store.activeThreadId === threadId) store.appendMessage(res.data)
       state.value = 'idle'
     }
     catch (err) {

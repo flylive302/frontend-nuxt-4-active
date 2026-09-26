@@ -81,13 +81,37 @@ export function useInboxActions() {
     }
   }
 
+  // ── Open / close a thread view ────────────────────────
+  // The store holds ONE message list, shared by every thread view (/inbox/:id,
+  // the room inbox + chat drawers, /notifications/:id). Opening a thread whose
+  // messages are not the ones loaded drops the list and shows the skeleton;
+  // otherwise the previous thread's messages render under this thread's header
+  // until the tail fetch lands.
+  function openThread(threadId: string): void {
+    const holdsThisThread = store.messages.length > 0
+      && store.messages.every(m => String(m.threadId) === threadId)
+    if (!holdsThisThread) {
+      store.clearMessages()
+      store.setMessagesLoading(true)
+    }
+    store.setActiveThread(threadId)
+  }
+
+  function closeThread(threadId: string): void {
+    // A newer view may already own activeThreadId (unmount runs after the next mount).
+    if (store.activeThreadId === threadId) store.setActiveThread(null)
+  }
+
   // ── Load messages for a thread (initial load) ─────────
   async function loadMessages(threadId: string): Promise<void> {
     store.setMessagesLoading(true)
     try {
       const res = await api<MessagesResponse>(`/inbox/threads/${threadId}/messages`)
+      // GATE — the open thread changed while this was in flight (user switched
+      // chats). Applying it would put this thread's messages under the other
+      // thread's header; the other thread's own load follows (useInboxReconcile).
+      if (store.activeThreadId !== threadId) return
       store.setMessages(
-        threadId,
         res.data.messages,
         res.data.nextCursor,
         res.data.nextCursor !== null,
@@ -99,7 +123,8 @@ export function useInboxActions() {
       toast.add({ title: message, color: 'error' })
     }
     finally {
-      store.setMessagesLoading(false)
+      // Leave the flag to the thread that is open now — its own load clears it.
+      if (store.activeThreadId === threadId) store.setMessagesLoading(false)
     }
   }
 
@@ -112,6 +137,8 @@ export function useInboxActions() {
       const res = await api<MessagesResponse>(`/inbox/threads/${threadId}/messages`, {
         params: { cursor: store.messagesCursor },
       })
+      // GATE — same as loadMessages: the list now belongs to another thread.
+      if (store.activeThreadId !== threadId) return
       store.prependMessages(
         res.data.messages,
         res.data.nextCursor,
@@ -124,7 +151,7 @@ export function useInboxActions() {
       toast.add({ title: message, color: 'error' })
     }
     finally {
-      store.setMessagesLoading(false)
+      if (store.activeThreadId === threadId) store.setMessagesLoading(false)
     }
   }
 
@@ -183,5 +210,5 @@ export function useInboxActions() {
     }
   }
 
-  return { fetchThreads, loadMoreThreads, startThread, loadMessages, loadOlderMessages, sendMessage, markRead }
+  return { fetchThreads, loadMoreThreads, startThread, openThread, closeThread, loadMessages, loadOlderMessages, sendMessage, markRead }
 }

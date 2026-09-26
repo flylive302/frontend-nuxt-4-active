@@ -14,7 +14,7 @@ const isSystem = computed(() => threadId.value === 'system')
 const notificationStore = useNotificationStore()
 const inboxStore = useInboxStore()
 const { markAsRead, fetchNotifications } = useNotificationActions()
-const { sendMessage } = useInboxActions()
+const { openThread, closeThread, sendMessage } = useInboxActions()
 const { reconcileInbox } = useInboxReconcile()
 const { isOtherTyping, sendTyping, listenForTyping, stopListening } = useTypingIndicator()
 
@@ -66,7 +66,7 @@ onMounted(async () => {
     scrollToBottom()
   } else {
     // Thread-open reconcile trigger (issue 03, dm-realtime-platform).
-    inboxStore.activeThreadId = threadId.value
+    openThread(threadId.value)
     await reconcileInbox('thread-open')
     listenForTyping(threadId.value)
     scrollToBottom()
@@ -76,7 +76,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (!isSystem.value) {
     stopListening(threadId.value)
-    if (inboxStore.activeThreadId === threadId.value) inboxStore.activeThreadId = null
+    closeThread(threadId.value)
   }
 })
 </script>

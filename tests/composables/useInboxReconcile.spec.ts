@@ -90,4 +90,88 @@ describe('useInboxReconcile', () => {
 
     expect(fetchThreads).toHaveBeenCalledTimes(2)
   })
+
+  it('joiner re-runs once when the active thread changed while the run was in flight', async () => {
+    store.activeThreadId = 'thread-X'
+    let resolveLoad!: () => void
+    loadMessages.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveLoad = resolve
+      }),
+    )
+
+    const { useInboxReconcile } = await import('../../app/composables/inbox/useInboxReconcile')
+    const { reconcileInbox } = useInboxReconcile()
+
+    const first = reconcileInbox('thread-open') // picks up tail for thread-X, hangs on loadMessages
+
+    // Let fetchThreads resolve and loadMessages('thread-X') get invoked (captures
+    // lastTailThreadId = 'thread-X') before the user switches chats.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // User switches chats while the first run's tail fetch is still in flight.
+    store.activeThreadId = 'thread-Y'
+    const joiner = reconcileInbox('thread-open') // joins the in-flight run
+
+    resolveLoad()
+    await Promise.all([first, joiner])
+
+    expect(fetchThreads).toHaveBeenCalledTimes(2)
+    expect(loadMessages).toHaveBeenCalledTimes(2)
+    expect(loadMessages).toHaveBeenNthCalledWith(1, 'thread-X')
+    expect(loadMessages).toHaveBeenNthCalledWith(2, 'thread-Y')
+  })
+
+  it('joiner does not re-run when the active thread is unchanged', async () => {
+    store.activeThreadId = 'thread-X'
+    let resolveFetch!: () => void
+    fetchThreads.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveFetch = resolve
+      }),
+    )
+
+    const { useInboxReconcile } = await import('../../app/composables/inbox/useInboxReconcile')
+    const { reconcileInbox } = useInboxReconcile()
+
+    const first = reconcileInbox('thread-open')
+    const joiner = reconcileInbox('thread-open')
+
+    resolveFetch()
+    await Promise.all([first, joiner])
+
+    expect(fetchThreads).toHaveBeenCalledTimes(1)
+    expect(loadMessages).toHaveBeenCalledTimes(1)
+    expect(loadMessages).toHaveBeenCalledWith('thread-X')
+  })
+
+  it('joiner does not re-run when the active thread became null', async () => {
+    store.activeThreadId = 'thread-X'
+    let resolveLoad!: () => void
+    loadMessages.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveLoad = resolve
+      }),
+    )
+
+    const { useInboxReconcile } = await import('../../app/composables/inbox/useInboxReconcile')
+    const { reconcileInbox } = useInboxReconcile()
+
+    const first = reconcileInbox('thread-open')
+
+    // Let fetchThreads resolve and loadMessages('thread-X') get invoked before
+    // the user closes the thread.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    store.activeThreadId = null
+    const joiner = reconcileInbox('thread-open')
+
+    resolveLoad()
+    await Promise.all([first, joiner])
+
+    expect(fetchThreads).toHaveBeenCalledTimes(1)
+    expect(loadMessages).toHaveBeenCalledTimes(1)
+  })
 })

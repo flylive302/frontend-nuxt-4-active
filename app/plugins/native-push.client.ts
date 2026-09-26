@@ -28,13 +28,37 @@ export default defineNuxtPlugin({
 
     const log = createLogger('[NativePush]')
 
+    function openTapUrl(url: string): void {
+      Promise.resolve(nuxtApp.runWithContext(() => navigateTo(url))).catch((err: unknown) => {
+        log.warn('Failed to navigate from push tap', err)
+      })
+    }
+
+    // Cold start from a tap: Capacitor retains the launch tap and delivers it the moment
+    // the listener below registers — still inside the plugin phase. Nuxt's router then
+    // replays the launch URL on `app:created` (`router.replace(initialURL, { force: true })`),
+    // which overwrote a navigateTo issued here and landed the user on `/` instead of the
+    // chat. Hold the URL until the app has mounted (the replay has finished by then);
+    // taps while the app is running navigate at once.
+    let appMounted = false
+    let pendingTapUrl: string | null = null
+    nuxtApp.hooks.hookOnce('app:mounted', () => {
+      appMounted = true
+      if (pendingTapUrl === null) return
+      const url = pendingTapUrl
+      pendingTapUrl = null
+      openTapUrl(url)
+    })
+
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       const url = action.notification.data?.url
       if (typeof url !== 'string' || url === '') return
 
-      Promise.resolve(nuxtApp.runWithContext(() => navigateTo(url))).catch((err: unknown) => {
-        log.warn('Failed to navigate from push tap', err)
-      })
+      if (!appMounted) {
+        pendingTapUrl = url
+        return
+      }
+      openTapUrl(url)
     })
 
     // Re-sync this device's FCM token on every cold start with a live session.

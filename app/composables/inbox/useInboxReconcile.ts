@@ -14,6 +14,9 @@
 // - `reason` is informational/logging only — never branches behavior.
 // - Coalescing: a trigger firing while a reconcile is already in flight
 //   joins the SAME in-flight promise rather than starting a second fetch.
+//   If the open thread changed after that run picked its tail (user switched
+//   chats mid-reconcile), the joiner runs once more for the new thread —
+//   otherwise the new thread's messages never load.
 
 import { createLogger } from '~/utils/logger'
 
@@ -23,6 +26,8 @@ const log = createLogger('[useInboxReconcile]')
 // of useInboxReconcile(), regardless of which composable instance
 // triggered it. This is what makes overlapping triggers coalesce.
 let inFlight: Promise<void> | null = null
+// Thread whose tail the last run fetched (null = no thread was open).
+let lastTailThreadId: string | null = null
 
 export function useInboxReconcile() {
   const store = useInboxStore()
@@ -39,7 +44,11 @@ export function useInboxReconcile() {
   async function reconcileInbox(reason: string): Promise<void> {
     if (inFlight) {
       log.debug('Reconcile already in flight, joining', { reason })
-      return inFlight
+      await inFlight
+      if (store.activeThreadId && store.activeThreadId !== lastTailThreadId) {
+        return reconcileInbox(reason)
+      }
+      return
     }
 
     log.debug('Reconciling inbox', { reason })
@@ -55,6 +64,7 @@ export function useInboxReconcile() {
     await fetchThreads()
 
     const openThreadId = store.activeThreadId
+    lastTailThreadId = openThreadId
     if (openThreadId) {
       await loadMessages(openThreadId)
     }
