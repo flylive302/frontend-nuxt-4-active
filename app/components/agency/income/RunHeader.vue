@@ -29,7 +29,7 @@ defineProps<{
       />
       <div class="min-w-0">
         <p class="text-sm font-semibold truncate">#{{ run.agency.id }} · {{ run.agency.name }}</p>
-        <p class="text-xs text-muted">{{ formatRunRange(run.started_at, run.ends_at) }}</p>
+        <p class="text-xs text-muted">{{ run.label ?? formatRunRange(run.started_at, run.ends_at) }}</p>
       </div>
     </div>
     <UBadge :color="toStatusBadgeColor(run.status_color)" variant="soft" class="font-bold shrink-0">

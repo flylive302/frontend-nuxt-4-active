@@ -11,8 +11,7 @@
 
 import { computed } from 'vue'
 import type { OwnerIncomeMemberRow, OwnerIncomeWindowKind } from '~/types/income/ownerIncome'
-import { formatDiamondsExact } from '~/utils/incomeFormat'
-import { formatXp } from '~/utils/currency'
+import { formatDiamondsExact, formatGiftCoinsExact } from '~/utils/incomeFormat'
 import { isOwnerIncomeMemberTappable } from '~/utils/ownerIncomeCard'
 
 // ========================================
@@ -84,7 +83,7 @@ function onTap(): void {
     <p class="text-xs text-muted">
       <template v-if="windowKind === 'run' && member.run_id === null">No run · </template>
       <template v-else-if="windowKind === 'run'">T{{ member.current_tier }} · </template>
-      {{ formatXp(member.gift_coins) }} Gift coins
+      {{ formatGiftCoinsExact(member.gift_coins) }} Gift coins
     </p>
   </component>
 </template>

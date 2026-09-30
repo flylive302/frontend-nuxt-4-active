@@ -13,8 +13,7 @@
 
 import { computed, ref, watch } from 'vue'
 import type { OwnerIncomeMemberSheet, OwnerIncomeSheetMember, OwnerIncomeWindowKind } from '~/types/income/ownerIncome'
-import { formatRunRange, toStatusBadgeColor } from '~/utils/incomeFormat'
-import { formatXp } from '~/utils/currency'
+import { formatGiftCoinsExact, formatRunRange, toStatusBadgeColor } from '~/utils/incomeFormat'
 import { ownerIncomeSheetGiftCoins } from '~/utils/ownerIncomeCard'
 
 // ========================================
@@ -122,16 +121,16 @@ function onUpdateOpen(value: boolean): void {
         <template v-if="shownSheet">
           <template v-if="shownSheet.run">
             <div class="flex items-center justify-between gap-2">
-              <p class="text-xs text-muted">{{ formatRunRange(shownSheet.run.started_at, shownSheet.run.ends_at) }}</p>
+              <p class="text-xs text-muted">{{ shownSheet.run.label ?? formatRunRange(shownSheet.run.started_at, shownSheet.run.ends_at) }}</p>
               <UBadge :color="toStatusBadgeColor(shownSheet.run.status_color)" variant="soft" class="font-bold shrink-0">
                 {{ shownSheet.run.status_label }}
               </UBadge>
             </div>
             <p class="text-xs text-muted">
-              T{{ shownSheet.run.current_tier }} · {{ formatXp(giftCoins) }} Gift coins
+              T{{ shownSheet.run.current_tier }} · {{ formatGiftCoinsExact(giftCoins) }} Gift coins
             </p>
           </template>
-          <p v-else class="text-xs text-muted">{{ formatXp(giftCoins) }} Gift coins</p>
+          <p v-else class="text-xs text-muted">{{ formatGiftCoinsExact(giftCoins) }} Gift coins</p>
 
           <AgencyIncomeHero :totals="shownSheet.totals" />
           <AgencyIncomeTotalsCards

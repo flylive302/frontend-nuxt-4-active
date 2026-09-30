@@ -131,7 +131,7 @@ describe('setupRoomEventHandlers — gift:batch', () => {
       startAudio: vi.fn(),
     }
     setupRoomEventHandlers(socket as never, actions, toast)
-    return { socket, audioStore, participantsStore, authStore, roomStore, giftStore }
+    return { socket, audioStore, participantsStore, authStore, roomStore, giftStore, seatsStore }
   }
 
   it('registers a gift:batch listener', async () => {
@@ -147,16 +147,17 @@ describe('setupRoomEventHandlers — gift:batch', () => {
       seq: 1,
       roomId: '1',
       items: [
-        { senderId: 2, giftId: 9, recipientIds: [3], quantity: 3, count: 4, transactionIds: ['norm-1', 'norm-2', 'norm-3', 'norm-4'] },
+        // Wire shape: 4 taps of ×3 merged — MSAB sums quantity (3 × 4 = 12).
+        { senderId: 2, giftId: 9, recipientIds: [3], quantity: 12, count: 4, transactionIds: ['norm-1', 'norm-2', 'norm-3', 'norm-4'] },
       ],
       lucky: [],
     })
     await Promise.resolve() // useRoomXpAccumulator flushes on the next frame/microtask
 
-    // XP: seatGiftValue(normal, quantity=3) = 3 * 500 = 1500, folded × count (4) = 6000, once.
+    // XP: per-tap seatGiftValue(normal, 3) = 1500, × 4 taps = 6000, once.
     expect(roomStore.currentRoom?.daily_xp).toBe('6000')
 
-    // Chat bubble: one message, quantity folded to quantity × count = 12.
+    // Chat bubble: one message announcing the merged total ×12.
     expect(audioStore.messages).toHaveLength(1)
     expect(audioStore.messages[0]?.content).toBe('Ali sent Golden Rose ×12 to Sara — 6,000 coins')
 
@@ -173,7 +174,7 @@ describe('setupRoomEventHandlers — gift:batch', () => {
       seq: 1,
       roomId: '1',
       items: [
-        { senderId: 2, giftId: 9, recipientIds: [3], quantity: 1, count: MAX_PLAYBACK_REPEATS + 5, transactionIds: Array.from({ length: MAX_PLAYBACK_REPEATS + 5 }, (_, i) => `cap-${i}`) },
+        { senderId: 2, giftId: 9, recipientIds: [3], quantity: MAX_PLAYBACK_REPEATS + 5, count: MAX_PLAYBACK_REPEATS + 5, transactionIds: Array.from({ length: MAX_PLAYBACK_REPEATS + 5 }, (_, i) => `cap-${i}`) },
       ],
       lucky: [],
     })
@@ -188,7 +189,8 @@ describe('setupRoomEventHandlers — gift:batch', () => {
       seq: 1,
       roomId: '1',
       items: [
-        { senderId: 2, giftId: 11, recipientIds: [3, 4], quantity: 2, count: 5, transactionIds: ['lucky-1', 'lucky-2', 'lucky-3', 'lucky-4', 'lucky-5'] },
+        // Wire shape: 5 taps of ×2 merged — MSAB sums quantity (2 × 5 = 10).
+        { senderId: 2, giftId: 11, recipientIds: [3, 4], quantity: 10, count: 5, transactionIds: ['lucky-1', 'lucky-2', 'lucky-3', 'lucky-4', 'lucky-5'] },
       ],
       lucky: [],
     })
@@ -199,6 +201,51 @@ describe('setupRoomEventHandlers — gift:batch', () => {
     // One fly request for the whole item (all recipients), carrying count=5.
     expect(triggerFlyMock).toHaveBeenCalledTimes(1)
     expect(triggerFlyMock).toHaveBeenCalledWith(LUCKY_GIFT.thumbnail_url, 2, [3, 4], 5)
+  })
+
+  describe('merged item value — wire quantity is the TOTAL (MSAB roomTicker sums it)', () => {
+    function emitItem(socket: ReturnType<typeof createMockSocket>, quantity: number, count: number, giftId: number) {
+      socket.handlers.get('gift:batch')?.({
+        seq: 1,
+        roomId: '1',
+        items: [
+          { senderId: 2, giftId, recipientIds: [3], quantity, count, transactionIds: Array.from({ length: count }, (_, i) => `merge-${giftId}-${quantity}-${i}`) },
+        ],
+        lucky: [],
+      })
+    }
+
+    it('two ×1 taps merged into one item credit the seat 2 taps, not 4 (prod seat-total inflation)', async () => {
+      const { socket, seatsStore, roomStore } = await setup()
+
+      emitItem(socket, 2, 2, NORMAL_GIFT.id)
+      await Promise.resolve()
+
+      // 2 taps × 500 = 1000. Multiplying the wire total by count gave 2000.
+      expect(seatsStore.seatGiftTotals.get(3)).toBe(1000)
+      expect(roomStore.currentRoom?.daily_xp).toBe('1000')
+    })
+
+    it('lucky: floors the split base PER TAP, matching the sender\'s optimistic per-tap sum', async () => {
+      const oddLucky = { ...LUCKY_GIFT, id: 12, price: 55 }
+      const { socket, seatsStore } = await setup({ gift: oddLucky })
+
+      emitItem(socket, 2, 2, oddLucky.id)
+      await Promise.resolve()
+
+      // Sender books floor(55 × 0.1) = 5 per tap → 10. Valuing the total would give floor(11) = 11.
+      expect(seatsStore.seatGiftTotals.get(3)).toBe(10)
+    })
+
+    it('mixed per-tap quantities (total not divisible by count) are valued once as the total', async () => {
+      const { socket, seatsStore } = await setup()
+
+      // A ×1 and a ×2 tap merged: total 3, count 2.
+      emitItem(socket, 3, 2, NORMAL_GIFT.id)
+      await Promise.resolve()
+
+      expect(seatsStore.seatGiftTotals.get(3)).toBe(1500)
+    })
   })
 
   it('skips an item whose senderId is the local user entirely (already booked locally on send)', async () => {

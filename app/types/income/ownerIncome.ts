@@ -200,7 +200,14 @@ export type OwnerIncomeSheetMember = Pick<OwnerIncomeMemberRow, 'user_id' | 'nam
 export type OwnerIncomeSheetRun = Pick<
   AgencyRun,
   'id' | 'status' | 'status_label' | 'status_color' | 'started_at' | 'ends_at' | 'accumulated_xp' | 'current_tier'
->
+> & {
+  /**
+   * Shared cycle label ("Run N · start – end", end inclusive) — the same text
+   * as the owner's Member Income picker. Optional only so an older backend
+   * still renders (callers fall back to `formatRunRange`).
+   */
+  label?: string
+}
 
 /**
  * A crossed milestone on the sheet. In range mode the server adds `run_id`,

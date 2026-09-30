@@ -484,7 +484,9 @@ export interface GiftReceivedEvent {
 /**
  * One merged tap-set inside a `gift:batch` tick (gift-authority-tick-fanout
  * ticket 14). Same sender + gift + recipient set collapse into one item;
- * `count` is how many taps were merged, `quantity` is the per-tap quantity.
+ * `count` is how many taps were merged; `quantity` is the merged TOTAL —
+ * MSAB's `roomTicker.enqueueGift` sums each tap's quantity into it. Split it
+ * back to per-tap with `batchItemTaps` before multiplying by taps.
  * `transactionIds.length === count`.
  */
 export interface GiftBatchItem {

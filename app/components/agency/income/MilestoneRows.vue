@@ -8,7 +8,7 @@
 // ========================================
 
 import type { OwnerIncomeSheetMilestone } from '~/types/income/ownerIncome'
-import { formatDiamondsExact, formatRunDate } from '~/utils/incomeFormat'
+import { formatDiamondsExact, formatGiftCoinsExact, formatRunDate } from '~/utils/incomeFormat'
 import { ownerIncomeMilestoneKey } from '~/utils/ownerIncomeCard'
 
 // ========================================
@@ -31,7 +31,7 @@ defineProps<{
         <UBadge color="tertiary" variant="soft" class="font-bold shrink-0">Tier {{ milestone.tier }}</UBadge>
         <span class="text-xs text-muted flex items-center gap-1 shrink-0">
           <UIcon name="i-lucide-zap" class="size-3.5" />
-          {{ formatXp(milestone.required_xp) }} Gift coins
+          {{ formatGiftCoinsExact(milestone.required_xp) }} Gift coins
         </span>
         <span class="text-xs text-muted truncate">
           {{ milestone.crossed_at ? formatRunDate(milestone.crossed_at) : '—' }}

@@ -2,6 +2,7 @@
 <!-- Simple active-tier bar for the member's current agency-XP run (native XP). -->
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatGiftCoinsExact } from '~/utils/incomeFormat'
 
 // ========================================
 // Options
@@ -91,7 +92,7 @@ const progressColor = computed(() => {
         <div class="bg-tertiary/10 rounded-md p-2 inset-shadow-sm">
           <p class="text-xs text-muted">{{ isMaxed ? 'Status' : 'Gift coins to next tier' }}</p>
           <p class="text-lg font-bold text-tertiary">
-            {{ isMaxed ? 'Maxed' : formatCurrency(xpToNextTier) }}
+            {{ isMaxed ? 'Maxed' : formatGiftCoinsExact(xpToNextTier) }}
           </p>
         </div>
         <div class="bg-secondary/10 rounded-md p-2 inset-shadow-sm">
@@ -114,8 +115,8 @@ const progressColor = computed(() => {
           :ui="{ status: 'text-white -mb-1' }"
         />
         <div class="flex justify-between text-sm text-white font-semibold">
-          <span><UIcon name="i-lucide-zap" /> {{ formatCurrency(run?.accumulated_xp ?? 0) }} Gift coins</span>
-          <span v-if="nextTier"><UIcon name="i-lucide-flag" /> {{ formatCurrency(nextTier.required_xp) }} Gift coins</span>
+          <span><UIcon name="i-lucide-zap" /> {{ formatGiftCoinsExact(run?.accumulated_xp ?? 0) }} Gift coins</span>
+          <span v-if="nextTier"><UIcon name="i-lucide-flag" /> {{ formatGiftCoinsExact(nextTier.required_xp) }} Gift coins</span>
         </div>
       </div>
     </template>

@@ -2,16 +2,15 @@
  * Income Formatting Utilities
  *
  * Pure formatting helpers for the run-centric income page (member-income-runs
- * epic). Diamonds are always shown as exact integers with thousands
- * separators — never abbreviated — unlike XP, which uses the existing short
- * formatters in `~/utils/currency`.
+ * epic). Diamonds and Gift coins are always shown as exact integers with
+ * thousands separators on the income screens — never abbreviated.
  */
 
 // ========================================
 // Constants
 // ========================================
 
-const DIAMOND_FORMATTER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
+const EXACT_INTEGER_FORMATTER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 
 const RUN_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -43,7 +42,15 @@ export type IncomeStatusBadgeColor = (typeof STATUS_BADGE_COLORS)[number]
  * Negative values keep their leading minus, e.g. -50 -> "-50".
  */
 export function formatDiamondsExact(value: number): string {
-  return DIAMOND_FORMATTER.format(value)
+  return EXACT_INTEGER_FORMATTER.format(value)
+}
+
+/**
+ * Exact Gift coins figure with thousands separators, e.g. 241000 -> "241,000".
+ * Any fraction is truncated, never rounded: 315312.7 -> "315,312".
+ */
+export function formatGiftCoinsExact(value: number): string {
+  return EXACT_INTEGER_FORMATTER.format(Math.trunc(value))
 }
 
 /**

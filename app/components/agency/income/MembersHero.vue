@@ -10,7 +10,7 @@
 
 import { computed } from 'vue'
 import type { OwnerIncomeMembersTotals } from '~/types/income/ownerIncome'
-import { formatXp } from '~/utils/currency'
+import { formatGiftCoinsExact } from '~/utils/incomeFormat'
 
 // ========================================
 // Props
@@ -37,7 +37,7 @@ const rosterLine = computed(() => {
     <p class="text-xs text-muted text-center">{{ rosterLine }}</p>
     <p class="text-xs text-muted text-center flex items-center justify-center gap-1">
       <UIcon name="i-lucide-zap" class="size-3.5" />
-      Gift coins: {{ formatXp(totals.gift_coins) }}
+      Gift coins: {{ formatGiftCoinsExact(totals.gift_coins) }}
     </p>
     <AgencyIncomeTotalsCards :totals="totals" :collapsible="false" />
   </div>

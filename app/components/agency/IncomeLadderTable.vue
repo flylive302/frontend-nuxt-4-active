@@ -4,6 +4,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { LadderTier } from '~/types/income/income'
+import { formatGiftCoinsExact } from '~/utils/incomeFormat'
 
 // ========================================
 // Options
@@ -68,7 +69,7 @@ function rowColor(rung: LadderTier): 'success' | 'tertiary' | 'neutral' {
 
       <p class="text-xs text-muted mt-1 text-right">
         <UIcon name="i-lucide-zap" class="size-3 inline-block" />
-        {{ formatCurrency(rung.required_xp) }} Gift coins
+        {{ formatGiftCoinsExact(rung.required_xp) }} Gift coins
       </p>
     </div>
   </div>

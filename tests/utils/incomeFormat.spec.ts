@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   formatDiamondsExact,
+  formatGiftCoinsExact,
   formatRunDate,
   formatRunRange,
   toStatusBadgeColor,
@@ -21,6 +22,32 @@ describe('formatDiamondsExact', () => {
 
   it('formats zero', () => {
     expect(formatDiamondsExact(0)).toBe('0')
+  })
+})
+
+describe('formatGiftCoinsExact', () => {
+  it('formats a round thousand with a separator', () => {
+    expect(formatGiftCoinsExact(241000)).toBe('241,000')
+  })
+
+  it('formats a large integer with thousands separators', () => {
+    expect(formatGiftCoinsExact(1234567)).toBe('1,234,567')
+  })
+
+  it('keeps small integers unabbreviated', () => {
+    expect(formatGiftCoinsExact(999)).toBe('999')
+  })
+
+  it('formats zero', () => {
+    expect(formatGiftCoinsExact(0)).toBe('0')
+  })
+
+  it('truncates the fraction instead of rounding', () => {
+    expect(formatGiftCoinsExact(315312.7)).toBe('315,312')
+  })
+
+  it('truncates a fraction just below the next whole number', () => {
+    expect(formatGiftCoinsExact(3700.99)).toBe('3,700')
   })
 })
 

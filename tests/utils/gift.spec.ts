@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { seatGiftValue } from '../../app/utils/gift'
+import { batchItemTaps, seatGiftValue } from '../../app/utils/gift'
 import { LUCKY_SPLIT_SHARE } from '../../app/constants/room'
 import type { Gift } from '../../app/types/gift/gift'
 
@@ -43,5 +43,19 @@ describe('seatGiftValue', () => {
     expect(LUCKY_SPLIT_SHARE).toBe(0.1)
     const gcv = 100
     expect(seatGiftValue(makeGift('lucky', gcv), 1)).toBe(Math.floor(gcv * LUCKY_SPLIT_SHARE))
+  })
+})
+
+describe('batchItemTaps', () => {
+  it('splits an evenly merged total back to per-tap quantity × taps', () => {
+    expect(batchItemTaps(12, 4)).toEqual({ quantity: 3, taps: 4 })
+  })
+
+  it('passes a single tap through unchanged', () => {
+    expect(batchItemTaps(5, 1)).toEqual({ quantity: 5, taps: 1 })
+  })
+
+  it('values a total that does not divide evenly as one tap of the total', () => {
+    expect(batchItemTaps(3, 2)).toEqual({ quantity: 3, taps: 1 })
   })
 })

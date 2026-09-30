@@ -38,7 +38,7 @@ import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { resolveSvgaPlugin } from '../gift/useSvgaPlugin';
 import { propToEntryAnimationGift } from '~/utils/prop';
-import { isLuckyCategory } from '~/utils/gift';
+import { batchItemTaps, isLuckyCategory } from '~/utils/gift';
 import { createLogger } from '~/utils/logger';
 import { SPEAKER_ACTIVE_TTL_MS, CHAT_MESSAGE_TYPE_GIFT } from '~/constants/room';
 import { LUCKY_NUMBER } from '~/constants/lucky-number';
@@ -898,22 +898,27 @@ export function setupRoomEventHandlers(
       // those effects double-books on the sender's own screen.
       if (item.senderId === authStore.user?.id) continue;
 
-      // XP accumulated once per item (value × count).
+      // `item.quantity` is the merged TOTAL on the wire (MSAB sums it across
+      // the `count` taps) — split it back to per-tap before any consumer
+      // multiplies by taps, or every merged item over-counts by `count`.
+      const { quantity, taps } = batchItemTaps(item.quantity, item.count);
+
+      // XP accumulated once per item (per-tap value × taps).
       if (roomStore.currentRoom) {
-        const perRecipientXp = seatGiftValue(gift, item.quantity) * item.count;
+        const perRecipientXp = seatGiftValue(gift, quantity) * taps;
         for (const recipientId of item.recipientIds) {
           accumulateGiftXp(recipientId, perRecipientXp);
         }
       }
 
-      // One chat bubble per item — fold count into the announced quantity so
-      // a merged tick still shows the true total, same as N legacy events
-      // patching the same streak bubble in place would have summed to.
+      // One chat bubble per item — announce the merged total so a merged
+      // tick shows the same total N legacy events patching the same streak
+      // bubble in place would have summed to.
       if (!isLuckyCategory(gift.category)) {
         synthesizeGiftChatMessage(
           audioStore,
           participantsStore,
-          { senderId: item.senderId, giftId: item.giftId, quantity: item.quantity * item.count },
+          { senderId: item.senderId, giftId: item.giftId, quantity: quantity * taps },
           gift,
           item.recipientIds,
         );
@@ -924,16 +929,16 @@ export function setupRoomEventHandlers(
       const sender = participantsStore.participants.get(item.senderId);
 
       if (isLuckyCategory(gift.category)) {
-        // One lucky tap-activity record per item — count already folds into
-        // the accumulated xN (see recordLuckyGiftTap's `count` param).
+        // One lucky tap-activity record per item — taps fold into the
+        // accumulated xN (see recordLuckyGiftTap's `count` param).
         recordLuckyGiftTap({
           senderId: item.senderId,
           senderName: sender?.name ?? 'Someone',
           senderAvatar: sender?.avatar ?? null,
           giftName: gift.label ?? gift.name,
           recipientIds: item.recipientIds,
-          quantity: item.quantity,
-          count: item.count,
+          quantity,
+          count: taps,
         });
 
         // One lucky-fly request per item (all recipients, carrying `count`) —
@@ -943,18 +948,18 @@ export function setupRoomEventHandlers(
         continue;
       }
 
-      // One playback enqueue per item — `count` (merged taps) folded into the
-      // existing repeat counter: legacy coalesces one repeat per EVENT (tap)
-      // regardless of quantity, so a batch item = `count` repeats, clamped to
-      // the same MAX_PLAYBACK_REPEATS the legacy coalescer stops at.
+      // One playback enqueue per item — merged taps folded into the existing
+      // repeat counter: legacy coalesces one repeat per EVENT (tap) regardless
+      // of quantity, so a batch item = `taps` repeats of the per-tap quantity,
+      // clamped to the same MAX_PLAYBACK_REPEATS the legacy coalescer stops at.
       giftStore.enqueuePlayback({
         gift,
         senderId: item.senderId,
         senderName: sender?.name ?? 'Unknown',
         senderAvatar: sender?.avatar ?? undefined,
         recipientIds: item.recipientIds,
-        quantity: item.quantity,
-        repeats: Math.min(item.count, MAX_PLAYBACK_REPEATS),
+        quantity,
+        repeats: Math.min(taps, MAX_PLAYBACK_REPEATS),
       });
     }
 

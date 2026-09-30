@@ -151,6 +151,12 @@ export interface RunDeduction {
  * milestone-drain celebration.
  */
 export interface RunDetail extends AgencyRun {
+  /**
+   * Shared cycle label ("Run N · start – end", end inclusive) — the same text
+   * as the owner's Member Income picker. Optional only so an older backend
+   * still renders (callers fall back to `formatRunRange`).
+   */
+  label?: string
   agency: IncomeAgency
   totals: IncomeTotals
   earned_split: EarnedSplit

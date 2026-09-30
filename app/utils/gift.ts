@@ -32,3 +32,23 @@ export function seatGiftValue(gift: Pick<Gift, 'category' | 'price'>, quantity: 
 
   return gcv;
 }
+
+/**
+ * Per-tap view of a merged `gift:batch` item.
+ *
+ * MSAB's room ticker (`roomTicker.enqueueGift`) SUMS `quantity` across the
+ * taps it merges and counts them in `count`, so on the wire `quantity` is the
+ * item's TOTAL. Every consumer (seat value, chat quantity, lucky tap band,
+ * playback) works in per-tap quantity × taps — multiplying the wire total by
+ * `count` again inflated every non-sender's seat total and room XP by the
+ * merge factor. Taps merged inside one ~100 ms tick share a quantity in
+ * practice, which keeps the lucky split floor per tap (as the sender and the
+ * backend book it). If the total does not divide evenly, the item is valued
+ * as ONE tap of the total rather than guessing a split.
+ */
+export function batchItemTaps(totalQuantity: number, count: number): { quantity: number; taps: number } {
+  if (count > 1 && totalQuantity % count === 0) {
+    return { quantity: totalQuantity / count, taps: count };
+  }
+  return { quantity: totalQuantity, taps: 1 };
+}
