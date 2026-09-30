@@ -226,15 +226,16 @@ describe('setupRoomEventHandlers — gift:batch', () => {
       expect(roomStore.currentRoom?.daily_xp).toBe('1000')
     })
 
-    it('lucky: floors the split base PER TAP, matching the sender\'s optimistic per-tap sum', async () => {
+    it('lucky: sums the exact split value — the backend floors per flush group, not per tap', async () => {
       const oddLucky = { ...LUCKY_GIFT, id: 12, price: 55 }
       const { socket, seatsStore } = await setup({ gift: oddLucky })
 
       emitItem(socket, 2, 2, oddLucky.id)
       await Promise.resolve()
 
-      // Sender books floor(55 × 0.1) = 5 per tap → 10. Valuing the total would give floor(11) = 11.
-      expect(seatsStore.seatGiftTotals.get(3)).toBe(10)
+      // 2 × (55 × 0.1) = 11 — what the backend books when both taps land in one
+      // flush group (floor(110 × 0.1)). Flooring per tap gave 10.
+      expect(seatsStore.seatGiftTotals.get(3)).toBe(11)
     })
 
     it('mixed per-tap quantities (total not divisible by count) are valued once as the total', async () => {

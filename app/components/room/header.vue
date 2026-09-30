@@ -2,6 +2,7 @@
 import type { LevelConfig } from '~/types/user/bootstrap';
 import { ASSETS } from '~/constants/assets';
 import { roomLogoSquareSrc } from '~/utils/imagekit';
+import { wholeGiftValue } from '~/utils/gift';
 
 
 // ========================================
@@ -54,10 +55,11 @@ const nextLevel = computed(() =>
   currentLevel.value + 1
 );
 
-/** Current room XP (parsed from string) */
+/** Current room XP (parsed from string). Local gift bumps carry fractional lucky
+ * split values (see seatGiftValue) — show whole XP, rounded down like the backend. */
 const currentXP = computed(() => {
   const xpString = thisRoom.value?.room_xp ?? '0';
-  return parseFloat(xpString) || 0;
+  return wholeGiftValue(parseFloat(xpString) || 0);
 });
 
 /** Formatted current XP for display */

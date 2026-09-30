@@ -2,6 +2,7 @@
 import { ASSETS } from '~/constants/assets'
 import { withImageKitTransform } from '~/utils/imagekit'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
+import { wholeGiftValue } from '~/utils/gift'
 /**
  * RoomSeat - Individual speaker seat component
  * Shows user avatar, name, and audio status indicators
@@ -85,7 +86,8 @@ const displayName = computed(() => {
 // Cumulative coin value of gifts received during this session
 const seatGiftTotal = computed(() => {
   if (!seat.value?.user) return 0;
-  return seatsStore.seatGiftTotals.get(seat.value.user.id) ?? 0;
+  // Totals carry fractional lucky split values — show whole coins, rounded down.
+  return wholeGiftValue(seatsStore.seatGiftTotals.get(seat.value.user.id) ?? 0);
 });
 
 // Seat Reaction currently playing for this seat's occupant (ADR 0015)

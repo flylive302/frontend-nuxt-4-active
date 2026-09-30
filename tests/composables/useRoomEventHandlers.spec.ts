@@ -424,7 +424,7 @@ describe('setupRoomEventHandlers — gift:received daily XP bump', () => {
     })
 
     await Promise.resolve()
-    // Lucky gift: seatGiftValue = split base = floor(100 * 0.10) = 10.
+    // Lucky gift: seatGiftValue = split base = 100 * 0.10 = 10.
     expect(roomStore.currentRoom?.daily_xp).toBe('110')
     expect(roomStore.currentRoom?.room_xp).toBe('510')
   })

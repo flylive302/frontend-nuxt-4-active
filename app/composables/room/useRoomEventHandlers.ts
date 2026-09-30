@@ -795,8 +795,8 @@ export function setupRoomEventHandlers(
     if (giftForValue && roomStore.currentRoom) {
       for (const recipientId of newLegs) {
         // Seat total and room XP both credit the split base the backend books
-        // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)); seatGiftValue
-        // returns exactly that. Must match the sender's optimistic bump in
+        // (normal → full GCV, lucky → GCV × LUCKY_SPLIT_SHARE, unfloored — see
+        // seatGiftValue); seatGiftValue returns exactly that. Must match the sender's optimistic bump in
         // useRoomGifts.sendGift or the two clients' room XP drift apart on lucky sends.
         accumulateGiftXp(recipientId, seatGiftValue(giftForValue, event.quantity));
       }

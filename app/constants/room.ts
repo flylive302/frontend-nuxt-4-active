@@ -387,6 +387,15 @@ export const SPEAKER_ACTIVE_TTL_MS = 2_000;
  */
 export const LUCKY_SPLIT_SHARE = 0.1;
 
+/**
+ * Float-drift allowance when flooring an accumulated gift value (seat total,
+ * room XP) for display.
+ * Lucky split values are fractional (15-coin lucky → 1.5) and summed in
+ * floating point, so a total that should be 13 can land on 12.999999999999998.
+ * Far below the smallest real fraction (0.1 coin), far above any drift.
+ */
+export const GIFT_VALUE_FLOAT_EPSILON = 1e-6;
+
 // ============================================
 // Debounce Delays
 // ============================================

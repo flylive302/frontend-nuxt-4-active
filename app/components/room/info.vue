@@ -4,6 +4,8 @@ import { defineAsyncComponent } from 'vue'
 import { useRoomAudio } from '~/composables/room/useRoomAudio'
 import { useRoomGiftLeaderboard } from '~/composables/room/useRoomGiftLeaderboard'
 import { ASSETS } from '~/constants/assets'
+import { wholeGiftValue } from '~/utils/gift'
+import { parseCurrency } from '~/utils/currency'
 import type { LeaderboardPeriod, LeaderboardEntry } from '~/types/progression/leaderboard'
 
 // Async-load vue-virtual-scroller + its CSS so the feature-scroller chunk
@@ -164,7 +166,10 @@ async function handleInvite(userId: number) {
 
 // Outer XP button shows live *daily* XP (prd-daily-room-xp.md), distinct from
 // the lifetime room_xp used by the level progress bar / level-up flow.
-const dailyXp = computed(() => roomStore.currentRoom?.daily_xp)
+// Local gift bumps carry fractional lucky split values (see seatGiftValue) —
+// both totals show whole XP, rounded down like the backend.
+const dailyXp = computed(() => wholeGiftValue(parseCurrency(roomStore.currentRoom?.daily_xp)))
+const shownPeriodTotalXp = computed(() => wholeGiftValue(parseCurrency(periodTotalXp.value)))
 
 /**
  * Get rank badge color based on position.
@@ -218,7 +223,7 @@ function getRankVariant(rank: number): 'solid' | 'soft' {
                 class="cursor-pointer text-primary shadow-md backdrop-blur-xs font-bold"
               >
                 <img :src="ASSETS.COIN_ICON" class="size-4" alt="room xp indicator">
-                {{formatXp(periodTotalXp)}}
+                {{formatXp(shownPeriodTotalXp)}}
               </UButton>
             </div>
           </div>

@@ -74,8 +74,9 @@ export function useRoomGifts({
       const addedXpPerRecipient = seatGiftValue(gift, quantity);
       for (const recipientId of seatedRecipientIds) {
         // Room XP credits the same split base the backend books as `xpBase`
-        // (normal → full GCV, lucky → floor(GCV × LUCKY_SPLIT_SHARE)), which is
-        // exactly what seatGiftValue returns. Using the full GCV here over-counts
+        // (normal → full GCV, lucky → GCV × LUCKY_SPLIT_SHARE, floored by the
+        // backend per flush group, not per tap), which is what seatGiftValue
+        // returns. Using the full GCV here over-counts
         // lucky sends and drifts the sender's bar ahead of the receiver's (and the
         // authoritative value) until a refetch. Writes are batched per frame
         // (room XP, daily XP, period total, seat total) by useRoomXpAccumulator.
