@@ -168,15 +168,14 @@ onBeforeUnmount(clearLongPressTimer)
         <UserAvatar :img="displayAvatar" :frame-id="displayFrameId" :user-name="displayName" :static-frame="true" class="shrink-0 size-12" @click="handleAvatarClick" />
         <div class="min-w-0">
 
-          <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 bg-primary-30 ring ring-primary bg-primary/30 rounded-md">
+          <div class="flex items-center w-fit ml-1.5 px-2 gap-1.5 ring ring-primary bg-primary/30 rounded-md">
             <MarqueeName
                 class="flex-1 max-w-24 mx-auto"
                 text-class="text-sm font-bold leading-none"
                 :name="displayName"
                 :vip="participant?.vip_level"
-                delay="0s"
             />
-            <span class="text-xs text-gray-white shrink-0">{{ formattedTime }}</span>
+            <span class="text-xs shrink-0">{{ formattedTime }}</span>
           </div>
           <!-- Identity badges (flag, VIP, wealth, charm) scroll horizontally once they
                outgrow the row. The max-width is load-bearing, not cosmetic, and it is

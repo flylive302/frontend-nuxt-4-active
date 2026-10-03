@@ -3,36 +3,37 @@
 // Props
 // ========================================
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   name: string
   vip?: number | null
-  /** Animated highlight sweep. Opt-in: keep off in lists/seats (many names). */
-  shine?: boolean
-  /** Pause the shine (e.g. while scrolled out of view). */
-  paused?: boolean
-}>(), {
-  vip: undefined,
-  shine: false,
-  paused: false,
-})
+}>()
+
+// ========================================
+// State
+// ========================================
+
+const rootRef = ref<HTMLElement | null>(null)
 
 // ========================================
 // Composables
 // ========================================
 
-const { vipNameColor } = useVipNameColor()
-
-// Computed, not a snapshot: `vip` changes live (vip.updated socket → patchVip).
-const color = computed(() => vipNameColor(props.vip))
+const { color, active, hostStyle, glintStyle } = useVipGlint(() => props.vip, rootRef)
 </script>
 
+<!-- No whitespace between the name and the glint (tags close against the
+     text): a space there would become a text node and widen the base text
+     relative to its copy. -->
 <template>
   <span
+    ref="rootRef"
     class="vip-name"
-    :class="{ 'vip-name--shine': shine && color }"
-    :style="{
-      '--vip-color': color || undefined,
-      animationPlayState: paused ? 'paused' : 'running',
-    }"
-  >{{ name }}</span>
+    :class="{ 'vip-name--vip': color }"
+    :style="hostStyle"
+  >{{ name }}<span
+    v-if="active"
+    class="vip-glint"
+    :style="glintStyle"
+    aria-hidden="true"
+  ><span class="vip-glint__copy">{{ name }}</span></span></span>
 </template>

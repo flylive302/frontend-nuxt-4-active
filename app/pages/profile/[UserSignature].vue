@@ -418,9 +418,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
             text-class="text-lg leading-none font-bold"
             :name="profileWritable?.name || ''"
             :vip="profileWritable?.vip_level"
-            shine
             delay="0.5s"
-            :paused="!headerVisible"
         />
       </template>
 

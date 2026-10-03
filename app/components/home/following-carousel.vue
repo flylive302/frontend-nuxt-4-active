@@ -69,8 +69,8 @@ const presenceStore = usePresenceStore()
                 aria-label="Online"
               />
             </div>
-            <div class="marquee-container w-fit -mt-2">
-              <span class="text-xs text-center font-semibold w-full leading-tight marquee-text">
+            <div class="w-fit -mt-2">
+              <span class="text-xs text-center font-semibold w-full leading-tight">
                 <VipName :name="item.name" :vip="item.vip_level" />
               </span>
             </div>
@@ -111,6 +111,7 @@ const presenceStore = usePresenceStore()
                 class="mx-auto max-w-16"
                 text-class="text-xs leading-none font-bold"
                 :name="item.name"
+                :vip="item.vip_level"
                 delay="0.5s"
             />
           </component>

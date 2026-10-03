@@ -195,11 +195,9 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         <NuxtLink :to="`/profile/${authStore.user?.signature}`">
           <MarqueeName
               class="mx-auto max-w-36"
-              shine
               text-class="text-lg leading-none font-bold"
               :name="authStore.user?.name || ''"
               :vip="authStore.user?.vip_level"
-              :paused="!headerVisible"
           />
         </NuxtLink>
       </template>

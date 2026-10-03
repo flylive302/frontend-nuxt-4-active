@@ -142,6 +142,12 @@ export const ASSETS = {
 
   // VIP UI ASSETS
   VIP_BACKGROUND: `${IK}/vip/background.png?tr=w-800,q-70,c-maintain_ratio,f-auto`,
+
+
+  // --- CP event Assets
+  CP_HEADER: '/images/cp-event/header.webp',
+  CP_FERRIS_WHEEL_BOTTOM: '/images/cp-event/ferris-wheel-bottom.webp',
+  CP_FERRIS_WHEEL_BASE: '/images/cp-event/ferris-wheel-bottom.webp',
 } as const
 
 // ========================================

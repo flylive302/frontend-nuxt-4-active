@@ -1,108 +1,98 @@
 <script setup lang="ts">
+// ========================================
+// Props
+// ========================================
+
 const props = withDefaults(defineProps<{
   name: string
+  /** `animation-delay` for the scroll — staggers names in a list. */
   delay?: string
   textClass?: string
   vip?: number | null
-  /** Animated highlight sweep over the VIP colour. Opt-in (profile headers). */
-  shine?: boolean
-  /**
-   * Pause the scrolling animation (e.g. while the header is scrolled out of
-   * view). Purely visual — `animation-play-state`, no layout/appearance
-   * change while paused/resumed.
-   */
-  paused?: boolean
 }>(), {
   delay: undefined,
   textClass: undefined,
   vip: undefined,
-  shine: false,
-  paused: false,
 })
+
+// ========================================
+// State
+// ========================================
 
 const containerRef = ref<HTMLElement | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
 const isOverflowing = ref(false)
 
-function checkOverflow() {
+/** Copy indices: a second, aria-hidden copy only while scrolling (seamless loop). */
+const copies = computed(() => (isOverflowing.value ? [0, 1] : [0]))
+
+// ========================================
+// Composables
+// ========================================
+
+// Observing the container also while overflowing (not only for VIPs) lets the
+// scroll pause off-screen, same as the glint.
+const { color, inView, active, hostStyle, glintStyle } = useVipGlint(() => props.vip, containerRef, isOverflowing)
+
+const trackStyle = computed(() => (isOverflowing.value
+  ? { animationDelay: props.delay, animationPlayState: inView.value ? 'running' : 'paused' }
+  : undefined))
+
+useSharedResize([containerRef, trackRef], checkOverflow)
+
+// ========================================
+// Handlers
+// ========================================
+
+function checkOverflow(): void {
   if (!containerRef.value || !trackRef.value) return
-  // Temporarily measure just the single text's natural width
   isOverflowing.value = trackRef.value.scrollWidth > containerRef.value.clientWidth
 }
 
-let ro: ResizeObserver | null = null
-let rafHandle: number | null = null
-
-function scheduleCheck() {
-  if (rafHandle !== null) cancelAnimationFrame(rafHandle)
-  rafHandle = requestAnimationFrame(() => {
-    rafHandle = null
+// A new name doesn't resize the (block-level) track, so the observer won't
+// report it — re-measure explicitly. Collapse first: while overflowing the
+// track holds two copies, so a shrunken name would still read as overflowing.
+let nameFrame: number | null = null
+watch(() => props.name, () => {
+  isOverflowing.value = false
+  nameFrame ??= requestAnimationFrame(() => {
+    nameFrame = null
     checkOverflow()
   })
-}
-
-onMounted(() => {
-  ro = new ResizeObserver(useDebounceFn(checkOverflow, 80))
-  if (containerRef.value) ro.observe(containerRef.value)
-  if (trackRef.value) ro.observe(trackRef.value)
-  nextTick(scheduleCheck)
 })
 
-// Registered at setup scope (not inside onMounted) so an `async` mounted
-// callback can never silently drop the cleanup.
 onUnmounted(() => {
-  ro?.disconnect()
-  ro = null
-  if (rafHandle !== null) cancelAnimationFrame(rafHandle)
-  rafHandle = null
+  if (nameFrame !== null) cancelAnimationFrame(nameFrame)
 })
-
-watch(() => props.name, async () => {
-  // Reset first so the track collapses to its natural width before we measure.
-  // Without this, a shrinking name still overflows the now-collapsed container
-  // and isOverflowing stays true indefinitely.
-  isOverflowing.value = false
-  await nextTick()
-  scheduleCheck()
-})
-
-// Computed, not a setup-time snapshot: the parent's `vip` prop changes live
-// (vip.updated socket → authStore.patchVip, or the profile page's syncUser()).
-const { vipNameColor } = useVipNameColor()
-const colorFullName = computed(() => vipNameColor(props.vip))
-const nameClass = computed(() => ['vip-name', { 'vip-name--shine': props.shine && !!colorFullName.value }])
-const nameStyle = computed(() => ({
-  '--vip-color': colorFullName.value || undefined,
-  animationPlayState: props.paused ? 'paused' : 'running',
-}))
 </script>
 
 <template>
   <div ref="containerRef" class="overflow-hidden">
     <div
-        ref="trackRef"
-        class="whitespace-nowrap"
-        :class="[{ 'marquee-track': isOverflowing }]"
-        :style="{
-          ...(isOverflowing && delay ? { animationDelay: delay } : {}),
-          animationPlayState: paused ? 'paused' : 'running',
-        }"
+      ref="trackRef"
+      class="whitespace-nowrap"
+      :class="{ 'marquee-track': isOverflowing }"
+      :style="trackStyle"
     >
+      <!-- No whitespace between the name and the glint (tags close against
+           the text): a space would widen the base text relative to its copy. -->
       <span
-          :class="[textClass, nameClass]"
-          :style="nameStyle"
+        v-for="copy in copies"
+        :key="copy"
+        :class="[textClass, { 'marquee-copy': isOverflowing }]"
+        :aria-hidden="copy > 0 ? 'true' : undefined"
       >
-        {{ name }}
-      </span>
-      <!-- Duplicate for seamless loop, gap via padding -->
-      <span
-          v-if="isOverflowing"
-          :class="[textClass, nameClass]"
-          :style="nameStyle"
+        <span
+          v-if="color"
+          class="vip-name--vip inline-block"
+          :style="hostStyle"
+        >{{ name }}<span
+          v-if="active"
+          class="vip-glint"
+          :style="glintStyle"
           aria-hidden="true"
-          class="pl-12"
-      >
-        {{ name }}
+        ><span class="vip-glint__copy">{{ name }}</span></span></span>
+        <template v-else>{{ name }}</template>
       </span>
     </div>
   </div>
@@ -113,6 +103,14 @@ const nameStyle = computed(() => ({
   display: inline-flex;
   width: max-content;
   animation: marquee-scroll 6s linear infinite;
+}
+
+/* The loop gap is a margin on BOTH copies, never padding on the second only:
+   the track is then exactly two (copy + gap) units wide, so translateX(-50%)
+   lands the second copy precisely where the first started — no jump at the
+   seam. */
+.marquee-copy {
+  margin-right: 3rem;
 }
 
 @keyframes marquee-scroll {

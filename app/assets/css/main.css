@@ -555,10 +555,6 @@ html {
         animation: none;
     }
 
-    .marquee-text {
-        animation: none;
-    }
-
     .animate-scroll-up,
     .animate-scroll-down {
         animation: none;
@@ -682,48 +678,91 @@ textarea,
 }
 
 
-/* VIP display name. Colour comes from bootstrap `vip_levels.color` via
-   `--vip-color` (set inline by <VipName> / <MarqueeName>). `.vip-name--shine`
-   is opt-in (profile headers only): a highlight sweep clipped to the glyphs.
-   It animates background-position on a span a few hundred px² large, and is
-   paused off-screen via animation-play-state — cheap enough, but keep it off
-   in lists/seats where dozens of names render. */
+/* VIP display name (<VipName>, <MarqueeName>). The name text is always white;
+   the level colour (`--vip-glint-color`: bootstrap `vip_levels.color`, made
+   bright and vivid by useVipNameColor) shows only in a glint sweeping across
+   the glyphs.
+
+   Compositor-only, so it is safe on every name (seats, chat, lists):
+   `.vip-glint` is a soft-edged window (static mask) sliding right while its
+   coloured copy of the name slides left by exactly the same distance — the
+   copy stays pinned over the white text and only the window moves. Both
+   animate `transform` alone: no paint and no main-thread work per frame.
+   The two keyframes MUST keep identical offsets, duration, easing and delay,
+   or the copy drifts off the glyphs. No `will-change`: the running animation
+   already promotes both layers, and useVipGlint unmounts the glint while the
+   name is off-screen, so idle names hold no layers at all. */
+
+/* <VipName> root. Owns its truncation so the copy ellipsizes at exactly the
+   same point as the base text — a parent's `truncate` would ellipsize only the
+   base text, and the sweep would reveal real letters under the "…". */
 .vip-name {
-    color: var(--vip-color, inherit);
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: inherit;
+    /* overflow:hidden moves an inline-block's baseline to its bottom edge */
+    vertical-align: bottom;
 }
 
-.vip-name--shine {
-    background-image: linear-gradient(
-        100deg,
-        var(--vip-color) 0%,
-        var(--vip-color) 38%,
-        #fff 50%,
-        var(--vip-color) 62%,
-        var(--vip-color) 100%
-    );
-    background-size: 300% 100%;
-    background-position: 100% 0;
-    background-repeat: no-repeat;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: vip-name-shine 3s ease-in-out infinite;
+/* A glint host: the <VipName> root, or a VIP copy inside <MarqueeName>.
+   Must be a block box (inline-block) without padding, so the copy lays out
+   identically to the base text. */
+.vip-name--vip {
+    position: relative;
+    color: #fff;
 }
 
-@keyframes vip-name-shine {
-    0%, 20% {
-        background-position: 100% 0;
+.vip-glint {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    text-overflow: inherit;
+    /* Solid core with soft edges: a single-point peak reads as a faint tint. */
+    -webkit-mask-image: linear-gradient(100deg, transparent 5%, #000 30%, #000 70%, transparent 95%);
+    mask-image: linear-gradient(100deg, transparent 5%, #000 30%, #000 70%, transparent 95%);
+    animation: vip-glint-window var(--vip-glint-period) ease-in-out var(--vip-glint-delay) infinite;
+}
+
+.vip-glint__copy {
+    display: block;
+    overflow: hidden;
+    text-overflow: inherit;
+    color: var(--vip-glint-color);
+    animation: vip-glint-copy var(--vip-glint-period) ease-in-out var(--vip-glint-delay) infinite;
+}
+
+/* Sweep during the first 50%, rest for the remainder. The window travels
+   -100% → 100% of the name's width (the mask band starts and ends fully
+   outside the name); the copy travels the exact opposite. */
+@keyframes vip-glint-window {
+    0% {
+        transform: translateX(-100%);
     }
 
-    80%, 100% {
-        background-position: 0% 0;
+    50%, 100% {
+        transform: translateX(100%);
     }
 }
 
+@keyframes vip-glint-copy {
+    0% {
+        transform: translateX(100%);
+    }
+
+    50%, 100% {
+        transform: translateX(-100%);
+    }
+}
+
+/* No motion: keep VIP status visible as a static glow (painted once). */
 @media (prefers-reduced-motion: reduce) {
-    .vip-name--shine {
-        animation: none;
-        background-image: none;
-        -webkit-text-fill-color: currentcolor;
+    .vip-glint {
+        display: none;
+    }
+
+    .vip-name--vip {
+        text-shadow: 0 0 6px var(--vip-glint-color);
     }
 }

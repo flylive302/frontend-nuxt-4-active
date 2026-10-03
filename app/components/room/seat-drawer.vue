@@ -492,7 +492,6 @@ function handleOpenReport() {
                 text-class="text-xl font-bold leading-none"
                 :name="displayUser.name"
                 :vip="displayUser.vip_level"
-                delay="0s"
             />
               <UBadge
                   :color="genderInfo.color"

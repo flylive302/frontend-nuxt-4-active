@@ -49,7 +49,6 @@ const { formatGiftPrice } = useGiftData();
     <MarqueeName
         text-class="text-xs w-full text-center px-1"
         :name="gift.label ?? 'Gift'"
-        delay="0s"
     />
 
     <p class="text-xs font-medium truncate w-full text-center pb-1">
