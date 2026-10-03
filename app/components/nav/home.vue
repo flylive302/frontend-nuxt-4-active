@@ -4,6 +4,8 @@ import {ASSETS} from "~/constants/assets";
 const open = defineModel < boolean > ('open', { default: false })
 const inboxStore = useInboxStore()
 const isClientHydrated = ref(false)
+const topSentinel = ref<HTMLElement | null>(null)
+const { isScrolled } = useScrolledFromTop(topSentinel)
 
 onMounted(() => {
   isClientHydrated.value = true
@@ -16,7 +18,19 @@ const officialBadge = computed(() => {
 })
 </script>
 <template>
-  <header class="nav-home-header fixed inset-x-0 top-0 z-50 px-2 pb-1 safe-area-top flex items-center justify-between bg-neutral-950/80 border-b border-white/10 safe-area-top">
+  <!-- Scroll sentinel: absolute with no insets, so it sits at the document top
+       and scrolls with it. Its height IS the scroll distance before the header
+       tints (h-2 = 8px). -->
+  <div ref="topSentinel" aria-hidden="true" class="absolute h-2 w-px pointer-events-none" />
+
+  <!-- Tint + border live on ::before and fade via opacity only — compositor-only,
+       no repaint per frame. Don't move them back onto the header, don't
+       transition background-color, don't add backdrop-filter. -z-10 keeps the
+       layer under the logo/buttons (fixed z-50 = own stacking context). -->
+  <header
+      class="nav-home-header fixed inset-x-0 top-0 z-50 px-2 pb-1 safe-area-top flex items-center justify-between before:absolute before:inset-0 before:-z-10 before:pointer-events-none before:bg-neutral-950/80 before:border-b before:border-white/10 before:transition-opacity before:duration-300 before:ease-out before:will-change-[opacity] motion-reduce:before:transition-none"
+      :class="isScrolled ? 'before:opacity-100' : 'before:opacity-0'"
+  >
     <!-- Brand -->
     <NuxtImg
         :src="ASSETS.LOGO_MAIN"
