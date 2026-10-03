@@ -129,7 +129,7 @@ useHead({
         />
       </div>
 
-      <div class="backdrop-blur-3xl flex squircle border border-white/20 rounded-xl">
+      <div class="flex squircle border border-white/20 rounded-xl bg-neutral-950/50">
         <UButton
             to="/" class="flex-middle"
             variant="ghost"

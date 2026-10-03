@@ -252,9 +252,6 @@ const countryItems = computed<CountryFilterItem[]>(() => [
     >
       <BgGlass
         class="border border-white/40 px-3 py-2"
-        frost-blur-radius="blur(4px)"
-        :noise-frequency="0.009"
-        :noise-strength="200"
         rounded="rounded-lg"
       >
         <UButton 

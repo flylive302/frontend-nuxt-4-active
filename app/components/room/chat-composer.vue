@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
         ref="barRef"
-        class="fixed inset-x-0 z-60 flex items-center gap-1 px-2 pt-2 bg-default/95 backdrop-blur-sm border-t border-primary/30 transition-[transform,opacity] duration-150 ease-out"
+        class="fixed inset-x-0 z-60 flex items-center gap-1 px-2 pt-2 bg-default/95 border-t border-primary/30 transition-[transform,opacity] duration-150 ease-out"
         :class="isOpen ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'"
         :style="barStyle"
     >

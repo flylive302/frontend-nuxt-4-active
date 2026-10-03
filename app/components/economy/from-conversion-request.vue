@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
 
         <!-- Claim button -->
         <button
-          class="claim-btn group relative w-full overflow-hidden rounded-xl py-4 px-6 text-white text-center cursor-pointer select-none transition-all duration-300 bg-white/20 hover:bg-white/30 ring-1 ring-white/30 backdrop-blur-sm hover:scale-[1.01] hover:shadow-xl active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+          class="claim-btn group relative w-full overflow-hidden rounded-xl py-4 px-6 text-white text-center cursor-pointer select-none transition-all duration-300 bg-white/20 hover:bg-white/30 ring-1 ring-white/30 hover:scale-[1.01] hover:shadow-xl active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
           :disabled="disabled || isSubmitting"
           @click="onClaim"
         >

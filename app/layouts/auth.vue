@@ -16,7 +16,7 @@ const authHeading = computed(() => route.meta.authHeading as string | undefined)
       <img src="/images/auth-deco.png" width="180" height="auto" class="rotate-9" loading="lazy" fetchpriority="low" decoding="async" alt="">
     </div>
 
-    <div class="p-6 relative z-10 backdrop-blur-sm -mt-18 min-h-full">
+    <div class="p-6 relative z-10 -mt-18 min-h-full">
       <slot />
       <USeparator color="primary" class="my-4" label="OR" />
       <AuthSocialAuth class="w-full" />

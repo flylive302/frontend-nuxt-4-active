@@ -166,7 +166,7 @@ const tableData = computed<LevelRow[]>(() =>
         class="min-w-full aspect-rectangle object-cover animate-[zoom_50s_ease-in-out_infinite]"
     >
 
-    <div class="p-2 mx-3 backdrop-blur-xs -mt-26 rounded-xl border" :class="COLOR_BORDER_CLASS[color]">
+    <div class="p-2 mx-3 bg-neutral-950/50 -mt-26 rounded-xl border" :class="COLOR_BORDER_CLASS[color]">
       <!-- User Info Grid -->
       <div class="grid grid-cols-9 gap-1">
         <UserAvatar

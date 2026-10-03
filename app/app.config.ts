@@ -81,6 +81,26 @@ export default defineAppConfig({
                     }
                 }
             ]
+        },
+        table: {
+            // Nuxt UI's sticky thead/tfoot default to `bg-default/75 backdrop-blur`.
+            // backdrop-filter is banned app-wide (android-anr-regression 01: GPU-bound
+            // ANRs on low-end Android WebViews) — tailwind-merge drops the theme's
+            // blur and alpha in favour of these.
+            variants: {
+                sticky: {
+                    true: {
+                        thead: 'bg-default/95 backdrop-blur-none',
+                        tfoot: 'bg-default/95 backdrop-blur-none'
+                    },
+                    header: {
+                        thead: 'bg-default/95 backdrop-blur-none'
+                    },
+                    footer: {
+                        tfoot: 'bg-default/95 backdrop-blur-none'
+                    }
+                }
+            }
         }
     }
 })

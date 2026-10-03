@@ -65,7 +65,7 @@ function handleConfirm() {
   <UModal
     v-model:open="isOpen"
     :ui="{
-      overlay: 'bg-black/10 backdrop-blur-xs',
+      overlay: 'bg-black/30',
     }"
   >
     <template #content>

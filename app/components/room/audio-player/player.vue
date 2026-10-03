@@ -344,7 +344,7 @@ function handleVolumeChange(vol: number): void {
     <!-- ═══ Expanded deck card ═══ -->
     <div
       v-else
-      class="relative flex items-center gap-3 p-3 pr-2.5 rounded-[1.75rem] overflow-hidden backdrop-blur-3xl bg-black/60 shadow-2xl shadow-black/40 ring-1 ring-white/10"
+      class="relative flex items-center gap-3 p-3 pr-2.5 rounded-[1.75rem] overflow-hidden bg-black/80 shadow-2xl shadow-black/40 ring-1 ring-white/10"
     >
       <!-- Room-theme glow wash behind the vinyl -->
       <div
@@ -470,7 +470,7 @@ function handleVolumeChange(vol: number): void {
 
           <!-- Playlist drawer trigger + volume popover -->
           <div class="flex items-center gap-0.5">
-            <UPopover :ui="{ content: 'bg-neutral-900/90 backdrop-blur-xl ring-1 ring-white/10' }">
+            <UPopover :ui="{ content: 'bg-neutral-900/90 ring-1 ring-white/10' }">
               <UButton
                 :icon="localVolume > 0 ? 'i-lucide-volume-2' : 'i-lucide-volume-x'"
                 size="xs"
@@ -526,7 +526,7 @@ function handleVolumeChange(vol: number): void {
   -->
   <div
     v-if="isWaiting"
-    class="fixed left-1/2 -translate-x-1/2 bottom-24 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full backdrop-blur-xl bg-black/70 ring-1 ring-white/10 shadow-lg shadow-black/40"
+    class="fixed left-1/2 -translate-x-1/2 bottom-24 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/70 ring-1 ring-white/10 shadow-lg shadow-black/40"
   >
     <UIcon name="i-lucide-hourglass" class="text-sm text-primary animate-pulse" />
     <span class="text-[12px] font-medium text-white select-none">

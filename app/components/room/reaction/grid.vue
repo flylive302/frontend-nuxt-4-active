@@ -69,7 +69,7 @@ function handleScrollerUpdate(startIndex: number): void {
     <div class="relative">
       <div
         v-if="stickyCategory"
-        class="absolute inset-x-0 top-0 z-20 bg-neutral-900/95 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white/60 backdrop-blur"
+        class="absolute inset-x-0 top-0 z-20 bg-neutral-900/95 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white/60"
       >
         {{ stickyCategory }}
       </div>

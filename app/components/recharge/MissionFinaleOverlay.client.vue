@@ -81,7 +81,7 @@ function rankLabelClass(rank: number): string {
     <Transition name="finale-overlay">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90"
         aria-modal="true"
         role="dialog"
         aria-label="Ranking Finale"
@@ -191,7 +191,7 @@ function rankLabelClass(rank: number): string {
                 icon="i-lucide-coins"
                 variant="outline"
                 size="xs"
-                class="backdrop-blur font-bold"
+                class="font-bold"
                 :class="rankLabelClass(entry.rank)"
               >
                 {{ formatCurrency(entry.volume) }}

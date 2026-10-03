@@ -60,7 +60,7 @@ onMounted(ensureAgencyContext)
       :size="size"
       :variant="variant"
       :color="hasInvited ? 'success' : 'primary'"
-      class="pl-1 pr-2 gap-1 backdrop-blur-xs"
+      class="pl-1 pr-2 gap-1"
       @click="() => { invite() }"
   >
     {{ hasInvited ? invitedLabel : label }}

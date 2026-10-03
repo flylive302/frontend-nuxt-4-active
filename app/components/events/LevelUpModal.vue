@@ -90,7 +90,7 @@ function handleClose(): void {
     :open="open"
     :ui="{
       content: 'bg-transparent shadow-none ring-0',
-      overlay: 'bg-black/70 backdrop-blur-sm',
+      overlay: 'bg-black/70',
     }"
     class="z-90"
     @close="handleClose"

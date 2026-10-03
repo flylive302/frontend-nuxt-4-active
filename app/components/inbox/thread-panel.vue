@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
       <button
         v-if="isScrolledUp"
         type="button"
-        class="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-elevated/95 backdrop-blur border border-muted/20 shadow-lg px-3.5 py-2 text-xs font-medium text-default active:scale-95 transition-transform"
+        class="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-elevated/95 border border-muted/20 shadow-lg px-3.5 py-2 text-xs font-medium text-default active:scale-95 transition-transform"
         :class="fixedHeader ? 'bottom-24' : 'bottom-20'"
         @click="jumpToBottom"
       >

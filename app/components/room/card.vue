@@ -177,7 +177,7 @@ function handleRoomClick(): void {
 
       <CountryFlag :code="props.room.country" class="size-6 rounded-md drop-shadow-lg" />
 
-      <div class="w-fit flex items-center justify-end gap-2 backdrop-blur-2xl rounded rounded-tr-2xl px-2 border border-primary/10 shadow-md">
+      <div class="w-fit flex items-center justify-end gap-2 rounded rounded-tr-2xl bg-neutral-950/50 px-2 border border-primary/10 shadow-md">
         <img :src="ASSETS.COIN_ICON" class="size-5" alt="room xp indicator">
         <p class="font-bold text-lg text-white">{{formatXp(props.room.daily_xp)}}</p>
       </div>
@@ -186,7 +186,7 @@ function handleRoomClick(): void {
     <!-- Overlay content -->
     <aside class="absolute inset-0 p-2 flex items-end">
 
-      <div class="backdrop-blur-sm shadow-md border border-primary/10 rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
+      <div class="shadow-md bg-neutral-950/50 border border-primary/10 rounded-t-xl rounded-b-3xl p-2 w-full flex items-end justify-between">
         <div class="flex items-center gap-1 max-w-8/12">
           <img
             :src="ownerAvatarSrc"

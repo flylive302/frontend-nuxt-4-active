@@ -60,8 +60,7 @@ const outcomeText = computed(() => {
   gap: 0.25rem;
   padding: 0.75rem 1.5rem;
   border-radius: 1rem;
-  background: rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(6px);
+  background: rgb(0 0 0 / 0.7);
   color: white;
   text-align: center;
 }

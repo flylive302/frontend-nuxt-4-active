@@ -47,7 +47,7 @@ function handleClose(): void {
     :open="open"
     :ui="{
       content: 'bg-transparent shadow-none border-none focus-outline-none ring-0',
-      overlay: 'bg-neutral-950/20 backdrop-blur-xs',
+      overlay: 'bg-neutral-950/40',
     }"
     class="z-90"
     @close="handleClose"

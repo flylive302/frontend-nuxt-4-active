@@ -64,7 +64,7 @@ const profileAvatarImg = computed(() =>
 
 <template>
   <footer aria-label="Primary" class="nav-home-footer fixed inset-x-2 z-50 bottom-4 safe-area-bottom">
-    <div class="grid grid-cols-5 items-center gap-6 px-2 py-1 touch-manipulation select-none rounded-xl backdrop-blur-lg">
+    <div class="grid grid-cols-5 items-center gap-6 px-2 py-1 touch-manipulation select-none rounded-xl bg-neutral-950/50 ring-1 ring-white/10">
       <UButton 
         to="/" class="flex-middle"
         aria-label="Home"

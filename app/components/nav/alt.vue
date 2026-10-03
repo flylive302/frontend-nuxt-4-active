@@ -49,7 +49,7 @@ const uiColor = computed(() => props.color)
     aria-label="fly-live-alt-pages-header"
     class="fixed w-full z-50 top-0 safe-area-top"
   >
-    <div class="grid grid-cols-8 border-b border-white/50 backdrop-blur-xs" >
+    <div class="grid grid-cols-8 border-b border-white/50 bg-neutral-950/50" >
       <UButton
         aria-label="back-navigation-link"
         icon="i-lucide-chevron-left"

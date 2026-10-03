@@ -179,7 +179,7 @@ async function onSubmit(_e: FormSubmitEvent<Schema>): Promise<void> {
     >
 
     <!-- Convert Diamonds Section (Agency Members Only) -->
-    <section class="mx-4 px-3 py-6 backdrop-blur-lg rounded-t-4xl -mt-34 relative">
+    <section class="mx-4 px-3 py-6 rounded-t-4xl bg-neutral-950/50 ring-1 ring-white/10 -mt-34 relative">
       <!-- Loading: mask the concurrent agency-check + exchange-info fetch -->
       <template v-if="isLoading">
         <USkeleton class="h-14 w-full rounded-lg" />

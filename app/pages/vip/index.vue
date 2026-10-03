@@ -395,7 +395,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
         <!-- User VIP Status Banner -->
         <div
             v-if="isVip"
-            class="absolute w-7/8 ml-7 mt-12 z-50 px-2 flex items-center gap-2 rounded-lg bg-white/40 py-2 backdrop-blur-sm"
+            class="absolute w-7/8 ml-7 mt-12 z-50 px-2 flex items-center gap-2 rounded-lg bg-white/60 py-2"
         >
             <UIcon name="i-heroicons-shield-check-solid" class="h-5 w-5 text-tertiary" />
             <span class="text-sm font-medium text-white">
@@ -545,7 +545,7 @@ const isVap = computed(() => url.value.endsWith('.mp4'))
         </UButton>
       </div>
 
-      <div class="backdrop-blur-lg safe-area-bottom">
+      <div class="safe-area-bottom bg-neutral-950/50">
         <div class="relative flex items-center justify-center">
           <p class="text-white text-xl font-bold">PRICE</p>
           <img :src="ASSETS.COIN_ICON" class="size-5 ml-2 mt-1" alt="room xp indicator">

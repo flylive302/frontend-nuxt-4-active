@@ -134,7 +134,7 @@ function handleCropCancel(): void {
     :open="open"
     fullscreen
     :ui="{
-      overlay: 'bg-black/80 backdrop-blur-sm',
+      overlay: 'bg-black/80',
       content: 'bg-transparent shadow-none ring-0 divide-none',
     }"
     @update:open="(val) => !val && handleClose()"

@@ -140,7 +140,7 @@ const openLeaveDrawer = (event: Event) => {
   <header class="flex justify-between items-center">
 
     <!-- Left Section -->
-    <div class="rounded-md flex items-center bg-primary/10 gap-1 backdrop-blur-xl shadow-xl shadow-primary/10">
+    <div class="rounded-md flex items-center bg-primary/30 gap-1 shadow-xl shadow-primary/10">
       <!-- Level Drawer -->
       <UDrawer
           title="Room Information Drawer"
@@ -205,7 +205,7 @@ const openLeaveDrawer = (event: Event) => {
       <UButton
         icon="i-lucide-share-2"
         size="xl"
-        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
+        class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary text-primary"
         variant="soft"
         :disabled="sharing"
         aria-label="Share this room"
@@ -221,7 +221,7 @@ const openLeaveDrawer = (event: Event) => {
         <UButton
           icon="i-lucide-x"
           size="xl"
-          class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary backdrop-blur-lg text-primary"
+          class="rounded-full cursor-pointer shadow-lg shadow-primary/50 ring ring-primary text-primary"
           variant="soft"
           @click="openLeaveDrawer"
         />

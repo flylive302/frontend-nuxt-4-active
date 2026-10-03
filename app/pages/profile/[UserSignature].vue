@@ -629,7 +629,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
             :icon="buttonIcon"
             :variant="isFollowing ? 'subtle' : 'soft'"
             size="md"
-            class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150 backdrop-blur-xs"
+            class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150"
             :class="{
               'follow-btn--animating': followAnimating,
             }"
@@ -644,7 +644,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
             :disabled="isJoiningRoom"
             size="md"
             variant="subtle"
-            class="pl-1 pr-2 gap-1 backdrop-blur-xs"
+            class="pl-1 pr-2 gap-1"
             @click="goToRoom"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="size-6 drop-shadow-md" width="14" height="14" viewBox="0 0 14 14">
@@ -660,7 +660,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         <!-- `profileId` is null until the profile resolves; interpolating it then
              produced the literal string "null" in the query (`/inbox?start=null`),
              which /inbox forwarded to POST /inbox/start/null → 500 (PHP-LARAVEL-7T). -->
-        <UButton v-if="profileId" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="subtle" size="md" class="pl-1 pr-2 gap-1 backdrop-blur-xs">
+        <UButton v-if="profileId" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="subtle" size="md" class="pl-1 pr-2 gap-1">
           Chat
         </UButton>
 
@@ -669,7 +669,6 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
           variant="soft"
           size="md"
           color="warning"
-          class="backdrop-blur-xs"
           @click="() => { showReportModal = true }"
         />
       </div>

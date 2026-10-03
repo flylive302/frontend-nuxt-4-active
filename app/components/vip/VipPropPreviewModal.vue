@@ -105,7 +105,7 @@ function handleClose(): void {
   <UModal
     :open="open"
     :ui="{
-      overlay: 'bg-black/70 backdrop-blur-xs',
+      overlay: 'bg-black/70',
     }"
     @update:open="(val) => !val && handleClose()"
   >

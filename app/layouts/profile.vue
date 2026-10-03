@@ -11,7 +11,7 @@
                 variant="subtle"
                 to="/"
                 color="primary"
-                class="rounded-lg bg-primary/30 backdrop-blur-xl"
+                class="rounded-lg bg-primary/30"
             />
 
             <UButton
@@ -20,7 +20,7 @@
                 to="/profile/edit"
                 variant="subtle"
                 color="primary"
-                class="rounded-lg bg-primary/30 backdrop-blur-xl"
+                class="rounded-lg bg-primary/30"
             />
         </header>
 

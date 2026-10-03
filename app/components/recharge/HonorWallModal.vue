@@ -87,7 +87,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
 <template>
   <UModal
     :open="open"
-    :ui="{ overlay: 'bg-transparent backdrop-blur-sm' }"
+    :ui="{ overlay: 'bg-black/40' }"
     @update:open="(val) => !val && emit('close')"
   >
     <template #content>
@@ -201,7 +201,7 @@ function formatInstanceKey(key: string | null, timeframe: string): string {
                     icon="i-lucide-coins"
                     variant="outline"
                     size="xs"
-                    class="backdrop-blur font-bold"
+                    class="font-bold"
                     :class="entry.rank === 1 ? 'text-yellow-300' : entry.rank === 2 ? 'text-zinc-100' : 'text-amber-300'"
                   >
                     {{ formatCurrency(entry.volume) }}

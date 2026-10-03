@@ -62,7 +62,7 @@ const statusText = computed(() => {
       <!-- Status Text (optional, for detailed view) -->
       <div
         v-if="progress.total > 5"
-        class="absolute right-4 top-2 rounded-full bg-neutral-900/90 px-3 py-1 text-xs text-neutral-400 backdrop-blur"
+        class="absolute right-4 top-2 rounded-full bg-neutral-900/90 px-3 py-1 text-xs text-neutral-400"
       >
         {{ statusText }}
       </div>

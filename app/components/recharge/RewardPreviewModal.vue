@@ -46,7 +46,7 @@ const badgeThumbnailSrc = computed(() => propPreviewThumbnailSrc(props.resolved?
 <template>
   <UModal
     :open="open"
-    :ui="{ overlay: 'bg-black/70 backdrop-blur-xs' }"
+    :ui="{ overlay: 'bg-black/70' }"
     @update:open="(val) => !val && emit('close')"
   >
     <template #content>

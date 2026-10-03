@@ -232,9 +232,6 @@ onMounted(() => {
     >
       <BgGlass
           class="border border-white/40 p-3"
-          frost-blur-radius="blur(8px)"
-          :noise-frequency="0.009"
-          :noise-strength="200"
           rounded="rounded-lg"
       >
         <!-- Invite Button - Always visible for admins when there are invitations -->

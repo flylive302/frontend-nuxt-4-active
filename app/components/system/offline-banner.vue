@@ -47,7 +47,7 @@ async function handleRetry(): Promise<void> {
   >
     <div
       v-if="isVisible"
-      class="safe-area-top fixed inset-x-0 top-0 z-50 bg-neutral-900/95 backdrop-blur"
+      class="safe-area-top fixed inset-x-0 top-0 z-50 bg-neutral-900/95"
       role="status"
       aria-live="polite"
     >

@@ -60,7 +60,7 @@ const displayBadgeSrc = computed(() =>
 
 <template>
   <div
-    class="backdrop-blur-lg p-2 rounded-md flex flex-col justify-between items-center relative ring-1 ring-primary"
+    class="p-2 rounded-md bg-neutral-950/50 flex flex-col justify-between items-center relative ring-1 ring-primary"
     :class="rarityBorderClass"
   >
     <!-- Quantity Badge -->

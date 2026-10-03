@@ -36,7 +36,7 @@ const profileTo = computed(() => (!props.isSystem && props.signature ? `/profile
 
 <template>
   <header
-    class="top-0 inset-x-0 z-40 box-content flex items-center gap-3 px-3 h-14 bg-default/90 backdrop-blur border-b border-muted/20"
+    class="top-0 inset-x-0 z-40 box-content flex items-center gap-3 px-3 h-14 bg-default/90 border-b border-muted/20"
     :class="fixed ? 'fixed safe-area-top' : 'relative shrink-0'"
   >
     <UButton

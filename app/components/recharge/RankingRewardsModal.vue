@@ -115,7 +115,7 @@ function tileThumbnailSrc(url: string | null | undefined): string {
 <template>
   <UModal
     :open="open"
-    :ui="{ overlay: 'bg-black/80 backdrop-blur-sm' }"
+    :ui="{ overlay: 'bg-black/80' }"
     @update:open="(val) => !val && emit('close')"
   >
     <template #content>

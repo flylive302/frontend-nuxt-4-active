@@ -45,7 +45,7 @@ onBeforeUnmount(() => {
       <p class="absolute z-20 top-0 text-xs ml-6 mt-3 font-extrabold">{{txt}}</p>
     </div>
 
-    <p v-else class="font-semibold border-2 bg-primary/40 border-primary rounded-full shadow-md backdrop-blur-md text-xs px-1 cursor-pointer select-none text-center" @click="onCopy()">
+    <p v-else class="font-semibold border-2 bg-primary/60 border-primary rounded-full shadow-md text-xs px-1 cursor-pointer select-none text-center" @click="onCopy()">
       {{ txt }}
     </p>
   </div>

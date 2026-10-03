@@ -447,7 +447,7 @@ function handleOpenReport() {
       ? 'Follow, chat, gift, mute, invite to a seat, or remove this user.'
       : 'Manage seat actions like joining, leaving, muting, or locking.'"
     :ui="{
-      content: 'bg-transparent backdrop-blur-xs ring-0',
+      content: 'bg-neutral-950/80 ring-0',
       overlay: 'bg-white/10',
       handle: 'border-4 border-primary',
     }"

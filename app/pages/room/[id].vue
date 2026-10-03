@@ -258,7 +258,7 @@ onUnmounted(() => {
               <LazyRoomInboxDrawer />
 
               <!-- Volume Control with Popover -->
-              <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-transparent backdrop-blur-xl ring-0'}">
+              <UPopover v-model:open="volumePopoverOpen" :ui="{content: 'bg-neutral-950/80 ring-0'}">
                 <UButton
                     size="xl"
                     class="p-1"

@@ -47,7 +47,7 @@ async function handleClick(): Promise<void> {
       icon="i-mdi-airplane-search"
       :size="size"
       :variant="variant"
-      class="pl-1 pr-2 gap-1 backdrop-blur-xs"
+      class="pl-1 pr-2 gap-1"
       v-bind="$attrs"
       @click="handleClick"
   >

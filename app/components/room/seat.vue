@@ -170,7 +170,7 @@ const luckyNumberBadge = computed<{ kind: 'picked' } | { kind: 'revealed'; numbe
       <Transition name="seat-fade">
         <span
           v-if="!isEmpty && isMuted"
-          class="absolute bottom-0 -right-1 z-20 flex items-center justify-center size-4.5 rounded-full bg-neutral-950/60 backdrop-blur-sm ring-1 ring-white/20"
+          class="absolute bottom-0 -right-1 z-20 flex items-center justify-center size-4.5 rounded-full bg-neutral-950/80 ring-1 ring-white/20"
         >
           <UIcon name="i-lucide-mic-off" class="size-3 text-red-400" />
         </span>
@@ -206,7 +206,7 @@ const luckyNumberBadge = computed<{ kind: 'picked' } | { kind: 'revealed'; numbe
 
     </div>
 
-    <div class="backdrop-blur-xl rounded-xl w-fit max-w-full px-2 bg-neutral-950/30">
+    <div class="rounded-xl w-fit max-w-full px-2 bg-neutral-950/50">
       <MarqueeName
           text-class="text-xs font-semibold text-center drop-shadow-lg leading-none"
           :name="displayName"
@@ -214,7 +214,7 @@ const luckyNumberBadge = computed<{ kind: 'picked' } | { kind: 'revealed'; numbe
       />
     </div>
 
-    <p v-if="seat?.user" class="text-xs min-h-3 truncate font backdrop-blur-xl rounded-xl w-fit max-w-full px-1 bg-neutral-950/30 -mt-1">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
+    <p v-if="seat?.user" class="text-xs min-h-3 truncate font rounded-xl w-fit max-w-full px-1 bg-neutral-950/50 -mt-1">🪙 {{ formatCurrency(seatGiftTotal) }}</p>
 
   </div>
 </template>
@@ -244,19 +244,26 @@ const luckyNumberBadge = computed<{ kind: 'picked' } | { kind: 'revealed'; numbe
   opacity: 0;
 }
 
-/* Speaking indicator: CSS ring pulse (svga-removal 01) */
+/* Speaking indicator: CSS ring "breathe" (svga-removal 01).
+   The ring is painted once (static box-shadow); only transform + opacity
+   animate, so the compositor runs it with no per-frame repaint. Animating the
+   box-shadow spread instead repainted every speaking seat on every frame —
+   main-thread work on the low-end phones behind android-anr-regression 01.
+   scale(1.1) moves the outer edge ~3px on a ~60px seat, matching the old
+   2px → 5px spread. No will-change: a running transform animation already
+   gets its own layer. */
 .speaking-ring {
   box-shadow: 0 0 0 2px var(--seat-ring-color, #f97316);
-  animation: seat-ring-pulse 1.2s ease-in-out infinite;
+  animation: seat-ring-breathe 1.2s ease-in-out infinite;
 }
 
-@keyframes seat-ring-pulse {
+@keyframes seat-ring-breathe {
   0%, 100% {
-    box-shadow: 0 0 0 2px var(--seat-ring-color, #f97316);
+    transform: scale(1);
     opacity: 0.9;
   }
   50% {
-    box-shadow: 0 0 0 5px var(--seat-ring-color, #f97316);
+    transform: scale(1.1);
     opacity: 0.5;
   }
 }

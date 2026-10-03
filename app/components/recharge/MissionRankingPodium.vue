@@ -63,7 +63,7 @@ function avatarSize(rank: number): string {
           icon="i-lucide-coins"
           variant="outline"
           size="xs"
-          class="backdrop-blur font-bold text-white"
+          class="font-bold text-white"
           :class="rankAccent(entry.rank).text"
         >
           {{ formatCurrency(entry.volume) }}
