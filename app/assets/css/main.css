@@ -229,6 +229,30 @@ html {
     view-transition-name: nav-home-footer;
 }
 
+/* cp layout (/cp-event tabs). NavAlt renders two roots (header + spacer), so a
+   class on <NavAlt> is dropped — the layout wraps it in .cp-nav and the fixed
+   <header> child is named here. .cp-shell is the in-flow hero + countdown + tab
+   row above the <slot/>. */
+:root[data-nav-shell="cp"] .cp-nav > header {
+    view-transition-name: cp-nav;
+}
+
+:root[data-nav-shell="cp"] .cp-shell {
+    view-transition-name: cp-shell;
+}
+
+/* The hero holds a CSS-animated ferris wheel. `old` is a frozen frame and `new`
+   is live, so the UA cross-fade would ghost the carts for ~250ms. Drop the old
+   snapshot and show the live new one at once — the wheel keeps turning and the
+   active tab swaps instantly. */
+:root[data-nav-shell="cp"]::view-transition-old(cp-shell) {
+    display: none;
+}
+
+:root[data-nav-shell="cp"]::view-transition-new(cp-shell) {
+    animation: none;
+}
+
 /* ============================================
    View Transitions — the room card expands into the room page
    The card and the room page root share `view-transition-name: room-card`, so

@@ -151,6 +151,9 @@ export const ASSETS = {
   CP_FERRIS_WHEEL_TITLE: '/images/cp-event/wheel-title.webp',
   CP_FERRIS_WHEEL_CART: '/images/cp-event/wheel-cart.webp',
   CP_FERRIS_PLACEHOLDER: '/images/cp-event/placeholder.webp',
+  CP_FERRIS_TIME_BG: '/images/cp-event/time-bg.webp',
+  CP_FERRIS_TAB: '/images/cp-event/tab.webp',
+  CP_FERRIS_TAB_ACTIVE: '/images/cp-event/tab-active.webp',
 } as const
 
 // ========================================

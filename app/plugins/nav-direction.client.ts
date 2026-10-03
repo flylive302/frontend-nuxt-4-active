@@ -16,12 +16,15 @@
  * Add a row here whenever a new linked tab bar is introduced.
  */
 
+import { CP_EVENT_TABS } from '~/constants/cp-event'
+
 // Paths are compared trailing-slash-insensitively (see stripSlash).
 const TAB_GROUPS: string[][] = [
   ['/', '/discover-all-events'],
   ['/mall', '/mall/my-props'],
   ['/coins/request', '/coins/exchange'],
   ['/levels/wealth', '/levels/charm'],
+  CP_EVENT_TABS.map(tab => tab.to),
 ]
 
 const stripSlash = (p: string): string => (p.length > 1 ? p.replace(/\/+$/, '') : p)
