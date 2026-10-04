@@ -45,9 +45,5 @@ export function useRechargeMissionData() {
     }
   }
 
-  function fetchDaily(): Promise<void> {
-    return fetchProgress('daily')
-  }
-
-  return { fetchProgress, fetchDaily }
+  return { fetchProgress }
 }

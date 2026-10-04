@@ -253,6 +253,21 @@ html {
     animation: none;
 }
 
+/* recharge layout (/recharge tabs). .recharge-shell is the back button + banner +
+   Honor Wall / Rules row; .recharge-tabs is the Daily / Weekly / Monthly row.
+   They are two names (not one) because the pattern strip between them is
+   taller than the tab row and continues BEHIND the page content, so it stays
+   in the root snapshot and slides with the content. Nothing in either part is
+   CSS-animated, so the UA cross-fade is kept — it is what swaps the active
+   tab image. */
+:root[data-nav-shell="recharge"] .recharge-shell {
+    view-transition-name: recharge-shell;
+}
+
+:root[data-nav-shell="recharge"] .recharge-tabs {
+    view-transition-name: recharge-tabs;
+}
+
 /* ============================================
    View Transitions — the room card expands into the room page
    The card and the room page root share `view-transition-name: room-card`, so

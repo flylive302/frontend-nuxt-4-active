@@ -22,7 +22,7 @@
  */
 
 /** Layouts whose chrome main.css knows how to pin. Add a row + a CSS block together. */
-const PINNABLE_LAYOUTS = new Set(['home', 'cp'])
+const PINNABLE_LAYOUTS = new Set(['home', 'cp', 'recharge'])
 
 export default defineNuxtRouteMiddleware((to, from) => {
   if (import.meta.server) return
