@@ -154,6 +154,8 @@ export const ASSETS = {
   CP_FERRIS_TIME_BG: '/images/cp-event/time-bg.webp',
   CP_FERRIS_TAB: '/images/cp-event/tab.webp',
   CP_FERRIS_TAB_ACTIVE: '/images/cp-event/tab-active.webp',
+  CP_FERRIS_CARD_TOP: '/images/cp-event/card-top.webp',
+  CP_FERRIS_CARD_BOTTOM: '/images/cp-event/card-bottom.webp',
 } as const
 
 // ========================================
