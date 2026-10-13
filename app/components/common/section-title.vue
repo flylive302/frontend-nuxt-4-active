@@ -22,7 +22,7 @@ const gradientClasses = computed(() => ACCENT_GRADIENT_CLASS[props.type] ?? ACCE
 
 <template>
   <header class="flex items-center gap-1.5">
-    <aside class="h-5 w-1.5 bg-gradient-to-b rounded-full" :class="gradientClasses" />
+    <aside class="h-5 w-1.5 bg-linear-to-b rounded-full" :class="gradientClasses" />
     <p class="text-base font-bold"><slot /></p>
   </header>
 </template>

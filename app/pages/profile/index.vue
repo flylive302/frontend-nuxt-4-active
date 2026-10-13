@@ -7,6 +7,7 @@ import type { ProfileImageType } from '~/composables/auth/useProfileImageUpload'
 
 import {computed, onMounted} from 'vue'
 import MarqueeName from "~/components/common/marquee-name.vue";
+import {formatCurrency} from "~/utils/currency";
 
 // ========================================
 // Page Configuration
@@ -129,100 +130,120 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 <template>
   <div>
     <div ref="headerRef">
-    <ProfileHeader>
-      <template #cover>
-        <NuxtImg
-          :src="coverImageSrc"
-          format="webp"
-          densities="x1 x2"
-          sizes="320px"
-          width="100%"
-          class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
-          :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
-          @click="openImagePreview('cover')"
-        />
-      </template>
-
-      <template #card>
-        <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
-          <SvgaPlayer
-              v-if="!isVap"
-              :key="`data-card-svga-${authStore?.user?.data_card_id}`"
-              :name="dataCardAsset"
-              class="pointer-events-none mt-[-24vw]"
+      <ProfileHeader>
+        <template #cover>
+          <NuxtImg
+            :src="coverImageSrc"
+            format="webp"
+            densities="x1 x2"
+            sizes="320px"
+            width="100%"
+            class="min-w-full aspect-rectangle object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
+            :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
+            @click="openImagePreview('cover')"
           />
-          <VapPlayer
-              v-else
-              :key="`data-card-vap-${authStore?.user?.data_card_id}`"
-              :name="dataCardAsset"
-              class="pointer-events-none mt-[-24vw]"
-          />
-        </div>
-      </template>
+        </template>
 
-      <template #signature-badges>
-        <div class="w-full flex justify-end items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <ProfileBadge :vip="authStore?.user?.vip_level" :txt="authStore?.user?.signature || undefined" class="w-8/12" />
-          <img v-if="vip" :src="vipBadgeSrc" class="w-4/12" alt="">
-        </div>
-      </template>
+        <template #card>
+          <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
+            <SvgaPlayer
+                v-if="!isVap"
+                :key="`data-card-svga-${authStore?.user?.data_card_id}`"
+                :name="dataCardAsset"
+                class="pointer-events-none mt-[-24vw]"
+            />
+            <VapPlayer
+                v-else
+                :key="`data-card-vap-${authStore?.user?.data_card_id}`"
+                :name="dataCardAsset"
+                class="pointer-events-none mt-[-24vw]"
+            />
+          </div>
+        </template>
 
-      <template #avatar>
-        <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
-          <UserAvatar
-            :animated="true"
-            :frame-id="authStore?.user?.frame_id"
-            :user-name="authStore.user?.name"
-            :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-            :img-width="PROFILE_HEADER_AVATAR_WIDTH"
-            class="w-full profile-avatar-anchor"
-          />
-        </div>
-      </template>
+        <template #signature-badges>
+          <div class="w-full flex justify-end items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
+            <ProfileBadge :vip="authStore?.user?.vip_level" :txt="authStore?.user?.signature || undefined" class="w-8/12" />
+            <img v-if="vip" :src="vipBadgeSrc" class="w-4/12" alt="">
+          </div>
+        </template>
 
-      <template #badges>
-        <div class="flex justify-start items-center w-full relative z-10" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <img :src="CURRENT_WEALTH_BADGE" alt="current badge" class="w-7/12" >
-          <img :src="CURRENT_CHARM_BADGE" alt="current badge" class="w-5/12" >
-        </div>
-      </template>
+        <template #avatar>
+          <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
+            <UserAvatar
+              :animated="true"
+              :frame-id="authStore?.user?.frame_id"
+              :user-name="authStore.user?.name"
+              :img="authStore.user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+              :img-width="PROFILE_HEADER_AVATAR_WIDTH"
+              class="w-full profile-avatar-anchor"
+            />
+          </div>
+        </template>
 
-      <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" :paused="!headerVisible" class="mx-auto max-w-34" />
-      </template>
+        <template #badges>
+          <div class="flex justify-start items-center w-full relative z-10" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
+            <img :src="CURRENT_WEALTH_BADGE" alt="current badge" class="w-7/12" >
+            <img :src="CURRENT_CHARM_BADGE" alt="current badge" class="w-5/12" >
+          </div>
+        </template>
 
-      <template #name>
-        <NuxtLink :to="`/profile/${authStore.user?.signature}`">
-          <MarqueeName
-              class="mx-auto max-w-36"
-              text-class="text-lg leading-none font-bold"
-              :name="authStore.user?.name || ''"
-              :vip="authStore.user?.vip_level"
-          />
-        </NuxtLink>
-      </template>
+        <template #marquee>
+          <BadgesEquippedBadgeMarquee :equipped-badges="badgesStore.equippedBadges" :paused="!headerVisible" class="mx-auto max-w-34" />
+        </template>
 
-      <template #stats>
-        <div class="rounded-xl glowing-border overflow-hidden relative z-10 my-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
-          <UserStats
-              class="mt-2"
-              :wealth-xp="balanceStore.wealthXp ?? '0'"
-              :charm-xp="balanceStore.charmXp ?? '0'"
-              :followers="String(authStore.user?.followers_count ?? 0)"
-              :following="String(authStore.user?.following_count ?? 0)"
-              :visits="String(authStore.user?.profile_visits ?? 0)"
-              :user-id="authStore.user?.id ?? null"
-              :is-follow-list-public="true"
-              :is-own-profile="true"
-          />
-        </div>
-      </template>
-    </ProfileHeader>
+        <template #name>
+          <NuxtLink :to="`/profile/${authStore.user?.signature}`">
+            <MarqueeName
+                class="mx-auto max-w-36"
+                text-class="text-lg leading-none font-bold"
+                :name="authStore.user?.name || ''"
+                :vip="authStore.user?.vip_level"
+            />
+          </NuxtLink>
+        </template>
+
+        <template #stats>
+          <div class="rounded-xl glowing-border overflow-hidden relative z-10 my-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
+            <UserStats
+                class="mt-2"
+                :wealth-xp="balanceStore.wealthXp ?? '0'"
+                :charm-xp="balanceStore.charmXp ?? '0'"
+                :followers="String(authStore.user?.followers_count ?? 0)"
+                :following="String(authStore.user?.following_count ?? 0)"
+                :visits="String(authStore.user?.profile_visits ?? 0)"
+                :user-id="authStore.user?.id ?? null"
+                :is-follow-list-public="true"
+                :is-own-profile="true"
+            />
+          </div>
+        </template>
+      </ProfileHeader>
+
+      <div class="flex justify-center -mt-2 px-8 relative z-50">
+
+        <UButton to="/coins/request" color="tertiary" variant="subtle" class="rounded-t-none rounded-br-none text-lg font-bold w-full justify-center">
+          <UIcon name="i-streamline-ultimate-color-accounting-coins" class="size-5" />
+          {{ formatCurrency(balanceStore.coins) }}
+        </UButton>
+
+        <UButton v-if="agencyStore.isAgencyMember" to="/coins/exchange" color="secondary" variant="subtle" class="rounded-t-none rounded-bl-none text-lg font-bold w-full justify-center">
+          <UIcon name="i-ri-diamond-fill" class="size-5" />
+          {{ formatCurrency(balanceStore.diamonds) }}
+        </UButton>
+
+      </div>
+
     </div>
 
-    <div class="pb-24 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
-<!--      <SectionTitle>Cp RelationShips</SectionTitle>-->
-<!--      <EventsProfileCard class="mb-4" />-->
+    <div class="pb-24 mt-2 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
+      <div class="w-full mb-3">
+        <NuxtLink to="/cp-event/123-cp" class="flex justify-between">
+          <SectionTitle>Cp RelationShips</SectionTitle>
+          <UButton class="text-primary" icon="i-lucide-chevron-right" variant="soft" />
+        </NuxtLink>
+        <SvgaPlayer name="https://assets.flyliveapp.com/events/cp/1.svga" />
+      </div>
 
 
       <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />

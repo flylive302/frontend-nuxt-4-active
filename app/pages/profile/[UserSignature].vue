@@ -351,105 +351,155 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
     <!-- Profile Content -->
     <div v-else-if="hasProfile" ref="headerRef">
-    <ProfileHeader>
-      <template #cover>
-        <NuxtImg
-          :src="coverImageSrc"
-          format="webp"
-          densities="x1 x2"
-          sizes="320px"
-          width="100%"
-          class="min-w-full object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
-          :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
-          @click="openImagePreview('cover')"
-        />
-      </template>
-
-      <template #card>
-        <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
-          <SvgaPlayer
-              v-if="!isVap"
-              :key="`data-card-svga-${profileWritable?.data_card_id}`"
-              :name="dataCardAsset"
-              class="pointer-events-none mt-[-24vw]"
+      <ProfileHeader>
+        <template #cover>
+          <NuxtImg
+            :src="coverImageSrc"
+            format="webp"
+            densities="x1 x2"
+            sizes="320px"
+            width="100%"
+            class="min-w-full object-cover h-48 animate-[zoom_15s_ease-in-out_infinite] cursor-pointer"
+            :style="{ animationPlayState: headerVisible ? 'running' : 'paused' }"
+            @click="openImagePreview('cover')"
           />
-          <VapPlayer
-              v-else
-              :key="`data-card-vap-${profileWritable?.data_card_id}`"
-              :name="dataCardAsset"
-              class="pointer-events-none mt-[-24vw]"
+        </template>
+
+        <template #card>
+          <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
+            <SvgaPlayer
+                v-if="!isVap"
+                :key="`data-card-svga-${profileWritable?.data_card_id}`"
+                :name="dataCardAsset"
+                class="pointer-events-none mt-[-24vw]"
+            />
+            <VapPlayer
+                v-else
+                :key="`data-card-vap-${profileWritable?.data_card_id}`"
+                :name="dataCardAsset"
+                class="pointer-events-none mt-[-24vw]"
+            />
+          </div>
+        </template>
+
+        <template #signature-badges>
+          <div class="w-full flex justify-center items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
+            <ProfileBadge :vip="profileWritable?.vip_level" :txt="profileWritable?.signature || undefined" class="w-8/12" />
+            <img v-if="profileWritable?.vip_level" :src="vipBadgeSrc" class="w-4/12" alt="">
+          </div>
+        </template>
+
+        <template #avatar>
+          <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
+            <UserAvatar
+              :animated="true"
+              :frame-id="profileWritable?.frame_id"
+              :user-name="profileWritable?.name"
+              :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
+              class="w-full"
+            />
+          </div>
+        </template>
+
+        <template #badges>
+          <div class="flex justify-start items-center w-full relative z-10" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
+            <img :src="charmBadgeSrc" alt="current badge" class="w-5/12" >
+            <img :src="wealthBadgeSrc" alt="current badge" class="w-7/12" >
+          </div>
+        </template>
+
+        <template #marquee>
+          <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" :paused="!headerVisible" class="mx-auto max-w-34" />
+        </template>
+
+        <template #name>
+          <MarqueeName
+              class="mx-auto max-w-36"
+              text-class="text-lg leading-none font-bold"
+              :name="profileWritable?.name || ''"
+              :vip="profileWritable?.vip_level"
+              delay="0.5s"
           />
-        </div>
-      </template>
+        </template>
 
-      <template #signature-badges>
-        <div class="w-full flex justify-center items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <ProfileBadge :vip="profileWritable?.vip_level" :txt="profileWritable?.signature || undefined" class="w-8/12" />
-          <img v-if="profileWritable?.vip_level" :src="vipBadgeSrc" class="w-4/12" alt="">
-        </div>
-      </template>
+        <template #stats>
+          <div class="rounded-xl glowing-border overflow-hidden relative z-10 mt-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
+            <UserStats
+                class="mt-1"
+                :wealth-xp="profileWritable?.wealth_xp"
+                :charm-xp="profileWritable?.charm_xp"
+                :visits="String(profileWritable?.profile_visits)"
+                :followers="String(followersCount)"
+                :following="String(followingCount)"
+                :user-id="profileWritable?.id"
+                :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
+                :is-own-profile="isOwnProfile"
+            />
+          </div>
+        </template>
+      </ProfileHeader>
 
-      <template #avatar>
-        <div class="mt-[-12vw] w-9/12 cursor-pointer" @click="openImagePreview('avatar')">
-          <UserAvatar
-            :animated="true"
-            :frame-id="profileWritable?.frame_id"
-            :user-name="profileWritable?.name"
-            :img="profileWritable?.avatar ?? ASSETS.AVATAR_PLACEHOLDER"
-            class="w-full"
-          />
-        </div>
-      </template>
+      <div v-if="hasProfile && !isOwnProfile" class="relative flex justify-center gap-2 m-3 z-50 touch-manipulation select-none">
+        <!-- Follow Button (hidden for own profile) -->
+        <UButton
+            v-if="!isSelf && statusLoaded"
+            :loading="isToggling"
+            :disabled="isToggling"
+            :icon="buttonIcon"
+            :variant="isFollowing ? 'subtle' : 'soft'"
+            size="md"
+            class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150"
+            :class="{
+              'follow-btn--animating': followAnimating,
+            }"
+            @click="handleFollowClick"
+        >
+          {{ buttonLabel }}
+        </UButton>
 
-      <template #badges>
-        <div class="flex justify-start items-center w-full relative z-10" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-          <img :src="charmBadgeSrc" alt="current badge" class="w-5/12" >
-          <img :src="wealthBadgeSrc" alt="current badge" class="w-7/12" >
-        </div>
-      </template>
+        <UserTrackButton :user-id="profileId" :name="profileWritable?.name" />
 
-      <template #marquee>
-        <BadgesEquippedBadgeMarquee :equipped-badges="equippedBadges" :paused="!headerVisible" class="mx-auto max-w-34" />
-      </template>
+        <UButton
+            v-if="hasRoom"
+            :loading="isJoiningRoom"
+            :disabled="isJoiningRoom"
+            size="md"
+            variant="subtle"
+            class="pl-1 pr-2 gap-1"
+            @click="goToRoom"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="size-6 drop-shadow-md" width="14" height="14" viewBox="0 0 14 14">
+            <g fill="none">
+              <path fill="#000000" fill-rule="evenodd" d="M2.708 3.507a5.662 5.662 0 1 0 8.218 2.74l-.222-.073a1.65 1.65 0 0 1-.541.911a1.65 1.65 0 0 1-1.577.314h-.002l-1.258-.405a1.64 1.64 0 0 1-1.08-1.117l-.339-1.163l-2.413-.777a2 2 0 0 1-.786-.43" clip-rule="evenodd"/>
+              <path fill="#ffffff" fill-rule="evenodd" d="M2.708 3.507A5.66 5.66 0 0 0 .173 9.73h3.195a1.36 1.36 0 0 0 1.359-1.36V7.25a1.36 1.36 0 0 1 1.359-1.404q.075 0 .149-.008l-.328-1.123l-2.413-.777a2 2 0 0 1-.786-.43Zm8.33 6.614l-.947-.694a2.8 2.8 0 0 0-1.239-.31H7.215a1.35 1.35 0 0 0 0 2.688a.953.953 0 0 1 .962.95v.657a5.68 5.68 0 0 0 2.86-3.29Z" clip-rule="evenodd"/>
+              <path fill="#ff2465" d="M13.772 1.527L12.7 1.163a.364.364 0 0 0-.418.139l-.782 1.21L7.213.37a2.668 2.668 0 0 0-3.868 1.403a.73.73 0 0 0 .503.965l2.797.9l.279.097l.525 1.8a.39.39 0 0 0 .257.268l1.265.407a.397.397 0 0 0 .514-.44l-.278-1.339h.182l2.732.89a.72.72 0 0 0 .911-.44l.965-2.968a.364.364 0 0 0-.225-.386"/>
+            </g>
+          </svg>
+          Room
+        </UButton>
 
-      <template #name>
-        <MarqueeName
-            class="mx-auto max-w-36"
-            text-class="text-lg leading-none font-bold"
-            :name="profileWritable?.name || ''"
-            :vip="profileWritable?.vip_level"
-            delay="0.5s"
-        />
-      </template>
+        <UButton v-if="profileId" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="subtle" size="md" class="pl-1 pr-2 gap-1">
+          Chat
+        </UButton>
+      </div>
 
-      <template #stats>
-        <div class="rounded-xl glowing-border overflow-hidden relative z-10 mt-2" :class="dataCardAsset ? 'mx-6' : 'mx-4'">
-          <UserStats
-              class="mt-1"
-              :wealth-xp="profileWritable?.wealth_xp"
-              :charm-xp="profileWritable?.charm_xp"
-              :visits="String(profileWritable?.profile_visits)"
-              :followers="String(followersCount)"
-              :following="String(followingCount)"
-              :user-id="profileWritable?.id"
-              :is-follow-list-public="profileWritable?.is_follow_list_public ?? true"
-              :is-own-profile="isOwnProfile"
-          />
-        </div>
-      </template>
-    </ProfileHeader>
     </div>
 
-    <div ref="profileScrollRef" class="max-h-[58vh] overflow-scroll relative z-50 mt-2">
-      <SectionTitle class="mx-8">Cp RelationShips</SectionTitle>
-      <EventsProfileCard class="mx-4"/>
+    <div ref="profileScrollRef" class="max-h-[58vh] overflow-scroll relative z-50 mt-2" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
 
+      <div class="mb-3">
+        <NuxtLink to="/cp-event/123-cp" class="flex justify-between">
+          <SectionTitle>Cp RelationShips</SectionTitle>
+          <UButton class="text-primary" icon="i-lucide-chevron-right" variant="soft" />
+        </NuxtLink>
+        <SvgaPlayer name="https://assets.flyliveapp.com/events/cp/1.svga" />
+      </div>
       <!-- Agency Section (conditional) -->
-      <div v-if="profileWritable?.agency" class="relative z-50 mt-4">
-        <SectionTitle class="mx-8">Agency</SectionTitle>
+      <div v-if="profileWritable?.agency" class="mt-4">
+        <SectionTitle>Agency</SectionTitle>
         <NuxtLink
           :to="`/agency/${profileWritable.agency.id}`"
-          class="flex rounded-md overflow-hidden gap-2 glowing-border mx-8"
+          class="flex rounded-md overflow-hidden gap-2 glowing-border"
         >
           <div class="p-1 w-2/6">
             <NuxtImg :src="profileWritable.agency.logo" class="w-full aspect-square object-cover" />
@@ -479,15 +529,13 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         </NuxtLink>
       </div>
 
-      <AgencyInviteButton :user-id="profileId" :agency-id="profileWritable?.agency?.id" class="mt-2 mx-12" />
-
       <!-- History Section -->
-      <div class="mb-12 mt-4 relative z-30">
-        <SectionTitle class="mx-8">History</SectionTitle>
+      <div class="mb-12 mt-4">
+        <SectionTitle>History</SectionTitle>
 
         <UTabs
             v-model="activeTab"
-            class="w-full px-8"
+            class="w-full"
             variant="link"
             :items="TAB_ITEMS"
             :ui="{
@@ -614,61 +662,19 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     <footer
       aria-label="Primary"
       class="fixed inset-x-2 z-50 bottom-4"
+      v-if="hasProfile && !isOwnProfile"
     >
-      <!-- Only once the profile exists: no dead buttons during the skeleton or on the error card -->
-      <div v-if="hasProfile && !isOwnProfile" class="flex justify-between items-center px-1 py-1 gap-2 touch-manipulation select-none">
-        <UserTrackButton :user-id="profileId" :name="profileWritable?.name" />
-
-        <!-- Follow Button (hidden for own profile) -->
-        <UButton
-            v-if="!isSelf && statusLoaded"
-            :loading="isToggling"
-            :disabled="isToggling"
-            :icon="buttonIcon"
-            :variant="isFollowing ? 'subtle' : 'soft'"
-            size="md"
-            class="pl-1 pr-2 gap-1 follow-btn transition-all duration-150"
-            :class="{
-              'follow-btn--animating': followAnimating,
-            }"
-            @click="handleFollowClick"
-        >
-          {{ buttonLabel }}
-        </UButton>
-
-        <UButton
-            v-if="hasRoom"
-            :loading="isJoiningRoom"
-            :disabled="isJoiningRoom"
-            size="md"
-            variant="subtle"
-            class="pl-1 pr-2 gap-1"
-            @click="goToRoom"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="size-6 drop-shadow-md" width="14" height="14" viewBox="0 0 14 14">
-            <g fill="none">
-              <path fill="#000000" fill-rule="evenodd" d="M2.708 3.507a5.662 5.662 0 1 0 8.218 2.74l-.222-.073a1.65 1.65 0 0 1-.541.911a1.65 1.65 0 0 1-1.577.314h-.002l-1.258-.405a1.64 1.64 0 0 1-1.08-1.117l-.339-1.163l-2.413-.777a2 2 0 0 1-.786-.43" clip-rule="evenodd"/>
-              <path fill="#ffffff" fill-rule="evenodd" d="M2.708 3.507A5.66 5.66 0 0 0 .173 9.73h3.195a1.36 1.36 0 0 0 1.359-1.36V7.25a1.36 1.36 0 0 1 1.359-1.404q.075 0 .149-.008l-.328-1.123l-2.413-.777a2 2 0 0 1-.786-.43Zm8.33 6.614l-.947-.694a2.8 2.8 0 0 0-1.239-.31H7.215a1.35 1.35 0 0 0 0 2.688a.953.953 0 0 1 .962.95v.657a5.68 5.68 0 0 0 2.86-3.29Z" clip-rule="evenodd"/>
-              <path fill="#ff2465" d="M13.772 1.527L12.7 1.163a.364.364 0 0 0-.418.139l-.782 1.21L7.213.37a2.668 2.668 0 0 0-3.868 1.403a.73.73 0 0 0 .503.965l2.797.9l.279.097l.525 1.8a.39.39 0 0 0 .257.268l1.265.407a.397.397 0 0 0 .514-.44l-.278-1.339h.182l2.732.89a.72.72 0 0 0 .911-.44l.965-2.968a.364.364 0 0 0-.225-.386"/>
-            </g>
-          </svg>
-          Room
-        </UButton>
-
-        <!-- `profileId` is null until the profile resolves; interpolating it then
-             produced the literal string "null" in the query (`/inbox?start=null`),
-             which /inbox forwarded to POST /inbox/start/null → 500 (PHP-LARAVEL-7T). -->
-        <UButton v-if="profileId" :to="`/inbox?start=${profileId}`" icon="i-lucide-message-circle-more" variant="subtle" size="md" class="pl-1 pr-2 gap-1">
-          Chat
-        </UButton>
-
+      <div class="flex justify-end items-center px-1 py-1 gap-2 touch-manipulation select-none">
+        <AgencyInviteButton :user-id="profileId" :agency-id="profileWritable?.agency?.id" />
         <UButton
           icon="i-lucide-flag"
           variant="soft"
           size="md"
           color="warning"
           @click="() => { showReportModal = true }"
-        />
+        >
+          Report User
+        </UButton>
       </div>
     </footer>
 
