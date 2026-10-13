@@ -374,7 +374,7 @@ onMounted(() => {
          and not on the rare visit where there are no banners at all (approved:
          keep the empty space rather than collapse). No `ClientOnly`: this app
          is `ssr: false`, the wrapper only cost a throw-away first render. -->
-    <div class="aspect-[4/1]">
+    <div class="aspect-4/1">
       <EventsBanners />
     </div>
 

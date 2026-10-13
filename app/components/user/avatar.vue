@@ -31,6 +31,8 @@ const props = withDefaults(defineProps<{
    * (mall and VIP previews). Overrides whatever `frameId` resolves to.
    */
   frameAssetUrl?: string
+  /** Static image frame (webp/png) drawn over the whole avatar box. Use instead of an SVGA frame. */
+  frameImageUrl?: string
   /** Explicit geometry override. Wins over the prop's authored config. */
   frameDisplay?: FrameDisplayConfig
   /**
@@ -64,6 +66,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   frameId: undefined,
   frameAssetUrl: undefined,
+  frameImageUrl: undefined,
   frameDisplay: undefined,
   userName: undefined,
   img: undefined,
@@ -245,5 +248,12 @@ function onImgError() { hasImgError.value = true }
         :dynamic-element-factories="frameTextElements"
       />
     </div>
+    <!-- Static image frame spans the full box; the avatar's default padding keeps the face inside the ring -->
+    <img
+      v-if="props.frameImageUrl"
+      class="pointer-events-none absolute inset-0 size-full object-contain"
+      :src="props.frameImageUrl"
+      alt=""
+    >
   </div>
 </template>

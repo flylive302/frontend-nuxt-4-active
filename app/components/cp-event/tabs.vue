@@ -13,7 +13,7 @@ import { CP_EVENT_TABS } from '~/constants/cp-event'
       :to="tab.to"
       class="relative w-full"
     >
-      <img :src="isExactActive ? ASSETS.CP_FERRIS_TAB_ACTIVE : ASSETS.CP_FERRIS_TAB" class="w-full" alt="">
+      <img :src="isExactActive ? ASSETS.CP_TAB_ACTIVE : ASSETS.CP_TAB" class="w-full" alt="">
       <p
         class="absolute inset-0 -mt-1 flex items-center justify-center text-md font-bold"
         :class="isExactActive ? 'text-black' : 'text-white'"
