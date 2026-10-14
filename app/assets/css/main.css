@@ -805,3 +805,11 @@ textarea,
         text-shadow: 0 0 6px var(--vip-glint-color);
     }
 }
+
+
+/* Gold side strips + purple gradient come from card-top's band (rows 410-598): no extra request.
+   Slice 59px sides at 1480px wide = 3.986% of our width, so it lines up with the <img>s above/below. */
+.frame-body {
+    border: 0 solid;
+    border-image: url('/images/cp-event/card-top.webp') 410 59 2 59 fill / 0 3.986% / 0 stretch;
+}

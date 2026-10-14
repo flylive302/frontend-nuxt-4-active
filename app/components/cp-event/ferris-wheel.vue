@@ -21,7 +21,7 @@ const SEAT_ANGLES = Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i) => `${(i
           <div class="cart">
             <!-- one avatar slot per partner -->
             <div class="relative z-10 flex w-full justify-center gap-1 px-1 pt-8">
-              <img v-for="n in 2" :key="n" :src="ASSETS.CP_FERRIS_PLACEHOLDER" class="w-4/10" alt="">
+              <img v-for="n in 2" :key="n" :src="ASSETS.AVATAR_PLACEHOLDER" class="w-4/10 rounded-full" alt="">
             </div>
             <img :src="ASSETS.CP_FERRIS_WHEEL_CART" class="absolute inset-0 z-0" alt="">
           </div>

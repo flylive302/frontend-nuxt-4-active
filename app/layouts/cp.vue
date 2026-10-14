@@ -6,13 +6,13 @@
       <NavAlt spacer>CP Event</NavAlt>
     </div>
 
-    <div class="cp-shell">
+    <div class="cp-shell bg-primary-300">
       <CpEventFerrisWheel />
       <CpEventCountdown class="relative -mt-20" />
       <CpEventTabs />
     </div>
 
-    <div class="relative px-3">
+    <div class="relative px-3 bg-primary-300">
       <slot />
     </div>
   </div>

@@ -164,6 +164,10 @@ export const ASSETS = {
   CP_RANK_LIST_BACKGROUND: '/images/cp-event/rank-list-background.webp',
   CP_RANK_SELF_BACKGROUND: '/images/cp-event/rank-self-background.webp',
   CP_CONNECTION_ICON: '/images/cp-event/connection-icon.webp',
+  CP_USER_BACKGROUND: '/images/cp-event/user-background.webp',
+  CP_USER_DECORATION: '/images/cp-event/user-decoration.webp',
+  CP_USER_BINDING_ICON: '/images/cp-event/user-binding-icon.webp',
+  CP_USER_STATS_DECOR: '/images/cp-event/user-stats-decor.webp',
 } as const
 
 // ========================================

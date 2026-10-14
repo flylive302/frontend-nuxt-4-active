@@ -43,7 +43,6 @@ definePageMeta({ layout: 'cp', middleware: 'auth' })
             </div>
           </div>
         </div>
-
       </div>
 
       <!-- TOP 2 and 3 WINNER PODIUM -->
@@ -106,8 +105,8 @@ definePageMeta({ layout: 'cp', middleware: 'auth' })
 
             <div class="col-span-2 flex justify-center">
               <MarqueeName
-                  text-class="text-xs font-semibold text-center drop-shadow-lg leading-none rounded-xl px-2 px-1 mb-1 bg-neutral-950/50"
-                  name="❤️ OK"
+                text-class="text-xs font-semibold text-center drop-shadow-lg leading-none rounded-xl px-2 px-1 mb-1 bg-neutral-950/50"
+                name="❤️ OK"
               />
             </div>
           </div>
@@ -207,10 +206,5 @@ definePageMeta({ layout: 'cp', middleware: 'auth' })
 </template>
 
 <style scoped>
-/* Gold side strips + purple gradient come from card-top's band (rows 410-598): no extra request.
-   Slice 59px sides at 1480px wide = 3.986% of our width, so it lines up with the <img>s above/below. */
-.frame-body {
-  border: 0 solid;
-  border-image: url('/images/cp-event/card-top.webp') 410 59 2 59 fill / 0 3.986% / 0 stretch;
-}
+
 </style>
