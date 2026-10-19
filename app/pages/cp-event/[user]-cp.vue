@@ -43,7 +43,7 @@ definePageMeta({
       </div>
       
       <div class="rounded-xl glowing-border mx-4 mt-2">
-        <div class="grid grid-cols-3 h-full items-center pb-1">
+        <div class="grid grid-cols-4 h-full items-center pb-1">
           <div class="">
             <p class="text-xl font-bold text-center">51</p>
             <p class="text-sm font-semibold text-center">Days</p>
@@ -55,6 +55,10 @@ definePageMeta({
           <div class="">
             <p class="text-xl font-bold text-center">51</p>
             <p class="text-sm font-semibold text-center">Ranking</p>
+          </div>
+          <div class="">
+            <p class="text-xl font-bold text-center">10</p>
+            <p class="text-sm font-semibold text-center">Points</p>
           </div>
         </div>
       </div>
@@ -92,7 +96,7 @@ definePageMeta({
           <img alt="" :src="ASSETS.CP_DEVIDER" />
 
           <div class="rounded-xl glowing-border mt-3 -mb-6">
-            <div class="grid grid-cols-3 h-full items-center pb-1">
+            <div class="grid grid-cols-4 h-full items-center pb-1">
               <div class="">
                 <p class="text-xl font-bold text-center">30</p>
                 <p class="text-sm font-semibold text-center">Days</p>
@@ -104,6 +108,10 @@ definePageMeta({
               <div class="">
                 <p class="text-xl font-bold text-center">68</p>
                 <p class="text-sm font-semibold text-center">Ranking</p>
+              </div>
+              <div class="">
+                <p class="text-xl font-bold text-center">20</p>
+                <p class="text-sm font-semibold text-center">CP Points</p>
               </div>
             </div>
           </div>
