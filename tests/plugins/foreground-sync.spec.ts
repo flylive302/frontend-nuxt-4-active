@@ -59,8 +59,10 @@ describe('foreground-sync plugin', () => {
   })
 
   async function loadPlugin() {
-    const plugin = (await import('../../app/plugins/foreground-sync.client')).default as unknown as () => void
-    plugin()
+    const plugin = (await import('../../app/plugins/foreground-sync.client')).default as unknown as (
+      nuxtApp: { runWithContext: <T>(fn: () => T) => T },
+    ) => void
+    plugin({ runWithContext: fn => fn() })
     // Debounce clock starts at setup (boot already synced) — step past it.
     vi.advanceTimersByTime(10_000)
   }

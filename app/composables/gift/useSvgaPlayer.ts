@@ -8,6 +8,7 @@ import type { Ref } from 'vue';
 import type { SvgaPlayer, SvgaPlugin } from '@/types/asset/svga';
 import { createLogger } from '~/utils/logger';
 import * as motionPauseRegistry from '~/services/motionPauseRegistry';
+import { loadImageMap } from '~/services/imageLoader';
 
 const log = createLogger('[SvgaPlayer]');
 
@@ -18,7 +19,12 @@ export interface UseSvgaPlayerOptions {
   onComplete?: () => void;
   /** Called on each rendered frame — playback heartbeat */
   onProcess?: () => void;
-  replaceElements?: Record<string, HTMLImageElement>;
+  /**
+   * SVGA image key → image URL (e.g. a user avatar). Loaded before mount;
+   * empty or broken URLs are skipped so the baked layer shows through.
+   * Reloads the player when the URLs change.
+   */
+  replaceElements?: Ref<Record<string, string | null | undefined>>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
   /**
    * Draw a dynamic element once its sprite slot size is known. The lib draws
@@ -79,13 +85,21 @@ export function useSvgaPlayer(
     const currentPlaybackId = ++playbackId;
 
     try {
+      // The lib reads replace images once, at mount — decode them first.
+      const replaceElements = options.replaceElements?.value
+        ? await loadImageMap(options.replaceElements.value)
+        : undefined;
+
+      // Guard: unmounted or superseded while images loaded
+      if (isDestroyed || currentPlaybackId !== playbackId || !canvas.value) return;
+
       // Load without autoplay so we can register callbacks before the first frame runs
       const newPlayer = await (nuxtApp.$svga as SvgaPlugin).createSvgaPlayer({
         canvas: canvas.value,
         name: animationName,
         loop: options.loop?.value ?? 1,
         autoplay: false,
-        replaceElements: options.replaceElements,
+        replaceElements,
         dynamicElements: options.dynamicElements,
         dynamicElementFactories: options.dynamicElementFactories,
       });
@@ -197,9 +211,15 @@ export function useSvgaPlayer(
       })
     : null;
 
+  // Compared by content, not identity — an inline object literal from the
+  // parent would otherwise reload the player on every parent render.
+  const replaceElementsSignature = computed(() =>
+    JSON.stringify(options.replaceElements?.value ?? {})
+  );
+
   // Watch for option changes and reload
   watch(
-    [options.name, options.loop ?? ref(), options.autoplay ?? ref()],
+    [options.name, options.loop ?? ref(), options.autoplay ?? ref(), replaceElementsSignature],
     load
   );
 

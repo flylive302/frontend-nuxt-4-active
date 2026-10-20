@@ -35,10 +35,10 @@ function heartStyle(x: number, y: number) {
 </script>
 
 <template>
-  <div ref="rootRef" class="pointer-events-none absolute inset-0 z-[35] overflow-hidden" aria-hidden="true">
+  <div ref="rootRef" class="pointer-events-none absolute inset-0 z-35 overflow-hidden" aria-hidden="true">
     <template v-for="(heart, index) in hearts" :key="heart.key">
-      <div class="absolute left-0 top-0" :style="heartStyle(heart.x, heart.y)">
-        <SvgaPlayer v-if="isAnimated(index)" :name="CP_SEAT_HEART_SVGA" />
+      <div class="absolute -left-6.5 -top-1 w-fit" :style="heartStyle(heart.x, heart.y)">
+        <SvgaPlayer v-if="isAnimated(index)" :name="CP_SEAT_HEART_SVGA" width="auto" height="40px" />
         <img
           v-else-if="stillUrl"
           :src="stillUrl"

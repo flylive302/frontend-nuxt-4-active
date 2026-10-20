@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * One active slide overlay (INTENT). Builds the SVGA dynamic elements —
- * canvases from `texts`, images loaded from `replaceElements` URLs — then
- * renders a single SvgaPlayer. Self-removes via @complete. Pass-through unless
+ * One active slide overlay (INTENT). Builds canvases from `texts` and passes
+ * them plus the `replaceElements` URLs (SvgaPlayer loads those) to a single
+ * SvgaPlayer. Self-removes via @complete. Pass-through unless
  * the slide is clickable, in which case it captures pointer events for the link.
  */
 import type { ActiveSlide } from '~/types/slide'
@@ -22,7 +22,6 @@ import { buildSvgaTextCanvases } from '~/utils/svga-text-canvas'
 const props = defineProps<{ slide: ActiveSlide }>()
 const emit = defineEmits<{ complete: []; click: [] }>()
 
-const images = ref<Record<string, HTMLImageElement>>({})
 const textElements = shallowRef<Record<string, HTMLCanvasElement> | undefined>()
 const ready = ref(false)
 
@@ -46,34 +45,8 @@ function buildTextElements(): Record<string, HTMLCanvasElement> | undefined {
   })
 }
 
-// Load each replaceElements URL into an HTMLImageElement. A broken image is
-// skipped (safe fallback) rather than blocking the whole slide.
-async function loadImages(): Promise<void> {
-  const entries = Object.entries(props.slide.replaceElements ?? {})
-  const loaded: Record<string, HTMLImageElement> = {}
-
-  await Promise.all(
-    entries.map(([key, url]) =>
-      new Promise<void>((resolve) => {
-        if (!url) return resolve()
-        const img = new Image()
-        img.crossOrigin = 'anonymous'
-        img.onload = () => {
-          loaded[key] = img
-          resolve()
-        }
-        img.onerror = () => resolve()
-        img.src = url
-      }),
-    ),
-  )
-
-  images.value = loaded
-}
-
-onMounted(async () => {
+onMounted(() => {
   textElements.value = buildTextElements()
-  await loadImages()
   ready.value = true
 })
 </script>
@@ -89,7 +62,7 @@ onMounted(async () => {
       :name="slide.svgaUrl"
       :loop="1"
       :motion-pause="false"
-      :replace-elements="images"
+      :replace-elements="slide.replaceElements"
       :dynamic-elements="textElements"
       :width="`${slide.height}px`"
       class="w-auto"

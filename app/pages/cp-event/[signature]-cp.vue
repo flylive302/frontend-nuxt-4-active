@@ -32,37 +32,50 @@ const pairs = computed(() => profile.value?.pairs ?? [])
         <img :src="ASSETS.CP_USER_DECORATION" alt="">
 
         <template v-if="topPair">
-          <div class="px-22 -mt-50">
-            <CpEventCouplePair :pair="topPair" variant="hero" :animated="frameAnimationEnabled" />
-            <div class="h-24 mt-4 relative">
+          <div class="px-4 -mt-50">
+            <CpEventCouplePair :pair="topPair" class="mx-14" variant="hero" :animated="frameAnimationEnabled" />
+            <div class="relative -mt-10">
               <img :src="ASSETS.CP_USER_STATS_DECOR" class="relative z-0" alt="">
-              <p class="text-xl w-full mx-auto font-bold text-center -mt-14 relative z-10">{{ formatCurrency(topPair.lifetime_intimacy) }}</p>
+              <div class="flex justify-between absolute top-0 w-full px-14 mt-18">
+                <div class="">
+                  <p class="text-xl font-bold text-center">{{topPair.days}}</p>
+                  <p class="text-sm font-semibold text-center">Days</p>
+                </div>
+                <div class="">
+                  <p class="text-xl font-bold text-center">{{formatCurrency( topPair.lifetime_intimacy )}}</p>
+                  <p class="text-sm font-semibold text-center">Intimacy</p>
+                </div>
+                <div class="">
+                  <p class="text-xl font-bold text-center">{{topPair.lifetime_rank}}</p>
+                  <p class="text-sm font-semibold text-center">Rank</p>
+                </div>
+                <div class="">
+                  <p class="text-xl font-bold text-center">{{formatCurrency(topPair.points)}}</p>
+                  <p class="text-sm font-semibold text-center">Points</p>
+                </div>
+              </div>
             </div>
           </div>
-
-          <CpEventStatRow
-            class="mx-4 mt-2"
-            :days="topPair.days"
-            :intimacy="topPair.lifetime_intimacy"
-            :rank="topPair.lifetime_rank"
-            :points="topPair.points"
-          />
         </template>
 
         <p v-else class="px-4 py-10 text-center text-lg font-semibold">No CP yet</p>
 
         <div v-for="pair in pairs" :key="pair.pair_id" class="px-4">
           <CpEventCardFrame>
-            <CpEventCouplePair :pair="pair" variant="hero" />
-            <img alt="" :src="ASSETS.CP_DEVIDER">
+            <CpEventCouplePair :pair="pair" variant="hero" class="px-4" />
             <CpEventStatRow
-              class="mt-3 -mb-6"
               :days="pair.days"
               :intimacy="pair.lifetime_intimacy"
               :rank="pair.lifetime_rank"
               :points="pair.points"
+              class="-mt-8 relative z-10"
             />
-            <CpEventBreakButton v-if="pair.can_break" :pair-id="pair.pair_id" @broken="refetch" />
+            <CpEventBreakButton
+                v-if="pair.can_break"
+                :pair-id="pair.pair_id"
+                class="relative z-0 -mt-3"
+                @broken="refetch"
+            />
           </CpEventCardFrame>
         </div>
       </template>

@@ -30,8 +30,8 @@ function closeConfirm(): void {
 </script>
 
 <template>
-  <div class="flex justify-center mt-8">
-    <UButton color="error" variant="soft" icon="i-lucide-heart-crack" @click="openConfirm">
+  <div class="flex justify-center">
+    <UButton color="error" variant="soft" icon="i-lucide-heart-crack" class="text-white" @click="openConfirm">
       Break CP
     </UButton>
 

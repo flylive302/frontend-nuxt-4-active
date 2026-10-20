@@ -41,7 +41,11 @@ export const CP_WEEK_ROLL_RETRY_MAX_MS = 5000
 export const CP_WEEK_ROLL_MAX_TRIES = 6
 
 /** Animated hero frame on the CP profile page (profile hero only — lists use the static ring). */
-export const CP_PROFILE_FRAME_SVGA = 'https://assets.flyliveapp.com/events/cp/1.svga'
+export const CP_PROFILE_FRAME_SVGA = 'https://assets.flyliveapp.com/events/cp/3.svga'
+
+/** Avatar image keys inside CP_PROFILE_FRAME_SVGA — binder left, partner right. */
+export const CP_PROFILE_FRAME_BINDER_KEY = 'avatar1'
+export const CP_PROFILE_FRAME_PARTNER_KEY = 'avatar2'
 
 /** Seconds → ms. */
 export const CP_MS_PER_SECOND = 1000

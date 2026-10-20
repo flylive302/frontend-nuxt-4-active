@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CpPairCard } from '~/types/cp'
 import { ASSETS } from '~/constants/assets'
+import {CP_SEAT_HEART_SVGA} from "~/constants/cp-event";
 
 // Binder LEFT, partner RIGHT. Variants:
 //  - row:    compact list/self-bar entry (avatar · icon · avatar)
@@ -35,16 +36,19 @@ const wrapperClass = computed(() => ({
       >
         <CpEventFrame :user="user" :animated="animated" />
         <MarqueeName text-class="font-bold leading-none" :name="user.name ?? 'User'" :vip="user.vip_level" />
-        <p v-if="variant === 'podium'">ID: {{ user.signature }}</p>
-        <ProfileBadge v-else-if="variant === 'hero' && user.signature" :txt="`ID: ${user.signature}`" :vip="user.vip_level" />
+        <p v-if="variant === 'podium'">{{ user.signature }}</p>
+        <ProfileBadge v-else-if="variant === 'hero' && user.signature" :txt="user.signature" :vip="user.vip_level" />
       </div>
 
-      <div v-if="index === 0 && variant === 'row'" class="w-8 flex flex-col justify-center items-center">
+      <div v-if="index === 0 && variant === 'row'" class="w-8 bg-info flex flex-col justify-center items-center">
         <img alt="" :src="ASSETS.CP_CONNECTION_ICON">
       </div>
-      <div v-else-if="index === 0 && variant === 'hero'" class="flex flex-col justify-end">
-        <img alt="" :src="ASSETS.CP_USER_BINDING_ICON" class="-ml-0.5">
-      </div>
+      <SvgaPlayer
+          v-else-if="index === 0 && variant === 'hero'"
+          :name="CP_SEAT_HEART_SVGA"
+          width="auto" height="auto"
+          class="max-w-full mt-8"
+      />
     </template>
   </div>
 </template>

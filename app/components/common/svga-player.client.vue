@@ -12,7 +12,8 @@ const props = withDefaults(defineProps<{
   height?: string;
   loop?: number;
   autoplay?: boolean;
-  replaceElements?: Record<string, HTMLImageElement>;
+  /** SVGA image key → image URL. Empty URLs keep the baked layer. */
+  replaceElements?: Record<string, string | null | undefined>;
   dynamicElements?: Record<string, HTMLCanvasElement>;
   /**
    * Draw a dynamic element once its sprite slot size is known. Preferred over
@@ -41,7 +42,7 @@ const { reload } = useSvgaPlayer(canvas, {
   autoplay: toRef(props, 'autoplay'),
   motionPause: props.motionPause,
   onComplete: () => emit('complete'),
-  replaceElements: props.replaceElements,
+  replaceElements: toRef(props, 'replaceElements'),
   dynamicElements: props.dynamicElements,
   dynamicElementFactories: props.dynamicElementFactories,
 });

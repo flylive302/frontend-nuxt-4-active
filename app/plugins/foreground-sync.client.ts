@@ -25,7 +25,7 @@ const log = createLogger('[ForegroundSync]')
 
 const DEBOUNCE_MS = 10_000
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
   const authStore = useAuthStore()
 
   // Boot already ran syncUser (useBootstrapInit); start the debounce clock
@@ -44,8 +44,13 @@ export default defineNuxtPlugin(() => {
     // other plugins (toast provider, etc.) these composables may reach for
     // are mounted. Cheap to call repeatedly; both composables coalesce
     // their own in-flight requests at module scope, so nothing duplicates.
-    void useUserSync().syncUser()
-    void useInboxReconcile().reconcileInbox('foreground')
+    // runWithContext: this fires from a DOM/native listener, outside any
+    // injection context — composables that inject() (e.g. useToast inside
+    // useInboxActions) would otherwise warn on every foreground.
+    nuxtApp.runWithContext(() => {
+      void useUserSync().syncUser()
+      void useInboxReconcile().reconcileInbox('foreground')
+    })
   }
 
   if (Capacitor.isNativePlatform()) {
