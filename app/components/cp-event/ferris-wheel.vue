@@ -1,10 +1,26 @@
 <script setup lang="ts">
+import type { CpWinnerCard } from '~/types/cp'
 import { ASSETS } from '~/constants/assets'
 import { CP_FERRIS_CART_COUNT } from '~/constants/cp-event'
+import { avatarImageSrc } from '~/utils/imagekit'
 
-// Static by design (no props, no reactive reads): it renders once and is never
-// re-rendered by route changes or countdown ticks elsewhere in the layout.
-const SEAT_ANGLES = Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i) => `${(i * 360) / CP_FERRIS_CART_COUNT}deg`)
+// Carts fill newest-first from `winners`; unfilled slots render an empty cart.
+const props = defineProps<{
+  winners: readonly CpWinnerCard[]
+}>()
+
+const FERRIS_AVATAR_WIDTH = 64
+
+const carts = computed(() => Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i) => {
+  const winner = props.winners[i]
+  return {
+    angle: `${(i * 360) / CP_FERRIS_CART_COUNT}deg`,
+    // Deleted (null) user → the app's default silhouette.
+    avatars: winner
+      ? [winner.binder, winner.partner].map(user => avatarImageSrc(user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER, { w: FERRIS_AVATAR_WIDTH }))
+      : [],
+  }
+}))
 </script>
 
 <template>
@@ -17,11 +33,11 @@ const SEAT_ANGLES = Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i) => `${(i
       <img :src="ASSETS.CP_FERRIS_WHEEL_BOTTOM" class="stand" alt="">
       <div class="rotor">
         <img :src="ASSETS.CP_FERRIS_WHEEL_BASE" class="w-full" alt="">
-        <div v-for="angle in SEAT_ANGLES" :key="angle" class="seat" :style="{ '--a': angle }">
+        <div v-for="(cart, index) in carts" :key="index" class="seat" :style="{ '--a': cart.angle }">
           <div class="cart">
-            <!-- one avatar slot per partner -->
-            <div class="relative z-10 flex w-full justify-center gap-1 px-1 pt-8">
-              <img v-for="n in 2" :key="n" :src="ASSETS.AVATAR_PLACEHOLDER" class="w-4/10 rounded-full" alt="">
+            <!-- one avatar per partner; empty slot = bare cart -->
+            <div v-if="cart.avatars.length" class="relative z-10 flex w-full justify-center gap-1 px-1 pt-8">
+              <img v-for="(src, n) in cart.avatars" :key="n" :src="src" :width="FERRIS_AVATAR_WIDTH" :height="FERRIS_AVATAR_WIDTH" class="w-4/10 rounded-full" alt="">
             </div>
             <img :src="ASSETS.CP_FERRIS_WHEEL_CART" class="absolute inset-0 z-0" alt="">
           </div>

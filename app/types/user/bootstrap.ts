@@ -292,6 +292,18 @@ export interface BootstrapConfig {
   vip_levels: VipLevel[]
   /** JoyPlay games kill switch. Sent uncached so a flip reaches clients immediately. */
   games_enabled?: boolean
+  /** CP Event flag + public settings. Sent uncached; absent from older servers. */
+  cp?: CpBootstrapConfig
+}
+
+/**
+ * CP Event block of the bootstrap config.
+ */
+export interface CpBootstrapConfig {
+  enabled: boolean
+  poll_seconds: number
+  frame_male: number | null
+  frame_female: number | null
 }
 
 /**

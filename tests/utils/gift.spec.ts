@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { batchItemTaps, seatGiftValue, wholeGiftValue } from '../../app/utils/gift'
+import { batchItemTaps, compareGiftsForDrawer, isBindingGift, seatGiftValue, wholeGiftValue } from '../../app/utils/gift'
 import { LUCKY_SPLIT_SHARE } from '../../app/constants/room'
 import type { Gift } from '../../app/types/gift/gift'
 
@@ -77,3 +77,39 @@ describe('wholeGiftValue', () => {
     expect(wholeGiftValue(13600)).toBe(13600)
   })
 })
+
+describe('isBindingGift', () => {
+  it('is true only for cp-gift + binding', () => {
+    expect(isBindingGift({ category: 'cp-gift', subcategory: 'binding' })).toBe(true);
+  });
+
+  it.each([
+    ['binding subcategory in another category', { category: 'normal', subcategory: 'binding' }],
+    ['cp-gift with another subcategory', { category: 'cp-gift', subcategory: 'ring' }],
+    ['cp-gift with null subcategory', { category: 'cp-gift', subcategory: null }],
+    ['cp-gift with missing subcategory', { category: 'cp-gift' }],
+  ] as const)('is false for %s', (_label, gift) => {
+    expect(isBindingGift(gift)).toBe(false);
+  });
+});
+
+describe('compareGiftsForDrawer', () => {
+  const g = (price: number, sort_order: number, subcategory: string | null = null) => ({
+    category: 'cp-gift' as const,
+    subcategory,
+    price,
+    sort_order,
+  });
+
+  it('puts the binding gift first even when it is the most expensive', () => {
+    const sorted = [g(10, 1), g(5000, 2, 'binding'), g(20, 3)].sort(compareGiftsForDrawer);
+
+    expect(sorted.map((x) => x.price)).toEqual([5000, 10, 20]);
+  });
+
+  it('otherwise orders by price then sort_order', () => {
+    const sorted = [g(20, 1), g(10, 9), g(10, 2)].sort(compareGiftsForDrawer);
+
+    expect(sorted.map((x) => [x.price, x.sort_order])).toEqual([[10, 2], [10, 9], [20, 1]]);
+  });
+});

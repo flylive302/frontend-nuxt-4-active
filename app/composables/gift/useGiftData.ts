@@ -6,6 +6,7 @@
  */
 import type { Gift, GiftCategory, GiftCategoryGroup } from '~/types/gift/gift';
 import { GIFT_CATEGORY_CONFIG } from '~/types/gift/gift';
+import { compareGiftsForDrawer } from '~/utils/gift';
 import { useApi, type NormalizedError } from '../shared/useApi';
 
 
@@ -68,7 +69,7 @@ export function useGiftData() {
         const config = GIFT_CATEGORY_CONFIG[category];
         const categoryGifts = sendableGifts.value
           .filter((g) => g.category === category)
-          .sort((a, b) => a.price - b.price || a.sort_order - b.sort_order);
+          .sort(compareGiftsForDrawer);
 
         return {
           category,

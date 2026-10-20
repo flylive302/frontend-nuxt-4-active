@@ -2,6 +2,7 @@
  * Gift value helpers (pure functions — no Vue reactivity, no store imports).
  */
 
+import { CP_BINDING_SUBCATEGORY, CP_GIFT_CATEGORY } from '~/constants/cp-event';
 import { LUCKY_SPLIT_SHARE, GIFT_VALUE_FLOAT_EPSILON } from '~/constants/room';
 import type { Gift } from '~/types/gift/gift';
 
@@ -67,4 +68,24 @@ export function batchItemTaps(totalQuantity: number, count: number): { quantity:
     return { quantity: totalQuantity / count, taps: count };
   }
   return { quantity: totalQuantity, taps: 1 };
+}
+
+/**
+ * True for the CP binding gift (category `cp-gift` + subcategory `binding`).
+ */
+export function isBindingGift(gift: Pick<Gift, 'category' | 'subcategory'>): boolean {
+  return gift.category === CP_GIFT_CATEGORY && gift.subcategory === CP_BINDING_SUBCATEGORY;
+}
+
+/**
+ * Drawer ordering inside one category tab: the binding gift first, then
+ * price ascending, then sort_order.
+ */
+export function compareGiftsForDrawer(
+  a: Pick<Gift, 'category' | 'subcategory' | 'price' | 'sort_order'>,
+  b: Pick<Gift, 'category' | 'subcategory' | 'price' | 'sort_order'>
+): number {
+  const bindingRank = Number(isBindingGift(b)) - Number(isBindingGift(a));
+
+  return bindingRank || a.price - b.price || a.sort_order - b.sort_order;
 }

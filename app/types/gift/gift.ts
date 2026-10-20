@@ -26,6 +26,8 @@ export interface Gift {
   animation_url: string | null;
   asset_type: GiftAssetType;
   category: GiftCategory;
+  /** Free-text sub-grouping; `binding` marks the single CP binding gift (category `cp-gift`). */
+  subcategory?: string | null;
   rarity: GiftRarity;
   sort_order: number;
   is_critical: boolean;

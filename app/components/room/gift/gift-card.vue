@@ -8,8 +8,9 @@ import type { Gift } from '~/types/gift/gift';
 import { useGiftData } from '~/composables/gift/useGiftData';
 import MarqueeName from "~/components/common/marquee-name.vue";
 import { giftThumbnailSrc } from '~/utils/imagekit';
+import { isBindingGift } from '~/utils/gift';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     gift: Gift;
     selected?: boolean;
@@ -20,6 +21,8 @@ withDefaults(
 );
 
 const { formatGiftPrice } = useGiftData();
+
+const isBinding = computed(() => isBindingGift(props.gift));
 </script>
 
 <template>
@@ -28,7 +31,9 @@ const { formatGiftPrice } = useGiftData();
     :class="[
       selected
         ? 'bg-primary/30 ring-primary! scale-102'
-        : '',
+        : isBinding
+          ? 'ring-1 ring-pink-400/80'
+          : '',
     ]"
   >
     <div class="relative p-1 w-full">
@@ -43,6 +48,12 @@ const { formatGiftPrice } = useGiftData();
         sizes="128px"
         loading="lazy"
       />
+      <span
+        v-if="isBinding"
+        class="absolute top-0 right-0 rounded-full bg-pink-500 px-1.5 text-[10px] font-semibold leading-4 text-white"
+      >
+        Bind
+      </span>
       <!-- No load/ready indication by design: preloading is silent (ticket 11).
            If the asset is cold, playback fetches it directly. -->
     </div>

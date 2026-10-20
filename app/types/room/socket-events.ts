@@ -313,6 +313,36 @@ export interface MissionFinaleReadyPayload {
 }
 
 // ========================================
+// CP Events (CP event — pair lifecycle + weekly close)
+// ========================================
+// Hints only: handlers bump store counters, composables refetch (debounced).
+
+/** cp.pair.bound - One of the viewer's pairs was just bound. */
+export interface CpPairBoundPayload {
+  pair_id: number
+  partner_id: number
+}
+
+/** cp.pair.updated - Points / intimacy / weekly score of the viewer's pair changed. */
+export interface CpPairUpdatedPayload {
+  pair_id: number
+  points: number
+  lifetime_intimacy: number
+  weekly_score: number
+}
+
+/** cp.pair.broken - The viewer's pair ended. */
+export interface CpPairBrokenPayload {
+  pair_id: number
+  reason: string
+}
+
+/** cp.week.closed - Broadcast when the weekly ranking closes. */
+export interface CpWeekClosedPayload {
+  week_key: string
+}
+
+// ========================================
 // Inbox Events (DM / thread / official — dm-realtime-platform/02)
 // ========================================
 // Realtime Hints only (ADR 0021) — mirror backend broadcastWith() shapes
@@ -461,6 +491,12 @@ export interface ServerToClientEvents {
   // Mission (Recharge Activity)
   'mission.progress.updated': (payload: MissionProgressUpdatedPayload) => void
   'mission.finale.ready': (payload: MissionFinaleReadyPayload) => void
+
+  // CP event
+  'cp.pair.bound': (payload: CpPairBoundPayload) => void
+  'cp.pair.updated': (payload: CpPairUpdatedPayload) => void
+  'cp.pair.broken': (payload: CpPairBrokenPayload) => void
+  'cp.week.closed': (payload: CpWeekClosedPayload) => void
 
   // Inbox (DM / thread / official)
   'dm.message.received': (payload: DmMessageReceivedPayload) => void

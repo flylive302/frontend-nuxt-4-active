@@ -16,3 +16,17 @@
  * Persisted state written before this existed has no version → one cold fetch.
  */
 export const BOOTSTRAP_SHAPE_VERSION = 1
+
+/**
+ * CP Event config used while the server has not sent a `cp` block (older
+ * server, fresh install, discarded catalog). Off by default.
+ */
+export const CP_BOOTSTRAP_DEFAULTS = {
+  enabled: false,
+  poll_seconds: 30,
+  frame_male: null,
+  frame_female: null,
+} as const
+
+/** Longest the CP route gate waits for a cold-start bootstrap before treating CP as off. */
+export const CP_GATE_WAIT_MS = 8000

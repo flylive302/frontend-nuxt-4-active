@@ -6,12 +6,13 @@
 import { defineStore } from 'pinia'
 import type {
   BootstrapConfig,
+  CpBootstrapConfig,
   LevelConfig,
   VipLevel,
 } from '~/types/user/bootstrap'
 import type { Gift } from '~/types/gift/gift'
 import type { Badge } from "~/types/progression/badge";
-import { BOOTSTRAP_SHAPE_VERSION } from '~/constants/bootstrap'
+import { BOOTSTRAP_SHAPE_VERSION, CP_BOOTSTRAP_DEFAULTS } from '~/constants/bootstrap'
 
 // ========================================
 // Store Definition
@@ -43,6 +44,10 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   // so the button never renders before the server has said it may.
   const gamesEnabled = ref<boolean | null>(null);
 
+  // CP Event flag + public settings. Defaults to off until the server says
+  // otherwise (absent block, older server, fresh install).
+  const cpConfig = ref<CpBootstrapConfig>({ ...CP_BOOTSTRAP_DEFAULTS })
+
   /**
    * Validator from the last 200 of `/bootstrap`, verbatim (the edge serves the
    * weak `W/` form; the server weak-compares) — sent back as `If-None-Match`.
@@ -66,6 +71,9 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
    * Whether bootstrap has completed and config is available.
    */
   const isReady = computed(() => phase.value === 'complete')
+
+  /** Whether the CP Event is switched on. */
+  const cpEnabled = computed(() => cpConfig.value.enabled === true)
 
   /**
    * Whether the persisted catalog can render this open before any request:
@@ -182,6 +190,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = newConfig.vapid_public_key
     vipLevels.value = newConfig.vip_levels ?? []
     gamesEnabled.value = newConfig.games_enabled ?? false
+    cpConfig.value = { ...CP_BOOTSTRAP_DEFAULTS, ...(newConfig.cp ?? {}) }
     shapeVersion.value = BOOTSTRAP_SHAPE_VERSION
   }
 
@@ -232,6 +241,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key.value = null
     vipLevels.value = []
     gamesEnabled.value = null
+    cpConfig.value = { ...CP_BOOTSTRAP_DEFAULTS }
     etag.value = null
     shapeVersion.value = null
   }
@@ -281,12 +291,14 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vapid_public_key,
     vipLevels,
     gamesEnabled,
+    cpConfig,
     etag,
     shapeVersion,
 
     // Getters
     phase,
     isReady,
+    cpEnabled,
     hasUsableCache,
     badgeMap,
     sortedWealthLevels,
@@ -324,6 +336,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       'vapid_public_key',
       'vipLevels',
       'gamesEnabled',
+      'cpConfig',
       'etag',
       'shapeVersion',
     ],

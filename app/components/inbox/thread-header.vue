@@ -18,7 +18,7 @@ const props = withDefaults(
     /** dm-messenger-v2/07: participant's last-activity timestamp, for the "Last seen …" fallback. */
     lastSeenAt?: string | null
   }>(),
-  { fixed: true, vip: null, lastSeenAt: null },
+  { avatar: null, frameId: null, signature: null, gender: null, fixed: true, vip: null, lastSeenAt: null },
 )
 
 defineEmits<{

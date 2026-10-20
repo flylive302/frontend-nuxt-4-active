@@ -149,3 +149,54 @@ describe('useBootstrapStore.invalidateConfig("all") / reset', () => {
     expect(store.shapeVersion).toBeNull()
   })
 })
+
+describe('useBootstrapStore cp block', () => {
+  const baseConfig = {
+    api_version: 'v1',
+    room_owner_percentage: 3,
+    receiver_percentage: 30,
+    wealth_levels: [level(1)],
+    charm_levels: [level(1)],
+    room_levels: [],
+    badges: [],
+    gifts: [],
+    vapid_public_key: null,
+    props: [],
+    vip_levels: [],
+  }
+
+  it('defaults to off when the block is absent', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig(baseConfig)
+    expect(store.cpEnabled).toBe(false)
+    expect(store.cpConfig).toEqual({ enabled: false, poll_seconds: 30, frame_male: null, frame_female: null })
+  })
+
+  it('parses a present block', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({
+      ...baseConfig,
+      cp: { enabled: true, poll_seconds: 45, frame_male: 7, frame_female: 9 },
+    })
+    expect(store.cpEnabled).toBe(true)
+    expect(store.cpConfig).toEqual({ enabled: true, poll_seconds: 45, frame_male: 7, frame_female: 9 })
+  })
+
+  it('turns off again when a later payload drops the block', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({ ...baseConfig, cp: { enabled: true, poll_seconds: 45, frame_male: null, frame_female: null } })
+    store.setConfig(baseConfig)
+    expect(store.cpEnabled).toBe(false)
+  })
+
+  it('resets to off on invalidateConfig("all")', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({ ...baseConfig, cp: { enabled: true, poll_seconds: 45, frame_male: null, frame_female: null } })
+    store.invalidateConfig('all')
+    expect(store.cpEnabled).toBe(false)
+  })
+})

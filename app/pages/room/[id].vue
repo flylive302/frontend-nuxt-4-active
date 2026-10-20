@@ -7,7 +7,7 @@
  */
 
 import type { StyleValue } from 'vue';
-import { DEFAULT_SEAT_COUNT, SEAT_GRID_WIDE_THRESHOLD } from '~/constants/room';
+import { DEFAULT_SEAT_COUNT } from '~/constants/room';
 import auth from '~/middleware/auth';
 
 definePageMeta({
@@ -38,6 +38,7 @@ const route = useRoute();
 const roomStore = useRoomStore();
 const roomSessionStore = useRoomSessionStore();
 const roomSession = useRoomSession();
+const { cpEnabled } = storeToRefs(useBootstrapStore());
 
 const { roomExpandStyle } = useRoomExpandTransition();
 const { src: roomBackgroundDisplaySrc } = useRoomBackground(() => roomStore.currentRoom?.background);
@@ -62,9 +63,10 @@ const seatCount = computed(() => roomStore.currentRoom?.max_seats ?? DEFAULT_SEA
  * Tailwind only emits classes it can read literally in the source. The previous
  * `grid-cols-${…}` template literal produced no candidate, so `grid-cols-6` was
  * never generated and wide rooms fell back to a single stacked column.
+ * The column count comes from `seatGridCols`; the class strings stay literal.
  */
 const seatGridClass = computed(() =>
-  seatCount.value > SEAT_GRID_WIDE_THRESHOLD ? 'grid-cols-6' : 'grid-cols-5',
+  seatGridCols(seatCount.value) === 6 ? 'grid-cols-6' : 'grid-cols-5',
 );
 
 const roomColor = computed(() => roomStore.currentRoom?.primary_color ?? null);
@@ -204,6 +206,8 @@ onUnmounted(() => {
               <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
             </main>
           </div>
+          <!-- CP hearts between adjacent partner seats (cp-event/12); chunk never loads with the flag off -->
+          <LazyCpEventSeatHearts v-if="cpEnabled" />
           <!-- Lucky Number: countdown / drawn-number reveal over the grid (lucky-number/01) -->
           <RoomLuckyNumberCenter />
         </div>

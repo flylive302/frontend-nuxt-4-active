@@ -487,13 +487,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
     <div ref="profileScrollRef" class="max-h-[58vh] overflow-scroll relative z-50 mt-2" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
 
-      <div class="mb-3">
-        <NuxtLink to="/cp-event/123-cp" class="flex justify-between">
-          <SectionTitle>Cp RelationShips</SectionTitle>
-          <UButton class="text-primary" icon="i-lucide-chevron-right" variant="soft" />
-        </NuxtLink>
-        <SvgaPlayer name="https://assets.flyliveapp.com/events/cp/1.svga" />
-      </div>
+      <ProfileCpSection :signature="signature" />
       <!-- Agency Section (conditional) -->
       <div v-if="profileWritable?.agency" class="mt-4">
         <SectionTitle>Agency</SectionTitle>
@@ -660,9 +654,9 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
     <!-- Action Footer -->
     <footer
+      v-if="hasProfile && !isOwnProfile"
       aria-label="Primary"
       class="fixed inset-x-2 z-50 bottom-4"
-      v-if="hasProfile && !isOwnProfile"
     >
       <div class="flex justify-end items-center px-1 py-1 gap-2 touch-manipulation select-none">
         <AgencyInviteButton :user-id="profileId" :agency-id="profileWritable?.agency?.id" />

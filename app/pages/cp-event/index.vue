@@ -1,210 +1,53 @@
 <script setup lang="ts">
-import { ASSETS } from '~/constants/assets'
+import { useInfiniteScroll } from '@vueuse/core'
+import { CP_PODIUM_SIZE } from '~/constants/cp-event'
 
-definePageMeta({ layout: 'cp', middleware: 'auth' })
+definePageMeta({ layout: 'cp', middleware: ['auth', 'cp-enabled'] })
+
+const LOAD_MORE_DISTANCE_PX = 600
+
+const { podium, rows, myPair, isLoading, isLoadingMore, error, loadMoreError, isEmpty, canLoadMore, loadMore, refetch } = useCpEventData()
+
+if (import.meta.client) {
+  useInfiniteScroll(() => window, loadMore, {
+    distance: LOAD_MORE_DISTANCE_PX,
+    canLoadMore: () => canLoadMore.value,
+  })
+}
 </script>
 
 <template>
   <section class="min-h-screen pb-34">
-    <!-- 9-slice frame: top art (rows 0-410 of card-top) / stretchable band / bottom art (rows 58-326 of card-bottom) -->
-    <img :src="ASSETS.CP_CARD_TOP" width="1480" height="600" fetchpriority="high" alt="" class="block h-auto w-full aspect-1480/410 object-cover object-top select-none">
-    <div class="frame-body -my-px -mt-12 px-[6%] text-white">
+    <CpEventCardFrame priority>
       <p class="text-center my-3">Send CP gifts and you and your love may be on the list!</p>
-      <!-- TOP 1 WINNER PODIUM -->
-      <div class="relative">
-        <img alt="" :src="ASSETS.CP_DECORATION_TOP_1" />
-        <div class="grid grid-cols-2 w-full px-22 gap-2 absolute top-8">
-          <div class="flex-col justify-center items-center text-center text-xs leading-none">
-            <UserAvatar
-                :frame-image-url="ASSETS.CP_RANK_FRAME"
-                user-name="Steve Fox"
-                :img="ASSETS.AVATAR_PLACEHOLDER"
-            />
-            <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-            <p>ID: 7897897</p>
-          </div>
 
-          <div class="flex-col justify-center items-center text-center text-xs leading-none">
-            <UserAvatar
-                user-name="Steve Fox"
-                :frame-image-url="ASSETS.CP_RANK_FRAME"
-                :img="ASSETS.AVATAR_PLACEHOLDER"
-            />
-            <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-            <p>ID: 7897897</p>
-          </div>
+      <CpEventPodium :pairs="podium" score-field="lifetime_intimacy" />
 
-          <div class="col-span-2 flex justify-center">
-            <div class="rounded-xl px-2 mb-1 bg-neutral-950/50">
-              <MarqueeName
-                  text-class="text-xs font-semibold text-center leading-none"
-                  name="❤️ OK"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TOP 2 and 3 WINNER PODIUM -->
-      <div class="flex mt-2 justify-center">
-        <div class="relative">
-          <img alt="" :src="ASSETS.CP_DECORATION_TOP_2" />
-          <div class="grid grid-cols-2 w-full px-4 gap-2 absolute top-8">
-            <div class="flex-col justify-center items-center text-center text-xs leading-none">
-              <UserAvatar
-                  :frame-image-url="ASSETS.CP_RANK_FRAME"
-                  user-name="Steve Fox"
-                  :img="ASSETS.AVATAR_PLACEHOLDER"
-              />
-              <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-              <p>ID: 7897897</p>
-            </div>
-
-            <div class="flex-col justify-center items-center text-center text-xs leading-none">
-              <UserAvatar
-                  :frame-image-url="ASSETS.CP_RANK_FRAME"
-                  user-name="Steve Fox"
-                  :img="ASSETS.AVATAR_PLACEHOLDER"
-              />
-              <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-              <p>ID: 7897897</p>
-            </div>
-
-            <div class="col-span-2 flex justify-center">
-              <MarqueeName
-                  text-class="text-xs font-semibold text-center drop-shadow-lg leading-none rounded-xl px-2 px-1 mb-1 bg-neutral-950/50"
-                  name="❤️ OK"
-              />
-            </div>
-          </div>
-
-        </div>
-
-        <div class="relative">
-          <img alt="" :src="ASSETS.CP_DECORATION_TOP_2" />
-          <div class="grid grid-cols-2 w-full px-4 gap-2 absolute top-8">
-            <div class="flex-col justify-center items-center text-center text-xs leading-none">
-              <UserAvatar
-                  :frame-image-url="ASSETS.CP_RANK_FRAME"
-                  user-name="Steve Fox"
-                  :img="ASSETS.AVATAR_PLACEHOLDER"
-              />
-              <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-              <p>ID: 7897897</p>
-            </div>
-
-            <div class="flex-col justify-center items-center text-center text-xs leading-none">
-              <UserAvatar
-                  :frame-image-url="ASSETS.CP_RANK_FRAME"
-                  user-name="Steve Fox"
-                  :img="ASSETS.AVATAR_PLACEHOLDER"
-              />
-              <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-              <p>ID: 7897897</p>
-            </div>
-
-            <div class="col-span-2 flex justify-center">
-              <MarqueeName
-                text-class="text-xs font-semibold text-center drop-shadow-lg leading-none rounded-xl px-2 px-1 mb-1 bg-neutral-950/50"
-                name="❤️ OK"
-              />
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!--  Infinite Scroll List of top 50 couples  -->
       <div class="flex flex-col gap-2 mt-4">
-
-        <div v-for="i in 50" :key="i" class="relative">
-          <img alt="" :src="ASSETS.CP_RANK_LIST_BACKGROUND" />
-          <div class="absolute inset-0 grid grid-cols-12">
-
-            <p class="text-white font-bold text-md flex flex-col justify-center items-center">{{i}}</p>
-            <div class="flex justify-center col-span-6">
-
-              <div class="w-15 flex flex-col justify-center items-center text-center text-xs leading-none">
-                <UserAvatar
-                    :frame-image-url="ASSETS.CP_RANK_FRAME"
-                    user-name="Steve Fox"
-                    :img="ASSETS.AVATAR_PLACEHOLDER"
-                />
-                <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-              </div>
-              <div class="w-8 flex flex-col justify-center items-center">
-                <img alt="" :src="ASSETS.CP_CONNECTION_ICON" />
-              </div>
-              <div class="w-15 flex flex-col justify-center items-center text-center text-xs leading-none">
-                <UserAvatar
-                    :frame-image-url="ASSETS.CP_RANK_FRAME"
-                    user-name="Steve Fox"
-                    :img="ASSETS.AVATAR_PLACEHOLDER"
-                />
-                <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-              </div>
-
-            </div>
-
-            <div class="col-span-3 col-start-10 pr-2 flex flex-col justify-center items-end">
-              <div class="rounded-xl px-2 mb-1 bg-neutral-950/50">
-                <MarqueeName
-                    text-class="text-xs font-semibold text-center leading-none"
-                    name="❤️ OK"
-                />
-              </div>
-            </div>
-
-          </div>
-        </div>
-
+        <CpEventRankRow
+          v-for="(pair, index) in rows"
+          :key="pair.pair_id"
+          :pair="pair"
+          :rank="pair.lifetime_rank ?? index + CP_PODIUM_SIZE + 1"
+          score-field="lifetime_intimacy"
+        />
       </div>
-    </div>
-    <img :src="ASSETS.CP_CARD_BOTTOM" width="1480" height="326" loading="lazy" decoding="async" alt="" class="block h-auto w-full aspect-1480/268 object-cover object-bottom select-none">
 
-    <div class="fixed inset-x-0 bottom-0 z-10">
-      <img :src="ASSETS.CP_RANK_SELF_BACKGROUND" alt="" class="">
-      <div class="absolute inset-0 grid grid-cols-12">
-
-        <p class="text-white font-bold text-md flex flex-col justify-center items-center">105</p>
-        <div class="flex justify-center col-span-6">
-
-          <div class="w-15 flex flex-col justify-center items-center text-center text-xs leading-none">
-            <UserAvatar
-                :frame-image-url="ASSETS.CP_RANK_FRAME"
-                user-name="Steve Fox"
-                :img="ASSETS.AVATAR_PLACEHOLDER"
-            />
-            <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-          </div>
-          <div class="w-8 flex flex-col justify-center items-center">
-            <img alt="" :src="ASSETS.CP_CONNECTION_ICON" />
-          </div>
-          <div class="w-15 flex flex-col justify-center items-center text-center text-xs leading-none">
-            <UserAvatar
-                :frame-image-url="ASSETS.CP_RANK_FRAME"
-                user-name="Steve Fox"
-                :img="ASSETS.AVATAR_PLACEHOLDER"
-            />
-            <MarqueeName text-class=" font-bold leading-none" name="User Name" :vip="10" />
-          </div>
-
-        </div>
-
-        <div class="col-span-3 col-start-10 pr-2 flex flex-col justify-center items-end">
-          <div class="rounded-xl px-2 mb-1 bg-neutral-950/50">
-            <MarqueeName
-                text-class="text-xs font-semibold text-center leading-none"
-                name="❤️ OK"
-            />
-          </div>
-        </div>
-
+      <p v-if="isEmpty" class="py-6 text-center font-semibold text-white/70">No couples on the list yet. Be the first!</p>
+      <div v-else-if="error && !podium.length" class="py-6 text-center">
+        <p class="font-semibold text-rose-300">Could not load the list.</p>
+        <UButton class="mt-2" variant="soft" @click="refetch">Retry</UButton>
       </div>
+      <p v-else-if="isLoading && !podium.length" class="py-6 text-center font-semibold">Loading…</p>
+      <p v-else-if="isLoadingMore" class="py-3 text-center text-sm">Loading…</p>
+      <div v-else-if="loadMoreError" class="py-3 text-center">
+        <p class="text-sm font-semibold text-rose-300">Could not load more.</p>
+        <UButton class="mt-2" variant="soft" size="sm" @click="loadMore">Retry</UButton>
+      </div>
+    </CpEventCardFrame>
+
+    <div v-if="myPair" class="fixed inset-x-0 bottom-0 z-10 text-white">
+      <CpEventRankRow :pair="myPair" :rank="myPair.weekly_rank" score-field="lifetime_intimacy" self />
     </div>
   </section>
 </template>
-
-<style scoped>
-
-</style>

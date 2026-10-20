@@ -237,13 +237,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
     </div>
 
     <div class="pb-24 mt-2 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
-      <div class="w-full mb-3">
-        <NuxtLink to="/cp-event/123-cp" class="flex justify-between">
-          <SectionTitle>Cp RelationShips</SectionTitle>
-          <UButton class="text-primary" icon="i-lucide-chevron-right" variant="soft" />
-        </NuxtLink>
-        <SvgaPlayer name="https://assets.flyliveapp.com/events/cp/1.svga" />
-      </div>
+      <ProfileCpSection :signature="authStore.user?.signature" />
 
 
       <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />

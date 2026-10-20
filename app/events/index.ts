@@ -14,6 +14,7 @@ import { useVipEvents } from './vip.events'
 import { useFollowEvents } from './follow.events'
 import { useSlideEvents } from './slide.events'
 import { useMissionEvents } from './mission.events'
+import { useCpEvents } from './cp.events'
 import { useInboxEvents } from './inbox.events'
 import { usePresenceEvents } from './presence.events'
 
@@ -39,6 +40,7 @@ export function useAllEventHandlers() {
   const registerFollow = useFollowEvents()
   const registerSlide = useSlideEvents()
   const registerMission = useMissionEvents()
+  const registerCp = useCpEvents()
   const registerInbox = useInboxEvents()
   const registerPresence = usePresenceEvents()
 
@@ -54,6 +56,7 @@ export function useAllEventHandlers() {
     registerFollow(socket)
     registerSlide(socket)
     registerMission(socket)
+    registerCp(socket)
     registerInbox(socket)
     registerPresence(socket)
   }
