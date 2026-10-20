@@ -73,3 +73,28 @@ export const CP_SEAT_HEARTS_MAX_ANIMATED = 2
 
 /** Rendered heart size in CSS px. */
 export const CP_SEAT_HEART_SIZE_PX = 28
+
+/**
+ * Full-screen animation played to everyone in the room each time two CP partners become
+ * seat neighbours (the moment their seat heart appears). Plays in the gift center lane.
+ */
+export const CP_BIND_FX_SVGA = 'https://assets.flyliveapp.com/events/cp/bind.svga'
+
+/** Placeholder keys inside CP_BIND_FX_SVGA — `01` = the left seat's partner, `02` = the right seat's. */
+export const CP_BIND_FX_LEFT_AVATAR_KEY = 'avatar01'
+export const CP_BIND_FX_RIGHT_AVATAR_KEY = 'avatar02'
+export const CP_BIND_FX_LEFT_NAME_KEY = 'username01'
+export const CP_BIND_FX_RIGHT_NAME_KEY = 'username02'
+
+/** Avatar fetch width in px — the SVGA's avatar slots are 191 units wide. */
+export const CP_BIND_FX_AVATAR_WIDTH = 192
+
+/** Synthetic gift id of the bind FX playback item — outside every real and entry-animation id. */
+export const CP_BIND_FX_GIFT_ID = Number.MIN_SAFE_INTEGER
+
+/**
+ * Forced cp/seat-partners refetches after a binding gift lands in the room. Only the two
+ * partners get cp.pair.bound; everyone else re-checks. Delayed because ApplyCpGift is queued,
+ * so an immediate fetch can run before the pair exists.
+ */
+export const CP_BIND_REFETCH_DELAYS_MS = [3000, 8000] as const

@@ -16,6 +16,7 @@ import { ref, computed, nextTick } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
 import { MAX_PLAYBACK_REPEATS } from '../../app/constants/gift'
 import { useUserBlocksStore } from '../../app/stores/userBlocks'
+import { useCpStore } from '../../app/stores/cp'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -67,6 +68,7 @@ function createMockSocket() {
 
 const NORMAL_GIFT = { id: 9, name: 'Golden Rose', label: null, price: 500, category: 'normal' }
 const LUCKY_GIFT = { id: 11, name: 'Lucky Coin', label: null, price: 100, category: 'lucky', thumbnail_url: 'lucky.png' }
+const BINDING_GIFT = { id: 43, name: 'Together', label: null, price: 11000, category: 'cp-gift', subcategory: 'binding' }
 
 describe('setupRoomEventHandlers — gift:batch', () => {
   beforeEach(() => {
@@ -75,6 +77,7 @@ describe('setupRoomEventHandlers — gift:batch', () => {
     // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
     // from blocked users. Real store, empty set = nothing blocked.
     vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
+    vi.stubGlobal('useCpStore', () => useCpStore())
     vi.useFakeTimers()
 
     vi.stubGlobal('usePropLookup', () => ({ resolvePropAsync: vi.fn().mockResolvedValue(null) }))
@@ -320,6 +323,34 @@ describe('setupRoomEventHandlers — gift:batch', () => {
 
       expect(roomStore.currentRoom?.daily_xp).toBe('500')
       expect(audioStore.messages).toHaveLength(1)
+    })
+  })
+
+  describe('CP binding gift', () => {
+    const batch = (seq: number, senderId: number) => ({
+      seq,
+      roomId: '1',
+      items: [{ senderId, giftId: 43, recipientIds: [3], quantity: 1, count: 1, transactionIds: [`bind-${seq}`] }],
+      lucky: [],
+    })
+
+    it('a binding gift from another user bumps the room binding-gift signal; the viewer\'s own does not', async () => {
+      const { socket } = await setup({ gift: BINDING_GIFT })
+      const cpStore = useCpStore()
+
+      socket.handlers.get('gift:batch')?.(batch(1, 2))
+      expect(cpStore.roomBindingGiftSignal).toBe(1)
+
+      socket.handlers.get('gift:batch')?.(batch(2, 1))
+      expect(cpStore.roomBindingGiftSignal).toBe(1)
+    })
+
+    it('a non-binding gift leaves the signal alone', async () => {
+      const { socket } = await setup()
+      const cpStore = useCpStore()
+
+      socket.handlers.get('gift:batch')?.({ ...batch(1, 2), items: [{ ...batch(1, 2).items[0]!, giftId: 9 }] })
+      expect(cpStore.roomBindingGiftSignal).toBe(0)
     })
   })
 })

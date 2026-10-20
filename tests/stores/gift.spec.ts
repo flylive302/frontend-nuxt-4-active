@@ -113,6 +113,50 @@ function videoPlayback(giftId: number, senderId: number) {
 }
 
 // ============================================================
+// Personalized items (svgaFills) never coalesce, in either direction
+// ============================================================
+describe('useGiftStore playback queue — personalized (svgaFills) items', () => {
+  const fills = (name: string) => ({ images: {}, texts: { username01: name } })
+
+  it('two personalized items with the same gift and sender stay separate', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback({ ...criticalPlayback(1, 10), svgaFills: fills('A') })
+    store.enqueuePlayback({ ...criticalPlayback(1, 10), svgaFills: fills('B') })
+
+    expect(store.currentPlayback?.svgaFills?.texts?.username01).toBe('A')
+    expect(store.currentPlayback?.repeats ?? 1).toBe(1)
+    expect(store.playbackQueue).toHaveLength(1)
+    expect(store.playbackQueue[0]?.svgaFills?.texts?.username01).toBe('B')
+    expect(store.playbackQueue[0]?.repeats ?? 1).toBe(1)
+  })
+
+  it('a plain item does not merge onto a playing personalized item', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback({ ...criticalPlayback(1, 10), svgaFills: fills('A') })
+    store.enqueuePlayback(criticalPlayback(1, 10))
+
+    expect(store.currentPlayback?.repeats ?? 1).toBe(1)
+    expect(store.playbackQueue).toHaveLength(1)
+  })
+
+  it('a plain item does not merge onto a queued personalized item', async () => {
+    const { useGiftStore } = await import('../../app/stores/gift')
+    const store = useGiftStore()
+
+    store.enqueuePlayback(criticalPlayback(2, 11)) // plays
+    store.enqueuePlayback({ ...criticalPlayback(1, 10), svgaFills: fills('A') }) // queued
+    store.enqueuePlayback(criticalPlayback(1, 10))
+
+    expect(store.playbackQueue).toHaveLength(2)
+    expect(store.playbackQueue[0]?.repeats ?? 1).toBe(1)
+  })
+})
+
+// ============================================================
 // Center lane — serial, non-interrupting (FIFO), unchanged semantics
 // ============================================================
 describe('useGiftStore playback queue — center lane (critical gifts)', () => {

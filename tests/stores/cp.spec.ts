@@ -67,4 +67,12 @@ describe('cp store', () => {
     expect(store.podium).toEqual([])
     expect(store.profileFor('abc')).not.toBeNull()
   })
+
+  it('bumpRoomBindingGiftSignal increments roomBindingGiftSignal', async () => {
+    const store = await makeStore()
+    expect(store.roomBindingGiftSignal).toBe(0)
+    store.bumpRoomBindingGiftSignal()
+    store.bumpRoomBindingGiftSignal()
+    expect(store.roomBindingGiftSignal).toBe(2)
+  })
 })

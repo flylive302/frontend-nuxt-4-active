@@ -4,15 +4,18 @@ import {
   CP_SEAT_HEART_SVGA,
   CP_SEAT_HEARTS_MAX_ANIMATED,
 } from '~/constants/cp-event'
+import { useCpBindFx } from '~/composables/room/useCpBindFx'
 
-// Overlay of CP hearts between adjacent partner seats. Mounted lazily inside the
-// room's seat-grid wrapper (pages/room/[id].vue) only while the CP event is on.
+// Overlay of CP hearts between adjacent partner seats, plus the full-screen bind FX
+// each time a couple sits together (useCpBindFx). Mounted lazily inside the room's
+// seat-grid wrapper (pages/room/[id].vue) only while the CP event is on.
 // Live SVGA only on capable (high-tier) devices and only for the first
 // CP_SEAT_HEARTS_MAX_ANIMATED hearts; everything else shows the cached still.
 // A heart that cannot load renders nothing.
 
 const rootRef = ref<HTMLElement | null>(null)
-const { hearts } = useCpSeatHearts(rootRef)
+const { hearts, couples, pairsSynced, hasSeatedPairs } = useCpSeatHearts(rootRef)
+useCpBindFx({ couples, pairsSynced, hasSeatedPairs })
 const { frameAnimationEnabled } = useFrameAnimationBudget()
 const { isVisible } = useDeferredVisibility(rootRef, true)
 

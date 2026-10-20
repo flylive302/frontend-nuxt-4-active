@@ -180,7 +180,7 @@ export const useGiftStore = defineStore('giftStore', () => {
     const end = Math.max(0, queue.length - MERGE_LOOKBACK);
     for (let i = start; i >= end; i--) {
       const candidate = queue[i];
-      if (candidate && candidate.gift.id === giftId && candidate.senderId === senderId) {
+      if (candidate && !candidate.svgaFills && candidate.gift.id === giftId && candidate.senderId === senderId) {
         return candidate;
       }
     }
@@ -191,10 +191,13 @@ export const useGiftStore = defineStore('giftStore', () => {
   function findPlayingMatch(lane: Lane, giftId: number, senderId: number): GiftPlaybackItem | undefined {
     if (lane === 'center') {
       const current = currentCenter.value;
-      return current && current.gift.id === giftId && current.senderId === senderId ? current : undefined;
+      return current && !current.svgaFills && current.gift.id === giftId && current.senderId === senderId
+        ? current
+        : undefined;
     }
     return currentSides.value.find(
-      (item): item is GiftPlaybackItem => !!item && item.gift.id === giftId && item.senderId === senderId,
+      (item): item is GiftPlaybackItem =>
+        !!item && !item.svgaFills && item.gift.id === giftId && item.senderId === senderId,
     );
   }
 
@@ -238,16 +241,19 @@ export const useGiftStore = defineStore('giftStore', () => {
     // senders, becomes one slot playing ×N instead of N separate plays.
     // Runs BEFORE the burst-shed gate: a coalesced repeat never grows the
     // queue, so shedding it would silently eat a paid combo press for zero
-    // backlog win.
-    const queuedMatch = findMergeCandidate(lane, item.gift.id, item.senderId);
-    if (queuedMatch && (queuedMatch.repeats ?? 1) < MAX_PLAYBACK_REPEATS) {
-      queuedMatch.repeats = (queuedMatch.repeats ?? 1) + 1;
-      return;
-    }
-    const playingMatch = findPlayingMatch(lane, item.gift.id, item.senderId);
-    if (playingMatch && (playingMatch.repeats ?? 1) < MAX_PLAYBACK_REPEATS) {
-      playingMatch.repeats = (playingMatch.repeats ?? 1) + 1;
-      return;
+    // backlog win. Personalized items (`svgaFills`) never coalesce, in either
+    // direction — a repeat would replay the first item's people.
+    if (!item.svgaFills) {
+      const queuedMatch = findMergeCandidate(lane, item.gift.id, item.senderId);
+      if (queuedMatch && (queuedMatch.repeats ?? 1) < MAX_PLAYBACK_REPEATS) {
+        queuedMatch.repeats = (queuedMatch.repeats ?? 1) + 1;
+        return;
+      }
+      const playingMatch = findPlayingMatch(lane, item.gift.id, item.senderId);
+      if (playingMatch && (playingMatch.repeats ?? 1) < MAX_PLAYBACK_REPEATS) {
+        playingMatch.repeats = (playingMatch.repeats ?? 1) + 1;
+        return;
+      }
     }
 
     const queue = laneQueue(lane);

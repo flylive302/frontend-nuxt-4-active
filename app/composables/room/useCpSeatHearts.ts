@@ -3,12 +3,15 @@
  *
  * GATE → EXECUTE → REACT:
  *  - trigger: debounced watch of the seated-occupant key (+ the viewer's own bind/break
- *    signal, + a slow 120 s timer while the tab is visible and ≥ 2 are seated)
+ *    signal, + delayed re-checks after a binding gift lands in the room, + a slow 120 s
+ *    timer while the tab is visible and ≥ 2 are seated)
  *  - GATE: CP enabled, ≥ 2 seated, occupant key changed since the last fetch
  *    (signal / slow-timer fetches skip the key check)
  *  - EXECUTE: ONE `cp/seat-partners` call, then the pure adjacency util
  *  - REACT: measure the two seats' rects relative to the overlay's wrapper
  *    (ResizeObserver + scroll re-measure, rAF-throttled)
+ *
+ * Also exposes the adjacent couples as user ids for the bind FX (useCpBindFx).
  *
  * Everything is torn down with the calling scope.
  */
@@ -22,11 +25,13 @@ import {
 import type { CpSeatPartnersResponse } from '~/types/cp'
 import { useApi } from '~/composables/shared/useApi'
 import {
+  CP_BIND_REFETCH_DELAYS_MS,
   CP_SEAT_HEARTS_DEBOUNCE_MS,
   CP_SEAT_HEARTS_SLOW_REFETCH_MS,
   CP_SEAT_PARTNERS_MAX_USERS,
 } from '~/constants/cp-event'
 import { DEFAULT_SEAT_COUNT } from '~/constants/room'
+import type { CpSeatedCouple } from '~/utils/cp-bind-fx'
 import { findAdjacentCpSeats } from '~/utils/cp-seat-adjacency'
 import { createLogger } from '~/utils/logger'
 
@@ -61,12 +66,22 @@ export function useCpSeatHearts(container: Ref<HTMLElement | null>) {
   const seatedIds = computed(() => seatUserIds.value.filter((id): id is number => id !== null))
   const occupantKey = computed(() => `${seatCount.value}:${seatUserIds.value.join(',')}`)
   const adjacent = computed(() => findAdjacentCpSeats(seatUserIds.value, pairs.value))
+  const couples = computed<CpSeatedCouple[]>(() =>
+    adjacent.value.flatMap(({ left, right }) => {
+      const leftUserId = seatUserIds.value[left]
+      const rightUserId = seatUserIds.value[right]
+      return leftUserId != null && rightUserId != null ? [{ leftUserId, rightUserId }] : []
+    }),
+  )
+  const hasSeatedPairs = computed(() => pairs.value.length > 0)
 
   // ========================================
   // EXECUTE — fetch
   // ========================================
 
-  let lastFetchedKey: string | null = null
+  const lastFetchedKey = ref<string | null>(null)
+  /** `pairs` reflects the current occupants (trivially so with fewer than two seated). */
+  const pairsSynced = computed(() => seatedIds.value.length < MIN_SEATED || lastFetchedKey.value === occupantKey.value)
   let inflight = false
   let rerun = false
   let rerunForce = false
@@ -76,12 +91,12 @@ export function useCpSeatHearts(container: Ref<HTMLElement | null>) {
     // GATE
     if (disposed || !bootstrapStore.cpEnabled) return
     if (seatedIds.value.length < MIN_SEATED) {
-      lastFetchedKey = null
+      lastFetchedKey.value = null
       pairs.value = []
       return
     }
     const key = occupantKey.value
-    if (!force && key === lastFetchedKey) return
+    if (!force && key === lastFetchedKey.value) return
     if (inflight) {
       rerun = true
       rerunForce ||= force
@@ -96,7 +111,7 @@ export function useCpSeatHearts(container: Ref<HTMLElement | null>) {
       })
       if (disposed) return
       pairs.value = response.data.pairs
-      lastFetchedKey = key
+      lastFetchedKey.value = key
     } catch (err) {
       log.warn('Failed to fetch cp/seat-partners', err)
     } finally {
@@ -121,6 +136,21 @@ export function useCpSeatHearts(container: Ref<HTMLElement | null>) {
     () => cpStore.pairMembershipSignal,
     () => { void load(true) },
     { debounce: CP_SEAT_HEARTS_DEBOUNCE_MS },
+  )
+
+  // A binding gift may have just paired two other users. Re-check after the queued
+  // ApplyCpGift has had time to commit; a newer gift restarts the schedule.
+  let bindTimers: ReturnType<typeof setTimeout>[] = []
+  function clearBindTimers(): void {
+    for (const timer of bindTimers) clearTimeout(timer)
+    bindTimers = []
+  }
+  watch(
+    () => cpStore.roomBindingGiftSignal,
+    () => {
+      clearBindTimers()
+      bindTimers = CP_BIND_REFETCH_DELAYS_MS.map((delay) => setTimeout(() => { void load(true) }, delay))
+    },
   )
 
   const slowTimer = setInterval(() => {
@@ -182,9 +212,10 @@ export function useCpSeatHearts(container: Ref<HTMLElement | null>) {
   onScopeDispose(() => {
     disposed = true
     clearInterval(slowTimer)
+    clearBindTimers()
     if (frame !== null && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(frame)
     frame = null
   })
 
-  return { hearts: readonly(hearts) }
+  return { hearts: readonly(hearts), couples, pairsSynced, hasSeatedPairs }
 }

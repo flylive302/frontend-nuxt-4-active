@@ -38,7 +38,7 @@ import { useLuckyFly } from '../lucky/useLuckyFly';
 import * as giftAssetCache from '~/services/giftAssetCache';
 import { resolveSvgaPlugin } from '../gift/useSvgaPlugin';
 import { propToEntryAnimationGift } from '~/utils/prop';
-import { batchItemTaps, isLuckyCategory } from '~/utils/gift';
+import { batchItemTaps, isBindingGift, isLuckyCategory } from '~/utils/gift';
 import { createLogger } from '~/utils/logger';
 import { SPEAKER_ACTIVE_TTL_MS, CHAT_MESSAGE_TYPE_GIFT } from '~/constants/room';
 import { LUCKY_NUMBER } from '~/constants/lucky-number';
@@ -405,6 +405,7 @@ export function setupRoomEventHandlers(
   const giftStore = useGiftStore();
   const capabilitiesStore = useServerCapabilitiesStore();
   const userBlocksStore = useUserBlocksStore();
+  const cpStore = useCpStore();
 
   // Throttle for the ackBalance "gift refunded" toast (ticket 13) — separate
   // timer from the legacy burst-rejection cooldown; scoped to this room
@@ -818,6 +819,10 @@ export function setupRoomEventHandlers(
       synthesizeGiftChatMessage(audioStore, participantsStore, event, giftForValue, event.recipientIds);
     }
 
+    // CP: a binding gift may have just paired two seated users — seat hearts
+    // re-check (the sender + recipient learn it from cp.pair.bound instead).
+    if (giftForValue && isBindingGift(giftForValue)) cpStore.bumpRoomBindingGiftSignal();
+
     // Skip if current user is the sender
     if (event.senderId === authStore.user?.id) return;
 
@@ -897,6 +902,9 @@ export function setupRoomEventHandlers(
       // items must be skipped here entirely (XP included), or every one of
       // those effects double-books on the sender's own screen.
       if (item.senderId === authStore.user?.id) continue;
+
+      // CP: same binding-gift re-check as the legacy `gift:received` path.
+      if (isBindingGift(gift)) cpStore.bumpRoomBindingGiftSignal();
 
       // `item.quantity` is the merged TOTAL on the wire (MSAB sums it across
       // the `count` taps) — split it back to per-tap before any consumer

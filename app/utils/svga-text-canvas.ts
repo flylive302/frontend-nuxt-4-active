@@ -92,3 +92,49 @@ export function buildSvgaTextCanvases(
 
   return Object.keys(out).length ? out : undefined
 }
+
+/** Style for {@link buildSvgaTextFactories}: font bounds plus a slot-height cap. */
+export interface SvgaSlotTextStyle {
+  color: string
+  fontFamily: string
+  fontWeight: string
+  minFontSize: number
+  maxFontSize: number
+  /** Font size is capped at this share of the slot height. */
+  slotRatio: number
+  maxLines: number
+  lineHeight: number
+  paddingX: number
+}
+
+/**
+ * Slot-sized text factories for SvgaPlayer's `dynamicElementFactories`: each
+ * text is drawn at exactly its SVGA slot's size, since the lib draws dynamic
+ * elements unscaled and clips a canvas that doesn't match. Blank texts are
+ * skipped; returns undefined when nothing is left.
+ */
+export function buildSvgaTextFactories(
+  texts: Record<string, string | null | undefined>,
+  style: SvgaSlotTextStyle,
+): Record<string, (width: number, height: number) => HTMLCanvasElement | null> | undefined {
+  const out: Record<string, (width: number, height: number) => HTMLCanvasElement | null> = {}
+
+  for (const [key, text] of Object.entries(texts)) {
+    if (!text) continue
+    out[key] = (width, height) =>
+      renderSvgaTextCanvas(text, {
+        width,
+        height,
+        color: style.color,
+        fontFamily: style.fontFamily,
+        fontWeight: style.fontWeight,
+        maxFontSize: Math.max(style.minFontSize, Math.min(style.maxFontSize, Math.floor(height * style.slotRatio))),
+        minFontSize: style.minFontSize,
+        maxLines: style.maxLines,
+        lineHeight: style.lineHeight,
+        paddingX: style.paddingX,
+      })
+  }
+
+  return Object.keys(out).length ? out : undefined
+}

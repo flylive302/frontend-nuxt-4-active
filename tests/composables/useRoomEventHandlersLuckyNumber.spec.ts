@@ -12,6 +12,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
 import { useUserBlocksStore } from '../../app/stores/userBlocks'
+import { useCpStore } from '../../app/stores/cp'
 import { LUCKY_NUMBER } from '../../app/constants/lucky-number'
 
 vi.stubGlobal('ref', ref)
@@ -58,6 +59,7 @@ describe('setupRoomEventHandlers — Lucky Number', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
+    vi.stubGlobal('useCpStore', () => useCpStore())
     vi.useFakeTimers()
 
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(GOLDEN_ROSE) }))

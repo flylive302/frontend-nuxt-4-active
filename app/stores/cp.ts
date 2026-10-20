@@ -29,6 +29,11 @@ export const useCpStore = defineStore('cp', () => {
   const pairMembershipSignal = ref(0)
   /** Bumped on cp.week.closed (broadcast). */
   const weekClosedSignal = ref(0)
+  /**
+   * Bumped when a binding gift lands in the viewer's room — a pair may have just formed
+   * between two other users, who alone get cp.pair.bound. Seat hearts re-check on it.
+   */
+  const roomBindingGiftSignal = ref(0)
 
   // ========================================
   // Computed
@@ -107,6 +112,10 @@ export const useCpStore = defineStore('cp', () => {
     weekClosedSignal.value++
   }
 
+  function bumpRoomBindingGiftSignal(): void {
+    roomBindingGiftSignal.value++
+  }
+
   function reset(): void {
     resetEvent()
     profilesBySignature.value = {}
@@ -114,9 +123,9 @@ export const useCpStore = defineStore('cp', () => {
 
   return {
     podium, rows, nextOffset, myPair, week, hasLoaded, profilesBySignature,
-    pairSignal, pairMembershipSignal, weekClosedSignal,
+    pairSignal, pairMembershipSignal, weekClosedSignal, roomBindingGiftSignal,
     weekKey, closesAt, serverTime, isEmpty,
     setList, mergeHead, appendRows, setMyPair, setWeek, setProfile, profileFor, resetEvent,
-    bumpPairSignal, bumpWeekClosedSignal, reset,
+    bumpPairSignal, bumpWeekClosedSignal, bumpRoomBindingGiftSignal, reset,
   }
 })

@@ -13,6 +13,7 @@ import { ref, computed, nextTick } from 'vue'
 import { seatGiftValue } from '../../app/utils/gift'
 import { CHAT_MESSAGE_TYPE_GIFT } from '../../app/constants/room'
 import { useUserBlocksStore } from '../../app/stores/userBlocks'
+import { useCpStore } from '../../app/stores/cp'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -61,6 +62,7 @@ describe('setupRoomEventHandlers — gift chat announcement bubbles', () => {
     // `useRoomEventHandlers` reads the blocked-sender set to drop chat lines
     // from blocked users. Real store, empty set = nothing blocked.
     vi.stubGlobal('useUserBlocksStore', () => useUserBlocksStore())
+    vi.stubGlobal('useCpStore', () => useCpStore())
     vi.useFakeTimers()
 
     vi.stubGlobal('useGiftData', () => ({ getGiftById: vi.fn().mockReturnValue(GOLDEN_ROSE) }))

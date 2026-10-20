@@ -117,6 +117,20 @@ export interface GiftPlaybackItem {
    * `true` plays the real SVGA; `false`/undefined shows the static thumbnail.
    */
   playSvga?: boolean;
+  /**
+   * Per-item SVGA placeholder fills for a personalized playback (e.g. the CP
+   * bind FX naming both partners). Items carrying fills never coalesce with
+   * another item — each one shows different people.
+   */
+  svgaFills?: SvgaFills;
+}
+
+/** SVGA placeholder key → content, applied to one playback. */
+export interface SvgaFills {
+  /** Image key → URL (e.g. avatars). Empty/broken URLs keep the baked layer. */
+  images: Record<string, string>;
+  /** Text key → string, drawn fitted to the key's slot. */
+  texts: Record<string, string>;
 }
 
 // ============================================

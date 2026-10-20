@@ -24,6 +24,11 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
   // Seats (15 speaker seats)
   // ========================================
   const seats = ref<Seat[]>(createEmptySeats());
+  /**
+   * True once the join snapshot has been applied, false again on reset — lets
+   * consumers tell occupants already seated on arrival from live seat changes.
+   */
+  const seatsHydrated = ref(false);
 
   // ========================================
   // Seat Gift Totals (ephemeral per-session)
@@ -360,6 +365,11 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     luckyNumberEnabled.value = false;
     clearLuckyNumber();
     seats.value = createEmptySeats();
+    seatsHydrated.value = false;
+  }
+
+  function setSeatsHydrated(hydrated: boolean): void {
+    seatsHydrated.value = hydrated;
   }
 
   /**
@@ -466,6 +476,8 @@ export const useRoomSeatsStore = defineStore('roomSeatsStore', () => {
     resetSeats,
     setSeatCount,
     reconcileSeats,
+    seatsHydrated,
+    setSeatsHydrated,
     clearParticipantFromSeat,
     setSeatMutedByUserId,
 

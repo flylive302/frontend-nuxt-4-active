@@ -212,3 +212,17 @@ export const GIFT_REFUND_TOAST_MESSAGE = 'Some coins from that gift were refunde
  * are different events and each gets its own throttle.
  */
 export const GIFT_REFUND_TOAST_COOLDOWN_MS = 3000;
+
+/**
+ * Text drawn into a personalized gift SVGA's name slots (e.g. the CP bind FX).
+ * Each string is rendered at exactly its slot's size; the font starts at
+ * `GIFT_SVGA_TEXT_SLOT_RATIO` × slot height (capped at the max) and shrinks,
+ * then ellipsizes, to fit.
+ */
+export const GIFT_SVGA_TEXT_COLOR = '#ffffff';
+export const GIFT_SVGA_TEXT_FONT_FAMILY = 'Inter, sans-serif';
+export const GIFT_SVGA_TEXT_FONT_WEIGHT = 'bold';
+export const GIFT_SVGA_TEXT_MIN_FONT_SIZE = 14;
+export const GIFT_SVGA_TEXT_MAX_FONT_SIZE = 40;
+export const GIFT_SVGA_TEXT_SLOT_RATIO = 0.6;
+export const GIFT_SVGA_TEXT_PADDING_X = 8;

@@ -771,6 +771,7 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
       seatsStore.reconcileSeats(snapshot);
     }
+    seatsStore.setSeatsHydrated(true);
 
     // Initialize locked seats (if provided by server)
     if (response.lockedSeats) {

@@ -99,9 +99,11 @@ v-if="currentPlayback.gift.asset_type === 'video'" :key="`video-${currentPlaybac
 
       <!-- SVGA Player -->
       <RoomGiftSvgaPlayer
-v-else-if="currentPlayback.gift.asset_type === 'svga'" :key="`svga-${currentPlayback.id}`" class="w-full"
-        :name="currentPlayback.gift.animation_url ?? ''" @complete="handleComplete"
-        @progress="handleProgress" />
+v-else-if="currentPlayback.gift.asset_type === 'svga'" :key="`svga-${currentPlayback.id}`"
+        class="w-full object-contain"
+        :name="currentPlayback.gift.animation_url ?? ''"
+        :replace-elements="currentPlayback.svgaFills?.images" :texts="currentPlayback.svgaFills?.texts"
+        @complete="handleComplete" @progress="handleProgress" />
 
       <!-- VAP Player (MP4 + alpha via WebGL) -->
       <VapPlayer
