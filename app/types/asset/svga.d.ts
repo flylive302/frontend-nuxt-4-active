@@ -131,6 +131,8 @@ export interface CreateSvgaPlayerOptions {
   replaceElements?: Record<string, HTMLImageElement>
   dynamicElements?: Record<string, HTMLCanvasElement>
   dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>
+  /** Skip drawing while off-screen (default true). False for detached still-frame canvases. */
+  viewportGated?: boolean
 }
 
 /**

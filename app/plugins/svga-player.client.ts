@@ -244,6 +244,12 @@ export default defineNuxtPlugin({
              * resolveDynamicElementFactories.
              */
             dynamicElementFactories?: Record<string, (width: number, height: number) => HTMLCanvasElement | null>;
+            /**
+             * Skip drawing while the canvas is off-screen (default true). Pass
+             * false for detached canvases (still-frame renders): they never
+             * intersect, so a gated drawFrame() leaves them blank.
+             */
+            viewportGated?: boolean;
         }) => {
             await ensureSvga();
             // svga-removal 03: viewport gating for every consumer. The lib skips
@@ -254,7 +260,7 @@ export default defineNuxtPlugin({
             const player = new _PlayerCtor({
                 container: options.canvas,
                 loop: options.loop ?? 0,
-                isUseIntersectionObserver: true
+                isUseIntersectionObserver: options.viewportGated ?? true
             });
             // The lib's destroy() never disconnects its IntersectionObserver,
             // leaking an observer (and a canvas ref) per destroyed player —

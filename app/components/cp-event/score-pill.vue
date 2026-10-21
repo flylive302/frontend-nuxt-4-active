@@ -9,5 +9,5 @@ defineProps<{
 </script>
 
 <template>
-  <p class="rounded-xl px-2 mb-1 bg-neutral-950/50 text-xs font-semibold leading-none text-white">❤️ {{ formatCurrency(value) }}</p>
+  <p class="rounded-xl px-2 py-1 bg-neutral-950/50 text-xs font-semibold leading-none text-white">❤️ {{ formatCurrency(value) }}</p>
 </template>

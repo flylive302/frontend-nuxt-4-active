@@ -24,8 +24,8 @@ export const BOOTSTRAP_SHAPE_VERSION = 1
 export const CP_BOOTSTRAP_DEFAULTS = {
   enabled: false,
   poll_seconds: 30,
-  frame_male: null,
-  frame_female: null,
+  frame_male: 29,
+  frame_female: 28,
 } as const
 
 /** Longest the CP route gate waits for a cold-start bootstrap before treating CP as off. */

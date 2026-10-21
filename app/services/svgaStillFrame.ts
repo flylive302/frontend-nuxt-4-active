@@ -24,6 +24,7 @@ export interface SvgaStillPlugin {
     canvas: HTMLCanvasElement
     name: string
     autoplay?: boolean
+    viewportGated?: boolean
   }) => Promise<SvgaStillPlayerHandle>
 }
 
@@ -79,7 +80,9 @@ export function clearSvgaStillFrameCache(): void {
 
 async function renderStillFrame(url: string, svgaPlugin: SvgaStillPlugin): Promise<string | null> {
   const canvas = document.createElement('canvas')
-  const player = await svgaPlugin.createSvgaPlayer({ canvas, name: url, autoplay: false })
+  // Detached canvas never intersects the viewport — an observer-gated player
+  // would skip drawFrame() and cache a blank still forever.
+  const player = await svgaPlugin.createSvgaPlayer({ canvas, name: url, autoplay: false, viewportGated: false })
 
   try {
     if (typeof player.drawFrame !== 'function') {

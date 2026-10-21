@@ -50,7 +50,7 @@ describe('svgaStillFrame', () => {
     const result = await getSvgaStillFrame(FRAME_URL, plugin)
 
     expect(createSvgaPlayer).toHaveBeenCalledWith(
-      expect.objectContaining({ name: FRAME_URL, autoplay: false }),
+      expect.objectContaining({ name: FRAME_URL, autoplay: false, viewportGated: false }),
     )
     expect(drawFrame).toHaveBeenCalledWith(0)
     expect(destroy).toHaveBeenCalledTimes(1)
