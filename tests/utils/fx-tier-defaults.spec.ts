@@ -10,16 +10,16 @@ import {
 // cost-and-speed-tuning/14 — weak phones: gift/entry muted + no view transitions by default.
 
 describe('defaultFxForTier', () => {
-  it.each(['low', 'mid', 'unknown'] as const)('%s -> everything off', (tier) => {
-    expect(defaultFxForTier(tier)).toEqual({
+  it('low -> everything off', () => {
+    expect(defaultFxForTier('low')).toEqual({
       giftAnimations: false,
       entryAnimations: false,
       viewTransitions: false,
     })
   })
 
-  it('high -> everything on (current behaviour)', () => {
-    expect(defaultFxForTier('high')).toEqual({
+  it.each(['mid', 'high', 'unknown'] as const)('%s -> everything on (current behaviour)', (tier) => {
+    expect(defaultFxForTier(tier)).toEqual({
       giftAnimations: true,
       entryAnimations: true,
       viewTransitions: true,

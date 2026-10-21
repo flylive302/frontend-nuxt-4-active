@@ -6,7 +6,7 @@
  * `false` here skips the snapshot for that navigation only. `to.meta` is a
  * fresh object per resolved location, so nothing leaks to other navigations.
  *
- * Tier decision lives in `utils/fx-tier-defaults.ts` (low/mid/unknown -> off).
+ * Tier decision lives in `utils/fx-tier-defaults.ts` (low -> off).
  */
 import { defaultFxForTier, readFxTier, resolveFxEnabled } from '~/utils/fx-tier-defaults'
 

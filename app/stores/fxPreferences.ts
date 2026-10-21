@@ -23,7 +23,7 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
 
   /**
    * Gift Mute switch, MUTE axis (cost-and-speed-tuning/14): `auto` = device tier
-   * decides (muted on low/mid/unknown), `on` = muted, `off` = always plays.
+   * decides (muted on low only), `on` = muted, `off` = always plays.
    * Persisted under the legacy key name; the old boolean shape is migrated in
    * `afterHydrate` below (false -> auto, true -> on). Read the EFFECTIVE value
    * through `giftAnimationsMuted`, never this raw switch.

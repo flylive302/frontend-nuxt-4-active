@@ -3,9 +3,11 @@
  *
  * Pure decision module: which visual effects run by default on this device
  * class, and how the user's switch overrides that. Same shape as
- * `frame-animation-tier.ts`; it reuses `classifyDeviceClass()` unchanged, so
- * `low` + `mid` + `unknown` are all "weak" and only `high` keeps today's
- * behaviour.
+ * `frame-animation-tier.ts`; it reuses `classifyDeviceClass()` unchanged.
+ * Only `low` is "weak"; `mid`, `high` and `unknown` keep today's behaviour.
+ * Operator call 2026-10-22: `mid` covers most iPhones and 4-6 GB Androids
+ * (Chrome rounds deviceMemory down), and muting paid gifts for them by
+ * default was rejected — revisit `mid` with tier telemetry.
  *
  * Semantics of the two persisted switches (Gift Mute / Entry Mute) are on the
  * MUTE axis, matching the existing UI wording:
@@ -35,10 +37,10 @@ export interface FxTierDefaults {
   viewTransitions: boolean;
 }
 
-/** Tier defaults: only `high` devices keep every effect. */
+/** Tier defaults: only `low` devices lose effects by default. */
 export function defaultFxForTier(deviceClass: DeviceClass): FxTierDefaults {
-  const high = deviceClass === 'high';
-  return { giftAnimations: high, entryAnimations: high, viewTransitions: high };
+  const enabled = deviceClass !== 'low';
+  return { giftAnimations: enabled, entryAnimations: enabled, viewTransitions: enabled };
 }
 
 /** Type guard for values read back from persisted storage. */

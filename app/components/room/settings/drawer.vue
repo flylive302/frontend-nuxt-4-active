@@ -174,7 +174,7 @@ watch(open, (isOpen) => {
           </button>
 
           <!-- Gift Mute (everyone; tri-state: tap cycles Auto -> On -> Off. `On` = muted.
-               Highlighted whenever the EFFECTIVE state is muted, Auto included on weak phones) -->
+               Highlighted whenever the EFFECTIVE state is muted, Auto included on low-tier phones) -->
           <button
             type="button"
             class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-1"

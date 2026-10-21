@@ -84,12 +84,15 @@ describe('fxPreferencesStore', () => {
     vi.stubGlobal('navigator', realNavigator)
   })
 
-  it('unknown tier (no signals) is treated as weak', async () => {
+  it.each([
+    ['unknown (no signals)', {}],
+    ['mid (4 GB)', { deviceMemory: 4 }],
+  ])('%s tier keeps animations on by default', async (_label, nav) => {
     const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
-    vi.stubGlobal('navigator', {})
+    vi.stubGlobal('navigator', nav)
     const store = useFxPreferencesStore()
 
-    expect(store.giftAnimationsMuted).toBe(true)
+    expect(store.giftAnimationsMuted).toBe(false)
     vi.stubGlobal('navigator', realNavigator)
   })
 
