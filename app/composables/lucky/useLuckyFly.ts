@@ -88,7 +88,7 @@ export function useLuckyFly() {
   ): void {
     // GATE: Gift Mute preference suppresses the fly visual on this device only —
     // the lucky send/win itself (balances, session state) is already booked.
-    if (useFxPreferencesStore().muteGiftAnimations) return;
+    if (useFxPreferencesStore().giftAnimationsMuted) return;
     // GATE: no canvas mounted (not on the room page) — nothing to draw on.
     if (!renderer) return;
     // GATE (gift-backlog-and-lag 01): nobody is watching — app backgrounded or

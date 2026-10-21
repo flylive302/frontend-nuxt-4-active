@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, createApp, ref } from 'vue'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -9,6 +9,8 @@ vi.stubGlobal('piniaPluginPersistedstate', {
   localStorage: () => ({}),
   sessionStorage: () => ({}),
 })
+
+const realNavigator = globalThis.navigator
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -43,25 +45,72 @@ describe('fxPreferencesStore', () => {
     expect(store.animatedAvatarFrames).toBe('off')
   })
 
-  it('toggleGiftMute still flips muteGiftAnimations', async () => {
+  it('mute switches default to auto', async () => {
     const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
     const store = useFxPreferencesStore()
 
-    expect(store.muteGiftAnimations).toBe(false)
-    store.toggleGiftMute()
-    expect(store.muteGiftAnimations).toBe(true)
-    store.toggleGiftMute()
-    expect(store.muteGiftAnimations).toBe(false)
+    expect(store.muteGiftAnimations).toBe('auto')
+    expect(store.muteEntryAnimations).toBe('auto')
   })
 
-  it('toggleEntryMute still flips muteEntryAnimations', async () => {
+  it('setGiftMute / setEntryMute store the raw switch', async () => {
     const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
     const store = useFxPreferencesStore()
 
-    expect(store.muteEntryAnimations).toBe(false)
-    store.toggleEntryMute()
-    expect(store.muteEntryAnimations).toBe(true)
-    store.toggleEntryMute()
-    expect(store.muteEntryAnimations).toBe(false)
+    store.setGiftMute('on')
+    store.setEntryMute('off')
+    expect(store.muteGiftAnimations).toBe('on')
+    expect(store.muteEntryAnimations).toBe('off')
+  })
+
+  it('auto resolves through the tier; user switch wins both ways', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+
+    vi.stubGlobal('navigator', { deviceMemory: 2 })
+    const weak = useFxPreferencesStore()
+    expect(weak.giftAnimationsMuted).toBe(true)
+    expect(weak.entryAnimationsMuted).toBe(true)
+    weak.setGiftMute('off')
+    expect(weak.giftAnimationsMuted).toBe(false)
+
+    setActivePinia(createPinia())
+    vi.stubGlobal('navigator', { deviceMemory: 8 })
+    const strong = useFxPreferencesStore()
+    expect(strong.giftAnimationsMuted).toBe(false)
+    expect(strong.entryAnimationsMuted).toBe(false)
+    strong.setEntryMute('on')
+    expect(strong.entryAnimationsMuted).toBe(true)
+
+    vi.stubGlobal('navigator', realNavigator)
+  })
+
+  it('unknown tier (no signals) is treated as weak', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    vi.stubGlobal('navigator', {})
+    const store = useFxPreferencesStore()
+
+    expect(store.giftAnimationsMuted).toBe(true)
+    vi.stubGlobal('navigator', realNavigator)
+  })
+
+  it('migrates persisted legacy booleans on hydrate (false -> auto, true -> on)', async () => {
+    const { createPersistedState } = await import('pinia-plugin-persistedstate')
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const data = new Map<string, string>([
+      ['fxPreferencesStore', JSON.stringify({ muteGiftAnimations: true, muteEntryAnimations: false })],
+    ])
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+    }
+    const pinia = createPinia()
+    // Plugins are queued until the pinia is installed on an app.
+    createApp({}).use(pinia)
+    pinia.use(createPersistedState({ storage }))
+    setActivePinia(pinia)
+
+    const store = useFxPreferencesStore()
+    expect(store.muteGiftAnimations).toBe('on')
+    expect(store.muteEntryAnimations).toBe('auto')
   })
 })

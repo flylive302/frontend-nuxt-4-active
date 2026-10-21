@@ -8,17 +8,33 @@
  */
 import { defineStore } from 'pinia';
 import type { AnimatedAvatarFramesPreference } from '~/utils/frame-animation-tier';
+import {
+  defaultFxForTier,
+  normalizeFxMutePreference,
+  readFxTier,
+  resolveFxMuted,
+  type FxMutePreference,
+} from '~/utils/fx-tier-defaults';
 
 export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
   // ========================================
   // State
   // ========================================
 
-  /** When true, no gift animation (playback modal / lucky fly) renders on this device. */
-  const muteGiftAnimations = ref(false);
+  /**
+   * Gift Mute switch, MUTE axis (cost-and-speed-tuning/14): `auto` = device tier
+   * decides (muted on low/mid/unknown), `on` = muted, `off` = always plays.
+   * Persisted under the legacy key name; the old boolean shape is migrated in
+   * `afterHydrate` below (false -> auto, true -> on). Read the EFFECTIVE value
+   * through `giftAnimationsMuted`, never this raw switch.
+   */
+  const muteGiftAnimations = ref<FxMutePreference>('auto');
 
-  /** When true, no entry animation renders on this device when a user joins. */
-  const muteEntryAnimations = ref(false);
+  /** Entry Mute switch, same semantics as `muteGiftAnimations`. */
+  const muteEntryAnimations = ref<FxMutePreference>('auto');
+
+  /** Hardware does not change for the life of the page; read once. */
+  const tierDefaults = defaultFxForTier(readFxTier());
 
   /**
    * Animated seat avatar frames (android-client-performance/16, ADR 0039).
@@ -29,15 +45,29 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
   const animatedAvatarFrames = ref<AnimatedAvatarFramesPreference>('auto');
 
   // ========================================
+  // Computed
+  // ========================================
+
+  /** Effective: true = no gift animation renders (switch x tier). */
+  const giftAnimationsMuted = computed(() =>
+    resolveFxMuted(normalizeFxMutePreference(muteGiftAnimations.value), tierDefaults.giftAnimations),
+  );
+
+  /** Effective: true = no entry animation renders (switch x tier). */
+  const entryAnimationsMuted = computed(() =>
+    resolveFxMuted(normalizeFxMutePreference(muteEntryAnimations.value), tierDefaults.entryAnimations),
+  );
+
+  // ========================================
   // Setters
   // ========================================
 
-  function toggleGiftMute() {
-    muteGiftAnimations.value = !muteGiftAnimations.value;
+  function setGiftMute(value: FxMutePreference) {
+    muteGiftAnimations.value = value;
   }
 
-  function toggleEntryMute() {
-    muteEntryAnimations.value = !muteEntryAnimations.value;
+  function setEntryMute(value: FxMutePreference) {
+    muteEntryAnimations.value = value;
   }
 
   function setAnimatedAvatarFrames(value: AnimatedAvatarFramesPreference) {
@@ -48,8 +78,10 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
     muteGiftAnimations,
     muteEntryAnimations,
     animatedAvatarFrames,
-    toggleGiftMute,
-    toggleEntryMute,
+    giftAnimationsMuted,
+    entryAnimationsMuted,
+    setGiftMute,
+    setEntryMute,
     setAnimatedAvatarFrames,
   };
 }, {
@@ -57,5 +89,13 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
   // COOKIE until 2026-08-22 — see that file's note before changing it.
   persist: {
     pick: ['muteGiftAnimations', 'muteEntryAnimations', 'animatedAvatarFrames'],
+    // One-shot migration: installs persisted these as booleans. `$patch` copies
+    // whatever shape is in storage, so normalize right after hydration; the next
+    // persist write stores the tri-state. The computeds normalize too, so a stray
+    // legacy value can never mis-resolve even if this hook did not run.
+    afterHydrate: ({ store }) => {
+      store.muteGiftAnimations = normalizeFxMutePreference(store.muteGiftAnimations);
+      store.muteEntryAnimations = normalizeFxMutePreference(store.muteEntryAnimations);
+    },
   },
 });

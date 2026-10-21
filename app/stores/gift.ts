@@ -214,7 +214,7 @@ export const useGiftStore = defineStore('giftStore', () => {
     // Balances/XP/transactions are booked by callers BEFORE enqueueing, so a
     // dropped item only skips the visual.
     const fxPrefs = useFxPreferencesStore();
-    if (item.isEntryAnimation ? fxPrefs.muteEntryAnimations : fxPrefs.muteGiftAnimations) return;
+    if (item.isEntryAnimation ? fxPrefs.entryAnimationsMuted : fxPrefs.giftAnimationsMuted) return;
 
     // GATE (gift-backlog-and-lag 01): nobody is watching — app backgrounded or
     // tab hidden. Balances/XP/chat are already booked by the caller; queuing

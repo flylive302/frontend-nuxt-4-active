@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FxMutePreference } from '~/utils/fx-tier-defaults'
 // ========================================
 // Room Settings Drawer (Hub)
 // ========================================
@@ -33,6 +34,10 @@ const showAudio = ref(false)
 
 const roomStore = useRoomStore()
 const fxPrefs = useFxPreferencesStore()
+// Tri-state labels on the MUTE axis (Auto = device tier decides, On = muted, Off = always plays).
+const FX_MUTE_LABELS: Record<FxMutePreference, string> = { auto: 'Auto', on: 'On', off: 'Off' }
+const giftMutePref = computed(() => normalizeFxMutePreference(fxPrefs.muteGiftAnimations))
+const entryMutePref = computed(() => normalizeFxMutePreference(fxPrefs.muteEntryAnimations))
 const { socket } = useAudioSocket()
 const { frameAnimationEnabled, toggleFrameAnimation } = useFrameAnimationBudget()
 const { canEdit, isRoomOwner, refresh, refreshOwnRole } = useRoomMembershipState(
@@ -168,44 +173,47 @@ watch(open, (isOpen) => {
             <span class="text-xs text-neutral-200">Audio</span>
           </button>
 
-          <!-- Gift Mute (everyone; in-place toggle, highlighted when active) -->
+          <!-- Gift Mute (everyone; tri-state: tap cycles Auto -> On -> Off. `On` = muted.
+               Highlighted whenever the EFFECTIVE state is muted, Auto included on weak phones) -->
           <button
             type="button"
-            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
-            :class="fxPrefs.muteGiftAnimations
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-1"
+            :class="fxPrefs.giftAnimationsMuted
               ? 'bg-primary/20 ring-2 ring-primary'
               : 'bg-neutral-800 hover:bg-neutral-700'"
-            :aria-pressed="fxPrefs.muteGiftAnimations"
-            @click="fxPrefs.toggleGiftMute"
+            :aria-label="`Gift Mute: ${FX_MUTE_LABELS[giftMutePref]}`"
+            @click="fxPrefs.setGiftMute(nextFxMutePreference(giftMutePref))"
           >
             <UIcon
               name="i-lucide-gift"
               class="size-7"
-              :class="fxPrefs.muteGiftAnimations ? 'text-primary' : 'text-neutral-400'"
+              :class="fxPrefs.giftAnimationsMuted ? 'text-primary' : 'text-neutral-400'"
             />
-            <span class="text-xs" :class="fxPrefs.muteGiftAnimations ? 'text-primary' : 'text-neutral-200'">
-              {{ fxPrefs.muteGiftAnimations ? 'Gifts Muted' : 'Gift Mute' }}
+            <span class="text-xs" :class="fxPrefs.giftAnimationsMuted ? 'text-primary' : 'text-neutral-200'">
+              Gift Mute
             </span>
+            <span class="text-[10px] leading-none text-neutral-400">{{ FX_MUTE_LABELS[giftMutePref] }}</span>
           </button>
 
-          <!-- Entry Mute (everyone; in-place toggle, highlighted when active) -->
+          <!-- Entry Mute (same tri-state as Gift Mute) -->
           <button
             type="button"
-            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
-            :class="fxPrefs.muteEntryAnimations
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-1"
+            :class="fxPrefs.entryAnimationsMuted
               ? 'bg-primary/20 ring-2 ring-primary'
               : 'bg-neutral-800 hover:bg-neutral-700'"
-            :aria-pressed="fxPrefs.muteEntryAnimations"
-            @click="fxPrefs.toggleEntryMute"
+            :aria-label="`Entry Mute: ${FX_MUTE_LABELS[entryMutePref]}`"
+            @click="fxPrefs.setEntryMute(nextFxMutePreference(entryMutePref))"
           >
             <UIcon
               name="i-lucide-door-closed"
               class="size-7"
-              :class="fxPrefs.muteEntryAnimations ? 'text-primary' : 'text-neutral-400'"
+              :class="fxPrefs.entryAnimationsMuted ? 'text-primary' : 'text-neutral-400'"
             />
-            <span class="text-xs" :class="fxPrefs.muteEntryAnimations ? 'text-primary' : 'text-neutral-200'">
-              {{ fxPrefs.muteEntryAnimations ? 'Entries Muted' : 'Entry Mute' }}
+            <span class="text-xs" :class="fxPrefs.entryAnimationsMuted ? 'text-primary' : 'text-neutral-200'">
+              Entry Mute
             </span>
+            <span class="text-[10px] leading-none text-neutral-400">{{ FX_MUTE_LABELS[entryMutePref] }}</span>
           </button>
 
           <!-- Frames (everyone; in-place toggle, highlighted while frames are still) -->
