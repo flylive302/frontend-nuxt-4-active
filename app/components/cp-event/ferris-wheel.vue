@@ -2,23 +2,21 @@
 import type { CpWinnerCard } from '~/types/cp'
 import { ASSETS } from '~/constants/assets'
 import { CP_FERRIS_CART_COUNT } from '~/constants/cp-event'
-import { avatarImageSrc } from '~/utils/imagekit'
+import { winnerToPairCard } from '~/utils/cp'
 
 // Carts fill newest-first from `winners`; unfilled slots render an empty cart.
+// Each partner is a CpEventFrame (avatar + static CP ring), same as the podium
+// and list; a deleted (null) user becomes winnerToPairCard's placeholder.
 const props = defineProps<{
   winners: readonly CpWinnerCard[]
 }>()
 
-const FERRIS_AVATAR_WIDTH = 64
-
 const carts = computed(() => Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i) => {
   const winner = props.winners[i]
+  const pair = winner ? winnerToPairCard(winner) : null
   return {
     angle: `${(i * 360) / CP_FERRIS_CART_COUNT}deg`,
-    // Deleted (null) user → the app's default silhouette.
-    avatars: winner
-      ? [winner.binder, winner.partner].map(user => avatarImageSrc(user?.avatar ?? ASSETS.AVATAR_PLACEHOLDER, { w: FERRIS_AVATAR_WIDTH }))
-      : [],
+    users: pair ? [pair.binder, pair.partner] : [],
   }
 }))
 </script>
@@ -35,9 +33,9 @@ const carts = computed(() => Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i)
         <img :src="ASSETS.CP_FERRIS_WHEEL_BASE" class="w-full" alt="">
         <div v-for="(cart, index) in carts" :key="index" class="seat" :style="{ '--a': cart.angle }">
           <div class="cart">
-            <!-- one avatar per partner; empty slot = bare cart -->
-            <div v-if="cart.avatars.length" class="relative z-10 flex w-full justify-center gap-1 px-1 pt-8">
-              <img v-for="(src, n) in cart.avatars" :key="n" :src="src" :width="FERRIS_AVATAR_WIDTH" :height="FERRIS_AVATAR_WIDTH" class="w-4/10 rounded-full" alt="">
+            <!-- one framed avatar per partner; empty slot = bare cart -->
+            <div v-if="cart.users.length" class="relative z-10 flex w-full justify-center gap-1 px-1 pt-8">
+              <CpEventFrame v-for="user in cart.users" :key="user.id" :user="user" class="w-4/10" />
             </div>
             <img :src="ASSETS.CP_FERRIS_WHEEL_CART" class="absolute inset-0 z-0" alt="">
           </div>

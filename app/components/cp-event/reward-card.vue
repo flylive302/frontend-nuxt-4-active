@@ -52,16 +52,16 @@ function tileSrc(url: string | null | undefined): string {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-amber-400/30 bg-black/30 p-4">
-    <h2 class="mb-3 text-center text-lg font-bold text-amber-300">{{ rankLabel }}</h2>
+  <CpEventCardFrame priority>
+    <h2 class="mb-2 text-center text-lg font-bold text-amber-300">{{ rankLabel }}</h2>
 
     <p v-if="entries.length === 0" class="text-center text-sm text-white/60">No rewards set</p>
 
-    <div v-else class="grid grid-cols-2 gap-3">
+    <div v-else class="grid grid-cols-2 gap-2">
       <div
-        v-for="{ reward, resolved } in entries"
-        :key="reward.id"
-        class="flex flex-col items-center gap-2"
+          v-for="{ reward, resolved } in entries"
+          :key="reward.id"
+          class="flex flex-col items-center gap-2"
       >
         <template v-if="reward.reward_type === 'coins'">
           <img :src="ASSETS.COIN_ICON_LARGE" alt="" class="w-20" aria-hidden="true">
@@ -71,9 +71,9 @@ function tileSrc(url: string | null | undefined): string {
         <template v-else-if="resolved">
           <template v-if="reward.reward_type === 'vip' && resolved.thumbnailUrl">
             <button
-              v-if="resolved.assetUrl"
-              class="w-20 cursor-pointer overflow-hidden rounded-lg focus:outline-none"
-              @click="emit('preview', { reward, resolved })"
+                v-if="resolved.assetUrl"
+                class="w-20 cursor-pointer overflow-hidden rounded-lg focus:outline-none"
+                @click="emit('preview', { reward, resolved })"
             >
               <AssetPlayer :src="resolved.thumbnailUrl" :muted="true" class="w-full" />
             </button>
@@ -82,9 +82,9 @@ function tileSrc(url: string | null | undefined): string {
 
           <template v-else-if="resolved.thumbnailUrl">
             <button
-              v-if="resolved.assetUrl"
-              class="w-20 cursor-pointer focus:outline-none"
-              @click="emit('preview', { reward, resolved })"
+                v-if="resolved.assetUrl"
+                class="w-20 cursor-pointer focus:outline-none"
+                @click="emit('preview', { reward, resolved })"
             >
               <img :src="tileSrc(resolved.thumbnailUrl)" :alt="resolved.name" class="w-full rounded-lg">
             </button>
@@ -102,5 +102,5 @@ function tileSrc(url: string | null | undefined): string {
         </template>
       </div>
     </div>
-  </section>
+  </CpEventCardFrame>
 </template>

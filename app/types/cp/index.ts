@@ -59,7 +59,7 @@ export interface CpWeekMeta {
   readonly server_time: string
 }
 
-/** GET cp/list — podium + first page of ranks 4+, ranked by lifetime intimacy. */
+/** GET cp/list — podium + first page of ranks 4+, ranked by this week's score. */
 export interface CpListResponse {
   readonly top: CpPairCard[]
   readonly page: CpPairCard[]
@@ -116,13 +116,18 @@ export interface CpWinnerCard {
   readonly weekly_score: number
 }
 
-/** GET cp/square — last closed week's top 3. */
+/**
+ * GET cp/square — last closed week's top 3 (broken pairs hidden, so the next
+ * one moves up) and the all-time top 50 by lifetime intimacy (`lifetime_rank`
+ * 1..50, never resets). `all_time` is absent from a backend older than it.
+ */
 export interface CpSquareResponse {
   readonly week_key: string | null
   readonly winners: CpWinnerCard[]
+  readonly all_time?: CpPairCard[]
 }
 
-/** GET cp/history — the last 6 rank-1 pairs, newest first. */
+/** GET cp/history — the last 6 rank-1 pairs still together, newest first. */
 export interface CpHistoryResponse {
   readonly winners: CpWinnerCard[]
 }
