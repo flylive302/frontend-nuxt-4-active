@@ -46,8 +46,8 @@ const pairs = computed(() => profile.value?.pairs ?? [])
                   <p class="text-sm font-semibold text-center">Intimacy</p>
                 </div>
                 <div class="">
-                  <p class="text-xl font-bold text-center">{{topPair.lifetime_rank}}</p>
-                  <p class="text-sm font-semibold text-center">Rank</p>
+                  <p class="text-xl font-bold text-center">{{topPair.lifetime_rank ?? '-'}}</p>
+                  <p class="text-sm font-semibold text-center">All-time rank</p>
                 </div>
                 <div class="">
                   <p class="text-xl font-bold text-center">{{formatCurrency(topPair.points)}}</p>

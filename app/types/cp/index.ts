@@ -43,6 +43,10 @@ export interface CpPairCard {
   readonly days: number
   readonly lifetime_intimacy: number
   readonly weekly_score: number
+  /**
+   * Positions among SHOWN pairs — pairs with a staff or banned partner are never counted.
+   * Null = unranked: such a hidden pair, not in that ranking, or not computed for this row.
+   */
   readonly lifetime_rank: number | null
   readonly weekly_rank: number | null
   readonly points?: number
@@ -74,7 +78,7 @@ export interface CpListPageResponse {
   readonly next_offset: number | null
 }
 
-/** GET cp/me — the viewer's top pair (by lifetime) with its weekly rank. */
+/** GET cp/me — the viewer's pair leading this week (lifetime breaks ties), with both ranks. */
 export interface CpMeResponse {
   readonly pair: CpPairCard | null
   readonly week: CpWeekMeta
@@ -83,7 +87,7 @@ export interface CpMeResponse {
 /** GET cp/profile/{signature} — a user's pairs, ordered by lifetime intimacy. */
 export interface CpProfileResponse {
   readonly user: CpUserCard
-  /** Top pair (header) — carries the global lifetime rank. Null = no CP yet. */
+  /** Top pair (header) — carries the all-time (lifetime) rank. Null = no CP yet. */
   readonly top_pair: CpPairCard | null
   /** All active pairs including the top one, lifetime desc. */
   readonly pairs: CpPairCard[]

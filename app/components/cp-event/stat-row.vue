@@ -2,7 +2,7 @@
 import { formatCurrency } from '~/utils/currency'
 import {ASSETS} from "~/constants/assets";
 
-// Days / CP Intimacy / Ranking / Points. Points is partner-only: the column
+// Days / CP Intimacy / All-time rank / Points. Points is partner-only: the column
 // is absent (not zero) when the API omits it.
 
 const props = defineProps<{
@@ -15,7 +15,7 @@ const props = defineProps<{
 const stats = computed(() => [
   { label: 'Days', value: String(props.days) },
   { label: 'CP Intimacy', value: formatCurrency(props.intimacy) },
-  { label: 'Ranking', value: props.rank === null ? '-' : String(props.rank) },
+  { label: 'All-time rank', value: props.rank === null ? '-' : String(props.rank) },
   ...(props.points === undefined ? [] : [{ label: 'Points', value: String(props.points) }]),
 ])
 </script>
