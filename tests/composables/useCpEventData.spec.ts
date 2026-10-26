@@ -216,6 +216,32 @@ describe('realtime signals', () => {
     expect(store.weekKey).toBe('2026-W44')
   })
 
+  it('a new week_key replaces the list instead of keeping last week\'s scrolled rows', async () => {
+    const { data, store } = await setup()
+    await vi.advanceTimersByTimeAsync(0)
+    await data.loadMore()
+    expect(store.rows.map(p => p.pair_id)).toEqual([4, 5])
+
+    currentWeek = week('2026-W44', WEEK_MS)
+    listPayload = { top: [], page: [], next_offset: null }
+    store.bumpWeekClosedSignal(); await nextTick()
+    await vi.advanceTimersByTimeAsync(1_001)
+
+    expect(store.weekKey).toBe('2026-W44')
+    expect(store.podium).toEqual([])
+    expect(store.rows).toEqual([])
+    expect(store.isEmpty).toBe(true)
+  })
+
+  it('a poll in the same week still keeps the rows the viewer scrolled to', async () => {
+    const { data, store } = await setup()
+    await vi.advanceTimersByTimeAsync(0)
+    await data.loadMore()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(calls('/cp/list')).toBe(2)
+    expect(store.rows.map(p => p.pair_id)).toEqual([4, 5])
+  })
+
   it('no refetch after unmount', async () => {
     const { store } = await setup()
     await vi.advanceTimersByTimeAsync(0)

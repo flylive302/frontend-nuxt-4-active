@@ -6,6 +6,8 @@
  * - `loadMore()` pages ranks 4+ via cp/list/page, honouring the offset cap.
  * - The store's realtime signal counters (cp.events) trigger one debounced
  *   refetch (a combo of N gifts = one refetch).
+ * - The list is per CP week: a response for a new `week_key` replaces the list
+ *   instead of merging, so last week's scrolled-to rows never linger.
  * - When the week countdown hits zero it refetches with jittered retries until
  *   `week_key` changes (covers a lost `cp.week.closed`, avoids a herd).
  *
@@ -63,7 +65,7 @@ export function useCpEventData() {
       ])
       if (list.status === 'fulfilled') {
         const { top, page, next_offset, week } = list.value.data
-        if (store.hasLoaded) store.mergeHead(top, page, next_offset, week)
+        if (store.hasLoaded && store.weekKey === week.week_key) store.mergeHead(top, page, next_offset, week)
         else store.setList(top, page, next_offset, week)
         error.value = null
       } else {

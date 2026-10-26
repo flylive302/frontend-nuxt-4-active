@@ -3,8 +3,8 @@ import type { CpPairCard } from '~/types/cp'
 import { ASSETS } from '~/constants/assets'
 
 // Ranks 1-3. `pairs` arrives in rank order; missing ranks simply don't render.
-// `scoreField` picks the figure printed under each pair (event: lifetime
-// intimacy, square: the closed week's score).
+// `scoreField` picks the figure printed under each pair (event: this week's
+// score, square: the closed week's score).
 
 const props = defineProps<{
   pairs: readonly CpPairCard[]
