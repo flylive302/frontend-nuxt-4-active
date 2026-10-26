@@ -75,6 +75,14 @@ export const CP_SEAT_HEARTS_MAX_ANIMATED = 2
 export const CP_SEAT_HEART_SIZE_PX = 28
 
 /**
+ * Height in CSS px of the seat-heart SVGA box (width auto). The SVGA is a 300×150 canvas
+ * with the heart in its middle ~37 % × 72 %, so the live player and the still must both
+ * draw the whole canvas at this height — fitting the still into the CP_SEAT_HEART_SIZE_PX
+ * square shrank its heart to ~10 px.
+ */
+export const CP_SEAT_HEART_SVGA_HEIGHT_PX = 40
+
+/**
  * Full-screen animation played to everyone in the room each time two CP partners become
  * seat neighbours (the moment their seat heart appears). Plays in the gift center lane.
  */

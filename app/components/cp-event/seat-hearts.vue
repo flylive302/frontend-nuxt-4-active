@@ -2,6 +2,7 @@
 import {
   CP_SEAT_HEART_SIZE_PX,
   CP_SEAT_HEART_SVGA,
+  CP_SEAT_HEART_SVGA_HEIGHT_PX,
   CP_SEAT_HEARTS_MAX_ANIMATED,
 } from '~/constants/cp-event'
 import { useCpBindFx } from '~/composables/room/useCpBindFx'
@@ -23,6 +24,7 @@ const heartUrl = ref<string | null>(CP_SEAT_HEART_SVGA)
 const { stillUrl } = useAvatarStillFrame(heartUrl)
 
 const sizePx = `${CP_SEAT_HEART_SIZE_PX}px`
+const svgaHeightPx = `${CP_SEAT_HEART_SVGA_HEIGHT_PX}px`
 
 function isAnimated(index: number): boolean {
   return frameAnimationEnabled.value && isVisible.value && index < CP_SEAT_HEARTS_MAX_ANIMATED
@@ -41,12 +43,14 @@ function heartStyle(x: number, y: number) {
   <div ref="rootRef" class="pointer-events-none absolute inset-0 z-35 overflow-hidden" aria-hidden="true">
     <template v-for="(heart, index) in hearts" :key="heart.key">
       <div class="absolute -left-6.5 -top-1 w-fit" :style="heartStyle(heart.x, heart.y)">
-        <SvgaPlayer v-if="isAnimated(index)" :name="CP_SEAT_HEART_SVGA" width="auto" height="40px" />
+        <SvgaPlayer v-if="isAnimated(index)" :name="CP_SEAT_HEART_SVGA" width="auto" :height="svgaHeightPx" />
+        <!-- Same box as the live canvas; max-w-none stops the img clamping to the narrow wrapper. -->
         <img
           v-else-if="stillUrl"
           :src="stillUrl"
           alt=""
-          class="size-full object-contain"
+          class="w-auto max-w-none"
+          :style="{ height: svgaHeightPx }"
           decoding="async"
         >
       </div>
