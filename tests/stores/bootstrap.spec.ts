@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed } from 'vue'
-import { BOOTSTRAP_SHAPE_VERSION } from '../../app/constants/bootstrap'
+import { BOOTSTRAP_SHAPE_VERSION, CP_BOOTSTRAP_DEFAULTS } from '../../app/constants/bootstrap'
 import type { LevelConfig } from '../../app/types/user/bootstrap'
 
 vi.stubGlobal('ref', ref)
@@ -170,7 +170,7 @@ describe('useBootstrapStore cp block', () => {
     const store = useBootstrapStore()
     store.setConfig(baseConfig)
     expect(store.cpEnabled).toBe(false)
-    expect(store.cpConfig).toEqual({ enabled: false, poll_seconds: 30, frame_male: null, frame_female: null })
+    expect(store.cpConfig).toEqual(CP_BOOTSTRAP_DEFAULTS)
   })
 
   it('parses a present block', async () => {
