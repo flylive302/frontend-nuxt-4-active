@@ -33,9 +33,10 @@ const carts = computed(() => Array.from({ length: CP_FERRIS_CART_COUNT }, (_, i)
         <img :src="ASSETS.CP_FERRIS_WHEEL_BASE" class="w-full" alt="">
         <div v-for="(cart, index) in carts" :key="index" class="seat" :style="{ '--a': cart.angle }">
           <div class="cart">
-            <!-- one framed avatar per partner; empty slot = bare cart -->
-            <div v-if="cart.users.length" class="relative z-10 flex w-full justify-center gap-1 px-1 pt-8">
-              <CpEventFrame v-for="user in cart.users" :key="user.id" :user="user" class="w-4/10" />
+            <!-- one framed avatar per partner (tap → public profile; the stage ignores
+                 taps, so they are re-enabled here only); empty slot = bare cart -->
+            <div v-if="cart.users.length" class="pointer-events-auto relative z-10 flex w-full justify-center gap-1 pt-5">
+              <CpEventFrame v-for="user in cart.users" :key="user.id" :user="user" class="w-full" />
             </div>
             <img :src="ASSETS.CP_FERRIS_WHEEL_CART" class="absolute inset-0 z-0" alt="">
           </div>
