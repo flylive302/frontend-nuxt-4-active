@@ -4,6 +4,7 @@ import { App } from '@capacitor/app'
 import { applySentryEventPolicy } from '~/utils/sentry-event-policy'
 import { resolveClientPlatform } from '~/utils/client-platform'
 import { resolveTracePropagationTargets } from '~/utils/trace-targets'
+import { dropMainThreadWrapperIntegrations } from '~/utils/sentry-integrations'
 
 const config = useRuntimeConfig()
 
@@ -20,6 +21,12 @@ Sentry.init({
   release: (config.public.sentry.release as string) || undefined,
 
   sendDefaultPii: false,
+
+  // android-client-performance/17: drop the `BrowserApiErrors` wrapper around
+  // every timer / rAF / listener callback (~4–5 % of the A6x main thread, and
+  // it hides real callback names in traces). Errors still arrive via
+  // `GlobalHandlers`. Policy + rationale in `~/utils/sentry-integrations`.
+  integrations: dropMainThreadWrapperIntegrations,
 
   // 🔴 THIS IS THE MASTER TRACE DIAL FOR THE WHOLE STACK, NOT JUST THE BROWSER.
   // Since observability-audio-quality/12 shipped trace propagation, every API

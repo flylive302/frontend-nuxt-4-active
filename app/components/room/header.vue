@@ -17,6 +17,11 @@ const roomSession = useRoomSession();
 const bootstrapStore = useBootstrapStore();
 const { leaveRoom } = useRoomAudio();
 const { shareRoom, sharing } = useRoomShare();
+// android-client-performance/17: the owner avatar was the one always-on SVGA
+// loop left in the room after ADR 0039 made seats still-by-default — it forced
+// a main-thread frame per tick on every phone. Same tier × user-switch gate
+// as the seats, and deferred until the header is actually visible.
+const { frameAnimationEnabled } = useFrameAnimationBudget();
 
 // ========================================
 // State
@@ -148,7 +153,14 @@ const openLeaveDrawer = (event: Event) => {
           style="--ui-primary: var(--room-theme, var(--color-primary)); --ui-color-primary-500: var(--room-theme, var(--color-primary-500));"
       >
         <div class="w-10">
-          <UserAvatar :animated="true" :img="roomLogoSrc" :frame-id="thisRoom?.owner?.frame_id" :user-name="thisRoom?.owner?.name" />
+          <UserAvatar
+              :animated="true"
+              :defer-frame-animation="true"
+              :static-frame="!frameAnimationEnabled"
+              :img="roomLogoSrc"
+              :frame-id="thisRoom?.owner?.frame_id"
+              :user-name="thisRoom?.owner?.name"
+          />
           <p class="text-xs text-center">LvL. {{ thisRoom?.current_level != null ? thisRoom.current_level : 0 }}</p>
         </div>
 
