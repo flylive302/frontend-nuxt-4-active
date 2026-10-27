@@ -2,7 +2,15 @@
 <!-- Simple active-tier bar for the member's current agency-XP run (native XP). -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatGiftCoinsExact } from '~/utils/incomeFormat'
+import { useNow } from '@vueuse/core'
+import { formatGiftCoinsExact, formatRunTimeLeft, isRunEndingSoon } from '~/utils/incomeFormat'
+
+// ========================================
+// Constants
+// ========================================
+
+/** Hours are shown, so re-render the countdown once a minute. */
+const COUNTDOWN_TICK_MS = 60_000
 
 // ========================================
 // Options
@@ -38,13 +46,16 @@ const xpToNextTier = computed(() => {
 const isMaxed = computed(() => hasRun.value && nextTier.value === null)
 
 /**
- * Days remaining until the run window closes.
+ * Ticking clock so the days/hours label stays current while the page is open.
  */
-const daysRemaining = computed(() => {
-  if (!run.value) return 0
-  const ms = new Date(run.value.ends_at).getTime() - Date.now()
-  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)))
-})
+const now = useNow({ interval: COUNTDOWN_TICK_MS })
+
+/**
+ * "2d 5h left" style label until the run window closes.
+ */
+const timeLeftLabel = computed(() => (run.value ? formatRunTimeLeft(run.value.ends_at, now.value.getTime()) : ''))
+
+const isEndingSoon = computed(() => (run.value ? isRunEndingSoon(run.value.ends_at, now.value.getTime()) : false))
 
 const progressColor = computed(() => {
   if (progress.value >= 100) return 'success'
@@ -81,9 +92,9 @@ const progressColor = computed(() => {
           </UBadge>
           <UBadge color="tertiary" variant="soft">Tier {{ run?.current_tier }}</UBadge>
         </div>
-        <UBadge variant="soft" :color="daysRemaining <= 3 ? 'error' : 'info'" class="flex items-center gap-1 text-sm">
+        <UBadge variant="soft" :color="isEndingSoon ? 'error' : 'info'" class="flex items-center gap-1 text-sm">
           <Icon name="i-lucide-clock" class="size-4 text-info" />
-          {{ daysRemaining }} days left
+          {{ timeLeftLabel }}
         </UBadge>
       </div>
 

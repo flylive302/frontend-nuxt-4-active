@@ -27,6 +27,12 @@ const RUN_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {
 
 const STATUS_BADGE_COLORS = ['info', 'success', 'warning', 'neutral'] as const
 
+const MS_PER_HOUR = 3_600_000
+const MS_PER_DAY = 24 * MS_PER_HOUR
+
+/** A run with this much time or less left renders its countdown in the urgent colour. */
+export const RUN_URGENT_DAYS_LEFT = 3
+
 // ========================================
 // Types
 // ========================================
@@ -74,6 +80,41 @@ export function formatRunRange(startIso: string, endIso: string): string {
   const endLabel = formatRunDate(endIso)
 
   return `${startLabel} – ${endLabel}`
+}
+
+/**
+ * Time left in an agency run, floored to whole days and hours so the label
+ * never over-promises (a run with 2d 23h left reads "2d 23h left", not "3 days").
+ *
+ * Pure: `nowMs` is injected so callers (and tests) control the clock.
+ *
+ *   ≥ 1 day   → "2d 5h left"
+ *   < 1 day   → "5h left"
+ *   < 1 hour  → "Ends soon"
+ *   ≤ 0       → "Ended"
+ */
+export function formatRunTimeLeft(endsAtIso: string, nowMs: number): string {
+  const msLeft = new Date(endsAtIso).getTime() - nowMs
+
+  if (!Number.isFinite(msLeft) || msLeft <= 0) return 'Ended'
+
+  const days = Math.floor(msLeft / MS_PER_DAY)
+  const hours = Math.floor((msLeft % MS_PER_DAY) / MS_PER_HOUR)
+
+  if (days > 0) return `${days}d ${hours}h left`
+  if (hours > 0) return `${hours}h left`
+  return 'Ends soon'
+}
+
+/**
+ * True when `RUN_URGENT_DAYS_LEFT` days or less remain (compared in
+ * milliseconds, so 3d 1h is NOT urgent while 3d 0h is). Drives the
+ * countdown badge colour. An unparseable date counts as urgent.
+ */
+export function isRunEndingSoon(endsAtIso: string, nowMs: number): boolean {
+  const msLeft = new Date(endsAtIso).getTime() - nowMs
+  if (!Number.isFinite(msLeft)) return true
+  return msLeft <= RUN_URGENT_DAYS_LEFT * MS_PER_DAY
 }
 
 /**
