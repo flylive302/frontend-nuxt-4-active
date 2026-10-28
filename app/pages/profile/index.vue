@@ -236,11 +236,10 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
     </div>
 
-    <div class="pb-24 mt-2 relative z-10 overflow-scroll h-[64vh]" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
+    <div class="pb-44 mt-2 relative z-10 w-full max-h-[54vh] overflow-y-scroll" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
       <ProfileCpSection
         :signature="authStore.user?.signature"
       />
-
 
       <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />

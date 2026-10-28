@@ -485,7 +485,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
     </div>
 
-    <div ref="profileScrollRef" class="max-h-[58vh] overflow-scroll relative z-50 mt-2" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
+    <div ref="profileScrollRef" class="max-h-[56vh] overflow-scroll relative scrollbar-none z-50 mt-2" :class="dataCardAsset ? 'px-[8vw]' : 'px-6'">
 
       <ProfileCpSection :signature="signature" />
       <!-- Agency Section (conditional) -->
@@ -524,7 +524,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
       </div>
 
       <!-- History Section -->
-      <div class="mb-12 mt-4">
+      <div class="mb-24 mt-4">
         <SectionTitle>History</SectionTitle>
 
         <UTabs

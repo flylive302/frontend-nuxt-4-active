@@ -77,17 +77,17 @@ onMounted(async () => {
     </div>
 
     <!-- Income Dashboard -->
-    <div v-else class="px-3 py-14 space-y-4">
+    <div v-else class="px-3 my-28 space-y-4">
       <AgencyIncomeLifetimeStrip
-        :lifetime="overview?.lifetime ?? null"
-        :current-agency="overview?.current_agency ?? null"
-        :loading="incomeStore.isOverviewLoading && !overview"
+          :lifetime="overview?.lifetime ?? null"
+          :current-agency="overview?.current_agency ?? null"
+          :loading="incomeStore.isOverviewLoading && !overview"
       />
 
       <!-- Ex-member: past runs stay visible -->
       <div
-        v-if="!isAgencyMember"
-        class="flex items-center justify-between gap-3 bg-elevated rounded-lg p-3"
+          v-if="!isAgencyMember"
+          class="flex items-center justify-between gap-3 bg-elevated rounded-lg p-3"
       >
         <p class="text-sm text-muted">Join an agency to start a new run.</p>
         <UButton to="/agency/list" size="sm" color="primary">Browse</UButton>
@@ -97,8 +97,8 @@ onMounted(async () => {
 
       <!-- Member with no active run -->
       <div
-        v-if="isAgencyMember && overview && overview.active_run_id === null"
-        class="text-center py-4 bg-elevated rounded-lg"
+          v-if="isAgencyMember && overview && overview.active_run_id === null"
+          class="text-center py-4 bg-elevated rounded-lg"
       >
         <UIcon name="i-lucide-trending-up" class="size-8 text-muted mb-1" />
         <p class="text-sm text-muted">No active run — your next gift starts one.</p>
@@ -106,10 +106,10 @@ onMounted(async () => {
 
       <template v-if="incomeStore.hasAnyRun">
         <AgencyIncomeRunSelector
-          :groups="overview?.agencies ?? []"
-          :model-value="incomeStore.selectedRunId"
-          :loading="incomeStore.isOverviewLoading && !overview"
-          @update:model-value="onSelectRun"
+            :groups="overview?.agencies ?? []"
+            :model-value="incomeStore.selectedRunId"
+            :loading="incomeStore.isOverviewLoading && !overview"
+            @update:model-value="onSelectRun"
         />
 
         <AgencyIncomeInProgressNote v-if="incomeStore.isSelectedRunActive" />
@@ -121,10 +121,10 @@ onMounted(async () => {
           <AgencyIncomeRunHeader :run="run" />
           <AgencyIncomeHero :totals="run.totals" />
           <AgencyIncomeTotalsCards
-            :totals="run.totals"
-            :earned-split="run.earned_split"
-            :exchanges="run.exchanges"
-            :deductions="run.deductions"
+              :totals="run.totals"
+              :earned-split="run.earned_split"
+              :exchanges="run.exchanges"
+              :deductions="run.deductions"
           />
 
           <template v-if="incomeStore.isSelectedRunActive">
@@ -139,12 +139,12 @@ onMounted(async () => {
           <AgencyIncomeMilestoneRows :milestones="run.milestones" />
 
           <UButton
-            v-if="hasClaimable"
-            block
-            color="secondary"
-            :loading="incomeStore.isClaiming"
-            icon="i-lucide-gem"
-            @click="onClaim"
+              v-if="hasClaimable"
+              block
+              color="secondary"
+              :loading="incomeStore.isClaiming"
+              icon="i-lucide-gem"
+              @click="onClaim"
           >
             Claim Rewards
           </UButton>
