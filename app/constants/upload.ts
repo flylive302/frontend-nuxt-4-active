@@ -20,7 +20,26 @@ export interface UploadImageCap {
    * replaces, which defeats the point.
    */
   preserveAlpha: boolean
+  /**
+   * Accept `image/gif` and upload it untouched. Any canvas re-encode (crop or
+   * downscale) keeps only frame 0, so this is the only way an animation
+   * survives. Callers still opt in per picker (`FileUpload` `keepAnimatedGif`);
+   * everything else crops to JPEG before it gets here.
+   */
+  keepAnimatedGif: boolean
 }
+
+/** The one animated format the upload path passes through untouched. */
+export const GIF_MIME_TYPE = 'image/gif'
+
+/**
+ * Size ceiling for a GIF kept animated. Higher than `MAX_IMAGE_SIZE` because
+ * there is no downscale to shrink it, and phone GIFs routinely exceed 5 MB.
+ * Well under ImageKit's per-image processing limit (20 MB free / 40 MB paid),
+ * so the render path's `f-auto` still converts it to a much smaller WebP.
+ */
+export const MAX_GIF_UPLOAD_MB = 10
+export const MAX_GIF_UPLOAD_BYTES = MAX_GIF_UPLOAD_MB * 1024 * 1024
 
 /**
  * National IDs carry the highest quality because they are a compliance
@@ -36,17 +55,19 @@ export const UPLOAD_IMAGE_CAPS: Record<ImageUploadFolder, UploadImageCap> = {
   // preserveAlpha is false because it could never fire: both avatar entry
   // points (`profile-wizard.vue`, `image-preview-modal.vue`) crop with
   // outputFormat 'image/jpeg', so alpha is gone before `uploadImage` sees it.
-  'avatars': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false },
+  'avatars': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false, keepAnimatedGif: false },
   // 1600, not 1200, to match CROP_RESULT_MAX_LONG_EDGE_PX. Covers arrive from
   // the crop flow already capped at 1600; a 1200 ceiling would re-decode and
   // re-encode that JPEG a second time, and two lossy generations on a wide
   // hero image is exactly where softness becomes visible.
-  'covers': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false },
-  'rooms': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false },
-  'agencies/logos': { maxLongEdge: 512, quality: 0.85, preserveAlpha: true },
-  'agencies/national-ids': { maxLongEdge: 1600, quality: 0.90, preserveAlpha: false },
-  'coin-request-proofs': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false },
-  'support-attachments': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false },
+  'covers': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false, keepAnimatedGif: false },
+  // keepAnimatedGif: room backgrounds may be animated. The room logo shares this
+  // folder but its picker crops, so it still arrives as a JPEG.
+  'rooms': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false, keepAnimatedGif: true },
+  'agencies/logos': { maxLongEdge: 512, quality: 0.85, preserveAlpha: true, keepAnimatedGif: false },
+  'agencies/national-ids': { maxLongEdge: 1600, quality: 0.90, preserveAlpha: false, keepAnimatedGif: false },
+  'coin-request-proofs': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false, keepAnimatedGif: false },
+  'support-attachments': { maxLongEdge: 1600, quality: 0.85, preserveAlpha: false, keepAnimatedGif: false },
 }
 
 /**

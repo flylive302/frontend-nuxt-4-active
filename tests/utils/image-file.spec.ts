@@ -194,6 +194,19 @@ describe('downscaleImageForUpload', () => {
     expect(await downscaleImageForUpload(original, { maxLongEdge: 512, quality: 0.85 })).toBe(original)
   })
 
+  it('passes a GIF through untouched so its animation survives', async () => {
+    const { convertToBlob } = stubCanvasApis({
+      source: { width: 1080, height: 1920 },
+      blob: new Blob([new Uint8Array(1000)], { type: 'image/jpeg' }),
+    })
+    const original = makeFile('party.gif', 'image/gif', 2_000_000)
+
+    expect(await downscaleImageForUpload(original, { maxLongEdge: 1600, quality: 0.85 })).toBe(original)
+    // A frame-0 JPEG would have "won" the size check — it must never be produced.
+    expect(createImageBitmap).not.toHaveBeenCalled()
+    expect(convertToBlob).not.toHaveBeenCalled()
+  })
+
   it('does not throw when the 2D context is missing', async () => {
     stubCanvasApis({ source: { width: 4000, height: 4000 } })
     vi.stubGlobal('OffscreenCanvas', class {
@@ -223,7 +236,16 @@ describe('UPLOAD_IMAGE_CAPS', () => {
       maxLongEdge: 1600,
       quality: 0.90,
       preserveAlpha: false,
+      keepAnimatedGif: false,
     })
+  })
+
+  it('keeps GIFs only for room uploads (animated backgrounds)', () => {
+    const gifFolders = Object.entries(UPLOAD_IMAGE_CAPS)
+      .filter(([, cap]) => cap.keepAnimatedGif)
+      .map(([folder]) => folder)
+
+    expect(gifFolders).toEqual(['rooms'])
   })
 
   it('never sets a cap the crop flow would have to re-encode a second time', () => {

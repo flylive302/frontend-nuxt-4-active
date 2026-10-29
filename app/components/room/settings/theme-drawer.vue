@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ROOM_LOGO_ASPECT_RATIO, ROOM_THEME_COLORS } from '~/constants/room'
+import { MAX_GIF_UPLOAD_MB } from '~/constants/upload'
 import type { SeatPickerOption } from '~/composables/room/useSeatPickerOptions'
 
 // ========================================
@@ -80,13 +81,15 @@ onBeforeUnmount(releasePreviews)
             <UProgress :value="logoUpload.state.value.progress" size="xs" color="primary" />
           </div>
 
-          <!-- Background Upload (9:16) -->
-          <UFormField label="Room Background (9:16)">
+          <!-- Background Upload (9:16) — GIFs skip the cropper so they stay animated;
+               the room page's `object-cover` centres them instead. -->
+          <UFormField label="Room Background (9:16)" :help="`GIFs (up to ${MAX_GIF_UPLOAD_MB}MB) stay animated and are centred to fit`">
             <div class="flex justify-center">
               <FileUpload
                 :current-image="bgPreview"
                 :loading="isBgUploading"
                 crop
+                keep-animated-gif
                 :aspect-ratio="9 / 16"
                 shape="rounded"
                 size="xl"

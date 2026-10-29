@@ -14,7 +14,7 @@ import {
   MAX_IMAGE_SIZE,
   ALLOWED_IMAGE_TYPES,
 } from '~/types/asset/upload'
-import { UPLOAD_IMAGE_CAPS } from '~/constants/upload'
+import { GIF_MIME_TYPE, MAX_GIF_UPLOAD_BYTES, UPLOAD_IMAGE_CAPS } from '~/constants/upload'
 import { downscaleImageForUpload } from '~/utils/image-file'
 import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 
@@ -49,19 +49,24 @@ export function useImageUpload() {
   // ========================================
 
   /**
-   * Validates a file before upload.
+   * Validates a file before upload. GIF is accepted only for folders whose cap
+   * sets `keepAnimatedGif`, with its own size ceiling (`MAX_GIF_UPLOAD_BYTES`)
+   * — `ALLOWED_IMAGE_TYPES` itself stays JPG/PNG/WebP because the agency forms
+   * mirror it for their own copy.
    * @throws Error if file is invalid
    */
-  function validateFile(file: File): void {
+  function validateFile(file: File, folder: ImageUploadFolder): void {
     if (!file) {
       throw new Error('No file provided')
     }
 
-    if (file.size > MAX_IMAGE_SIZE) {
-      throw new Error(`File size exceeds ${MAX_IMAGE_SIZE / 1024 / 1024}MB limit`)
+    const isAllowedGif = file.type === GIF_MIME_TYPE && UPLOAD_IMAGE_CAPS[folder].keepAnimatedGif
+    const maxBytes = isAllowedGif ? MAX_GIF_UPLOAD_BYTES : MAX_IMAGE_SIZE
+    if (file.size > maxBytes) {
+      throw new Error(`File size exceeds ${maxBytes / 1024 / 1024}MB limit`)
     }
 
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type) && !isAllowedGif) {
       throw new Error('Invalid file type. Allowed: JPG, PNG, WebP')
     }
   }
@@ -203,7 +208,7 @@ export function useImageUpload() {
   ): Promise<ImageUploadResult> {
     // Validate — against the ORIGINAL file, so the 5MB ceiling still means
     // "what the user may pick", not "what survived the downscale".
-    validateFile(file)
+    validateFile(file, folder)
 
     // Shrink to the asset class's ceiling
     const prepared = await prepareForUpload(file, folder)

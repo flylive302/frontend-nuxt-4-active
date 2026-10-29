@@ -4,6 +4,7 @@
 // ========================================
 import type { Component } from 'vue'
 import { defineAsyncComponent } from 'vue'
+import { GIF_MIME_TYPE, MAX_GIF_UPLOAD_MB } from '~/constants/upload'
 import { buildCroppedFile, isValidMimeType } from '~/utils/image-file'
 
 // Async-load stencils so the vue-advanced-cropper chunk doesn't get pulled
@@ -55,6 +56,12 @@ interface Props {
   error?: string
   /** Icon displayed when no image is present */
   icon?: string
+  /**
+   * Emit a picked GIF as-is, skipping the cropper — the crop canvas keeps only
+   * frame 0. Such a GIF is held to `MAX_GIF_UPLOAD_MB` instead of `maxSize`.
+   * The upload folder must also allow GIF (`UPLOAD_IMAGE_CAPS`).
+   */
+  keepAnimatedGif?: boolean
   /** Accessible label for the upload area */
   label?: string
   /** Show loading spinner overlay */
@@ -89,6 +96,7 @@ const props = withDefaults(defineProps<Props>(), {
   label: 'Upload image',
   icon: 'i-lucide-upload',
   crop: false,
+  keepAnimatedGif: false,
   loading: false,
   size: 'md',
   shape: 'circle',
@@ -146,10 +154,12 @@ function handleFileChange(event: Event) {
 }
 
 function validateAndProcessFile(file: File) {
-  // Validate Size
-  const maxBytes = props.maxSize * 1024 * 1024
-  if (file.size > maxBytes) {
-    localError.value = `File size must be less than ${props.maxSize}MB`
+  const keepAsGif = props.keepAnimatedGif && file.type === GIF_MIME_TYPE
+
+  // Validate Size — a kept GIF gets the larger ceiling, since nothing downscales it
+  const maxSizeMb = keepAsGif ? MAX_GIF_UPLOAD_MB : props.maxSize
+  if (file.size > maxSizeMb * 1024 * 1024) {
+    localError.value = `File size must be less than ${maxSizeMb}MB`
     return
   }
 
@@ -161,7 +171,7 @@ function validateAndProcessFile(file: File) {
 
   selectedFile.value = file
 
-  if (props.crop && file.type.startsWith('image/')) {
+  if (props.crop && file.type.startsWith('image/') && !keepAsGif) {
     isCropModalOpen.value = true
   } else {
     emit('file-selected', file)

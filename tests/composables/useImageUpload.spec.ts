@@ -39,6 +39,13 @@ function pngFile(name = 'logo.png', type = 'image/png'): File {
   return new File([new Uint8Array(10)], name, { type })
 }
 
+/** Reports `megabytes` as its size without allocating the bytes. */
+function sizedFile(name: string, type: string, megabytes: number): File {
+  const file = pngFile(name, type)
+  Object.defineProperty(file, 'size', { value: megabytes * 1024 * 1024 })
+  return file
+}
+
 async function setup() {
   const { useImageUpload } = await import('../../app/composables/shared/useImageUpload')
   return useImageUpload().createUploadState()
@@ -74,6 +81,54 @@ describe('createUploadState', () => {
     const upload = await setup()
 
     const result = await upload.upload(pngFile('photo.heic', 'image/heic'), 'agencies/logos')
+
+    expect(result).toBeNull()
+    expect(upload.state.value.error).toBe('Invalid file type. Allowed: JPG, PNG, WebP')
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+
+  it('accepts a GIF for room uploads so an animated background survives', async () => {
+    const upload = await setup()
+
+    const result = await upload.upload(pngFile('party.gif', 'image/gif'), 'rooms')
+
+    expect(result).not.toBeNull()
+    expect(upload.state.value.error).toBeFalsy()
+    expect(apiMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets a room GIF past the 5MB still-image ceiling, up to 10MB', async () => {
+    const upload = await setup()
+
+    const result = await upload.upload(sizedFile('party.gif', 'image/gif', 9), 'rooms')
+
+    expect(result).not.toBeNull()
+    expect(apiMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a room GIF over 10MB', async () => {
+    const upload = await setup()
+
+    const result = await upload.upload(sizedFile('huge.gif', 'image/gif', 11), 'rooms')
+
+    expect(result).toBeNull()
+    expect(upload.state.value.error).toBe('File size exceeds 10MB limit')
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the 5MB ceiling for still images in the same folder', async () => {
+    const upload = await setup()
+
+    const result = await upload.upload(sizedFile('big.jpg', 'image/jpeg', 6), 'rooms')
+
+    expect(result).toBeNull()
+    expect(upload.state.value.error).toBe('File size exceeds 5MB limit')
+  })
+
+  it('still rejects a GIF for folders that do not keep animation', async () => {
+    const upload = await setup()
+
+    const result = await upload.upload(pngFile('party.gif', 'image/gif'), 'agencies/logos')
 
     expect(result).toBeNull()
     expect(upload.state.value.error).toBe('Invalid file type. Allowed: JPG, PNG, WebP')

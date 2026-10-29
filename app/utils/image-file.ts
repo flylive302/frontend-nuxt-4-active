@@ -5,6 +5,8 @@
 // files and rebuilding a cropped Blob into a properly named File, and by
 // the upload paths for the pre-upload canvas downscale (cdn-bandwidth/02).
 
+import { GIF_MIME_TYPE } from '~/constants/upload'
+
 export type ImageOutputFormat = 'image/jpeg' | 'image/png' | 'image/webp'
 
 /** Source formats that can carry an alpha channel worth preserving. */
@@ -168,8 +170,15 @@ export async function downscaleImageToBlob(
  * undecodable file, or a re-encode that came out bigger than the original all
  * fall back to the original File. Shrinking an upload is an optimization; it
  * must not be able to break one.
+ *
+ * GIFs pass through untouched: `createImageBitmap` decodes only frame 0, so the
+ * re-encode would turn an animation into a still — and a one-frame JPEG always
+ * "wins" the size check below. The render path's ImageKit `f-auto` transform
+ * serves the GIF as animated WebP, which is where the bytes get saved instead.
  */
 export async function downscaleImageForUpload(file: File, options: DownscaleOptions): Promise<File> {
+  if (file.type === GIF_MIME_TYPE) return file
+
   if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas !== 'function') {
     return file
   }

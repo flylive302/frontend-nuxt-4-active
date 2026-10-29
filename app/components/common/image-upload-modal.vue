@@ -183,15 +183,24 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <!-- The sheet is pinned to BOTH viewport edges (`top-0` + the theme's `bottom-0`) so its
+       height is the visible viewport, and the cropper takes whatever is left after the
+       header/controls/footer. A fixed `60vh` cropper inside a content-sized sheet pushed
+       "Save Photo" below the fold on short phones, and the open sheet locks page scroll,
+       so users could not reach it. -->
   <USlideover
       :open="modelValue"
       side="bottom"
       title="Crop Image"
       description="Adjust your image by zooming, rotating, and cropping before saving"
+      :ui="{ content: 'top-0 safe-area-top' }"
       @update:open="emit('update:modelValue', $event)"
   >
     <template #content>
-      <UCard class="flex flex-col flex-1">
+      <UCard
+          class="flex flex-col flex-1 min-h-0"
+          :ui="{ header: 'shrink-0', body: 'flex flex-col flex-1 min-h-0 overflow-y-auto', footer: 'shrink-0' }"
+      >
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold">
@@ -213,12 +222,13 @@ onBeforeUnmount(() => {
           </div>
         </template>
 
-        <!-- Cropper Area -->
+        <!-- Cropper Area — flex-fills the body; the min-height floor only matters on very
+             short (landscape) screens, where the body scrolls but the footer stays put. -->
         <ClientOnly>
           <Cropper
               v-if="imageSrc"
               ref="cropperRef"
-              class="h-[60vh] border w-auto rounded-lg overflow-hidden inset-shadow-sm"
+              class="flex-1 min-h-40 border w-auto rounded-lg overflow-hidden inset-shadow-sm"
               :src="imageSrc"
               :canvas="RESULT_CANVAS"
               :stencil-component="resolvedStencil"
@@ -228,14 +238,14 @@ onBeforeUnmount(() => {
               }"
               @ready="onCropperReady"
           />
-          <div v-else class="flex flex-col items-center gap-2 text-gray-400">
+          <div v-else class="flex flex-1 flex-col items-center justify-center gap-2 text-gray-400">
             <UIcon name="i-lucide-image" class="h-8 w-8" />
             <span>Loading image...</span>
           </div>
         </ClientOnly>
 
         <!-- Controls -->
-        <div class="flex items-center justify-center gap-4 mt-4">
+        <div class="flex shrink-0 items-center justify-center gap-4 mt-4">
           <UTooltip text="Zoom Out">
             <UButton
                 icon="i-lucide-minus"
