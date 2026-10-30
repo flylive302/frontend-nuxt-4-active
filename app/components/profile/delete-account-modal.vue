@@ -179,6 +179,10 @@ async function handleDelete(): Promise<void> {
                 <span class="h-1 w-1 rounded-full bg-emerald-400 shrink-0" />
                 Your unique signature ID (for financial audit trails)
               </li>
+              <li class="flex items-center gap-2">
+                <span class="h-1 w-1 rounded-full bg-emerald-400 shrink-0" />
+                Moderation records (any block placed on your account, IP address or device), so blocked users can't return by re-creating their account
+              </li>
             </ul>
           </div>
 
