@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { defineAsyncComponent } from 'vue'
+import { BLOCKED_PATH } from '~/constants/blocked'
 
 const route = useRoute()
 
@@ -14,6 +15,8 @@ const isAuthRoute = computed(() => /^\/(log-in|sign-up|forgot-password)(\/|$)/.t
 // overlays (download progress, mini-player) would sit on top of the screen that
 // exists to explain the outage, and the room lifecycle has nothing to do there.
 const isOfflineRoute = computed(() => route.path === '/offline')
+// account-bans 03: the blocked screen is a full-screen wall — no mini-player or nav over it.
+const isBlockedRoute = computed(() => route.path.replace(/\/+$/, '') === BLOCKED_PATH)
 
 // Preconnect to image CDN + R2 only on routes that actually fetch from them.
 // Auth routes have no images from these origins; emitting the preconnect there
@@ -47,7 +50,7 @@ const { maintenanceMode } = useRuntimeConfig().public
       <NuxtPage />
     </NuxtLayout>
 
-    <GlobalShell v-if="!isAuthRoute && !isOfflineRoute && !maintenanceMode" />
+    <GlobalShell v-if="!isAuthRoute && !isOfflineRoute && !isBlockedRoute && !maintenanceMode" />
 
     <!-- Mounted here rather than inside GlobalShell (ADR 0026): losing signal on
          /log-in or /sign-up must say so too, and GlobalShell is deliberately

@@ -9,6 +9,7 @@ import { useDeviceId } from './useDeviceId'
 // Types
 // ========================================
 import { normalizeFetchError, type NormalizedError } from '~/utils/api/normalizeFetchError'
+import { parseBlockReply } from '~/utils/api/parseBlockReply'
 
 export type { NormalizedError }
 
@@ -20,6 +21,13 @@ type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 // CRITICAL: Client must be at module level to reuse connections across calls.
 
 let _client: ReturnType<typeof ofetch.create> | null = null
+
+/**
+ * account-bans 03 — the requests sent while a block was stored. Only their 2xx
+ * may resume the session: a reply to a request sent BEFORE the block landed
+ * proves nothing about the block, and would bounce /blocked → / → /blocked.
+ */
+const _sentWhileBlocked = new WeakSet<object>()
 let _baseURL: string | undefined = undefined
 
 // ========================================
@@ -105,8 +113,34 @@ function getClient(baseURL: string | undefined) {
 
       options.headers = headers
       options.credentials = 'include'
+
+      try {
+        if (authStore.blockInfo) _sentWhileBlocked.add(options)
+      } catch {
+        // Diagnostics-only guard; never break a request.
+      }
+    },
+    onResponse({ response, options }: FetchContext) {
+      // account-bans 03 — a normal `/auth/user` reply while a block is stored
+      // means the block is over (ended, lifted by staff, or the user moved off
+      // a blocked network): resume. `/auth/user` only — it is always behind
+      // the account gate, so a 2xx proves the account, IP and device all pass.
+      if (!response?.ok || !(response.url || '').includes('/auth/user')) return
+      if (!_sentWhileBlocked.has(options)) return
+      if (useAuthStore().blockInfo) useBlockedState().resumeAfterBlock()
     },
     onResponseError({ response }: FetchContext) {
+      // account-bans 03 — a blocked account / IP / device. Checked BEFORE the
+      // generic 401 path and its URL exemptions: `/auth/user` and `/bootstrap`
+      // are exactly the calls a blocked user makes on boot. The token is KEPT
+      // (a timed block ends by itself and "Try again" resumes the session), and
+      // it applies signed out too (login / register refused by an IP block).
+      const block = parseBlockReply(response?.status, response?._data)
+      if (block) {
+        useBlockedState().enterBlocked(block)
+        return
+      }
+
       // Global 401 interceptor — token expired or invalid
       if (response?.status === 401) {
         const url = response?.url || ''

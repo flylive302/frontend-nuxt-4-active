@@ -22,17 +22,19 @@ export function useAuthLifecycle() {
    */
   async function handleForceDisconnect(payload: ForceDisconnectPayload): Promise<void> {
 
-    authStore.setSuspensionInfo({
-      reason: payload.blocked_reason ?? 'Your account has been suspended.',
-      until: payload.blocked_until ?? null,
-    })
-
     // Clear room session state before logout so the persisted `minimizedRoom`
     // snapshot doesn't outlive the block and resurrect the mini-player bubble
     // on a later re-login.
     useRoomSession().leaveRoom()
     disconnectSocket()
     authStore.logout()
+    // After logout: logout() clears blockInfo. Ticket 04 reworks this handler
+    // (route on `reason`, keep the token); until then it keeps today's behaviour.
+    authStore.setBlockInfo({
+      kind: 'account',
+      reason: payload.blocked_reason ?? null,
+      until: payload.blocked_until ?? null,
+    })
     await navigateTo('/blocked')
   }
 

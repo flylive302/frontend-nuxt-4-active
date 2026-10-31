@@ -4,6 +4,7 @@
 
 import { defineStore } from 'pinia'
 import type { BootstrapUser } from '~/types/user/bootstrap'
+import type { BlockInfo } from '~/types/user/block'
 
 export const useAuthStore = defineStore('auth', () => {
   // ========================================
@@ -14,8 +15,13 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null) // Sanctum Laravel token
   const msabToken = ref<string | null>(null) // MSAB token
   const status = ref<'idle' | 'loading' | 'authenticated' | 'unauthenticated'>('idle')
-  /** Populated by force-disconnect event; consumed by /blocked page */
-  const suspensionInfo = ref<{ reason: string; until: string | null } | null>(null)
+  /**
+   * Set when the API (or the socket) says this account, network or device is
+   * blocked; consumed by the /blocked page. Persisted, so the app reopens on
+   * /blocked after a kill + relaunch. Cleared by logout and by a successful
+   * "Try again" (account-bans 03).
+   */
+  const blockInfo = ref<BlockInfo | null>(null)
 
   // ========================================
   // Getters
@@ -69,15 +75,15 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(null)
     setMsabToken(null)
     status.value = 'unauthenticated'
-    suspensionInfo.value = null
+    blockInfo.value = null
   }
 
   /**
-   * Store suspension details from a force-disconnect event.
-   * The /blocked page reads this to display reason and countdown.
+   * Store (or clear, with null) the current block. State only — routing to
+   * /blocked lives in useBlockedState.
    */
-  function setSuspensionInfo(info: { reason: string; until: string | null }) {
-    suspensionInfo.value = info
+  function setBlockInfo(info: BlockInfo | null) {
+    blockInfo.value = info
   }
 
   function patchVip(vip: { vip_level: number; vip_level_id: number | null; vip_expires_at: string | null }) {
@@ -125,13 +131,13 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     msabToken,
     status,
-    suspensionInfo,
+    blockInfo,
     isAuthenticated,
     setUser,
     setToken,
     setMsabToken,
     logout,
-    setSuspensionInfo,
+    setBlockInfo,
     patchVip,
     patchProfile,
     incrementFollowers,
@@ -168,6 +174,11 @@ export const useAuthStore = defineStore('auth', () => {
       }),
     },
     { pick: ['user'], storage: piniaPluginPersistedstate.localStorage() },
+    // account-bans 03: /blocked must survive a kill + relaunch.
+    // ⚠️ Own `key`: without one every entry defaults to the store id (`auth`),
+    // and two localStorage entries under one key overwrite each other — `user`
+    // would never persist again.
+    { key: 'auth-block', pick: ['blockInfo'], storage: piniaPluginPersistedstate.localStorage() },
     { pick: ['msabToken'], storage: piniaPluginPersistedstate.sessionStorage() },
   ],
 })

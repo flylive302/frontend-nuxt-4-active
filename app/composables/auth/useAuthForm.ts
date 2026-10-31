@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import { useApi } from '../shared/useApi'
+import { parseBlockReply } from '~/utils/api/parseBlockReply'
 
 /**
  * Field error object shape used by Nuxt UI Form component at runtime.
@@ -102,8 +103,12 @@ export function useAuthForm(options: UseAuthFormOptions) {
       // Set general error message
       generalError.value = normalizedError.message
 
-      // Show toast for non-validation errors or general fallback
-      if (normalizedError.status !== 422) {
+      // Show toast for non-validation errors or general fallback. Not for a
+      // blocked reply (account-bans 03): useApi has already sent the user to
+      // /blocked, which says it in full.
+      const response = (error as { response?: { status?: number; _data?: unknown } } | undefined)?.response
+      const isBlockedReply = parseBlockReply(response?.status, response?._data) !== null
+      if (normalizedError.status !== 422 && !isBlockedReply) {
         toast.add({
           title: 'Error',
           description: normalizedError.message,
