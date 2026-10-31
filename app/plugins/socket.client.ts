@@ -38,7 +38,10 @@ export default defineNuxtPlugin({
     watch(
       () => authStore.isAuthenticated,
       async (isAuth, wasAuth) => {
-        if (isAuth && !wasAuth) {
+        // A blocked user stays authenticated (token kept), so a cold start with a
+        // persisted block would otherwise connect. resumeAfterBlock owns the
+        // reconnect when the block ends — do not also watch blockInfo here.
+        if (isAuth && !wasAuth && !authStore.blockInfo) {
           await connect()
         } else if (!isAuth && wasAuth) {
           disconnect()

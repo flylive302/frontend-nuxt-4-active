@@ -143,6 +143,15 @@ export function useAudioSocket(): UseAudioSocketReturn {
   // ========================================
   const isConnected = computed(() => status.value === 'connected');
 
+  /**
+   * A blocked user keeps their token (and stays authenticated) but must not
+   * hold a live socket. `useBlockedState.resumeAfterBlock` is the only owner of
+   * the reconnect once the block ends, and it clears blockInfo first.
+   */
+  function isBlocked(): boolean {
+    return authStore.blockInfo !== null;
+  }
+
   // ========================================
   // Visibility Tracking (PWA Suspension Detection)
   // ========================================
@@ -193,8 +202,8 @@ export function useAudioSocket(): UseAudioSocketReturn {
   function handleDisconnect(reason: string) {
     status.value = 'disconnected';
 
-    // If server disconnected us, try to reconnect
-    if (reason === 'io server disconnect') {
+    // If server disconnected us, try to reconnect — never while blocked
+    if (reason === 'io server disconnect' && !isBlocked()) {
       socket.value?.connect();
     }
   }
@@ -250,6 +259,12 @@ export function useAudioSocket(): UseAudioSocketReturn {
     socket.value?.disconnect();
 
     _authActions!.refreshMsabToken().then((success) => {
+      // Blocked while the refresh was in flight (often the refresh's own block
+      // reply): stay disconnected, and no "Audio connection failed" toast on /blocked.
+      if (isBlocked()) {
+        _authRetryInFlight = false;
+        return;
+      }
       if (success && _authStore!.msabToken) {
         socket.value?.connect();
       } else {
@@ -265,6 +280,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
     }).catch(() => {
       _authRetryInFlight = false;
       socket.value?.disconnect();
+      if (isBlocked()) return;
       toast.add({
         title: 'Audio connection failed',
         description: 'Chat and gifting will still work.',
@@ -363,6 +379,9 @@ export function useAudioSocket(): UseAudioSocketReturn {
    *   if any connection is active.
    */
   async function connect(targetUrl?: string) {
+    // GATE: no connection (or token refresh) while blocked.
+    if (isBlocked()) return;
+
     // Auto-refresh MSAB token if not available
     if (!authStore.msabToken) {
       status.value = 'error';
@@ -423,6 +442,16 @@ export function useAudioSocket(): UseAudioSocketReturn {
     // Create new socket connection
     _connectedUrl = serverUrl;
     const io = await getIo();
+    // GATE again, after the last await: a block can land during the token
+    // refresh above or while socket.io-client loads (cold start: /bootstrap's
+    // block reply races the eager connect). enterBlocked() tears down only on
+    // first entry and found no socket yet, so nothing else would remove one
+    // created now.
+    if (isBlocked()) {
+      _connectedUrl = null;
+      status.value = 'disconnected';
+      return;
+    }
     socket.value = io(serverUrl, {
       auth: (cb: (data: { token: string | null; correlationId: string }) => void) => {
         cb({ token: authStore.msabToken, correlationId });
@@ -530,7 +559,7 @@ export function useAudioSocket(): UseAudioSocketReturn {
       return;
     }
 
-    if (!socket.value.connected) {
+    if (!socket.value.connected && !isBlocked()) {
       socket.value.connect();
       return;
     }

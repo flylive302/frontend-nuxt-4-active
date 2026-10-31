@@ -7,6 +7,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { ref, computed, shallowRef, reactive, readonly, watch } from 'vue'
+import type { BlockInfo } from '~/types/user/block'
+
+const BLOCKED: BlockInfo = { kind: 'account', reason: 'Spam', until: null }
 
 // ============================================
 // Mock External Dependencies
@@ -73,7 +76,7 @@ const mockApi = { api: vi.fn().mockResolvedValue(null) }
 vi.stubGlobal('useApi', () => mockApi)
 
 // Mock useAuthStore - needs to be a function that returns the store
-let mockAuthStore = { token: null as string | null, msabToken: null as string | null }
+let mockAuthStore = { token: null as string | null, msabToken: null as string | null, blockInfo: null as BlockInfo | null }
 vi.stubGlobal('useAuthStore', () => mockAuthStore)
 
 // Mock useAuthActions (connect() calls refreshMsabToken when no MSAB token)
@@ -104,7 +107,7 @@ describe('useAudioSocket', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockSocket.connected = false
-    mockAuthStore = { token: null, msabToken: null }
+    mockAuthStore = { token: null, msabToken: null, blockInfo: null }
     
     // Re-stub all globals after module reset
     vi.stubGlobal('useRuntimeConfig', () => mockRuntimeConfig)
@@ -403,6 +406,138 @@ describe('useAudioSocket', () => {
       await connect()
 
       expect(mockIo).toHaveBeenCalledWith('ws://localhost:3030', expect.any(Object))
+    })
+  })
+
+  describe('blocked user (account-bans 04)', () => {
+    async function connectedDisconnectHandler() {
+      mockAuthStore.msabToken = 'valid-token'
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const api = useAudioSocket()
+      await api.connect()
+      mockSocket.connect.mockClear()
+      const handler = mockSocket.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'disconnect'
+      )?.[1] as (reason: string) => void
+      return { api, handler }
+    }
+
+    it("'io server disconnect' while not blocked → raw socket.connect() is called", async () => {
+      const { handler } = await connectedDisconnectHandler()
+
+      handler('io server disconnect')
+
+      expect(mockSocket.connect).toHaveBeenCalledOnce()
+    })
+
+    it("'io server disconnect' while blocked → NOT reconnected", async () => {
+      const { handler } = await connectedDisconnectHandler()
+      mockAuthStore.blockInfo = BLOCKED
+
+      handler('io server disconnect')
+
+      expect(mockSocket.connect).not.toHaveBeenCalled()
+    })
+
+    it('connect() while blocked → no io(), no token refresh, status unchanged', async () => {
+      mockAuthStore.blockInfo = BLOCKED
+      const { io: mockIo } = await import('socket.io-client')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect, status } = useAudioSocket()
+      await connect()
+
+      expect(mockIo).not.toHaveBeenCalled()
+      expect(mockAuthActions.refreshMsabToken).not.toHaveBeenCalled()
+      expect(status.value).toBe('disconnected')
+    })
+
+    it('auth-failure token refresh resolving while blocked → no reconnect, no toast', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      mockAuthActions.refreshMsabToken.mockResolvedValueOnce(true)
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      await useAudioSocket().connect()
+      mockSocket.connect.mockClear()
+      const errorHandler = mockSocket.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'connect_error'
+      )?.[1] as (err: Error) => void
+
+      errorHandler(new Error('Authentication failed'))
+      mockAuthStore.blockInfo = BLOCKED
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(mockSocket.connect).not.toHaveBeenCalled()
+      expect(mockToast.add).not.toHaveBeenCalled()
+    })
+
+    async function connectErrorWhileRefreshing(refresh: () => Promise<boolean>) {
+      mockAuthStore.msabToken = 'valid-token'
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      await useAudioSocket().connect()
+      mockSocket.connect.mockClear()
+      mockAuthActions.refreshMsabToken.mockImplementationOnce(refresh)
+      const errorHandler = mockSocket.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'connect_error'
+      )?.[1] as (err: Error) => void
+      errorHandler(new Error('Authentication failed'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+
+    it('auth-failure token refresh FAILING with a block reply → no "Audio connection failed" toast', async () => {
+      await connectErrorWhileRefreshing(async () => {
+        mockAuthStore.blockInfo = BLOCKED
+        return false
+      })
+
+      expect(mockSocket.connect).not.toHaveBeenCalled()
+      expect(mockToast.add).not.toHaveBeenCalled()
+    })
+
+    it('auth-failure token refresh REJECTING while blocked → no toast', async () => {
+      await connectErrorWhileRefreshing(async () => {
+        mockAuthStore.blockInfo = BLOCKED
+        throw new Error('401')
+      })
+
+      expect(mockToast.add).not.toHaveBeenCalled()
+    })
+
+    it('auth-failure token refresh failing while NOT blocked → still toasts (regression)', async () => {
+      await connectErrorWhileRefreshing(async () => false)
+
+      expect(mockToast.add).toHaveBeenCalledOnce()
+    })
+
+    it('block lands during the token refresh inside connect() → no io(), status disconnected', async () => {
+      const { io: mockIo } = await import('socket.io-client')
+      mockAuthActions.refreshMsabToken.mockImplementationOnce(async () => {
+        mockAuthStore.msabToken = 'fresh-token'
+        mockAuthStore.blockInfo = BLOCKED
+        return true
+      })
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect, status } = useAudioSocket()
+      await connect()
+
+      expect(mockIo).not.toHaveBeenCalled()
+      expect(status.value).toBe('disconnected')
+    })
+
+    it('block lands while socket.io-client loads (cold start race) → no io(), status disconnected', async () => {
+      mockAuthStore.msabToken = 'valid-token'
+      const { io: mockIo } = await import('socket.io-client')
+
+      const { useAudioSocket } = await import('../../app/composables/room/useAudioSocket')
+      const { connect, status } = useAudioSocket()
+      // connect() runs synchronously up to `await getIo()`; the block reply
+      // from /bootstrap lands before that import resolves.
+      const pending = connect()
+      mockAuthStore.blockInfo = BLOCKED
+      await pending
+
+      expect(mockIo).not.toHaveBeenCalled()
+      expect(status.value).toBe('disconnected')
     })
   })
 

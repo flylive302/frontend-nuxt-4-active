@@ -7,12 +7,14 @@
  * dropped it for this reason — see the plugin header).
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { BlockInfo } from '~/types/user/block'
 import { ref, watch, nextTick, effectScope, type EffectScope } from 'vue'
 
 const connect = vi.fn(() => Promise.resolve())
 const disconnect = vi.fn()
 const isAuthenticated = ref(false)
 const maintenanceMode = ref(false)
+const blockInfo = ref<BlockInfo | null>(null)
 
 vi.stubGlobal('watch', watch)
 vi.stubGlobal('defineNuxtPlugin', (def: unknown) => def)
@@ -21,6 +23,9 @@ vi.stubGlobal('useAudioSocket', () => ({ connect, disconnect }))
 vi.stubGlobal('useAuthStore', () => ({
   get isAuthenticated() {
     return isAuthenticated.value
+  },
+  get blockInfo() {
+    return blockInfo.value
   },
 }))
 
@@ -38,6 +43,7 @@ describe('audio-socket plugin', () => {
     connect.mockClear()
     disconnect.mockClear()
     maintenanceMode.value = false
+    blockInfo.value = null
   })
 
   afterEach(() => {
@@ -75,5 +81,40 @@ describe('audio-socket plugin', () => {
     await setup(true)
 
     expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('login mid-session while blocked: does not connect', async () => {
+    await setup(false)
+    blockInfo.value = { kind: 'account', reason: 'Spam', until: null }
+
+    isAuthenticated.value = true
+    await nextTick()
+
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('cold start with authenticated + persisted block: does not connect', async () => {
+    blockInfo.value = { kind: 'account', reason: 'Spam', until: null }
+    await setup(true)
+
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('does not connect when the block clears (resumeAfterBlock owns that reconnect)', async () => {
+    blockInfo.value = { kind: 'account', reason: 'Spam', until: null }
+    await setup(true)
+
+    blockInfo.value = null
+    await nextTick()
+
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('login mid-session with no block: connects (regression)', async () => {
+    await setup(false)
+    isAuthenticated.value = true
+    await nextTick()
+
+    expect(connect).toHaveBeenCalledTimes(1)
   })
 })

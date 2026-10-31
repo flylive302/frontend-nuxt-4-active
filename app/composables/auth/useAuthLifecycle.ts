@@ -1,7 +1,7 @@
 // ========================================
 // Auth Lifecycle Composable
 // ========================================
-// REACT layer for force-disconnect (admin block) events fired from MSAB.
+// REACT layer for force-disconnect events fired from MSAB (admin block / sign out everywhere).
 // Lives outside useAudioSocket so the socket layer stays infrastructure-only.
 
 
@@ -13,29 +13,37 @@ export interface ForceDisconnectPayload {
 }
 
 export function useAuthLifecycle() {
-  const authStore = useAuthStore()
   const { disconnect: disconnectSocket } = useAudioSocket()
 
   /**
-   * Handle MSAB's auth:force_disconnect event.
-   * Stores suspension info → kills the socket → clears auth → redirects.
+   * Handle MSAB's auth:force_disconnect event, routed on `payload.reason`:
+   *
+   * - `'blocked'` → enterBlocked(): keeps the token, leaves the room, drops the
+   *   socket and navigates to /blocked. Nothing else runs here.
+   * - anything else (`'signed_out'` from "Sign out everywhere", or an unknown
+   *   reason) → plain session end. The room is left and the socket dropped
+   *   FIRST, before any network call: MSAB emits the
+   *   event then server-disconnects, and with listeners still live the
+   *   `io server disconnect` path would reconnect with a revoked token. Then the
+   *   normal logout runs (leave room, reset stores, clear auth incl. blockInfo,
+   *   navigate to /log-in). Block state is never stored on this path.
    */
   async function handleForceDisconnect(payload: ForceDisconnectPayload): Promise<void> {
+    if (payload.reason === 'blocked') {
+      useBlockedState().enterBlocked({
+        kind: 'account',
+        reason: payload.blocked_reason ?? null,
+        until: payload.blocked_until ?? null,
+      })
+      return
+    }
 
-    // Clear room session state before logout so the persisted `minimizedRoom`
-    // snapshot doesn't outlive the block and resurrect the mini-player bubble
-    // on a later re-login.
+    // Leave the room before the logout's network round-trip (its POST
+    // /auth/logout 401s on the revoked token and can take the full timeout
+    // offline), so the room UI and audio stop at once.
     useRoomSession().leaveRoom()
     disconnectSocket()
-    authStore.logout()
-    // After logout: logout() clears blockInfo. Ticket 04 reworks this handler
-    // (route on `reason`, keep the token); until then it keeps today's behaviour.
-    authStore.setBlockInfo({
-      kind: 'account',
-      reason: payload.blocked_reason ?? null,
-      until: payload.blocked_until ?? null,
-    })
-    await navigateTo('/blocked')
+    await useAuthActions().logout()
   }
 
   return { handleForceDisconnect }
