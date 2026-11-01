@@ -24,6 +24,7 @@ const ROUTES = {
 } as const
 
 const { register } = useAuthActions()
+const { openLegalPage } = useLegalPages()
 
 const formRef = ref<Form<RegistrationFormData> | null>(null)
 const { isSubmitting, generalError, handleSubmit } = useAuthForm({ formRef })
@@ -132,9 +133,10 @@ async function handleFormSubmit(event: FormSubmitEvent<RegistrationFormData>): P
 
       <p class="text-xs text-neutral-500 text-center mt-2 leading-relaxed">
         By signing up, you agree to our
-        <a href="/privacy-policy" class="text-primary hover:underline">Privacy Policy</a>
+        <a href="/privacy-policy" class="text-primary hover:underline" @click="openLegalPage('privacy-policy', $event)">Privacy Policy</a>
         and
-        <a href="/terms-of-service" class="text-primary hover:underline">Terms of Service</a>.
+        <a href="/terms-of-service" class="text-primary hover:underline" @click="openLegalPage('terms-of-service', $event)">Terms of Service</a>,
+        including our zero-tolerance policy on objectionable content and abusive users.
         You must be at least 18 years old.
       </p>
     </UForm>

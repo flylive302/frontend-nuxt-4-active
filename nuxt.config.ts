@@ -299,6 +299,9 @@ export default defineNuxtConfig({
         public: {
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
             apiRoot: process.env.NUXT_PUBLIC_API_ROOT || 'http://localhost:8000',
+            // Public web origin. Native opens the legal pages (Terms / Privacy)
+            // from here in the in-app browser — see composables/shared/useLegalPages.ts.
+            siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://flyliveapp.com',
             audioServerUrl:
                 process.env.NUXT_PUBLIC_AUDIO_SERVER_URL
                 || (process.env.NODE_ENV === 'development' ? 'ws://localhost:3030' : 'wss://localhost:3030'),

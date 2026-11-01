@@ -28,6 +28,7 @@ const ROUTES = {
 } as const
 
 const { login } = useAuthActions()
+const { openLegalPage } = useLegalPages()
 
 const form = ref<Form<LoginFormState> | null>(null)
 const { isSubmitting, generalError, handleSubmit } = useAuthForm({ formRef: form })
@@ -126,6 +127,12 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>): Promise<void> {
       >
         Log In
       </UButton>
+
+      <p class="text-xs text-neutral-500 text-center mt-2 leading-relaxed">
+        By logging in, you agree to our
+        <a href="/terms-of-service" class="text-primary hover:underline" @click="openLegalPage('terms-of-service', $event)">Terms of Service</a>,
+        including our zero-tolerance policy on objectionable content and abusive users.
+      </p>
     </UForm>
 
     <UButton

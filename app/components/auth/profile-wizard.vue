@@ -20,6 +20,9 @@ const {
 } = useProfileCompletion()
 
 const { hasGrantedMic, requestMicAccess } = useMicPermission()
+// Apple 1.2 — on native the legal links must open in the in-app browser (a
+// `target="_blank"` to the bundled page is a dead tap in the WKWebView).
+const { openLegalPage } = useLegalPages()
 
 // Microphone permission, requested inline on the consent step (INTENT only).
 const micState = ref<'idle' | 'granted' | 'denied'>('idle')
@@ -235,6 +238,15 @@ async function onAvatarFileSelected(file: File) {
         <p class="text-sm text-neutral-400 text-center mb-8">Please review and accept our agreements to continue</p>
 
         <div class="flex flex-col gap-4 w-full max-w-88 mx-auto">
+          <!-- Community rules — Apple 1.2: the EULA must make the zero-tolerance
+               policy explicit at the point of agreement, not only behind the link -->
+          <div class="p-4 rounded-2xl border border-neutral-700 bg-neutral-900">
+            <p class="text-sm font-medium text-neutral-100 mb-1">Community rules</p>
+            <p class="text-xs text-neutral-400 leading-relaxed">
+              FlyLive has zero tolerance for objectionable content or abusive users. Reports are reviewed within 24 hours; offending content is removed and the user who posted it is removed from the platform.
+            </p>
+          </div>
+
           <label class="flex items-start gap-3 cursor-pointer p-4 rounded-2xl border border-neutral-700 bg-neutral-900 transition-colors" :class="{ 'border-primary-500 bg-neutral-800': formState.termsAccepted }">
             <input
               v-model="formState.termsAccepted"
@@ -243,7 +255,8 @@ async function onAvatarFileSelected(file: File) {
             >
             <span class="text-sm text-neutral-300 leading-relaxed">
               I agree to the
-              <a href="/terms-of-service" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2">Terms of Service</a>
+              <a href="/terms-of-service" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2" @click="openLegalPage('terms-of-service', $event)">Terms of Service</a>,
+              including the zero-tolerance policy on objectionable content and abusive users
             </span>
           </label>
 
@@ -255,7 +268,7 @@ async function onAvatarFileSelected(file: File) {
             >
             <span class="text-sm text-neutral-300 leading-relaxed">
               I agree to the
-              <a href="/privacy-policy" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2">Privacy Policy</a>
+              <a href="/privacy-policy" target="_blank" class="text-primary-400 hover:text-primary-300 underline underline-offset-2" @click="openLegalPage('privacy-policy', $event)">Privacy Policy</a>
             </span>
           </label>
 
