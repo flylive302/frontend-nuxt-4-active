@@ -95,6 +95,7 @@ export interface Agency {
   // Owner-only fields
   logo_file_id?: string | null
   national_id_images?: AgencyNationalIdImage[] | null
+  phone?: string | null // E.164, e.g. "+923001234567"
   can_cancel?: boolean
   can_resubmit?: boolean
 }

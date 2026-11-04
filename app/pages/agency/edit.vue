@@ -5,7 +5,7 @@
 
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { navigateTo } from 'nuxt/app'
 import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
 import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
@@ -68,6 +68,11 @@ const phone = reactive<PhoneModel>({
   dialCode: '',
   phone: '',
 })
+
+// E.164 phone from the previous application. The phone input resolves the
+// dial code from the country asynchronously, so the national part is filled in
+// once the dial code is known.
+const storedPhone = ref<string | null>(null)
 
 // Track selected coin reseller ID from ChooseDefaultReseller
 const coinResellerId = ref<number | null>(null)
@@ -152,6 +157,8 @@ function prefillFromAgency(agency: Agency): void {
   state.agencyName = agency.name
   state.address = agency.address ?? undefined
   phone.countryCode = agency.country ?? ''
+  storedPhone.value = agency.phone ?? null
+  applyStoredPhone()
 
   // The API rejects a logo URL without its file id (`required_with`), so a
   // logo we cannot re-send with its file id counts as "no logo kept" — the
@@ -166,6 +173,21 @@ function prefillFromAgency(agency: Agency): void {
 
   coinResellerId.value = agency.coin_reseller?.id ?? null
 }
+
+/**
+ * Splits the stored E.164 phone into the input's national part once the dial
+ * code is known. One-shot: never overwrites a number the owner already typed.
+ */
+function applyStoredPhone(): void {
+  const stored = storedPhone.value
+  if (!stored || !phone.dialCode || phone.phone) return
+  if (stored.startsWith(phone.dialCode)) {
+    phone.phone = stored.slice(phone.dialCode.length)
+  }
+  storedPhone.value = null
+}
+
+watch(() => phone.dialCode, applyStoredPhone)
 
 // ========================================
 // Lifecycle
