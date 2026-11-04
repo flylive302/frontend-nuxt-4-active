@@ -1,18 +1,12 @@
 <script setup lang="ts">
 // ========================================
-// Imports & Types
+// Imports
 // ========================================
 
-import { z } from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 import { navigateTo } from 'nuxt/app'
-import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
-import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
-import type { NationalIdImage } from '~/types/asset/upload'
-import { ALLOWED_IMAGE_ACCEPT, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE } from '~/types/asset/upload'
-import type { Agency, AgencyNationalIdImage } from '~/types/agency/agency'
-import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
+import { ALLOWED_IMAGE_ACCEPT } from '~/types/asset/upload'
+import { canEditAgencyApplication, useAgencyApplicationForm } from '~/composables/agency/useAgencyApplicationForm'
 
 // ========================================
 // Page Configuration
@@ -24,173 +18,41 @@ definePageMeta({
 })
 
 // ========================================
-// Schema
-// ========================================
-
-const imageFile = z.instanceof(File, { message: 'Only image files are allowed' })
-  // Same allowlist `useImageUpload.validateFile` enforces — anything looser
-  // (e.g. HEIC/GIF from a phone gallery) passes the form, then fails at upload.
-  .refine(f => ALLOWED_IMAGE_TYPES.includes(f.type), 'Please pick a JPG, PNG or WebP image')
-  .refine(f => f.size <= MAX_IMAGE_SIZE, 'Each file must be ≤ 5MB')
-
-// Images are optional at the zod level here — an existing (already-uploaded)
-// image is an acceptable substitute for a freshly picked File. That extra
-// "file OR existing image" rule is enforced in `isValid` below, not in the schema.
-const baseSchema = z.object({
-  agencyName: z.string()
-    .min(1, 'Agency name is required')
-    .max(30, 'Agency name must be less than 30 characters'),
-  address: z.string()
-    .min(1, 'Address is required'),
-  logo: imageFile.optional(),
-  idCardFront: imageFile.optional(),
-  idCardBack: imageFile.optional(),
-})
-
-type BaseSchema = z.output<typeof baseSchema>
-
-// ========================================
-// Component State
+// State
 // ========================================
 
 const ready = ref(false)
 
-const state = reactive<Partial<BaseSchema>>({
-  agencyName: undefined,
-  address: undefined,
-  logo: undefined,
-  idCardFront: undefined,
-  idCardBack: undefined,
-})
-
-const phone = reactive<PhoneModel>({
-  countryCode: '',
-  dialCode: '',
-  phone: '',
-})
-
-// E.164 phone from the previous application. The phone input resolves the
-// dial code from the country asynchronously, so the national part is filled in
-// once the dial code is known.
-const storedPhone = ref<string | null>(null)
-
-// Track selected coin reseller ID from ChooseDefaultReseller
-const coinResellerId = ref<number | null>(null)
-
-// Previously uploaded images kept from the rejected/cancelled application.
-// Replaced (not merged) the moment the owner picks a new file for that slot.
-const existingLogo = ref<{ url: string; file_id: string } | null>(null)
-const existingIdFront = ref<AgencyNationalIdImage | null>(null)
-const existingIdBack = ref<AgencyNationalIdImage | null>(null)
-
 // ========================================
-// Composables / Injected Dependencies
+// Composables
 // ========================================
 
-const toast = useToast()
 const agencyStore = useAgencyStore()
-const { resubmitApplication } = useAgencyApplication()
 const { fetchUserAgency } = useAgencyMembership()
-const { uploadImage: _uploadImage, createUploadState } = useImageUpload()
+
+// Whole GATE → EXECUTE → REACT pipeline lives in the composable.
+const {
+  state,
+  phone,
+  coinResellerId,
+  existingLogo,
+  existingIdFront,
+  existingIdBack,
+  logoUpload,
+  idFrontUpload,
+  idBackUpload,
+  processing,
+  currentStep,
+  pageSchema,
+  isValid,
+  isUploading,
+  overallProgress,
+  prefillFromAgency,
+  submit: onSubmit,
+} = useAgencyApplicationForm('edit')
 
 // ========================================
-// Upload States
-// ========================================
-
-const logoUpload = createUploadState()
-const idFrontUpload = createUploadState()
-const idBackUpload = createUploadState()
-
-const processing = ref(false)
-const currentStep = ref<'idle' | 'uploading' | 'submitting'>('idle')
-
-// ========================================
-// Schema Composition
-// ========================================
-
-const phoneSchema = usePhoneSchema(computed(() =>
-  phone.countryCode ? { code: phone.countryCode, name: '' } : undefined
-))
-const pageSchema = computed(() => baseSchema.and(phoneSchema.value))
-
-type FullSchema = z.output<typeof pageSchema.value>
-
-// ========================================
-// Computed
-// ========================================
-
-const isValid = computed(() => {
-  const baseValid = baseSchema.safeParse(state).success
-  const phoneValid = phoneSchema.value.safeParse(phone).success
-  const hasLogo = !!state.logo || !!existingLogo.value
-  const hasIdFront = !!state.idCardFront || !!existingIdFront.value
-  const hasIdBack = !!state.idCardBack || !!existingIdBack.value
-  return baseValid && phoneValid && hasLogo && hasIdFront && hasIdBack
-})
-
-const isUploading = computed(() =>
-  logoUpload.state.value.status === 'uploading' ||
-  idFrontUpload.state.value.status === 'uploading' ||
-  idBackUpload.state.value.status === 'uploading'
-)
-
-const overallProgress = computed(() => {
-  const states = [logoUpload.state.value, idFrontUpload.state.value, idBackUpload.state.value]
-  const total = states.reduce((sum, s) => sum + s.progress, 0)
-  return Math.round(total / 3)
-})
-
-// ========================================
-// Gate — owner-only, rejected/cancelled applications only
-// ========================================
-
-function canEditApplication(agency: Agency | null, isOwner: boolean): boolean {
-  if (!agency || !isOwner) return false
-  return agency.can_resubmit ?? (agency.status === 'rejected' || agency.status === 'cancelled')
-}
-
-// ========================================
-// Prefill
-// ========================================
-
-function prefillFromAgency(agency: Agency): void {
-  state.agencyName = agency.name
-  state.address = agency.address ?? undefined
-  phone.countryCode = agency.country ?? ''
-  storedPhone.value = agency.phone ?? null
-  applyStoredPhone()
-
-  // The API rejects a logo URL without its file id (`required_with`), so a
-  // logo we cannot re-send with its file id counts as "no logo kept" — the
-  // owner must pick a new one rather than hit a 422 on submit.
-  if (agency.logo && agency.logo_file_id) {
-    existingLogo.value = { url: agency.logo, file_id: agency.logo_file_id }
-  }
-
-  const idImages = agency.national_id_images ?? []
-  existingIdFront.value = idImages.find(img => img.side === 'front') ?? null
-  existingIdBack.value = idImages.find(img => img.side === 'back') ?? null
-
-  coinResellerId.value = agency.coin_reseller?.id ?? null
-}
-
-/**
- * Splits the stored E.164 phone into the input's national part once the dial
- * code is known. One-shot: never overwrites a number the owner already typed.
- */
-function applyStoredPhone(): void {
-  const stored = storedPhone.value
-  if (!stored || !phone.dialCode || phone.phone) return
-  if (stored.startsWith(phone.dialCode)) {
-    phone.phone = stored.slice(phone.dialCode.length)
-  }
-  storedPhone.value = null
-}
-
-watch(() => phone.dialCode, applyStoredPhone)
-
-// ========================================
-// Lifecycle
+// Lifecycle — route-level data loading
 // ========================================
 
 onMounted(async () => {
@@ -199,7 +61,7 @@ onMounted(async () => {
   }
 
   const agency = agencyStore.userAgency.agency
-  if (!canEditApplication(agency, agencyStore.isAgencyOwner) || !agency) {
+  if (!agency || !canEditAgencyApplication(agency, agencyStore.isAgencyOwner)) {
     await navigateTo('/agency/my-agency')
     return
   }
@@ -209,119 +71,7 @@ onMounted(async () => {
 })
 
 // ========================================
-// Event Handlers
-// ========================================
-
-async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
-  processing.value = true
-  currentStep.value = 'idle'
-
-  try {
-    const parsed = pageSchema.value.safeParse({ ...state, ...phone })
-    if (!parsed.success) {
-      toast.add({ title: 'Validation Error', description: 'Please check all required fields', color: 'error' })
-      return
-    }
-
-    // Step 1: Upload any newly-picked images to ImageKit; keep existing ones untouched
-    currentStep.value = 'uploading'
-
-    let logoUrl: string
-    let logoFileId: string | number | null
-
-    if (parsed.data.logo) {
-      const logoResult = await logoUpload.upload(parsed.data.logo, 'agencies/logos')
-      if (!logoResult) {
-        toast.add({ title: 'Upload Failed', description: logoUpload.state.value.error ?? 'Failed to upload logo', color: 'error' })
-        return
-      }
-      logoUrl = logoResult.url
-      logoFileId = logoResult.fileId
-    } else if (existingLogo.value) {
-      logoUrl = existingLogo.value.url
-      logoFileId = existingLogo.value.file_id
-    } else {
-      toast.add({ title: 'Missing Logo', description: 'Please add a logo for your agency', color: 'error' })
-      return
-    }
-
-    let idFrontImage: NationalIdImage
-    if (parsed.data.idCardFront) {
-      const idFrontResult = await idFrontUpload.upload(parsed.data.idCardFront, 'agencies/national-ids')
-      if (!idFrontResult) {
-        toast.add({ title: 'Upload Failed', description: idFrontUpload.state.value.error ?? 'Failed to upload ID card front', color: 'error' })
-        return
-      }
-      idFrontImage = { url: idFrontResult.url, file_id: idFrontResult.fileId, side: 'front' }
-    } else if (existingIdFront.value) {
-      idFrontImage = existingIdFront.value
-    } else {
-      toast.add({ title: 'Missing ID', description: 'Please add the front of your ID card', color: 'error' })
-      return
-    }
-
-    let idBackImage: NationalIdImage
-    if (parsed.data.idCardBack) {
-      const idBackResult = await idBackUpload.upload(parsed.data.idCardBack, 'agencies/national-ids')
-      if (!idBackResult) {
-        toast.add({ title: 'Upload Failed', description: idBackUpload.state.value.error ?? 'Failed to upload ID card back', color: 'error' })
-        return
-      }
-      idBackImage = { url: idBackResult.url, file_id: idBackResult.fileId, side: 'back' }
-    } else if (existingIdBack.value) {
-      idBackImage = existingIdBack.value
-    } else {
-      toast.add({ title: 'Missing ID', description: 'Please add the back of your ID card', color: 'error' })
-      return
-    }
-
-    // Step 2: Resubmit to API — same payload shape as the initial create request
-    currentStep.value = 'submitting'
-
-    const payload = {
-      name: parsed.data.agencyName,
-      address: parsed.data.address,
-      country: parsed.data.countryCode.toUpperCase(),
-      logo_url: logoUrl,
-      logo_file_id: logoFileId,
-      national_id_images: [idFrontImage, idBackImage],
-      // Phone info
-      phone_country_code: parsed.data.countryCode,
-      phone_dial_code: parsed.data.dialCode,
-      phone: parsed.data.phone,
-      phone_e164: normalizePhone(parsed.data.dialCode, parsed.data.phone),
-      // Coin reseller (from user's default reseller selection)
-      ...(coinResellerId.value && { coin_reseller_id: coinResellerId.value }),
-    }
-
-    const success = await resubmitApplication(payload)
-    if (!success) return
-
-    // Navigate to my-agency dashboard. Immediate — leaving the submit button
-    // live after success lets a second click re-POST an already-pending
-    // application.
-    await navigateTo('/agency/my-agency')
-
-  } catch (error: unknown) {
-    const normalizedError = normalizeFetchError(error)
-
-    const errorDescription = normalizedError.fieldErrors
-      ? Object.values(normalizedError.fieldErrors).flat()[0]
-      : normalizedError.message
-
-    toast.add({
-      title: 'Error',
-      description: errorDescription || 'Failed to resubmit agency application. Please try again.',
-      color: 'error'
-    })
-  } finally {
-    processing.value = false
-    currentStep.value = 'idle'
-  }
-}
-
-// ========================================
-// Helpers
+// Helpers (template display only)
 // ========================================
 
 function getUploadStatusIcon(status: string): string {

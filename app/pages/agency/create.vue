@@ -1,223 +1,43 @@
 <script setup lang="ts">
 // ========================================
-// Imports & Types
+// Imports
 // ========================================
 
-import { z } from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
-import { computed, reactive, ref } from 'vue'
-import { navigateTo } from 'nuxt/app'
-import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
-import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
-import type { NationalIdImage } from '~/types/asset/upload'
-import { ALLOWED_IMAGE_ACCEPT, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE } from '~/types/asset/upload'
-import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
+import { ALLOWED_IMAGE_ACCEPT } from '~/types/asset/upload'
+import { useAgencyApplicationForm } from '~/composables/agency/useAgencyApplicationForm'
 
 // ========================================
 // Page Configuration
 // ========================================
 
-definePageMeta({ 
+definePageMeta({
   layout: 'alt',
   middleware: 'auth',
 })
 
 // ========================================
-// Schema
+// Composables
 // ========================================
 
-const imageFile = z.instanceof(File, { message: 'Only image files are allowed' })
-  // Same allowlist `useImageUpload.validateFile` enforces — anything looser
-  // (e.g. HEIC/GIF from a phone gallery) passes the form, then fails at upload.
-  .refine(f => ALLOWED_IMAGE_TYPES.includes(f.type), 'Please pick a JPG, PNG or WebP image')
-  .refine(f => f.size <= MAX_IMAGE_SIZE, 'Each file must be ≤ 5MB')
-
-const baseSchema = z.object({
-  agencyName: z.string()
-    .min(1, 'Agency name is required')
-    .max(30, 'Agency name must be less than 30 characters'),
-  address: z.string()
-    .min(1, 'Address is required'),
-  logo: imageFile,
-  idCardFront: imageFile,
-  idCardBack: imageFile,
-})
-
-type BaseSchema = z.output<typeof baseSchema>
+// Whole GATE → EXECUTE → REACT pipeline lives in the composable.
+const {
+  state,
+  phone,
+  coinResellerId,
+  logoUpload,
+  idFrontUpload,
+  idBackUpload,
+  processing,
+  currentStep,
+  pageSchema,
+  isValid,
+  isUploading,
+  overallProgress,
+  submit: onSubmit,
+} = useAgencyApplicationForm('create')
 
 // ========================================
-// Component State
-// ========================================
-
-const state = reactive<Partial<BaseSchema>>({
-  agencyName: undefined,
-  address: undefined,
-  logo: undefined,
-  idCardFront: undefined,
-  idCardBack: undefined,
-})
-
-const phone = reactive<PhoneModel>({
-  countryCode: '',
-  dialCode: '',
-  phone: '',
-})
-
-// Track selected coin reseller ID from ChooseDefaultReseller
-const coinResellerId = ref<number | null>(null)
-
-// ========================================
-// Composables / Injected Dependencies
-// ========================================
-
-const toast = useToast()
-const { submitAgency } = useAgencyCreateApi()
-const { uploadImage: _uploadImage, createUploadState } = useImageUpload()
-const { fetchUserAgency } = useAgencyMembership()
-
-// ========================================
-// Upload States
-// ========================================
-
-const logoUpload = createUploadState()
-const idFrontUpload = createUploadState()
-const idBackUpload = createUploadState()
-
-const processing = ref(false)
-// Set once the application is accepted; keeps the form locked through the
-// success toast → redirect delay so a second tap can't re-POST.
-const submitted = ref(false)
-const currentStep = ref<'idle' | 'uploading' | 'submitting'>('idle')
-
-// ========================================
-// Schema Composition
-// ========================================
-
-const phoneSchema = usePhoneSchema(computed(() =>
-  phone.countryCode ? { code: phone.countryCode, name: '' } : undefined
-))
-const pageSchema = computed(() => baseSchema.and(phoneSchema.value))
-
-type FullSchema = z.output<typeof pageSchema.value>
-
-// ========================================
-// Computed
-// ========================================
-
-const isValid = computed(() => {
-  const baseValid = baseSchema.safeParse(state).success
-  const phoneValid = phoneSchema.value.safeParse(phone).success
-  return baseValid && phoneValid
-})
-
-const isUploading = computed(() => 
-  logoUpload.state.value.status === 'uploading' ||
-  idFrontUpload.state.value.status === 'uploading' ||
-  idBackUpload.state.value.status === 'uploading'
-)
-
-const overallProgress = computed(() => {
-  const states = [logoUpload.state.value, idFrontUpload.state.value, idBackUpload.state.value]
-  const total = states.reduce((sum, s) => sum + s.progress, 0)
-  return Math.round(total / 3)
-})
-
-// ========================================
-// Event Handlers
-// ========================================
-
-async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
-  if (submitted.value) return
-  processing.value = true
-  currentStep.value = 'idle'
-
-  try {
-    const parsed = pageSchema.value.safeParse({ ...state, ...phone })
-    if (!parsed.success) {
-      toast.add({ title: 'Validation Error', description: 'Please check all required fields', color: 'error' })
-      return
-    }
-
-    // Step 1: Upload images to ImageKit
-    currentStep.value = 'uploading'
-
-    // Upload logo
-    const logoResult = await logoUpload.upload(parsed.data.logo, 'agencies/logos')
-    if (!logoResult) {
-      toast.add({ title: 'Upload Failed', description: logoUpload.state.value.error ?? 'Failed to upload logo', color: 'error' })
-      return
-    }
-
-    // Upload ID front
-    const idFrontResult = await idFrontUpload.upload(parsed.data.idCardFront, 'agencies/national-ids')
-    if (!idFrontResult) {
-      toast.add({ title: 'Upload Failed', description: idFrontUpload.state.value.error ?? 'Failed to upload ID card front', color: 'error' })
-      return
-    }
-
-    // Upload ID back
-    const idBackResult = await idBackUpload.upload(parsed.data.idCardBack, 'agencies/national-ids')
-    if (!idBackResult) {
-      toast.add({ title: 'Upload Failed', description: idBackUpload.state.value.error ?? 'Failed to upload ID card back', color: 'error' })
-      return
-    }
-
-    // Step 2: Submit to API with URLs
-    currentStep.value = 'submitting'
-
-    const nationalIdImages: NationalIdImage[] = [
-      { url: idFrontResult.url, file_id: idFrontResult.fileId, side: 'front' },
-      { url: idBackResult.url, file_id: idBackResult.fileId, side: 'back' },
-    ]
-
-    const payload = {
-      name: parsed.data.agencyName,
-      address: parsed.data.address,
-      country: parsed.data.countryCode.toUpperCase(),
-      logo_url: logoResult.url,
-      logo_file_id: logoResult.fileId,
-      national_id_images: nationalIdImages,
-      // Phone info
-      phone_country_code: parsed.data.countryCode,
-      phone_dial_code: parsed.data.dialCode,
-      phone: parsed.data.phone,
-      phone_e164: normalizePhone(parsed.data.dialCode, parsed.data.phone),
-      // Coin reseller (from user's default reseller selection)
-      ...(coinResellerId.value && { coin_reseller_id: coinResellerId.value }),
-    }
-
-    await submitAgency(payload)
-    submitted.value = true
-
-    // Refresh user agency state
-    await fetchUserAgency()
-
-    toast.add({ title: 'Success', description: 'Agency application submitted for review', color: 'success' })
-    
-    // Navigate to my-agency dashboard
-    setTimeout(() => navigateTo('/agency/my-agency'), 1500)
-
-  } catch (error: unknown) {
-    const normalizedError = normalizeFetchError(error)
-    
-    const errorDescription = normalizedError.fieldErrors 
-      ? Object.values(normalizedError.fieldErrors).flat()[0] 
-      : normalizedError.message
-    
-    toast.add({ 
-      title: 'Error', 
-      description: errorDescription || 'Failed to create agency. Please try again.', 
-      color: 'error' 
-    })
-  } finally {
-    // Stay locked after success until the delayed redirect fires.
-    processing.value = submitted.value
-    currentStep.value = 'idle'
-  }
-}
-
-// ========================================
-// Helpers
+// Helpers (template display only)
 // ========================================
 
 function getUploadStatusIcon(status: string): string {
