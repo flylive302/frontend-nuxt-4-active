@@ -74,3 +74,6 @@ export const MAX_IMAGE_SIZE = 5 * 1024 * 1024
  * Allowed image MIME types.
  */
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+/** `accept` attribute value for file pickers — keeps the picker in sync with upload validation
+ *  (a narrow list also hides HEIC/HEIF in most phone galleries, and some Android pickers transcode). */
+export const ALLOWED_IMAGE_ACCEPT = ALLOWED_IMAGE_TYPES.join(',')

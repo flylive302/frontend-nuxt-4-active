@@ -10,7 +10,7 @@ import { navigateTo } from 'nuxt/app'
 import type { PhoneModel } from '~/composables/auth/usePhoneSchema'
 import { usePhoneSchema, normalizePhone } from '~/composables/auth/usePhoneSchema'
 import type { NationalIdImage } from '~/types/asset/upload'
-import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE } from '~/types/asset/upload'
+import { ALLOWED_IMAGE_ACCEPT, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE } from '~/types/asset/upload'
 import { normalizeFetchError } from '~/utils/api/normalizeFetchError'
 
 // ========================================
@@ -320,7 +320,7 @@ v-model="state.address" class="w-full" size="lg" icon="i-lucide-map-pin"
           <UFileUpload
             v-model="state.logo"
             color="primary"
-            accept="image/*"
+            :accept="ALLOWED_IMAGE_ACCEPT"
             :disabled="processing"
             label="Drop your Agency Logo here"
             description="JPG, PNG, WebP (max. 5MB)"
@@ -348,7 +348,7 @@ v-model="state.address" class="w-full" size="lg" icon="i-lucide-map-pin"
           <UFileUpload
             v-model="state.idCardFront"
             color="primary"
-            accept="image/*"
+            :accept="ALLOWED_IMAGE_ACCEPT"
             :disabled="processing"
             label="Make Sure It's clear and fully readable"
             description="JPG, PNG, WebP (max. 5MB)"
@@ -376,7 +376,7 @@ v-model="state.address" class="w-full" size="lg" icon="i-lucide-map-pin"
           <UFileUpload
             v-model="state.idCardBack"
             color="primary"
-            accept="image/*"
+            :accept="ALLOWED_IMAGE_ACCEPT"
             :disabled="processing"
             label="Make Sure It's clear and fully readable"
             description="JPG, PNG, WebP (max. 5MB)"
