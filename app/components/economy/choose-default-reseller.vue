@@ -55,6 +55,7 @@ const isUpdating = ref(false)
 const selectedReseller = ref<ResellerApiRow | null>(null)
 const resellers = ref<ResellerApiRow[]>([])
 const isFetching = ref(false)
+const hasLoadedList = ref(false)
 const fetchError = ref<NormalizedError | null>(null)
 
 // ========================================
@@ -148,6 +149,7 @@ async function loadResellers(signature?: string): Promise<void> {
   try {
     const response = await fetchResellers(signature)
     resellers.value = response.status === 'success' ? (response.data ?? []) : []
+    hasLoadedList.value = response.status === 'success'
   } catch (err) {
     fetchError.value = normalizeError(err)
     resellers.value = []
@@ -156,14 +158,22 @@ async function loadResellers(signature?: string): Promise<void> {
   }
 }
 
-watch(
-  debouncedSearchTerm,
-  (value) => {
-    const signature = value?.trim() || undefined
-    void loadResellers(signature)
-  },
-  { immediate: true }
-)
+function currentSignature(): string | undefined {
+  return debouncedSearchTerm.value?.trim() || undefined
+}
+
+// The list is only visible inside the drawer, so load it lazily on first open
+// instead of on mount — most page views never tap "Change". Re-opening reuses
+// the loaded list; a failed load retries on the next open.
+watch(isModalOpen, (open) => {
+  if (open && !hasLoadedList.value && !isFetching.value) {
+    void loadResellers(currentSignature())
+  }
+})
+
+watch(debouncedSearchTerm, () => {
+  void loadResellers(currentSignature())
+})
 
 // ========================================
 // Actions
