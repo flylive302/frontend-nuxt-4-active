@@ -6,12 +6,22 @@
  *   EXECUTE  POST /games/launch → an iframe URL carrying a one-shot session token
  *   REACT    postMessage bridge: their events in, balance-changed out
  *
+ * No session exists until the player picks a game: `open(game)` is called by the
+ * picker's tile tap, never by the surface opening. The catalogue itself is
+ * `useGameCatalog`.
+ *
  * The component that uses this owns nothing but markup and bindings.
  *
  * Design: docs/issues/game-integration/03-joyplay-integration-design.md §3.5
  */
-import type { GameLaunchResponse, GamePanelStatus } from '~/types/room/games';
+import type {
+  GameCatalogEntry,
+  GameContainer,
+  GameLaunchResponse,
+  GamePanelStatus,
+} from '~/types/room/games';
 import { GAME_MESSAGE_IN, GAME_MESSAGE_OUT, MIN_WEALTH_LEVEL_FOR_GAMES } from '~/constants/games';
+import { resolveGameContainer } from '~/utils/games';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[RoomGames]');
@@ -33,9 +43,15 @@ export interface UseRoomGamesReturn {
   status: Readonly<Ref<GamePanelStatus>>;
   gameUrl: Readonly<Ref<string | null>>;
   errorMessage: Readonly<Ref<string | null>>;
+  /** The game the player picked, kept so "Try again" can relaunch the same one. `null` = picker. */
+  currentGame: Readonly<Ref<Readonly<GameCatalogEntry> | null>>;
+  /** Where `currentGame` renders. `null` while the picker is showing. */
+  container: ComputedRef<GameContainer | null>;
+  isFullScreen: ComputedRef<boolean>;
   canPlay: ComputedRef<boolean>;
   frame: Ref<HTMLIFrameElement | null>;
-  open: () => Promise<void>;
+  open: (game: GameCatalogEntry) => Promise<void>;
+  retry: () => Promise<void>;
   close: () => Promise<void>;
   notifyBalanceChanged: () => void;
   onFrameLoaded: () => void;
@@ -54,6 +70,19 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
   const gameUrl = ref<string | null>(null);
   const errorMessage = ref<string | null>(null);
   const frame = ref<HTMLIFrameElement | null>(null);
+  const currentGame = ref<GameCatalogEntry | null>(null);
+
+  /**
+   * Counts launch attempts AND closes. A launch response is only applied if the
+   * counter still holds the value it had when the request went out; `close()` and
+   * every new `open()` advance it, which orphans whatever was in flight.
+   *
+   * Without it the sequence "tap a tile → tap ← back before the server answers"
+   * lands the late response on a surface nobody is looking at: `gameUrl` is set
+   * with `currentGame` already cleared, and the next time the surface opens it
+   * shows a game the player never picked.
+   */
+  let launchSeq = 0;
 
   /**
    * The origin we will accept messages from, derived from the launch URL rather
@@ -108,37 +137,94 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
       && wealthLevel.value >= MIN_WEALTH_LEVEL_FOR_GAMES,
   );
 
+  /**
+   * Where the picked game renders, derived from the layout the server resolved.
+   * `null` while no game is picked (the picker is showing).
+   */
+  const container = computed<GameContainer | null>(
+    () => (currentGame.value ? resolveGameContainer(currentGame.value.layout) : null),
+  );
+
+  const isFullScreen = computed<boolean>(() => container.value?.mode === 'overlay');
+
   // ============================================
   // EXECUTE
   // ============================================
 
-  async function open(): Promise<void> {
+  /**
+   * Mint a session for the picked game and attach it.
+   *
+   * `currentGame` is set BEFORE the request: the component derives the container
+   * (sheet vs full-screen overlay) from it, so the surface switches the moment the
+   * tile is tapped and the spinner has somewhere to show.
+   */
+  async function open(game: GameCatalogEntry): Promise<void> {
     if (!canPlay.value || status.value === 'launching') {
       return;
     }
 
+    const launchId = ++launchSeq;
+    currentGame.value = game;
     status.value = 'launching';
     errorMessage.value = null;
 
     try {
       const response = await api<{ data: GameLaunchResponse }>('/games/launch', {
         method: 'POST',
-        body: { room_id: roomStore.currentRoom?.id ?? null },
+        // `game_id` must be a JSON STRING — the server 422s on a number — so it is
+        // coerced here rather than trusting whatever shape the catalogue had.
+        body: { room_id: roomStore.currentRoom?.id ?? null, game_id: String(game.game_id) },
       });
+
+      if (launchId !== launchSeq) {
+        // Closed or superseded while the request was in flight. Drop it. The
+        // server-side session this minted is never attached to a frame and expires
+        // on its own, like any force-quit.
+        log.debug('Discarded a stale game launch', game.game_id);
+        return;
+      }
 
       gameUrl.value = response.data.url;
       status.value = 'loading';
     } catch (error) {
+      if (launchId !== launchSeq) {
+        return;
+      }
+
       status.value = 'error';
       errorMessage.value = normalizeError(error).message;
       log.error('Failed to open the games panel', error);
     }
   }
 
+  /** Relaunch the game the player picked — what "Try again" in the error state does. */
+  async function retry(): Promise<void> {
+    if (!currentGame.value) {
+      return;
+    }
+
+    await open(currentGame.value);
+  }
+
   async function close(): Promise<void> {
+    // Nothing was launched since the last close (the player opened the picker and
+    // left without choosing) → there is no server session to end. Skipping the call
+    // matters: `/games/close` shares the 20-a-minute limit with `/games` and
+    // `/games/launch`, and open-then-close is the most common thing a player does.
+    //
+    // A launch still in flight counts as launched — `currentGame` is set before the
+    // request — because the server may already have minted its session.
+    const hadLaunch = currentGame.value !== null;
+
+    launchSeq += 1;
+    currentGame.value = null;
     gameUrl.value = null;
     status.value = 'idle';
     errorMessage.value = null;
+
+    if (!hadLaunch) {
+      return;
+    }
 
     // Best-effort. The server never depends on this arriving — the session row
     // carries its own expiry precisely because a force-quit or a dropped network
@@ -299,9 +385,13 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
     status: readonly(status),
     gameUrl: readonly(gameUrl),
     errorMessage: readonly(errorMessage),
+    currentGame: readonly(currentGame),
+    container,
+    isFullScreen,
     canPlay,
     frame,
     open,
+    retry,
     close,
     notifyBalanceChanged,
     onFrameLoaded,

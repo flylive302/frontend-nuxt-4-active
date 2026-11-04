@@ -4,6 +4,7 @@
  * Design: docs/issues/game-integration/03-joyplay-integration-design.md
  * postMessage contract: docs/issues/game-integration/vendor-doc/joyplay-iframe-integration-CN.txt
  */
+import type { GameLayout } from '~/types/room/games';
 
 /**
  * Messages the GAME sends up to us.
@@ -65,3 +66,44 @@ export const GAME_PANEL_TITLE = 'Games';
  * level-0 user calling the endpoint directly is still served a session.
  */
 export const MIN_WEALTH_LEVEL_FOR_GAMES = 2;
+
+/**
+ * Where a catalogue game's icon lives: `public/images/games/<game_id>.webp`.
+ *
+ * Bundled local files, NOT catalog pictures — they never go through
+ * `~/utils/imagekit`. The operator adds them over time, so a missing file is the
+ * normal case and the picker falls back to a text tile (see `gameIconUrl`).
+ */
+export const GAME_ICON_BASE_PATH = '/images/games';
+export const GAME_ICON_EXTENSION = 'webp';
+
+/** Placeholder tiles shown while the catalogue loads — two rows of three. */
+export const GAME_PICKER_SKELETON_COUNT = 6;
+
+/**
+ * The most of the viewport height a bottom-sheet game may use, in `dvh`.
+ *
+ * The sheet panel is sized by WIDTH (`w-full`) and its height follows from the
+ * aspect ratio. On a phone that is fine. On a wide, short screen (landscape, a
+ * tablet browser) full width makes the panel taller than the screen, so the width
+ * is capped such that the HEIGHT never exceeds this share. The stock drawer allows
+ * `max-h-[96%]`; the remaining ~11% is the handle and the bottom safe-area inset.
+ */
+export const GAME_SHEET_MAX_HEIGHT_DVH = 85;
+
+/**
+ * Panel classes for the two sheet layouts. `full` has no entry — it is not a sheet.
+ *
+ * ⚠️ LITERAL strings on purpose. Tailwind extracts classes from source text only,
+ * so building `max-w-[${n}dvh]` at runtime would emit nothing. The numbers below
+ * are `GAME_SHEET_MAX_HEIGHT_DVH` written out; a test pins them together.
+ *
+ *   half  1:1  height = width       → cap width at 85dvh
+ *   tall  2:3  height = 1.5 × width → cap width at 85dvh × 2/3
+ *
+ * `mx-auto` centres the capped panel inside the drawer's flex column.
+ */
+export const GAME_SHEET_PANEL_CLASS: Record<Exclude<GameLayout, 'full'>, string> = {
+  half: 'mx-auto w-full max-w-[85dvh] aspect-square',
+  tall: 'mx-auto w-full max-w-[calc(85dvh*2/3)] aspect-[2/3]',
+};
