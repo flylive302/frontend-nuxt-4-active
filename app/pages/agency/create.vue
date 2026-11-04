@@ -84,6 +84,9 @@ const idFrontUpload = createUploadState()
 const idBackUpload = createUploadState()
 
 const processing = ref(false)
+// Set once the application is accepted; keeps the form locked through the
+// success toast → redirect delay so a second tap can't re-POST.
+const submitted = ref(false)
 const currentStep = ref<'idle' | 'uploading' | 'submitting'>('idle')
 
 // ========================================
@@ -124,6 +127,7 @@ const overallProgress = computed(() => {
 // ========================================
 
 async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
+  if (submitted.value) return
   processing.value = true
   currentStep.value = 'idle'
 
@@ -183,6 +187,7 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
     }
 
     await submitAgency(payload)
+    submitted.value = true
 
     // Refresh user agency state
     await fetchUserAgency()
@@ -205,7 +210,8 @@ async function onSubmit(_e: FormSubmitEvent<FullSchema>): Promise<void> {
       color: 'error' 
     })
   } finally {
-    processing.value = false
+    // Stay locked after success until the delayed redirect fires.
+    processing.value = submitted.value
     currentStep.value = 'idle'
   }
 }
