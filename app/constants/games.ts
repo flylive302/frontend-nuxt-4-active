@@ -1,8 +1,8 @@
 /**
  * JoyPlay third-party games — static values.
  *
- * Design: docs/issues/game-integration/03-joyplay-integration-design.md
- * postMessage contract: docs/issues/game-integration/vendor-doc/joyplay-iframe-integration-CN.txt
+ * Design: docs/reference/joyplay/joyplay-integration-design.md
+ * postMessage contract: docs/reference/joyplay/vendor-doc/joyplay-iframe-integration-CN.txt
  */
 import type { GameLayout } from '~/types/room/games';
 

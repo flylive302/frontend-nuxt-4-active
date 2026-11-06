@@ -12,7 +12,7 @@
  *
  * The component that uses this owns nothing but markup and bindings.
  *
- * Design: docs/issues/game-integration/03-joyplay-integration-design.md §3.5
+ * Design: docs/reference/joyplay/joyplay-integration-design.md §3.5
  */
 import type {
   GameCatalogEntry,
@@ -262,7 +262,7 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
    *
    * Kept live deliberately: it starts working the moment they ship, with no
    * release of ours. Root cause and the exact source lines are in
-   * docs/issues/game-integration/03-joyplay-integration-design.md.
+   * docs/reference/joyplay/joyplay-integration-design.md.
    */
   function notifyBalanceChanged(): void {
     const origin = vendorOrigin.value;

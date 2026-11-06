@@ -142,7 +142,7 @@ useBackDismiss(isOverlayOpen, onBackToPicker);
     does not exist in a browser, so the tap is a silent no-op. We therefore stopped
     asking for that button (`showMiniExitBtn=0` in GameLaunchService::buildUrl) and
     their code hides it on its own. Root cause and the exact source lines are in
-    docs/issues/game-integration/03-joyplay-integration-design.md.
+    docs/reference/joyplay/joyplay-integration-design.md.
 
     The `full` layout is the exception to "stock": it does not render in this
     drawer at all. See `RoomGamesFullScreenOverlay` below. While it is up this
