@@ -415,7 +415,7 @@ async function doLuckySend(): Promise<void> {
                 await navigateTo(`/coins/request`);
               }"
             >
-              {{ formatCurrency(balanceStore.coins) }}
+              {{ balanceStore.coins }}
             </UButton>
           </div>
 
