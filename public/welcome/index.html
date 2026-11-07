@@ -7,7 +7,7 @@
   <script>
     try {
       // pinia-plugin-persistedstate stores `user` in localStorage under key "auth"
-      // and `token` in a cookie — check user presence for the authenticated guard
+      // (and `token` under "auth-token") — check user presence for the authenticated guard
       var s = localStorage.getItem('auth');
       if (s) {
         var a = JSON.parse(s);
@@ -16,7 +16,9 @@
           location.replace('/');
         }
       }
-      // Belt-and-suspenders: also catch a live sanctum_token cookie (e.g. localStorage cleared)
+      // Belt-and-suspenders: also catch a live sanctum_token cookie (e.g. localStorage cleared).
+      // auth.setToken mirrors it on login/logout (services/legacyAuthCookies.ts), and the app
+      // re-seeds its token from it when localStorage has none.
       if (document.cookie.split(';').some(function (c) { return c.trim().indexOf('sanctum_token=') === 0; })) {
         document.documentElement.style.display = 'none';
         location.replace('/');

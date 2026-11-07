@@ -52,11 +52,15 @@ export default defineNuxtConfig({
     // Full analysis: docs/issues/android-client-performance/
     //                analysis-gift-lag-cookie-persistence.md
     //
-    // Cookies are only correct for state a server must read. This app is a pure
-    // SPA (`ssr: false`), so that set is: `auth.token` (read by the API layer
-    // alongside the Sanctum cookie) and `homeFeed.selectedCountry` — both
-    // already declare `storage:` explicitly, as does `roomStore` (see its own
-    // note). Flipping the default makes the expensive option opt-in.
+    // Every persisted store uses localStorage; this app is a pure SPA
+    // (`ssr: false`), so no server ever needs to read persisted store state from
+    // a cookie. `piniaPluginPersistedstate.cookies()` is banned (ADR 0048): its
+    // `getItem`/`setItem` call `useCookie()` on every write, and outside an
+    // effect scope each call leaks a cookieStore listener. The former cookie
+    // stores (`auth.token`, `roomStore`, `homeFeed.selectedCountry`) now seed
+    // once from their legacy cookie via `services/seededLocalStorage.ts`.
+    // `scripts/architecture-check.sh` fails on `useCookie(` and `.cookies(`
+    // under `app/`.
     piniaPluginPersistedstate: {
         storage: 'localStorage',
     },

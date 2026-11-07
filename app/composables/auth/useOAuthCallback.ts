@@ -51,8 +51,8 @@ export function useOAuthCallback() {
       authStore.setMsabToken(msabToken)
     }
 
-    // The api() interceptor reads authStore.token as a fallback when
-    // the cookie isn't available yet, so this works in the same tick.
+    // The api() interceptor reads authStore.token directly, so the token set
+    // above is used in the same tick.
     let userData: BootstrapUser | undefined
     try {
       const response = await api<{ data: BootstrapUser }>('/auth/user')

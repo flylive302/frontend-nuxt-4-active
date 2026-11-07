@@ -9,6 +9,8 @@ import { useDeviceId } from './useDeviceId'
 // Types
 // ========================================
 import { normalizeFetchError, type NormalizedError } from '~/utils/api/normalizeFetchError'
+import { XSRF_COOKIE } from '~/constants/persistence'
+import { readCookie } from '~/services/browserCookies'
 import { parseBlockReply } from '~/utils/api/parseBlockReply'
 
 export type { NormalizedError }
@@ -87,20 +89,23 @@ function getClient(baseURL: string | undefined) {
     retry: 0,
     onRequest({ options }: FetchContext) {
       const headers = new Headers(options.headers || {})
-      const cookieToken = useCookie('sanctum_token')
-      const xsrfToken = useCookie('XSRF-TOKEN')
 
-      // Fall back to Pinia persisted state if cookie is missing
-      // (e.g., PWA reopened after browser cleared session cookies)
+      // ⛔ No `useCookie()` in a fetch hook (ADR 0048): there is no effect
+      // scope here, so each call leaked a cookieStore "change" listener for
+      // the life of the page — two per request, the dominant gift-time cost
+      // on the A6x (gift-authority-tick-fanout/17). The token comes from the
+      // store (persisted to localStorage, seeded once from the legacy
+      // `sanctum_token` cookie); the CSRF cookie is a plain, listener-free read.
       const authStore = useAuthStore()
-      const token = cookieToken.value || authStore.token
+      const token = authStore.token
+      const xsrfToken = readCookie(XSRF_COOKIE)
 
       // Auth headers
       if (token) {
         headers.set('Authorization', `Bearer ${token}`)
       }
-      if (xsrfToken.value) {
-        headers.set('X-XSRF-TOKEN', xsrfToken.value)
+      if (xsrfToken) {
+        headers.set('X-XSRF-TOKEN', xsrfToken)
       }
 
       // Standard headers

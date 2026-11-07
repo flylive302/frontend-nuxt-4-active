@@ -297,7 +297,6 @@ export function setupNuxtMocks(mocks: {
   inboxReconcile?: ReturnType<typeof createMockInboxReconcile>
   mallStore?: ReturnType<typeof createMockMallStore>
   route?: Record<string, unknown>
-  cookieValue?: string | null
 } = {}) {
   const bootstrapStore = mocks.bootstrapStore ?? createMockBootstrapStore()
   const levelsStore = mocks.levelsStore ?? createMockLevelsStore()
@@ -313,7 +312,6 @@ export function setupNuxtMocks(mocks: {
   const inboxReconcile = mocks.inboxReconcile ?? createMockInboxReconcile()
   const mallStore = mocks.mallStore ?? createMockMallStore()
   const route = mocks.route ?? { meta: { middleware: [] } }
-  const cookieValue = mocks.cookieValue ?? null
 
   // Mock auto-imported composables globally
   ;(globalThis as Record<string, unknown>).useBootstrapStore = () => bootstrapStore
@@ -330,7 +328,6 @@ export function setupNuxtMocks(mocks: {
   ;(globalThis as Record<string, unknown>).useInboxReconcile = () => inboxReconcile
   ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useRoute = () => route
-  ;(globalThis as Record<string, unknown>).useCookie = () => ref(cookieValue)
   ;(globalThis as Record<string, unknown>).useRoomParticipantsStore = () => ({ updateParticipantProfile: vi.fn() })
   ;(globalThis as Record<string, unknown>).ref = ref
   ;(globalThis as Record<string, unknown>).shallowRef = shallowRef
@@ -348,7 +345,7 @@ export function setupNuxtMocks(mocks: {
 export function cleanupNuxtMocks(): void {
   const keys = [
     'useBootstrapStore', 'useLevelsStore', 'useAssetStore', 'useAuthStore', 'useBalanceStore', 'useLevelUpWatermarkStore', 'useIncomeStore',
-    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useUserSync', 'useInboxReconcile', 'useMallStore', 'useRoute', 'useCookie',
+    'useApi', 'useTelemetry', 'useBootstrapAssets', 'useUserSync', 'useInboxReconcile', 'useMallStore', 'useRoute',
     'ref', 'shallowRef', 'computed', 'reactive', 'readonly', 'useRoomParticipantsStore',
   ] as const
   for (const key of keys) {

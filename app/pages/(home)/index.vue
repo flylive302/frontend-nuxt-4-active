@@ -53,8 +53,8 @@ const { fetchRooms } = useRoom()
 // `useHomeRoomsData` for why the two paths differ on purpose.
 const { fetchCachedRooms } = useHomeRoomsData()
 
-// The country chip lives in the browse store, which cookie-persists it (see
-// `stores/homeFeed.ts` for why a cookie and not localStorage).
+// The country chip lives in the browse store, which persists it to localStorage
+// (seeded once from the legacy cookie; see `stores/homeFeed.ts`).
 //
 // Must be read *above* `useAsyncData` — `roomsKey` has to already carry the
 // restored country when Nuxt queues the initial fetch.
@@ -172,8 +172,8 @@ const activeCountries = computed(() => roomsPayload.value?.res.meta?.active_coun
 
 /**
  * Mirrors the response's country list into the browse store, and drops a
- * persisted country whose last room has since closed — otherwise a cookie
- * restores a chip that now matches nothing and strands the user on an empty
+ * persisted country whose last room has since closed — otherwise the persisted
+ * value restores a chip that now matches nothing and strands the user on an empty
  * feed with no obvious way back.
  *
  * Every input comes off the *same* payload object rather than the live refs.

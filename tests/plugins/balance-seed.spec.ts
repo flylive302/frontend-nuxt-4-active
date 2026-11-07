@@ -9,9 +9,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('watch', watch)
-vi.stubGlobal('useCookie', () => ref(null))
 vi.stubGlobal('piniaPluginPersistedstate', {
-  cookies: () => ({}),
   localStorage: () => ({}),
   sessionStorage: () => ({}),
 })

@@ -37,7 +37,11 @@ vi.stubGlobal('useBlockedState', () => ({ enterBlocked: mockEnterBlocked, resume
 vi.stubGlobal('useAuthStore', () => authStore)
 vi.stubGlobal('navigateTo', mockNavigateTo)
 vi.stubGlobal('useToast', () => ({ add: mockToastAdd }))
-vi.stubGlobal('useCookie', () => ({ value: null }))
+// ADR 0048: useApi must never call Nuxt's useCookie() (it leaks a cookieStore
+// listener per call outside an effect scope). Fail loudly if it ever does again.
+vi.stubGlobal('useCookie', () => {
+  throw new Error('useCookie must not be called from useApi (ADR 0048)')
+})
 vi.stubGlobal('useConnectivityStore', () => ({ recordFailure: vi.fn(), resetFailures: vi.fn() }))
 
 function hook() {

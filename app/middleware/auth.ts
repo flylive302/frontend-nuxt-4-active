@@ -7,7 +7,9 @@ import { Capacitor } from '@capacitor/core'
  * Protects authenticated routes.
  * - Redirects to login if no token present
  * - Redirects to profile completion if profile incomplete
- * - NOTE: User data is hydrated by bootstrap.client.ts plugin after middleware runs.
+ * - NOTE: The token comes from the auth store (persisted in localStorage, seeded
+ *   once from the legacy `sanctum_token` cookie). User data is hydrated by
+ *   bootstrap.client.ts plugin after middleware runs.
  *   We only check token here; if the token is stale/invalid, the bootstrap API call
  *   will 401 and the plugin's catch block calls authStore.logout().
  */

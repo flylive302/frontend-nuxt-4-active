@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 import type { BootstrapRoom as Room } from '~/types/user/bootstrap';
+import { ROOM_SESSION_STORAGE_KEY } from '~/constants/persistence';
+import { legacyCookieSeed, seededLocalStorage } from '~/services/seededLocalStorage';
 
 // ============================================
 // Store
@@ -65,20 +67,24 @@ export const useRoomSessionStore = defineStore('roomSession', () => {
     setActiveRoom,
   };
 }, {
-  // 🔴 Pinned to cookies under the LEGACY `roomStore` key ON PURPOSE.
+  // localStorage, seeded ONCE from the legacy `roomStore` cookie
+  // (cost-and-speed-tuning 15, ADR 0048).
   //
-  // `activeRoom` is what `useRoomRehydration` reads to put a user back into
-  // their Room after a WebView kill. Reusing the exact key + backend that
-  // `roomStore` persisted under means the cookie a user already has is adopted
-  // byte-for-byte on the first boot after this OTA — no empty read, no
-  // migration shim, no risk of silently not returning them to their Room.
+  // `useRoomLifecycle`'s heartbeat calls `setActiveRoom` every
+  // ACTIVE_ROOM_HEARTBEAT_MS, and every write used to go through
+  // `piniaPluginPersistedstate.cookies()` → Nuxt `useCookie()`, leaking one
+  // cookieStore listener per tick for the life of the page.
   //
-  // Moving this to localStorage is a separate, deliberate step: it must be done
-  // with a one-shot seed from this cookie (see ticket 12 / Wave 2 notes in
-  // docs/issues/android-client-performance/analysis-gift-lag-cookie-persistence.md).
+  // 🔴 `activeRoom` is what `useRoomRehydration` reads to put a user back into
+  // their Room after a WebView kill. The key keeps the legacy `roomStore` name,
+  // and the first read with no localStorage value adopts the cookie the
+  // previous build wrote (`encodeURIComponent(JSON)` — the decoded cookie IS the
+  // serialized state), so a user mid-session on the OTA boot is still
+  // rehydrated. After that first write the cookie is never read again; it is
+  // left in place (session cookie) so an OTA rollback still finds it.
   persist: {
-    key: 'roomStore',
+    key: ROOM_SESSION_STORAGE_KEY,
     pick: ['userRoom', 'previousRoute', 'minimizedRoom', 'activeRoom'],
-    storage: piniaPluginPersistedstate.cookies(),
+    storage: seededLocalStorage(legacyCookieSeed(ROOM_SESSION_STORAGE_KEY)),
   },
 });

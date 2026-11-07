@@ -165,7 +165,6 @@ describe('useBootstrapInit', () => {
         authStore: tokenlessAuthStore(),
         bootstrapStore: warmBootstrapStore(),
         api: createMockApi(),
-        cookieValue: null,
       })
 
       const { init } = useBootstrapInit()

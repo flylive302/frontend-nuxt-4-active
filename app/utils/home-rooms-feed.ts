@@ -245,8 +245,8 @@ export function shouldRefreshRoomsOnMount(
 /**
  * Whether the selected country chip has to be reset back to "All" because the
  * country it points at has dropped out of the active list — e.g. the last
- * room in that country closed between visits and a cookie-restored selection
- * now points at nothing.
+ * room in that country closed between visits and a persisted (localStorage)
+ * selection now points at nothing.
  *
  * Every guard here exists to avoid clobbering a choice that is still valid:
  *

@@ -112,6 +112,31 @@ check_raw_catalog_pictures() {
 
 check_raw_catalog_pictures app
 
+# ADR 0048 / cost-and-speed-tuning/15: Nuxt's `useCookie()` called outside an effect scope
+# (a store action, a fetch hook, a timer, a socket handler) installs a cookieStore "change"
+# listener that is never torn down — one leaked listener per call, for the life of the page.
+# `piniaPluginPersistedstate.cookies()` does the same on every store write. Neither is allowed
+# anywhere under `app/`. Alternatives: `services/browserCookies.ts` (`readCookie` /
+# `writeCookie`: plain, listener-free `document.cookie` access) and
+# `services/seededLocalStorage.ts` (localStorage persistence that adopts a legacy cookie once).
+#
+# Comment lines (`//`, `*`, `/*`) are skipped on purpose — the ADR's own explanations name
+# these APIs. ⚠️ Known limitation: a trailing comment after code, or a `*` line inside a
+# template literal, is judged by its line start only.
+check_no_use_cookie() {
+  local target="$1"
+  local hits
+  hits=$(grep -R -nE 'useCookie\s*[<(]|piniaPluginPersistedstate\.cookies\s*\(' "$target" 2>/dev/null \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|\*|/\*)' || true)
+  if [[ -n "$hits" ]]; then
+    echo "FAIL: useCookie()/persistedstate cookies() leak a cookieStore listener per call outside an effect scope (ADR 0048) — use services/browserCookies.ts or services/seededLocalStorage.ts"
+    printf '%s\n' "$hits"
+    violations=$((violations + 1))
+  fi
+}
+
+check_no_use_cookie app
+
 if [[ $violations -gt 0 ]]; then
   echo "Frontend architecture checks failed with $violations violation group(s)."
   exit 1

@@ -72,8 +72,8 @@ export function useBootstrapInit() {
     }
 
     // Background user re-hydration — persisted user is good enough for initial render.
-    // Pinia-persist restores token from a durable cookie and user from localStorage;
-    // this API call patches stale data.
+    // Pinia-persist restores both token and user from localStorage (token seeded
+    // once from the legacy `sanctum_token` cookie); this API call patches stale data.
     // PERF: defer past first paint so /auth/user stays off the LCP-critical chain.
     if (authStore.token) {
       scheduleAfterFirstPaint(() => {

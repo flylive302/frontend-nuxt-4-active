@@ -5,6 +5,9 @@
 import { defineStore } from 'pinia'
 import type { BootstrapUser } from '~/types/user/bootstrap'
 import type { BlockInfo } from '~/types/user/block'
+import { AUTH_TOKEN_STORAGE_KEY } from '~/constants/persistence'
+import { legacyAuthTokenSeed, mirrorLegacyTokenCookie } from '~/services/legacyAuthCookies'
+import { seededLocalStorage } from '~/services/seededLocalStorage'
 
 export const useAuthStore = defineStore('auth', () => {
   // ========================================
@@ -46,17 +49,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Set an authentication token and sync with the cookie.
+   * Set the authentication token. Persisted to localStorage by the `persist`
+   * entry below; the legacy `sanctum_token` cookie is mirrored for the welcome
+   * page's pre-paint guard and OTA rollback (see `mirrorLegacyTokenCookie`).
+   *
+   * ⛔ Never `useCookie()` here (ADR 0048) — outside a component scope every
+   * call leaks a cookieStore listener for the life of the page.
    */
   function setToken(newToken: string | null) {
     token.value = newToken
-    const cookie = useCookie('sanctum_token', {
-      maxAge: 90 * 24 * 60 * 60, // 90 days — matches backend Sanctum expiration
-      secure: true,
-      sameSite: 'lax',
-      path: '/',
-    })
-    cookie.value = newToken
+    mirrorLegacyTokenCookie(newToken)
   }
 
   /**
@@ -146,13 +148,14 @@ export const useAuthStore = defineStore('auth', () => {
     decrementFollowing,
   }
 }, {
-  // token → durable cookie (90-day, matches backend Sanctum expiration). The
-  // module's default cookie storage sets no maxAge, so token persisted as a
-  // SESSION cookie that is dropped when the browser closes. A returning user
-  // then had authStore.token === null, and the `auth` route middleware bounced
-  // them to /welcome — even though the separate durable `sanctum_token` cookie
-  // (read by useApi) was still valid. Persisting token durably keeps the route
-  // gate and bootstrap rehydration in sync with the API-layer auth.
+  // token → localStorage under its OWN key (`auth-token`). It used to persist
+  // through `piniaPluginPersistedstate.cookies()`, whose `setItem` calls Nuxt's
+  // `useCookie()` on every auth-store write and leaks a cookieStore listener
+  // each time (ADR 0048, cost-and-speed-tuning 15). Durable across restarts
+  // like the 90-day cookie was. The first boot after the move adopts the token
+  // from the old `sanctum_token` / `auth` cookies once (`legacyAuthTokenSeed`),
+  // so nobody is signed out by the update; the `auth` route middleware and
+  // bootstrap rehydration read `token` from here, as does `useApi`.
   //
   // user → localStorage: durable across restarts without the ~4KB cookie size
   // limit or per-request overhead of shipping the full user object on every
@@ -165,13 +168,9 @@ export const useAuthStore = defineStore('auth', () => {
   // connect (useAudioSocket.connect → refreshMsabToken, using the shared token).
   persist: [
     {
+      key: AUTH_TOKEN_STORAGE_KEY,
       pick: ['token'],
-      storage: piniaPluginPersistedstate.cookies({
-        maxAge: 90 * 24 * 60 * 60,
-        secure: true,
-        sameSite: 'lax',
-        path: '/',
-      }),
+      storage: seededLocalStorage(legacyAuthTokenSeed),
     },
     { pick: ['user'], storage: piniaPluginPersistedstate.localStorage() },
     // account-bans 03: /blocked must survive a kill + relaunch.

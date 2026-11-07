@@ -4,13 +4,9 @@ import { computed, ref } from 'vue'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
-// homeFeed's persist config calls this at store-definition time (same
-// pattern as authStore — see tests/composables/useRoomEventHandlers.spec.ts).
-vi.stubGlobal('piniaPluginPersistedstate', {
-  cookies: () => ({}),
-  localStorage: () => ({}),
-  sessionStorage: () => ({}),
-})
+// homeFeed persists through `seededLocalStorage(...)` (ADR 0048), which only
+// touches localStorage when the persist plugin runs — not installed here.
+// Persistence is covered in tests/stores/persistedStores.legacySeed.spec.ts.
 
 beforeEach(() => {
   setActivePinia(createPinia())

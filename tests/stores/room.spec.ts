@@ -5,9 +5,9 @@ import type { BootstrapRoom as Room } from '../../app/types/user/bootstrap'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
-// roomStore's persist config pins cookie storage explicitly (see the note on
-// its `persist:` block), and that call runs at store-definition time — same
-// pattern as authStore/homeFeedStore.
+// Stores that still call `piniaPluginPersistedstate.localStorage()/.sessionStorage()`
+// at definition time (authStore) need this stub. No store uses `.cookies()` any
+// more (ADR 0048).
 vi.stubGlobal('piniaPluginPersistedstate', {
   cookies: () => ({}),
   localStorage: () => ({}),

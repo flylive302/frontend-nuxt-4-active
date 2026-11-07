@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia';
+import { HOME_FEED_STORAGE_KEY } from '~/constants/persistence';
+import { legacyCookieSeed, seededLocalStorage } from '~/services/seededLocalStorage';
 
 /**
  * Home Feed Store
@@ -73,34 +75,28 @@ export const useHomeFeedStore = defineStore('homeFeed', () => {
     clearRateLimit,
   };
 }, {
-  // Cookie rather than localStorage. This app is `ssr: false` today, so the two
-  // are equivalent in practice — the cookie is the forward-compatible one. If
-  // SSR is ever switched on, the server can read a cookie but not localStorage,
-  // and the home page emits a single `<link rel=preload fetchpriority=high>`
-  // for the first carousel room: a localStorage-only choice would make the
-  // server render the "All" list, burn that preload on an image the user is not
-  // going to see, then flash on hydration. Keeping it on a cookie means that
-  // switch costs nothing here.
+  // localStorage, seeded ONCE from the legacy `homeFeed` cookie
+  // (cost-and-speed-tuning 15, ADR 0048). It was a cookie for a hypothetical
+  // SSR switch (a server can read a cookie, not localStorage) — but
+  // `piniaPluginPersistedstate.cookies()` calls Nuxt's `useCookie()` on every
+  // store write, and outside an effect scope each call leaks a cookieStore
+  // listener for the life of the page. ADR 0048: persisted stores use
+  // localStorage. If SSR is ever switched on, the server-rendered list will be
+  // "All" until hydration — revisit then, with a scoped cookie read.
   //
   // Only the browse choices (`selectedCountry`, `liveOnly`) persist —
   // `rateLimitedUntil` is per-session state, not a durable user choice.
   //
-  // The cookie is named after the store id: `homeFeed`. There is no global
-  // `piniaPluginPersistedstate.key` template in `nuxt.config.ts`, so the id is
-  // used bare. **Renaming the store id silently orphans every existing user's
-  // saved country** — they get a one-time reset to "All", no error anywhere.
+  // **Renaming the key silently orphans every existing user's saved country** —
+  // they get a one-time reset to "All", no error anywhere.
   //
   // Restore is synchronous: the plugin hydrates inside `createPersistence` at
   // store-instantiation time, so `useHomeFeedStore()` already carries the
-  // cookie's value by the time it returns. That is what lets the home page read
+  // saved value by the time it returns. That is what lets the home page read
   // the country *above* `useAsyncData` and have the key be right first time.
   persist: {
+    key: HOME_FEED_STORAGE_KEY,
     pick: ['selectedCountry', 'liveOnly'],
-    storage: piniaPluginPersistedstate.cookies({
-      maxAge: 60 * 60 * 24 * 180,
-      sameSite: 'lax',
-      secure: true,
-      path: '/',
-    }),
+    storage: seededLocalStorage(legacyCookieSeed(HOME_FEED_STORAGE_KEY)),
   },
 });
