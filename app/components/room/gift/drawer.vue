@@ -12,7 +12,7 @@
  */
 import type { Gift } from "~/types/gift/gift";
 import { ASSETS } from '~/constants/assets';
-import { formatCurrency } from '~/utils/currency';
+import { formatCoins } from '~/utils/currency';
 import { isLuckyCategory } from '~/utils/gift';
 import { useGiftData } from "~/composables/gift/useGiftData";
 import { useGiftRecipientSync } from "~/composables/gift/useGiftRecipientSync";
@@ -360,9 +360,30 @@ async function doLuckySend(): Promise<void> {
         class="lucky-combo-float"
         :style="{ bottom: `${LUCKY_ANIMATION.comboFloatBottomPct}vh` }"
       >
-        <button type="button" class="lucky-combo-float__btn" @pointerdown.prevent="handleComboClick">
+        <!-- Honest numbers, display-only: exact spendable coins straight from the
+             sequence-guarded balance store (never netted or predicted), plus the
+             sender's own wins this combo. Exact digits, never K/M. Sits ABOVE the
+             button so the tap target keeps its place under the thumb. -->
+        <div class="lucky-combo-float__stats">
+          <span class="lucky-combo-float__balance">
+            🪙 {{ formatCoins(balanceStore.coins) }}
+          </span>
+          <span class="lucky-combo-float__won">
+            +{{ formatCoins(comboStore.luckyComboWonCoins) }} won this combo
+          </span>
+        </div>
+        <!-- Paused after a server refusal (LUCKY_COMBO_REFUSAL_PAUSE_MS): shown
+             disabled by opacity + dashed border + the "Paused" label + the real
+             `disabled`/aria-disabled state — never by colour alone. -->
+        <button
+          type="button"
+          class="lucky-combo-float__btn"
+          :disabled="comboStore.isLuckyComboPaused"
+          :aria-disabled="comboStore.isLuckyComboPaused"
+          @pointerdown.prevent="handleComboClick"
+        >
           <span class="lucky-combo-float__count">X{{ giftStore.comboCount }}</span>
-          <span class="lucky-combo-float__label">Combo</span>
+          <span class="lucky-combo-float__label">{{ comboStore.isLuckyComboPaused ? 'Paused' : 'Combo' }}</span>
         </button>
         <div class="lucky-combo-float__track">
           <div :key="comboRunId" class="lucky-combo-float__fill" :style="comboDurationStyle" />
@@ -415,7 +436,7 @@ async function doLuckySend(): Promise<void> {
                 await navigateTo(`/coins/request`);
               }"
             >
-              {{ balanceStore.coins }}
+              {{ formatCoins(balanceStore.coins) }}
             </UButton>
           </div>
 
@@ -506,6 +527,19 @@ async function doLuckySend(): Promise<void> {
   transform: scale(0.94);
 }
 
+/* Paused: reduced opacity AND a dashed ring AND the "Paused" label, so the
+   state never rests on colour alone. The 90x90 tap target is unchanged. */
+.lucky-combo-float__btn:disabled {
+  opacity: 0.5;
+  border-style: dashed;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.lucky-combo-float__btn:disabled:active {
+  transform: none;
+}
+
 .lucky-combo-float__count {
   font-size: 1.5rem;
   font-weight: 800;
@@ -540,6 +574,34 @@ async function doLuckySend(): Promise<void> {
   border-radius: 9999px;
   transform-origin: left;
   animation: combo-drain var(--combo-ms) linear forwards;
+}
+
+/* Numbers stay put as digits change: tabular figures, fixed minimum width. */
+.lucky-combo-float__stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 8rem;
+  padding: 0.1rem;
+  border-radius: 0.9rem;
+  background: rgba(17, 24, 39, 0.62);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.lucky-combo-float__balance {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.lucky-combo-float__won {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fde047;
 }
 
 .lucky-combo-float-enter-active,

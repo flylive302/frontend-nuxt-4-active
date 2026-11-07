@@ -4,7 +4,9 @@
 
 import { CP_BINDING_SUBCATEGORY, CP_GIFT_CATEGORY } from '~/constants/cp-event';
 import { LUCKY_SPLIT_SHARE, GIFT_VALUE_FLOAT_EPSILON } from '~/constants/room';
+import { GIFT_SEND_ERROR, LUCKY_COMBO_PAUSING_REFUSAL_CODES } from '~/constants/gift';
 import type { Gift } from '~/types/gift/gift';
+import type { GiftSendAck } from '~/types/room/audio';
 
 /**
  * True for any gift category that follows lucky-gift logic (split payout,
@@ -14,6 +16,33 @@ import type { Gift } from '~/types/gift/gift';
  */
 export function isLuckyCategory(category: string | undefined | null): boolean {
   return category === 'lucky' || category === 'gild-lucky';
+}
+
+/**
+ * GATE (gift-cashback-latency 06): may the sender afford ONE more lucky tap,
+ * counting the lucky taps already emitted but not yet acked?
+ *
+ * Under `ackBalance` the balance only drops when an ack/push lands, so the
+ * raw balance still shows the coins that in-flight taps are about to spend.
+ * `inFlightCost` is that not-yet-booked spend. Pure — it never writes
+ * anything; the balance shown on screen is NOT netted (display-only rule).
+ */
+export function canAffordLuckyTap(spendable: number, inFlightCost: number, cost: number): boolean {
+  return spendable - inFlightCost >= cost;
+}
+
+/**
+ * True when a `gift:send` ack is a refusal that should pause the lucky combo
+ * button: an ackBalance `code` from `LUCKY_COMBO_PAUSING_REFUSAL_CODES`, or the
+ * rate limiter (`error: GIFT_SEND_ERROR.RATE_LIMITED`, no `code`). A missing
+ * ack (timeout / disconnect) is not a refusal and never pauses.
+ */
+export function isComboPausingRefusal(
+  ack: Pick<GiftSendAck, 'success' | 'code' | 'error'> | null,
+): boolean {
+  if (!ack || ack.success) return false;
+  if (ack.code !== undefined && LUCKY_COMBO_PAUSING_REFUSAL_CODES.has(ack.code)) return true;
+  return ack.error === GIFT_SEND_ERROR.RATE_LIMITED;
 }
 
 /**

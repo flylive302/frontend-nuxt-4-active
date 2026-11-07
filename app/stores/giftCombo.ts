@@ -19,6 +19,20 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
   const lastLuckyContext = ref<GiftComboContext | null>(null);
   const isLuckyComboActive = ref(false);
   /**
+   * Coins the sender has WON since the current lucky combo started — the sum
+   * of their own `lucky:result` `coins_won`, shown as "+N won this combo".
+   * Display-only: it is never added to, or subtracted from, the balance store
+   * (the balance only ever moves via sequence-guarded acks/pushes). Reset when
+   * a combo starts and when it ends.
+   */
+  const luckyComboWonCoins = ref(0);
+  /**
+   * True while the floating lucky combo button is paused after a server
+   * refusal (gift-cashback-latency 06). The composable owns the timer that
+   * clears it; this is just the flag the button renders `disabled` from.
+   */
+  const isLuckyComboPaused = ref(false);
+  /**
    * Snapshot of the last normal (non-lucky) send, so a combo press repeats THAT
    * gift rather than whatever the playback queue happens to show now.
    */
@@ -47,14 +61,29 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
     return amount;
   }
 
+  /** A lucky combo starts: fresh "won this combo" sum, button enabled. */
   function setLuckyContext(ctx: GiftComboContext): void {
     lastLuckyContext.value = ctx;
     isLuckyComboActive.value = true;
+    luckyComboWonCoins.value = 0;
+    isLuckyComboPaused.value = false;
   }
 
+  /** The lucky combo ends: drop its context, its won-sum and any pause. */
   function clearLuckyContext(): void {
     lastLuckyContext.value = null;
     isLuckyComboActive.value = false;
+    luckyComboWonCoins.value = 0;
+    isLuckyComboPaused.value = false;
+  }
+
+  /** Add a (frame-coalesced) batch of the sender's own wins to this combo's sum. */
+  function addLuckyComboWon(delta: number): void {
+    luckyComboWonCoins.value += delta;
+  }
+
+  function setLuckyComboPaused(paused: boolean): void {
+    isLuckyComboPaused.value = paused;
   }
 
   function setNormalContext(ctx: GiftComboContext): void {
@@ -73,6 +102,8 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
     pendingRefunds.value.clear();
     lastLuckyContext.value = null;
     isLuckyComboActive.value = false;
+    luckyComboWonCoins.value = 0;
+    isLuckyComboPaused.value = false;
     lastNormalContext.value = null;
   }
 
@@ -84,11 +115,15 @@ export const useGiftComboStore = defineStore('giftComboStore', () => {
     pendingRefunds,
     lastLuckyContext,
     isLuckyComboActive,
+    luckyComboWonCoins,
+    isLuckyComboPaused,
     lastNormalContext,
     setPendingRefund,
     consumePendingRefund,
     setLuckyContext,
     clearLuckyContext,
+    addLuckyComboWon,
+    setLuckyComboPaused,
     setNormalContext,
     clearNormalContext,
     $reset,

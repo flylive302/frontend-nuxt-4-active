@@ -11,7 +11,11 @@ import {
   GIFT_FAILURE_TOAST_COOLDOWN_MS,
   GIFT_REFUSAL_TOAST_GENERIC,
   GIFT_REFUSAL_TOAST_MESSAGES,
+  GIFT_SEND_ERROR,
+  LUCKY_COMBO_PAUSING_REFUSAL_CODES,
+  LUCKY_COMBO_REFUSAL_PAUSE_MS,
 } from '../../app/constants/gift'
+import { SOCKET_TIMEOUT_MS } from '../../app/constants/room'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -1073,5 +1077,321 @@ describe('useGiftSending — self-gifting FX (self-gifting epic ticket 04)', () 
 
     expect(triggerFly).toHaveBeenCalledTimes(1)
     expect(triggerFly).toHaveBeenCalledWith('x.png', 1, [1])
+  })
+})
+
+// ============================================================================
+// gift-cashback-latency 06 — in-flight-net lucky gate + refusal pause
+// ============================================================================
+
+const LUCKY_GIFT = { id: 9, price: 50, category: 'lucky', thumbnail_url: 'x.png' } as never
+/** One lucky tap to ONE recipient at quantity 1 — what luckyCombo() charges. */
+const LUCKY_TAP_COST = 50
+/** How many taps the seeded balance can cover before the gate must refuse. */
+const AFFORDABLE_TAPS = 3
+const SEEDED_COINS = LUCKY_TAP_COST * AFFORDABLE_TAPS
+
+/** Settle helper: let the emit's `.then`/`.catch` reconciliation run. */
+async function flushAcks(): Promise<void> {
+  await vi.advanceTimersByTimeAsync(0)
+}
+
+/** Deferred ack per emit, so each tap stays "in flight" until the test resolves it. */
+function deferredAcks() {
+  const resolvers: Array<(ack: GiftSendAck | null) => void> = []
+  const rejecters: Array<(err: unknown) => void> = []
+  const sendGiftMock = vi.fn().mockImplementation(
+    () => new Promise<GiftSendAck | null>((resolve, reject) => {
+      resolvers.push(resolve)
+      rejecters.push(reject)
+    }),
+  )
+  return { sendGiftMock, resolvers, rejecters }
+}
+
+async function setupLuckyCombo(sendGiftMock: ReturnType<typeof vi.fn>, ackBalance = true) {
+  const ctx = await setup(sendGiftMock, { ackBalance })
+  ctx.balanceStore.seed({ coins: String(SEEDED_COINS), diamonds: '0', wealth_xp: '0', charm_xp: '0' })
+  ctx.comboStore.setLuckyContext({ gift: LUCKY_GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+  return ctx
+}
+
+describe('useGiftSending — lucky gate is net of in-flight taps (ackBalance)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('sends while spendable − in-flight ≥ cost and refuses the next tap with no emit', async () => {
+    const { sendGiftMock } = deferredAcks()
+    const { useGiftSending: sending, toastAdd } = await setupLuckyCombo(sendGiftMock)
+
+    for (let tap = 0; tap < AFFORDABLE_TAPS; tap++) {
+      expect(await sending.luckyCombo()).toBe(true)
+    }
+    expect(sendGiftMock).toHaveBeenCalledTimes(AFFORDABLE_TAPS)
+
+    // The raw balance still reads SEEDED_COINS (ackBalance never debits locally),
+    // but every coin is already spoken for by an in-flight tap.
+    expect(await sending.luckyCombo()).toBe(false)
+    expect(sendGiftMock).toHaveBeenCalledTimes(AFFORDABLE_TAPS)
+    expect(toastArg(toastAdd.mock.calls.length - 1).title).toBe('Insufficient balance for combo')
+  })
+
+  it('lucky taps stay one emit per tap — never merged', async () => {
+    const { sendGiftMock } = deferredAcks()
+    const { useGiftSending: sending } = await setupLuckyCombo(sendGiftMock)
+
+    for (let tap = 0; tap < AFFORDABLE_TAPS; tap++) await sending.luckyCombo()
+
+    const quantities = sendGiftMock.mock.calls.map((call) => call[2] as number)
+    expect(quantities).toEqual(Array(AFFORDABLE_TAPS).fill(1))
+    expect(new Set(sendGiftMock.mock.calls.map((call) => call[3] as string)).size).toBe(AFFORDABLE_TAPS)
+  })
+
+  it('the combo-starting send() counts as an in-flight tap for the next luckyCombo()', async () => {
+    const { sendGiftMock } = deferredAcks()
+    const { useGiftSending: sending, giftStore, comboStore, balanceStore } = await setup(sendGiftMock, { ackBalance: true })
+    balanceStore.seed({ coins: String(2 * LUCKY_TAP_COST), diamonds: '0', wealth_xp: '0', charm_xp: '0' })
+
+    giftStore.selectGift(LUCKY_GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+    expect(await sending.send()).toBe(true)
+    expect(comboStore.isLuckyComboActive).toBe(true)
+
+    expect(await sending.luckyCombo()).toBe(true) // 2 tap-costs − 1 in flight ≥ 1
+    expect(await sending.luckyCombo()).toBe(false) // 2 tap-costs − 2 in flight < 1
+    expect(sendGiftMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('a new lucky send() is refused while earlier lucky taps still claim the balance', async () => {
+    const { sendGiftMock } = deferredAcks()
+    const { useGiftSending: sending, giftStore, balanceStore } = await setupLuckyCombo(sendGiftMock)
+    balanceStore.seed({ coins: String(LUCKY_TAP_COST), diamonds: '0', wealth_xp: '0', charm_xp: '0' })
+
+    expect(await sending.luckyCombo()).toBe(true)
+    giftStore.selectGift(LUCKY_GIFT)
+    giftStore.setSelectedRecipientIds([2])
+    giftStore.setQuantity(1)
+
+    expect(await sending.send()).toBe(false)
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+  })
+
+  describe('releases the tap cost when it settles', () => {
+    /** A win on tap 1 puts its cost back, so a released reservation is observable. */
+    const WIN_BACK = { success: true, ok: true, balance: String(SEEDED_COINS), seq: 1 } as GiftSendAck
+
+    it.each([
+      ['a success ack', (r: Array<(a: GiftSendAck | null) => void>) => r[0]!(WIN_BACK)],
+      ['a non-pausing refusal ack', (r: Array<(a: GiftSendAck | null) => void>) =>
+        r[0]!({ success: false, ok: false, code: 'GIFT_NOT_SENDABLE' } as GiftSendAck)],
+      ['a pausing refusal ack', (r: Array<(a: GiftSendAck | null) => void>) =>
+        r[0]!({ success: false, ok: false, code: 'INSUFFICIENT' } as GiftSendAck)],
+      ['a null ack', (r: Array<(a: GiftSendAck | null) => void>) => r[0]!(null)],
+    ])('%s frees that tap\'s cost for the next tap', async (_label, settleFirst) => {
+      const { sendGiftMock, resolvers } = deferredAcks()
+      const { useGiftSending: sending, comboStore } = await setupLuckyCombo(sendGiftMock)
+
+      for (let tap = 0; tap < AFFORDABLE_TAPS; tap++) await sending.luckyCombo()
+      expect(await sending.luckyCombo()).toBe(false) // fully claimed
+
+      settleFirst(resolvers)
+      await flushAcks()
+      // A pausing refusal also disables the button; lift it so ONLY the ledger is under test.
+      comboStore.setLuckyComboPaused(false)
+
+      expect(await sending.luckyCombo()).toBe(true)
+      expect(sendGiftMock).toHaveBeenCalledTimes(AFFORDABLE_TAPS + 1)
+    })
+
+    it('a rejected emit frees the cost', async () => {
+      const { sendGiftMock, rejecters } = deferredAcks()
+      const { useGiftSending: sending } = await setupLuckyCombo(sendGiftMock)
+
+      for (let tap = 0; tap < AFFORDABLE_TAPS; tap++) await sending.luckyCombo()
+      expect(await sending.luckyCombo()).toBe(false)
+
+      rejecters[0]!(new Error('Socket disconnected during gift:send'))
+      await flushAcks()
+
+      expect(await sending.luckyCombo()).toBe(true)
+    })
+
+    it('the ack timeout frees the cost — held for SOCKET_TIMEOUT_MS, released exactly then', async () => {
+      // Mirrors the real chain: createEmitAsync rejects at SOCKET_TIMEOUT_MS,
+      // useRoomGifts.sendGift catches it and resolves null.
+      const sendGiftMock = vi.fn().mockImplementation(
+        () => new Promise<GiftSendAck | null>((resolve) => setTimeout(() => resolve(null), SOCKET_TIMEOUT_MS)),
+      )
+      const { useGiftSending: sending } = await setupLuckyCombo(sendGiftMock)
+
+      for (let tap = 0; tap < AFFORDABLE_TAPS; tap++) await sending.luckyCombo()
+      expect(await sending.luckyCombo()).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(SOCKET_TIMEOUT_MS - 1)
+      expect(await sending.luckyCombo()).toBe(false) // still held
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(await sending.luckyCombo()).toBe(true) // released
+    })
+  })
+
+  it('does not double-count on the legacy path, where the debit is already optimistic', async () => {
+    const { sendGiftMock } = deferredAcks()
+    const { useGiftSending: sending, balanceStore } = await setupLuckyCombo(sendGiftMock, false)
+
+    // Legacy deducts per tap, so the same balance still covers exactly AFFORDABLE_TAPS
+    // taps. Subtracting in-flight on top would stop it a tap or two early.
+    for (let tap = 0; tap < AFFORDABLE_TAPS; tap++) {
+      expect(await sending.luckyCombo()).toBe(true)
+    }
+    expect(balanceStore.coinsNumber).toBe(0)
+    expect(await sending.luckyCombo()).toBe(false)
+    expect(sendGiftMock).toHaveBeenCalledTimes(AFFORDABLE_TAPS)
+  })
+})
+
+describe('useGiftSending — refusal pauses the lucky combo button', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const PAUSING_ACKS: Array<[string, GiftSendAck]> = [
+    ...[...LUCKY_COMBO_PAUSING_REFUSAL_CODES].map((code): [string, GiftSendAck] => [
+      `code ${code}`,
+      { success: false, ok: false, code } as GiftSendAck,
+    ]),
+    ['rate limited (error, no code)', { success: false, error: GIFT_SEND_ERROR.RATE_LIMITED }],
+  ]
+
+  it.each(PAUSING_ACKS)('%s disables the button for exactly LUCKY_COMBO_REFUSAL_PAUSE_MS', async (_label, refusal) => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, comboStore } = await setupLuckyCombo(sendGiftMock)
+
+    await sending.luckyCombo()
+    resolvers[0]!(refusal)
+    await flushAcks()
+
+    expect(comboStore.isLuckyComboPaused).toBe(true)
+    // While paused a tap is ignored outright — no emit, even though DOM `disabled`
+    // alone is not trusted to stop a pointerdown.
+    expect(await sending.luckyCombo()).toBe(false)
+    expect(sendGiftMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(LUCKY_COMBO_REFUSAL_PAUSE_MS - 1)
+    expect(comboStore.isLuckyComboPaused).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(comboStore.isLuckyComboPaused).toBe(false)
+    expect(await sending.luckyCombo()).toBe(true)
+    expect(sendGiftMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('the pause is a one-second constant, not a literal in the composable', () => {
+    expect(LUCKY_COMBO_REFUSAL_PAUSE_MS).toBe(1000)
+  })
+
+  it('a further refusal inside the window restarts the pause', async () => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, comboStore } = await setupLuckyCombo(sendGiftMock)
+    const refusal = { success: false, ok: false, code: 'MONEY_UNAVAILABLE' } as GiftSendAck
+
+    await sending.luckyCombo()
+    await sending.luckyCombo() // second tap already in flight when the first is refused
+    resolvers[0]!(refusal)
+    await flushAcks()
+
+    await vi.advanceTimersByTimeAsync(LUCKY_COMBO_REFUSAL_PAUSE_MS - 1)
+    resolvers[1]!(refusal)
+    await flushAcks()
+
+    await vi.advanceTimersByTimeAsync(LUCKY_COMBO_REFUSAL_PAUSE_MS - 1)
+    expect(comboStore.isLuckyComboPaused).toBe(true) // restarted: would be lifted by now otherwise
+    await vi.advanceTimersByTimeAsync(1)
+    expect(comboStore.isLuckyComboPaused).toBe(false)
+  })
+
+  it.each([
+    ['a refusal a wait would not fix (GIFT_NOT_SENDABLE)', { success: false, ok: false, code: 'GIFT_NOT_SENDABLE' } as GiftSendAck],
+    ['a success ack', { success: true, ok: true, balance: String(SEEDED_COINS - LUCKY_TAP_COST), seq: 1 } as GiftSendAck],
+    ['a missing ack (timeout / disconnect)', null],
+  ])('%s does not pause the button', async (_label, ack) => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, comboStore } = await setupLuckyCombo(sendGiftMock)
+
+    await sending.luckyCombo()
+    resolvers[0]!(ack)
+    await flushAcks()
+
+    expect(comboStore.isLuckyComboPaused).toBe(false)
+  })
+
+  it('still shows the existing refusal toast', async () => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, toastAdd } = await setupLuckyCombo(sendGiftMock)
+
+    await sending.luckyCombo()
+    resolvers[0]!({ success: false, ok: false, code: 'INSUFFICIENT' } as GiftSendAck)
+    await flushAcks()
+
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastArg(0).description).toBe(GIFT_REFUSAL_TOAST_MESSAGES.INSUFFICIENT)
+  })
+
+  it('does not revert visuals already shown for the refused tap', async () => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, giftStore } = await setupLuckyCombo(sendGiftMock)
+
+    await sending.luckyCombo()
+    const flies = triggerFly.mock.calls.length
+    const combo = giftStore.comboCount
+
+    resolvers[0]!({ success: false, ok: false, code: 'INSUFFICIENT' } as GiftSendAck)
+    await flushAcks()
+
+    expect(triggerFly).toHaveBeenCalledTimes(flies)
+    expect(giftStore.comboCount).toBe(combo)
+  })
+
+  it('a refusal arriving after the combo ended pauses nothing', async () => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, comboStore } = await setupLuckyCombo(sendGiftMock)
+
+    await sending.luckyCombo()
+    sending.endLuckyCombo()
+    resolvers[0]!({ success: false, ok: false, code: 'INSUFFICIENT' } as GiftSendAck)
+    await flushAcks()
+
+    expect(comboStore.isLuckyComboPaused).toBe(false)
+  })
+
+  it('ending the combo cancels a pending re-enable timer', async () => {
+    const { sendGiftMock, resolvers } = deferredAcks()
+    const { useGiftSending: sending, comboStore } = await setupLuckyCombo(sendGiftMock)
+
+    await sending.luckyCombo()
+    resolvers[0]!({ success: false, ok: false, code: 'INSUFFICIENT' } as GiftSendAck)
+    await flushAcks()
+    expect(comboStore.isLuckyComboPaused).toBe(true)
+
+    sending.endLuckyCombo()
+    expect(comboStore.isLuckyComboPaused).toBe(false)
+
+    // A new combo that is paused again must not be lifted by the OLD timer.
+    comboStore.setLuckyContext({ gift: LUCKY_GIFT, senderId: 1, recipientIds: [2], quantity: 1 })
+    comboStore.setLuckyComboPaused(true)
+    await vi.advanceTimersByTimeAsync(LUCKY_COMBO_REFUSAL_PAUSE_MS)
+    expect(comboStore.isLuckyComboPaused).toBe(true)
   })
 })

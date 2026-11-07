@@ -15,8 +15,10 @@ import {
   GIFT_REFUSAL_TOAST_GENERIC,
   GIFT_REFUSAL_TOAST_MESSAGES,
   GIFT_SEND_ERROR,
+  LUCKY_COMBO_REFUSAL_PAUSE_MS,
 } from '~/constants/gift';
-import { isLuckyCategory } from '~/utils/gift';
+import { canAffordLuckyTap, isComboPausingRefusal, isLuckyCategory } from '~/utils/gift';
+import { createInFlightLedger } from '~/utils/in-flight-ledger';
 
 export function useGiftSending() {
   // ========================================
@@ -86,6 +88,25 @@ export function useGiftSending() {
     refundTotal: number;
     timer: ReturnType<typeof setTimeout>;
   } | null = null;
+
+  /**
+   * Coin cost of lucky taps emitted but not yet acked, keyed by batchId
+   * (gift-cashback-latency 06). Only populated under `ackBalance`: there the
+   * balance does not drop until the ack/push lands, so the next tap's GATE
+   * must subtract these itself. On the legacy path `deductCoins` already
+   * lowers the balance per tap, and counting them here too would refuse
+   * taps the sender can afford.
+   *
+   * A plain closure ledger, not a store ref: the GATE reads `total`
+   * synchronously on every tap and nothing renders it, so reactivity would
+   * only add per-tap cost. An entry is released by its own ack, refusal, or
+   * the `emitAsync` ack timeout (it rejects → `sendGift` resolves `null`), so
+   * nothing can stay reserved past `SOCKET_TIMEOUT_MS`.
+   */
+  const inFlightLuckyTaps = createInFlightLedger();
+
+  /** Timer that re-enables the lucky combo button after a refusal pause. */
+  let luckyPauseTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ========================================
   // Computed
@@ -209,6 +230,77 @@ export function useGiftSending() {
 
     if (!ack.success) {
       notifyRefusal(ack);
+    }
+  }
+
+  /**
+   * EXECUTE: emit ONE lucky tap's own `gift:send` (never merged — see
+   * `luckyCombo()`), reserving its cost in the in-flight ledger first so the
+   * very next tap's GATE already counts it. Every settle path — an ack, a
+   * refusal ack, a `null` ack (the ack timeout, a disconnect, no socket) or a
+   * rejected emit — goes through `settleLuckyTap`, so the reservation is
+   * always released.
+   *
+   * @param tapTotalCost coin cost of THIS tap across all recipients.
+   */
+  function emitLuckyTap(
+    giftId: number,
+    recipientIds: number[],
+    quantity: number,
+    batchId: string,
+    perRecipientCost: number,
+    tapTotalCost: number,
+  ): void {
+    if (capabilitiesStore.ackBalance) {
+      inFlightLuckyTaps.reserve(batchId, tapTotalCost);
+    }
+
+    emitGift(giftId, recipientIds, quantity, batchId)
+      .then((ack) => {
+        settleLuckyTap(batchId, ack);
+        reconcileSend(batchId, perRecipientCost, recipientIds, ack);
+      })
+      .catch((err: unknown) => {
+        log.warn('gift:send (lucky tap) failed', err);
+        settleLuckyTap(batchId, null);
+        reconcileSend(batchId, perRecipientCost, recipientIds, null);
+      });
+  }
+
+  /**
+   * REACT: a lucky tap's emit has resolved one way or another — release its
+   * in-flight cost (idempotent) and, if the server refused it in a way that
+   * waiting out helps, pause the combo button. Runs BEFORE `reconcileSend` so
+   * the reservation is gone even if reconciling throws; both are synchronous,
+   * so no GATE can run between this and the balance being applied.
+   */
+  function settleLuckyTap(batchId: string, ack: GiftSendAck | null): void {
+    inFlightLuckyTaps.release(batchId);
+    pauseLuckyComboOnRefusal(ack);
+  }
+
+  /**
+   * REACT: disable the floating lucky combo button for
+   * `LUCKY_COMBO_REFUSAL_PAUSE_MS` after a pausing refusal (see
+   * `isComboPausingRefusal`). A further refusal inside the window restarts it.
+   * Only a live lucky combo has a button to pause. Visuals already shown for
+   * the refused tap (fly, count, bubble) are deliberately left alone.
+   */
+  function pauseLuckyComboOnRefusal(ack: GiftSendAck | null): void {
+    if (!isComboPausingRefusal(ack) || !comboStore.isLuckyComboActive) return;
+
+    comboStore.setLuckyComboPaused(true);
+    clearLuckyPauseTimer();
+    luckyPauseTimer = setTimeout(() => {
+      luckyPauseTimer = null;
+      comboStore.setLuckyComboPaused(false);
+    }, LUCKY_COMBO_REFUSAL_PAUSE_MS);
+  }
+
+  function clearLuckyPauseTimer(): void {
+    if (luckyPauseTimer !== null) {
+      clearTimeout(luckyPauseTimer);
+      luckyPauseTimer = null;
     }
   }
 
@@ -438,6 +530,21 @@ export function useGiftSending() {
       return false;
     }
 
+    // GATE (lucky only): a new lucky send must also clear the lucky taps still
+    // in flight from a combo that just ended — `canAfford` reads the raw balance.
+    const isLuckySend = isLuckyCategory(selectedGift.category);
+    if (
+      isLuckySend
+      && !canAffordLuckyTap(balanceStore.coinsNumber, inFlightLuckyTaps.total, totalCost.value)
+    ) {
+      toast.add({
+        title: 'Insufficient balance',
+        description: 'Please top up your coins to send this gift.',
+        color: 'error',
+      });
+      return false;
+    }
+
     // GATE: the sender must be authenticated. `authStore.user` CAN be null
     // here (session revoked / auth refresh gap) — the old `user!` assertions
     // crashed the whole component tree instead of failing the send.
@@ -471,12 +578,25 @@ export function useGiftSending() {
       // accumulate here too — that double-counts the seat total for the sender.
       // REACT: reconcile the debit against the ack once it resolves — never
       // blocks this function's optimistic return.
-      emitGift(selectedGift.id, recipientIds, selectedQuantity, batchId)
-        .then((ack) => reconcileSend(batchId, perRecipientCost, recipientIds, ack))
-        .catch((err: unknown) => {
-          log.warn('gift:send failed', err);
-          reconcileSend(batchId, perRecipientCost, recipientIds, null);
-        });
+      if (isLuckySend) {
+        // A lucky send is the combo's first tap: one emit, its cost tracked in
+        // flight like every following `luckyCombo()` tap.
+        emitLuckyTap(
+          selectedGift.id,
+          recipientIds,
+          selectedQuantity,
+          batchId,
+          perRecipientCost,
+          totalCost.value,
+        );
+      } else {
+        emitGift(selectedGift.id, recipientIds, selectedQuantity, batchId)
+          .then((ack) => reconcileSend(batchId, perRecipientCost, recipientIds, ack))
+          .catch((err: unknown) => {
+            log.warn('gift:send failed', err);
+            reconcileSend(batchId, perRecipientCost, recipientIds, null);
+          });
+      }
 
       // Start playback immediately (optimistic)
       // Lucky gifts use fly animation, all others use fullscreen playback modal.
@@ -673,6 +793,12 @@ export function useGiftSending() {
     const ctx = comboStore.lastLuckyContext;
     if (!ctx) return false;
 
+    // GATE: the button is paused after a server refusal — silently ignore the
+    // tap (the button is already shown disabled; the refusal toast was shown).
+    // The DOM `disabled` attribute alone is not enough: some browsers still
+    // dispatch `pointerdown` on a disabled button.
+    if (comboStore.isLuckyComboPaused) return false;
+
     // GATE: refuse before the debit while the socket is down — see gateRoomConnection.
     if (!gateRoomConnection()) return false;
 
@@ -687,7 +813,10 @@ export function useGiftSending() {
     const comboCost = ctx.gift.price * validRecipients.length * ctx.quantity;
     const coins = balanceStore.coinsNumber;
 
-    if (coins < comboCost) {
+    // GATE: net of the lucky taps already emitted but not yet acked
+    // (gift-cashback-latency 06) — never send a tap we can already tell the
+    // sender cannot afford, instead of sending it to be refused.
+    if (!canAffordLuckyTap(coins, inFlightLuckyTaps.total, comboCost)) {
       toast.add({
         title: 'Insufficient balance for combo',
         description: 'Please top up your coins.',
@@ -706,12 +835,7 @@ export function useGiftSending() {
       comboStore.setPendingRefund(batchId, comboCost);
     }
 
-    emitGift(ctx.gift.id, validRecipients, ctx.quantity, batchId)
-      .then((ack) => reconcileSend(batchId, perRecipientCost, validRecipients, ack))
-      .catch((err: unknown) => {
-        log.warn('gift:send (lucky combo) failed', err);
-        reconcileSend(batchId, perRecipientCost, validRecipients, null);
-      });
+    emitLuckyTap(ctx.gift.id, validRecipients, ctx.quantity, batchId, perRecipientCost, comboCost);
 
     // Self-gifting: `validRecipients` may include self — already covered by
     // this unconditional loop, no extra branch needed.
@@ -737,6 +861,7 @@ export function useGiftSending() {
    * End lucky combo (called on combo timeout or when switching to non-lucky gift)
    */
   function endLuckyCombo(): void {
+    clearLuckyPauseTimer();
     comboStore.clearLuckyContext();
   }
 

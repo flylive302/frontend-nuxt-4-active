@@ -9,6 +9,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref, computed } from 'vue'
 import { useLuckySessionStore } from '../../../app/stores/luckySession'
+import { useGiftComboStore } from '../../../app/stores/giftCombo'
+import { useBalanceStore } from '../../../app/stores/balance'
 import {
   setupLuckyEventHandlers,
   cleanupLuckyEventHandlers,
@@ -22,6 +24,7 @@ vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('readonly', <T>(v: T) => v)
 vi.stubGlobal('useLuckySessionStore', useLuckySessionStore)
+vi.stubGlobal('useGiftComboStore', useGiftComboStore)
 
 // A single Pinia for the file: the composable caches its store reference on
 // first setup (module-level `_store`), so the active store must stay stable.
@@ -298,5 +301,150 @@ describe('useLuckyGift — lucky:room-result band writes, frame-coalesced (gift-
     flushLuckyGiftWrites() // no-op: cleanup cleared the pending delta and reset the store
 
     expect(store.senderBands.has(2)).toBe(false)
+  })
+})
+
+describe('useLuckyGift — "+N won this combo" sum (gift-cashback-latency 06)', () => {
+  let socket: ReturnType<typeof createMockSocket>
+  const comboStore = useGiftComboStore()
+  const balanceStore = useBalanceStore()
+  const addMessageMock = vi.fn()
+  const COMBO_CTX = { gift: { id: 7, price: 100 } as never, senderId: 1, recipientIds: [2], quantity: 1 }
+  const STARTING_COINS = '1000'
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.stubGlobal('useRoomAudioStore', () => ({ addMessage: addMessageMock, messages: [] }))
+    vi.stubGlobal('useRoomParticipantsStore', () => ({ participants: new Map([[2, { name: 'Ali' }]]) }))
+    store.$reset()
+    comboStore.$reset()
+    balanceStore.reset()
+    balanceStore.seed({ coins: STARTING_COINS, diamonds: '0', wealth_xp: '0', charm_xp: '0' })
+    socket = createMockSocket()
+    cleanupLuckyEventHandlers(socket as never)
+    setupLuckyEventHandlers(socket as never)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  function fireOwnResult(multiplier: number, coins: number): void {
+    socket.handlers.get('lucky:result')!({ multiplier, coins_won: coins, tier_name: 'T', gift_name: 'G' })
+  }
+
+  function fireRoomResult(senderId: number, coins: number): void {
+    socket.handlers.get('lucky:room-result')!({
+      sender_id: senderId, gift_id: 1, gift_name: 'G', multiplier: 5, coins_won: coins,
+      tier_name: 'T', room_id: 1, has_slide: true,
+    } satisfies LuckyRoomResultPayload)
+  }
+
+  it('sums the sender\'s own lucky:result coins since the combo started', () => {
+    const wins = [500, 200, 1_300]
+    comboStore.setLuckyContext(COMBO_CTX)
+
+    for (const coins of wins) {
+      fireOwnResult(5, coins)
+      flushLuckyGiftWrites()
+    }
+
+    expect(comboStore.luckyComboWonCoins).toBe(wins.reduce((sum, coins) => sum + coins, 0))
+  })
+
+  it('folds a same-frame burst of wins into ONE store write (ADR 0034 frame batching)', () => {
+    const wins = [500, 200, 1_300]
+    comboStore.setLuckyContext(COMBO_CTX)
+    const addWon = vi.spyOn(comboStore, 'addLuckyComboWon')
+
+    for (const coins of wins) fireOwnResult(5, coins)
+    // Not flushed yet — the write is deferred to the next frame, like the cashback.
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+    expect(addWon).not.toHaveBeenCalled()
+
+    flushLuckyGiftWrites()
+
+    expect(addWon).toHaveBeenCalledTimes(1)
+    expect(comboStore.luckyComboWonCoins).toBe(wins.reduce((sum, coins) => sum + coins, 0))
+  })
+
+  it('resets when the combo ends and starts from zero on the next combo', () => {
+    comboStore.setLuckyContext(COMBO_CTX)
+    fireOwnResult(5, 500)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(500)
+
+    comboStore.clearLuckyContext()
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+
+    comboStore.setLuckyContext(COMBO_CTX)
+    fireOwnResult(5, 70)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(70)
+  })
+
+  it('counts only the sender\'s own lucky:result — never lucky:room-result, not even the sender\'s echo', () => {
+    comboStore.setLuckyContext(COMBO_CTX)
+    const OWN_SENDER_ID = COMBO_CTX.senderId
+    const OTHER_SENDER_ID = 2
+
+    fireRoomResult(OTHER_SENDER_ID, 900)
+    fireRoomResult(OWN_SENDER_ID, 900) // the sender also receives their own room broadcast
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+
+    fireOwnResult(5, 400)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(400)
+  })
+
+  it('a bust (×0) adds nothing', () => {
+    comboStore.setLuckyContext(COMBO_CTX)
+    fireOwnResult(0, 0)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+  })
+
+  it('a result with no live lucky combo is not added to the sum', () => {
+    fireOwnResult(5, 500)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+
+    // ...and it does not leak into the NEXT combo either.
+    comboStore.setLuckyContext(COMBO_CTX)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+  })
+
+  it('room leave drops a pending unflushed win instead of applying it later', () => {
+    comboStore.setLuckyContext(COMBO_CTX)
+    fireOwnResult(5, 500)
+    cleanupLuckyEventHandlers(socket as never)
+    flushLuckyGiftWrites()
+    expect(comboStore.luckyComboWonCoins).toBe(0)
+  })
+
+  it('never writes the balance store — a win moves the display sum, not the spendable coins', () => {
+    const apply = vi.spyOn(balanceStore, 'apply')
+    const patch = vi.spyOn(balanceStore, 'patch')
+    const seed = vi.spyOn(balanceStore, 'seed')
+    const reset = vi.spyOn(balanceStore, 'reset')
+    const seqBefore = balanceStore.seq
+
+    comboStore.setLuckyContext(COMBO_CTX)
+    fireOwnResult(5, 500)
+    fireOwnResult(10, 1_000)
+    fireOwnResult(0, 0)
+    fireRoomResult(1, 500)
+    flushLuckyGiftWrites()
+
+    expect(comboStore.luckyComboWonCoins).toBe(1_500)
+    expect(apply).not.toHaveBeenCalled()
+    expect(patch).not.toHaveBeenCalled()
+    expect(seed).not.toHaveBeenCalled()
+    expect(reset).not.toHaveBeenCalled()
+    expect(balanceStore.coins).toBe(STARTING_COINS)
+    expect(balanceStore.seq).toBe(seqBefore)
   })
 })

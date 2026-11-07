@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { batchItemTaps, compareGiftsForDrawer, isBindingGift, seatGiftValue, wholeGiftValue } from '../../app/utils/gift'
+import {
+  batchItemTaps,
+  canAffordLuckyTap,
+  compareGiftsForDrawer,
+  isBindingGift,
+  isComboPausingRefusal,
+  seatGiftValue,
+  wholeGiftValue,
+} from '../../app/utils/gift'
 import { LUCKY_SPLIT_SHARE } from '../../app/constants/room'
+import { GIFT_SEND_ERROR, LUCKY_COMBO_PAUSING_REFUSAL_CODES } from '../../app/constants/gift'
 import type { Gift } from '../../app/types/gift/gift'
 
 // ========================================
@@ -113,3 +122,59 @@ describe('compareGiftsForDrawer', () => {
     expect(sorted.map((x) => [x.price, x.sort_order])).toEqual([[10, 2], [10, 9], [20, 1]]);
   });
 });
+
+// ========================================
+// gift-cashback-latency 06 — lucky combo gate + refusal predicate
+// ========================================
+
+describe('canAffordLuckyTap', () => {
+  const COST = 50
+
+  it('allows a tap when spendable minus in-flight still covers the cost', () => {
+    expect(canAffordLuckyTap(3 * COST, 2 * COST, COST)).toBe(true)
+  })
+
+  it('allows a tap that spends the last coin exactly (>=, not >)', () => {
+    expect(canAffordLuckyTap(COST, 0, COST)).toBe(true)
+    expect(canAffordLuckyTap(2 * COST, COST, COST)).toBe(true)
+  })
+
+  it('refuses when in-flight taps have already claimed the balance', () => {
+    expect(canAffordLuckyTap(3 * COST, 3 * COST, COST)).toBe(false)
+    expect(canAffordLuckyTap(3 * COST, 2 * COST + 1, COST)).toBe(false)
+  })
+
+  it('refuses when the balance alone is short, even with nothing in flight', () => {
+    expect(canAffordLuckyTap(COST - 1, 0, COST)).toBe(false)
+  })
+})
+
+describe('isComboPausingRefusal', () => {
+  it('pauses on every code in LUCKY_COMBO_PAUSING_REFUSAL_CODES', () => {
+    expect(LUCKY_COMBO_PAUSING_REFUSAL_CODES.size).toBeGreaterThan(0)
+    for (const code of LUCKY_COMBO_PAUSING_REFUSAL_CODES) {
+      expect(isComboPausingRefusal({ success: false, code })).toBe(true)
+    }
+  })
+
+  it('names INSUFFICIENT and MONEY_UNAVAILABLE', () => {
+    expect(LUCKY_COMBO_PAUSING_REFUSAL_CODES.has('INSUFFICIENT')).toBe(true)
+    expect(LUCKY_COMBO_PAUSING_REFUSAL_CODES.has('MONEY_UNAVAILABLE')).toBe(true)
+  })
+
+  it('pauses on the rate limiter, which acks an `error` string and no `code`', () => {
+    expect(isComboPausingRefusal({ success: false, error: GIFT_SEND_ERROR.RATE_LIMITED })).toBe(true)
+  })
+
+  it('does not pause on refusals a wait would not fix', () => {
+    for (const code of ['GIFT_NOT_SENDABLE', 'LUCKY_DISABLED', 'GIFT_UNKNOWN', 'SOMETHING_NEW']) {
+      expect(isComboPausingRefusal({ success: false, code })).toBe(false)
+    }
+    expect(isComboPausingRefusal({ success: false, error: GIFT_SEND_ERROR.NOT_IN_ROOM })).toBe(false)
+  })
+
+  it('never pauses on a success ack or a missing ack (timeout / disconnect)', () => {
+    expect(isComboPausingRefusal({ success: true })).toBe(false)
+    expect(isComboPausingRefusal(null)).toBe(false)
+  })
+})

@@ -65,6 +65,10 @@ const LUCKY_EVENTS = ['lucky:result', 'lucky:no-draw', 'lucky:room-result'] as c
 // then reused by socket callbacks that run outside Vue setup.
 let _store: ReturnType<typeof useLuckySessionStore> | null = null;
 
+// Same caching rule for the combo store: `handleLuckyResult` adds the sender's
+// own win to the "+N won this combo" sum (gift-cashback-latency 06).
+let _comboStore: ReturnType<typeof useGiftComboStore> | null = null;
+
 let floaterIdCounter = 0;
 let cashbackRevision = 0;
 
@@ -126,6 +130,15 @@ let pendingCashback: { multiplier: number; coinsWon: number } | null = null;
 /** Pending coin deltas per sender for the next flush (list-merge). */
 const pendingBandDeltas = new Map<number, number>();
 
+/**
+ * Coins from the SENDER'S OWN `lucky:result` events since the last flush,
+ * summed (list-merge) into the lucky combo's "+N won this combo" display on the
+ * same frame coalescer as the cashback overwrite. Display-only: this feeds the
+ * giftCombo store's won-sum and nothing else — the balance store is never
+ * written by a lucky result (it only moves via sequence-guarded acks/pushes).
+ */
+let pendingComboWon = 0;
+
 const luckyWriteCoalescer = createFrameCoalescer(flushLuckyWrites);
 
 function flushLuckyWrites(): void {
@@ -137,6 +150,13 @@ function flushLuckyWrites(): void {
     applyBandWinDelta(senderId, coinsWonDelta);
   }
   pendingBandDeltas.clear();
+
+  // Only a live lucky combo has a "won this combo" sum; a late result after the
+  // combo ended is dropped from it (the band and the cashback still show it).
+  if (pendingComboWon > 0 && _comboStore?.isLuckyComboActive) {
+    _comboStore.addLuckyComboWon(pendingComboWon);
+  }
+  pendingComboWon = 0;
 }
 
 /** Apply anything pending right now (tests, room leave). */
@@ -423,6 +443,9 @@ function handleLuckyResult(data: LuckyDrawResult): void {
   if (!(data.multiplier > 0)) return;
   // Store write only — frame-coalesced (latest wins), see luckyWriteCoalescer.
   pendingCashback = { multiplier: data.multiplier, coinsWon: data.coins_won };
+  // `lucky:result` is sender-private, so every one of these is the sender's own
+  // win — it counts toward "+N won this combo" (summed, one write per frame).
+  if (data.coins_won > 0) pendingComboWon += data.coins_won;
   luckyWriteCoalescer.schedule();
 }
 
@@ -509,6 +532,7 @@ function prewarmCashbackSvgas(): void {
  */
 export function setupLuckyEventHandlers(socket: AudioSocket): void {
   if (!_store) _store = useLuckySessionStore();
+  if (!_comboStore) _comboStore = useGiftComboStore();
   socket.on('lucky:result', handleLuckyResult);
   socket.on('lucky:no-draw', handleLuckyNoDraw);
   socket.on('lucky:room-result', handleLuckyRoomResult);
@@ -535,6 +559,7 @@ export function cleanupLuckyEventHandlers(socket: AudioSocket): void {
   luckyWriteCoalescer.cancel();
   pendingCashback = null;
   pendingBandDeltas.clear();
+  pendingComboWon = 0;
 
   _store?.$reset();
 }

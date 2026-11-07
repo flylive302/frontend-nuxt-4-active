@@ -82,6 +82,71 @@ describe('useGiftComboStore', () => {
     })
   })
 
+  describe('won-this-combo sum + refusal pause (gift-cashback-latency 06)', () => {
+    const luckyCtx = () => ({ gift: { id: 7, price: 100 } as Gift, senderId: 1, recipientIds: [2], quantity: 1 })
+
+    it('starts at zero and unpaused', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      expect(store.luckyComboWonCoins).toBe(0)
+      expect(store.isLuckyComboPaused).toBe(false)
+    })
+
+    it('addLuckyComboWon accumulates deltas', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+      const deltas = [500, 200, 1]
+
+      store.setLuckyContext(luckyCtx())
+      for (const delta of deltas) store.addLuckyComboWon(delta)
+
+      expect(store.luckyComboWonCoins).toBe(deltas.reduce((sum, d) => sum + d, 0))
+    })
+
+    it('a new combo starts from zero won and enabled', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      store.setLuckyContext(luckyCtx())
+      store.addLuckyComboWon(700)
+      store.setLuckyComboPaused(true)
+
+      store.setLuckyContext(luckyCtx())
+
+      expect(store.luckyComboWonCoins).toBe(0)
+      expect(store.isLuckyComboPaused).toBe(false)
+    })
+
+    it('ending the combo resets the won sum and the pause', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      store.setLuckyContext(luckyCtx())
+      store.addLuckyComboWon(700)
+      store.setLuckyComboPaused(true)
+
+      store.clearLuckyContext()
+
+      expect(store.luckyComboWonCoins).toBe(0)
+      expect(store.isLuckyComboPaused).toBe(false)
+    })
+
+    it('$reset clears the won sum and the pause', async () => {
+      const { useGiftComboStore } = await import('../../app/stores/giftCombo')
+      const store = useGiftComboStore()
+
+      store.setLuckyContext(luckyCtx())
+      store.addLuckyComboWon(700)
+      store.setLuckyComboPaused(true)
+
+      store.$reset()
+
+      expect(store.luckyComboWonCoins).toBe(0)
+      expect(store.isLuckyComboPaused).toBe(false)
+    })
+  })
+
   describe('$reset()', () => {
     it('clears all fields to their initial values', async () => {
       const { useGiftComboStore } = await import('../../app/stores/giftCombo')

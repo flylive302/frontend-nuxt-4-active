@@ -31,6 +31,18 @@ export function formatCurrency(value: string | number | undefined | null): strin
 }
 
 /**
+ * Exact whole-coin amount with thousands separators ("1,234,567"). Never
+ * abbreviated to K/M — used where the sender must see the real spendable
+ * balance (lucky combo float, gift drawer). `en-US` is pinned so the
+ * separator is the same on every device locale. Display-only: the input is
+ * never rounded up, only truncated to a whole coin.
+ */
+export function formatCoins(value: string | number | undefined | null): string {
+  const num = typeof value === 'string' ? parseCurrency(value) : (value ?? 0);
+  return Math.trunc(num).toLocaleString('en-US');
+}
+
+/**
  * Format with full decimal precision for display.
  */
 export function formatCurrencyPrecise(value: string | undefined | null): string {

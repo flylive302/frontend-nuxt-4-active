@@ -200,6 +200,29 @@ export const GIFT_REFUSAL_TOAST_MESSAGES: Record<string, string> = {
 export const GIFT_REFUSAL_TOAST_GENERIC = 'Gift not sent. Please try again.';
 
 /**
+ * gift-cashback-latency 06 — how long the floating lucky combo button stays
+ * disabled after the server refuses a lucky tap. Long enough that a frantic
+ * finger stops tapping into refusals; short enough that a transient refusal
+ * (busy ledger, a rate-limit window) does not feel like a locked-out combo.
+ * A second refusal inside the window restarts it.
+ */
+export const LUCKY_COMBO_REFUSAL_PAUSE_MS = 1000;
+
+/**
+ * `gift:send` ack `code`s (ackBalance refusal contract) that pause the lucky
+ * combo button. Rate-limiting is deliberately NOT in here: MSAB's rate-limit
+ * branch acks `{ success:false, error: 'Too many requests' }` with no `code`
+ * (it runs before the ackBalance policy), so it is matched on
+ * `GIFT_SEND_ERROR.RATE_LIMITED` instead — see `isComboPausingRefusal`.
+ * Other refusals (`GIFT_NOT_SENDABLE`, `LUCKY_DISABLED`, `GIFT_UNKNOWN`) only
+ * toast: waiting a second does not change their outcome.
+ */
+export const LUCKY_COMBO_PAUSING_REFUSAL_CODES: ReadonlySet<string> = new Set([
+  'INSUFFICIENT',
+  'MONEY_UNAVAILABLE',
+]);
+
+/**
  * `gift:error` after acceptance (ackBalance-only, ticket 13): the refund
  * itself arrives via `balance.updated` — this toast only announces it, it
  * never touches the balance directly.
