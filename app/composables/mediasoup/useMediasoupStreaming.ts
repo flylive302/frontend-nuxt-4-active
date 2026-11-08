@@ -14,6 +14,7 @@ import { watch } from 'vue';
 import { useMediasoupSessionStore } from '~/stores/mediasoupSession';
 import { useAudioPreferencesStore } from '~/stores/audioPreferences';
 import { resolveNoiseFilter, isAudioWorkletSupported } from '~/utils/audio/resolve-noise-filter';
+import { micProducerCodecOptions, musicProducerCodecOptions } from '~/utils/audio/producer-codec-options';
 import { classifyDeviceClass, readDeviceCapabilities } from '~/utils/device-class';
 import { attachNoiseFilter, detachNoiseFilter, rewireNoiseFilter } from './useMicNoiseFilter';
 
@@ -262,21 +263,11 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       await applyNoiseFilterForMute(true);
     }
 
-    // Voice mic: mono at a capped 96k target (64k until 2026-08-23; raised
-    // after the "A vs A++" audio-quality review). Without these options the
-    // router's stereo-forced Opus config encodes the mono mic as uncapped
-    // stereo — roughly half the bits go to a phantom second channel and BWE
-    // picks an arbitrary rate ("weak audio", 2026-07-10 audio review). FEC on
-    // for loss resilience; DTX stays off (it froze the HLS broadcast mix).
-    // Server maxIncomingBitrate (256k) covers mic 96k + DJ music 128k + FEC.
+    // Voice mic: mono 96k, FEC, DTX on, 40 ms packets — the why lives on
+    // `micProducerCodecOptions()`.
     producer.value = await producerTransport.value!.produce({
       track: trackForProducer,
-      codecOptions: {
-        opusStereo: false,
-        opusFec: true,
-        opusDtx: false,
-        opusMaxAverageBitrate: 96000,
-      },
+      codecOptions: micProducerCodecOptions(),
       appData: { source: 'mic' },
     });
 
@@ -476,17 +467,12 @@ export function useMediasoupStreaming(socket: Ref<AudioSocket | null>) {
       return;
     }
 
-    // Music (DJ) producer: true stereo source, higher cap than the voice mic.
-    // 128k stereo Opus is transparent for music; server maxIncomingBitrate
-    // (256k) covers it alongside the DJ's own 96k mic on the same transport.
+    // Music (DJ) producer: stereo 128k, DTX off — see
+    // `musicProducerCodecOptions()`. Server maxIncomingBitrate (256k) covers
+    // it alongside the DJ's own mic on the same transport.
     musicProducer.value = await producerTransport.value.produce({
       track,
-      codecOptions: {
-        opusStereo: true,
-        opusFec: true,
-        opusDtx: false,
-        opusMaxAverageBitrate: 128000,
-      },
+      codecOptions: musicProducerCodecOptions(),
       appData: { source: 'music' },
     });
 
