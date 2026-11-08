@@ -516,3 +516,22 @@ export const SEAT_GRID_WIDE_THRESHOLD = 15;
  * the pipeline gets each one, localStorage only gets the last.
  */
 export const VOLUME_PERSIST_DEBOUNCE_MS = 250;
+
+// ============================================
+// Room Video
+// ============================================
+
+/** Longest video link / id (in characters, after trimming) a controller may submit. */
+export const ROOM_VIDEO_URL_MAX_LENGTH = 2048;
+
+/**
+ * Playback drift (seconds) a listener tolerates before seeking back to the
+ * expected position. Smaller seeks stutter more than the drift they fix.
+ */
+export const ROOM_VIDEO_DRIFT_THRESHOLD_SEC = 1.5;
+
+/**
+ * How many of the most recent server-clock samples feed the offset estimate.
+ * Few enough to follow clock drift, enough to find one low-delay packet.
+ */
+export const ROOM_VIDEO_CLOCK_SAMPLE_COUNT = 5;
