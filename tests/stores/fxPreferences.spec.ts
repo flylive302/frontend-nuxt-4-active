@@ -45,6 +45,48 @@ describe('fxPreferencesStore', () => {
     expect(store.animatedAvatarFrames).toBe('off')
   })
 
+  // room-video-player 09 — "Always start video collapsed"
+  it('defaults startVideoCollapsed to false', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const store = useFxPreferencesStore()
+
+    expect(store.startVideoCollapsed).toBe(false)
+  })
+
+  it('setStartVideoCollapsed updates the preference both ways', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const store = useFxPreferencesStore()
+
+    store.setStartVideoCollapsed(true)
+    expect(store.startVideoCollapsed).toBe(true)
+
+    store.setStartVideoCollapsed(false)
+    expect(store.startVideoCollapsed).toBe(false)
+  })
+
+  it('persists startVideoCollapsed to storage and restores it on hydrate', async () => {
+    const { createPersistedState } = await import('pinia-plugin-persistedstate')
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const data = new Map<string, string>([
+      ['fxPreferencesStore', JSON.stringify({ startVideoCollapsed: true })],
+    ])
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+    }
+    const pinia = createPinia()
+    createApp({}).use(pinia)
+    pinia.use(createPersistedState({ storage }))
+    setActivePinia(pinia)
+
+    const store = useFxPreferencesStore()
+    expect(store.startVideoCollapsed).toBe(true)
+
+    store.setStartVideoCollapsed(false)
+    await Promise.resolve()
+    expect(JSON.parse(data.get('fxPreferencesStore') ?? '{}').startVideoCollapsed).toBe(false)
+  })
+
   it('mute switches default to auto', async () => {
     const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
     const store = useFxPreferencesStore()

@@ -1,11 +1,13 @@
 /**
- * Unit tests for useRoomVideoActions: start / stop through GATE -> EXECUTE -> REACT.
+ * Unit tests for useRoomVideoActions: start / takeover / stop / pause / resume / seek
+ * through GATE -> EXECUTE -> REACT, plus the silent heartbeat / ended transport.
  * Real Pinia store; the socket emit, toast, hierarchy and logger are fakes.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, ref } from 'vue'
 import { ROOM_SOCKET_NOT_AUTHORIZED, ROOM_VIDEO_ERROR, ROOM_VIDEO_URL_MAX_LENGTH } from '../../app/constants/room'
+import type { RoomRank } from '../../app/utils/room-hierarchy'
 import type { RoomVideoSnapshot, VideoPlayerAck, VideoSourceError } from '../../app/types/room/video'
 
 // ============================================
@@ -21,7 +23,8 @@ const toastAdd = vi.fn()
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 
 const canModerate = ref(true)
-vi.stubGlobal('useRoomHierarchy', () => ({ canModerate }))
+const myRank = ref<RoomRank>('admin')
+vi.stubGlobal('useRoomHierarchy', () => ({ canModerate, myRank }))
 
 vi.stubGlobal('useAudioSocket', () => ({ socket: ref({}) }))
 
@@ -33,8 +36,9 @@ vi.mock('~/utils/socket', () => ({
   createEmitAsync: () => emitAsyncMock,
 }))
 
+const logDebug = vi.fn()
 vi.mock('~/utils/logger', () => ({
-  createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+  createLogger: () => ({ debug: logDebug, info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 
 // ============================================
@@ -80,7 +84,9 @@ beforeEach(() => {
   toastAdd.mockReset()
   emitAsyncMock.mockReset()
   emitAsyncMock.mockResolvedValue({ success: true })
+  logDebug.mockReset()
   canModerate.value = true
+  myRank.value = 'admin'
 })
 
 // ============================================================
@@ -92,7 +98,7 @@ describe('start — GATE refusals emit nothing and toast once', () => {
 
     const result = await start(YOUTUBE_LINK)
 
-    expect(result).toBe(false)
+    expect(result).toEqual({ ok: false, canTakeOver: false })
     expect(emitAsyncMock).not.toHaveBeenCalled()
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(lastToast().description).toBe("Room Video isn't available right now.")
@@ -103,7 +109,7 @@ describe('start — GATE refusals emit nothing and toast once', () => {
 
     const result = await start(YOUTUBE_LINK)
 
-    expect(result).toBe(false)
+    expect(result).toEqual({ ok: false, canTakeOver: false })
     expect(emitAsyncMock).not.toHaveBeenCalled()
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(lastToast().description).toBe("Room Video isn't available right now.")
@@ -115,7 +121,7 @@ describe('start — GATE refusals emit nothing and toast once', () => {
 
     const result = await start(YOUTUBE_LINK)
 
-    expect(result).toBe(false)
+    expect(result).toEqual({ ok: false, canTakeOver: false })
     expect(emitAsyncMock).not.toHaveBeenCalled()
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(lastToast().description).toBe('Only the room owner and admins can start a video.')
@@ -150,7 +156,7 @@ describe('start — GATE refusals emit nothing and toast once', () => {
 
     const result = await start(input)
 
-    expect(result).toBe(false)
+    expect(result).toEqual({ ok: false, canTakeOver: false })
     expect(emitAsyncMock).not.toHaveBeenCalled()
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(lastToast().description).toBe(copy)
@@ -166,7 +172,7 @@ describe('start — EXECUTE', () => {
 
     const result = await start(`  ${YOUTUBE_LINK}  `)
 
-    expect(result).toBe(true)
+    expect(result).toEqual({ ok: true })
     expect(emitAsyncMock).toHaveBeenCalledTimes(1)
     expect(emitAsyncMock).toHaveBeenCalledWith('videoPlayer:play', {
       roomId: ROOM_ID,
@@ -242,7 +248,7 @@ describe('start — REACT to a failed ack', () => {
 
     const result = await start(YOUTUBE_LINK)
 
-    expect(result).toBe(false)
+    expect(result).toEqual({ ok: false, canTakeOver: false })
     expect(emitAsyncMock).toHaveBeenCalledTimes(1)
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ description: copy, color }))
@@ -254,7 +260,7 @@ describe('start — REACT to a failed ack', () => {
 
     const result = await start(YOUTUBE_LINK)
 
-    expect(result).toBe(false)
+    expect(result).toEqual({ ok: false, canTakeOver: false })
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ description: GENERIC_START_FAILURE, color: 'error' }))
   })
@@ -325,5 +331,324 @@ describe('stop', () => {
     expect(result).toBe(false)
     expect(toastAdd).toHaveBeenCalledTimes(1)
     expect(lastToast().description).toBe(GENERIC_STOP_FAILURE)
+  })
+})
+
+
+// ============================================================
+// start — owner meets a busy slot (drawer offers "Take over")
+// ============================================================
+describe('start — owner on a busy media slot', () => {
+  const MP4_LINK = 'https://cdn.example.com/clips/a.mp4'
+
+  it.each([
+    ['music', { heldBy: 'music', userId: 3 }],
+    ['video', { heldBy: 'video', userId: 3 }],
+  ] as const)('held by %s: canTakeOver, heldBy reported, no toast', async (heldBy, data) => {
+    myRank.value = 'owner'
+    emitAsyncMock.mockResolvedValue({ success: false, error: ROOM_VIDEO_ERROR.MEDIA_SLOT_BUSY, data })
+    const { start } = await setup()
+
+    const result = await start(MP4_LINK)
+
+    expect(result).toEqual({ ok: false, canTakeOver: true, heldBy })
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('busy without holder data still offers the takeover, no toast', async () => {
+    myRank.value = 'owner'
+    emitAsyncMock.mockResolvedValue({ success: false, error: ROOM_VIDEO_ERROR.MEDIA_SLOT_BUSY })
+    const { start } = await setup()
+
+    const result = await start(MP4_LINK)
+
+    expect(result).toEqual({ ok: false, canTakeOver: true, heldBy: undefined })
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('an admin on the same busy ack gets the toast and no takeover offer', async () => {
+    myRank.value = 'admin'
+    emitAsyncMock.mockResolvedValue({
+      success: false,
+      error: ROOM_VIDEO_ERROR.MEDIA_SLOT_BUSY,
+      data: { heldBy: 'music', userId: 3 },
+    })
+    const { start } = await setup()
+
+    const result = await start(MP4_LINK)
+
+    expect(result).toEqual({ ok: false, canTakeOver: false })
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(lastToast().description).toBe('Music is playing — ask the DJ to stop it first.')
+  })
+
+  it('an owner whose failure is NOT a busy slot still gets the toast', async () => {
+    myRank.value = 'owner'
+    emitAsyncMock.mockResolvedValue({ success: false, error: ROOM_VIDEO_ERROR.SOURCE_INVALID })
+    const { start } = await setup()
+
+    const result = await start(MP4_LINK)
+
+    expect(result).toEqual({ ok: false, canTakeOver: false })
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(lastToast().description).toBe("That link can't be played.")
+  })
+})
+
+// ============================================================
+// takeover
+// ============================================================
+describe('takeover', () => {
+  const MP4_LINK = 'https://cdn.example.com/clips/a.mp4'
+  const MP4_SOURCE = { kind: 'url', url: MP4_LINK, container: 'mp4' }
+
+  it('refuses a non-owner (admin): no emit, one toast, false', async () => {
+    myRank.value = 'admin'
+    const { takeover } = await setup()
+
+    const result = await takeover(MP4_LINK)
+
+    expect(result).toBe(false)
+    expect(emitAsyncMock).not.toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(lastToast().description).toBe('Only the room owner can take over.')
+  })
+
+  it('refuses a plain member', async () => {
+    myRank.value = 'member'
+    const { takeover } = await setup()
+
+    expect(await takeover(MP4_LINK)).toBe(false)
+    expect(emitAsyncMock).not.toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses when the feature is off or no room is joined', async () => {
+    myRank.value = 'owner'
+    const off = await setup({ enabled: false })
+    expect(await off.takeover(MP4_LINK)).toBe(false)
+    expect(lastToast().description).toBe("Room Video isn't available right now.")
+
+    toastAdd.mockClear()
+    setActivePinia(createPinia())
+    const noRoom = await setup({ joinedRoom: null })
+    expect(await noRoom.takeover(MP4_LINK)).toBe(false)
+    expect(lastToast().description).toBe("Room Video isn't available right now.")
+    expect(emitAsyncMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses an unplayable link: no emit, one toast', async () => {
+    myRank.value = 'owner'
+    const { takeover } = await setup()
+
+    expect(await takeover('http://example.com/clip.mp4')).toBe(false)
+    expect(emitAsyncMock).not.toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(lastToast().description).toBe('Use an https:// link.')
+  })
+
+  it('the owner emits videoPlayer:takeover with the play payload, returns true, no toast', async () => {
+    myRank.value = 'owner'
+    const { takeover } = await setup()
+
+    const result = await takeover(`  ${MP4_LINK}  `)
+
+    expect(result).toBe(true)
+    expect(emitAsyncMock).toHaveBeenCalledTimes(1)
+    expect(emitAsyncMock).toHaveBeenCalledWith('videoPlayer:takeover', { roomId: ROOM_ID, source: MP4_SOURCE })
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('works while only music holds the slot (no active video needed)', async () => {
+    myRank.value = 'owner'
+    const { takeover } = await setup({ snapshot: null })
+
+    expect(await takeover(MP4_LINK)).toBe(true)
+    expect(emitAsyncMock).toHaveBeenCalledTimes(1)
+  })
+
+  const failures: Array<[string, VideoPlayerAck, string, string]> = [
+    ['not authorized', { success: false, error: ROOM_SOCKET_NOT_AUTHORIZED }, 'Only the room owner can take over.', 'warning'],
+    ['feature disabled on the server', { success: false, error: ROOM_VIDEO_ERROR.DISABLED }, "Room Video isn't available right now.", 'warning'],
+    ['server rejected the source', { success: false, error: ROOM_VIDEO_ERROR.SOURCE_INVALID }, "That link can't be played.", 'warning'],
+    ['unknown error string', { success: false, error: 'something_else' }, "Couldn't take over. Try again.", 'error'],
+  ]
+
+  it.each(failures)('%s: one toast, returns false', async (_name, ack, copy, color) => {
+    myRank.value = 'owner'
+    emitAsyncMock.mockResolvedValue(ack)
+    const { takeover } = await setup()
+
+    expect(await takeover(MP4_LINK)).toBe(false)
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ description: copy, color }))
+  })
+
+  it('a rejected emit gives the generic takeover toast and false', async () => {
+    myRank.value = 'owner'
+    emitAsyncMock.mockRejectedValue(new Error('Socket not connected'))
+    const { takeover } = await setup()
+
+    expect(await takeover(MP4_LINK)).toBe(false)
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(lastToast().description).toBe("Couldn't take over. Try again.")
+  })
+})
+
+// ============================================================
+// pause / resume / seek
+// ============================================================
+describe('pause / resume / seek', () => {
+  const POSITION_SEC = 42.5
+  const cases = [
+    ['pause', 'videoPlayer:pause', "Couldn't pause the video. Try again."],
+    ['resume', 'videoPlayer:resume', "Couldn't resume the video. Try again."],
+    ['seek', 'videoPlayer:seek', "Couldn't move the video. Try again."],
+  ] as const
+
+  describe.each(cases)('%s', (action, event, failedCopy) => {
+    it('refuses a viewer who is not the Controller: no emit, one toast, false', async () => {
+      const actions = await setup({ snapshot: makeSnapshot({ controllerUserId: CURRENT_USER_ID + 1 }) })
+
+      const result = await actions[action](POSITION_SEC)
+
+      expect(result).toBe(false)
+      expect(emitAsyncMock).not.toHaveBeenCalled()
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+      expect(lastToast().description).toBe('Only the person controlling the video can do that.')
+    })
+
+    it('refuses when no video is playing', async () => {
+      const actions = await setup({ snapshot: null })
+
+      expect(await actions[action](POSITION_SEC)).toBe(false)
+      expect(emitAsyncMock).not.toHaveBeenCalled()
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses when the feature is disabled even with a stale snapshot', async () => {
+      const actions = await setup({ enabled: false, snapshot: makeSnapshot() })
+
+      expect(await actions[action](POSITION_SEC)).toBe(false)
+      expect(emitAsyncMock).not.toHaveBeenCalled()
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+    })
+
+    it('the Controller emits the event with {roomId, positionSec}, gets true, no toast', async () => {
+      const actions = await setup({ snapshot: makeSnapshot() })
+
+      const result = await actions[action](POSITION_SEC)
+
+      expect(result).toBe(true)
+      expect(emitAsyncMock).toHaveBeenCalledTimes(1)
+      expect(emitAsyncMock).toHaveBeenCalledWith(event, { roomId: ROOM_ID, positionSec: POSITION_SEC })
+      expect(toastAdd).not.toHaveBeenCalled()
+    })
+
+    it('a failed ack gives one toast and false', async () => {
+      emitAsyncMock.mockResolvedValue({ success: false, error: ROOM_SOCKET_NOT_AUTHORIZED })
+      const actions = await setup({ snapshot: makeSnapshot() })
+
+      expect(await actions[action](POSITION_SEC)).toBe(false)
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+      expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ description: failedCopy, color: 'error' }))
+    })
+
+    it('a rejected emit gives one toast and false', async () => {
+      emitAsyncMock.mockRejectedValue(new Error("Socket event timed out"))
+      const actions = await setup({ snapshot: makeSnapshot() })
+
+      expect(await actions[action](POSITION_SEC)).toBe(false)
+      expect(toastAdd).toHaveBeenCalledTimes(1)
+      expect(lastToast().description).toBe(failedCopy)
+    })
+  })
+})
+
+// ============================================================
+// heartbeat / ended (silent RoomVideoTransport)
+// ============================================================
+describe('heartbeat / ended', () => {
+  /** Let a fire-and-forget emit (and its catch) settle. */
+  const flush = () => new Promise<void>(resolve => setTimeout(resolve, 0))
+
+  it('heartbeat emits {roomId, positionSec, paused} when Controller', async () => {
+    const { heartbeat } = await setup({ snapshot: makeSnapshot() })
+
+    heartbeat(12.5, true)
+    await flush()
+
+    expect(emitAsyncMock).toHaveBeenCalledTimes(1)
+    expect(emitAsyncMock).toHaveBeenCalledWith('videoPlayer:heartbeat', { roomId: ROOM_ID, positionSec: 12.5, paused: true })
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('ended emits {roomId} when Controller', async () => {
+    const { ended } = await setup({ snapshot: makeSnapshot() })
+
+    ended()
+    await flush()
+
+    expect(emitAsyncMock).toHaveBeenCalledTimes(1)
+    expect(emitAsyncMock).toHaveBeenCalledWith('videoPlayer:ended', { roomId: ROOM_ID })
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('both emit nothing and never toast for a non-Controller', async () => {
+    const { heartbeat, ended } = await setup({ snapshot: makeSnapshot({ controllerUserId: CURRENT_USER_ID + 1 }) })
+
+    heartbeat(1, false)
+    ended()
+    await flush()
+
+    expect(emitAsyncMock).not.toHaveBeenCalled()
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('both emit nothing when there is no snapshot or no joined room', async () => {
+    const noVideo = await setup({ snapshot: null })
+    noVideo.heartbeat(1, false)
+    noVideo.ended()
+
+    setActivePinia(createPinia())
+    const noRoom = await setup({ joinedRoom: null })
+    noRoom.heartbeat(1, false)
+    noRoom.ended()
+    await flush()
+
+    expect(emitAsyncMock).not.toHaveBeenCalled()
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('swallows a rejected emit: no throw, no toast, one debug line each', async () => {
+    emitAsyncMock.mockRejectedValue(new Error('Socket not connected'))
+    const { heartbeat, ended } = await setup({ snapshot: makeSnapshot() })
+
+    expect(() => heartbeat(1, false)).not.toThrow()
+    expect(() => ended()).not.toThrow()
+    await flush()
+
+    expect(emitAsyncMock).toHaveBeenCalledTimes(2)
+    expect(toastAdd).not.toHaveBeenCalled()
+    expect(logDebug).toHaveBeenCalledTimes(2)
+  })
+
+  it('a refused ack is also silent (debug only)', async () => {
+    emitAsyncMock.mockResolvedValue({ success: false, error: ROOM_SOCKET_NOT_AUTHORIZED })
+    const { heartbeat } = await setup({ snapshot: makeSnapshot() })
+
+    heartbeat(1, false)
+    await flush()
+
+    expect(toastAdd).not.toHaveBeenCalled()
+    expect(logDebug).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns void synchronously (does not hand the promise to the caller)', async () => {
+    const { heartbeat, ended } = await setup({ snapshot: makeSnapshot() })
+
+    expect(heartbeat(1, false)).toBeUndefined()
+    expect(ended()).toBeUndefined()
+    await flush()
   })
 })

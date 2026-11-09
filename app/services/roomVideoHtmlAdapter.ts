@@ -371,6 +371,12 @@ export const createHtmlVideoAdapter = ((
     return video.currentTime || 0;
   }
 
+  /** `NaN` before metadata and `Infinity` on a live stream both read as 0 (no seek bar). */
+  function duration(): number {
+    const value = video.duration;
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
   function setMuted(muted: boolean): void {
     video.muted = muted;
   }
@@ -415,5 +421,5 @@ export const createHtmlVideoAdapter = ((
   for (const [type, listener] of elementListeners) video.addEventListener(type, listener);
   container.appendChild(video);
 
-  return { load, play, pause, seek, currentTime, setMuted, destroy, on };
+  return { load, play, pause, seek, currentTime, duration, setMuted, destroy, on };
 }) satisfies VideoPlayerAdapterFactory;

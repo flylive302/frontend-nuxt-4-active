@@ -50,6 +50,7 @@ import { useAudioPreferencesStore } from '~/stores/audioPreferences';
 import {
   AUDIO_DUCK_RAMP_DOWN_MS,
   AUDIO_DUCK_RAMP_UP_MS,
+  ROOM_VIDEO_ERROR,
 } from '~/constants/room';
 
 // ============================================
@@ -325,9 +326,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
       toast.add({
         title: 'Music',
-        description: force
-          ? 'Could not take over music playback.'
-          : 'Another admin is currently playing music. Try again when the slot is free.',
+        description: describePlayRefusal(res, force),
         color: 'warning',
       });
       return false;
@@ -714,10 +713,12 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   }
 
   /**
-   * The room owner force-took the slot (targeted `audioPlayer:revoked`). Tear
-   * down local production so this DJ is no longer audible — the Room never hears
-   * two tracks — but **preserve the queue** for resume when the slot frees. We
-   * do NOT emit `audioPlayer:stop`: the mutex already belongs to the owner.
+   * The slot was taken from this DJ (targeted `audioPlayer:revoked`): the room
+   * owner force-took the music, or (`reason: 'video'`, room-video-player/03) a
+   * Room Video took the media slot. Tear down local production so this DJ is no
+   * longer audible — the Room never hears two tracks — but **preserve the queue**
+   * for resume when the slot frees. We do NOT emit `audioPlayer:stop`: the server
+   * already released / reassigned the mutex.
    */
   function handleRevoked(event: AudioPlayerRevokedEvent): void {
     stopPositionTracking();
@@ -729,13 +730,28 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     clearWaiting(); // music-dj-queue/04: a revoke also cancels any waiting state
     isPlayerOpen.value = false; // hide the displaced DJ's panel (queue is kept)
 
+    playerState.title = null;
+    playerState.duration = 0;
+    playerState.position = 0;
+
+    if (event.reason === 'video') {
+      // No music is playing now (the server sent `stateChanged stopped` about us,
+      // which this client drops as its own). Silent when we started the video.
+      playerState.status = 'idle';
+      playerState.userId = null;
+      if (event.byUserId === authStore.user?.id) return;
+      toast.add({
+        title: 'Music',
+        description: 'Music stopped because a video started in the room. Your playlist is kept.',
+        color: 'info',
+      });
+      return;
+    }
+
     // Reflect "someone else is now playing" immediately so the DJ-only player
     // hides without waiting for the owner's stateChanged broadcast to arrive.
     playerState.status = 'playing';
     playerState.userId = event.byUserId;
-    playerState.title = null;
-    playerState.duration = 0;
-    playerState.position = 0;
 
     toast.add({
       title: 'Music',
@@ -978,4 +994,18 @@ function isUnreadableBlobError(err: unknown): boolean {
   const cause = err instanceof AudioPlaybackError ? err.cause : err;
   return cause instanceof DOMException
     && (cause.name === 'NotFoundError' || cause.name === 'NotReadableError');
+}
+
+/**
+ * Toast copy for a refused first play. room-video-player/03: a live Room Video
+ * holds the media slot (`media_slot_busy`, never queued) — the owner's takeover
+ * would have ended it, so this is only reached by a plain play.
+ */
+function describePlayRefusal(res: AudioPlayerResponse, force: boolean): string {
+  if (res.error === ROOM_VIDEO_ERROR.MEDIA_SLOT_BUSY && res.data?.heldBy === 'video') {
+    return 'A video is playing in the room. Stop it first to play music.';
+  }
+  return force
+    ? 'Could not take over music playback.'
+    : 'Another admin is currently playing music. Try again when the slot is free.';
 }

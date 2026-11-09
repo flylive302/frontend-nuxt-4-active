@@ -14,6 +14,8 @@ import type { FxMutePreference } from '~/utils/fx-tier-defaults'
 // - Gift Mute / Entry Mute → in-place per-device FX toggles (everyone)
 // - Frames    → animated seat avatar frames switch (everyone; still by
 //               default on ≤ 4 GB phones — android-client-performance/16)
+// - Video Collapsed → "Always start video collapsed" switch (everyone; per-device,
+//               the Room Video panel opens as the 40 px bar — room-video-player 09)
 // ========================================
 
 // ========================================
@@ -247,6 +249,32 @@ watch(open, (isOpen) => {
             <span class="text-xs" :class="!frameAnimationEnabled ? 'text-primary' : 'text-neutral-200'">
               {{ frameAnimationEnabled ? 'Frames' : 'Frames Off' }}
             </span>
+          </button>
+
+          <!-- Always start video collapsed (everyone, only when the server has Room Video on; per-device toggle) -->
+          <button
+            v-if="roomVideoStore.enabled"
+            type="button"
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 px-1"
+            :class="fxPrefs.startVideoCollapsed
+              ? 'bg-primary/20 ring-2 ring-primary'
+              : 'bg-neutral-800 hover:bg-neutral-700'"
+            aria-label="Always start video collapsed"
+            :aria-pressed="fxPrefs.startVideoCollapsed"
+            @click="fxPrefs.setStartVideoCollapsed(!fxPrefs.startVideoCollapsed)"
+          >
+            <UIcon
+              name="i-lucide-chevrons-down-up"
+              class="size-7"
+              :class="fxPrefs.startVideoCollapsed ? 'text-primary' : 'text-neutral-400'"
+            />
+            <span
+              class="text-xs text-center leading-tight"
+              :class="fxPrefs.startVideoCollapsed ? 'text-primary' : 'text-neutral-200'"
+            >
+              Video Collapsed
+            </span>
+            <span class="text-[10px] leading-none text-neutral-400">{{ fxPrefs.startVideoCollapsed ? 'Always' : 'Auto' }}</span>
           </button>
         </div>
 

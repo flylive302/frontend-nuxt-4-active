@@ -27,6 +27,18 @@ export const useRoomVideoStore = defineStore('roomVideoStore', () => {
   /** Watcher-local: panel shrunk to the 40 px bar. Never sent anywhere. */
   const collapsed = ref(false)
 
+  /**
+   * The Watcher tapped collapse / expand this session (room-video-player 09). Once
+   * true, the tier / preference default never overrides `collapsed` again.
+   */
+  const collapsedByUser = ref(false)
+
+  /** Local player position (s), refreshed by the sync tick — feeds the Controller's seek bar (07). */
+  const positionSec = ref(0)
+
+  /** Local player duration (s); 0 = unknown or live (no seek bar). */
+  const durationSec = ref(0)
+
   /** Watcher-local mute. Never sent anywhere. */
   const muted = ref(false)
 
@@ -108,8 +120,20 @@ export const useRoomVideoStore = defineStore('roomVideoStore', () => {
     clockSamples.value = [...clockSamples.value, sampleMs].slice(-ROOM_VIDEO_CLOCK_SAMPLE_COUNT)
   }
 
+  /** Programmatic collapse (tier / preference default). Does not mark a user choice. */
   function setCollapsed(value: boolean): void {
     collapsed.value = value
+  }
+
+  /** The Watcher's own collapse / expand tap; wins over every default for the session. */
+  function setCollapsedByUser(value: boolean): void {
+    collapsed.value = value
+    collapsedByUser.value = true
+  }
+
+  function setProgress(position: number, duration: number): void {
+    positionSec.value = position
+    durationSec.value = duration
   }
 
   function setMuted(value: boolean): void {
@@ -134,6 +158,9 @@ export const useRoomVideoStore = defineStore('roomVideoStore', () => {
     enabled.value = false
     snapshot.value = null
     collapsed.value = false
+    collapsedByUser.value = false
+    positionSec.value = 0
+    durationSec.value = 0
     muted.value = false
     needsTap.value = false
     playbackFailed.value = false
@@ -149,6 +176,9 @@ export const useRoomVideoStore = defineStore('roomVideoStore', () => {
     enabled,
     snapshot,
     collapsed,
+    collapsedByUser,
+    positionSec,
+    durationSec,
     muted,
     needsTap,
     playbackFailed,
@@ -161,6 +191,8 @@ export const useRoomVideoStore = defineStore('roomVideoStore', () => {
     applySnapshot,
     addClockSample,
     setCollapsed,
+    setCollapsedByUser,
+    setProgress,
     setMuted,
     setNeedsTap,
     setPlaybackFailed,

@@ -151,6 +151,8 @@ export interface VideoPlayerAdapter {
   seek(sec: number): void;
   /** Current playback position in seconds (0 before anything loaded). */
   currentTime(): number;
+  /** Source duration in seconds; 0 while unknown and for live streams (room-video-player 07). */
+  duration(): number;
   /** Local mute; never affects other Watchers. */
   setMuted(muted: boolean): void;
   /** Stop playback, release decoders / hls.js / iframes, remove the element. Idempotent. */
@@ -161,3 +163,18 @@ export interface VideoPlayerAdapter {
 
 /** Builds an adapter that renders inside `container` (the panel's player slot). */
 export type VideoPlayerAdapterFactory = (container: HTMLElement) => VideoPlayerAdapter;
+
+// ============================================
+// CONTROLLER TRANSPORT (room-video-player 07)
+// ============================================
+
+/**
+ * Silent, fire-and-forget Controller emits the sync composable drives. Never
+ * toast, never throw; a failed heartbeat is retried by the next one.
+ */
+export interface RoomVideoTransport {
+  /** `videoPlayer:heartbeat {roomId, positionSec, paused}` — every `ROOM_VIDEO_HEARTBEAT_MS` from the Controller. */
+  heartbeat(positionSec: number, paused: boolean): void;
+  /** `videoPlayer:ended {roomId}` — the Controller's player reached the end of the Source. */
+  ended(): void;
+}

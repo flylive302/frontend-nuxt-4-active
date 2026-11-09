@@ -243,6 +243,69 @@ describe('useRoomAudioPlayer — playlist retention across cleanup/revoke', () =
     expect(player.queueTracks.value.map((t) => t.id)).toEqual([trackA!.id, trackB!.id])
   })
 
+  // room-video-player/03 + 07: a Room Video taking the media slot revokes with reason 'video'.
+  function getRevokedHandler() {
+    return mockSocket.value.on.mock.calls.find(
+      ([event]) => event === 'audioPlayer:revoked',
+    )?.[1] as ((event: { roomId: string; byUserId: unknown; reason?: 'video' }) => void) | undefined
+  }
+
+  it('revoked by a video (someone else) goes idle, keeps the playlist and toasts once', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.setupListeners()
+    player.addTracks([audioFile('a.mp3'), audioFile('b.mp3')])
+    await player.play('room-1')
+    toastAdd.mockClear()
+
+    getRevokedHandler()!({ roomId: 'room-1', byUserId: 999, reason: 'video' })
+
+    expect(stopMusicProducer).toHaveBeenCalledTimes(1)
+    expect(player.playerState.status).toBe('idle')
+    expect(player.playerState.userId).toBeNull()
+    expect(player.isPlayerVisible.value).toBe(false)
+    expect(emitAsyncMock).not.toHaveBeenCalledWith('audioPlayer:stop', expect.anything())
+    expect(player.queueTracks.value).toHaveLength(2)
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Music',
+      description: expect.stringContaining('a video started'),
+    }))
+  })
+
+  it('revoked by my own video goes idle silently', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.setupListeners()
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+    toastAdd.mockClear()
+
+    getRevokedHandler()!({ roomId: 'room-1', byUserId: mockUser.id, reason: 'video' })
+
+    expect(stopMusicProducer).toHaveBeenCalledTimes(1)
+    expect(player.playerState.status).toBe('idle')
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('a play refused because a video holds the media slot says so (not "another admin")', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.addTracks([audioFile('a.mp3')])
+    emitAsyncMock.mockResolvedValueOnce({
+      success: false, error: 'media_slot_busy', data: { heldBy: 'video', userId: 7 },
+    })
+    toastAdd.mockClear()
+
+    const ok = await player.play('room-1')
+
+    expect(ok).toBe(false)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({
+      color: 'warning',
+      description: 'A video is playing in the room. Stop it first to play music.',
+    }))
+  })
+
   it('a fresh module import (simulating a hard refresh) starts with an empty playlist', async () => {
     vi.resetModules()
     const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')

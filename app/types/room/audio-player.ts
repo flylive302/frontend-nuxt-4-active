@@ -112,8 +112,13 @@ export interface AudioPlayerStateChangedEvent {
 /** MSAB → displaced DJ (targeted): the owner force-took the music slot. */
 export interface AudioPlayerRevokedEvent {
   roomId: string;
-  /** The owner who took over. */
+  /** The owner who took over — or, with `reason: 'video'`, whoever started the Room Video. */
   byUserId: number;
+  /**
+   * room-video-player/03: `'video'` = a Room Video took the media slot (the DJ's own
+   * included). Absent = the room owner force-took the music.
+   */
+  reason?: 'video';
 }
 
 /**
@@ -143,4 +148,6 @@ export interface AudioPlayerResponse {
   queued?: boolean;
   /** music-dj-queue/04: 1-based position in the waiting queue (with `queued`). */
   position?: number;
+  /** room-video-player/03: with `error: 'media_slot_busy'`, who holds the slot (never queued). */
+  data?: { heldBy: 'music' | 'video'; userId: number };
 }

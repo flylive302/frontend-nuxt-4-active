@@ -580,3 +580,12 @@ export const ROOM_VIDEO_DRIFT_TICK_MS = 1000;
  * applied regardless.
  */
 export const ROOM_VIDEO_SEEK_COOLDOWN_MS = 3000;
+
+/**
+ * Controller heartbeat cadence (room-video-player 07). Must stay well under the
+ * MSAB mutex TTL; the server refreshes both video keys on each one.
+ */
+export const ROOM_VIDEO_HEARTBEAT_MS = 2000;
+
+/** Seek bar granularity (seconds) for the Controller's `<input type="range">`. */
+export const ROOM_VIDEO_SEEK_STEP_SEC = 1;

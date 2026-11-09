@@ -1,14 +1,22 @@
 // ========================================
-// useRoomVideoSync Tests (room-video-player 06)
+// useRoomVideoSync Tests (room-video-player 06, 07, 09)
 // ========================================
 // The sync composable driven against a fake adapter, the real store, fake timers
 // and a mocked motion orchestrator. Asserts what the player is told to do —
-// load / seek / play / pause / destroy — for each Snapshot and timer event.
+// load / seek / play / pause / destroy — and what the Controller transport is
+// told to send (heartbeat / ended), for each Snapshot and timer event.
 // ========================================
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { computed, nextTick, ref } from 'vue'
-import type { RoomVideoSnapshot, VideoAdapterEvent, VideoPlayerAdapter } from '~/types/room/video'
+import { computed, nextTick, reactive, ref } from 'vue'
+import { ROOM_VIDEO_HEARTBEAT_MS } from '~/constants/room'
+import type { DeviceClass } from '~/utils/device-class'
+import type {
+  RoomVideoSnapshot,
+  RoomVideoTransport,
+  VideoAdapterEvent,
+  VideoPlayerAdapter,
+} from '~/types/room/video'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -20,6 +28,7 @@ const toastAdd = vi.fn()
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 
 let awayCallback: ((away: boolean) => void) | null = null
+const awayState = { value: false }
 const awayUnsubscribe = vi.fn()
 let coverCounter = 0
 const acquireCovered = vi.fn(() => `cover-${++coverCounter}`)
@@ -27,6 +36,7 @@ const releaseCovered = vi.fn()
 vi.mock('~/services/motionPauseOrchestrator', () => ({
   acquireCovered: () => acquireCovered(),
   releaseCovered: (token: string) => releaseCovered(token),
+  isAway: () => awayState.value,
   subscribeAway: (cb: (away: boolean) => void) => {
     awayCallback = cb
     return awayUnsubscribe
@@ -37,8 +47,21 @@ vi.mock('~/utils/logger', () => ({
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 
+// Device tier: 'high' by default so the existing cases start expanded and play at once.
+const tier = { value: 'high' as DeviceClass }
+const readTier = vi.fn(() => tier.value)
+vi.mock('~/utils/frame-animation-tier', () => ({ readFrameAnimationTier: () => readTier() }))
+
+// The "Always start video collapsed" switch (the real store is covered by its own spec).
+const fxPrefs = reactive({ startVideoCollapsed: false })
+vi.mock('~/stores/fxPreferences', () => ({ useFxPreferencesStore: () => fxPrefs }))
+
+// Transport used when a caller passes none: `useRoomVideoActions()` is resolved in setup.
+const actionsTransport: RoomVideoTransport = { heartbeat: vi.fn(), ended: vi.fn() }
+vi.mock('~/composables/room/video/useRoomVideoActions', () => ({ useRoomVideoActions: () => actionsTransport }))
+
 const { useRoomVideoStore } = await import('~/stores/roomVideo')
-const { useRoomVideoSync } = await import('~/composables/room/video/useRoomVideoSync')
+const { useRoomVideoSync, __resetRoomVideoSyncTierForTest } = await import('~/composables/room/video/useRoomVideoSync')
 
 // ----------------------------------------
 // Fakes
@@ -47,11 +70,13 @@ const { useRoomVideoSync } = await import('~/composables/room/video/useRoomVideo
 interface FakeAdapter extends VideoPlayerAdapter {
   emit(event: VideoAdapterEvent): void
   setTime(sec: number): void
+  setDuration(sec: number): void
 }
 
 function makeFakeAdapter(): FakeAdapter {
   const listeners = new Map<VideoAdapterEvent, Set<() => void>>()
   let time = 0
+  let length = 0
   return {
     load: vi.fn(),
     play: vi.fn(async () => {}),
@@ -60,6 +85,7 @@ function makeFakeAdapter(): FakeAdapter {
       time = sec
     }),
     currentTime: vi.fn(() => time),
+    duration: vi.fn(() => length),
     setMuted: vi.fn(),
     destroy: vi.fn(),
     on: vi.fn((event: VideoAdapterEvent, cb: () => void) => {
@@ -74,11 +100,17 @@ function makeFakeAdapter(): FakeAdapter {
     setTime(sec) {
       time = sec
     },
+    setDuration(sec) {
+      length = sec
+    },
   }
 }
 
 const NOW = 1_731_068_400_000
 const MP4 = { kind: 'url', url: 'https://cdn.example.com/a.mp4', container: 'mp4' } as const
+const OTHER_MP4 = { kind: 'url', url: 'https://cdn.example.com/b.mp4', container: 'mp4' } as const
+const CONTROLLER_ID = 99
+const HEARTBEAT_MS = ROOM_VIDEO_HEARTBEAT_MS
 
 function snapshot(overrides: Partial<RoomVideoSnapshot> = {}): RoomVideoSnapshot {
   return {
@@ -104,8 +136,15 @@ function setup(initial: RoomVideoSnapshot | null = snapshot()) {
     adapters.push(adapter)
     return adapter
   })
-  const sync = useRoomVideoSync({ url: factory })
-  return { store, sync, factory, adapters, current: () => adapters[adapters.length - 1]! }
+  const transport = { heartbeat: vi.fn(), ended: vi.fn() }
+  const sync = useRoomVideoSync({ url: factory }, transport)
+  return { store, sync, factory, transport, adapters, current: () => adapters[adapters.length - 1]! }
+}
+
+/** Away transition as the orchestrator reports it: the flag flips, then subscribers hear. */
+function setAway(away: boolean): void {
+  awayState.value = away
+  awayCallback?.(away)
 }
 
 beforeEach(() => {
@@ -115,11 +154,15 @@ beforeEach(() => {
   vi.clearAllMocks()
   authUser.id = 7
   awayCallback = null
+  awayState.value = false
   coverCounter = 0
+  tier.value = 'high'
+  fxPrefs.startVideoCollapsed = false
+  __resetRoomVideoSyncTierForTest()
 })
 
 afterEach(() => {
-  useRoomVideoSync().detach()
+  useRoomVideoSync({}, { heartbeat: vi.fn(), ended: vi.fn() }).detach()
   vi.useRealTimers()
 })
 
@@ -433,5 +476,499 @@ describe('away and install-once', () => {
     await nextTick()
 
     expect(factory).toHaveBeenCalledTimes(1)
+  })
+})
+
+
+// ----------------------------------------
+// Controller heartbeat (ticket 07)
+// ----------------------------------------
+
+/** A Controller (id 99) whose player is up and playing at 10 s. */
+function setupPlayingController(initial: RoomVideoSnapshot = snapshot()) {
+  authUser.id = CONTROLLER_ID
+  const ctx = setup(initial)
+  ctx.sync.attach(container)
+  ctx.current().setTime(10)
+  ctx.current().emit('playing')
+  return ctx
+}
+
+describe('Controller heartbeat', () => {
+  it('beats every ROOM_VIDEO_HEARTBEAT_MS with the local position and paused flag', () => {
+    const { current, transport } = setupPlayingController()
+    current().setTime(33)
+
+    vi.advanceTimersByTime(HEARTBEAT_MS - 1)
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(1)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+    expect(transport.heartbeat).toHaveBeenLastCalledWith(33, false)
+
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(2)
+  })
+
+  it('a Watcher never beats', () => {
+    const { sync, current, transport } = setup()
+    sync.attach(container)
+    current().emit('playing')
+
+    vi.advanceTimersByTime(10 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+  })
+
+  it('stops after detach', () => {
+    const { sync, transport } = setupPlayingController()
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+
+    sync.detach()
+    vi.advanceTimersByTime(10 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops when the Snapshot goes null', async () => {
+    const { store, transport } = setupPlayingController()
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+
+    store.applySnapshot(null)
+    await nextTick()
+    vi.advanceTimersByTime(10 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops when someone else takes control', async () => {
+    const { store, transport } = setupPlayingController()
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+
+    store.applySnapshot(snapshot({ revision: 2, controllerUserId: 5 }))
+    await nextTick()
+    vi.advanceTimersByTime(10 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+
+  it('is skipped while away, and resumes when back', () => {
+    const { transport } = setupPlayingController()
+
+    setAway(true)
+    vi.advanceTimersByTime(5 * HEARTBEAT_MS)
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+
+    setAway(false)
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+
+  it('is skipped while the browser is blocking playback (needs a tap)', () => {
+    const { current, transport } = setupPlayingController()
+    current().emit('blocked')
+
+    vi.advanceTimersByTime(5 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+  })
+
+  it("is skipped once playback failed on this device", () => {
+    const { current, transport } = setupPlayingController()
+    current().emit('error')
+
+    vi.advanceTimersByTime(5 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+  })
+
+  it('waits for the player to really start before beating a playing video', () => {
+    authUser.id = CONTROLLER_ID
+    const { sync, current, transport } = setup()
+    sync.attach(container)
+
+    vi.advanceTimersByTime(5 * HEARTBEAT_MS)
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+
+    current().emit('playing')
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+
+  it('a paused video beats with paused=true, but only once the player is ready (position is real)', () => {
+    authUser.id = CONTROLLER_ID
+    const { sync, current, transport } = setup(snapshot({ paused: true, positionAtTs: 42 }))
+    sync.attach(container)
+
+    vi.advanceTimersByTime(5 * HEARTBEAT_MS)
+    expect(transport.heartbeat).not.toHaveBeenCalled() // metadata not loaded: currentTime would read 0
+
+    current().emit('ready')
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+    expect(transport.heartbeat).toHaveBeenLastCalledWith(42, true)
+  })
+
+  it('a new Source must start playing again before the next beat', async () => {
+    const { store, transport } = setupPlayingController()
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+
+    store.applySnapshot(snapshot({ revision: 2, source: OTHER_MP4, positionAtTs: 0 }))
+    await nextTick()
+    vi.advanceTimersByTime(3 * HEARTBEAT_MS)
+
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+
+  it('with no transport passed, resolves useRoomVideoActions() in setup', () => {
+    authUser.id = CONTROLLER_ID
+    const store = useRoomVideoStore()
+    store.startSession('room-1', true)
+    store.replaceSnapshot(snapshot())
+    const adapter = makeFakeAdapter()
+    const sync = useRoomVideoSync({ url: () => adapter })
+    sync.attach(container)
+    adapter.emit('playing')
+
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+
+    expect(actionsTransport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ----------------------------------------
+// Ended (ticket 07)
+// ----------------------------------------
+
+describe('ended', () => {
+  it('the Controller tells the server once per loaded Source', async () => {
+    const { store, current, transport } = setupPlayingController()
+
+    current().emit('ended')
+    current().emit('ended')
+    expect(transport.ended).toHaveBeenCalledTimes(1)
+
+    store.applySnapshot(snapshot({ revision: 2, source: OTHER_MP4, positionAtTs: 0 }))
+    await nextTick()
+    current().emit('ended')
+    expect(transport.ended).toHaveBeenCalledTimes(2)
+  })
+
+  it('a Watcher reaching the end sends nothing', () => {
+    const { sync, current, transport } = setup()
+    sync.attach(container)
+
+    current().emit('ended')
+
+    expect(transport.ended).not.toHaveBeenCalled()
+  })
+})
+
+// ----------------------------------------
+// Progress for the seek bar (ticket 07)
+// ----------------------------------------
+
+describe('progress', () => {
+  it('the Controller mirrors position + duration into the store on every drift tick', () => {
+    const { store, current } = setupPlayingController()
+    current().setDuration(120)
+    current().setTime(30)
+
+    vi.advanceTimersByTime(1_000)
+
+    expect(store.positionSec).toBe(30)
+    expect(store.durationSec).toBe(120)
+  })
+
+  it('keeps updating while the video is paused', () => {
+    authUser.id = CONTROLLER_ID
+    const { store, sync, current } = setup(snapshot({ paused: true, positionAtTs: 42 }))
+    sync.attach(container)
+    current().setDuration(300)
+
+    vi.advanceTimersByTime(1_000)
+
+    expect(store.positionSec).toBe(42)
+    expect(store.durationSec).toBe(300)
+  })
+
+  it('updates when the player starts playing', () => {
+    authUser.id = CONTROLLER_ID
+    const { store, sync, current } = setup()
+    sync.attach(container)
+    current().setDuration(80)
+    current().setTime(12)
+
+    current().emit('playing')
+
+    expect(store.positionSec).toBe(12)
+    expect(store.durationSec).toBe(80)
+  })
+
+  it('updates right after a seek', async () => {
+    const { store, current } = setupPlayingController()
+    current().setDuration(200)
+
+    store.applySnapshot(snapshot({ revision: 2, positionAtTs: 90 }))
+    await nextTick()
+
+    expect(store.positionSec).toBe(90)
+    expect(store.durationSec).toBe(200)
+  })
+
+  it('a Watcher never writes progress (saves work on low phones)', () => {
+    const { store, sync, current } = setup()
+    sync.attach(container)
+    current().emit('playing')
+    current().setDuration(120)
+    current().setTime(30)
+
+    vi.advanceTimersByTime(5_000)
+
+    expect(store.positionSec).toBe(0)
+    expect(store.durationSec).toBe(0)
+    expect(current().duration).not.toHaveBeenCalled()
+  })
+})
+
+describe('currentPosition', () => {
+  it('is 0 with no player, then the local player position', () => {
+    const { sync, current } = setup()
+    expect(sync.currentPosition()).toBe(0)
+
+    sync.attach(container)
+    current().setTime(41.5)
+
+    expect(sync.currentPosition()).toBe(41.5)
+  })
+})
+
+// ----------------------------------------
+// Away = local pause (ticket 09)
+// ----------------------------------------
+
+describe('away is a local pause', () => {
+  it('pausing on away touches neither the store Snapshot nor the transport', () => {
+    authUser.id = CONTROLLER_ID
+    const { store, sync, current, transport } = setup()
+    sync.attach(container)
+    current().emit('playing')
+    const held = store.snapshot
+
+    setAway(true)
+
+    expect(current().pause).toHaveBeenCalledTimes(1)
+    expect(store.snapshot).toBe(held)
+    expect(store.snapshot?.paused).toBe(false)
+    vi.advanceTimersByTime(10 * HEARTBEAT_MS)
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+    expect(transport.ended).not.toHaveBeenCalled()
+  })
+
+  it('coming back does ONE seek to the expected second, then plays', () => {
+    const { sync, current } = setup()
+    sync.attach(container)
+    current().emit('playing')
+    setAway(true)
+    vi.setSystemTime(NOW + 120_000)
+    vi.mocked(current().seek).mockClear()
+    vi.mocked(current().play).mockClear()
+
+    setAway(false)
+
+    expect(current().seek).toHaveBeenCalledTimes(1)
+    expect(current().seek).toHaveBeenCalledWith(130)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+
+  it('a Snapshot arriving while away loads and seeks but never starts playback', async () => {
+    const { store, sync, current } = setup()
+    sync.attach(container)
+    vi.mocked(current().play).mockClear()
+    setAway(true)
+
+    store.applySnapshot(snapshot({ revision: 2, source: OTHER_MP4, positionAtTs: 5 }))
+    await nextTick()
+
+    expect(current().load).toHaveBeenLastCalledWith(OTHER_MP4)
+    expect(current().play).not.toHaveBeenCalled()
+  })
+
+  it('the drift tick does nothing while away', () => {
+    const { sync, current } = setup()
+    sync.attach(container)
+    current().emit('playing')
+    setAway(true)
+    current().setTime(0) // expected would be far ahead
+    vi.mocked(current().seek).mockClear()
+    vi.mocked(current().play).mockClear()
+
+    vi.advanceTimersByTime(20_000)
+
+    expect(current().seek).not.toHaveBeenCalled()
+    expect(current().play).not.toHaveBeenCalled()
+  })
+})
+
+// ----------------------------------------
+// Tier / preference default + user choice (ticket 09)
+// ----------------------------------------
+
+describe('start state: tier default, preference, user choice', () => {
+  it.each<DeviceClass>(['low', 'unknown'])('a %s phone opens collapsed and holds playback', (deviceClass) => {
+    tier.value = deviceClass
+    const { store, sync, current } = setup()
+
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(true)
+    expect(store.needsTap).toBe(true)
+    expect(store.collapsedByUser).toBe(false)
+    expect(current().load).toHaveBeenCalledWith(MP4) // loaded and positioned, just not decoding
+    expect(current().play).not.toHaveBeenCalled()
+  })
+
+  it.each<DeviceClass>(['mid', 'high'])('a %s phone opens expanded and plays', (deviceClass) => {
+    tier.value = deviceClass
+    const { store, sync, current } = setup()
+    store.setCollapsed(true) // stale from an earlier video
+
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(false)
+    expect(store.needsTap).toBe(false)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+
+  it('"Always start video collapsed" collapses a strong phone too', () => {
+    tier.value = 'high'
+    fxPrefs.startVideoCollapsed = true
+    const { store, sync, current } = setup()
+
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(true)
+    expect(store.needsTap).toBe(true)
+    expect(current().play).not.toHaveBeenCalled()
+  })
+
+  it('the user\'s expand wins over a default-collapsed tier on the next video', () => {
+    tier.value = 'low'
+    const { store, sync, current } = setup()
+    store.setCollapsedByUser(false)
+
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(false)
+    expect(store.needsTap).toBe(false)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+
+  it('the user\'s collapse wins over a default-expanded tier; the video keeps playing', () => {
+    tier.value = 'high'
+    const { store, sync, current } = setup()
+    store.setCollapsedByUser(true)
+
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(true)
+    expect(store.needsTap).toBe(false)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+
+  it('a re-attach after the user expanded does not re-collapse', () => {
+    tier.value = 'low'
+    const { store, sync } = setup()
+    sync.attach(container)
+    sync.toggleCollapsed() // expand: now the user's choice
+    sync.detach()
+
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(false)
+    expect(store.collapsedByUser).toBe(true)
+  })
+
+  it('reads the device tier once per module', () => {
+    tier.value = 'low'
+    const { sync } = setup()
+    sync.attach(container)
+    sync.detach()
+    sync.attach(container)
+
+    expect(readTier).toHaveBeenCalledTimes(1)
+  })
+
+  it('expanding a default-collapsed video plays it from the expected second', () => {
+    tier.value = 'low'
+    const { store, sync, current } = setup()
+    sync.attach(container)
+    vi.setSystemTime(NOW + 20_000)
+    vi.mocked(current().seek).mockClear()
+
+    sync.toggleCollapsed()
+
+    expect(store.collapsed).toBe(false)
+    expect(store.collapsedByUser).toBe(true)
+    expect(store.needsTap).toBe(false)
+    expect(current().seek).toHaveBeenCalledWith(30)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+
+  it('expanding also answers an autoplay refusal (Tap to watch)', () => {
+    const { store, sync, current } = setup()
+    sync.attach(container)
+    sync.toggleCollapsed() // collapse
+    current().emit('blocked')
+    vi.mocked(current().play).mockClear()
+
+    sync.toggleCollapsed() // expand
+
+    expect(store.needsTap).toBe(false)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+
+  it('collapsing is a user choice and does not hold playback', () => {
+    const { store, sync, current } = setup()
+    sync.attach(container)
+
+    sync.toggleCollapsed()
+
+    expect(store.collapsed).toBe(true)
+    expect(store.collapsedByUser).toBe(true)
+    expect(store.needsTap).toBe(false)
+    expect(current().pause).not.toHaveBeenCalled()
+  })
+
+  it('a new Source while still default-collapsed stays held', async () => {
+    tier.value = 'low'
+    const { store, sync, current } = setup()
+    sync.attach(container)
+
+    store.applySnapshot(snapshot({ revision: 2, source: OTHER_MP4, positionAtTs: 0 }))
+    await nextTick()
+
+    expect(store.needsTap).toBe(true)
+    expect(current().load).toHaveBeenLastCalledWith(OTHER_MP4)
+    expect(current().play).not.toHaveBeenCalled()
+  })
+
+  it('a Controller on a weak phone is never held: expanded, playing, beating', () => {
+    tier.value = 'low'
+    authUser.id = CONTROLLER_ID
+    const { store, sync, current, transport } = setup()
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(false)
+    expect(store.needsTap).toBe(false)
+    expect(current().play).toHaveBeenCalledTimes(1)
+
+    current().emit('playing')
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    expect(transport.heartbeat).toHaveBeenCalledTimes(1)
   })
 })

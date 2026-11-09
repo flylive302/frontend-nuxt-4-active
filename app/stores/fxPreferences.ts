@@ -44,6 +44,13 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
    */
   const animatedAvatarFrames = ref<AnimatedAvatarFramesPreference>('auto');
 
+  /**
+   * "Always start video collapsed" (room-video-player 09): the Room Video panel
+   * opens as the 40 px bar on every tier. Off = the device tier decides
+   * (`utils/video-start-collapsed.ts`). Per-device, localStorage — never a cookie.
+   */
+  const startVideoCollapsed = ref(false);
+
   // ========================================
   // Computed
   // ========================================
@@ -74,21 +81,27 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
     animatedAvatarFrames.value = value;
   }
 
+  function setStartVideoCollapsed(value: boolean) {
+    startVideoCollapsed.value = value;
+  }
+
   return {
     muteGiftAnimations,
     muteEntryAnimations,
     animatedAvatarFrames,
+    startVideoCollapsed,
     giftAnimationsMuted,
     entryAnimationsMuted,
     setGiftMute,
     setEntryMute,
     setAnimatedAvatarFrames,
+    setStartVideoCollapsed,
   };
 }, {
   // storage: localStorage, from the nuxt.config default. This was an implicit
   // COOKIE until 2026-08-22 — see that file's note before changing it.
   persist: {
-    pick: ['muteGiftAnimations', 'muteEntryAnimations', 'animatedAvatarFrames'],
+    pick: ['muteGiftAnimations', 'muteEntryAnimations', 'animatedAvatarFrames', 'startVideoCollapsed'],
     // One-shot migration: installs persisted these as booleans. `$patch` copies
     // whatever shape is in storage, so normalize right after hydration; the next
     // persist write stores the tri-state. The computeds normalize too, so a stray
