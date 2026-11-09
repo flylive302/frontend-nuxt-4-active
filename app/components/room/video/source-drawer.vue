@@ -6,9 +6,11 @@ import type { RoomMediaSlotKind, VideoSourceError } from '~/types/room/video'
 // Room Video Source Drawer
 // ========================================
 //
-// Owner / admin pastes an .mp4 or .m3u8 link (or a YouTube link, which parses
-// but cannot start yet). Shows a live preview of what the link was recognised
-// as, and a Start button.
+// Owner / admin pastes a YouTube, .mp4 or .m3u8 link. Shows a live preview of
+// what the link was recognised as (a YouTube link shows its video id), and a
+// Start button. On a platform that cannot embed YouTube (iOS, ticket 01) a
+// YouTube link is refused here: its Controller would have no player to drive
+// the heartbeat and `ended`.
 //
 // Take over (owner only): when a Room Video is live under someone else, Start
 // reads "Take over" and force-takes the room. When Start meets a busy media slot
@@ -29,9 +31,10 @@ const open = defineModel<boolean>('open', { default: false })
 // Constants
 // ========================================
 
-const PLACEHOLDER = 'Paste an .mp4 or .m3u8 link'
+const PLACEHOLDER = 'Paste a YouTube, .mp4 or .m3u8 link'
 
-const YOUTUBE_SOON_MESSAGE = 'YouTube links are coming soon.'
+const YOUTUBE_LABEL = 'YouTube video'
+const YOUTUBE_UNAVAILABLE_MESSAGE = "YouTube can't play inside this app yet. Use an .mp4 or .m3u8 link."
 
 /** One plain-English line per refusal. `empty` is never shown (nothing typed yet). */
 const ERROR_MESSAGES: Record<VideoSourceError, string> = {
@@ -42,7 +45,7 @@ const ERROR_MESSAGES: Record<VideoSourceError, string> = {
   unsupported_scheme: 'Only https:// links work.',
   youtube_playlist: 'That is a playlist. Paste a link to one video.',
   youtube_channel: 'That is a channel page. Paste a link to one video.',
-  not_media: 'The link must end in .mp4 or .m3u8.',
+  not_media: 'Paste a YouTube link, or one ending in .mp4 or .m3u8.',
 }
 
 const CONTAINER_LABELS = { mp4: 'MP4 video', hls: 'HLS stream' } as const
@@ -62,7 +65,7 @@ const TAKEOVER_HINT = 'Taking over stops it for everyone.'
 type SourcePreview =
   | { state: 'idle' }
   | { state: 'ready'; label: string; host: string }
-  | { state: 'soon'; message: string }
+  | { state: 'unavailable'; message: string }
   | { state: 'error'; message: string }
 
 // ========================================
@@ -75,11 +78,23 @@ const isTakingOver = ref(false)
 /** Set when Start hit a busy slot as the owner; `heldBy` is absent if the server did not say. */
 const takeoverOffer = ref<{ heldBy?: RoomMediaSlotKind } | null>(null)
 
+// ========================================
+// Composables
+// ========================================
+
+const store = useRoomVideoStore()
+const { myRank } = useRoomHierarchy()
+const { start, takeover } = useRoomVideoActions()
+const { canEmbed: canEmbedYouTube } = useRoomVideoYouTube()
+
 const preview = computed<SourcePreview>(() => {
   if (text.value.trim() === '') return { state: 'idle' }
   const parsed = parseVideoSource(text.value)
   if (!parsed.ok) return { state: 'error', message: ERROR_MESSAGES[parsed.error] }
-  if (parsed.source.kind === 'youtube') return { state: 'soon', message: YOUTUBE_SOON_MESSAGE }
+  if (parsed.source.kind === 'youtube') {
+    if (!canEmbedYouTube) return { state: 'unavailable', message: YOUTUBE_UNAVAILABLE_MESSAGE }
+    return { state: 'ready', label: YOUTUBE_LABEL, host: parsed.source.videoId }
+  }
   return {
     state: 'ready',
     label: CONTAINER_LABELS[parsed.source.container],
@@ -88,14 +103,6 @@ const preview = computed<SourcePreview>(() => {
 })
 
 const canStart = computed(() => preview.value.state === 'ready' && !isStarting.value && !isTakingOver.value)
-
-// ========================================
-// Composables
-// ========================================
-
-const store = useRoomVideoStore()
-const { myRank } = useRoomHierarchy()
-const { start, takeover } = useRoomVideoActions()
 
 /** A video is live under someone else and I own the room: the primary button takes over. */
 const takeoverMode = computed(() => store.isActive && myRank.value === 'owner' && !store.isController)
@@ -196,7 +203,7 @@ function hostOf(url: string): string {
             class="flex items-center gap-2 text-xs"
             :class="{
               'text-primary': preview.state === 'ready',
-              'text-neutral-300': preview.state === 'soon',
+              'text-neutral-300': preview.state === 'unavailable',
               'text-error': preview.state === 'error',
             }"
             aria-live="polite"
@@ -209,7 +216,7 @@ function hostOf(url: string): string {
             </template>
             <template v-else>
               <UIcon
-                :name="preview.state === 'soon' ? 'i-lucide-clock' : 'i-lucide-circle-alert'"
+                :name="preview.state === 'unavailable' ? 'i-lucide-info' : 'i-lucide-circle-alert'"
                 class="size-4 shrink-0"
               />
               <span>{{ preview.message }}</span>

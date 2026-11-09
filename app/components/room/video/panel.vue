@@ -14,6 +14,11 @@ import { ROOM_VIDEO_SEEK_STEP_SEC } from '~/constants/room'
 // `useRoomVideoSync` (attached to `playerSlot`), so collapsing only hides it —
 // the audio keeps playing, which is what the bar's mute button is for.
 //
+// YouTube (ticket 08): where the platform cannot embed it (iOS) the player area
+// shows an "Open on YouTube" card at the room's current second instead; the
+// room's Snapshot keeps running. On Capacitor a Watcher's collapsed YouTube
+// iframe is destroyed by the sync (decoder freed), so there the bar is silent.
+//
 // Chrome rules (ADR 0040): translucent fills, no backdrop-blur, transitions on
 // transform / opacity only.
 // ========================================
@@ -23,6 +28,8 @@ import { ROOM_VIDEO_SEEK_STEP_SEC } from '~/constants/room'
 // ========================================
 
 const TAP_TO_WATCH_LABEL = 'Tap to watch'
+const ROOM_VIDEO_TITLE = 'Room video'
+const YOUTUBE_VIDEO_TITLE = 'YouTube video'
 
 // ========================================
 // State
@@ -46,8 +53,18 @@ const sync = useRoomVideoSync()
 const { stop, pause, resume, seek } = useRoomVideoActions()
 const { myRank } = useRoomHierarchy()
 const { invalidateSeatPositions } = useLuckyFly()
+const { canEmbed: canEmbedYouTube, openOnYouTube } = useRoomVideoYouTube()
 
-const title = computed(() => store.snapshot?.title ?? 'Room video')
+/** The live Source's YouTube id, or null for a direct link / no video. */
+const youTubeId = computed(() => {
+  const source = store.snapshot?.source
+  return source?.kind === 'youtube' ? source.videoId : null
+})
+/** This platform cannot embed YouTube: the card replaces the player. */
+const showYouTubeCard = computed(() => youTubeId.value !== null && !canEmbedYouTube)
+const title = computed(
+  () => store.snapshot?.title ?? (youTubeId.value !== null ? YOUTUBE_VIDEO_TITLE : ROOM_VIDEO_TITLE),
+)
 const collapsedLabel = computed(() => (store.needsTap ? TAP_TO_WATCH_LABEL : title.value))
 const isOwner = computed(() => myRank.value === 'owner')
 const showTakeover = computed(() => isOwner.value && !store.isController)
@@ -142,6 +159,12 @@ function openSourceDrawer(): void {
   showSourceDrawer.value = true
 }
 
+/** Card / failure fallback: watch it on YouTube from where the room is now. */
+function handleOpenOnYouTube(): void {
+  const videoId = youTubeId.value
+  if (videoId !== null) void openOnYouTube(videoId, sync.currentPosition())
+}
+
 // ========================================
 // Helpers
 // ========================================
@@ -170,12 +193,29 @@ function seekValueOf(event: Event): number {
         <span class="text-sm font-medium">Tap to watch</span>
       </button>
 
+      <!-- No YouTube embed on this platform: follow along on YouTube; the room's clock is unaffected. -->
+      <div
+        v-else-if="showYouTubeCard"
+        class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-neutral-900 px-6 text-center text-white"
+      >
+        <UIcon name="i-lucide-youtube" class="size-10 text-red-500" />
+        <span class="line-clamp-2 text-sm font-medium">{{ title }}</span>
+        <button type="button" class="room-video-pill" @click="handleOpenOnYouTube">
+          <UIcon name="i-lucide-external-link" class="size-4" />
+          <span>Open on YouTube</span>
+        </button>
+      </div>
+
       <div
         v-else-if="store.playbackFailed"
         class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/70 px-6 text-center text-neutral-300"
       >
         <UIcon name="i-lucide-video-off" class="size-8" />
         <span class="text-sm">Can't play this video on your device.</span>
+        <button v-if="youTubeId !== null" type="button" class="room-video-pill mt-1" @click="handleOpenOnYouTube">
+          <UIcon name="i-lucide-external-link" class="size-4" />
+          <span>Open on YouTube</span>
+        </button>
       </div>
 
       <div class="absolute right-2 top-2 z-20 flex gap-2">

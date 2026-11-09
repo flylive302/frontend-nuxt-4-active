@@ -589,3 +589,38 @@ export const ROOM_VIDEO_HEARTBEAT_MS = 2000;
 
 /** Seek bar granularity (seconds) for the Controller's `<input type="range">`. */
 export const ROOM_VIDEO_SEEK_STEP_SEC = 1;
+
+/** YouTube IFrame Player API script, injected at most once per page (room-video-player 08). */
+export const ROOM_VIDEO_YOUTUBE_API_SRC = 'https://www.youtube.com/iframe_api';
+
+/**
+ * After `playVideo()`, a YouTube player that has neither started buffering nor
+ * playing within this window was refused unmuted autoplay: the adapter emits
+ * `blocked` once and the panel shows "Tap to watch". The IFrame API has no
+ * `NotAllowedError`, so this timer is the only signal.
+ */
+export const ROOM_VIDEO_YOUTUBE_AUTOPLAY_PROBE_MS = 2500;
+
+/** Where a Room Video platform runs: the web build, or the Capacitor shell. */
+export type RoomVideoPlatform = 'web' | 'android' | 'ios';
+
+/**
+ * Per-platform YouTube embed capability (room-video-player 01 decision row,
+ * 2026-11-09). `false` = the panel shows the "Open on YouTube" card instead of
+ * the iframe and the room's Snapshot keeps running. iOS stays `false` until a
+ * Mac re-test passes (WKWebView `capacitor://localhost` → expected error 153);
+ * a pass flips that one value, nothing else.
+ */
+export const ROOM_VIDEO_YOUTUBE_EMBED: Readonly<Record<RoomVideoPlatform, boolean>> = {
+  web: true,
+  android: true,
+  ios: false,
+};
+
+/**
+ * After a seek on a PLAYING YouTube player, `currentTime()` trusts the seek target
+ * (advanced by the elapsed time) this long, then the player. The IFrame API's
+ * `getCurrentTime()` is a cached value that lags a seek, and YouTube may report no
+ * new state for a seek inside the buffered range — so the hint must expire on its own.
+ */
+export const ROOM_VIDEO_YOUTUBE_SEEK_HINT_MS = 1000;

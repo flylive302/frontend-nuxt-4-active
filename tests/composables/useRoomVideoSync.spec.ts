@@ -1,5 +1,5 @@
 // ========================================
-// useRoomVideoSync Tests (room-video-player 06, 07, 09)
+// useRoomVideoSync Tests (room-video-player 06, 07, 08, 09)
 // ========================================
 // The sync composable driven against a fake adapter, the real store, fake timers
 // and a mocked motion orchestrator. Asserts what the player is told to do —
@@ -9,11 +9,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, nextTick, reactive, ref } from 'vue'
-import { ROOM_VIDEO_HEARTBEAT_MS } from '~/constants/room'
+import { ROOM_VIDEO_HEARTBEAT_MS, type RoomVideoPlatform } from '~/constants/room'
 import type { DeviceClass } from '~/utils/device-class'
 import type {
   RoomVideoSnapshot,
   RoomVideoTransport,
+  VideoAdapterError,
   VideoAdapterEvent,
   VideoPlayerAdapter,
 } from '~/types/room/video'
@@ -43,6 +44,11 @@ vi.mock('~/services/motionPauseOrchestrator', () => ({
   },
 }))
 vi.mock('~/services/roomVideoHtmlAdapter', () => ({ createHtmlVideoAdapter: vi.fn() }))
+vi.mock('~/services/roomVideoYouTubeAdapter', () => ({ createYouTubeVideoAdapter: vi.fn() }))
+
+// Where the app runs (ticket 08): 'web' by default; YouTube cases switch it.
+const platform = { value: 'web' as RoomVideoPlatform }
+vi.mock('~/composables/room/video/useRoomVideoYouTube', () => ({ readRoomVideoPlatform: () => platform.value }))
 vi.mock('~/utils/logger', () => ({
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
@@ -68,13 +74,13 @@ const { useRoomVideoSync, __resetRoomVideoSyncTierForTest } = await import('~/co
 // ----------------------------------------
 
 interface FakeAdapter extends VideoPlayerAdapter {
-  emit(event: VideoAdapterEvent): void
+  emit(event: VideoAdapterEvent, error?: VideoAdapterError): void
   setTime(sec: number): void
   setDuration(sec: number): void
 }
 
 function makeFakeAdapter(): FakeAdapter {
-  const listeners = new Map<VideoAdapterEvent, Set<() => void>>()
+  const listeners = new Map<VideoAdapterEvent, Set<(error?: VideoAdapterError) => void>>()
   let time = 0
   let length = 0
   return {
@@ -88,14 +94,14 @@ function makeFakeAdapter(): FakeAdapter {
     duration: vi.fn(() => length),
     setMuted: vi.fn(),
     destroy: vi.fn(),
-    on: vi.fn((event: VideoAdapterEvent, cb: () => void) => {
+    on: vi.fn((event: VideoAdapterEvent, cb: (error?: VideoAdapterError) => void) => {
       const set = listeners.get(event) ?? new Set()
       set.add(cb)
       listeners.set(event, set)
       return () => set.delete(cb)
     }),
-    emit(event) {
-      listeners.get(event)?.forEach((cb) => cb())
+    emit(event, error) {
+      listeners.get(event)?.forEach((cb) => cb(error))
     },
     setTime(sec) {
       time = sec
@@ -109,6 +115,7 @@ function makeFakeAdapter(): FakeAdapter {
 const NOW = 1_731_068_400_000
 const MP4 = { kind: 'url', url: 'https://cdn.example.com/a.mp4', container: 'mp4' } as const
 const OTHER_MP4 = { kind: 'url', url: 'https://cdn.example.com/b.mp4', container: 'mp4' } as const
+const YOUTUBE = { kind: 'youtube', videoId: 'dQw4w9WgXcQ' } as const
 const CONTROLLER_ID = 99
 const HEARTBEAT_MS = ROOM_VIDEO_HEARTBEAT_MS
 
@@ -126,7 +133,7 @@ function snapshot(overrides: Partial<RoomVideoSnapshot> = {}): RoomVideoSnapshot
 
 const container = {} as HTMLElement
 
-function setup(initial: RoomVideoSnapshot | null = snapshot()) {
+function setup(initial: RoomVideoSnapshot | null = snapshot(), factoryKind: 'url' | 'youtube' = 'url') {
   const store = useRoomVideoStore()
   store.startSession('room-1', true)
   store.replaceSnapshot(initial)
@@ -137,7 +144,7 @@ function setup(initial: RoomVideoSnapshot | null = snapshot()) {
     return adapter
   })
   const transport = { heartbeat: vi.fn(), ended: vi.fn() }
-  const sync = useRoomVideoSync({ url: factory }, transport)
+  const sync = useRoomVideoSync({ [factoryKind]: factory }, transport)
   return { store, sync, factory, transport, adapters, current: () => adapters[adapters.length - 1]! }
 }
 
@@ -158,6 +165,7 @@ beforeEach(() => {
   coverCounter = 0
   tier.value = 'high'
   fxPrefs.startVideoCollapsed = false
+  platform.value = 'web'
   __resetRoomVideoSyncTierForTest()
 })
 
@@ -379,6 +387,34 @@ describe('autoplay refusal and errors', () => {
 
     expect(store.playbackFailed).toBe(true)
     expect(toastAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('the Controller toast names the cause when the adapter knows it (YouTube codes)', () => {
+    authUser.id = CONTROLLER_ID
+    const { sync, current } = setup()
+    sync.attach(container)
+
+    current().emit('error', {
+      code: 'youtube_embed_disabled',
+      message: 'YouTube onError 150',
+      userMessage: "This video's owner doesn't allow it to play outside YouTube.",
+    })
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "This video's owner doesn't allow it to play outside YouTube." }),
+    )
+  })
+
+  it('an error without a known cause keeps the generic toast line', () => {
+    authUser.id = CONTROLLER_ID
+    const { sync, current } = setup()
+    sync.attach(container)
+
+    current().emit('error', { code: 'media_3', message: 'decode' })
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "This link couldn't be played. Try another one." }),
+    )
   })
 
   it('a Watcher error never toasts', () => {
@@ -736,14 +772,35 @@ describe('progress', () => {
 })
 
 describe('currentPosition', () => {
-  it('is 0 with no player, then the local player position', () => {
+  it('with no player it is where the room is now (never 0), then the local player position', () => {
+    vi.setSystemTime(NOW + 7_000)
     const { sync, current } = setup()
-    expect(sync.currentPosition()).toBe(0)
+    expect(sync.currentPosition()).toBe(17)
 
     sync.attach(container)
     current().setTime(41.5)
+    current().emit('ready')
 
     expect(sync.currentPosition()).toBe(41.5)
+  })
+
+  it('is the room\'s second while the player is still loading or has failed (a pause must never rewind to 0)', () => {
+    vi.setSystemTime(NOW + 7_000)
+    authUser.id = CONTROLLER_ID
+    const { sync, current } = setup()
+    sync.attach(container)
+    current().setTime(0)
+
+    expect(sync.currentPosition()).toBe(17) // loading: no ready / playing yet
+
+    current().emit('playing')
+    current().emit('error')
+    expect(sync.currentPosition()).toBe(17) // failed
+  })
+
+  it('is 0 with no Snapshot and no player', () => {
+    const { sync } = setup(null)
+    expect(sync.currentPosition()).toBe(0)
   })
 })
 
@@ -970,5 +1027,122 @@ describe('start state: tier default, preference, user choice', () => {
     current().emit('playing')
     vi.advanceTimersByTime(HEARTBEAT_MS)
     expect(transport.heartbeat).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ----------------------------------------
+// YouTube platform rules (ticket 08)
+// ----------------------------------------
+
+describe('YouTube: no-embed platform (iOS card)', () => {
+  it('builds no player and is NOT a playback failure: no toast, seats uncovered', () => {
+    platform.value = 'ios'
+    authUser.id = CONTROLLER_ID
+    const { store, sync, factory } = setup(snapshot({ source: YOUTUBE }), 'youtube')
+
+    sync.attach(container)
+
+    expect(factory).not.toHaveBeenCalled()
+    expect(store.playbackFailed).toBe(false)
+    expect(toastAdd).not.toHaveBeenCalled()
+    expect(acquireCovered).not.toHaveBeenCalled()
+  })
+
+  it('the card opens at the room\'s current second; no heartbeat without a player', () => {
+    platform.value = 'ios'
+    authUser.id = CONTROLLER_ID
+    const { sync, transport } = setup(snapshot({ source: YOUTUBE }), 'youtube')
+    sync.attach(container)
+
+    vi.advanceTimersByTime(HEARTBEAT_MS * 2)
+
+    expect(sync.currentPosition()).toBe(10 + (HEARTBEAT_MS * 2) / 1000)
+    expect(transport.heartbeat).not.toHaveBeenCalled()
+  })
+
+  it('a direct link still plays on the same platform', () => {
+    platform.value = 'ios'
+    const { sync, factory, current } = setup()
+    sync.attach(container)
+
+    expect(factory).toHaveBeenCalledTimes(1)
+    expect(current().play).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('YouTube: Capacitor collapse unmounts the iframe', () => {
+  it('a Watcher\'s collapse destroys the player; expand rebuilds it at the room\'s second and plays', async () => {
+    platform.value = 'android'
+    const { sync, factory, adapters } = setup(snapshot({ source: YOUTUBE }), 'youtube')
+    sync.attach(container)
+    const first = adapters[0]!
+    expect(first.load).toHaveBeenCalledWith(YOUTUBE)
+
+    sync.toggleCollapsed()
+    await nextTick()
+    expect(first.destroy).toHaveBeenCalledTimes(1)
+    expect(factory).toHaveBeenCalledTimes(1)
+
+    vi.setSystemTime(NOW + 30_000)
+    sync.toggleCollapsed()
+    await nextTick()
+
+    expect(factory).toHaveBeenCalledTimes(2)
+    const second = adapters[1]!
+    expect(second.load).toHaveBeenCalledWith(YOUTUBE)
+    expect(second.seek).toHaveBeenLastCalledWith(40)
+    expect(second.play).toHaveBeenCalled()
+  })
+
+  it('a default-collapsed Watcher on a weak phone never builds the iframe until they expand', async () => {
+    platform.value = 'android'
+    tier.value = 'low'
+    const { store, sync, factory, current } = setup(snapshot({ source: YOUTUBE }), 'youtube')
+    sync.attach(container)
+
+    expect(store.collapsed).toBe(true)
+    expect(factory).not.toHaveBeenCalled()
+
+    sync.toggleCollapsed()
+    await nextTick()
+
+    expect(store.needsTap).toBe(false)
+    expect(factory).toHaveBeenCalledTimes(1)
+    expect(current().play).toHaveBeenCalled()
+  })
+
+  it('the Controller keeps their player when collapsed (it drives heartbeat + ended)', async () => {
+    platform.value = 'android'
+    authUser.id = CONTROLLER_ID
+    const { sync, factory, current } = setup(snapshot({ source: YOUTUBE }), 'youtube')
+    sync.attach(container)
+
+    sync.toggleCollapsed()
+    await nextTick()
+
+    expect(current().destroy).not.toHaveBeenCalled()
+    expect(factory).toHaveBeenCalledTimes(1)
+  })
+
+  it('on the web a collapsed YouTube player is only hidden', async () => {
+    const { sync, current } = setup(snapshot({ source: YOUTUBE }), 'youtube')
+    sync.attach(container)
+
+    sync.toggleCollapsed()
+    await nextTick()
+
+    expect(current().destroy).not.toHaveBeenCalled()
+  })
+
+  it('a direct link on Capacitor is only hidden when collapsed (audio continues)', async () => {
+    platform.value = 'android'
+    const { sync, factory, current } = setup()
+    sync.attach(container)
+
+    sync.toggleCollapsed()
+    await nextTick()
+
+    expect(current().destroy).not.toHaveBeenCalled()
+    expect(factory).toHaveBeenCalledTimes(1)
   })
 })

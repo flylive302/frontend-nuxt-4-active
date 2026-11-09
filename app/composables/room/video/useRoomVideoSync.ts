@@ -26,12 +26,18 @@
  * switch, opens the panel collapsed and holds playback until the user expands; the
  * user's own collapse / expand always wins afterwards.
  *
- * Not here: YouTube (08).
+ * YouTube (ticket 08): one more factory. Two platform rules (`shouldMountVideoPlayer`):
+ * a platform that cannot embed YouTube (iOS) gets no player — the panel shows the
+ * "Open on YouTube" card and the Snapshot keeps running, which is NOT a playback
+ * failure; on Capacitor a Watcher's collapsed YouTube iframe is destroyed (not
+ * hidden) to free the decoder and rebuilt on expand. The Controller keeps theirs.
  */
 import { effectScope, watch, type EffectScope } from 'vue'
 import { useRoomVideoActions } from '~/composables/room/video/useRoomVideoActions'
 import { acquireCovered, isAway, releaseCovered, subscribeAway } from '~/services/motionPauseOrchestrator'
 import { createHtmlVideoAdapter } from '~/services/roomVideoHtmlAdapter'
+import { createYouTubeVideoAdapter } from '~/services/roomVideoYouTubeAdapter'
+import { readRoomVideoPlatform } from '~/composables/room/video/useRoomVideoYouTube'
 import { useFxPreferencesStore } from '~/stores/fxPreferences'
 import { useRoomVideoStore } from '~/stores/roomVideo'
 import {
@@ -43,6 +49,7 @@ import type { DeviceClass } from '~/utils/device-class'
 import { readFrameAnimationTier } from '~/utils/frame-animation-tier'
 import { createLogger } from '~/utils/logger'
 import { expectedPosition, shouldCorrect } from '~/utils/video-clock'
+import { shouldMountVideoPlayer } from '~/utils/video-platform'
 import { resolveVideoStartCollapsed } from '~/utils/video-start-collapsed'
 import type {
   RoomVideoSnapshot,
@@ -55,10 +62,15 @@ import type {
 
 type AdapterKind = RoomVideoSource['kind']
 
-/** Backend per Source kind. YouTube joins in ticket 08. */
+/** Backend per Source kind. */
 export type RoomVideoAdapterFactories = Partial<Record<AdapterKind, VideoPlayerAdapterFactory>>
 
-const DEFAULT_FACTORIES: RoomVideoAdapterFactories = { url: createHtmlVideoAdapter }
+const DEFAULT_FACTORIES: RoomVideoAdapterFactories = {
+  url: createHtmlVideoAdapter,
+  youtube: createYouTubeVideoAdapter,
+}
+
+const PLAYBACK_FAILED_MESSAGE = "This link couldn't be played. Try another one."
 
 const log = createLogger('[RoomVideoSync]')
 
@@ -154,6 +166,11 @@ export function useRoomVideoSync(
     state.scope.run(() => {
       watch(() => store.snapshot, applySnapshot, { immediate: true })
       watch(() => store.muted, (muted) => state.adapter?.setMuted(muted))
+      // Collapse / Controller change can flip whether a YouTube player may exist (Capacitor).
+      // Only act on a real mismatch: the Snapshot watcher above already handles Source changes.
+      watch(playerMountable, (mountable) => {
+        if (mountable !== (state.adapter !== null)) applySnapshot(store.snapshot)
+      })
       watch(shouldCoverSeats, setSeatsCovered, { immediate: true })
     })
     state.awayUnsubscribe = subscribeAway(onAwayChange)
@@ -208,6 +225,11 @@ export function useRoomVideoSync(
 
   function applySnapshot(snapshot: RoomVideoSnapshot | null): void {
     if (snapshot === null || state.container === null) {
+      destroyAdapter()
+      return
+    }
+    // The "Open on YouTube" card, or a Watcher's collapsed YouTube on Capacitor: no player, no failure.
+    if (!playerMountable()) {
       destroyAdapter()
       return
     }
@@ -362,7 +384,7 @@ export function useRoomVideoSync(
       state.failureToastKey = key
       toast.add({
         title: 'Video',
-        description: "This link couldn't be played. Try another one.",
+        description: error?.userMessage ?? PLAYBACK_FAILED_MESSAGE,
         color: 'error',
       })
     }
@@ -404,7 +426,8 @@ export function useRoomVideoSync(
       snapshot !== null &&
       !snapshot.paused &&
       !store.needsTap &&
-      !store.playbackFailed
+      !store.playbackFailed &&
+      playerMountable()
     )
   }
 
@@ -431,9 +454,30 @@ export function useRoomVideoSync(
     publishProgress()
   }
 
-  /** Local player position (s), 0 with no player — the panel's pause / seek read it. */
+  /**
+   * Local player position (s) — the panel's pause / resume and the "Open on YouTube"
+   * card read it. While no player has a real position (card, unmounted iframe, still
+   * loading, failed) it is where the room is now, never 0: a pause sent from 0 would
+   * rewind everyone.
+   */
   function currentPosition(): number {
-    return state.adapter?.currentTime() ?? 0
+    const adapter = state.adapter
+    const positionKnown = state.readySinceLoad || state.playingSinceLoad
+    if (adapter && positionKnown && !store.playbackFailed) return adapter.currentTime()
+    const snapshot = store.snapshot
+    return snapshot ? expected(snapshot) : 0
+  }
+
+  /** May a player exist for the current Source right now (`shouldMountVideoPlayer`)? Reactive on the store. */
+  function playerMountable(): boolean {
+    const snapshot = store.snapshot
+    if (snapshot === null) return false
+    return shouldMountVideoPlayer({
+      kind: snapshot.source.kind,
+      platform: readRoomVideoPlatform(),
+      collapsed: store.collapsed,
+      isController: store.isController,
+    })
   }
 
   return { attach, detach, tapToWatch, toggleCollapsed, toggleMuted, currentPosition }

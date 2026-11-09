@@ -133,7 +133,13 @@ export type VideoAdapterEvent = 'ready' | 'playing' | 'paused' | 'ended' | 'erro
 /** Payload of an adapter `error` event. `code` is backend-specific (MediaError code, hls.js type, YouTube code). */
 export interface VideoAdapterError {
   code: string;
+  /** Technical description, for logs. */
   message: string;
+  /**
+   * Plain-English cause for the Controller's toast, when the backend knows it
+   * (YouTube `onError` codes, room-video-player 08). Absent → the generic line.
+   */
+  userMessage?: string;
 }
 
 /**
