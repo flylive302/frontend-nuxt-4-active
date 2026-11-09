@@ -55,10 +55,11 @@ See `Architecture.md` for the full ✅/❌ rules on components, stores, composab
 
 ## Room music playlist (DJ)
 
-Single-DJ, client-local, ephemeral playlist streamed through the existing mediasoup producer (ADR 0006). Three composed modules, strict GATE→EXECUTE→REACT:
+Single-DJ, client-local, **device-persistent** playlist streamed through the existing mediasoup producer (ADR 0006, amended 2026-11-09). Four composed modules, strict GATE→EXECUTE→REACT:
 
 - `utils/playlist-queue.ts` — `PlaylistQueue`: pure ordered-track model (`add`/`remove`/`reorder`/`next`/`prev`); cheap `File` handles only, no Vue/Web Audio/sockets.
 - `services/audioPlaybackEngine.ts` — `createAudioPlaybackEngine()`: owns the Web Audio graph + decode. **Stable output `MediaStreamTrack`** built once; track swaps change only the upstream source → `musicProducer` is produced **exactly once**, gapless auto-advance, no re-consume. Bounds resident PCM to current+next.
+- `composables/room/audio/useSavedPlaylist.ts` + `services/playlistTrackStore.ts` — the device copy (IndexedDB `flylive-playlist`, per account, ~500 MB budget via `utils/playlist-eviction.ts`). Writes are REACT/fire-and-forget through one serial chain; restore runs on room join (`restoreSavedPlaylist`, once per account per session). **Never move this behind a Pinia `persist:` store** (gift-lag gotcha).
 - `composables/room/audio/useRoomAudioPlayer.ts` — thin orchestrator composing the queue + engine + `useMediasoupStreaming` + MSAB socket coordination. **No raw Web Audio code here.** Owns auto-advance (`engine.onEnded → queue.next()`), owner force-take (`takeover`), and the targeted-`revoked` path.
 
-Owner-only force-take (`audioPlayer:takeover`) overwrites the mutex + revokes the displaced DJ; non-owner admins cannot interrupt. Queue clears only on leave/refresh. Components stay INTENT-only; `player.vue` uses `vue-draggable-plus` for drag-to-reorder.
+Owner-only force-take (`audioPlayer:takeover`) overwrites the mutex + revokes the displaced DJ; non-owner admins cannot interrupt. The queue is never cleared on leave or refresh; it survives app kill on the same device and is cleared only on an account switch (the other account's saved songs stay on disk). The deck re-shows on rejoin for owner/admin when the queue has songs. Components stay INTENT-only; `player.vue` uses `vue-draggable-plus` for drag-to-reorder.
