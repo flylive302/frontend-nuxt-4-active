@@ -4,6 +4,7 @@
 export function useRoomPermissions() {
   const roomStore = useRoomStore()
   const authStore = useAuthStore()
+  const membershipStore = useRoomMembershipStore()
 
   /**
    * `owner_id` is a plain column and always serialized; the nested `owner`
@@ -21,5 +22,17 @@ export function useRoomPermissions() {
     return ownerId !== null && selfId !== null && ownerId === selfId
   })
 
-  return { isRoomOwner }
+  /**
+   * Admin of the CURRENT room. `myMembership` loads asynchronously on room
+   * mount (Settings drawer `refreshOwnRole`), so this can flip true late; the
+   * row is matched to the current room so a stale membership from a previous
+   * room never grants it. Same rule as `useRoomMembershipState`'s admin state.
+   */
+  const isRoomAdmin = computed(() => {
+    const membership = membershipStore.myMembership
+    const roomId = roomStore.currentRoom?.id
+    return membership != null && roomId != null && membership.room_id === roomId && membership.role === 'admin'
+  })
+
+  return { isRoomOwner, isRoomAdmin }
 }

@@ -474,6 +474,9 @@ export function useRoomAudio(): UseRoomAudioReturn {
   // Audio player (music playback through mediasoup)
   const audioPlayer = useRoomAudioPlayer(socket);
 
+  // room-video-player/06: Room Video socket listeners + join-ack mapping.
+  const roomVideo = useRoomVideoListeners(socket);
+
   // observability-audio-quality 13: silent-join detection. Instrumentation
   // only — it observes the join, it never steers it.
   const silentJoin = useSilentJoinDetection();
@@ -611,11 +614,16 @@ export function useRoomAudio(): UseRoomAudioReturn {
     // delay reaches the right server. Only that code is retried, and only once.
     let response: JoinRoomResponse;
     let handoverRetries = 0;
+    // room-video-player/06: stamped the moment the ack lands — the Room Video's
+    // first clock sample is `serverNow - this`; stamping it later (after the
+    // transports below) would skew a late joiner by the setup time.
+    let joinAckReceivedAt = 0;
     for (;;) {
       response = await emitAsync<{ roomId: string; ownerId: number; seatCount: number }, JoinRoomResponse>(
         'room:join',
         { roomId, ownerId: ownerId!, seatCount }
       );
+      joinAckReceivedAt = Date.now();
       if (!shouldRetryJoinAfterHandover(response.error, handoverRetries)) break;
       handoverRetries += 1;
       log.warn('room:join hit an owner hand-over — retrying once', { roomId, handoverRetries });
@@ -869,6 +877,10 @@ export function useRoomAudio(): UseRoomAudioReturn {
       audioPlayer.initFromJoinState(response.musicPlayer);
     }
     audioPlayer.setupListeners();
+    // room-music-playlist/01: rebuild the DJ's Playlist from the device store
+    // after a reload / app kill. Fire-and-forget; once per account per session,
+    // so reconnect re-joins are a no-op. Never blocks the join.
+    void audioPlayer.restoreSavedPlaylist();
 
     // lucky-number/01: MSAB flag — hides the start button when the game is off.
     seatsStore.setLuckyNumberEnabled(response.luckyNumberEnabled === true);
@@ -883,6 +895,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
       seatsStore.hydrateLuckyNumber({ roundId, endsAt, pickedUserIds: pickedUserIds.map(Number) });
       armLuckyNumberEndFallback(roundId, endsAt);
     }
+
+    // room-video-player/06: flag echo + live Snapshot + clock anchor, then the
+    // listeners (cleanup-before-setup inside: a reconnect re-join never stacks).
+    roomVideo.applyJoinAck(roomId, response, joinAckReceivedAt);
+    roomVideo.setupListeners();
 
     // 5. Replay any app-scope slide still playing app-wide, so a late joiner
     // catches it too. Admission gates on currentRoom (set above) and coalesces
@@ -944,6 +961,11 @@ export function useRoomAudio(): UseRoomAudioReturn {
 
     // Cleanup audio player
     audioPlayer.cleanup(targetRoomId ?? undefined);
+
+    // room-video-player/06: listeners off by reference, then drop the Room Video
+    // state (the panel unmounts with it and releases its player).
+    roomVideo.cleanupListeners();
+    useRoomVideoStore().$reset();
 
     // realtime-09: tear down broadcast HLS playback if it was active.
     // realtime-10: reset the tier flag in lockstep so the invariant "HLS

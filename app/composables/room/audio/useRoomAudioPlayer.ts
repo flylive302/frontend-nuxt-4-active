@@ -5,6 +5,8 @@
  *  - {@link PlaylistQueue}             — the ordered Playlist (cheap `File` handles).
  *  - {@link createAudioPlaybackEngine} — the Web Audio graph + decode/swap.
  *  - {@link useMediasoupStreaming}     — the stable music producer lifecycle.
+ *  - {@link useSavedPlaylist}          — the device (IndexedDB) copy of the
+ *    Playlist, so it survives the app process dying (room-music-playlist/01).
  *
  * It contains **no raw Web Audio graph code** (that lives in the engine) and no
  * queue arithmetic (that lives in the model). Its only job is the
@@ -15,7 +17,8 @@
  * the engine's natural-end callback drives `queue.next()` and the engine swaps
  * the next decoded source onto the **stable output track**, so the mediasoup
  * `musicProducer` is produced exactly once and listeners never re-consume
- * (gapless boundary). See ADR 0006 (single-DJ, client-local, ephemeral).
+ * (gapless boundary). See ADR 0006 (single-DJ, client-local; device-persistent
+ * since room-music-playlist/01 — never uploaded).
  */
 import type { Ref } from 'vue';
 import type { AudioSocket } from '../useAudioSocket';
@@ -39,6 +42,7 @@ import {
   type AudioPlaybackEngine,
 } from '~/services/audioPlaybackEngine';
 import { PlaylistQueue } from '~/utils/playlist-queue';
+import { useSavedPlaylist } from './useSavedPlaylist';
 import { createEmitAsync } from '~/utils/socket';
 import { createLogger } from '~/utils/logger';
 import { percentToFraction } from '~/utils/audio/duck-level';
@@ -92,6 +96,16 @@ const isDucking = ref(false);
 const queue = new PlaylistQueue();
 let engine: AudioPlaybackEngine | null = null;
 
+/**
+ * room-music-playlist/01: which account the in-memory queue belongs to
+ * (reactive — the deck hides the moment a different account is signed in), and
+ * which account's saved Playlist has already been restored this session. A
+ * different account signing in on the same tab gets an empty queue plus its
+ * own saved songs — never the previous account's.
+ */
+const queueOwnerKey = ref<string | null>(null);
+let restoredForUserKey: string | null = null;
+
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 let stateUpdateInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -112,7 +126,9 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   // callbacks or timers outside setup, where useXStore() would throw.
   const authStore = useAuthStore();
   const roomStore = useRoomStore();
+  const { isRoomOwner, isRoomAdmin } = useRoomPermissions();
   const toast = useToast();
+  const savedPlaylist = useSavedPlaylist();
 
   // Stable music producer lifecycle (shared via the session store).
   const { produceTrack, stopMusicProducer } = useMediasoupStreaming(socket);
@@ -126,13 +142,36 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   const isMusicPlayingInRoom = computed(() => playerState.userId !== null && playerState.status !== 'idle' && playerState.status !== 'stopped');
 
   /**
+   * Whether this user may DJ in the *current* Room — owner or admin, the same
+   * rule as the Settings hub's `canEdit`. The admin half flips true late (the
+   * membership row loads asynchronously on room mount).
+   */
+  const canDjInRoom = computed(() => isRoomOwner.value || isRoomAdmin.value);
+
+  /** The in-memory Playlist belongs to the signed-in account (or to nobody yet). */
+  const isQueueMine = computed(() =>
+    queueOwnerKey.value === null || queueOwnerKey.value === savedPlaylist.currentUserKey(),
+  );
+
+  /**
    * Show the DJ panel to its owner whenever it is open AND nobody *else* holds
    * the slot. Driven by an explicit open flag (not playback `status`), so Stop /
    * end-of-queue keep it visible; a force-take by the owner hides the displaced
    * DJ's panel because the active player becomes someone else.
+   *
+   * room-music-playlist/01 (cause 1): `cleanup()` leaves the panel open when a
+   * Playlist is retained, so the role gate decides whether it shows in the
+   * Room being (re)joined — a DJ who walks into a Room where they are only a
+   * member does not get a deck they cannot use. A live session (`isActive`)
+   * always shows, so a transient membership refetch failure can never strip
+   * the controls off audible music. After a logout → login on the same tab the
+   * previous account's queue is never shown (`isQueueMine`), even before the
+   * next join's restore clears it.
    */
   const isPlayerVisible = computed(() =>
     isPlayerOpen.value &&
+    isQueueMine.value &&
+    (isActive.value || canDjInRoom.value) &&
     !(isMusicPlayingInRoom.value && playerState.userId !== authStore.user?.id),
   );
 
@@ -302,6 +341,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
 
     syncQueue();
     primeNext();
+    savedPlaylist.rememberPlayed(track.id); // REACT: recency for eviction
     return true;
   }
 
@@ -320,12 +360,25 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   }
 
   function onPlaybackError(err: unknown, track: Track): void {
-    const message =
-      err instanceof AudioPlaybackError
-        ? err.message
-        : `Could not play "${track.title}" — the file's encoding may be unsupported or corrupt. Try re-exporting as MP3 or AAC.`;
     log.warn('Playback failed', err);
-    toast.add({ title: 'Music Error', description: message, color: 'error' });
+    toast.add({ title: 'Music Error', description: playbackErrorMessage(err, track), color: 'error' });
+  }
+
+  /**
+   * room-music-playlist/01: a song restored from the device store whose bytes
+   * are gone (the OS evicted storage — `persist()` is best-effort) is not a
+   * codec problem: mark the row and tell the DJ to remove it instead of
+   * suggesting a re-export.
+   */
+  function playbackErrorMessage(err: unknown, track: Track): string {
+    if (track.unavailable || (savedPlaylist.isRestored(track.id) && isUnreadableBlobError(err))) {
+      queue.markUnavailable(track.id);
+      syncQueue();
+      return `"${track.title}" is no longer saved on this device. Remove it and add the song again.`;
+    }
+    return err instanceof AudioPlaybackError
+      ? err.message
+      : `Could not play "${track.title}" — the file's encoding may be unsupported or corrupt. Try re-exporting as MP3 or AAC.`;
   }
 
   // ========================================
@@ -343,7 +396,24 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     syncQueue();
     if (created.length > 0) isPlayerOpen.value = true; // reveal the DJ panel
     if (isActive.value) primeNext();
+
+    // REACT (room-music-playlist/01): copy the songs to the device store so the
+    // Playlist survives an app kill. Fire-and-forget — the DJ never waits.
+    if (created.length > 0) {
+      queueOwnerKey.value = savedPlaylist.currentUserKey();
+      savedPlaylist.rememberAdded(created, queueTrackIds());
+    }
     return created;
+  }
+
+  /** Current queue order as track ids (input to the saved-order writes). */
+  function queueTrackIds(): string[] {
+    return queue.tracks.map((t) => t.id);
+  }
+
+  /** REACT: persist the current queue order so a restore reproduces it. */
+  function persistOrder(): void {
+    savedPlaylist.rememberOrder(queueTrackIds());
   }
 
   /**
@@ -355,6 +425,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     queue.reorder(fromIndex, toIndex);
     syncQueue();
     primeNext();
+    persistOrder();
   }
 
   /**
@@ -365,6 +436,8 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     const wasCurrent = queue.current?.id === id;
     queue.remove(id);
     syncQueue();
+    savedPlaylist.forget(id); // REACT: drop the saved copy
+    persistOrder();
 
     if (!wasCurrent) {
       primeNext();
@@ -728,22 +801,95 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
   }
 
   /**
+   * room-music-playlist/01: rebuild the Playlist from the device store after a
+   * reload / app kill. Called (fire-and-forget) on every room join; runs at most
+   * once per account per JS session, so reconnect re-joins are a no-op. A
+   * failed read is retried on the next join.
+   */
+  async function restoreSavedPlaylist(): Promise<void> {
+    const userKey = savedPlaylist.currentUserKey();
+    if (!canRestoreFor(userKey)) return;
+    adoptQueueFor(userKey);
+    const restored = await rebuildQueueFrom(userKey);
+    if (restored > 0) revealRestoredPlaylist(restored);
+  }
+
+  /** GATE: signed in and not yet restored for this account this session. */
+  function canRestoreFor(userKey: string | null): userKey is string {
+    return userKey !== null && restoredForUserKey !== userKey;
+  }
+
+  /**
+   * EXECUTE (sync): claim the queue for `userKey`. An account switch drops the
+   * previous account's in-memory queue (its saved copy stays on disk).
+   */
+  function adoptQueueFor(userKey: string): void {
+    if (queueOwnerKey.value !== null && queueOwnerKey.value !== userKey) {
+      queue.clear();
+      savedPlaylist.resetBindings();
+      syncQueue();
+      isPlayerOpen.value = false;
+    }
+    restoredForUserKey = userKey;
+    queueOwnerKey.value = userKey;
+  }
+
+  /**
+   * EXECUTE: append the saved songs (after anything added while loading) and
+   * bind them to their storage keys; songs whose bytes are gone come back as
+   * unavailable rows. Returns how many tracks were rebuilt.
+   */
+  async function rebuildQueueFrom(userKey: string): Promise<number> {
+    const saved = await savedPlaylist.loadSaved(userKey);
+    const accountChanged = savedPlaylist.currentUserKey() !== userKey;
+    if (saved === null || accountChanged) {
+      // Read failed, or signed out / switched mid-read: allow a later retry.
+      if (restoredForUserKey === userKey) restoredForUserKey = null;
+      return 0;
+    }
+
+    const created = queue.add(saved.map((s) => s.file));
+    savedPlaylist.bindRestored(created.map((t, i) => ({ trackId: t.id, key: saved[i]!.key })));
+    created.forEach((t, i) => {
+      if (saved[i]!.unavailable) queue.markUnavailable(t.id);
+    });
+    syncQueue();
+    return created.length;
+  }
+
+  /** REACT: reveal the deck (the role gate still decides visibility) and re-persist order. */
+  function revealRestoredPlaylist(count: number): void {
+    isPlayerOpen.value = true;
+    if (isActive.value) primeNext();
+    // Songs added while the read was in flight sit ahead of the restored ones;
+    // re-persist the merged order so the next restore matches what the DJ sees.
+    persistOrder();
+    log.info('Restored saved playlist', { tracks: count });
+  }
+
+  /**
    * Playback/streaming teardown on room leave (covers manual leave, room
    * switch, kick/eject, and room-closed — every path funnels through this one
    * `cleanup()`, see `useRoomAudio.leaveRoom`): stop production, release the
    * MSAB mutex (via `stopStreaming`'s `audioPlayer:stop`) when a session was
-   * live, drop socket listeners, hide the panel, reset playback state.
+   * live, drop socket listeners, reset playback state.
+   *
+   * Panel: room-music-playlist/01 (cause 1) — this used to hide the panel
+   * unconditionally, and nothing re-opened it on rejoin, so a retained Playlist
+   * looked "lost". Now the panel stays open iff a Playlist is retained; the
+   * role gate in `isPlayerVisible` decides whether it shows in the next Room.
+   * Socket reconnects re-join without passing through here, so a deck the DJ
+   * dismissed with ✕ stays dismissed across network blips.
    *
    * The in-memory Playlist (`queue`) is deliberately **not** cleared here —
    * PRD "Playlist retention" (stories 18–21): a DJ's queue survives room
    * switches, kicks, and owner takeover within the same browser session.
-   * `handleRevoked` already preserves it the same way. Only a hard page
-   * refresh clears it, and that happens for free — a reload resets this
-   * module's singleton state, since local `File` handles cannot be re-read
-   * across a reload anyway (ADR 0006). No caller currently needs an explicit
-   * full-clear path (logout also flows through this same `cleanup()` via the
-   * `currentRoom` watcher, and the PRD does not call out logout as a clear
-   * trigger) — if one is ever added, clear the queue there, not here.
+   * `handleRevoked` already preserves it the same way. A reload or app kill
+   * resets this module's singleton state; since room-music-playlist/01 the
+   * queue is then rebuilt from the device store by `restoreSavedPlaylist` on
+   * the next join. An account switch clears it there too (per-user Playlist).
+   * Logout also flows through this same `cleanup()` via the `currentRoom`
+   * watcher — do not clear the queue here.
    */
   function cleanup(roomId?: string): void {
     if (roomId && isActive.value) {
@@ -762,7 +908,7 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     const queueRoomId = roomId ?? roomStore.currentRoom?.id?.toString();
     if (queueRoomId) cancelWaitingSpot(queueRoomId);
     clearWaiting(); // music-dj-queue/04: leaving cancels any local waiting state
-    isPlayerOpen.value = false;
+    isPlayerOpen.value = queue.tracks.length > 0; // re-reveal a retained Playlist on rejoin
 
     playerState.status = 'idle';
     playerState.userId = null;
@@ -818,6 +964,18 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     setupListeners,
     cleanupListeners,
     initFromJoinState,
+    restoreSavedPlaylist,
     cleanup,
   };
+}
+
+/**
+ * Whether a playback failure came from reading the song's bytes (blob gone /
+ * unreadable) rather than decoding them. The engine wraps both in
+ * `AudioPlaybackError`, keeping the original error in `cause`.
+ */
+function isUnreadableBlobError(err: unknown): boolean {
+  const cause = err instanceof AudioPlaybackError ? err.cause : err;
+  return cause instanceof DOMException
+    && (cause.name === 'NotFoundError' || cause.name === 'NotReadableError');
 }

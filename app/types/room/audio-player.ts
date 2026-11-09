@@ -46,6 +46,12 @@ export interface Track {
   title: string;
   /** Duration in seconds, written back by the engine once decoded; `null` until known. */
   duration: number | null;
+  /**
+   * room-music-playlist/01: set when a song restored from the device store can
+   * no longer be read (storage evicted by the OS). The row stays so the DJ sees
+   * what was lost and can remove it.
+   */
+  unavailable?: boolean;
 }
 
 // ============================================

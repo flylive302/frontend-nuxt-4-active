@@ -336,6 +336,9 @@ onBeforeUnmount(releasePreview);
                   :class="track.id === currentTrackId ? 'text-white font-semibold' : 'text-neutral-300'"
                 >
                   {{ track.title }}
+                  <span v-if="track.unavailable" class="block text-[11px] font-normal text-error">
+                    No longer saved on this device — remove it
+                  </span>
                 </span>
                 <UButton
                   icon="i-lucide-trash-2"

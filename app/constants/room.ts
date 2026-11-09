@@ -340,6 +340,26 @@ export type ChatTab = typeof CHAT_TAB_ALL | typeof CHAT_TAB_CHAT | typeof CHAT_T
 export const PLAYLIST_MAX_TRACKS = 50;
 
 /**
+ * room-music-playlist/01: the DJ's picked songs are copied into IndexedDB so the
+ * Playlist survives the app process dying. Device-wide byte budget across every
+ * account on the device; past it, the least-recently-played saved songs that are
+ * NOT in the live queue are evicted first, and a song that still does not fit
+ * stays session-only. A count cap alone is not enough (50 × 50 MB = 2.5 GB).
+ */
+export const PLAYLIST_STORAGE_CAP_BYTES = 500 * 1024 * 1024;
+
+/**
+ * The byte budget never exceeds this fraction of the origin quota reported by
+ * `navigator.storage.estimate()` — keeps small-quota devices (iOS WKWebView)
+ * from filling the origin with music and starving the gift-asset cache.
+ */
+export const PLAYLIST_STORAGE_QUOTA_FRACTION = 0.5;
+
+/** IndexedDB database holding saved Playlist songs (separate from the asset index). */
+export const PLAYLIST_IDB_NAME = 'flylive-playlist';
+export const PLAYLIST_IDB_VERSION = 1;
+
+/**
  * Talk-over duck (ADR 0018): holding the player vinyl ramps the music gain
  * down, for the Room and the DJ's own monitor alike (one gain feeds both
  * edges). The target fraction is user-configurable — see
@@ -535,3 +555,28 @@ export const ROOM_VIDEO_DRIFT_THRESHOLD_SEC = 1.5;
  * Few enough to follow clock drift, enough to find one low-delay packet.
  */
 export const ROOM_VIDEO_CLOCK_SAMPLE_COUNT = 5;
+
+/**
+ * Machine-readable error codes in a `videoPlayer:*` ack (MSAB `Errors`, room-video-player 02/03).
+ * `MEDIA_SLOT_BUSY` carries `data: { heldBy: 'music' | 'video', userId }`.
+ * Authorization failures arrive as the generic `ROOM_SOCKET_NOT_AUTHORIZED` string.
+ */
+export const ROOM_VIDEO_ERROR = {
+  DISABLED: 'video_player_disabled',
+  SOURCE_INVALID: 'video_source_invalid',
+  MEDIA_SLOT_BUSY: 'media_slot_busy',
+} as const;
+
+/** MSAB's generic authorization failure string (`Errors.NOT_AUTHORIZED`). */
+export const ROOM_SOCKET_NOT_AUTHORIZED = 'Not authorized';
+
+/** How often a Watcher compares its player with the Snapshot's expected position. */
+export const ROOM_VIDEO_DRIFT_TICK_MS = 1000;
+
+/**
+ * After a corrective seek, the drift tick stays quiet this long: the player needs
+ * time to land and rebuffer, and stacked seeks during a gift-burst stall are worse
+ * than the drift they chase. Server transport events (pause / resume / seek) are
+ * applied regardless.
+ */
+export const ROOM_VIDEO_SEEK_COOLDOWN_MS = 3000;

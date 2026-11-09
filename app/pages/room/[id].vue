@@ -69,6 +69,18 @@ const seatGridClass = computed(() =>
   seatGridCols(seatCount.value) === 6 ? 'grid-cols-6' : 'grid-cols-5',
 );
 
+// room-video-player/06: the Room Video panel sits above the seats (beside them on
+// `md`+). While it is expanded on a phone the seat box shrinks so the 16:9 panel,
+// the seats and the chat all fit; `seatGridCols` is untouched, so the grid keeps
+// its columns and scrolls more. The min height drops too — min-height overrides
+// max-height. Class strings stay literal here for Tailwind's scan (see above).
+const roomVideoStore = useRoomVideoStore();
+const seatBoxClass = computed(() =>
+  roomVideoStore.isActive && !roomVideoStore.collapsed
+    ? 'max-h-[38vh] min-h-[20vh] md:max-h-[60vh] md:min-h-[40vh]'
+    : 'max-h-[60vh] min-h-[40vh]',
+);
+
 const roomColor = computed(() => roomStore.currentRoom?.primary_color ?? null);
 useThemeColor(() => roomColor.value ?? '#000000');
 
@@ -199,17 +211,24 @@ onUnmounted(() => {
              visibility internally (isPlayerVisible / isWaiting). -->
         <RoomAudioPlayer />
 
-        <!-- Seats Grid -->
-        <div class="relative">
-          <div class="scrollbar-hide max-h-[60vh] min-h-[40vh] overflow-y-auto rounded-xl">
-            <main class="grid gap-x-1" :class="seatGridClass">
-              <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
-            </main>
+        <!-- Room Video (room-video-player/06) above the seats; beside them on md+.
+             OUTSIDE the seat wrapper, so the overlays anchored to it (CP hearts,
+             Lucky Number center) keep covering only the seats. -->
+        <div class="flex flex-col gap-2 md:flex-row md:items-start">
+          <LazyRoomVideoPanel v-if="roomVideoStore.isActive" class="shrink-0 md:w-[55%]" />
+
+          <!-- Seats Grid -->
+          <div class="relative min-w-0 md:flex-1">
+            <div class="scrollbar-hide overflow-y-auto rounded-xl" :class="seatBoxClass">
+              <main class="grid gap-x-1" :class="seatGridClass">
+                <RoomSeat v-for="i in seatCount" :key="i" :seat-id="i" />
+              </main>
+            </div>
+            <!-- CP hearts between adjacent partner seats (cp-event/12); chunk never loads with the flag off -->
+            <LazyCpEventSeatHearts v-if="cpEnabled" />
+            <!-- Lucky Number: countdown / drawn-number reveal over the grid (lucky-number/01) -->
+            <RoomLuckyNumberCenter />
           </div>
-          <!-- CP hearts between adjacent partner seats (cp-event/12); chunk never loads with the flag off -->
-          <LazyCpEventSeatHearts v-if="cpEnabled" />
-          <!-- Lucky Number: countdown / drawn-number reveal over the grid (lucky-number/01) -->
-          <RoomLuckyNumberCenter />
         </div>
 
         <LazyRoomSeatDrawer />

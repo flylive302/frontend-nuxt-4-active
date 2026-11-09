@@ -27,12 +27,14 @@ const showTheme = ref(false)
 const showPrivacy = ref(false)
 const showBlockList = ref(false)
 const showAudio = ref(false)
+const showVideo = ref(false)
 
 // ========================================
 // Stores & Composables
 // ========================================
 
 const roomStore = useRoomStore()
+const roomVideoStore = useRoomVideoStore()
 const fxPrefs = useFxPreferencesStore()
 // Tri-state labels on the MUTE axis (Auto = device tier decides, On = muted, Off = always plays).
 const FX_MUTE_LABELS: Record<FxMutePreference, string> = { auto: 'Auto', on: 'On', off: 'Off' }
@@ -163,6 +165,17 @@ watch(open, (isOpen) => {
             </span>
           </button>
 
+          <!-- Video (owner / admin; only when the server has the Room Video feature on) -->
+          <button
+            v-if="canEdit && roomVideoStore.enabled"
+            type="button"
+            class="aspect-square rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
+            @click="showVideo = true"
+          >
+            <UIcon name="i-lucide-monitor-play" class="size-7 text-primary" />
+            <span class="text-xs text-neutral-200">Video</span>
+          </button>
+
           <!-- Audio (everyone) -->
           <button
             type="button"
@@ -255,6 +268,8 @@ watch(open, (isOpen) => {
         />
 
         <RoomSettingsAudioDrawer v-model:open="showAudio" />
+
+        <RoomVideoSourceDrawer v-if="canEdit" v-model:open="showVideo" />
 
         <RoomAudioPlayerUploader
           v-model:open="showMusicUploader"

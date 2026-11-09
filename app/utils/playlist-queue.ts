@@ -99,6 +99,27 @@ export class PlaylistQueue {
   }
 
   /**
+   * Drop every track (well-defined empty queue, `current === null`). Used when
+   * the signed-in account changes: one account's Playlist must never surface
+   * under another (room-music-playlist/01).
+   */
+  clear(): void {
+    this.items.length = 0;
+    this.index = -1;
+  }
+
+  /**
+   * Flag the track with `id` as unavailable (its saved bytes are gone). The row
+   * stays so the DJ can see what was lost and remove it. Returns the track, or
+   * `null` for an unknown id.
+   */
+  markUnavailable(id: string): Track | null {
+    const track = this.items.find((t) => t.id === id) ?? null;
+    if (track) track.unavailable = true;
+    return track;
+  }
+
+  /**
    * Remove the track with `id`. Removing the current track is a skip: the next
    * track takes the current slot (or, if it was the last, `current` falls back
    * to the new last track). Removing a track before the current one keeps the

@@ -252,6 +252,52 @@ describe('PlaylistQueue', () => {
     })
   })
 
+  describe('clear', () => {
+    it('empties the queue and leaves current null', () => {
+      queue.add([audioFile('a.mp3'), audioFile('b.mp3'), audioFile('c.mp3')])
+      queue.next()
+
+      queue.clear()
+
+      expect(queue.tracks).toEqual([])
+      expect(queue.length).toBe(0)
+      expect(queue.current).toBeNull()
+      expect(queue.hasNext).toBe(false)
+      expect(queue.hasPrev).toBe(false)
+      expect(queue.next()).toBeNull()
+      expect(queue.prev()).toBeNull()
+    })
+
+    it('is a safe no-op on an already empty queue', () => {
+      expect(() => queue.clear()).not.toThrow()
+      expect(queue.current).toBeNull()
+      expect(queue.tracks).toEqual([])
+    })
+
+    it('makes the first track added after clear the current one', () => {
+      queue.add([audioFile('old-a.mp3'), audioFile('old-b.mp3')])
+      queue.next()
+      queue.clear()
+
+      const created = queue.add([audioFile('new-a.mp3'), audioFile('new-b.mp3')])
+
+      expect(titles(queue)).toEqual(['new-a', 'new-b'])
+      expect(queue.current).toBe(created[0])
+      expect(queue.hasPrev).toBe(false)
+      expect(queue.hasNext).toBe(true)
+    })
+
+    it('restores the full capacity after clearing a full queue', () => {
+      queue.add(Array.from({ length: PLAYLIST_MAX_TRACKS }, (_, i) => audioFile(`t${i}.mp3`)))
+      queue.clear()
+
+      const created = queue.add(Array.from({ length: PLAYLIST_MAX_TRACKS + 5 }, (_, i) => audioFile(`n${i}.mp3`)))
+
+      expect(created).toHaveLength(PLAYLIST_MAX_TRACKS)
+      expect(queue.length).toBe(PLAYLIST_MAX_TRACKS)
+    })
+  })
+
   describe('queue-length cap', () => {
     it('enforces the cap, ignoring files beyond the limit', () => {
       const many = Array.from({ length: PLAYLIST_MAX_TRACKS + 10 }, (_, i) => audioFile(`t${i}.mp3`))
@@ -279,5 +325,21 @@ describe('PlaylistQueue', () => {
     snapshot.push(audioFile('hacked.mp3') as unknown as Track)
 
     expect(queue.tracks).toHaveLength(2)
+  })
+})
+
+describe('PlaylistQueue — markUnavailable (room-music-playlist/01)', () => {
+  it('flags only the named track and keeps it in place', () => {
+    const queue = new PlaylistQueue()
+    const [a, b] = queue.add([new File(['a'], 'a.mp3'), new File(['b'], 'b.mp3')])
+
+    expect(queue.markUnavailable(b!.id)).toBe(b)
+    expect(queue.tracks.map((t) => t.unavailable ?? false)).toEqual([false, true])
+    expect(queue.tracks.map((t) => t.id)).toEqual([a!.id, b!.id])
+  })
+
+  it('returns null for an unknown id', () => {
+    const queue = new PlaylistQueue()
+    expect(queue.markUnavailable('nope')).toBeNull()
   })
 })

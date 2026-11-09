@@ -72,6 +72,7 @@ export default defineNuxtConfig({
             'composables/auth',
             'composables/room',
             'composables/room/audio',
+            'composables/room/video',
             'composables/gift',
             'composables/lucky',
             'composables/agency',

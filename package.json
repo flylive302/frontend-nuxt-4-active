@@ -78,6 +78,7 @@
     "@nuxt/test-utils": "^3.19.2",
     "@types/node": "^24.10.2",
     "eslint": "^9.37.0",
+    "fake-indexeddb": "^6.2.5",
     "imagekit": "^6.0.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.9.3",

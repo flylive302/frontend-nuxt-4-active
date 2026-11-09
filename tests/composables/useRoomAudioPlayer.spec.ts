@@ -7,7 +7,8 @@
  * GATE → EXECUTE → REACT logic runs for real. Behavior only — no DOM/gesture
  * assertions; the drawer component only binds a tap to `playTrack`.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { IDBFactory } from 'fake-indexeddb'
 import { ref, reactive, computed, readonly, watch, nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 
@@ -21,9 +22,19 @@ vi.stubGlobal('readonly', readonly)
 vi.stubGlobal('watch', watch)
 vi.stubGlobal('nextTick', nextTick)
 
-const mockUser = { id: 'user-1' }
+const mockUser = reactive({ id: 'user-1' })
 vi.stubGlobal('useAuthStore', () => ({ user: mockUser }))
 vi.stubGlobal('useRoomStore', () => ({ currentRoom: { id: 'room-1' } }))
+// room-music-playlist/01: the deck's role gate (owner OR admin of the current
+// Room). Reactive so a test can demote / late-load the role and see the
+// computed follow. Defaults to owner so the pre-existing suites are unchanged.
+const mockIsRoomOwner = ref(true)
+const mockMembershipStore = reactive<{ myMembership: { room_id: string; role: string } | null }>({ myMembership: null })
+// Mirrors useRoomPermissions.isRoomAdmin: admin of the CURRENT room ('room-1') only.
+const mockIsRoomAdmin = computed(() =>
+  mockMembershipStore.myMembership?.room_id === 'room-1' && mockMembershipStore.myMembership.role === 'admin',
+)
+vi.stubGlobal('useRoomPermissions', () => ({ isRoomOwner: mockIsRoomOwner, isRoomAdmin: mockIsRoomAdmin }))
 // Shared toast spy so waiting-queue tests can assert toast color/copy.
 const toastAdd = vi.fn()
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
@@ -237,10 +248,363 @@ describe('useRoomAudioPlayer — playlist retention across cleanup/revoke', () =
     const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
     const player = useRoomAudioPlayer(mockSocket as never)
 
-    // ADR 0006: File handles cannot survive a reload — only a fresh JS module
-    // graph (i.e. an actual page load) clears the Playlist. `cleanup()` itself
-    // intentionally does not do this (see the retention tests above).
+    // A fresh JS module graph (an actual page load) starts empty when the
+    // device store holds nothing — here there is no IndexedDB at all, so the
+    // restore is a silent no-op. `cleanup()` itself never clears the queue
+    // (see the retention tests above); the reload-restore cases live in the
+    // room-music-playlist/01 cause-2 suite below.
+    await player.restoreSavedPlaylist()
     expect(player.queueTracks.value).toHaveLength(0)
+  })
+})
+
+// ============================================
+// Rejoin re-reveal (room-music-playlist/01, cause 1)
+// ============================================
+describe('useRoomAudioPlayer — deck re-reveal on rejoin (room-music-playlist/01)', () => {
+  const mockSocket = ref({ emit: vi.fn(), on: vi.fn(), off: vi.fn() })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    mockIsRoomOwner.value = true
+    mockMembershipStore.myMembership = null
+  })
+
+  it('leave → rejoin as owner shows the retained playlist deck without re-opening it', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.addTracks([audioFile('a.mp3'), audioFile('b.mp3')])
+    await player.play('room-1')
+    player.cleanup('room-1') // leave
+
+    // Rejoin: nothing calls play/addTracks/playTrack — the deck must already show.
+    expect(player.isActive.value).toBe(false)
+    expect(player.isPlayerVisible.value).toBe(true)
+  })
+
+  it('leave with an empty playlist hides the deck', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    const [trackA] = player.addTracks([audioFile('a.mp3')])
+    await player.removeTrack(trackA!.id, 'room-1') // emptied; deck still open
+    player.cleanup('room-1')
+
+    expect(player.isPlayerVisible.value).toBe(false)
+  })
+
+  it('rejoining a Room where the user is only a member keeps the deck hidden', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.addTracks([audioFile('a.mp3')])
+    player.cleanup('room-1')
+    mockIsRoomOwner.value = false // next Room: plain member
+
+    expect(player.isPlayerVisible.value).toBe(false)
+  })
+
+  it('an admin sees the deck once their membership loads (late role fetch)', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.addTracks([audioFile('a.mp3')])
+    player.cleanup('room-1')
+    mockIsRoomOwner.value = false
+    expect(player.isPlayerVisible.value).toBe(false) // role not loaded yet
+
+    mockMembershipStore.myMembership = { room_id: 'room-1', role: 'admin' }
+    expect(player.isPlayerVisible.value).toBe(true)
+  })
+
+  it('a stale admin membership from a different Room does not grant the deck', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.addTracks([audioFile('a.mp3')])
+    player.cleanup('room-1')
+    mockIsRoomOwner.value = false
+    mockMembershipStore.myMembership = { room_id: 'room-other', role: 'admin' }
+
+    expect(player.isPlayerVisible.value).toBe(false)
+  })
+
+  it('a live session keeps its deck even if the role momentarily reads as member', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+    mockIsRoomOwner.value = false // e.g. a membership refetch failed mid-session
+
+    expect(player.isPlayerVisible.value).toBe(true)
+  })
+
+  it('a deck dismissed with ✕ stays dismissed when no leave happens (socket reconnect path)', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.addTracks([audioFile('a.mp3')])
+    player.closePlayer('room-1')
+    // Reconnect re-runs joinRoom → setupListeners/initFromJoinState only.
+    player.setupListeners()
+    player.initFromJoinState(null)
+
+    expect(player.isPlayerVisible.value).toBe(false)
+  })
+})
+
+// ============================================
+// Survives process death (room-music-playlist/01, cause 2)
+// ============================================
+describe('useRoomAudioPlayer — playlist survives a reload via IndexedDB (room-music-playlist/01)', () => {
+  const mockSocket = ref({ emit: vi.fn(), on: vi.fn(), off: vi.fn() })
+  type PlayerModule = typeof import('../../app/composables/room/audio/useRoomAudioPlayer')
+
+  /** A reload: drop every module (singleton queue, id counter, key map) but keep the device's IndexedDB. */
+  async function reload(): Promise<ReturnType<PlayerModule['useRoomAudioPlayer']>> {
+    vi.resetModules()
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    return useRoomAudioPlayer(mockSocket as never)
+  }
+
+  /** Saved records currently on the "device" (reads the same fake IndexedDB). */
+  async function savedRecords() {
+    const { listAllRecords } = await import('../../app/services/playlistTrackStore')
+    return listAllRecords()
+  }
+
+  function sizedAudioFile(name: string, bytes: number): File {
+    return new File([new Uint8Array(bytes)], name, { type: 'audio/mpeg' })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    mockIsRoomOwner.value = true
+    mockMembershipStore.myMembership = null
+    mockUser.id = 'user-1'
+    // Fresh, empty device store per test.
+    ;(globalThis as { indexedDB?: IDBFactory }).indexedDB = new IDBFactory()
+  })
+
+  afterEach(() => {
+    // Other suites in this file run without IndexedDB (silent-degrade path).
+    delete (globalThis as { indexedDB?: IDBFactory }).indexedDB
+    mockUser.id = 'user-1'
+  })
+
+  it('songs added before an app kill are rebuilt, in order, on the next join — deck shown', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3'), audioFile('b.mp3'), audioFile('c.mp3')])
+    await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(3))
+
+    const after = await reload()
+    expect(after.queueTracks.value).toHaveLength(0) // nothing until a join restores
+    await after.restoreSavedPlaylist()
+
+    expect(after.queueTracks.value.map((t) => t.title)).toEqual(['a', 'b', 'c'])
+    expect(after.currentTrackId.value).toBe(after.queueTracks.value[0]!.id)
+    expect(after.isPlayerVisible.value).toBe(true)
+    // The restored File carries the original bytes.
+    expect(after.queueTracks.value[0]!.file.size).toBe(3)
+  })
+
+  it('a reorder survives the reload', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3'), audioFile('b.mp3'), audioFile('c.mp3')])
+    before.reorderTracks(0, 2) // a → end
+    await vi.waitFor(async () => {
+      const positions = (await savedRecords()).sort((x, y) => x.position - y.position).map((r) => r.name)
+      expect(positions).toEqual(['b.mp3', 'c.mp3', 'a.mp3'])
+    })
+
+    const after = await reload()
+    await after.restoreSavedPlaylist()
+    expect(after.queueTracks.value.map((t) => t.title)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('a removed song is deleted from the device and does not come back', async () => {
+    const before = await reload()
+    const [trackA] = before.addTracks([audioFile('a.mp3'), audioFile('b.mp3')])
+    await before.removeTrack(trackA!.id, 'room-1')
+    await vi.waitFor(async () => expect((await savedRecords()).map((r) => r.name)).toEqual(['b.mp3']))
+
+    const after = await reload()
+    await after.restoreSavedPlaylist()
+    expect(after.queueTracks.value.map((t) => t.title)).toEqual(['b'])
+  })
+
+  it('restore runs once per account per session — a reconnect re-join does not duplicate songs', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3')])
+    await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(1))
+
+    const after = await reload()
+    await after.restoreSavedPlaylist()
+    await after.restoreSavedPlaylist() // second join (reconnect)
+    expect(after.queueTracks.value).toHaveLength(1)
+  })
+
+  it('songs are per account: another account on the same device never sees them', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3')])
+    await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(1))
+
+    // Same tab: user-1 logs out, user-2 logs in and joins a room.
+    mockUser.id = 'user-2'
+    await before.restoreSavedPlaylist()
+    expect(before.queueTracks.value).toHaveLength(0)
+    expect(before.isPlayerVisible.value).toBe(false)
+    // user-1's saved copy is untouched on disk for when they return.
+    expect((await savedRecords()).map((r) => r.userId)).toEqual(['user-1'])
+
+    mockUser.id = 'user-1'
+    const back = await reload()
+    await back.restoreSavedPlaylist()
+    expect(back.queueTracks.value.map((t) => t.title)).toEqual(['a'])
+  })
+
+  it('a song that does not fit the storage budget stays session-only and the DJ is told', async () => {
+    const realNavigator = globalThis.navigator
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { storage: { estimate: async () => ({ quota: 20, usage: 0 }), persist: async () => false } },
+    })
+    try {
+      const player = await reload()
+      // Budget = min(500 MB, 20 B × 0.5) = 10 B: the 4-byte song fits, the 50-byte one cannot.
+      player.addTracks([sizedAudioFile('small.mp3', 4), sizedAudioFile('huge.mp3', 50)])
+      await vi.waitFor(() => expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Storage full' })))
+
+      expect((await savedRecords()).map((r) => r.name)).toEqual(['small.mp3'])
+      expect(player.queueTracks.value).toHaveLength(2) // still playable this session
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: realNavigator })
+    }
+  })
+
+  it('after logout → login as another account, the previous queue is hidden even before a restore', async () => {
+    const player = await reload()
+    player.addTracks([audioFile('a.mp3')])
+    player.cleanup('room-1') // logout funnels through leave → cleanup
+    mockUser.id = 'user-2' // owns the next room too (mockIsRoomOwner stays true)
+
+    expect(player.isPlayerVisible.value).toBe(false)
+  })
+
+  it('a song whose saved bytes are gone comes back as an unavailable row the DJ can remove', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3'), audioFile('b.mp3')])
+    await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(2))
+    const orphanKey = (await savedRecords()).find((r) => r.name === 'b.mp3')!.key
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('flylive-playlist')
+      open.onsuccess = () => {
+        const tx = open.result.transaction('blobs', 'readwrite')
+        tx.objectStore('blobs').delete(orphanKey)
+        tx.oncomplete = () => { open.result.close(); resolve() }
+        tx.onerror = () => reject(tx.error)
+      }
+    })
+
+    const after = await reload()
+    await after.restoreSavedPlaylist()
+    expect(after.queueTracks.value.map((t) => [t.title, t.unavailable ?? false])).toEqual([['a', false], ['b', true]])
+
+    await after.removeTrack(after.queueTracks.value[1]!.id, 'room-1')
+    await vi.waitFor(async () => expect((await savedRecords()).map((r) => r.name)).toEqual(['a.mp3']))
+  })
+
+  it('a failed read is retried on the next join instead of treating the account as empty', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3')])
+    await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(1))
+
+    const after = await reload()
+    const store = await import('../../app/services/playlistTrackStore')
+    const spy = vi.spyOn(store, 'listSavedTracks').mockResolvedValueOnce(null)
+    await after.restoreSavedPlaylist() // first join: read fails
+    expect(after.queueTracks.value).toHaveLength(0)
+    spy.mockRestore()
+
+    await after.restoreSavedPlaylist() // next join: retried
+    expect(after.queueTracks.value.map((t) => t.title)).toEqual(['a'])
+  })
+
+  it('over budget: the least-recently-played saved song is evicted (still playable) and the DJ is told', async () => {
+    const realNavigator = globalThis.navigator
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      // Budget = min(500 MB, 20 B × 0.5) = 10 B.
+      value: { storage: { estimate: async () => ({ quota: 20, usage: 0 }), persist: async () => false } },
+    })
+    try {
+      const player = await reload()
+      player.addTracks([sizedAudioFile('old.mp3', 6)])
+      await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(1))
+
+      player.addTracks([sizedAudioFile('new.mp3', 6)]) // 6 + 6 > 10 → evict old.mp3 after saving new.mp3
+      await vi.waitFor(async () => expect((await savedRecords()).map((r) => r.name)).toEqual(['new.mp3']))
+
+      expect(player.queueTracks.value.map((t) => t.title)).toEqual(['old', 'new']) // old still queued
+      await vi.waitFor(() => expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({
+        description: expect.stringContaining("you played longest ago won't be kept"),
+      })))
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: realNavigator })
+    }
+  })
+
+  it('a save that fails never costs other saved songs (save first, evict after)', async () => {
+    const realNavigator = globalThis.navigator
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { storage: { estimate: async () => ({ quota: 20, usage: 0 }), persist: async () => false } },
+    })
+    try {
+      const player = await reload()
+      player.addTracks([sizedAudioFile('old.mp3', 6)])
+      await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(1))
+
+      const store = await import('../../app/services/playlistTrackStore')
+      const spy = vi.spyOn(store, 'saveTrack').mockResolvedValueOnce('error')
+      player.addTracks([sizedAudioFile('new.mp3', 6)])
+      await vi.waitFor(() => expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({
+        description: expect.stringContaining("Couldn't save 1 song"),
+      })))
+      spy.mockRestore()
+
+      expect((await savedRecords()).map((r) => r.name)).toEqual(['old.mp3'])
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: realNavigator })
+    }
+  })
+
+  it('a restored song whose bytes the OS evicted is marked unavailable with a remove hint', async () => {
+    const before = await reload()
+    before.addTracks([audioFile('a.mp3')])
+    await vi.waitFor(async () => expect(await savedRecords()).toHaveLength(1))
+
+    const after = await reload()
+    await after.restoreSavedPlaylist()
+
+    const { createAudioPlaybackEngine, AudioPlaybackError } = await import('../../app/services/audioPlaybackEngine')
+    const engine = createMockEngine()
+    const unreadable = Object.assign(new AudioPlaybackError('could not decode'), {
+      cause: new DOMException('blob gone', 'NotFoundError'),
+    })
+    engine.play.mockRejectedValueOnce(unreadable)
+    vi.mocked(createAudioPlaybackEngine).mockReturnValueOnce(engine as never)
+
+    await after.play('room-1')
+
+    expect(after.queueTracks.value[0]!.unavailable).toBe(true)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({
+      description: expect.stringContaining('no longer saved on this device'),
+    }))
   })
 })
 

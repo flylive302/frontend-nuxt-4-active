@@ -2,6 +2,7 @@ import type { types as mediasoupTypes } from 'mediasoup-client';
 import type { Socket } from 'socket.io-client';
 import type { MinimalUser } from '../user/bootstrap';
 import type { MusicPlayerJoinState } from './audio-player';
+import type { RoomVideoJoinAckFields } from './video';
 import type { SlidePlayPayload } from '../slide';
 import type { LuckyRoomResultPayload } from '../lucky';
 
@@ -52,6 +53,10 @@ export interface JoinRoomResponse {
   luckyNumberEnabled?: boolean;
   /** lucky-number/03: live round snapshot for late join/reconnect. Non-null only while a round is live. */
   luckyNumber?: LuckyNumberSnapshot | null;
+  /** room-video-player: flag echo, live Snapshot and the MSAB clock (see `RoomVideoJoinAckFields`). */
+  videoPlayerEnabled?: RoomVideoJoinAckFields['videoPlayerEnabled'];
+  videoPlayer?: RoomVideoJoinAckFields['videoPlayer'];
+  serverNow?: RoomVideoJoinAckFields['serverNow'];
   error?: string;
   /** Present when `error === 'room_blocked'` (ADR 0017 / room-blocks 03). */
   permanent?: boolean;
