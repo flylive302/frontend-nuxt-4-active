@@ -63,3 +63,13 @@ Single-DJ, client-local, **device-persistent** playlist streamed through the exi
 - `composables/room/audio/useRoomAudioPlayer.ts` — thin orchestrator composing the queue + engine + `useMediasoupStreaming` + MSAB socket coordination. **No raw Web Audio code here.** Owns auto-advance (`engine.onEnded → queue.next()`), owner force-take (`takeover`), and the targeted-`revoked` path.
 
 Owner-only force-take (`audioPlayer:takeover`) overwrites the mutex + revokes the displaced DJ; non-owner admins cannot interrupt. The queue is never cleared on leave or refresh; it survives app kill on the same device and is cleared only on an account switch (the other account's saved songs stay on disk). The deck re-shows on rejoin for owner/admin when the queue has songs. Components stay INTENT-only; `player.vue` uses `vue-draggable-plus` for drag-to-reorder.
+
+## Room video (watch together)
+
+A Room Video is a synced *link*, never a stream (ADR 0049): each device plays the Source itself; MSAB keeps only the server-authoritative Snapshot. Shown only when the join ack says `videoPlayerEnabled` (fleet-wide `VIDEO_PLAYER_ENABLED`, on since 2026-11-10).
+
+- `utils/video-source.ts` (link → Source) · `utils/video-clock.ts` (Snapshot → expected position, clock offset) · `utils/video-platform.ts` (per-platform YouTube embed + mount rule) · `utils/video-start-collapsed.ts` — pure.
+- `stores/roomVideo.ts` — Snapshot + Watcher-local flags (collapsed, muted, needsTap, playbackFailed) + clock samples. Ephemeral, never persisted.
+- `services/roomVideoHtmlAdapter.ts` (MP4 / hls.js) and `services/roomVideoYouTubeAdapter.ts` (IFrame API) implement `VideoPlayerAdapter` (`types/room/video.ts`); adapters never read stores or the socket.
+- `composables/room/video/`: `useRoomVideoSync` owns the one adapter and drives it from the Snapshot (drift > 1.5 s → one seek; Controller heartbeat / `ended`); `useRoomVideoActions` = the emits (GATE → EXECUTE → REACT); `useRoomVideoListeners` = socket → store; `useRoomVideoYouTube` = platform read + "Open on YouTube".
+- Traps: YouTube `seekTo` on a paused player starts playback — the adapter gates on intent; on Capacitor a collapsed Watcher's YouTube iframe is unmounted (the Controller's never is); iOS never embeds YouTube (card) and the drawer refuses a YouTube start there — `useRoomVideoActions` has no iOS GATE yet; music and video share one media slot (`media_slot_busy`).
