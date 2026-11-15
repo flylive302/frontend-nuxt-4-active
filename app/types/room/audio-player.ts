@@ -131,6 +131,16 @@ export interface AudioPlayerGrantedEvent {
   roomId: string;
 }
 
+/**
+ * MSAB → room (broadcast): a Room Video took the media slot and the music
+ * waiting line was cleared (room-music-playlist/04, rule "clear the line").
+ * Only clients that were waiting react; everyone else ignores it.
+ */
+export interface AudioPlayerQueueClearedEvent {
+  roomId: string;
+  reason: 'video';
+}
+
 /** Music player state from room:join ack */
 export interface MusicPlayerJoinState {
   userId: number;

@@ -31,6 +31,7 @@ import type {
   AudioPlayerStateChangedEvent,
   AudioPlayerRevokedEvent,
   AudioPlayerGrantedEvent,
+  AudioPlayerQueueClearedEvent,
   AudioPlayerTakeoverPayload,
   AudioPlayerResponse,
   MusicPlayerJoinState,
@@ -105,6 +106,13 @@ let engine: AudioPlaybackEngine | null = null;
  * own saved songs — never the previous account's.
  */
 const queueOwnerKey = ref<string | null>(null);
+/**
+ * The music socket handlers currently registered, shared across every
+ * `useRoomAudioPlayer()` instance so any instance's cleanup removes them
+ * (room-music-playlist/06).
+ */
+type MusicSocketHandlers = Record<string, (event: never) => void>;
+let registeredHandlers: MusicSocketHandlers | null = null;
 let restoredForUserKey: string | null = null;
 
 let positionInterval: ReturnType<typeof setInterval> | null = null;
@@ -760,49 +768,89 @@ export function useRoomAudioPlayer(socket: Ref<AudioSocket | null>) {
     });
   }
 
+  /**
+   * room-music-playlist/04: a Room Video took the media slot and MSAB cleared the
+   * music waiting line (broadcast `audioPlayer:queueCleared`). GATE: only a client
+   * actually waiting in THIS room reacts — the server already dropped our spot, so
+   * no `leaveQueue` emit. The Playlist is kept; the DJ presses play again later.
+   */
+  function handleQueueCleared(event: AudioPlayerQueueClearedEvent): void {
+    if (!isWaitingForSlot.value) return;
+    if (event.roomId !== roomStore.currentRoom?.id?.toString()) return;
+
+    clearWaiting();
+    toast.add({
+      title: 'Music',
+      description: 'A video started, so the music line was cleared. Your playlist is kept — tap play again later.',
+      color: 'info',
+    });
+  }
+
+  /** Mirror other DJs' broadcasts into `playerState` (passive listener). */
+  function handleStateChanged(event: AudioPlayerStateChangedEvent): void {
+    // Don't override local state from our own broadcast.
+    if (event.userId === authStore.user?.id) return;
+
+    switch (event.state) {
+      case 'playing':
+        playerState.status = 'playing';
+        playerState.userId = event.userId;
+        playerState.title = event.title ?? null;
+        playerState.duration = event.duration ?? 0;
+        playerState.position = event.position;
+        break;
+      case 'paused':
+        playerState.status = 'paused';
+        playerState.position = event.position;
+        break;
+      case 'stopped':
+        playerState.status = 'idle';
+        playerState.userId = null;
+        playerState.title = null;
+        playerState.duration = 0;
+        playerState.position = 0;
+        break;
+    }
+  }
+
   // ========================================
   // Socket Event Listeners
   // ========================================
 
-  /** Listen for other DJs' state broadcasts (passive listeners). */
+  /**
+   * Listen for other DJs' state broadcasts (passive listeners). Runs on every
+   * (re)join — including the socket auto-reconnect re-join, which never passes
+   * through `cleanup()` — so drop our previous registrations first; Socket.IO
+   * keeps listeners across reconnects and does not dedupe them
+   * (room-music-playlist/06).
+   */
   function setupListeners(): void {
     if (!socket.value) return;
+    cleanupListeners();
 
-    socket.value.on('audioPlayer:revoked', handleRevoked);
-    socket.value.on('audioPlayer:granted', handleGranted); // music-dj-queue/04
-
-    socket.value.on('audioPlayer:stateChanged', (event: AudioPlayerStateChangedEvent) => {
-      // Don't override local state from our own broadcast.
-      if (event.userId === authStore.user?.id) return;
-
-      switch (event.state) {
-        case 'playing':
-          playerState.status = 'playing';
-          playerState.userId = event.userId;
-          playerState.title = event.title ?? null;
-          playerState.duration = event.duration ?? 0;
-          playerState.position = event.position;
-          break;
-        case 'paused':
-          playerState.status = 'paused';
-          playerState.position = event.position;
-          break;
-        case 'stopped':
-          playerState.status = 'idle';
-          playerState.userId = null;
-          playerState.title = null;
-          playerState.duration = 0;
-          playerState.position = 0;
-          break;
-      }
-    });
+    const handlers: MusicSocketHandlers = {
+      'audioPlayer:stateChanged': handleStateChanged,
+      'audioPlayer:revoked': handleRevoked,
+      'audioPlayer:granted': handleGranted, // music-dj-queue/04
+      'audioPlayer:queueCleared': handleQueueCleared, // room-music-playlist/04
+    };
+    for (const [event, handler] of Object.entries(handlers)) {
+      socket.value.on(event, handler as (...args: unknown[]) => void);
+    }
+    registeredHandlers = handlers;
   }
 
+  /**
+   * Remove exactly the handlers `setupListeners` registered — whichever
+   * `useRoomAudioPlayer()` instance registered them (the module-scoped record),
+   * since join and leave can run through different `useRoomAudio()` call sites.
+   */
   function cleanupListeners(): void {
-    if (!socket.value) return;
-    socket.value.off('audioPlayer:stateChanged');
-    socket.value.off('audioPlayer:revoked', handleRevoked);
-    socket.value.off('audioPlayer:granted', handleGranted); // music-dj-queue/04
+    if (!socket.value || !registeredHandlers) return;
+    for (const [event, handler] of Object.entries(registeredHandlers)) {
+      socket.value.off(event, handler as (...args: unknown[]) => void);
+    }
+    registeredHandlers = null;
   }
 
   /** Sync UI when joining a room where music is already playing. */

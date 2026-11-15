@@ -852,6 +852,76 @@ describe('useRoomAudioPlayer — waiting queue (music-dj-queue/04)', () => {
 
     expect(player.isWaiting.value).toBe(false)
   })
+
+  it('(g) audioPlayer:queueCleared (video) while waiting → waiting cleared + one info toast (room-music-playlist/04)', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.setupListeners()
+
+    emitAsyncMock.mockResolvedValue({ success: false, queued: true, position: 1 })
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+    toastAdd.mockClear()
+
+    getListener('audioPlayer:queueCleared')!({ roomId: 'room-1' })
+
+    expect(player.isWaiting.value).toBe(false)
+    expect(player.queuePosition.value).toBeNull()
+    expect(toastAdd).toHaveBeenCalledTimes(1)
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'info', description: expect.stringContaining('video started') }),
+    )
+  })
+
+  it('(h) audioPlayer:queueCleared while NOT waiting, or for another room → ignored, no toast', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+    player.setupListeners()
+    const onCleared = getListener('audioPlayer:queueCleared')!
+
+    onCleared({ roomId: 'room-1' })
+    expect(toastAdd).not.toHaveBeenCalled()
+
+    emitAsyncMock.mockResolvedValue({ success: false, queued: true, position: 1 })
+    player.addTracks([audioFile('a.mp3')])
+    await player.play('room-1')
+    toastAdd.mockClear()
+
+    onCleared({ roomId: 'room-2' })
+    expect(player.isWaiting.value).toBe(true)
+    expect(toastAdd).not.toHaveBeenCalled()
+  })
+
+  it('(i) setupListeners twice (reconnect re-join) → previous handlers removed first, never stacked (room-music-playlist/06)', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const player = useRoomAudioPlayer(mockSocket as never)
+
+    player.setupListeners()
+    player.setupListeners()
+
+    for (const event of ['audioPlayer:stateChanged', 'audioPlayer:revoked', 'audioPlayer:granted', 'audioPlayer:queueCleared']) {
+      const ons = mockSocket.value.on.mock.calls.filter(([e]) => e === event)
+      const offs = mockSocket.value.off.mock.calls.filter(([e]) => e === event)
+      expect(ons, event).toHaveLength(2)
+      // The second setup removed the first registration with the SAME handler
+      // reference (a bare `off(event)` would also strip other modules' handlers).
+      expect(offs.some(([, fn]) => fn === ons[0]![1]), event).toBe(true)
+    }
+  })
+
+  it('(j) cleanup from ANOTHER instance removes the handlers the first instance registered', async () => {
+    const { useRoomAudioPlayer } = await import('../../app/composables/room/audio/useRoomAudioPlayer')
+    const joiner = useRoomAudioPlayer(mockSocket as never)
+    const leaver = useRoomAudioPlayer(mockSocket as never)
+
+    joiner.setupListeners()
+    const registered = mockSocket.value.on.mock.calls.map(([e, fn]) => [e, fn])
+    leaver.cleanupListeners()
+
+    for (const [event, fn] of registered) {
+      expect(mockSocket.value.off).toHaveBeenCalledWith(event, fn)
+    }
+  })
 })
 
 // ============================================
