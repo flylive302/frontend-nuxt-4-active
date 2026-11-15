@@ -145,7 +145,7 @@ useBackDismiss(isOverlayOpen, onBackToPicker);
     docs/reference/joyplay/joyplay-integration-design.md.
 
     The `full` layout is the exception to "stock": it does not render in this
-    drawer at all. See `RoomGamesFullScreenOverlay` below. While it is up this
+    drawer at all. See `GamesFullScreenOverlay` below. While it is up this
     drawer is CLOSED (`isDrawerOpen`), and its `update:open` is filtered through
     `onDrawerOpenChange` — see the comment there.
 
@@ -174,7 +174,7 @@ useBackDismiss(isOverlayOpen, onBackToPicker);
     </UButton>
 
     <template #content>
-      <RoomGamesPicker
+      <GamesPicker
         v-if="!container"
         :games="games"
         :status="catalogStatus"
@@ -192,7 +192,7 @@ useBackDismiss(isOverlayOpen, onBackToPicker);
         class="relative overflow-hidden"
         :class="container.panelClass"
       >
-        <RoomGamesFrame
+        <GamesFrame
           v-model:frame="frame"
           :game-url="gameUrl"
           :status="status"
@@ -205,13 +205,13 @@ useBackDismiss(isOverlayOpen, onBackToPicker);
     </template>
   </UDrawer>
 
-  <RoomGamesFullScreenOverlay
+  <GamesFullScreenOverlay
     :open="isOverlayOpen"
     :title="gameTitle"
     @back="onBackToPicker"
     @close="onCloseSurface"
   >
-    <RoomGamesFrame
+    <GamesFrame
       v-model:frame="frame"
       :game-url="gameUrl"
       :status="status"
@@ -220,5 +220,5 @@ useBackDismiss(isOverlayOpen, onBackToPicker);
       @loaded="onFrameLoaded"
       @retry="retry"
     />
-  </RoomGamesFullScreenOverlay>
+  </GamesFullScreenOverlay>
 </template>

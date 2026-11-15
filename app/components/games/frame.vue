@@ -7,8 +7,10 @@
  * own component so the iframe's attributes exist ONCE instead of being copied into
  * both containers and drifting.
  *
- * The parent (`drawer.vue`) owns the `frame` ref that `useRoomGames` posts
- * balance messages through, so the element is handed back up via `v-model:frame`.
+ * Shared: lives outside the Room area so any games surface (the Room games
+ * drawer today) can render it. The parent owns the `frame` ref its pipeline composable posts messages
+ * through (`useRoomGames` in the Room drawer), so the element is handed back up via
+ * `v-model:frame`.
  */
 import type { ComponentPublicInstance } from 'vue';
 import type { GamePanelStatus } from '~/types/room/games';

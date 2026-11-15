@@ -67,7 +67,7 @@ const emit = defineEmits<{
 
     <ul v-else class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
       <li v-for="game in games" :key="game.game_id">
-        <RoomGamesTile :game="game" @select="emit('select', $event)" />
+        <GamesTile :game="game" @select="emit('select', $event)" />
       </li>
     </ul>
   </div>
