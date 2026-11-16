@@ -25,6 +25,8 @@ const { openBanner, opening } = useBannerActions(enterRoom)
 
 <template>
   <main>
+    <!-- Fly games grid, above the events: renders nothing at all unless this player has a `games_page` game. -->
+    <GamesDiscoverSection />
     <SectionTitle class="px-3">Discover all events</SectionTitle>
     <!-- Loading: 3 rows at the banner's 3:1 box so the real list lands with no jump -->
     <div v-if="showSkeleton" class="flex flex-col gap-4 px-3 mt-6 pb-24" aria-busy="true">
