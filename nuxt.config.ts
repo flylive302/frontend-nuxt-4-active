@@ -90,6 +90,7 @@ export default defineNuxtConfig({
             'composables/slide',
             'composables/events',
             'composables/cp',
+            'composables/games',
         ],
     },
     // Native View Transitions API drives ALL page/layout animation (one system,

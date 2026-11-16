@@ -1,15 +1,15 @@
 // ========================================
-// games utils — layout → container, icon URL
+// games utils — layout → container, icon URL, origin, placement
 // ========================================
 
 import { describe, it, expect } from 'vitest'
-import { gameIconUrl, resolveGameContainer } from '~/utils/games'
+import { gameIconUrl, isGameOfferedIn, normalizeGameOrigin, resolveGameContainer } from '~/utils/games'
 import {
   GAME_ICON_BASE_PATH,
   GAME_SHEET_MAX_HEIGHT_DVH,
   GAME_SHEET_PANEL_CLASS,
 } from '~/constants/games'
-import type { GameLayout } from '~/types/room/games'
+import type { GameCatalogEntry, GameLayout } from '~/types/room/games'
 
 describe('resolveGameContainer', () => {
   it('renders a full layout in the full-viewport overlay, not a sheet', () => {
@@ -65,5 +65,59 @@ describe('gameIconUrl', () => {
 
   it('encodes an id that is not path-safe', () => {
     expect(gameIconUrl('a/b')).toBe('/images/games/a%2Fb.webp')
+  })
+})
+
+describe('normalizeGameOrigin', () => {
+  it('keeps a bare origin as is, with or without a trailing slash', () => {
+    expect(normalizeGameOrigin('https://flylive-ludo.flylive.workers.dev')).toBe('https://flylive-ludo.flylive.workers.dev')
+    expect(normalizeGameOrigin('https://flylive-ludo.flylive.workers.dev/')).toBe('https://flylive-ludo.flylive.workers.dev')
+    expect(normalizeGameOrigin('http://192.168.1.5:5175')).toBe('http://192.168.1.5:5175')
+  })
+
+  it.each([
+    ['empty', ''],
+    ['null', null],
+    ['undefined', undefined],
+    ['not a URL', 'flylive-ludo'],
+    ['a path', 'https://a.example/game'],
+    ['a query', 'https://a.example/?token=x'],
+    ['a fragment', 'https://a.example/#x'],
+    ['credentials', 'https://user:pw@a.example'],
+    ['a default port written out', 'https://a.example:443'],
+    ['a non-http scheme', 'javascript:alert(1)'],
+  ])('refuses %s', (_label, input) => {
+    expect(normalizeGameOrigin(input)).toBeNull()
+  })
+})
+
+describe('isGameOfferedIn', () => {
+  const JOYPLAY: GameCatalogEntry = { game_id: '10', name: 'Roulette', category: 'Casino', layout: 'half', provider: 'joyplay', places: ['room_lobby'], origin: null }
+  const LUDO: GameCatalogEntry = {
+    game_id: 'fly-ludo', name: 'Ludo', category: 'Casual', layout: 'full',
+    provider: 'fly', places: ['room_lobby', 'games_page'], origin: 'https://flylive-ludo.flylive.workers.dev',
+  }
+
+  it('offers a game where its places say', () => {
+    expect(isGameOfferedIn(JOYPLAY, 'room_lobby')).toBe(true)
+    expect(isGameOfferedIn(JOYPLAY, 'games_page')).toBe(false)
+    expect(isGameOfferedIn(LUDO, 'room_lobby')).toBe(true)
+    expect(isGameOfferedIn(LUDO, 'games_page')).toBe(true)
+  })
+
+  it('offers a row from a pre-fly-games backend (no provider, no places) in the Room lobby only', () => {
+    const legacy: GameCatalogEntry = { game_id: '10', name: 'Roulette', category: 'Casino', layout: 'half' }
+    expect(isGameOfferedIn(legacy, 'room_lobby')).toBe(true)
+    expect(isGameOfferedIn(legacy, 'games_page')).toBe(false)
+  })
+
+  it('never offers an unknown provider', () => {
+    expect(isGameOfferedIn({ ...JOYPLAY, provider: 'someone-else' }, 'room_lobby')).toBe(false)
+  })
+
+  it('never offers a Fly game without places or a usable origin', () => {
+    expect(isGameOfferedIn({ ...LUDO, places: undefined }, 'room_lobby')).toBe(false)
+    expect(isGameOfferedIn({ ...LUDO, origin: null }, 'room_lobby')).toBe(false)
+    expect(isGameOfferedIn({ ...LUDO, origin: 'https://a.example/path' }, 'room_lobby')).toBe(false)
   })
 })

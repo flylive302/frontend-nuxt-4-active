@@ -14,13 +14,22 @@
  *   - a failure is NOT retried on the next open — only `retry()`, which the player
  *     triggers with the "Try again" button, fetches again.
  */
-import type { GameCatalogEntry, GameCatalogStatus } from '~/types/room/games';
+import type { GameCatalogEntry, GameCatalogStatus, GamePlace } from '~/types/room/games';
+import { isGameOfferedIn } from '~/utils/games';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[GameCatalog]');
 
 /** Shown when the server answers 200 with something that is not a game list. */
 const MALFORMED_RESPONSE_MESSAGE = 'Games are unavailable right now.';
+
+export interface UseGameCatalogOptions {
+  /**
+   * Only the games offered at this place (`isGameOfferedIn`): unknown providers and
+   * games meant for elsewhere are left out. Omitted → every row, as served.
+   */
+  place?: GamePlace;
+}
 
 export interface UseGameCatalogReturn {
   games: Readonly<Ref<readonly GameCatalogEntry[]>>;
@@ -32,10 +41,14 @@ export interface UseGameCatalogReturn {
   retry: () => Promise<void>;
 }
 
-export function useGameCatalog(): UseGameCatalogReturn {
+export function useGameCatalog(options: UseGameCatalogOptions = {}): UseGameCatalogReturn {
   const { api, normalizeError } = useApi();
 
-  const games = ref<GameCatalogEntry[]>([]);
+  const allGames = ref<GameCatalogEntry[]>([]);
+  const games = computed<readonly GameCatalogEntry[]>(() => {
+    const { place } = options;
+    return place ? allGames.value.filter((game) => isGameOfferedIn(game, place)) : allGames.value;
+  });
   const status = ref<GameCatalogStatus>('idle');
   const errorMessage = ref<string | null>(null);
 
@@ -54,7 +67,7 @@ export function useGameCatalog(): UseGameCatalogReturn {
         throw new Error(MALFORMED_RESPONSE_MESSAGE);
       }
 
-      games.value = response.data;
+      allGames.value = response.data;
       status.value = 'ready';
     } catch (error) {
       status.value = 'error';
@@ -85,7 +98,7 @@ export function useGameCatalog(): UseGameCatalogReturn {
   }
 
   return {
-    games: readonly(games),
+    games,
     status: readonly(status),
     errorMessage: readonly(errorMessage),
     load,

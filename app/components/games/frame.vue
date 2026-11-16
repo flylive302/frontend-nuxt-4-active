@@ -8,8 +8,9 @@
  * both containers and drifting.
  *
  * Shared: lives outside the Room area so any games surface (the Room games
- * drawer today) can render it. The parent owns the `frame` ref its pipeline composable posts messages
- * through (`useRoomGames` in the Room drawer), so the element is handed back up via
+ * drawer today) can render it. The parent owns the `frame` ref its pipeline
+ * composable posts messages through (`useRoomGameLobby` in the Room drawer, shared
+ * by the JoyPlay and Fly launchers), so the element is handed back up via
  * `v-model:frame`.
  */
 import type { ComponentPublicInstance } from 'vue';
@@ -63,6 +64,10 @@ function bindFrame(el: Element | ComponentPublicInstance | null): void {
 
       Once the iframe is attached, THEIR loader takes over — it shows a real
       progress number, which is better than a spinner of ours.
+
+      Fly games (`useFlyGameBridge`) hold `launching` until the game answers
+      `launch_result ok:true` — the login handshake IS their launch, and the
+      board is not playable before it. A later re-login stays silent.
     -->
     <div
       v-if="status === 'launching'"

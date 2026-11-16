@@ -23,6 +23,18 @@ export type GamePanelStatus =
  */
 export type GameLayout = 'full' | 'half' | 'tall';
 
+/**
+ * Who hosts a game and how it logs the player in.
+ *
+ * - `joyplay` — `POST /games/launch` returns an iframe URL carrying a session token.
+ * - `fly`     — the iframe loads the bare game origin; a launch token is handed over
+ *               by `postMessage` after the game says `ready` (`useFlyGameBridge`).
+ */
+export type GameProvider = 'joyplay' | 'fly';
+
+/** Where the app may offer a game (`GET /games` → `places`). */
+export type GamePlace = 'room_lobby' | 'games_page';
+
 /** One row of `GET /api/v1/games`. */
 export interface GameCatalogEntry {
   /** A STRING on the wire both ways — `POST /games/launch` 422s on a number. */
@@ -30,6 +42,16 @@ export interface GameCatalogEntry {
   name: string;
   category: string;
   layout: GameLayout;
+  /**
+   * Optional because a backend from before fly-games-ludo 01/03 omits them. A row
+   * without them is a JoyPlay game offered in the Room lobby only — see
+   * `isGameOfferedIn`. `provider` is a plain string on the wire: a value this
+   * bundle does not know is hidden, never launched down the wrong path.
+   */
+  provider?: GameProvider | (string & {});
+  places?: readonly (GamePlace | (string & {}))[];
+  /** Fly games only: `scheme://host[:port]`, the frame's src and the postMessage origin. */
+  origin?: string | null;
 }
 
 /** Where the catalogue fetch is, for the picker to render against. */

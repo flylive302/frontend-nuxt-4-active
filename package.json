@@ -6,6 +6,7 @@
     "build": "nuxt build",
     "build:analyze": "NUXT_ANALYZE=true nuxt build",
     "dev": "nuxt dev --host",
+    "dev:fake-fly-game": "node scripts/dev/fake-fly-game.mjs",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "cap:build": "RELEASE=$(git rev-parse HEAD 2>/dev/null || echo '') && NUXT_PUBLIC_SENTRY_RELEASE=$RELEASE NITRO_PRESET=static nuxt generate --dotenv .env.capacitor && printf '%s' \"$RELEASE\" > .output/ota-release.txt && cap sync",

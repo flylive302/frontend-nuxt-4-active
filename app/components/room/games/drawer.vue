@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
- * Games Drawer — the JoyPlay surface over the live room.
+ * Games Drawer — the games surface over the live room (JoyPlay and Fly games).
  *
- * INTENT only. Every decision lives in `useRoomGames` (the session) and
- * `useGameCatalog` (the list); this file owns the button, the drawer, the
- * full-screen layer and the bindings between them.
+ * INTENT only. Every decision lives in `useRoomGameLobby` (the open game, routed
+ * to its provider's launcher) and `useGameCatalog` (the list, filtered to the
+ * Room lobby); this file owns the button, the drawer, the full-screen layer and
+ * the bindings between them.
  *
  * Two states: PICKER (a grid of games, no session minted yet) → GAME (the player
  * tapped a tile). Where the game renders follows its `layout`:
@@ -20,7 +21,7 @@
  */
 import { GAME_PANEL_TITLE } from '~/constants/games';
 import { useGameCatalog } from '~/composables/room/useGameCatalog';
-import { useRoomGames } from '~/composables/room/useRoomGames';
+import { useRoomGameLobby } from '~/composables/room/useRoomGameLobby';
 import type { GameCatalogEntry } from '~/types/room/games';
 
 const isOpen = defineModel<boolean>('open', { default: false });
@@ -31,7 +32,7 @@ const {
   errorMessage: catalogError,
   load: loadCatalog,
   retry: retryCatalog,
-} = useGameCatalog();
+} = useGameCatalog({ place: 'room_lobby' });
 
 const {
   status,
@@ -46,10 +47,10 @@ const {
   retry,
   close,
   onFrameLoaded,
-} = useRoomGames({
-  // The game's own exit button and its recharge prompt both end the session inside
-  // the composable, but only the component owns `open` — without this the player
-  // taps exit and is left with an empty square to dismiss by hand.
+} = useRoomGameLobby({
+  // The game's own exit (JoyPlay exit/recharge, Fly `return_to_room`) ends the
+  // session inside the composable, but only the component owns `open` — without
+  // this the player taps exit and is left with an empty square to dismiss by hand.
   onExitRequested: () => {
     isOpen.value = false;
   },

@@ -37,6 +37,11 @@ export interface UseRoomGamesOptions {
    * dismiss by hand.
    */
   onExitRequested?: () => void;
+  /**
+   * The iframe element, when the surface shares one frame between providers
+   * (the Room lobby also hosts Fly games — `useRoomGameLobby`). Own ref otherwise.
+   */
+  frame?: Ref<HTMLIFrameElement | null>;
 }
 
 export interface UseRoomGamesReturn {
@@ -69,7 +74,7 @@ export function useRoomGames(options: UseRoomGamesOptions = {}): UseRoomGamesRet
   const status = ref<GamePanelStatus>('idle');
   const gameUrl = ref<string | null>(null);
   const errorMessage = ref<string | null>(null);
-  const frame = ref<HTMLIFrameElement | null>(null);
+  const frame = options.frame ?? ref<HTMLIFrameElement | null>(null);
   const currentGame = ref<GameCatalogEntry | null>(null);
 
   /**

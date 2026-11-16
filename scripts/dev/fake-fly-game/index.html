@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Fake Fly Game (dev only)</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #171b23;
+    --panel-2: #1f2430;
+    --border: #2d3443;
+    --text: #e8ecf3;
+    --muted: #93a0b5;
+    --accent: #6ea8ff;
+    --ok: #4cd08a;
+    --bad: #ff6b6b;
+    --warn: #ffc857;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-text-size-adjust: 100%;
+  }
+  .banner {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: repeating-linear-gradient(45deg, #b3261e, #b3261e 14px, #8f1d17 14px, #8f1d17 28px);
+    color: #fff;
+    text-align: center;
+    font-weight: 800;
+    letter-spacing: .04em;
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top));
+    text-transform: uppercase;
+  }
+  main { padding: 12px; max-width: 760px; margin: 0 auto; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  h2 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; word-break: break-all; }
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+  .pill.ok { color: var(--ok); }
+  .pill.bad { color: var(--bad); }
+  .pill.warn { color: var(--warn); }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .empty { color: var(--muted); font-style: italic; }
+
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  button {
+    min-height: 48px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:active { background: #2a3142; }
+  button.ok { border-color: #2c7a53; color: var(--ok); }
+  button.bad { border-color: #8a3a3a; color: var(--bad); }
+  button.primary { border-color: #3d5f99; color: var(--accent); }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    margin-top: 8px;
+    padding: 0 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .check input { width: 26px; height: 26px; accent-color: var(--accent); flex: none; }
+
+  .profile { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .profile img, .profile .noimg {
+    width: 56px; height: 56px; border-radius: 50%; flex: none; object-fit: cover;
+    background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .profile .noimg { display: grid; place-items: center; font-size: 10px; color: var(--muted); text-align: center; }
+  .profile .name { font-size: 18px; font-weight: 800; }
+  .profile .sig { color: var(--muted); word-break: break-word; }
+
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--border); word-break: break-word; }
+  th { color: var(--muted); font-weight: 600; width: 1%; white-space: nowrap; }
+  td img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; }
+  td .sub { display: block; color: var(--muted); font-size: 12px; }
+
+  #log { list-style: none; margin: 0; padding: 0; max-height: 60vh; overflow-y: auto; }
+  #log li { border-top: 1px solid var(--border); padding: 6px 0; }
+  #log li:first-child { border-top: 0; }
+  #log .head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #log .time { color: var(--muted); }
+  #log pre {
+    margin: 4px 0 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #c4cddd;
+  }
+  .dir-in { color: var(--accent); }
+  .dir-out { color: var(--ok); }
+  .dir-dropped { color: var(--bad); }
+</style>
+</head>
+<body>
+<div class="banner">FAKE FLY GAME — dev only</div>
+<main>
+  <section>
+    <h2>Connection</h2>
+    <dl class="kv">
+      <dt>parent origin</dt>
+      <dd><span id="parent-origin" class="mono"></span> <span id="parent-origin-note" class="pill"></span></dd>
+      <dt>embedded</dt>
+      <dd id="embedded"></dd>
+      <dt>room id</dt>
+      <dd id="room-id" class="mono empty">none received yet</dd>
+      <dt>launch</dt>
+      <dd id="launch-state" class="empty">waiting for launch</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Actions</h2>
+    <div class="controls">
+      <button type="button" class="primary" id="btn-ready">Send ready again</button>
+      <button type="button" class="ok" id="btn-ok">launch_result ok:true</button>
+      <button type="button" class="bad" id="btn-fail">launch_result ok:false</button>
+      <button type="button" id="btn-return">return_to_room</button>
+      <button type="button" id="btn-fullscreen">request_fullscreen</button>
+      <button type="button" id="btn-reload">Reload page</button>
+    </div>
+    <label class="check">
+      <input type="checkbox" id="auto-reply" checked>
+      <span>auto-reply ok (sends launch_result ok:true after a launch)</span>
+    </label>
+  </section>
+
+  <section id="launch-section" hidden>
+    <h2>Launch token (decoded, NOT verified)</h2>
+    <div class="profile" id="profile"></div>
+    <dl class="kv" id="token-summary"></dl>
+    <h2 style="margin-top:12px">Header</h2>
+    <div class="scroll"><table id="header-table"></table></div>
+    <h2 style="margin-top:12px">Claims</h2>
+    <div class="scroll"><table id="claims-table"></table></div>
+  </section>
+
+  <section>
+    <h2>Event log (newest first)</h2>
+    <ul id="log"></ul>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict'
+
+  var SOURCE_GAME = 'flylive-ludo'
+  var SOURCE_HOST = 'flylive'
+  var LOG_LIMIT = 200
+
+  var $ = function (id) { return document.getElementById(id) }
+
+  // ---- parent origin -------------------------------------------------------
+  var parentOrigin = '*'
+  var originFromReferrer = false
+  try {
+    if (document.referrer) {
+      parentOrigin = new URL(document.referrer).origin
+      originFromReferrer = true
+      if (parentOrigin === 'null') {
+        parentOrigin = '*'
+        originFromReferrer = false
+      }
+    }
+  } catch (e) {
+    parentOrigin = '*'
+    originFromReferrer = false
+  }
+  var embedded = window.parent !== window
+
+  $('parent-origin').textContent = parentOrigin
+  var note = $('parent-origin-note')
+  if (originFromReferrer) {
+    note.textContent = 'from document.referrer'
+    note.className = 'pill ok'
+  } else {
+    note.textContent = 'fallback, no referrer: any origin accepted'
+    note.className = 'pill warn'
+  }
+  $('embedded').textContent = embedded ? 'yes (inside an iframe)' : 'NO - opened standalone, posts go nowhere'
+  if (!embedded) $('embedded').className = 'dir-dropped'
+
+  // ---- helpers -------------------------------------------------------------
+  function el(tag, props, children) {
+    var node = document.createElement(tag)
+    var key
+    if (props) {
+      for (key in props) {
+        if (key === 'text') node.textContent = props[key]
+        else if (key === 'class') node.className = props[key]
+        else node.setAttribute(key, props[key])
+      }
+    }
+    if (children) {
+      children.forEach(function (c) { if (c) node.appendChild(c) })
+    }
+    return node
+  }
+
+  function pad(n, w) { return String(n).padStart(w || 2, '0') }
+  function stamp() {
+    var d = new Date()
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + pad(d.getMilliseconds(), 3)
+  }
+
+  function truncToken(token) {
+    var s = String(token)
+    return s.length > 20 ? s.slice(0, 20) + '…' : s
+  }
+
+  // Copy of an inbound/outbound payload that is safe to print (token truncated).
+  function printable(data) {
+    if (data && typeof data === 'object' && !Array.isArray(data) && typeof data.token === 'string') {
+      var copy = {}
+      Object.keys(data).forEach(function (k) { copy[k] = data[k] })
+      copy.token = truncToken(data.token)
+      return copy
+    }
+    return data
+  }
+
+  function stringify(value) {
+    try {
+      var out = JSON.stringify(value, null, 2)
+      return out === undefined ? String(value) : out
+    } catch (e) {
+      return '[unserializable: ' + (e && e.message) + ']'
+    }
+  }
+
+  // ---- event log -----------------------------------------------------------
+  var logEl = $('log')
+  function log(dir, label, payload, extra) {
+    var head = el('div', { class: 'head' }, [
+      el('span', { class: 'time mono', text: stamp() }),
+      el('span', { class: 'pill dir-' + dir, text: dir }),
+      el('strong', { text: label }),
+      extra ? el('span', { class: 'muted', text: extra }) : null
+    ])
+    var li = el('li', null, [head])
+    if (payload !== undefined) li.appendChild(el('pre', { text: stringify(printable(payload)) }))
+    logEl.insertBefore(li, logEl.firstChild)
+    while (logEl.children.length > LOG_LIMIT) logEl.removeChild(logEl.lastChild)
+  }
+
+  // ---- outbound ------------------------------------------------------------
+  function post(msg) {
+    var payload = Object.assign({ source: SOURCE_GAME }, msg)
+    try {
+      window.parent.postMessage(payload, parentOrigin)
+      log('out', payload.type, payload, 'targetOrigin ' + parentOrigin)
+    } catch (e) {
+      log('dropped', payload.type + ' (send failed)', payload, String(e && e.message ? e.message : e))
+    }
+  }
+
+  var lastRoomId = null
+  var sendReady = function () { post({ type: 'ready' }) }
+  var sendResult = function (ok, reason) { post({ type: 'launch_result', ok: ok, reason: reason }) }
+
+  // ---- JWT decode (NO verification) ---------------------------------------
+  function b64urlToJson(part) {
+    var b64 = part.replace(/-/g, '+').replace(/_/g, '/')
+    while (b64.length % 4 !== 0) b64 += '='
+    var bin = atob(b64)
+    var bytes = new Uint8Array(bin.length)
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    return JSON.parse(new TextDecoder('utf-8').decode(bytes))
+  }
+
+  function decodeJwt(token) {
+    var parts = String(token).split('.')
+    if (parts.length < 2) throw new Error('not a JWT (expected header.payload[.signature])')
+    return { header: b64urlToJson(parts[0]), claims: b64urlToJson(parts[1]) }
+  }
+
+  // ---- render --------------------------------------------------------------
+  var currentClaims = null
+
+  function isHttpUrl(v) { return typeof v === 'string' && /^https?:\/\//i.test(v) }
+
+  function avatarNode(url, size) {
+    var img = el('img', { alt: 'avatar', referrerpolicy: 'no-referrer' })
+    img.addEventListener('error', function () {
+      var fb = el('span', { class: size === 'big' ? 'noimg' : 'muted', text: 'avatar failed to load' })
+      if (img.parentNode) img.parentNode.replaceChild(fb, img)
+    })
+    img.src = url
+    return img
+  }
+
+  function valueCell(key, value) {
+    var td = el('td')
+    if (key === 'avatar' && isHttpUrl(value)) {
+      td.appendChild(avatarNode(value, 'small'))
+      td.appendChild(el('span', { class: 'mono', text: value }))
+      return td
+    }
+    if (value !== null && typeof value === 'object') {
+      td.appendChild(el('span', { class: 'mono', text: JSON.stringify(value) }))
+    } else {
+      td.appendChild(el('span', { class: 'mono', text: String(value) }))
+    }
+    if ((key === 'exp' || key === 'iat' || key === 'nbf') && typeof value === 'number') {
+      td.appendChild(el('span', { class: 'sub', text: new Date(value * 1000).toISOString() }))
+    }
+    return td
+  }
+
+  function fillTable(table, obj) {
+    table.textContent = ''
+    var keys = Object.keys(obj)
+    if (!keys.length) {
+      table.appendChild(el('tr', null, [el('td', { class: 'empty', text: '(empty)' })]))
+      return
+    }
+    keys.forEach(function (k) {
+      table.appendChild(el('tr', null, [el('th', { text: k }), valueCell(k, obj[k])]))
+    })
+  }
+
+  function fmtShow(v) { return v === undefined || v === null ? '(missing)' : String(v) }
+
+  function renderSummary() {
+    var c = currentClaims
+    var dl = $('token-summary')
+    dl.textContent = ''
+    if (!c) return
+    function row(label, value, cls) {
+      dl.appendChild(el('dt', { text: label }))
+      dl.appendChild(el('dd', { class: cls || 'mono', text: value }))
+    }
+    row('sub', fmtShow(c.sub))
+    row('coins', fmtShow(c.coins))
+    var hasTimes = typeof c.exp === 'number' && typeof c.iat === 'number'
+    row('exp - iat', hasTimes ? (c.exp - c.iat) + ' s' : '(needs numeric exp and iat)')
+    if (typeof c.exp === 'number') {
+      var left = Math.round(c.exp - Date.now() / 1000)
+      row('expires in', left >= 0 ? left + ' s' : 'EXPIRED ' + (-left) + ' s ago', left >= 0 ? 'mono' : 'mono dir-dropped')
+    } else {
+      row('expires in', '(no numeric exp)')
+    }
+  }
+
+  function renderProfile(c) {
+    var box = $('profile')
+    box.textContent = ''
+    if (isHttpUrl(c.avatar)) box.appendChild(avatarNode(c.avatar, 'big'))
+    else box.appendChild(el('div', { class: 'noimg', text: c.avatar ? 'avatar (not a URL)' : 'no avatar' }))
+    box.appendChild(el('div', null, [
+      el('div', { class: 'name', text: fmtShow(c.name) }),
+      el('div', { class: 'sig', text: c.signature === undefined || c.signature === null || c.signature === '' ? '(no signature)' : String(c.signature) })
+    ]))
+  }
+
+  function renderLaunch(decoded) {
+    currentClaims = decoded.claims
+    $('launch-section').hidden = false
+    renderProfile(decoded.claims)
+    fillTable($('header-table'), decoded.header)
+    fillTable($('claims-table'), decoded.claims)
+    renderSummary()
+  }
+
+  setInterval(renderSummary, 1000)
+
+  // ---- inbound (GATE → EXECUTE) -------------------------------------------
+  function drop(event, reason) {
+    log('dropped', reason, printable(event.data), 'origin ' + event.origin)
+  }
+
+  function onLaunch(data) {
+    if (typeof data.token !== 'string' || !data.token) {
+      log('dropped', 'launch without token', printable(data))
+      return
+    }
+    log('in', 'launch', data)
+    var state = $('launch-state')
+    try {
+      renderLaunch(decodeJwt(data.token))
+      state.textContent = 'received token ' + truncToken(data.token)
+      state.className = 'mono'
+    } catch (e) {
+      currentClaims = null
+      $('launch-section').hidden = true
+      state.textContent = 'token decode FAILED: ' + (e && e.message ? e.message : e)
+      state.className = 'dir-dropped'
+      log('dropped', 'token decode failed', undefined, String(e && e.message ? e.message : e))
+    }
+    if ($('auto-reply').checked) sendResult(true, null)
+  }
+
+  function onRoom(data) {
+    if (typeof data.roomId !== 'string' && typeof data.roomId !== 'number') {
+      log('dropped', 'room without roomId', printable(data))
+      return
+    }
+    log('in', 'room', data)
+    lastRoomId = String(data.roomId)
+    var r = $('room-id')
+    r.textContent = lastRoomId
+    r.className = 'mono'
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.source !== window.parent) return drop(event, 'event.source is not window.parent')
+    if (parentOrigin !== '*' && event.origin !== parentOrigin) {
+      return drop(event, 'origin mismatch (expected ' + parentOrigin + ')')
+    }
+    var data = event.data
+    if (data === null || typeof data !== 'object' || Array.isArray(data)) return drop(event, 'data is not an object')
+    if (data.source !== SOURCE_HOST) return drop(event, 'source is not "' + SOURCE_HOST + '"')
+
+    if (data.type === 'launch') return onLaunch(data)
+    if (data.type === 'room') return onRoom(data)
+    log('in', String(data.type) + ' (unknown type)', data)
+  })
+
+  // ---- buttons -------------------------------------------------------------
+  $('btn-ready').addEventListener('click', sendReady)
+  $('btn-ok').addEventListener('click', function () { sendResult(true, null) })
+  $('btn-fail').addEventListener('click', function () { sendResult(false, 'fake_failure') })
+  $('btn-return').addEventListener('click', function () {
+    post({ type: 'return_to_room', roomId: lastRoomId, matchId: 'fake-match-1' })
+  })
+  $('btn-fullscreen').addEventListener('click', function () { post({ type: 'request_fullscreen' }) })
+  $('btn-reload').addEventListener('click', function () { location.reload() })
+
+  // ---- boot: listener is installed above, now announce ready ---------------
+  log('in', 'page loaded', { parentOrigin: parentOrigin, fromReferrer: originFromReferrer, embedded: embedded })
+  sendReady()
+})()
+</script>
+</body>
+</html>

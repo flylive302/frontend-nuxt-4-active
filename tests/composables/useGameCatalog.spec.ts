@@ -30,13 +30,13 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-async function loadCatalog() {
+async function loadCatalog(options: Parameters<typeof import('~/composables/room/useGameCatalog').useGameCatalog>[0] = {}) {
   const api = vi.fn()
   setupNuxtMocks({ api: createMockApi({ api }) })
 
   const { useGameCatalog } = await import('~/composables/room/useGameCatalog')
 
-  return { catalog: useGameCatalog(), api }
+  return { catalog: useGameCatalog(options), api }
 }
 
 afterEach(() => {
@@ -179,5 +179,41 @@ describe('useGameCatalog — error and retry', () => {
 
     expect(catalog.status.value).toBe('error')
     expect(catalog.games.value).toEqual([])
+  })
+})
+
+describe('useGameCatalog — place filter', () => {
+  const JOYPLAY: GameCatalogEntry = { ...ROULETTE, provider: 'joyplay', places: ['room_lobby'], origin: null }
+  const LUDO: GameCatalogEntry = {
+    game_id: 'fly-ludo', name: 'Ludo', category: 'Casual', layout: 'full',
+    provider: 'fly', places: ['room_lobby', 'games_page'], origin: 'https://flylive-ludo.flylive.workers.dev',
+  }
+  const FUTURE: GameCatalogEntry = { ...ROULETTE, game_id: '99', provider: 'someone-else', places: ['room_lobby'] }
+
+  it('shows Room-lobby games of known providers, in server order', async () => {
+    const { catalog, api } = await loadCatalog({ place: 'room_lobby' })
+    api.mockResolvedValue({ data: [JOYPLAY, LUDO, FUTURE] })
+
+    await catalog.load()
+
+    expect(catalog.games.value).toEqual([JOYPLAY, LUDO])
+  })
+
+  it('still shows every JoyPlay row from a backend that sends no places', async () => {
+    const { catalog, api } = await loadCatalog({ place: 'room_lobby' })
+    api.mockResolvedValue({ data: [ROULETTE, BIG_EATER] })
+
+    await catalog.load()
+
+    expect(catalog.games.value).toEqual([ROULETTE, BIG_EATER])
+  })
+
+  it('without a place, returns every row as served', async () => {
+    const { catalog, api } = await loadCatalog()
+    api.mockResolvedValue({ data: [JOYPLAY, LUDO, FUTURE] })
+
+    await catalog.load()
+
+    expect(catalog.games.value).toEqual([JOYPLAY, LUDO, FUTURE])
   })
 })
