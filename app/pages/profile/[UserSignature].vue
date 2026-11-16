@@ -366,18 +366,18 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         </template>
 
         <template #card>
-          <div v-if="dataCardAsset && headerVisible" class="absolute z-0 overflow-hidden -mt-26">
+          <div v-if="dataCardAsset && headerVisible">
             <SvgaPlayer
                 v-if="!isVap"
                 :key="`data-card-svga-${profileWritable?.data_card_id}`"
                 :name="dataCardAsset"
-                class="pointer-events-none mt-[-24vw]"
+                class="pointer-events-none -mt-20"
             />
             <VapPlayer
                 v-else
                 :key="`data-card-vap-${profileWritable?.data_card_id}`"
                 :name="dataCardAsset"
-                class="pointer-events-none mt-[-24vw]"
+                class="pointer-events-none -mt-20"
             />
           </div>
         </template>
