@@ -1,7 +1,7 @@
 /**
  * Fly Games postMessage protocol — types only, no runtime code.
  *
- * The protocol is the Fly team's own (docs/issues/fly-games-ludo/vendor-messages.md §4).
+ * The protocol is the Fly team's own (docs/reference/fly-games/vendor-messages.md §4).
  * Field names and values may not change without telling them.
  */
 

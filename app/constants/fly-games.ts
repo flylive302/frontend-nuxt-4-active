@@ -1,7 +1,7 @@
 /**
  * Fly Games (Ludo first) — static values.
  *
- * postMessage protocol: docs/issues/fly-games-ludo/vendor-messages.md §4 (the Fly
+ * postMessage protocol: docs/reference/fly-games/vendor-messages.md §4 (the Fly
  * team's, already built on their side — do not rename anything here without them).
  */
 

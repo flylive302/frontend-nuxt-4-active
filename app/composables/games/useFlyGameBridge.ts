@@ -13,7 +13,7 @@
  *     request_fullscreen → full-screen layout
  *     anything else → ignored (Fly will add `coins` / `closed`)
  *
- * Protocol: docs/issues/fly-games-ludo/vendor-messages.md §4 — the Fly team's,
+ * Protocol: docs/reference/fly-games/vendor-messages.md §4 — the Fly team's,
  * already built on their side. Spec: prd-fly-games-ludo.md § Frontend.
  *
  * ⛔ No load timeout. The only failures are a failed mint and `launch_result

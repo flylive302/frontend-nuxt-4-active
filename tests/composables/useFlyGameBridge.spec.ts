@@ -3,7 +3,7 @@
 // ========================================
 // Driven through the outer seam the browser gives us: a `message` event in, a
 // `postMessage` / API call out. The protocol is the Fly team's
-// (docs/issues/fly-games-ludo/vendor-messages.md §4); a regression here either
+// (docs/reference/fly-games/vendor-messages.md §4); a regression here either
 // leaks a launch token to the wrong window or leaves a player on a spinner.
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
