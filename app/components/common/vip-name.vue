@@ -18,7 +18,7 @@ const rootRef = ref<HTMLElement | null>(null)
 // Composables
 // ========================================
 
-const { color, active, hostStyle, glintStyle } = useVipGlint(() => props.vip, rootRef)
+const { color, active, still, hostStyle, glintStyle } = useVipGlint(() => props.vip, rootRef)
 </script>
 
 <!-- No whitespace between the name and the glint (tags close against the
@@ -28,7 +28,7 @@ const { color, active, hostStyle, glintStyle } = useVipGlint(() => props.vip, ro
   <span
     ref="rootRef"
     class="vip-name"
-    :class="{ 'vip-name--vip': color }"
+    :class="{ 'vip-name--vip': color, 'vip-name--still': still }"
     :style="hostStyle"
   >{{ name }}<span
     v-if="active"

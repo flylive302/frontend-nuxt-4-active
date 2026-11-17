@@ -14,6 +14,12 @@ export const REACTION_MIN_DISPLAY_MS = 3_000;
 /** Number of columns in the Reaction Drawer thumbnail grid. */
 export const REACTION_GRID_COLUMNS = 4;
 
+/**
+ * One shared dotlottie-web worker for every seat reaction on screen
+ * (android-client-performance/17 fix 2): N reacting seats = 1 worker + 1 wasm core.
+ */
+export const REACTION_LOTTIE_WORKER_ID = 'seat-reactions';
+
 /** Estimated pixel height of one grid row, for virtual-scroller sizing. */
 export const REACTION_GRID_ROW_MIN_SIZE_PX = 84;
 

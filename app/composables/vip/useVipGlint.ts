@@ -9,6 +9,10 @@
  * The glint is mounted only while the name is on screen (shared
  * IntersectionObserver), so off-screen names cost no layers and no animation.
  * Each mount picks up the global phase, so every glint sweeps in step.
+ *
+ * Name motion is tier-gated (`useNameMotion`): on a still-by-default phone, or
+ * with the user's "Names" switch off, no glint mounts and `still` is true —
+ * the host then shows the static glow instead (`.vip-name--still`).
  */
 import { computed, ref, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 import { VIP_GLINT_PERIOD_MS } from '~/constants/vip'
@@ -27,12 +31,15 @@ export function useVipGlint(
   alsoObserve: MaybeRefOrGetter<boolean> = false,
 ) {
   const { vipNameColor } = useVipNameColor()
+  const { nameMotionEnabled } = useNameMotion()
 
   // Computed, not a setup-time snapshot: `vip` changes live
   // (vip.updated socket → authStore.patchVip, or the profile page's syncUser()).
   const color = computed(() => vipNameColor(toValue(vip)))
   const inView = useInViewport(target, () => !!color.value || toValue(alsoObserve))
-  const active = computed(() => !!color.value && inView.value)
+  const active = computed(() => !!color.value && inView.value && nameMotionEnabled.value)
+  /** VIP name with motion off: static glow, no glint layers. */
+  const still = computed(() => !!color.value && !nameMotionEnabled.value)
 
   // Read the clock only when the glint (re)mounts — never per render.
   const phaseDelayMs = ref(0)
@@ -49,5 +56,5 @@ export function useVipGlint(
     '--vip-glint-delay': `${phaseDelayMs.value}ms`,
   }))
 
-  return { color, inView, active, hostStyle, glintStyle }
+  return { color, inView, active, still, hostStyle, glintStyle }
 }

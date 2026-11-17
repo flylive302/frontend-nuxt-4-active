@@ -32,6 +32,11 @@ const containerRef = ref<HTMLElement | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
 const isOverflowing = ref(false)
 
+// Name motion (tier x "Names" switch): with it off an overflowing roster is
+// simply clipped by the container — no animation, no duplicate set.
+const { nameMotionEnabled } = useNameMotion()
+const scrolling = computed(() => isOverflowing.value && nameMotionEnabled.value)
+
 const sorted = computed<SlottedBadge[]>(() =>
     props.equippedBadges
         .filter((b): b is SlottedBadge => b.image_url !== null)
@@ -77,7 +82,7 @@ watch(sorted, async () => {
     <div
         ref="trackRef"
         class="flex items-center gap-1"
-        :class="{ 'marquee-track': isOverflowing }"
+        :class="{ 'marquee-track': scrolling }"
         :style="{ animationPlayState: paused ? 'paused' : 'running' }"
     >
       <BadgeVisual
@@ -90,7 +95,7 @@ watch(sorted, async () => {
           alt=""
       />
       <!-- Duplicate set for seamless looping — only rendered when marquee is active -->
-      <template v-if="isOverflowing">
+      <template v-if="scrolling">
         <BadgeVisual
             v-for="badge in sorted"
             :key="`b-${badge.badge_id}`"

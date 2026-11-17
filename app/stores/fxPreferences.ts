@@ -10,9 +10,12 @@ import { defineStore } from 'pinia';
 import type { AnimatedAvatarFramesPreference } from '~/utils/frame-animation-tier';
 import {
   defaultFxForTier,
+  normalizeFxEnablePreference,
   normalizeFxMutePreference,
   readFxTier,
+  resolveFxEnabled,
   resolveFxMuted,
+  type FxEnablePreference,
   type FxMutePreference,
 } from '~/utils/fx-tier-defaults';
 
@@ -45,6 +48,14 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
   const animatedAvatarFrames = ref<AnimatedAvatarFramesPreference>('auto');
 
   /**
+   * Animated names (android-client-performance/17 fix 3): the VIP name glint
+   * and scrolling name/badge marquees. `auto` = the device tier decides (still
+   * on everything below `high`); `on` / `off` override the tier both ways.
+   * Read the EFFECTIVE value through `nameMotionEnabled`, never this raw switch.
+   */
+  const animatedNames = ref<FxEnablePreference>('auto');
+
+  /**
    * "Always start video collapsed" (room-video-player 09): the Room Video panel
    * opens as the 40 px bar on every tier. Off = the device tier decides
    * (`utils/video-start-collapsed.ts`). Per-device, localStorage — never a cookie.
@@ -65,6 +76,11 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
     resolveFxMuted(normalizeFxMutePreference(muteEntryAnimations.value), tierDefaults.entryAnimations),
   );
 
+  /** Effective: true = VIP glint + marquees animate (switch x tier). */
+  const nameMotionEnabled = computed(() =>
+    resolveFxEnabled(normalizeFxEnablePreference(animatedNames.value), tierDefaults.nameMotion),
+  );
+
   // ========================================
   // Setters
   // ========================================
@@ -81,6 +97,10 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
     animatedAvatarFrames.value = value;
   }
 
+  function setAnimatedNames(value: FxEnablePreference) {
+    animatedNames.value = value;
+  }
+
   function setStartVideoCollapsed(value: boolean) {
     startVideoCollapsed.value = value;
   }
@@ -89,19 +109,28 @@ export const useFxPreferencesStore = defineStore('fxPreferencesStore', () => {
     muteGiftAnimations,
     muteEntryAnimations,
     animatedAvatarFrames,
+    animatedNames,
     startVideoCollapsed,
     giftAnimationsMuted,
     entryAnimationsMuted,
+    nameMotionEnabled,
     setGiftMute,
     setEntryMute,
     setAnimatedAvatarFrames,
+    setAnimatedNames,
     setStartVideoCollapsed,
   };
 }, {
   // storage: localStorage, from the nuxt.config default. This was an implicit
   // COOKIE until 2026-08-22 — see that file's note before changing it.
   persist: {
-    pick: ['muteGiftAnimations', 'muteEntryAnimations', 'animatedAvatarFrames', 'startVideoCollapsed'],
+    pick: [
+      'muteGiftAnimations',
+      'muteEntryAnimations',
+      'animatedAvatarFrames',
+      'animatedNames',
+      'startVideoCollapsed',
+    ],
     // One-shot migration: installs persisted these as booleans. `$patch` copies
     // whatever shape is in storage, so normalize right after hydration; the next
     // persist write stores the tri-state. The computeds normalize too, so a stray

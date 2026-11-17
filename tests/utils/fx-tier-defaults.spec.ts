@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   defaultFxForTier,
   nextFxMutePreference,
+  normalizeFxEnablePreference,
   normalizeFxMutePreference,
   resolveFxEnabled,
   resolveFxMuted,
@@ -15,15 +16,40 @@ describe('defaultFxForTier', () => {
       giftAnimations: false,
       entryAnimations: false,
       viewTransitions: false,
+      nameMotion: false,
     })
   })
 
-  it.each(['mid', 'high', 'unknown'] as const)('%s -> everything on (current behaviour)', (tier) => {
-    expect(defaultFxForTier(tier)).toEqual({
+  it.each(['mid', 'unknown'] as const)(
+    '%s -> gifts/entries/transitions on (current behaviour), name motion still',
+    (tier) => {
+      expect(defaultFxForTier(tier)).toEqual({
+        giftAnimations: true,
+        entryAnimations: true,
+        viewTransitions: true,
+        nameMotion: false,
+      })
+    },
+  )
+
+  it('high -> everything on, including name motion', () => {
+    expect(defaultFxForTier('high')).toEqual({
       giftAnimations: true,
       entryAnimations: true,
       viewTransitions: true,
+      nameMotion: true,
     })
+  })
+
+  // android-client-performance/17 fix 3: same cut as animated seat frames
+  // (frame-animation-tier.ts) — only `high` animates names by default.
+  it.each([
+    ['low', false],
+    ['mid', false],
+    ['unknown', false],
+    ['high', true],
+  ] as const)('nameMotion on %s = %s', (tier, expected) => {
+    expect(defaultFxForTier(tier).nameMotion).toBe(expected)
   })
 })
 
@@ -50,6 +76,18 @@ describe('resolveFxEnabled', () => {
     expect(resolveFxEnabled('off', true)).toBe(false)
     expect(resolveFxEnabled('auto', true)).toBe(true)
     expect(resolveFxEnabled('auto', false)).toBe(false)
+  })
+})
+
+describe('normalizeFxEnablePreference (enable axis)', () => {
+  it('keeps valid tri-state values', () => {
+    expect(normalizeFxEnablePreference('auto')).toBe('auto')
+    expect(normalizeFxEnablePreference('on')).toBe('on')
+    expect(normalizeFxEnablePreference('off')).toBe('off')
+  })
+
+  it.each([undefined, null, 'garbage', true, false, 1, {}])('corrupt %s -> auto', (v) => {
+    expect(normalizeFxEnablePreference(v)).toBe('auto')
   })
 })
 

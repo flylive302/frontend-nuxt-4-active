@@ -795,6 +795,13 @@ textarea,
     }
 }
 
+/* Name motion off (still-by-default tier or the user's "Names" switch, see
+   useNameMotion): no glint is mounted, so keep VIP status visible as the same
+   static glow the reduced-motion block below uses. */
+.vip-name--still {
+    text-shadow: 0 0 6px var(--vip-glint-color);
+}
+
 /* No motion: keep VIP status visible as a static glow (painted once). */
 @media (prefers-reduced-motion: reduce) {
     .vip-glint {

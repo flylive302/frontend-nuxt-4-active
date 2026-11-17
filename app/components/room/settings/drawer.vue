@@ -14,6 +14,8 @@ import type { FxMutePreference } from '~/utils/fx-tier-defaults'
 // - Gift Mute / Entry Mute → in-place per-device FX toggles (everyone)
 // - Frames    → animated seat avatar frames switch (everyone; still by
 //               default on ≤ 4 GB phones — android-client-performance/16)
+// - Names     → VIP name glint + scrolling name/badge marquees switch (everyone;
+//               still by default below the `high` tier — android-client-performance/17)
 // - Video Collapsed → "Always start video collapsed" switch (everyone; per-device,
 //               the Room Video panel opens as the 40 px bar — room-video-player 09)
 // ========================================
@@ -44,6 +46,7 @@ const giftMutePref = computed(() => normalizeFxMutePreference(fxPrefs.muteGiftAn
 const entryMutePref = computed(() => normalizeFxMutePreference(fxPrefs.muteEntryAnimations))
 const { socket } = useAudioSocket()
 const { frameAnimationEnabled, toggleFrameAnimation } = useFrameAnimationBudget()
+const { nameMotionEnabled, toggleNameMotion } = useNameMotion()
 const { canEdit, isRoomOwner, refresh, refreshOwnRole } = useRoomMembershipState(
   () => roomStore.currentRoom?.id ?? null
 )
@@ -248,6 +251,26 @@ watch(open, (isOpen) => {
             />
             <span class="text-xs" :class="!frameAnimationEnabled ? 'text-primary' : 'text-neutral-200'">
               {{ frameAnimationEnabled ? 'Frames' : 'Frames Off' }}
+            </span>
+          </button>
+
+          <!-- Names (everyone; in-place toggle, highlighted while VIP glint + name marquees are still) -->
+          <button
+            type="button"
+            class="aspect-square rounded-xl transition-colors cursor-pointer flex flex-col items-center justify-center gap-2"
+            :class="!nameMotionEnabled
+              ? 'bg-primary/20 ring-2 ring-primary'
+              : 'bg-neutral-800 hover:bg-neutral-700'"
+            :aria-pressed="!nameMotionEnabled"
+            @click="toggleNameMotion"
+          >
+            <UIcon
+              name="i-lucide-type"
+              class="size-7"
+              :class="!nameMotionEnabled ? 'text-primary' : 'text-neutral-400'"
+            />
+            <span class="text-xs" :class="!nameMotionEnabled ? 'text-primary' : 'text-neutral-200'">
+              {{ nameMotionEnabled ? 'Names' : 'Names Off' }}
             </span>
           </button>
 

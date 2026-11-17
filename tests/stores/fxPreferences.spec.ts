@@ -158,4 +158,107 @@ describe('fxPreferencesStore', () => {
     expect(store.muteGiftAnimations).toBe('on')
     expect(store.muteEntryAnimations).toBe('auto')
   })
+
+  // ============================================================
+  // android-client-performance/17 fix 3 — animatedNames switch (VIP glint + marquees)
+  // ============================================================
+  it('defaults animatedNames to auto', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const store = useFxPreferencesStore()
+
+    expect(store.animatedNames).toBe('auto')
+  })
+
+  it('setAnimatedNames updates the raw switch both ways', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const store = useFxPreferencesStore()
+
+    store.setAnimatedNames('on')
+    expect(store.animatedNames).toBe('on')
+    store.setAnimatedNames('off')
+    expect(store.animatedNames).toBe('off')
+    store.setAnimatedNames('auto')
+    expect(store.animatedNames).toBe('auto')
+  })
+
+  it.each([
+    ['low (2 GB)', { deviceMemory: 2 }],
+    ['mid (4 GB)', { deviceMemory: 4 }],
+    ['unknown (no signals)', {}],
+  ])('auto: names are still on %s', async (_label, nav) => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    vi.stubGlobal('navigator', nav)
+    const store = useFxPreferencesStore()
+
+    expect(store.nameMotionEnabled).toBe(false)
+    vi.stubGlobal('navigator', realNavigator)
+  })
+
+  it('auto: names animate on the high tier', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    vi.stubGlobal('navigator', { deviceMemory: 8 })
+    const store = useFxPreferencesStore()
+
+    expect(store.nameMotionEnabled).toBe(true)
+    vi.stubGlobal('navigator', realNavigator)
+  })
+
+  it('user switch overrides the tier both ways', async () => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+
+    vi.stubGlobal('navigator', { deviceMemory: 2 })
+    const weak = useFxPreferencesStore()
+    expect(weak.nameMotionEnabled).toBe(false)
+    weak.setAnimatedNames('on')
+    expect(weak.nameMotionEnabled).toBe(true)
+
+    setActivePinia(createPinia())
+    vi.stubGlobal('navigator', { deviceMemory: 8 })
+    const strong = useFxPreferencesStore()
+    expect(strong.nameMotionEnabled).toBe(true)
+    strong.setAnimatedNames('off')
+    expect(strong.nameMotionEnabled).toBe(false)
+
+    vi.stubGlobal('navigator', realNavigator)
+  })
+
+  it.each([
+    ['low', { deviceMemory: 2 }, false],
+    ['high', { deviceMemory: 8 }, true],
+  ])('invalid persisted animatedNames falls back to auto on %s', async (_tier, nav, expected) => {
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    vi.stubGlobal('navigator', nav)
+    const store = useFxPreferencesStore()
+
+    // Simulate a corrupt/legacy value that slipped past hydration.
+    ;(store as unknown as { animatedNames: unknown }).animatedNames = 'garbage'
+    expect(store.nameMotionEnabled).toBe(expected)
+
+    ;(store as unknown as { animatedNames: unknown }).animatedNames = true
+    expect(store.nameMotionEnabled).toBe(expected)
+    vi.stubGlobal('navigator', realNavigator)
+  })
+
+  it('persists animatedNames to storage and restores it on hydrate', async () => {
+    const { createPersistedState } = await import('pinia-plugin-persistedstate')
+    const { useFxPreferencesStore } = await import('../../app/stores/fxPreferences')
+    const data = new Map<string, string>([
+      ['fxPreferencesStore', JSON.stringify({ animatedNames: 'on' })],
+    ])
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+    }
+    const pinia = createPinia()
+    createApp({}).use(pinia)
+    pinia.use(createPersistedState({ storage }))
+    setActivePinia(pinia)
+
+    const store = useFxPreferencesStore()
+    expect(store.animatedNames).toBe('on')
+
+    store.setAnimatedNames('off')
+    await Promise.resolve()
+    expect(JSON.parse(data.get('fxPreferencesStore') ?? '{}').animatedNames).toBe('off')
+  })
 })

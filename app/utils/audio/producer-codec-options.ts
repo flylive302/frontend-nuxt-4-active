@@ -21,8 +21,10 @@ import {
  * an arbitrary rate ("weak audio", 2026-07-10 audio review). FEC on for loss
  * resilience.
  *
- * DTX on (cost-and-speed-tuning 03): a quiet open mic sends one comfort-noise
- * packet every ~400 ms instead of 50 packets/s; speech encodes identically.
+ * DTX on (cost-and-speed-tuning 03): a quiet open mic drops to ~5–6 packets/s
+ * of comfort noise (measured 5.6 pkt/s in Chrome 2026-11-08 and the Android
+ * WebView 2026-11-16) instead of 25 packets/s at ptime 40; speech encodes
+ * identically.
  * It was off because it froze the HLS broadcast mix — ticket 02 hardened that
  * graph and proved it on the prod FFmpeg 5.1.9
  * (`docs/issues/cost-and-speed-tuning/assets-02-dtx-repro/`).

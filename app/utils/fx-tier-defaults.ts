@@ -4,7 +4,9 @@
  * Pure decision module: which visual effects run by default on this device
  * class, and how the user's switch overrides that. Same shape as
  * `frame-animation-tier.ts`; it reuses `classifyDeviceClass()` unchanged.
- * Only `low` is "weak"; `mid`, `high` and `unknown` keep today's behaviour.
+ * Only `low` is "weak" for gifts/entries/transitions; `mid`, `high` and
+ * `unknown` keep today's behaviour. Name motion (glint + marquees) is the one
+ * exception: it needs `high` (see `FxTierDefaults.nameMotion`).
  * Operator call 2026-10-22: `mid` covers most iPhones and 4-6 GB Androids
  * (Chrome rounds deviceMemory down), and muting paid gifts for them by
  * default was rejected — revisit `mid` with tier telemetry.
@@ -30,17 +32,44 @@ export const FX_MUTE_PREFERENCES: readonly FxMutePreference[] = ['auto', 'on', '
 /** Generic user switch for a tier-defaulted feature (`on` = enabled). */
 export type FxEnablePreference = 'auto' | 'on' | 'off';
 
+export const FX_ENABLE_PREFERENCES: readonly FxEnablePreference[] = ['auto', 'on', 'off'];
+
 /** Whether each effect is enabled by default on a device class. */
 export interface FxTierDefaults {
   giftAnimations: boolean;
   entryAnimations: boolean;
   viewTransitions: boolean;
+  /**
+   * VIP name glint + scrolling name/badge marquees. Unlike gifts/entries, still
+   * on `mid` and `unknown` too — only `high` animates by default (operator call
+   * 2026-11-17, android-client-performance/17 fix 3; same cut as animated seat
+   * frames, ADR 0039 / `frame-animation-tier.ts`). Cosmetics only.
+   */
+  nameMotion: boolean;
 }
 
-/** Tier defaults: only `low` devices lose effects by default. */
+/**
+ * Tier defaults: only `low` devices lose gift/entry/transition effects by
+ * default; `nameMotion` is the stricter cosmetic cut (`high` only).
+ */
 export function defaultFxForTier(deviceClass: DeviceClass): FxTierDefaults {
   const enabled = deviceClass !== 'low';
-  return { giftAnimations: enabled, entryAnimations: enabled, viewTransitions: enabled };
+  return {
+    giftAnimations: enabled,
+    entryAnimations: enabled,
+    viewTransitions: enabled,
+    nameMotion: deviceClass === 'high',
+  };
+}
+
+/** Type guard for an enable-axis switch read back from persisted storage. */
+export function isFxEnablePreference(value: unknown): value is FxEnablePreference {
+  return (FX_ENABLE_PREFERENCES as readonly unknown[]).includes(value);
+}
+
+/** Corrupt/missing persisted enable-axis value -> `auto`; valid values pass through. */
+export function normalizeFxEnablePreference(value: unknown): FxEnablePreference {
+  return isFxEnablePreference(value) ? value : 'auto';
 }
 
 /** Type guard for values read back from persisted storage. */

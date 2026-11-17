@@ -12,7 +12,7 @@
  * so construction of the DotLottie instance happens after a microtask —
  * tests `await flush()` once after `init()` before asserting on it.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
 
 vi.stubGlobal('ref', ref)
@@ -60,16 +60,29 @@ class FakeDotLottie {
 
 let lastInstance: FakeDotLottie | null = null
 
-vi.mock('@lottiefiles/dotlottie-web', () => ({
-  DotLottie: vi.fn().mockImplementation(() => {
-    lastInstance = new FakeDotLottie()
-    return lastInstance
-  }),
+const { DotLottieMock, DotLottieWorkerMock } = vi.hoisted(() => ({
+  DotLottieMock: vi.fn(),
+  DotLottieWorkerMock: vi.fn(),
 }))
+
+vi.mock('@lottiefiles/dotlottie-web', () => ({
+  DotLottie: DotLottieMock,
+  DotLottieWorker: DotLottieWorkerMock,
+}))
+
+function resetPlayerMocks(): void {
+  for (const ctor of [DotLottieMock, DotLottieWorkerMock]) {
+    ctor.mockImplementation(() => {
+      lastInstance = new FakeDotLottie()
+      return lastInstance
+    })
+  }
+}
 
 describe('useSeatReactionPlayer — fetch failure no-op', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetPlayerMocks()
     lastInstance = null
   })
 
@@ -140,5 +153,101 @@ describe('useSeatReactionPlayer — fetch failure no-op', () => {
     await flush()
 
     expect(lastInstance).toBeNull() // never constructed after teardown
+  })
+})
+
+// android-client-performance/17 fix 2 — render off the main thread where the WebView can.
+describe('useSeatReactionPlayer — player choice', () => {
+  /** Node test env has no DOM: stub just enough canvas surface for the feature check. */
+  function stubWorkerSupport(): void {
+    vi.stubGlobal('OffscreenCanvas', function OffscreenCanvas() {})
+    vi.stubGlobal('HTMLCanvasElement', class { transferControlToOffscreen(): unknown { return {} } })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetPlayerMocks()
+    lastInstance = null
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.stubGlobal('ref', ref)
+  })
+
+  it('uses the shared DotLottieWorker when OffscreenCanvas transfer is supported', async () => {
+    stubWorkerSupport()
+    const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
+    const { REACTION_LOTTIE_WORKER_ID } = await import('../../app/constants/reactions')
+
+    useSeatReactionPlayer(ref({} as HTMLCanvasElement), { code: '1f602', onDone: vi.fn() }).init()
+    await flush()
+
+    expect(DotLottieWorkerMock).toHaveBeenCalledTimes(1)
+    expect(DotLottieWorkerMock.mock.calls[0]![0]).toMatchObject({ workerId: REACTION_LOTTIE_WORKER_ID, loop: true })
+    expect(DotLottieMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the main-thread DotLottie without OffscreenCanvas', async () => {
+    vi.stubGlobal('OffscreenCanvas', undefined)
+    const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
+
+    useSeatReactionPlayer(ref({} as HTMLCanvasElement), { code: '1f602', onDone: vi.fn() }).init()
+    await flush()
+
+    expect(DotLottieMock).toHaveBeenCalledTimes(1)
+    expect(DotLottieWorkerMock).not.toHaveBeenCalled()
+  })
+
+  it('still reports done exactly once when the worker player\'s async destroy rejects', async () => {
+    stubWorkerSupport()
+    DotLottieWorkerMock.mockImplementation(() => {
+      const fake = new FakeDotLottie()
+      // The worker player's destroy() is async; FakeDotLottie's is typed sync.
+      Object.assign(fake, { destroy: () => Promise.reject(new Error('worker gone')) })
+      lastInstance = fake
+      return fake
+    })
+    const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
+    const onDone = vi.fn()
+
+    useSeatReactionPlayer(ref({} as HTMLCanvasElement), { code: '1f602', onDone }).init()
+    await flush()
+    lastInstance!.fire('complete')
+    await flush()
+
+    expect(onDone).toHaveBeenCalledTimes(1)
+  })
+
+  it('destroys a player again once it loads when teardown came before its async create finished', async () => {
+    stubWorkerSupport()
+    const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
+    const destroySpy = vi.fn()
+
+    const player = useSeatReactionPlayer(ref({} as HTMLCanvasElement), { code: '1f602', onDone: vi.fn() })
+    player.init()
+    await flush()
+    const fake = lastInstance!
+    fake.destroy = destroySpy
+    player.destroy() // seat unmounted before the worker reported load
+    fake.fire('load') // worker finishes create + load afterwards
+
+    expect(destroySpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not re-arm teardown when the player had already loaded', async () => {
+    const { useSeatReactionPlayer } = await import('../../app/composables/room/useSeatReactionPlayer')
+    const destroySpy = vi.fn()
+
+    const player = useSeatReactionPlayer(ref({} as HTMLCanvasElement), { code: '1f602', onDone: vi.fn() })
+    player.init()
+    await flush()
+    const fake = lastInstance!
+    fake.destroy = destroySpy
+    fake.fire('load')
+    player.destroy()
+    fake.fire('load')
+
+    expect(destroySpy).toHaveBeenCalledTimes(1)
   })
 })
