@@ -53,6 +53,31 @@ function isPendingError(error: unknown): boolean {
   return /pending/i.test(errorMessage(error))
 }
 
+// ========================================
+// Serial billing queue
+// ========================================
+// Android: the plugin keeps ONE shared BillingClient, and every billing method
+// (isBillingSupported, getProducts, getPurchases, purchaseProduct,
+// consumePurchase, acknowledgePurchase) starts by closing any existing client
+// and building a new one. The Play query's callback fires after the method's
+// executor task has returned, so two overlapping plugin calls cut each other
+// off: `getProducts` rejects, `getPurchases` resolves an EMPTY list. Every
+// billing call therefore runs through this one FIFO chain — a call starts only
+// after the previous one settled (resolved or rejected).
+//
+// Module-level on purpose: `useCoinPurchase()` builds a fresh adapter on every
+// call, so an instance-level chain would not serialize across callers.
+
+let billingQueueTail: Promise<void> = Promise.resolve()
+
+function runSerialized<T>(task: () => Promise<T>): Promise<T> {
+  const result = billingQueueTail.then(task)
+  // The tail swallows the outcome so one rejection never breaks the chain;
+  // the caller still gets the untouched `result` (value or error).
+  billingQueueTail = result.then(() => undefined, () => undefined)
+  return result
+}
+
 function toStoreTransaction(t: NativeTransaction): StoreTransaction {
   const id = isIosNative() ? (t.transactionId ?? '') : (t.purchaseToken ?? '')
   return {
@@ -77,62 +102,74 @@ export function createNativePurchasesAdapter(): StoreBillingAdapter {
   }
 
   return {
-    async isSupported(): Promise<boolean> {
-      const { plugin } = await getPlugin()
-      const { isBillingSupported } = await plugin.isBillingSupported()
-      return isBillingSupported
+    isSupported(): Promise<boolean> {
+      return runSerialized(async () => {
+        const { plugin } = await getPlugin()
+        const { isBillingSupported } = await plugin.isBillingSupported()
+        return isBillingSupported
+      })
     },
 
     async listProducts(ids: string[]): Promise<StoreProduct[]> {
       if (ids.length === 0) return []
-      const { plugin } = await getPlugin()
-      const { products } = await plugin.getProducts({ productIdentifiers: ids })
-      return (products as NativeProduct[]).map(p => ({
-        identifier: p.identifier,
-        priceString: p.priceString,
-        currencyCode: p.currencyCode,
-        price: p.price,
-      }))
+      return runSerialized(async () => {
+        const { plugin } = await getPlugin()
+        const { products } = await plugin.getProducts({ productIdentifiers: ids })
+        return (products as NativeProduct[]).map(p => ({
+          identifier: p.identifier,
+          priceString: p.priceString,
+          currencyCode: p.currencyCode,
+          price: p.price,
+        }))
+      })
     },
 
-    async purchase(productId: string): Promise<StoreTransaction> {
-      const { plugin } = await getPlugin()
-      try {
-        const tx = await plugin.purchaseProduct({
-          productIdentifier: productId,
-          // Deliberately false although the packs are consumables. On Android
-          // the plugin consumes a purchase flagged consumable the moment Play
-          // reports it (PurchaseActionDecider: isConsumable → CONSUME, which
-          // ignores autoAcknowledgePurchases) — before the backend has
-          // verified it, and the backend refuses a consumed token as
-          // `already_consumed`: paid, never credited. The backend consumes
-          // after crediting; `finish()` consumes on the device. iOS ignores it.
-          isConsumable: false,
-          autoAcknowledgePurchases: false,
-        })
-        return toStoreTransaction(tx as NativeTransaction)
-      } catch (error) {
-        if (isCancelError(error)) throw new PurchaseCancelledError()
-        if (isPendingError(error)) throw new PurchasePendingError()
-        throw error
-      }
+    purchase(productId: string): Promise<StoreTransaction> {
+      return runSerialized(async () => {
+        const { plugin } = await getPlugin()
+        try {
+          const tx = await plugin.purchaseProduct({
+            productIdentifier: productId,
+            // Deliberately false although the packs are consumables. On Android
+            // the plugin consumes a purchase flagged consumable the moment Play
+            // reports it (PurchaseActionDecider: isConsumable → CONSUME, which
+            // ignores autoAcknowledgePurchases) — before the backend has
+            // verified it, and the backend refuses a consumed token as
+            // `already_consumed`: paid, never credited. The backend consumes
+            // after crediting; `finish()` consumes on the device. iOS ignores it.
+            isConsumable: false,
+            autoAcknowledgePurchases: false,
+          })
+          return toStoreTransaction(tx as NativeTransaction)
+        } catch (error) {
+          if (isCancelError(error)) throw new PurchaseCancelledError()
+          if (isPendingError(error)) throw new PurchasePendingError()
+          throw error
+        }
+      })
     },
 
-    async finish(tx: StoreTransaction): Promise<void> {
-      const { plugin } = await getPlugin()
-      if (isIosNative()) {
-        await plugin.acknowledgePurchase({ purchaseToken: tx.id })
-      } else {
-        await plugin.consumePurchase({ purchaseToken: tx.purchaseToken ?? tx.id })
-      }
+    finish(tx: StoreTransaction): Promise<void> {
+      return runSerialized(async () => {
+        const { plugin } = await getPlugin()
+        if (isIosNative()) {
+          await plugin.acknowledgePurchase({ purchaseToken: tx.id })
+        } else {
+          await plugin.consumePurchase({ purchaseToken: tx.purchaseToken ?? tx.id })
+        }
+      })
     },
 
-    async pendingTransactions(): Promise<StoreTransaction[]> {
-      const { plugin } = await getPlugin()
-      const { purchases } = await plugin.getPurchases({ onlyCurrentEntitlements: false })
-      return (purchases as NativeTransaction[]).map(toStoreTransaction)
+    pendingTransactions(): Promise<StoreTransaction[]> {
+      return runSerialized(async () => {
+        const { plugin } = await getPlugin()
+        const { purchases } = await plugin.getPurchases({ onlyCurrentEntitlements: false })
+        return (purchases as NativeTransaction[]).map(toStoreTransaction)
+      })
     },
 
+    // Not a billing call (it only registers a JS listener) — deliberately NOT
+    // queued, so it can never be blocked behind a long-running purchase.
     onTransactionUpdated(cb: (tx: StoreTransaction) => void): () => void {
       let handle: { remove: () => void } | undefined
       // Registered on every native launch (plugins/iap-restore.client.ts), so a

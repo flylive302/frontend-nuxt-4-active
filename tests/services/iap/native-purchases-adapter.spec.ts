@@ -48,6 +48,27 @@ vi.mock('@capgo/native-purchases', () => ({
   },
 }))
 
+interface Deferred<T> {
+  promise: Promise<T>
+  resolve: (value: T) => void
+  reject: (reason: unknown) => void
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+/** Lets every already-queued microtask and one macrotask run. */
+function flushPending(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0))
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockIsIosNative.mockReturnValue(true)
@@ -184,5 +205,143 @@ describe('onTransactionUpdated', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(() => stop()).not.toThrow()
+  })
+})
+
+// ========================================
+// Serialized billing calls
+// ========================================
+// Android's plugin shares ONE BillingClient and every billing method closes it
+// first, so overlapping calls cut each other off (getProducts rejects,
+// getPurchases resolves an empty list). The adapter runs every billing call
+// through one module-level FIFO chain. Every deferred below is settled before
+// its test ends — a hung call would block the shared queue for later tests.
+
+describe('serialized billing calls', () => {
+  it('does not invoke the second plugin method until the first plugin promise settles', async () => {
+    const purchases = deferred<{ purchases: unknown[] }>()
+    mockGetPurchases.mockReturnValue(purchases.promise)
+    mockGetProducts.mockResolvedValue({ products: [] })
+    const adapter = createNativePurchasesAdapter()
+
+    const pending = adapter.pendingTransactions()
+    const products = adapter.listProducts(['coins_100'])
+    await vi.waitFor(() => expect(mockGetPurchases).toHaveBeenCalledTimes(1))
+    await flushPending()
+
+    expect(mockGetProducts).not.toHaveBeenCalled()
+
+    purchases.resolve({ purchases: [] })
+    await pending
+    await products
+
+    expect(mockGetProducts).toHaveBeenCalledTimes(1)
+    expect(mockGetPurchases.mock.invocationCallOrder[0]!)
+      .toBeLessThan(mockGetProducts.mock.invocationCallOrder[0]!)
+  })
+
+  it('a rejected call does not block the next one, and each caller gets its own outcome', async () => {
+    const purchases = deferred<{ purchases: unknown[] }>()
+    mockGetPurchases.mockReturnValue(purchases.promise)
+    mockIsBillingSupported.mockResolvedValue({ isBillingSupported: true })
+    const adapter = createNativePurchasesAdapter()
+
+    const first = adapter.pendingTransactions()
+    const firstOutcome = expect(first).rejects.toThrow('play query failed')
+    const second = adapter.isSupported()
+    await vi.waitFor(() => expect(mockGetPurchases).toHaveBeenCalledTimes(1))
+    await flushPending()
+
+    expect(mockIsBillingSupported).not.toHaveBeenCalled()
+
+    purchases.reject(new Error('play query failed'))
+    await firstOutcome
+
+    await expect(second).resolves.toBe(true)
+    expect(mockIsBillingSupported).toHaveBeenCalledTimes(1)
+  })
+
+  it('serializes calls made through two separately created adapters (one shared queue)', async () => {
+    const purchases = deferred<{ purchases: unknown[] }>()
+    mockGetPurchases.mockReturnValue(purchases.promise)
+    mockGetProducts.mockResolvedValue({ products: [] })
+    const restoreAdapter = createNativePurchasesAdapter()
+    const panelAdapter = createNativePurchasesAdapter()
+
+    const restore = restoreAdapter.pendingTransactions()
+    const panel = panelAdapter.listProducts(['coins_100'])
+    await vi.waitFor(() => expect(mockGetPurchases).toHaveBeenCalledTimes(1))
+    await flushPending()
+
+    expect(mockGetProducts).not.toHaveBeenCalled()
+
+    purchases.resolve({ purchases: [] })
+    await restore
+    await panel
+
+    expect(mockGetProducts).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs three overlapping calls strictly in the order they were started', async () => {
+    const supported = deferred<{ isBillingSupported: boolean }>()
+    const products = deferred<{ products: unknown[] }>()
+    mockIsBillingSupported.mockReturnValue(supported.promise)
+    mockGetProducts.mockReturnValue(products.promise)
+    mockGetPurchases.mockResolvedValue({ purchases: [] })
+    const adapter = createNativePurchasesAdapter()
+
+    const a = adapter.isSupported()
+    const b = adapter.listProducts(['coins_100'])
+    const c = adapter.pendingTransactions()
+    await vi.waitFor(() => expect(mockIsBillingSupported).toHaveBeenCalledTimes(1))
+    await flushPending()
+    expect(mockGetProducts).not.toHaveBeenCalled()
+    expect(mockGetPurchases).not.toHaveBeenCalled()
+
+    supported.resolve({ isBillingSupported: true })
+    await a
+    await vi.waitFor(() => expect(mockGetProducts).toHaveBeenCalledTimes(1))
+    await flushPending()
+    expect(mockGetPurchases).not.toHaveBeenCalled()
+
+    products.resolve({ products: [] })
+    await b
+    await c
+
+    expect(mockGetPurchases).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the cancel mapping when purchase() waits behind another call', async () => {
+    const purchases = deferred<{ purchases: unknown[] }>()
+    mockGetPurchases.mockReturnValue(purchases.promise)
+    mockPurchaseProduct.mockRejectedValue(new Error('User cancelled the purchase'))
+    const adapter = createNativePurchasesAdapter()
+
+    const pending = adapter.pendingTransactions()
+    const purchase = adapter.purchase('coins_100')
+    const purchaseOutcome = expect(purchase).rejects.toBeInstanceOf(PurchaseCancelledError)
+    await vi.waitFor(() => expect(mockGetPurchases).toHaveBeenCalledTimes(1))
+    await flushPending()
+
+    expect(mockPurchaseProduct).not.toHaveBeenCalled()
+
+    purchases.resolve({ purchases: [] })
+    await pending
+    await purchaseOutcome
+  })
+
+  it('never queues the transactionUpdated listener behind a billing call', async () => {
+    const purchase = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(purchase.promise)
+    const adapter = createNativePurchasesAdapter()
+
+    const inFlight = adapter.purchase('coins_100')
+    await vi.waitFor(() => expect(mockPurchaseProduct).toHaveBeenCalledTimes(1))
+    adapter.onTransactionUpdated(vi.fn())
+
+    await vi.waitFor(() => expect(mockAddListener).toHaveBeenCalledTimes(1))
+
+    purchase.resolve({ transactionId: 'tx-1' })
+    await inFlight
   })
 })
