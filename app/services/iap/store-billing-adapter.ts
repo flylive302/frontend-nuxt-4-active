@@ -29,6 +29,21 @@ export class PurchasePendingError extends Error {
   }
 }
 
+/**
+ * Thrown by `purchase()` when the store gave no usable outcome: Android's
+ * billing plugin rejects cancel, already-owned and every other Play failure
+ * with the same text, and a purchase call that never settles is released after
+ * a hang guard (see native-purchases-adapter.ts). Nothing was credited here;
+ * the caller resets the UI and runs restore, which credits anything Play does
+ * hold (the backend credits a token once).
+ */
+export class PurchaseNotCompletedError extends Error {
+  constructor(message = 'Purchase not completed') {
+    super(message)
+    this.name = 'PurchaseNotCompletedError'
+  }
+}
+
 export interface StoreBillingAdapter {
   isSupported(): Promise<boolean>
   listProducts(ids: string[]): Promise<StoreProduct[]>

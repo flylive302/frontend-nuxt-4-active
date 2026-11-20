@@ -197,6 +197,66 @@ describe('buy (google)', () => {
   })
 })
 
+describe('buy (google) — not completed (cancel / already owned / released hang)', () => {
+  beforeEach(() => {
+    coinPacksStore.status = 'ready'
+    // Write-through, so restore's `purchasing` GATE really sees buy()'s status:
+    // the restore below only runs if buy() reset to `ready` FIRST.
+    coinPacksStore.setStatus.mockImplementation((status: string) => {
+      coinPacksStore.status = status
+    })
+  })
+
+  it('resets to ready with a neutral toast — never "Purchase failed" / "Could not start the purchase."', async () => {
+    const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'not-completed' })
+
+    const { buy } = useCoinPurchase(adapter)
+    await buy('coins_100')
+
+    expect(coinPacksStore.setStatus).toHaveBeenLastCalledWith('ready')
+    expect(coinPacksStore.setActiveProductId).toHaveBeenLastCalledWith(null)
+    expect(coinPacksStore.setError).not.toHaveBeenCalledWith('Could not start the purchase.')
+    expect(mockToast.add).toHaveBeenCalledWith({ title: 'Purchase not completed', color: 'neutral' })
+    expect(mockToast.add).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Purchase failed' }))
+    expect(mockApiModule.api).not.toHaveBeenCalledWith('/iap/google/verify', expect.anything())
+  })
+
+  it('runs a silent restore that credits an already-owned purchase Play still lists', async () => {
+    mockApiModule.api.mockResolvedValue({
+      data: {
+        results: [{ transaction_id: 'token-owned', outcome: 'credited', finish: true, purchase: { id: 7, store: 'google', product_id: 'coins_100', coins: 100, state: 'credited', store_transaction_id: 'token-owned', failure_reason: null } }],
+        balance: 900,
+      },
+    })
+    const owned = [{ id: 'token-owned', purchaseToken: 'token-owned', productId: 'coins_100', pending: false }]
+    const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'not-completed', pendingTransactions: owned })
+
+    const { buy } = useCoinPurchase(adapter)
+    await buy('coins_100')
+
+    await vi.waitFor(() => expect(adapter.finished).toEqual(['token-owned']))
+    expect(mockApiModule.api).toHaveBeenCalledTimes(1)
+    expect(mockApiModule.api).toHaveBeenCalledWith('/iap/google/restore', expect.objectContaining({
+      method: 'POST',
+      body: { transactions: [{ purchase_token: 'token-owned', product_id: 'coins_100' }] },
+    }))
+    expect(balanceStore.patch).toHaveBeenCalledWith({ coins: '900' })
+  })
+
+  it('a plain cancel with nothing owned: restore stays silent (no "No purchases to restore")', async () => {
+    const adapter = new FakeStoreBillingAdapter({ purchaseResult: 'not-completed' })
+    const pendingSpy = vi.spyOn(adapter, 'pendingTransactions')
+
+    const { buy } = useCoinPurchase(adapter)
+    await buy('coins_100')
+
+    await vi.waitFor(() => expect(pendingSpy).toHaveBeenCalled())
+    await vi.waitFor(() => expect(coinPacksStore.setRestoring).toHaveBeenLastCalledWith(false))
+    expect(mockToast.add).toHaveBeenCalledTimes(1)
+    expect(mockApiModule.api).not.toHaveBeenCalled()
+  })
+})
+
 describe('load (google) — 404 marks the catalog definitively disabled', () => {
   it('404 → status unavailable, catalogDisabled true', async () => {
     mockApiModule.api.mockRejectedValue(makeApiError(404))

@@ -26,3 +26,21 @@ export const IAP_JOURNAL_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
 
 /** Settled transaction ids remembered so restore skips them (iOS 18+ lists every finished consumable). */
 export const IAP_JOURNAL_MAX_SETTLED = 2000
+
+/**
+ * Android hang guard (native-purchases-adapter.ts): how long a purchase call may
+ * hold the billing queue while the app activity has NOT paused — i.e. the Play
+ * sheet never opened. The billing plugin never rejects when Play refuses to
+ * open the sheet, so without this the call, and every billing call queued
+ * behind it, waits until the app restarts. Stops counting at the first `pause`
+ * (sheet open — the user may take minutes to pay). Above the plugin's own
+ * pre-sheet budget: 2 connect attempts × 5 s setup timeout + the product query.
+ */
+export const IAP_PURCHASE_SHEET_OPEN_CEILING_MS = 60 * 1000
+
+/**
+ * Android hang guard: how long a purchase call may stay unsettled after the app
+ * activity resumes (the Play sheet is gone). Play reports the result before
+ * the sheet closes, so a call still open after this will never settle.
+ */
+export const IAP_PURCHASE_RESUME_GRACE_MS = 10 * 1000

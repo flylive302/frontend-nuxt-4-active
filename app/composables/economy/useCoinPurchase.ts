@@ -13,7 +13,7 @@
 
 import { createNativePurchasesAdapter } from '~/services/iap/native-purchases-adapter'
 import type { StoreBillingAdapter } from '~/services/iap/store-billing-adapter'
-import { PurchaseCancelledError, PurchasePendingError } from '~/services/iap/store-billing-adapter'
+import { PurchaseCancelledError, PurchaseNotCompletedError, PurchasePendingError } from '~/services/iap/store-billing-adapter'
 import { createPurchaseJournal, type JournalSnapshot, type PurchaseJournal } from '~/services/iap/purchase-journal'
 import { storeFor } from '~/utils/native-platform'
 import { createLogger } from '~/utils/logger'
@@ -298,11 +298,29 @@ export function useCoinPurchase(
         toast.add({ title: 'Waiting for approval', description: 'Your purchase needs approval before it can complete.', color: 'info' })
         return
       }
+      if (error instanceof PurchaseNotCompletedError) {
+        // Android: cancel and real failures look the same, or the call hung.
+        // Neutral — never "Purchase failed" for a plain cancel. `ready` first:
+        // restore's GATE skips while `purchasing`.
+        store.setStatus('ready')
+        toast.add({ title: 'Purchase not completed', color: 'neutral' })
+        reactToNotCompleted()
+        return
+      }
       log.warn('Purchase failed', error)
       store.setStatus('failed')
       store.setError('Could not start the purchase.')
       toast.add({ title: 'Purchase failed', description: 'Could not start the purchase.', color: 'error' })
     }
+  }
+
+  /**
+   * REACT — an already-owned or still-unfinished purchase behind a
+   * not-completed outcome is credited by restore (the backend credits a token
+   * once). Silent unless something is credited; never throws.
+   */
+  function reactToNotCompleted(): void {
+    restorePending('auto').catch(error => log.warn('Restore after not-completed purchase failed', error))
   }
 
   // ========================================

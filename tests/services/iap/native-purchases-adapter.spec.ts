@@ -8,9 +8,10 @@
 // plain object, never a Proxy, matching what getPlugin() wraps it into.
 // ========================================
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { PurchaseCancelledError, PurchasePendingError } from '~/services/iap/store-billing-adapter'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { PurchaseCancelledError, PurchaseNotCompletedError, PurchasePendingError } from '~/services/iap/store-billing-adapter'
 import { createNativePurchasesAdapter } from '~/services/iap/native-purchases-adapter'
+import { IAP_PURCHASE_SHEET_OPEN_CEILING_MS, IAP_PURCHASE_RESUME_GRACE_MS } from '~/constants/economy/iapConstants'
 
 const {
   mockIsIosNative,
@@ -21,6 +22,9 @@ const {
   mockAcknowledgePurchase,
   mockConsumePurchase,
   mockAddListener,
+  appListeners,
+  mockAppAddListener,
+  mockAppListenerRemove,
 } = vi.hoisted(() => ({
   mockIsIosNative: vi.fn(() => true),
   mockIsBillingSupported: vi.fn(),
@@ -30,6 +34,13 @@ const {
   mockAcknowledgePurchase: vi.fn(),
   mockConsumePurchase: vi.fn(),
   mockAddListener: vi.fn(),
+  appListeners: {} as Record<string, Array<() => void>>,
+  mockAppAddListener: vi.fn(),
+  mockAppListenerRemove: vi.fn(),
+}))
+
+vi.mock('@capacitor/app', () => ({
+  App: { addListener: mockAppAddListener },
 }))
 
 vi.mock('~/utils/native-platform', () => ({
@@ -69,10 +80,25 @@ function flushPending(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0))
 }
 
+/** Fires a Capacitor App lifecycle event at every listener still registered. */
+function fireApp(event: 'pause' | 'resume'): void {
+  for (const fn of appListeners[event] ?? []) fn()
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockIsIosNative.mockReturnValue(true)
   mockAddListener.mockResolvedValue({ remove: vi.fn() })
+  for (const key of Object.keys(appListeners)) Reflect.deleteProperty(appListeners, key)
+  mockAppAddListener.mockImplementation((event: string, fn: () => void) => {
+    ;(appListeners[event] ??= []).push(fn)
+    return Promise.resolve({
+      remove: () => {
+        mockAppListenerRemove(event)
+        appListeners[event] = (appListeners[event] ?? []).filter(l => l !== fn)
+      },
+    })
+  })
 })
 
 // ========================================
@@ -343,5 +369,208 @@ describe('serialized billing calls', () => {
 
     purchase.resolve({ transactionId: 'tx-1' })
     await inFlight
+  })
+})
+
+// ========================================
+// Android: "Purchase is not purchased" (bug 2)
+// ========================================
+// The plugin's onPurchasesUpdated rejects USER_CANCELED, ITEM_ALREADY_OWNED and
+// every other non-OK Play result with this one text — not a "failed" outcome.
+
+describe('purchase — "Purchase is not purchased"', () => {
+  it('Android → PurchaseNotCompletedError', async () => {
+    mockIsIosNative.mockReturnValue(false)
+    mockPurchaseProduct.mockRejectedValue(new Error('Purchase is not purchased'))
+    const adapter = createNativePurchasesAdapter()
+
+    await expect(adapter.purchase('coins_100')).rejects.toBeInstanceOf(PurchaseNotCompletedError)
+  })
+
+  it('iOS → passed through untouched (not an iOS plugin message)', async () => {
+    mockIsIosNative.mockReturnValue(true)
+    mockPurchaseProduct.mockRejectedValue(new Error('Purchase is not purchased'))
+    const adapter = createNativePurchasesAdapter()
+
+    const outcome = adapter.purchase('coins_100')
+    await expect(outcome).rejects.toThrow('Purchase is not purchased')
+    await expect(outcome).rejects.not.toBeInstanceOf(PurchaseNotCompletedError)
+  })
+})
+
+// ========================================
+// Android purchase hang guard (bug 1)
+// ========================================
+// launchBillingFlow's non-OK result is only logged by the plugin, so a purchase
+// call can hang and hold the shared billing queue. Fake timers are scoped to
+// this block; every deferred is settled so the module-level queue is clean.
+
+describe('purchase — Android hang guard', () => {
+  beforeEach(() => {
+    // Only the guard's own timers — faking more stalls the plugin's dynamic import.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    mockIsIosNative.mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** Lets the dynamic import and queue hops finish without moving the fake clock. */
+  async function flush(): Promise<void> {
+    await new Promise<void>(resolve => setImmediate(resolve))
+    await new Promise<void>(resolve => setImmediate(resolve))
+  }
+
+  /** Waits (real time, Date is not faked) until purchaseProduct was invoked — the guard is armed right after. */
+  async function untilPurchaseStarted(times = 1): Promise<void> {
+    const deadline = Date.now() + 4000
+    while (mockPurchaseProduct.mock.calls.length < times && Date.now() < deadline) await flush()
+    expect(mockPurchaseProduct).toHaveBeenCalledTimes(times)
+    await flush()
+  }
+
+  it('ceiling: an unsettled call rejects PurchaseNotCompletedError and releases the queue', async () => {
+    const hung = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(hung.promise)
+    mockIsBillingSupported.mockResolvedValue({ isBillingSupported: true })
+    const adapter = createNativePurchasesAdapter()
+
+    const purchase = adapter.purchase('coins_100')
+    const outcome = expect(purchase).rejects.toBeInstanceOf(PurchaseNotCompletedError)
+    const next = adapter.isSupported()
+    await untilPurchaseStarted()
+
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_SHEET_OPEN_CEILING_MS - 1)
+    expect(mockIsBillingSupported).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    await outcome
+    await expect(next).resolves.toBe(true)
+    expect(mockIsBillingSupported).toHaveBeenCalledTimes(1)
+
+    // A late plugin settle after the release is harmless (no unhandled rejection).
+    hung.reject(new Error('Purchase is not purchased'))
+    await flush()
+  })
+
+  it('once the sheet opened (pause), the ceiling never fires — a user may take minutes to pay', async () => {
+    const call = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(call.promise)
+    const adapter = createNativePurchasesAdapter()
+    let settled = false
+
+    const purchase = adapter.purchase('coins_100')
+    purchase.then(() => { settled = true }, () => { settled = true })
+    await untilPurchaseStarted()
+
+    fireApp('pause') // sheet opened
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_SHEET_OPEN_CEILING_MS * 20)
+    expect(settled).toBe(false)
+
+    call.resolve({ purchaseToken: 'token-1', purchaseState: '1' })
+    await expect(purchase).resolves.toEqual(expect.objectContaining({ id: 'token-1' }))
+  })
+
+  it('a late SUCCESS after the release is dropped, not returned to anyone', async () => {
+    const hung = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(hung.promise)
+    const adapter = createNativePurchasesAdapter()
+
+    const purchase = adapter.purchase('coins_100')
+    const outcome = expect(purchase).rejects.toBeInstanceOf(PurchaseNotCompletedError)
+    await untilPurchaseStarted()
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_SHEET_OPEN_CEILING_MS)
+    await outcome
+
+    hung.resolve({ purchaseToken: 'late-token', purchaseState: '1' })
+    await flush()
+    await expect(purchase).rejects.toBeInstanceOf(PurchaseNotCompletedError)
+  })
+
+  it('resume: released IAP_PURCHASE_RESUME_GRACE_MS after the app resumes with the call still open', async () => {
+    const hung = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(hung.promise)
+    const adapter = createNativePurchasesAdapter()
+
+    const purchase = adapter.purchase('coins_100')
+    const outcome = expect(purchase).rejects.toBeInstanceOf(PurchaseNotCompletedError)
+    await untilPurchaseStarted()
+
+    fireApp('pause') // sheet opened
+    await vi.advanceTimersByTimeAsync(60_000) // user taking their time — not released
+    fireApp('resume') // sheet gone
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_RESUME_GRACE_MS)
+    await outcome
+
+    hung.reject(new Error('Purchase is not purchased'))
+    await flush()
+  })
+
+  it('a pause inside the grace window cancels the resume countdown', async () => {
+    const call = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(call.promise)
+    const adapter = createNativePurchasesAdapter()
+    let settled = false
+
+    const purchase = adapter.purchase('coins_100')
+    purchase.then(() => { settled = true }, () => { settled = true })
+    await untilPurchaseStarted()
+
+    fireApp('resume')
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_RESUME_GRACE_MS - 1)
+    fireApp('pause') // sheet (re)opened
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_RESUME_GRACE_MS * 3)
+    expect(settled).toBe(false)
+
+    call.resolve({ purchaseToken: 'token-1', purchaseState: '1' })
+    await expect(purchase).resolves.toEqual(expect.objectContaining({ id: 'token-1' }))
+  })
+
+  it('a call that settles normally removes its listeners and never releases later', async () => {
+    mockPurchaseProduct.mockResolvedValue({ purchaseToken: 'token-1', purchaseState: '1' })
+    const adapter = createNativePurchasesAdapter()
+
+    await expect(adapter.purchase('coins_100')).resolves.toEqual(expect.objectContaining({ id: 'token-1' }))
+    await flush()
+
+    expect(mockAppListenerRemove).toHaveBeenCalledWith('resume')
+    expect(mockAppListenerRemove).toHaveBeenCalledWith('pause')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('a shell without the App plugin still gets the ceiling', async () => {
+    mockAppAddListener.mockRejectedValue(new Error('"App" plugin is not implemented on android'))
+    const hung = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(hung.promise)
+    const adapter = createNativePurchasesAdapter()
+
+    const purchase = adapter.purchase('coins_100')
+    const outcome = expect(purchase).rejects.toBeInstanceOf(PurchaseNotCompletedError)
+    await untilPurchaseStarted()
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_SHEET_OPEN_CEILING_MS)
+    await outcome
+
+    hung.reject(new Error('late'))
+    await flush()
+  })
+
+  it('iOS: no guard — the call is awaited as is', async () => {
+    mockIsIosNative.mockReturnValue(true)
+    const call = deferred<Record<string, string>>()
+    mockPurchaseProduct.mockReturnValue(call.promise)
+    const adapter = createNativePurchasesAdapter()
+    let settled = false
+
+    const purchase = adapter.purchase('coins_100')
+    purchase.then(() => { settled = true }, () => { settled = true })
+    await untilPurchaseStarted()
+    await vi.advanceTimersByTimeAsync(IAP_PURCHASE_SHEET_OPEN_CEILING_MS * 2)
+
+    expect(settled).toBe(false)
+    expect(mockAppAddListener).not.toHaveBeenCalled()
+
+    call.resolve({ transactionId: 'tx-ios' })
+    await expect(purchase).resolves.toEqual(expect.objectContaining({ id: 'tx-ios' }))
   })
 })
