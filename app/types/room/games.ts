@@ -50,8 +50,26 @@ export interface GameCatalogEntry {
    */
   provider?: GameProvider | (string & {});
   places?: readonly (GamePlace | (string & {}))[];
-  /** Fly games only: `scheme://host[:port]`, the frame's src and the postMessage origin. */
+  /**
+   * Fly games only: `scheme://host[:port]`. The frame src and postMessage origin of
+   * a game at its origin root. `null` for a Fly game on a path — see `launch_url`.
+   */
   origin?: string | null;
+  /**
+   * Fly games only: the URL the game frame loads — the origin, plus a path when
+   * several games share one origin (`…/carrom`). Optional because a backend from
+   * before it omits it; then `origin` is the URL. Read both through
+   * `resolveFlyGameTarget`, never directly.
+   */
+  launch_url?: string | null;
+}
+
+/** Where a Fly game loads and which origin its messages are matched against. */
+export interface FlyGameTarget {
+  /** Bare `scheme://host[:port]` — the postMessage GATE and `targetOrigin`. */
+  origin: string;
+  /** The frame `src`. Equals `origin` for a game at its origin root. */
+  url: string;
 }
 
 /** Where the catalogue fetch is, for the picker to render against. */

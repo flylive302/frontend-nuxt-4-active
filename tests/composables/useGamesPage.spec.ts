@@ -46,6 +46,15 @@ const FLY_HALF: GameCatalogEntry = {
   places: ['games_page'],
 }
 
+/** A Fly game on a path of the same site as Ludo: no bare `origin`, only a `launch_url`. */
+const CARROM: GameCatalogEntry = {
+  ...LUDO,
+  game_id: 'fly-carrom',
+  name: 'Carrom',
+  origin: null,
+  launch_url: `${ORIGIN}/carrom`,
+}
+
 const FLY_ROOM_ONLY: GameCatalogEntry = { ...LUDO, game_id: 'fly-room', name: 'Room Fly', places: ['room_lobby'] }
 const JOYPLAY_ROOM: GameCatalogEntry = {
   game_id: '10',
@@ -244,6 +253,32 @@ describe('useGamesPage — what the grid lists', () => {
     expect(page.games.value).toEqual([LUDO, FLY_HALF])
   })
 
+  it('lists a Carrom row (null origin, launch_url on a path) next to Ludo', async () => {
+    const { page } = await mountPage({ data: [LUDO, CARROM] })
+
+    expect(page.isSectionVisible.value).toBe(true)
+    expect(page.games.value).toEqual([LUDO, CARROM])
+  })
+
+  it('leaves out a Carrom row whose launch_url is unusable — even beside a valid origin', async () => {
+    const { page } = await mountPage({
+      data: [
+        LUDO,
+        { ...CARROM, game_id: 'bad-slash', launch_url: `${ORIGIN}/carrom/` },
+        { ...CARROM, game_id: 'bad-origin', origin: ORIGIN, launch_url: 'not a url' },
+        { ...CARROM, game_id: 'bad-mismatch', origin: ORIGIN, launch_url: 'https://evil.example/carrom' },
+      ],
+    })
+
+    expect(page.games.value).toEqual([LUDO])
+  })
+
+  it('hides the section when the only Games-page game is a Carrom row with an unusable launch_url', async () => {
+    const { page } = await mountPage({ data: [{ ...CARROM, launch_url: `${ORIGIN}/carrom?x=1` }] })
+
+    expect(page.isSectionVisible.value).toBe(false)
+  })
+
   it('leaves out room-lobby-only games, JoyPlay games and unknown providers', async () => {
     const { page } = await mountPage({
       data: [JOYPLAY_ROOM, FLY_ROOM_ONLY, LUDO, JOYPLAY_PAGE, JOYPLAY_LEGACY, UNKNOWN_PROVIDER, FLY_HALF],
@@ -264,6 +299,24 @@ describe('useGamesPage — opening a game', () => {
     expect(page.gameUrl.value).toBe(ORIGIN)
     expect(page.gameTitle.value).toBe('Ludo')
     expect(page.status.value).toBe('launching')
+  })
+
+  it('opens a Carrom tile at its launch URL and mints for it from the bare origin', async () => {
+    const { page, api, gameWindow, fromGame } = await mountPage({ data: [LUDO, CARROM] })
+
+    page.selectGame(CARROM)
+
+    expect(page.isOverlayOpen.value).toBe(true)
+    expect(page.gameUrl.value).toBe(`${ORIGIN}/carrom`)
+    expect(page.gameTitle.value).toBe('Carrom')
+
+    fromGame('ready')
+    await settle()
+
+    expect(api).toHaveBeenCalledWith('/games/fly/token', { method: 'POST', body: { game_id: 'fly-carrom' } })
+    expect(gameWindow.postMessage.mock.calls).toEqual([
+      [{ source: 'flylive', type: 'launch', token: 'jwt-1' }, ORIGIN],
+    ])
   })
 
   it('uses the full-screen layer even for a game whose layout is not `full`', async () => {

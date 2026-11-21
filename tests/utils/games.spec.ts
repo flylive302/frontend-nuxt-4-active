@@ -3,7 +3,13 @@
 // ========================================
 
 import { describe, it, expect } from 'vitest'
-import { gameIconUrl, isGameOfferedIn, normalizeGameOrigin, resolveGameContainer } from '~/utils/games'
+import {
+  gameIconUrl,
+  isGameOfferedIn,
+  normalizeGameOrigin,
+  resolveFlyGameTarget,
+  resolveGameContainer,
+} from '~/utils/games'
 import {
   GAME_ICON_BASE_PATH,
   GAME_SHEET_MAX_HEIGHT_DVH,
@@ -91,6 +97,130 @@ describe('normalizeGameOrigin', () => {
   })
 })
 
+/** `launch_url` values that must never load: each is one thing a browser would rewrite or a parser would misread. */
+const REFUSED_LAUNCH_URLS: ReadonlyArray<[label: string, value: string]> = [
+  ['empty', ''],
+  ['not a URL', 'not a url'],
+  ['a javascript: URL', 'javascript:alert(1)'],
+  ['a non-http scheme', 'ftp://host/carrom'],
+  ['a trailing slash on a path', 'https://host/carrom/'],
+  ['an empty path segment', 'https://host//carrom'],
+  ['a `..` segment', 'https://host/carrom/../x'],
+  ['a `.` segment', 'https://host/./carrom'],
+  ['a query', 'https://host/carrom?x=1'],
+  ['a fragment', 'https://host/carrom#x'],
+  ['credentials', 'https://user:pw@host/carrom'],
+  ['a default port written out', 'https://host:443/carrom'],
+  ['an uppercase host', 'https://HOST/carrom'],
+  ['an encoded slash', 'https://host/car%2Fom'],
+  ['a backslash', 'https://host\\carrom'],
+  ['a space', 'https://host/carrom play'],
+  ['a non-string', 123 as unknown as string],
+]
+
+describe('resolveFlyGameTarget', () => {
+  const HOST = 'https://host'
+
+  describe('a row with no `launch_url` (a backend from before it)', () => {
+    it.each([
+      ['absent', undefined],
+      ['null', null],
+    ])('falls back to the bare origin when `launch_url` is %s', (_label, launchUrl) => {
+      expect(resolveFlyGameTarget({ origin: HOST, launch_url: launchUrl }))
+        .toEqual({ origin: HOST, url: HOST })
+      expect(resolveFlyGameTarget({ origin: `${HOST}/`, launch_url: launchUrl }))
+        .toEqual({ origin: HOST, url: HOST })
+    })
+
+    it('reads a row with only an `origin` key (the field is not there at all)', () => {
+      expect(resolveFlyGameTarget({ origin: HOST })).toEqual({ origin: HOST, url: HOST })
+    })
+
+    it.each([
+      ['no origin at all', {}],
+      ['a null origin', { origin: null }],
+      ['an empty origin', { origin: '' }],
+      ['an origin with a path', { origin: `${HOST}/carrom` }],
+      ['an origin that is not a URL', { origin: 'flylive-ludo' }],
+      ['null for both', { origin: null, launch_url: null }],
+    ])('is null with %s', (_label, row) => {
+      expect(resolveFlyGameTarget(row)).toBeNull()
+    })
+  })
+
+  describe('a row with a usable `launch_url`', () => {
+    it('Ludo shape (origin + the same launch_url): the url is the bare origin', () => {
+      expect(resolveFlyGameTarget({ origin: HOST, launch_url: HOST }))
+        .toEqual({ origin: HOST, url: HOST })
+    })
+
+    it('Carrom shape (null origin, launch_url on a path): bare origin for the GATE, the full URL for the frame', () => {
+      expect(resolveFlyGameTarget({ origin: null, launch_url: `${HOST}/carrom` }))
+        .toEqual({ origin: HOST, url: `${HOST}/carrom` })
+    })
+
+    it('does not need the `origin` key at all', () => {
+      expect(resolveFlyGameTarget({ launch_url: `${HOST}/carrom` }))
+        .toEqual({ origin: HOST, url: `${HOST}/carrom` })
+    })
+
+    it('accepts a nested path', () => {
+      expect(resolveFlyGameTarget({ origin: null, launch_url: `${HOST}/games/carrom` }))
+        .toEqual({ origin: HOST, url: `${HOST}/games/carrom` })
+    })
+
+    it('accepts every character a path segment may carry', () => {
+      expect(resolveFlyGameTarget({ origin: null, launch_url: `${HOST}/a-b_c.d~E9/v1.2` }))
+        .toEqual({ origin: HOST, url: `${HOST}/a-b_c.d~E9/v1.2` })
+    })
+
+    it('keeps a non-default port in both the origin and the url', () => {
+      expect(resolveFlyGameTarget({ origin: null, launch_url: 'http://192.168.1.5:5175/carrom' }))
+        .toEqual({ origin: 'http://192.168.1.5:5175', url: 'http://192.168.1.5:5175/carrom' })
+    })
+
+    it('turns a bare-origin launch_url with one trailing slash into the bare origin', () => {
+      expect(resolveFlyGameTarget({ origin: null, launch_url: `${HOST}/` }))
+        .toEqual({ origin: HOST, url: HOST })
+      expect(resolveFlyGameTarget({ origin: HOST, launch_url: `${HOST}/` }))
+        .toEqual({ origin: HOST, url: HOST })
+    })
+
+    it('accepts a row `origin` that normalises to the same origin as the launch_url', () => {
+      expect(resolveFlyGameTarget({ origin: `${HOST}/`, launch_url: `${HOST}/carrom` }))
+        .toEqual({ origin: HOST, url: `${HOST}/carrom` })
+    })
+  })
+
+  describe('a row whose `origin` and `launch_url` disagree', () => {
+    it.each([
+      ['another host', 'https://other'],
+      ['another port', 'https://host:8443'],
+      ['another scheme', 'http://host'],
+    ])('is null when the row origin is %s', (_label, origin) => {
+      expect(resolveFlyGameTarget({ origin, launch_url: `${HOST}/carrom` })).toBeNull()
+      expect(resolveFlyGameTarget({ origin, launch_url: HOST })).toBeNull()
+    })
+
+    it('is null when the row origin is itself unusable, even though the launch_url is fine', () => {
+      expect(resolveFlyGameTarget({ origin: `${HOST}/carrom`, launch_url: `${HOST}/carrom` })).toBeNull()
+      expect(resolveFlyGameTarget({ origin: '', launch_url: `${HOST}/carrom` })).toBeNull()
+    })
+  })
+
+  describe('a present but unusable `launch_url`', () => {
+    it.each(REFUSED_LAUNCH_URLS)('refuses %s', (_label, launchUrl) => {
+      expect(resolveFlyGameTarget({ origin: null, launch_url: launchUrl })).toBeNull()
+    })
+
+    it.each(REFUSED_LAUNCH_URLS)('refuses %s even with a perfectly valid `origin` — it never falls back', (_label, launchUrl) => {
+      // The origin root can be a different game (Ludo, for Carrom): loading it
+      // would put the wrong game in front of the player.
+      expect(resolveFlyGameTarget({ origin: HOST, launch_url: launchUrl })).toBeNull()
+    })
+  })
+})
+
 describe('isGameOfferedIn', () => {
   const JOYPLAY: GameCatalogEntry = { game_id: '10', name: 'Roulette', category: 'Casino', layout: 'half', provider: 'joyplay', places: ['room_lobby'], origin: null }
   const LUDO: GameCatalogEntry = {
@@ -119,5 +249,39 @@ describe('isGameOfferedIn', () => {
     expect(isGameOfferedIn({ ...LUDO, places: undefined }, 'room_lobby')).toBe(false)
     expect(isGameOfferedIn({ ...LUDO, origin: null }, 'room_lobby')).toBe(false)
     expect(isGameOfferedIn({ ...LUDO, origin: 'https://a.example/path' }, 'room_lobby')).toBe(false)
+  })
+
+  describe('a Fly game on a path (Carrom)', () => {
+    const CARROM: GameCatalogEntry = {
+      game_id: 'fly-carrom', name: 'Carrom', category: 'Casual', layout: 'full',
+      provider: 'fly', places: ['room_lobby', 'games_page'], origin: null,
+      launch_url: 'https://flylive-ludo.flylive.workers.dev/carrom',
+    }
+
+    it('is offered in the places it names, via its launch_url alone', () => {
+      expect(isGameOfferedIn(CARROM, 'room_lobby')).toBe(true)
+      expect(isGameOfferedIn(CARROM, 'games_page')).toBe(true)
+      expect(isGameOfferedIn({ ...CARROM, places: ['games_page'] }, 'room_lobby')).toBe(false)
+      expect(isGameOfferedIn({ ...CARROM, places: undefined }, 'games_page')).toBe(false)
+    })
+
+    it('is not offered when its launch_url is unusable, even with a valid origin', () => {
+      expect(isGameOfferedIn({ ...CARROM, launch_url: 'https://flylive-ludo.flylive.workers.dev/carrom/' }, 'games_page')).toBe(false)
+      expect(isGameOfferedIn({ ...CARROM, launch_url: 'javascript:alert(1)' }, 'room_lobby')).toBe(false)
+      expect(isGameOfferedIn({ ...CARROM, origin: 'https://flylive-ludo.flylive.workers.dev', launch_url: 'not a url' }, 'games_page')).toBe(false)
+    })
+
+    it('is not offered when its launch_url is on a different origin than the row origin', () => {
+      expect(isGameOfferedIn({ ...CARROM, origin: 'https://other.example' }, 'games_page')).toBe(false)
+    })
+
+    it('still offers a Ludo row that also carries a launch_url on its own origin', () => {
+      expect(isGameOfferedIn({ ...LUDO, launch_url: LUDO.origin }, 'games_page')).toBe(true)
+    })
+
+    it('is hidden from an older bundle because a null origin normalises to nothing (why the backend may send `origin: null`)', () => {
+      // An older bundle reads `origin` only, through this function.
+      expect(normalizeGameOrigin(CARROM.origin)).toBeNull()
+    })
   })
 })

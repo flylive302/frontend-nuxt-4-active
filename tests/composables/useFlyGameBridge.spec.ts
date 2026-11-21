@@ -12,6 +12,7 @@ import { setupNuxtMocks, cleanupNuxtMocks, createMockApi } from '../helpers/nuxt
 import {
   FLY_GAME_LOGIN_FAILED_MESSAGE,
   FLY_GAME_MIN_MINT_INTERVAL_MS,
+  FLY_GAME_UNAVAILABLE_MESSAGE,
 } from '~/constants/fly-games'
 import type { GameCatalogEntry } from '~/types/room/games'
 
@@ -34,6 +35,18 @@ const LUDO: GameCatalogEntry = {
   provider: 'fly',
   places: ['room_lobby', 'games_page'],
   origin: ORIGIN,
+}
+
+/**
+ * A Fly game on a path of the same vendor site as Ludo. No bare `origin` — the
+ * launch URL carries both the frame src and (by its origin) the message GATE.
+ */
+const CARROM: GameCatalogEntry = {
+  ...LUDO,
+  game_id: 'fly-carrom',
+  name: 'Carrom',
+  origin: null,
+  launch_url: `${ORIGIN}/carrom`,
 }
 
 /** A Fly game that renders in a sheet, to see `request_fullscreen` change something. */
@@ -183,6 +196,96 @@ describe('useFlyGameBridge.open(game)', () => {
   })
 })
 
+describe('useFlyGameBridge.open(game) — a game on a path (Carrom)', () => {
+  it('loads the launch URL, path included, and shows the loading state', async () => {
+    const { bridge, api } = await loadBridge()
+
+    bridge.open(CARROM)
+
+    expect(bridge.gameUrl.value).toBe(`${ORIGIN}/carrom`)
+    expect(bridge.gameUrl.value).not.toContain('token')
+    expect(bridge.status.value).toBe('launching')
+    expect(bridge.currentGame.value).toEqual(CARROM)
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('still loads the bare origin for a Ludo row that carries a launch_url (or a null one)', async () => {
+    const { bridge } = await loadBridge()
+
+    bridge.open({ ...LUDO, launch_url: ORIGIN })
+    expect(bridge.gameUrl.value).toBe(ORIGIN)
+
+    bridge.open({ ...LUDO, launch_url: `${ORIGIN}/` })
+    expect(bridge.gameUrl.value).toBe(ORIGIN)
+
+    bridge.open({ ...LUDO, launch_url: null })
+    expect(bridge.gameUrl.value).toBe(ORIGIN)
+  })
+
+  it.each([
+    ['an unusable launch_url and no origin', { ...CARROM, launch_url: `${ORIGIN}/carrom/` }],
+    // Never falls back to the origin root — that is Ludo, not Carrom.
+    ['an unusable launch_url beside a valid origin', { ...CARROM, origin: ORIGIN, launch_url: `${ORIGIN}/carrom?x=1` }],
+    ['a launch_url that is not a URL', { ...CARROM, origin: ORIGIN, launch_url: 'not a url' }],
+    ['a launch_url on another origin than the row origin', { ...CARROM, origin: ORIGIN, launch_url: 'https://evil.example/carrom' }],
+  ])('goes to the error state with nothing loaded for %s', async (_label, row) => {
+    const { bridge, api } = await loadBridge()
+
+    bridge.open(row)
+
+    expect(bridge.gameUrl.value).toBeNull()
+    expect(bridge.status.value).toBe('error')
+    expect(bridge.errorMessage.value).toBe(FLY_GAME_UNAVAILABLE_MESSAGE)
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('does not leave a closed game\'s origin live for the next, invalid row', async () => {
+    const { bridge, api, gameWindow, fromGame } = await loadBridge()
+    bridge.open(LUDO)
+    bridge.close()
+
+    bridge.open({ ...CARROM, origin: ORIGIN, launch_url: `${ORIGIN}/carrom/` })
+    expect(bridge.gameUrl.value).toBeNull()
+    expect(bridge.status.value).toBe('error')
+
+    // A `ready` from the old (and from the very same) origin must reach nothing.
+    fromGame('ready')
+    await settle()
+
+    expect(tokenCalls(api)).toHaveLength(0)
+    expect(gameWindow.postMessage).not.toHaveBeenCalled()
+  })
+
+  it('does not leave an open game\'s origin live when the next row is invalid and nothing closed in between', async () => {
+    const { bridge, api, gameWindow, fromGame } = await loadBridge()
+    bridge.open(LUDO)
+
+    bridge.open({ ...CARROM, launch_url: 'javascript:alert(1)' })
+    expect(bridge.status.value).toBe('error')
+
+    fromGame('ready')
+    await settle()
+
+    expect(tokenCalls(api)).toHaveLength(0)
+    expect(gameWindow.postMessage).not.toHaveBeenCalled()
+  })
+
+  // KNOWN RED (source gap, predates Carrom): the `!target` branch of `open()` nulls
+  // `origin` / `launchUrl` but not `gameUrl`, so the frame keeps the previous game's
+  // src beside an error state for a different game. Both surfaces call `open()`
+  // without a `close()` first (useRoomGameLobby.open, useGamesPage.selectGame).
+  it('clears the previous game\'s frame URL when the next row is invalid and nothing closed in between', async () => {
+    const { bridge } = await loadBridge()
+    bridge.open(LUDO)
+    expect(bridge.gameUrl.value).toBe(ORIGIN)
+
+    bridge.open({ ...CARROM, launch_url: 'javascript:alert(1)' })
+
+    expect(bridge.status.value).toBe('error')
+    expect(bridge.gameUrl.value).toBeNull()
+  })
+})
+
 describe('useFlyGameBridge — inbound GATE', () => {
   it('ignores a message from the wrong origin', async () => {
     const { bridge, api, deliver } = await loadBridge()
@@ -263,6 +366,85 @@ describe('useFlyGameBridge — inbound GATE', () => {
     fromGame('ready')
     await settle()
     expect(tokenCalls(api)).toHaveLength(1)
+  })
+})
+
+describe('useFlyGameBridge — a game on a path (Carrom): GATE and targetOrigin stay on the BARE origin', () => {
+  it('accepts `ready` from the bare origin and mints for fly-carrom', async () => {
+    const { bridge, api, fromGame } = await loadBridge()
+    bridge.open(CARROM)
+
+    fromGame('ready')
+    await settle()
+
+    expect(tokenCalls(api)).toEqual([['/games/fly/token', { method: 'POST', body: { game_id: 'fly-carrom' } }]])
+  })
+
+  it('posts `launch` and `room` with the bare origin as targetOrigin, never the URL with the path', async () => {
+    const { bridge, gameWindow, fromGame } = await loadBridge({ roomId: 7 })
+    bridge.open(CARROM)
+
+    fromGame('ready')
+    await settle()
+
+    expect(gameWindow.postMessage.mock.calls).toEqual([
+      [{ source: 'flylive', type: 'launch', token: 'jwt-1' }, ORIGIN],
+      [{ source: 'flylive', type: 'room', roomId: '7' }, ORIGIN],
+    ])
+    for (const [, target] of gameWindow.postMessage.mock.calls) {
+      expect(target).not.toContain('/carrom')
+      expect(target).not.toBe('*')
+    }
+    // The token still travels by message only — the frame src stays the launch URL.
+    expect(bridge.gameUrl.value).toBe(`${ORIGIN}/carrom`)
+  })
+
+  it('posts only `launch` when not opened from a Room', async () => {
+    const { bridge, gameWindow, fromGame } = await loadBridge({ roomId: null })
+    bridge.open(CARROM)
+
+    fromGame('ready')
+    await settle()
+
+    expect(gameWindow.postMessage.mock.calls).toEqual([
+      [{ source: 'flylive', type: 'launch', token: 'jwt-1' }, ORIGIN],
+    ])
+  })
+
+  it.each([
+    ['the launch URL (a browser never sends it as an origin)', `${ORIGIN}/carrom`],
+    ['the bare origin with a trailing slash', `${ORIGIN}/`],
+    ['another host', 'https://evil.example'],
+    ['another host on the same path', 'https://evil.example/carrom'],
+  ])('drops a message whose origin is %s', async (_label, origin) => {
+    const { bridge, api, gameWindow, deliver } = await loadBridge()
+    bridge.open(CARROM)
+
+    deliver({ source: 'flylive-ludo', type: 'ready' }, { origin })
+    await settle()
+
+    expect(api).not.toHaveBeenCalled()
+    expect(gameWindow.postMessage).not.toHaveBeenCalled()
+  })
+
+  it('reads the Fly site\'s `flylive-ludo` source from Carrom too (one site, one protocol)', async () => {
+    const { bridge, fromGame } = await loadBridge()
+    bridge.open(CARROM)
+
+    fromGame('launch_result', { ok: true, reason: null })
+
+    expect(bridge.status.value).toBe('ready')
+  })
+
+  it('`return_to_room` closes it and clears the launch URL', async () => {
+    const { bridge, fromGame, onExitRequested } = await loadBridge()
+    bridge.open(CARROM)
+
+    fromGame('return_to_room', { roomId: '7', matchId: 'm-1' })
+
+    expect(bridge.gameUrl.value).toBeNull()
+    expect(bridge.currentGame.value).toBeNull()
+    expect(onExitRequested).toHaveBeenCalledOnce()
   })
 })
 
@@ -467,6 +649,43 @@ describe('useFlyGameBridge.retry()', () => {
     expect(tokenCalls(api)).toHaveLength(2)
   })
 
+  it('reloads a game on a path at its launch URL, not the bare origin (Carrom)', async () => {
+    vi.useFakeTimers()
+    const { bridge, api, gameWindow, fromGame } = await loadBridge()
+    bridge.open(CARROM)
+    fromGame('ready')
+    await settle()
+    fromGame('launch_result', { ok: false, reason: 'bad_token' })
+
+    const retrying = bridge.retry()
+    expect(bridge.gameUrl.value).toBeNull()
+    await retrying
+
+    expect(bridge.gameUrl.value).toBe(`${ORIGIN}/carrom`)
+    expect(bridge.status.value).toBe('launching')
+
+    // The GATE and the targetOrigin did not move to the path.
+    fromGame('ready')
+    await settle()
+    expect(tokenCalls(api)).toHaveLength(2)
+    expect(tokenCalls(api)[1]).toEqual(['/games/fly/token', { method: 'POST', body: { game_id: 'fly-carrom' } }])
+    for (const [, target] of gameWindow.postMessage.mock.calls) {
+      expect(target).toBe(ORIGIN)
+    }
+  })
+
+  it('does not load the launch URL after the game is closed during the unmounted tick', async () => {
+    const { bridge } = await loadBridge()
+    bridge.open(CARROM)
+
+    const retrying = bridge.retry()
+    bridge.close()
+    await retrying
+
+    expect(bridge.gameUrl.value).toBeNull()
+    expect(bridge.status.value).toBe('idle')
+  })
+
   it('does nothing when no game is open', async () => {
     const { bridge } = await loadBridge()
 
@@ -487,6 +706,20 @@ describe('useFlyGameBridge.close()', () => {
     expect(bridge.currentGame.value).toBeNull()
     expect(bridge.container.value).toBeNull()
     expect(bridge.status.value).toBe('idle')
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('clears the launch URL of a game on a path, and ignores the origin afterwards (Carrom)', async () => {
+    const { bridge, api, fromGame } = await loadBridge()
+    bridge.open(CARROM)
+    expect(bridge.gameUrl.value).toBe(`${ORIGIN}/carrom`)
+
+    bridge.close()
+
+    expect(bridge.gameUrl.value).toBeNull()
+    expect(bridge.currentGame.value).toBeNull()
+    fromGame('ready')
+    await settle()
     expect(api).not.toHaveBeenCalled()
   })
 

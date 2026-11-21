@@ -4,9 +4,12 @@
  * Action role, not tied to a Room: the Room games lobby passes a `roomId`, the
  * Games page (fly-games-ludo 05) passes none.
  *
- *   open(game)   GATE  Fly provider + usable origin
- *                EXECUTE load the BARE game origin in the frame — no token in any URL
- *   message      GATE  exact origin + this frame's window + `source: flylive-ludo`
+ *   open(game)   GATE  Fly provider + usable target (`resolveFlyGameTarget`)
+ *                EXECUTE load the game's launch URL in the frame — the bare origin,
+ *                plus a path for a game that shares its origin (Carrom at `/carrom`).
+ *                No token in any URL.
+ *   message      GATE  exact BARE origin + this frame's window + `source: flylive-ludo`
+ *                (`flylive-ludo` is the Fly site's name, sent by every game on it)
  *     ready        → POST /games/fly/token → post `launch`, then `room` (Room only)
  *     launch_result → ok: ready · not ok: error state (Retry reloads the frame)
  *     return_to_room → close, ask the surface to close
@@ -34,7 +37,7 @@ import {
   FLY_GAME_SOURCE_OUT,
   FLY_GAME_UNAVAILABLE_MESSAGE,
 } from '~/constants/fly-games';
-import { gameProviderOf, normalizeGameOrigin, resolveGameContainer } from '~/utils/games';
+import { gameProviderOf, resolveFlyGameTarget, resolveGameContainer } from '~/utils/games';
 import { createLogger } from '~/utils/logger';
 
 const log = createLogger('[FlyGameBridge]');
@@ -50,7 +53,7 @@ export interface UseFlyGameBridgeOptions {
 
 export interface UseFlyGameBridgeReturn {
   status: Readonly<Ref<GamePanelStatus>>;
-  /** The bare game origin while a game is open. Never carries a token. */
+  /** The game's launch URL (origin, plus a path for some games) while it is open. Never carries a token. */
   gameUrl: Readonly<Ref<string | null>>;
   errorMessage: Readonly<Ref<string | null>>;
   currentGame: Readonly<Ref<Readonly<GameCatalogEntry> | null>>;
@@ -74,8 +77,11 @@ export function useFlyGameBridge(options: UseFlyGameBridgeOptions = {}): UseFlyG
   const currentGame = ref<GameCatalogEntry | null>(null);
   const fullScreenRequested = ref(false);
 
-  /** The normalised origin of the open game: the frame src, the GATE and the targetOrigin. */
+  /** The bare origin of the open game: the GATE and the targetOrigin. Never the frame src. */
   let origin: string | null = null;
+
+  /** What the frame loads for the open game — `origin`, or `origin` plus the game's path. */
+  let launchUrl: string | null = null;
 
   /**
    * Advanced by open, retry and close. A mint answer is used only if this still
@@ -146,27 +152,34 @@ export function useFlyGameBridge(options: UseFlyGameBridgeOptions = {}): UseFlyG
 
     resetSession();
     currentGame.value = game;
-    origin = normalizeGameOrigin(game.origin);
+    const target = resolveFlyGameTarget(game);
 
-    if (!origin) {
+    if (!target) {
+      // A game may already be open (the surfaces call open() without close()):
+      // drop its frame too, or the panel errors over another game's page.
+      origin = null;
+      launchUrl = null;
+      gameUrl.value = null;
       status.value = 'error';
       errorMessage.value = FLY_GAME_UNAVAILABLE_MESSAGE;
-      log.error('Fly game has no usable origin', game.game_id);
+      log.error('Fly game has no usable launch target', game.game_id);
       return;
     }
 
-    gameUrl.value = origin;
+    origin = target.origin;
+    launchUrl = target.url;
+    gameUrl.value = launchUrl;
     status.value = 'launching';
   }
 
   /** "Try again": reload the frame. The reloaded game sends `ready` and the flow restarts. */
   async function retry(): Promise<void> {
     const game = currentGame.value;
-    if (!game || !origin) {
+    if (!game || !launchUrl) {
       return;
     }
 
-    const url = origin;
+    const url = launchUrl;
     resetSession();
     status.value = 'launching';
     // Unmount the iframe for one tick so it remounts and loads afresh — the same
@@ -184,6 +197,7 @@ export function useFlyGameBridge(options: UseFlyGameBridgeOptions = {}): UseFlyG
     resetSession();
     currentGame.value = null;
     origin = null;
+    launchUrl = null;
     gameUrl.value = null;
     status.value = 'idle';
   }
