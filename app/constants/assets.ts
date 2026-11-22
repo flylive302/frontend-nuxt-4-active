@@ -293,3 +293,65 @@ export const RECHARGE_ACTIVITY = {
   honarWallUserDisplayBgTop2: `${IK}/missions/recharge-activity/honor_top2.png`,
   honarWallUserDisplayBgTop3: `${IK}/missions/recharge-activity/honor_top3.png`,
 }
+
+// ========================================
+// Pretty ID event (/pretty-id)
+// ========================================
+
+/**
+ * Bundled event art (`public/images/pretty-id/`), produced from the design
+ * sources by a one-off sharp pass: WebP, sized to the largest CSS slot x 2.5
+ * DPR and never above native. Ships in the app bundle like the CP event art.
+ *
+ * ⚠️ `panelBorder` is a 9-slice source — `border-image-slice: 81 46 81 46` in
+ * assets/css/pretty-id.css is in SOURCE pixels (112x182). Never resize it.
+ */
+const PID = '/images/pretty-id'
+
+/**
+ * Looping event animations. Bundled for now so the page works with no upload
+ * step; the app's home for .svga is R2 (`${R2}/events/pretty-id`) — once the
+ * four files are uploaded there, change this one constant and delete
+ * `public/svga/pretty-id/`. Root-relative paths are made absolute at the call
+ * site (`PrettyIdAnimation`): the svga parser fetches from a blob worker, which
+ * cannot resolve a relative URL.
+ */
+const PID_SVGA = '/svga/pretty-id'
+
+export const PRETTY_ID_ASSETS = {
+  // Hero (750x1000 design canvas). `heroPoster` has the title baked in.
+  heroPoster: `${PID}/hero-poster.webp`,
+  heroPlain: `${PID}/hero-plain.webp`,
+
+  // Frames & chrome
+  marble: `${PID}/marble.webp`,
+  panelBorder: `${PID}/panel-border.webp`,
+  finial: `${PID}/finial.webp`,
+  corner: `${PID}/corner.webp`,
+  plaque: `${PID}/plaque.webp`,
+  plaqueDim: `${PID}/plaque-dim.webp`,
+  button: `${PID}/button.webp`,
+  row: `${PID}/row.webp`,
+  card: `${PID}/card.webp`,
+  card2: `${PID}/card2.webp`,
+  ring: `${PID}/ring.webp`,
+  slip: `${PID}/slip.webp`,
+  badge: `${PID}/badge.webp`,
+
+  // Tier shields (Choose tab filters)
+  shieldLucky: `${PID}/shield-lucky.webp`,
+  shieldSequence: `${PID}/shield-sequence.webp`,
+  shieldLegend: `${PID}/shield-legend.webp`,
+  shieldMirror: `${PID}/shield-mirror.webp`,
+  shieldCouple: `${PID}/shield-couple.webp`,
+
+  // Animations
+  heroSvga: `${PID_SVGA}/hero-purple.svga`,
+  lockedSvga: `${PID_SVGA}/locked-accent.svga`,
+  unlockLv17Svga: `${PID_SVGA}/unlock-lv17-accent.svga`,
+  unlockLv34Svga: `${PID_SVGA}/unlock-lv34-accent.svga`,
+} as const
+
+/** Placeholder faces for the mock backend's rival users (`av0`–`av8`). Mock-only. */
+export const PRETTY_ID_MOCK_AVATAR_BASE = `${PID}/avatars`
+export const PRETTY_ID_MOCK_AVATAR_COUNT = 9

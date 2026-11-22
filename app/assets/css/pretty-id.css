@@ -1,0 +1,237 @@
+/* ============================================
+   Pretty ID event — "Hall of Numbers" theme (royal purple & gold)
+
+   Loaded only by <PrettyIdTheme> (components/pretty-id/ui/Theme.vue), so none of
+   this ships in the main stylesheet. Everything is scoped under `.pid`:
+   tokens, the four event typefaces and a handful of typography helpers.
+   Frame art (panel, button, row, card …) is styled inside the primitive that
+   owns it (components/pretty-id/ui/*.vue); it reads the tokens below.
+
+   Image URLs are NOT written here. <PrettyIdTheme> injects them as
+   `--pid-img-*` custom properties from constants/assets.ts, which stays the
+   single source of truth (and the one place to repoint at a CDN).
+
+   Overlays teleported to <body> (modals, sheets) sit outside the layout root,
+   so each wraps its content in its own <PrettyIdTheme>.
+   ============================================ */
+
+/* Event typefaces, self-hosted (SIL OFL — licences in public/fonts/pretty-id/licenses).
+   Declared here, explicitly, so @nuxt/fonts has nothing to resolve. Families are
+   referenced ONLY through the --pid-font-* tokens below. */
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/fonts/pretty-id/cinzel.woff2') format('woff2');
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cinzel Decorative';
+    src: url('/fonts/pretty-id/cinzel-decorative-bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    src: url('/fonts/pretty-id/montserrat.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Great Vibes';
+    src: url('/fonts/pretty-id/great-vibes.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Everything below sits in Tailwind's `components` cascade layer, like the
+   primitives' scoped styles. That puts the event's own styling BELOW the
+   utilities layer on purpose: a utility on an element (`pt-5` on a `pid-sec`,
+   `gap-1.5` on a row) overrides the helper without `!important`. Unlayered
+   CSS would beat every utility regardless of specificity. */
+@layer components {
+    .pid {
+        /* Surfaces */
+        --pid-bg-deep: #160820;
+        --pid-bg: #26103a;
+        --pid-surface: #2a1240;
+        --pid-surface-on: #3a1a54;
+        --pid-well: #1c0730;
+        --pid-sheet: #1d0a2c;
+        --pid-scrim: #0c0414cc;
+
+        /* Text */
+        --pid-ink: #efe4ff;
+        --pid-text: #e6d8fa;
+        --pid-muted: #c9b6e6;
+        --pid-faint: #b9a4d8;
+        --pid-tab-idle: #d6c4ee;
+        --pid-tier: #d8c2f4;
+
+        /* Gold */
+        --pid-gold-light: #fff7d6;
+        --pid-gold: #f6d078;
+        --pid-gold-deep: #d6a03e;
+        --pid-gold-soft: #fad682;
+        --pid-gold-pale: #fbe2a0;
+        --pid-gold-ink: #fff3d6;
+        --pid-gold-gradient: linear-gradient(var(--pid-gold-light), var(--pid-gold) 45%, var(--pid-gold-deep) 55%, var(--pid-gold-soft));
+
+        /* Lines & status */
+        --pid-line: #8a6ab0;
+        --pid-line-dim: #6a4a8a;
+        --pid-ok: #9ff0bd;
+        --pid-bad: #ffb3bd;
+
+        /* Type */
+        --pid-font-num: 'Cinzel', serif;
+        --pid-font-display: 'Cinzel Decorative', 'Cinzel', serif;
+        --pid-font-body: 'Montserrat', sans-serif;
+        --pid-font-script: 'Great Vibes', cursive;
+
+        color: var(--pid-ink);
+        font-family: var(--pid-font-body);
+        font-weight: 600;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* --------------------------------------------
+       Typography helpers
+       -------------------------------------------- */
+
+    /* Gold foil text. The drop-shadows are what keep it legible on marble. */
+    .pid .pid-gold {
+        background: var(--pid-gold-gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 1px 0 #3a1408) drop-shadow(0 2px 3px rgb(18 4 28 / 0.8));
+    }
+
+    /* Numbers: IDs, coin amounts, countdowns. */
+    .pid .pid-num {
+        font-family: var(--pid-font-num);
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        font-variant-numeric: lining-nums;
+    }
+
+    /* Small-caps style headings: panel titles, tab labels, column heads. */
+    .pid .pid-head {
+        font-family: var(--pid-font-num);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    /* Display titles: "Pretty ID Locked", "Congratulations!". */
+    .pid .pid-disp {
+        font-family: var(--pid-font-display);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+    }
+
+    .pid .pid-body {
+        font-family: var(--pid-font-body);
+        font-weight: 600;
+        color: var(--pid-text);
+    }
+
+    .pid .pid-small {
+        font-size: 12px;
+    }
+
+    .pid .pid-muted {
+        color: var(--pid-muted);
+    }
+
+    /* --------------------------------------------
+       Layout helpers shared by the views
+       -------------------------------------------- */
+
+    /* Standard page gutter. */
+    .pid .pid-sec {
+        padding: 10px 12px;
+    }
+
+    .pid .pid-empty {
+        padding: 20px;
+        text-align: center;
+        color: var(--pid-muted);
+        font-size: 13px;
+    }
+
+    /* Three-up grid of ID cards (Choose list, suggestions). */
+    .pid .pid-card-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    /* Two-up grid of framed cards (auction lots, winners). */
+    .pid .pid-pair-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    /* Framed card used in the two-up grids. */
+    .pid .pid-wcard {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        padding: 16px 10px;
+        text-align: center;
+        background: var(--pid-img-card2) center / 100% 100%;
+    }
+
+    /* Level progress bar: <div class="pid-bar"><i :style="{ width }" /></div>. */
+    .pid .pid-bar {
+        height: 12px;
+        overflow: hidden;
+        border: 1px solid var(--pid-line-dim);
+        border-radius: 6px;
+        background: var(--pid-well);
+    }
+
+    .pid .pid-bar > i {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, var(--pid-gold-deep), var(--pid-gold-soft));
+    }
+
+    /* Bid amount field. */
+    .pid .pid-input {
+        width: 100%;
+        padding: 10px;
+        border: 1.5px solid var(--pid-line);
+        border-radius: 10px;
+        background: var(--pid-well);
+        color: #fff;
+        font: 700 18px var(--pid-font-num);
+        text-align: center;
+    }
+
+    .pid .pid-input:focus-visible {
+        border-color: var(--pid-gold);
+        outline: none;
+    }
+
+    /* Square SVGA stage for the locked / unlock accents (750x900 source). */
+    .pid .pid-accent {
+        position: relative;
+        width: 100%;
+        max-width: 380px;
+        margin: 0 auto;
+        aspect-ratio: 750 / 900;
+    }
+}

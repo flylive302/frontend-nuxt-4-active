@@ -33,6 +33,10 @@ export default defineNuxtConfig({
     modules: ['@sentry/nuxt/module', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     components: [
         { path: '~/components/common', pathPrefix: false },
+        // Pretty ID event: sub-folders (ui / shell / choose / auction / my / dev) are
+        // for navigation only — every file registers as <PrettyId{FileName}>
+        // whichever folder it sits in. Must precede '~/components'.
+        { path: '~/components/pretty-id', pathPrefix: false, prefix: 'PrettyId' },
         '~/components',
     ],
     pinia: {
@@ -91,6 +95,7 @@ export default defineNuxtConfig({
             'composables/events',
             'composables/cp',
             'composables/games',
+            'composables/pretty-id',
         ],
     },
     // Native View Transitions API drives ALL page/layout animation (one system,
@@ -322,6 +327,11 @@ export default defineNuxtConfig({
             // CF Pages redeploy on web and an OTA push for the native shell — it is a
             // deploy-scoped switch, NOT a runtime toggle.
             maintenanceMode: process.env.NUXT_PUBLIC_MAINTENANCE_MODE === 'true',
+            // Pretty ID event (/pretty-id). Unset ⇒ off: middleware/pretty-id-enabled.ts
+            // 404s every event route. The event currently runs on a mock backend
+            // (services/prettyIdMockApi.ts), so this must stay unset in any build that
+            // reaches real users until the real API lands. Baked at build time.
+            prettyIdEnabled: process.env.NUXT_PUBLIC_PRETTY_ID_ENABLED === 'true',
             sentry: {
                 dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
                 environment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || 'production',

@@ -17,6 +17,7 @@
  */
 
 import { CP_EVENT_TABS } from '~/constants/cp-event'
+import { PRETTY_ID_TABS } from '~/constants/pretty-id'
 import { RECHARGE_TABS } from '~/constants/recharge'
 
 // Paths are compared trailing-slash-insensitively (see stripSlash).
@@ -27,6 +28,7 @@ const TAB_GROUPS: string[][] = [
   ['/levels/wealth', '/levels/charm'],
   CP_EVENT_TABS.map(tab => tab.to),
   RECHARGE_TABS.map(tab => tab.to),
+  PRETTY_ID_TABS.map(tab => tab.to),
 ]
 
 const stripSlash = (p: string): string => (p.length > 1 ? p.replace(/\/+$/, '') : p)
