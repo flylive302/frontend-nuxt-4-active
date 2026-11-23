@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/*
+ * A phone turned sideways: landscape AND short. Height is the scarce axis there, so
+ * chrome that is fine in portrait (e.g. the full-screen game bar) floats instead.
+ * 500px: phones in landscape are ~320–430 CSS px tall; tablets and desktop windows
+ * are taller, so they keep the normal layout. `landscape:` alone would also match
+ * every desktop browser.
+ */
+@custom-variant short-landscape (@media (orientation: landscape) and (max-height: 500px));
+
 @theme {
     --animate-scroll-up: scroll-up 25s linear infinite;
     --animate-scroll-down: scroll-down 25s linear infinite;
