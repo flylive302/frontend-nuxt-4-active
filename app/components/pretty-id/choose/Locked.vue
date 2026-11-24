@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The locked state of the Choose and Rare Auction tabs: the padlock animation,
+ * The locked state of the Choose tab: the padlock animation,
  * "Pretty ID Locked", and a "Your level" panel showing how far the user is from
  * `requiredLevel`. Copy differs by what is locked (`context`). Reads the user's
  * level from the store.
@@ -27,14 +27,12 @@ const PERCENT = 100
 const LINE: Record<LockedContext, (level: number) => string> = {
   'six-digit': level => `Reach Lv ${level} to unlock your 6-digit Pretty ID`,
   'four-digit': level => `Reach Lv ${level} to unlock a 4-digit Pretty ID`,
-  'auction': level => `Reach Lv ${level} to join rare ID auctions`,
 }
 
 const HINT: Record<LockedContext, string | null> = {
   // Quotes the Lv 34 threshold, which is server-owned — built from `me` below.
   'six-digit': null,
   'four-digit': 'Elite 4-digit IDs come with the diamond crown',
-  'auction': 'Rare 1–2 digit IDs are won at auction only',
 }
 
 /** Six-digit hint while `me` has not loaded, so there is no Lv 34 threshold to quote yet. */
@@ -44,8 +42,8 @@ const HINT_ELITE_FALLBACK = 'Higher levels unlock 4-digit elite IDs'
 // Types
 // ========================================
 
-/** What is locked: the 6-digit list, the 4-digit list, or the rare auction. */
-type LockedContext = 'six-digit' | 'four-digit' | 'auction'
+/** What is locked: the 6-digit list or the 4-digit list. */
+type LockedContext = 'six-digit' | 'four-digit'
 
 // ========================================
 // State

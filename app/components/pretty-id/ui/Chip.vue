@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /**
- * Small outlined pill: length filter, quick-bid amounts, the Big Winners /
- * Weekly Record shortcuts.
+ * Small outlined pill (e.g. the Choose tab's length filter).
  *
  * Pass `active` only for a chip that is a toggle (a filter, a lever): it paints
  * the selected gold state and announces `aria-pressed`. Leave it out for a plain

@@ -12,7 +12,6 @@ const navigateToMock = vi.fn()
 
 vi.mock('~/composables/pretty-id/usePrettyIdApi', () => ({
   usePrettyIdApi: () => apiMock,
-  usePrettyIdMockControls: () => null,
 }))
 vi.mock('~/utils/logger', () => ({
   createLogger: () => ({ debug: vi.fn(), warn: vi.fn(), error: vi.fn(), info: vi.fn() }),
@@ -53,7 +52,7 @@ describe('usePrettyIdData', () => {
     it('stores me', async () => {
       const { store, data } = setup()
       await data.loadMe()
-      expect(store.me?.user.name).toBe('Ana')
+      expect(store.me?.level).toBe(20)
       expect(store.isMeLoading).toBe(false)
     })
 

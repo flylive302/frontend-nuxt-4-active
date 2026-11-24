@@ -174,26 +174,6 @@
         gap: 10px;
     }
 
-    /* Two-up grid of framed cards (auction lots, winners). */
-    .pid .pid-pair-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-    }
-
-    /* Framed card used in the two-up grids. */
-    .pid .pid-wcard {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        min-width: 0;
-        padding: 16px 10px;
-        text-align: center;
-        background: var(--pid-img-card2) center / 100% 100%;
-    }
-
     /* Level progress bar: <div class="pid-bar"><i :style="{ width }" /></div>. */
     .pid .pid-bar {
         height: 12px;
@@ -207,23 +187,6 @@
         display: block;
         height: 100%;
         background: linear-gradient(90deg, var(--pid-gold-deep), var(--pid-gold-soft));
-    }
-
-    /* Bid amount field. */
-    .pid .pid-input {
-        width: 100%;
-        padding: 10px;
-        border: 1.5px solid var(--pid-line);
-        border-radius: 10px;
-        background: var(--pid-well);
-        color: #fff;
-        font: 700 18px var(--pid-font-num);
-        text-align: center;
-    }
-
-    .pid .pid-input:focus-visible {
-        border-color: var(--pid-gold);
-        outline: none;
     }
 
     /* Square SVGA stage for the locked / unlock accents (750x900 source). */

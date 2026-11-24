@@ -2,7 +2,7 @@
 // Pretty ID — top-bar back navigation
 // ========================================
 //
-// The event's sub-pages (lot, search, winners, weekly) are reached from a tab,
+// The event's sub-page (search) is reached from a tab,
 // so "back" is normally a history pop — which also restores the tab's scroll
 // position and plays the back slide. A cold deep link has no history entry
 // behind it; popping would leave the app, so it falls back to the Choose tab.

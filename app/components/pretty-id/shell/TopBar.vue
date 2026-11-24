@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * Sticky top chrome of every Pretty ID page: back button, the dev-panel gear
- * (mock backend only) and the coin balance. It floats over the hero on a
- * fading violet scrim, so the hero pulls itself up underneath it.
+ * Sticky top chrome of every Pretty ID page: back button and the user's real
+ * coin balance (the app's balance store, not the event payload). It floats over
+ * the hero on a fading violet scrim, so the hero pulls itself up underneath it.
  */
 import { formatCoins } from '~/utils/currency'
-import { usePrettyIdStore } from '~/stores/prettyId'
+import { useBalanceStore } from '~/stores/balance'
 
 const props = defineProps<{
   /**
@@ -15,11 +15,10 @@ const props = defineProps<{
   backTo?: string
 }>()
 
-const store = usePrettyIdStore()
+const balanceStore = useBalanceStore()
 const { goBack } = usePrettyIdBack()
-const devPanel = usePrettyIdDevPanel()
 
-const coinsLabel = computed(() => formatCoins(store.coins))
+const coinsLabel = computed(() => formatCoins(balanceStore.coinsNumber))
 
 function onBack(): void {
   if (props.backTo) {
@@ -35,16 +34,6 @@ function onBack(): void {
     <div class="flex items-center gap-2 px-2.5 py-2">
       <button type="button" class="pid-topbar__icon" aria-label="Back" @click="onBack">
         <UIcon name="i-lucide-chevron-left" class="size-5" />
-      </button>
-
-      <button
-        v-if="devPanel.isAvailable"
-        type="button"
-        class="pid-topbar__icon"
-        aria-label="Demo panel"
-        @click="devPanel.open()"
-      >
-        <UIcon name="i-lucide-settings" class="size-4.5" />
       </button>
 
       <div class="pid-topbar__coins" aria-label="Coin balance">

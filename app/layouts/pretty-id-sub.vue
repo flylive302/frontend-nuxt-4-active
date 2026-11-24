@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * Layout of the Pretty ID sub-pages (auction lot, search result, Big Winners,
- * Weekly Record): the event frame and top bar only — no hero, no tab row. Back
- * pops history to the tab the user came from.
+ * Layout of the Pretty ID sub-pages (the search result): the event frame and
+ * top bar only — no hero, no tab row. Back pops history to the tab the user
+ * came from.
  *
  * A separate layout from `pretty-id` on purpose: the tab layout's chrome is
  * pinned during sibling-tab View Transitions, and a page without that chrome

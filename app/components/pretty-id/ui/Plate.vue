@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /**
- * Small gold plaque that holds a rare ID number inline (winner cards, weekly
- * rows, auction holdings).
+ * Small gold plaque that holds a rare ID number inline.
  */
 </script>
 

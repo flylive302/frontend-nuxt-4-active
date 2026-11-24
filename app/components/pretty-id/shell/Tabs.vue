@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Choose ID / Rare Auction / My ID — three plaque links under the hero. Real
+ * Choose ID / Rare Auction — two plaque links under the hero. Real
  * routes, so the active tab comes from the router and the phone's back button
  * walks the tabs like any other navigation.
  */
@@ -34,7 +34,7 @@ import { PRETTY_ID_TABS } from '~/constants/pretty-id'
 @layer components {
   .pid-tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     padding: 8px 10px 4px;
   }

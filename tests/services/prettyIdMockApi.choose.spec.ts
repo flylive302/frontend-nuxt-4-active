@@ -3,7 +3,7 @@
 // ========================================
 //
 // See `tests/helpers/prettyIdMockHarness.ts` for the shared environment (pinned clock,
-// localStorage stub, scripted RNG).
+// localStorage stub).
 
 import { describe, it, expect, vi } from 'vitest'
 import { PRETTY_ID_LIST_PAGE_SIZE, PRETTY_ID_SUGGESTION_LIMIT } from '~/constants/pretty-id'
@@ -116,21 +116,4 @@ describe('search', () => {
     expect((await api.search('1000')).reason).toBe('reserved')
     expect((await api.search('100500')).reason).toBe('reserved')
   })
-
-  it('reports a just-released ID as reserved for 72 hours', async () => {
-    const { api, controls } = make()
-    await api.claim('111111')
-    controls.skipHours(24)
-    await api.change('222222', 'lv17')
-
-    expect(await api.search('111111')).toMatchObject({ available: false, reason: 'reserved' })
-    controls.skipHours(71)
-    expect((await api.search('111111')).reason).toBe('reserved')
-    controls.skipHours(1)
-    expect(await api.search('111111')).toMatchObject({ available: true, reason: null })
-  })
 })
-
-// ========================================
-// Claim
-// ========================================

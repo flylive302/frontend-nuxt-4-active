@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
- * Layout of the three Pretty ID tabs (/pretty-id, /pretty-id/auction,
- * /pretty-id/my): top bar, hero and tab row stay mounted while only the
- * <slot/> swaps.
+ * Layout of the two Pretty ID tabs (/pretty-id, /pretty-id/auction): top bar,
+ * hero and tab row stay mounted while only the <slot/> swaps.
  */
 import { PRETTY_ID_EXIT_ROUTE, PRETTY_ID_ROUTES } from '~/constants/pretty-id'
 
 const route = useRoute()
 
-/** Full-height hero on Choose, cropped band on the other two tabs. */
+/** Full-height hero on Choose, cropped band on the other tab. */
 const isHeroCompact = computed(() => route.path.replace(/\/+$/, '') !== PRETTY_ID_ROUTES.choose)
 </script>
 

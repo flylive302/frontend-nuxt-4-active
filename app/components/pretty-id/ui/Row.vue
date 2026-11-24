@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Framed list row (bidders, slots, weekly record). A flex line: give the child
+ * Framed list row (e.g. the claim dialog's details). A flex line: give the child
  * that should take the slack the `pid-row__grow` class — it truncates with an
  * ellipsis instead of pushing the row wider.
  */

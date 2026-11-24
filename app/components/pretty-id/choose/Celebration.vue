@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Full-screen celebration after a claim or change succeeds: the unlock animation,
- * the new ID letter-spaced in a panel, and "Go to My ID". It REPLACES the screen
+ * Full-screen celebration after a claim succeeds: the unlock animation, the
+ * new ID letter-spaced in a panel, and "Done" (closes it, no navigation). It REPLACES the screen
  * (a fixed layer over the page) rather than stacking a dialog on it. Shown while
  * `celebration` is set. Mounted once by <PrettyIdShell>, inside the theme root
  * (so the tokens and helper classes apply) — which is why it is not teleported.
@@ -31,10 +31,7 @@ const title = computed(() => {
   if (!isElite.value) return 'Congratulations!'
   return eliteLevel.value === null ? 'Elite' : `Elite Lv ${eliteLevel.value}`
 })
-const subline = computed(() => {
-  if (store.celebration?.changed) return 'Your Pretty ID was changed'
-  return isElite.value ? '4-digit Pretty ID · Diamond Crown' : '6-digit Pretty ID unlocked'
-})
+const subline = computed(() => (isElite.value ? '4-digit Pretty ID · Diamond Crown' : '6-digit Pretty ID unlocked'))
 const panelTitle = computed(() => (isElite.value ? 'Elite ID' : 'Your new ID'))
 const celebratedId = computed(() => store.celebration?.id ?? '')
 /** "5 2 0 5 2 0" — the digits stand apart, as in the design. */
@@ -67,9 +64,7 @@ onScopeDispose(() => {
 })
 
 // The Android back button dismisses it like the button does.
-useBackDismiss(isOpen, () => {
-  void finishCelebration()
-})
+useBackDismiss(isOpen, finishCelebration)
 
 // ========================================
 // Handlers
@@ -114,7 +109,7 @@ function focusAction(): void {
         </PrettyIdPanel>
 
         <div ref="actionWrap">
-          <PrettyIdButton @click="finishCelebration">Go to My ID</PrettyIdButton>
+          <PrettyIdButton @click="finishCelebration">Done</PrettyIdButton>
         </div>
       </div>
     </div>

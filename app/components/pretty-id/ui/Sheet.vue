@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Bottom sheet in the event's colours (winner details, the dev panel). Built on
+ * Bottom sheet in the event's colours. Built on
  * USlideover, so Escape, outside-tap and the Android back button close it
  * through the app's standard dismiss path.
  *

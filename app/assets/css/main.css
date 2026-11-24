@@ -278,11 +278,11 @@ html {
 }
 
 /* pretty-id layout (/pretty-id tabs). .pretty-id-topbar is the sticky back button
-   + coin balance; .pretty-id-shell is the hero + Choose / Auction / My tab row.
+   + coin balance; .pretty-id-shell is the hero + Choose / Auction tab row.
    The hero is a live SVGA canvas and changes height between tabs (full on
-   Choose, compact on the others): like the cp wheel, `old` is a frozen frame, so
+   Choose, compact on the other tab): like the cp wheel, `old` is a frozen frame, so
    it is dropped and the live `new` shown at once — the group still animates the
-   height change. Sub-pages (lot, search, winners, weekly) use the separate
+   height change. The search sub-page uses the separate
    `pretty-id-sub` layout, so the marker is never set across that boundary. */
 :root[data-nav-shell="pretty-id"] .pretty-id-topbar {
     view-transition-name: pretty-id-topbar;

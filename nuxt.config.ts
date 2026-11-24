@@ -33,7 +33,7 @@ export default defineNuxtConfig({
     modules: ['@sentry/nuxt/module', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', '@nuxt/test-utils', '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
     components: [
         { path: '~/components/common', pathPrefix: false },
-        // Pretty ID event: sub-folders (ui / shell / choose / auction / my / dev) are
+        // Pretty ID event: sub-folders (ui / shell / choose / auction) are
         // for navigation only — every file registers as <PrettyId{FileName}>
         // whichever folder it sits in. Must precede '~/components'.
         { path: '~/components/pretty-id', pathPrefix: false, prefix: 'PrettyId' },

@@ -178,7 +178,7 @@ function candidates(target: string): string[] {
 
 /**
  * Up to `limit` AVAILABLE IDs closest in pattern to `target`, best first. `isAvailable`
- * is the caller's ownership / cooldown check; reserved, auction-only and malformed
+ * is the caller's ownership check; reserved, auction-only and malformed
  * candidates are dropped here. Ties on score break by ascending ID, so the result is
  * deterministic.
  */

@@ -3,10 +3,6 @@
 // ========================================
 //
 // The data model, its schema version, and the guarded localStorage load / save.
-// The model keeps raw epoch-ms numbers (mock-clock domain); only the mappers turn
-// them into ISO strings. "Me" is the flag `'me'`, never an id or name — the card
-// is resolved from the live profile at response time, so a rename needs no
-// migration and no rival id can collide with a real user id (rivals are negative).
 
 import type { PrettyIdSlotKey } from '~/types/pretty-id'
 import { createLogger } from '~/utils/logger'
@@ -17,65 +13,18 @@ const log = createLogger('[PrettyIdMock]')
 // Constants
 // ========================================
 
-export const PRETTY_ID_MOCK_STORAGE_KEY = 'flylive.prettyId.mock.v1'
-export const PRETTY_ID_MOCK_VERSION = 1
+export const PRETTY_ID_MOCK_STORAGE_KEY = 'flylive.prettyId.mock.v2'
+export const PRETTY_ID_MOCK_VERSION = 2
 
 // ========================================
 // Model
 // ========================================
 
-/** Stored reference to a user: the live profile (`'me'`) or a fictional person's id. */
-export type MockUserRef = 'me' | number
-
-export interface MockBid {
-  user: MockUserRef
-  amount: number
-  at: number
-}
-
-export interface MockLot {
-  number: string
-  starts_at: number
-  ends_at: number
-  entered: boolean
-  ended: boolean
-  /** Highest (newest) first. */
-  bids: MockBid[]
-  /** Mock-clock time of the last rival-bot dice roll; throttles `auction()`. */
-  last_rival_roll_at: number
-}
+/** Who owns a claimed ID: the signed-in user, or a fictional other user. */
+export type MockOwner = 'me' | 'other'
 
 export interface MockSlot {
   id: string
-  tokens: number
-  claimed_at: number
-  last_change_at: number
-}
-
-export interface MockHolding {
-  id: string
-  won_at: number
-  expires_at: number
-}
-
-export interface MockWin {
-  user: MockUserRef
-  number: string
-  amount: number
-  at: number
-}
-
-export interface MockAllotment {
-  id: number
-  user: MockUserRef
-  number: string
-  week_start: number
-  week_end: number
-}
-
-export interface MockBidLogEntry {
-  amount: number
-  at: number
 }
 
 export interface MockData {
@@ -83,29 +32,14 @@ export interface MockData {
   /** Profile id the data was seeded for — a different signed-in user reseeds. */
   owner_id: number
   level: number
-  coins: number
-  offset_hours: number
-  race_armed: boolean
   slots: Partial<Record<PrettyIdSlotKey, MockSlot>>
-  holdings: MockHolding[]
-  /** Claimed / won ID → owner. */
-  owned: Record<string, MockUserRef>
-  /** Released ID → mock-clock time its cooldown ends. */
-  released: Record<string, number>
-  lots: MockLot[]
-  /** Newest first. */
-  wins: MockWin[]
-  /** Newest first. */
-  allotments: MockAllotment[]
-  bid_log: MockBidLogEntry[]
-  /** Month key → coins bid before this session (the "everyone else" baseline). */
-  base_bid: Record<string, number>
+  /** Claimed ID → owner. */
+  owned: Record<string, MockOwner>
 }
 
-/** What every operation works on: the loaded data and the mock clock, fixed for one call. */
+/** What every operation works on: the loaded data. */
 export interface MockCtx {
   data: MockData
-  now: number
 }
 
 // ========================================
@@ -152,12 +86,7 @@ function isMockData(value: unknown): value is MockData {
   return value.version === PRETTY_ID_MOCK_VERSION
     && typeof value.owner_id === 'number'
     && typeof value.level === 'number'
-    && typeof value.coins === 'number'
-    && typeof value.offset_hours === 'number'
-    && typeof value.race_armed === 'boolean'
-    && isRecord(value.slots) && isRecord(value.owned) && isRecord(value.released) && isRecord(value.base_bid)
-    && Array.isArray(value.holdings) && Array.isArray(value.lots) && Array.isArray(value.wins)
-    && Array.isArray(value.allotments) && Array.isArray(value.bid_log)
+    && isRecord(value.slots) && isRecord(value.owned)
 }
 
 function parseStored(json: string | null): unknown {

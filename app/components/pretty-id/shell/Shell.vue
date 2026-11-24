@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * Common frame of both Pretty ID layouts (`pretty-id` = the three tabs,
- * `pretty-id-sub` = lot / search / winners / weekly): the theme root, the
- * phone-width marble column, and the overlays that can open from any event
- * page — claim confirm, "ID taken", the celebration and the dev panel.
+ * Common frame of both Pretty ID layouts (`pretty-id` = the two tabs,
+ * `pretty-id-sub` = the search page): the theme root, the phone-width marble
+ * column, and the overlays that can open from any event page — claim confirm,
+ * "ID taken" and the celebration.
  *
  * Loads `me` once on entry; every page under it reads the store. If that first
  * load fails there is nothing to render, so the page gives way to a retry screen.
@@ -31,7 +31,6 @@ onMounted(() => {
     <PrettyIdClaimModal />
     <PrettyIdRaceModal />
     <PrettyIdCelebration />
-    <PrettyIdDevPanel />
   </PrettyIdTheme>
 </template>
 

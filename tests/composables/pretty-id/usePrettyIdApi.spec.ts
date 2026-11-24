@@ -14,10 +14,7 @@ vi.mock('~/services/prettyIdMockApi', () => ({
 }))
 
 function fakeBackend(tag: string) {
-  return {
-    api: { me: vi.fn(async () => tag), list: vi.fn(), search: vi.fn(), claim: vi.fn(), change: vi.fn(), auctions: vi.fn(), auction: vi.fn(), enter: vi.fn(), bid: vi.fn(), winners: vi.fn(), weekly: vi.fn() },
-    controls: { state: vi.fn(() => tag), setLevel: vi.fn(), addCoins: vi.fn(), skipHours: vi.fn(), rivalBidsNow: vi.fn(() => 3), endAllAuctions: vi.fn(), toggleRace: vi.fn(), addChangeToken: vi.fn(() => true), reset: vi.fn() },
-  }
+  return { me: vi.fn(async () => tag), list: vi.fn(), search: vi.fn(), claim: vi.fn() }
 }
 
 async function loadSeam() {
@@ -33,44 +30,39 @@ describe('usePrettyIdApi seam', () => {
   })
 
   it('does not build the mock until it is used', async () => {
-    const { usePrettyIdApi, usePrettyIdMockControls } = await loadSeam()
+    const { usePrettyIdApi } = await loadSeam()
     usePrettyIdApi()
-    usePrettyIdMockControls()
     expect(hoisted.createMock).not.toHaveBeenCalled()
   })
 
   it('seeds the mock with the signed-in user', async () => {
     const { usePrettyIdApi } = await loadSeam()
     await usePrettyIdApi().me()
-    expect(hoisted.createMock).toHaveBeenCalledWith({ id: 5, name: 'Ana', avatar_url: 'https://cdn.test/a.png' })
+    expect(hoisted.createMock).toHaveBeenCalledWith({ id: 5 })
   })
 
   it('falls back to a generic profile when nobody is signed in', async () => {
     hoisted.user.value = null
     const { usePrettyIdApi } = await loadSeam()
     await usePrettyIdApi().me()
-    expect(hoisted.createMock).toHaveBeenCalledWith({ id: 0, name: 'You', avatar_url: null })
+    expect(hoisted.createMock).toHaveBeenCalledWith({ id: 0 })
   })
 
-  it('serves api and controls from one shared instance', async () => {
-    const { usePrettyIdApi, usePrettyIdMockControls } = await loadSeam()
+  it('serves every call from one shared instance', async () => {
+    const { usePrettyIdApi } = await loadSeam()
     const api = usePrettyIdApi()
-    const controls = usePrettyIdMockControls()
     await api.me()
-    controls?.state()
+    await api.list({ length: 6, tier: null })
     await usePrettyIdApi().me()
     expect(hoisted.createMock).toHaveBeenCalledTimes(1)
   })
 
-  it('forwards arguments and return values to the instance', async () => {
-    const { usePrettyIdApi, usePrettyIdMockControls } = await loadSeam()
+  it('forwards arguments to the instance', async () => {
+    const { usePrettyIdApi } = await loadSeam()
     const api = usePrettyIdApi()
-    const controls = usePrettyIdMockControls()
-    await api.bid(7, 5_000)
-    expect(controls?.rivalBidsNow()).toBe(3)
-    expect(controls?.addChangeToken()).toBe(true)
+    await api.claim('123456')
     const backend = hoisted.createMock.mock.results[0]?.value as ReturnType<typeof fakeBackend>
-    expect(backend.api.bid).toHaveBeenCalledWith(7, 5_000)
+    expect(backend.claim).toHaveBeenCalledWith('123456')
   })
 
   it('rebuilds the mock when the signed-in user changes, even for a reference taken earlier', async () => {
@@ -82,6 +74,6 @@ describe('usePrettyIdApi seam', () => {
 
     expect(await api.me()).toBe('user-6')
     expect(hoisted.createMock).toHaveBeenCalledTimes(2)
-    expect(hoisted.createMock).toHaveBeenLastCalledWith({ id: 6, name: 'Bo', avatar_url: null })
+    expect(hoisted.createMock).toHaveBeenLastCalledWith({ id: 6 })
   })
 })

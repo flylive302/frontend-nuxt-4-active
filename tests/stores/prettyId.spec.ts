@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, readonly, ref } from 'vue'
-import type { PrettyIdMe } from '../../app/types/pretty-id'
 import { makeMe, SERVER_NOW } from '../helpers/prettyIdFixtures'
 
 vi.stubGlobal('ref', ref)
@@ -9,12 +8,6 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('readonly', readonly)
 
 const DEVICE_NOW = Date.parse(SERVER_NOW)
-const SERVER_AHEAD_MS = 5 * 3_600_000
-
-/** A `me` whose server clock runs `SERVER_AHEAD_MS` ahead of the (pinned) device clock. */
-function aheadMe(overrides: Partial<PrettyIdMe> = {}): PrettyIdMe {
-  return makeMe({ server_now: new Date(DEVICE_NOW + SERVER_AHEAD_MS).toISOString(), ...overrides })
-}
 
 async function makeStore() {
   const { usePrettyIdStore } = await import('../../app/stores/prettyId')
@@ -36,42 +29,21 @@ describe('prettyId store', () => {
     expect(store.listLength).toBe(6)
     expect(store.listTier).toBeNull()
     expect(store.level).toBe(0)
-    expect(store.coins).toBe(0)
-    expect(store.clockOffsetMs).toBe(0)
   })
 
-  it('setMe stores me, level, coins and the server clock offset', async () => {
+  it('setMe stores me and level', async () => {
     const store = await makeStore()
-    store.setMe(aheadMe())
-    expect(store.me?.user.name).toBe('Ana')
+    store.setMe(makeMe())
+    expect(store.me?.slots.lv17.id).toBeNull()
     expect(store.level).toBe(20)
-    expect(store.coins).toBe(100_000)
-    expect(store.clockOffsetMs).toBe(SERVER_AHEAD_MS)
   })
 
-  it('setMe falls back to a zero offset for an unparseable server_now', async () => {
+  it('setMe(null) clears me', async () => {
     const store = await makeStore()
-    store.setMe(makeMe({ server_now: 'not-a-date' }))
-    expect(store.clockOffsetMs).toBe(0)
-  })
-
-  it('setMe(null) clears me but keeps the last offset', async () => {
-    const store = await makeStore()
-    store.setMe(aheadMe())
+    store.setMe(makeMe())
     store.setMe(null)
     expect(store.me).toBeNull()
-    expect(store.coins).toBe(0)
-    expect(store.clockOffsetMs).toBe(SERVER_AHEAD_MS)
-  })
-
-  it('setCoins patches me.coins and is a no-op without me', async () => {
-    const store = await makeStore()
-    store.setCoins(5)
-    expect(store.me).toBeNull()
-    store.setMe(aheadMe())
-    store.setCoins(250)
-    expect(store.coins).toBe(250)
-    expect(store.me?.level).toBe(20)
+    expect(store.level).toBe(0)
   })
 
   it('setList / setListLength / setListTier / setListLoading update the list state', async () => {
@@ -104,30 +76,25 @@ describe('prettyId store', () => {
     store.setClaimTarget('123456')
     store.setClaiming(true)
     store.setRaceConflict({ id: '123456', suggestions: [] })
-    store.setChangeSlot('lv17')
-    store.setCelebration({ id: '123456', slot: 'lv17', changed: false })
+    store.setCelebration({ id: '123456', slot: 'lv17' })
     expect(store.claimTarget).toBe('123456')
     expect(store.isClaiming).toBe(true)
     expect(store.raceConflict?.id).toBe('123456')
-    expect(store.changeSlot).toBe('lv17')
-    expect(store.celebration).toEqual({ id: '123456', slot: 'lv17', changed: false })
+    expect(store.celebration).toEqual({ id: '123456', slot: 'lv17' })
   })
 
   it('reset returns every field to its default', async () => {
     const store = await makeStore()
-    store.setMe(aheadMe())
+    store.setMe(makeMe())
     store.setListLength(4)
     store.setListTier('mirror')
     store.setClaimTarget('1234')
-    store.setChangeSlot('lv34')
-    store.setCelebration({ id: '1234', slot: 'lv34', changed: true })
+    store.setCelebration({ id: '1234', slot: 'lv34' })
     store.reset()
     expect(store.me).toBeNull()
-    expect(store.clockOffsetMs).toBe(0)
     expect(store.listLength).toBe(6)
     expect(store.listTier).toBeNull()
     expect(store.claimTarget).toBeNull()
-    expect(store.changeSlot).toBeNull()
     expect(store.celebration).toBeNull()
   })
 })
