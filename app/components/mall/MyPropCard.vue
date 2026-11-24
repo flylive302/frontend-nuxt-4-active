@@ -7,6 +7,7 @@ import { PROP_TYPE_ICONS, PROP_TYPE_COLORS } from '~/constants/mall'
 import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 import { useMallStore } from '~/stores/mall'
 import { withImageKitTransform } from '~/utils/imagekit'
+import { formatUserPropExpiryLabel, userPropExpiryColorClass } from '~/utils/userPropExpiry'
 
 // ========================================
 // Props & Emits
@@ -55,29 +56,9 @@ const thumbnailSrc = computed(() =>
 const isExpired = computed(() => !props.userProp.is_valid)
 const isEquipped = computed(() => props.userProp.is_equipped)
 
-/**
- * Days remaining display.
- */
-const expiryDisplay = computed(() => {
-  if (!props.userProp.expires_at) return 'Permanent'
-  if (!props.userProp.is_valid) return 'Expired'
-  
-  const days = props.userProp.days_remaining
-  if (days === null) return ''
-  if (days <= 0) return 'Expires today'
-  if (days === 1) return '1 day left'
-  return `${days} days left`
-})
-
-/**
- * Expiry urgency color.
- */
-const expiryColor = computed(() => {
-  if (isExpired.value) return 'text-error'
-  const days = props.userProp.days_remaining
-  if (days !== null && days <= 3) return 'text-warning'
-  return 'text-muted'
-})
+/** Expiry label + urgency colour (permanent rows read "Permanent" — ADR 0051). */
+const expiryDisplay = computed(() => formatUserPropExpiryLabel(props.userProp))
+const expiryColor = computed(() => userPropExpiryColorClass(props.userProp))
 
 // ========================================
 // Handlers

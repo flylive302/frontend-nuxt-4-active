@@ -6,6 +6,7 @@ import type { UserProp } from '~/types/mall/prop'
 import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/constants/mall'
 import { useAuthStore } from '~/stores/auth'
 import { useMallStore } from '~/stores/mall'
+import { formatUserPropExpiryLabel, userPropExpiryColorClass } from '~/utils/userPropExpiry'
 
 // ========================================
 // Props & Emits
@@ -52,30 +53,9 @@ const typeLabel = computed(() => props.userProp ? PROP_TYPE_LABELS[props.userPro
 const isExpired = computed(() => !props.userProp?.is_valid)
 const isEquipped = computed(() => props.userProp?.is_equipped ?? false)
 
-/**
- * Days remaining display.
- */
-const expiryDisplay = computed(() => {
-  if (!props.userProp) return ''
-  if (!props.userProp.expires_at) return 'Permanent'
-  if (!props.userProp.is_valid) return 'Expired'
-
-  const days = props.userProp.days_remaining
-  if (days === null) return ''
-  if (days <= 0) return 'Expires today'
-  if (days === 1) return '1 day left'
-  return `${days} days left`
-})
-
-/**
- * Expiry urgency color.
- */
-const expiryColor = computed(() => {
-  if (isExpired.value) return 'text-error'
-  const days = props.userProp?.days_remaining
-  if (days !== null && days !== undefined && days <= 3) return 'text-warning'
-  return 'text-muted'
-})
+/** Expiry label + urgency colour (permanent rows read "Permanent" — ADR 0051). */
+const expiryDisplay = computed(() => props.userProp ? formatUserPropExpiryLabel(props.userProp) : '')
+const expiryColor = computed(() => props.userProp ? userPropExpiryColorClass(props.userProp) : 'text-muted')
 
 /**
  * Source type label for display.
