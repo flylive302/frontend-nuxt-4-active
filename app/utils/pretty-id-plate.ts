@@ -5,9 +5,10 @@
  * ID; `null`/absent means an original or mall signature (plain badge).
  */
 
+import { PRETTY_ID_TIERS } from '~/constants/pretty-id'
 import type { PrettyIdTier } from '~/types/pretty-id'
 
 /** True when the signature should be drawn on the gold Pretty ID plate. */
 export function showsPrettyIdPlate(tier: PrettyIdTier | null | undefined): tier is PrettyIdTier {
-  return tier === 6 || tier === 4
+  return tier != null && PRETTY_ID_TIERS.includes(tier)
 }

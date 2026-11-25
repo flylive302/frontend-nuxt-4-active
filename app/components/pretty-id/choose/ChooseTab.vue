@@ -22,15 +22,7 @@ const store = usePrettyIdStore()
 const { loadList, loadMore, selectTier, toggleCategory, runSearch } = usePrettyIdData()
 const { pickItem } = usePrettyIdClaimActions()
 
-// The list loads whenever a browsable tier becomes the active one: on entry once `me`
-// has arrived, on a tier switch, and when a refreshed `me` unlocks the tier.
-watch(
-  () => store.browseTier,
-  (tier) => {
-    if (tier !== null) void loadList()
-  },
-  { immediate: true },
-)
+useBrowseTierLoader()
 
 // ========================================
 // Handlers

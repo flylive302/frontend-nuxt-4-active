@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { computed, readonly, ref } from 'vue'
-import { usePrettyIdData } from '~/composables/pretty-id/usePrettyIdData'
+import { computed, nextTick, readonly, ref, watch } from 'vue'
+import { useBrowseTierLoader, usePrettyIdData } from '~/composables/pretty-id/usePrettyIdData'
 import { usePrettyIdStore } from '~/stores/prettyId'
 import type { PrettyIdListResponse } from '~/types/pretty-id'
 import { PrettyIdApiError } from '~/utils/pretty-id-error'
@@ -20,6 +20,7 @@ vi.mock('~/utils/logger', () => ({
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('readonly', readonly)
+vi.stubGlobal('watch', watch)
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 
 function toastTitles(): string[] {
@@ -382,5 +383,43 @@ describe('usePrettyIdData', () => {
       expect(store.searchStatus).toBe('failed')
       expect(toastTitles()).toEqual(['Lookup down'])
     })
+  })
+})
+
+describe('useBrowseTierLoader', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    resetApiMock(apiMock)
+    toastAdd.mockReset()
+  })
+
+  it('does not load while `me` has not arrived', async () => {
+    useBrowseTierLoader()
+    await nextTick()
+    expect(apiMock.list).not.toHaveBeenCalled()
+  })
+
+  it('loads once `me` arrives with a browsable tier', async () => {
+    const store = usePrettyIdStore()
+    useBrowseTierLoader()
+    store.setMe(makeMe())
+    await vi.waitFor(() => expect(apiMock.list).toHaveBeenCalledTimes(1))
+  })
+
+  it('loads on entry when `me` is already there', async () => {
+    const store = usePrettyIdStore()
+    store.setMe(makeMe())
+    useBrowseTierLoader()
+    await vi.waitFor(() => expect(apiMock.list).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not load a locked tier', async () => {
+    const store = usePrettyIdStore()
+    store.setMe(makeMe())
+    store.setActiveTier(4)
+    useBrowseTierLoader()
+    await nextTick()
+    expect(store.tierMode).toBe('locked')
+    expect(apiMock.list).not.toHaveBeenCalled()
   })
 })

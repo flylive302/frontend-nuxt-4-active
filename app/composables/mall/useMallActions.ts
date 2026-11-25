@@ -20,14 +20,16 @@ import type {
   UserProp,
 } from '~/types/mall/prop'
 import type { ProfileSyncFields } from '~/types/user/profile-sync'
-import type { NormalizedError } from '~/utils/api/normalizeFetchError'
 import { useAuthStore } from '~/stores/auth'
+import { readErrorCode } from '~/utils/api/readErrorCode'
+import { createLogger } from '~/utils/logger'
 import {
   ORIGINAL_SIGNATURE_LOCKED_CODE,
   ORIGINAL_SIGNATURE_LOCKED_MESSAGE,
   isOriginalSignature,
 } from '~/utils/userPropOrigin'
 
+const log = createLogger('[MallActions]')
 
 /** Map PropType → user profile field key (e.g., 'frame' → 'frame_id'). */
 const PROP_TYPE_TO_COLUMN: Partial<Record<PropType, keyof ProfileSyncFields>> = {
@@ -174,17 +176,21 @@ export function useMallActions() {
     try {
       const response = await api<PropEquipResponse>(`/props/${userPropId}/equip`, { method: 'POST' })
 
-      // REACT — success
+      // Signature is not a column prop: the server answers with the number it set.
+      const signature = response?.data?.signature ?? null
+      if (prop.type === 'signature') {
+        applySignatureResult(signature, undefined)
+      }
+
+      // REACT — success (best-effort from here: the equip already succeeded)
       toast.add({
         title: 'Prop Equipped',
         color: 'success',
       })
 
-      // Signature is not a column prop: the server answers with the number it
-      // set. The first equip also creates the user's original-signature row,
-      // so the list is re-read (refreshSignatureState).
+      // The first equip also creates the user's original-signature row, so the list is re-read.
       if (prop.type === 'signature') {
-        await refreshSignatureState(response?.data?.signature ?? null, null, prop)
+        await reactToSignatureChange(signature, prop)
       }
 
       // Push column prop change to room participants via socket
@@ -272,21 +278,26 @@ export function useMallActions() {
 
       // Signature: this row steps down, the one the server names steps up.
       const nowEquippedId = response?.data?.equipped_prop_id ?? null
+      const signature = response?.data?.signature ?? null
+      const worn = nowEquippedId !== null
+        ? mallStore.userProps.items.find(p => p.id === nowEquippedId)
+        : undefined
       if (isSignature) {
         mallStore.setUserPropEquipped(userPropId, false)
         if (nowEquippedId !== null) {
           mallStore.setUserPropEquipped(nowEquippedId, true)
         }
+        applySignatureResult(signature, worn)
       }
 
-      // REACT — success
+      // REACT — success (best-effort from here: the unequip already succeeded)
       toast.add({
         title: 'Prop Unequipped',
         color: 'neutral',
       })
 
       if (isSignature) {
-        await refreshSignatureState(response?.data?.signature ?? null, nowEquippedId)
+        await reactToSignatureChange(signature, worn)
       }
 
       // Push column prop removal to room participants via socket
@@ -317,7 +328,7 @@ export function useMallActions() {
       const normalized = normalizeError(err)
       toast.add({
         title: 'Unequip Failed',
-        description: errorCodeOf(normalized) === ORIGINAL_SIGNATURE_LOCKED_CODE
+        description: readErrorCode(normalized) === ORIGINAL_SIGNATURE_LOCKED_CODE
           ? ORIGINAL_SIGNATURE_LOCKED_MESSAGE
           : normalized.message,
         color: 'error',
@@ -334,78 +345,66 @@ export function useMallActions() {
   // ========================================
 
   /**
-   * After a signature equip/unequip: show the number the server set on the
-   * signed-in user (profile updates without a reload), tell the room, and
-   * re-read My Props so exactly one signature shows equipped. `equippedUserPropId`
-   * (unequip only) is the row the server switched to — when it is in the list it
-   * is also mirrored into the equipped map. Best-effort (REACT).
+   * EXECUTE — cross-store writes from a signature equip/unequip response: show
+   * the number the server set on the signed-in user (profile updates without a
+   * reload) and, when `mirrored` (unequip only: the row the server switched to,
+   * if it is in the list) is given, mirror it into the equipped map.
    *
-   * `pretty_id_tier` (drives the profile's gold plate) is not in the equip /
-   * unequip response and a user-prop row does not carry it. So it is cleared
-   * together with the signature (exact for an original or mall signature — the
-   * plate never shows next to the wrong number), and only when the row now worn
-   * is a Pretty ID (or unknown) is the signed-in user re-read to learn its tier.
+   * `pretty_id_tier` (drives the profile's gold plate) is not in the response
+   * and a user-prop row does not carry it. So it is cleared together with the
+   * signature (exact for an original or mall signature — the plate never shows
+   * next to the wrong number); `reactToSignatureChange` re-reads the user when
+   * the row now worn is a Pretty ID.
    */
-  async function refreshSignatureState(
-    signature: string | null,
-    equippedUserPropId: number | null = null,
-    equippedRow: UserProp | undefined = undefined,
-  ): Promise<void> {
-    const worn = equippedRow
-      ?? (equippedUserPropId !== null
-        ? mallStore.userProps.items.find(p => p.id === equippedUserPropId)
-        : undefined)
-
+  function applySignatureResult(signature: string | null, mirrored: UserProp | undefined): void {
     if (signature !== null) {
       authStore.patchProfile({ signature, pretty_id_tier: null })
-      try {
-        emitProfileSync({ signature })
-      } catch {
-        // Silent — best-effort optimization
-      }
     }
 
-    if (equippedUserPropId !== null && worn) {
+    if (mirrored) {
       mallStore.setEquippedForType('signature', {
-        id: worn.id,
-        prop_id: worn.prop_id,
-        name: worn.name,
-        asset_url: worn.asset_url,
+        id: mirrored.id,
+        prop_id: mirrored.prop_id,
+        name: mirrored.name,
+        asset_url: mirrored.asset_url,
       })
     }
-
-    // A Pretty ID's tier is only known to the server: re-read the user (best-effort).
-    if (signature !== null && (worn === undefined || worn.origin === 'pretty_id')) {
-      void syncUser()
-    }
-
-    // Authoritative re-read: the first equip creates the original row; an
-    // unequip's target may be on a page/filter that is not loaded.
-    const { fetchUserProps } = useMallUserProps()
-    await fetchUserProps({}, true)
-  }
-
-  /** Machine-readable error code of a failed call (`errors.error_code` or `meta.error_code`). */
-  function errorCodeOf(error: NormalizedError): string | undefined {
-    if (error.errorCode) return error.errorCode
-    const metaCode = error.meta?.error_code
-    if (typeof metaCode === 'string') return metaCode
-    const data = (error.raw as { response?: { _data?: { errors?: { error_code?: unknown } } } } | undefined)
-      ?.response?._data
-    const bodyCode = data?.errors?.error_code
-    return typeof bodyCode === 'string' ? bodyCode : undefined
   }
 
   /**
-   * Push column-prop change through the audio socket for immediate room propagation.
-   * Best-effort / fire-and-forget (REACT).
+   * REACT — after a signature equip/unequip succeeded: tell the room, re-read
+   * the signed-in user when the worn row may be a Pretty ID (its tier is only
+   * known to the server), and re-read My Props so exactly one signature shows
+   * equipped (an unequip's target may be on a page/filter that is not loaded).
+   * `worn` is the row now worn, `undefined` when unknown. Best-effort: never
+   * throws, so it can never turn a successful call into a failure.
    */
-  function emitColumnSync(columnKey: keyof ProfileSyncFields, value: number | null): void {
+  async function reactToSignatureChange(signature: string | null, worn: UserProp | undefined): Promise<void> {
     try {
-      emitProfileSync({ [columnKey]: value })
+      if (signature !== null) {
+        emitProfileSyncSafely({ signature })
+        if (worn === undefined || worn.origin === 'pretty_id') void syncUser()
+      }
+
+      const { fetchUserProps } = useMallUserProps()
+      await fetchUserProps({}, true)
+    } catch (err) {
+      log.warn('Signature follow-up failed after a successful equip/unequip', err)
+    }
+  }
+
+  /** Push a profile change through the audio socket for immediate room propagation (REACT, best-effort). */
+  function emitProfileSyncSafely(fields: ProfileSyncFields): void {
+    try {
+      emitProfileSync(fields)
     } catch {
       // Silent — best-effort optimization
     }
+  }
+
+  /** Column-prop change → room participants via socket. */
+  function emitColumnSync(columnKey: keyof ProfileSyncFields, value: number | null): void {
+    emitProfileSyncSafely({ [columnKey]: value })
   }
 
   // ========================================

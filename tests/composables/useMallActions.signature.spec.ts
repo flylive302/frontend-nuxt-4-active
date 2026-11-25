@@ -199,6 +199,73 @@ describe('useMallActions — signature equip', () => {
   })
 })
 
+describe('useMallActions — best-effort follow-up after a successful signature call', () => {
+  /** The My Props re-read blows up AFTER the server call succeeded. */
+  function breakListReRead(): void {
+    ;(globalThis as Record<string, unknown>).useMallUserProps = () => ({
+      fetchUserProps: () => Promise.reject(new Error('re-read exploded')),
+    })
+  }
+
+  it('equip: a throwing list re-read is still a success — success toast, no failure toast, signature patched', async () => {
+    const { authStore, actions } = await setup({ equippedId: ORIGINAL_ID })
+    breakListReRead()
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${MALL_SIG_ID}/equip`) {
+        return Promise.resolve({ data: { equipped_prop_id: MALL_SIG_ID, type: 'signature', signature: '777777' } })
+      }
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    const ok = await actions.equipProp(MALL_SIG_ID)
+
+    expect(ok).toBe(true)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Prop Equipped' }))
+    expect(toastAdd).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Equip Failed' }))
+    expect(authStore.user?.signature).toBe('777777')
+    expect(emitProfileSync).toHaveBeenCalledWith({ signature: '777777' })
+  })
+
+  it('equip: a throwing room emit does not fail the equip either', async () => {
+    const { authStore, actions } = await setup({ equippedId: ORIGINAL_ID })
+    emitProfileSync.mockImplementationOnce(() => { throw new Error('socket down') })
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${MALL_SIG_ID}/equip`) {
+        return Promise.resolve({ data: { equipped_prop_id: MALL_SIG_ID, type: 'signature', signature: '777777' } })
+      }
+      if (url === '/user/props') return Promise.resolve(listPayload(MALL_SIG_ID))
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    const ok = await actions.equipProp(MALL_SIG_ID)
+
+    expect(ok).toBe(true)
+    expect(toastAdd).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Equip Failed' }))
+    expect(authStore.user?.signature).toBe('777777')
+  })
+
+  it('unequip: a throwing list re-read is still a success — success toast, no failure toast, signature patched', async () => {
+    const { mallStore, authStore, actions } = await setup({ equippedId: MALL_SIG_ID })
+    breakListReRead()
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${MALL_SIG_ID}/unequip`) {
+        return Promise.resolve({
+          data: { type: 'signature', prop_id: MALL_SIG_ID + 100, equipped_prop_id: ORIGINAL_ID, signature: '8123456' },
+        })
+      }
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    const ok = await actions.unequipProp(MALL_SIG_ID)
+
+    expect(ok).toBe(true)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Prop Unequipped' }))
+    expect(toastAdd).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Unequip Failed' }))
+    expect(authStore.user?.signature).toBe('8123456')
+    expect(mallStore.equipped.signature?.id).toBe(ORIGINAL_ID)
+  })
+})
+
 describe('useMallActions — pretty_id_tier (profile plate)', () => {
   it('equipping a mall signature clears the tier and does not re-read the user', async () => {
     const { authStore, actions } = await setup({ equippedId: PRETTY_SIG_ID, prettyIdTier: 6 })

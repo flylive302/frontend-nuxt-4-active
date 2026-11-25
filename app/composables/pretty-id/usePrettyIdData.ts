@@ -170,3 +170,21 @@ export function usePrettyIdData() {
 
   return { loadMe, loadList, loadMore, selectTier, toggleCategory, runSearch }
 }
+
+/**
+ * Keeps the browse list loaded: it (re)loads whenever a browsable tier becomes
+ * the active one — on entry once `me` has arrived, on a tier switch, and when a
+ * refreshed `me` unlocks the tier. Call once, from the component that shows the list.
+ */
+export function useBrowseTierLoader(): void {
+  const store = usePrettyIdStore()
+  const { loadList } = usePrettyIdData()
+
+  watch(
+    () => store.browseTier,
+    (tier) => {
+      if (tier !== null) void loadList()
+    },
+    { immediate: true },
+  )
+}
