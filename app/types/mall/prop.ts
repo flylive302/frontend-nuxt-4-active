@@ -19,7 +19,14 @@ export type PropStatus = 'active' | 'expired'
 /**
  * Source of how user obtained the prop.
  */
-export type PropSourceType = 'purchase' | 'gift' | 'reward'
+export type PropSourceType = 'purchase' | 'gift' | 'reward' | 'system'
+
+/**
+ * Where a prop comes from. Only `mall` props are sold in the mall; `pretty_id`
+ * rows are claimed numbers; `original_signature` is the user's own original
+ * Signature, kept as a permanent prop (pretty-id 06).
+ */
+export type PropOrigin = 'mall' | 'pretty_id' | 'original_signature'
 
 // ========================================
 // Catalog Types
@@ -76,6 +83,9 @@ export interface UserProp {
   source_type: PropSourceType
   days_remaining: number | null
   is_valid: boolean
+  /** The Signature number — non-null only for `signature` rows. */
+  signature_value: string | null
+  origin: PropOrigin
 }
 
 /**
@@ -217,6 +227,8 @@ export interface PropEquipResponse {
   data: {
     equipped_prop_id: number
     type: PropType
+    /** The user's Signature after the equip — non-null when `type` is `signature`. */
+    signature: string | null
   }
 }
 
@@ -226,7 +238,18 @@ export interface PropEquipResponse {
 export interface PropUnequipResponse {
   status: 'success'
   message: string
-  data: null
+  data: {
+    type: PropType
+    prop_id: number
+    /**
+     * The user-prop now equipped for this type. For a signature this is the
+     * user's original-signature row (unequip switches back to the original);
+     * null for every other type.
+     */
+    equipped_prop_id: number | null
+    /** The user's Signature after the unequip — non-null when `type` is `signature`. */
+    signature: string | null
+  }
 }
 
 // ========================================

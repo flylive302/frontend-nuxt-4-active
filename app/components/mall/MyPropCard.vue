@@ -8,6 +8,7 @@ import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 import { useMallStore } from '~/stores/mall'
 import { withImageKitTransform } from '~/utils/imagekit'
 import { formatUserPropExpiryLabel, userPropExpiryColorClass } from '~/utils/userPropExpiry'
+import { canUnequipUserProp, isOriginalSignature } from '~/utils/userPropOrigin'
 
 // ========================================
 // Props & Emits
@@ -56,6 +57,13 @@ const thumbnailSrc = computed(() =>
 const isExpired = computed(() => !props.userProp.is_valid)
 const isEquipped = computed(() => props.userProp.is_equipped)
 
+/** Signature rows show their number; the user's original one is labelled and cannot be unequipped. */
+const signatureNumber = computed(() =>
+  props.userProp.type === 'signature' ? props.userProp.signature_value : null,
+)
+const isOriginal = computed(() => isOriginalSignature(props.userProp))
+const showUnequip = computed(() => canUnequipUserProp(props.userProp))
+
 /** Expiry label + urgency colour (permanent rows read "Permanent" — ADR 0051). */
 const expiryDisplay = computed(() => formatUserPropExpiryLabel(props.userProp))
 const expiryColor = computed(() => userPropExpiryColorClass(props.userProp))
@@ -68,7 +76,7 @@ function handleToggleEquip(): void {
   if (isExpired.value) return
 
   if (isEquipped.value) {
-    emit('unequip', props.userProp.id)
+    if (showUnequip.value) emit('unequip', props.userProp.id)
   } else {
     emit('equip', props.userProp.id)
   }
@@ -127,15 +135,28 @@ function handleSelect(): void {
 
     <!-- Info -->
     <div class="p-2 space-y-1.5">
-      <!-- Name -->
-      <p class="font-medium text-xs truncate">{{ userProp.name }}</p>
+      <!-- Signature number -->
+      <p
+        v-if="signatureNumber"
+        class="font-bold text-base tabular-nums tracking-wide truncate"
+      >
+        {{ signatureNumber }}
+      </p>
+
+      <!-- Name (+ Original label) -->
+      <div class="flex items-center gap-1 min-w-0">
+        <p class="font-medium text-xs truncate">{{ userProp.name }}</p>
+        <UBadge v-if="isOriginal" color="neutral" size="xs" variant="subtle" class="shrink-0">
+          Original
+        </UBadge>
+      </div>
 
       <!-- Expiry -->
       <p class="text-[10px]" :class="expiryColor">{{ expiryDisplay }}</p>
 
       <!-- Equip/Unequip Button -->
       <UButton
-        v-if="!isExpired"
+        v-if="!isExpired && (!isEquipped || showUnequip)"
         size="xs"
         block
         :color="isEquipped ? 'neutral' : 'primary'"

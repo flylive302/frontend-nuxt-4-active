@@ -7,6 +7,7 @@ import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/constants
 import { useAuthStore } from '~/stores/auth'
 import { useMallStore } from '~/stores/mall'
 import { formatUserPropExpiryLabel, userPropExpiryColorClass } from '~/utils/userPropExpiry'
+import { canUnequipUserProp, isOriginalSignature } from '~/utils/userPropOrigin'
 
 // ========================================
 // Props & Emits
@@ -53,6 +54,13 @@ const typeLabel = computed(() => props.userProp ? PROP_TYPE_LABELS[props.userPro
 const isExpired = computed(() => !props.userProp?.is_valid)
 const isEquipped = computed(() => props.userProp?.is_equipped ?? false)
 
+/** Signature rows show their number; the user's original one is labelled and cannot be unequipped. */
+const signatureNumber = computed(() =>
+  props.userProp?.type === 'signature' ? props.userProp.signature_value : null,
+)
+const isOriginal = computed(() => props.userProp ? isOriginalSignature(props.userProp) : false)
+const showUnequip = computed(() => props.userProp ? canUnequipUserProp(props.userProp) : false)
+
 /** Expiry label + urgency colour (permanent rows read "Permanent" — ADR 0051). */
 const expiryDisplay = computed(() => props.userProp ? formatUserPropExpiryLabel(props.userProp) : '')
 const expiryColor = computed(() => props.userProp ? userPropExpiryColorClass(props.userProp) : 'text-muted')
@@ -66,6 +74,7 @@ const sourceLabel = computed(() => {
     purchase: 'Purchased',
     gift: 'Received as Gift',
     reward: 'Reward',
+    system: 'Original Signature',
   }
   return labels[props.userProp.source_type] ?? props.userProp.source_type
 })
@@ -78,7 +87,7 @@ function handleToggleEquip(): void {
   if (!props.userProp || isExpired.value) return
 
   if (isEquipped.value) {
-    emit('unequip', props.userProp.id)
+    if (showUnequip.value) emit('unequip', props.userProp.id)
   } else {
     emit('equip', props.userProp.id)
   }
@@ -131,6 +140,12 @@ function handleClose(): void {
           <!-- Name -->
           <h2 class="text-xl font-bold text-center">{{ userProp.name }}</h2>
 
+          <!-- Signature number + Original label -->
+          <div v-if="signatureNumber" class="flex items-center justify-center gap-2">
+            <span class="text-2xl font-bold tabular-nums tracking-wide">{{ signatureNumber }}</span>
+            <UBadge v-if="isOriginal" color="neutral" size="xs" variant="subtle">Original</UBadge>
+          </div>
+
           <!-- Details -->
           <div class="grid grid-cols-2 gap-3 text-sm">
             <div class="bg-muted/20 rounded-lg p-3 text-center">
@@ -167,7 +182,7 @@ function handleClose(): void {
           <div class="flex flex-col gap-2">
             <!-- Equip/Unequip Button -->
             <UButton
-              v-if="!isExpired"
+              v-if="!isExpired && (!isEquipped || showUnequip)"
               block
               size="lg"
               :color="isEquipped ? 'neutral' : 'primary'"
@@ -187,7 +202,7 @@ function handleClose(): void {
 
             <!-- Expired: Cannot equip -->
             <UButton
-              v-else
+              v-else-if="isExpired"
               block
               size="lg"
               color="neutral"

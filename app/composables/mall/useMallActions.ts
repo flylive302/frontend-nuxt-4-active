@@ -7,17 +7,25 @@
  * This composable owns:
  * - API calls for mutations
  * - Toast notifications (REACT)
- * - Cross-store writes (prop_id sync via authStore for column-based props)
+ * - Cross-store writes (prop_id sync via authStore for column-based props;
+ *   the Signature number from the equip/unequip response for signature props)
  * - Socket emissions (profile sync for column-based props)
  * - Optimistic updates with rollback
  */
 import type {
   PropPurchaseResponse,
   PropEquipResponse,
+  PropUnequipResponse,
   PropType,
 } from '~/types/mall/prop'
 import type { ProfileSyncFields } from '~/types/user/profile-sync'
+import type { NormalizedError } from '~/utils/api/normalizeFetchError'
 import { useAuthStore } from '~/stores/auth'
+import {
+  ORIGINAL_SIGNATURE_LOCKED_CODE,
+  ORIGINAL_SIGNATURE_LOCKED_MESSAGE,
+  isOriginalSignature,
+} from '~/utils/userPropOrigin'
 
 
 /** Map PropType → user profile field key (e.g., 'frame' → 'frame_id'). */
@@ -162,13 +170,20 @@ export function useMallActions() {
     }
 
     try {
-      await api<PropEquipResponse>(`/props/${userPropId}/equip`, { method: 'POST' })
+      const response = await api<PropEquipResponse>(`/props/${userPropId}/equip`, { method: 'POST' })
 
       // REACT — success
       toast.add({
         title: 'Prop Equipped',
         color: 'success',
       })
+
+      // Signature is not a column prop: the server answers with the number it
+      // set. The first equip also creates the user's original-signature row,
+      // so the list is re-read (refreshSignatureState).
+      if (prop.type === 'signature') {
+        await refreshSignatureState(response?.data?.signature ?? null)
+      }
 
       // Push column prop change to room participants via socket
       if (columnKey) {
@@ -210,8 +225,10 @@ export function useMallActions() {
   /**
    * Unequip a user prop.
    *
-   * GATE:    check isEquipping guard, find prop
+   * GATE:    check isEquipping guard, find prop, refuse the original signature
    * EXECUTE: optimistic update → API POST → confirm or rollback
+   *          (a signature is NOT optimistic: the server switches the user to
+   *          their original signature, so the response says what is equipped)
    * REACT:   toast, column-prop sync socket emission
    */
   async function unequipProp(userPropId: number): Promise<boolean> {
@@ -221,28 +238,54 @@ export function useMallActions() {
     const prop = mallStore.userProps.items.find(p => p.id === userPropId)
     if (!prop) return false
 
-    // EXECUTE — optimistic update
+    if (isOriginalSignature(prop)) {
+      toast.add({
+        title: 'Unequip Failed',
+        description: ORIGINAL_SIGNATURE_LOCKED_MESSAGE,
+        color: 'error',
+      })
+      return false
+    }
+
+    // EXECUTE
     isEquipping.value = userPropId
 
+    const isSignature = prop.type === 'signature'
     const previousState = prop.is_equipped
-    mallStore.setUserPropEquipped(userPropId, false)
-    mallStore.setEquippedForType(prop.type, null)
 
-    // Cross-store column sync (optimistic)
+    // Optimistic update — column props only
     const columnKey = PROP_TYPE_TO_COLUMN[prop.type]
     const previousValue = columnKey ? (authStore.user?.[columnKey] ?? null) : null
-    if (columnKey) {
-      authStore.patchProfile({ [columnKey]: null })
+    if (!isSignature) {
+      mallStore.setUserPropEquipped(userPropId, false)
+      mallStore.setEquippedForType(prop.type, null)
+
+      if (columnKey) {
+        authStore.patchProfile({ [columnKey]: null })
+      }
     }
 
     try {
-      await api(`/props/${userPropId}/unequip`, { method: 'POST' })
+      const response = await api<PropUnequipResponse>(`/props/${userPropId}/unequip`, { method: 'POST' })
+
+      // Signature: this row steps down, the one the server names steps up.
+      const nowEquippedId = response?.data?.equipped_prop_id ?? null
+      if (isSignature) {
+        mallStore.setUserPropEquipped(userPropId, false)
+        if (nowEquippedId !== null) {
+          mallStore.setUserPropEquipped(nowEquippedId, true)
+        }
+      }
 
       // REACT — success
       toast.add({
         title: 'Prop Unequipped',
         color: 'neutral',
       })
+
+      if (isSignature) {
+        await refreshSignatureState(response?.data?.signature ?? null, nowEquippedId)
+      }
 
       // Push column prop removal to room participants via socket
       if (columnKey) {
@@ -252,25 +295,29 @@ export function useMallActions() {
       return true
     } catch (err) {
       // EXECUTE — rollback first (must complete before REACT feedback)
-      mallStore.setUserPropEquipped(userPropId, previousState)
-      if (previousState) {
-        mallStore.setEquippedForType(prop.type, {
-          id: prop.id,
-          prop_id: prop.prop_id,
-          name: prop.name,
-          asset_url: prop.asset_url,
-        })
-      }
+      if (!isSignature) {
+        mallStore.setUserPropEquipped(userPropId, previousState)
+        if (previousState) {
+          mallStore.setEquippedForType(prop.type, {
+            id: prop.id,
+            prop_id: prop.prop_id,
+            name: prop.name,
+            asset_url: prop.asset_url,
+          })
+        }
 
-      if (columnKey) {
-        authStore.patchProfile({ [columnKey]: previousValue })
+        if (columnKey) {
+          authStore.patchProfile({ [columnKey]: previousValue })
+        }
       }
 
       // REACT — error feedback (after rollback is complete)
       const normalized = normalizeError(err)
       toast.add({
         title: 'Unequip Failed',
-        description: normalized.message,
+        description: errorCodeOf(normalized) === ORIGINAL_SIGNATURE_LOCKED_CODE
+          ? ORIGINAL_SIGNATURE_LOCKED_MESSAGE
+          : normalized.message,
         color: 'error',
       })
 
@@ -283,6 +330,55 @@ export function useMallActions() {
   // ========================================
   // Helpers (private)
   // ========================================
+
+  /**
+   * After a signature equip/unequip: show the number the server set on the
+   * signed-in user (profile updates without a reload), tell the room, and
+   * re-read My Props so exactly one signature shows equipped. `equippedUserPropId`
+   * (unequip only) is the row the server switched to — when it is in the list it
+   * is also mirrored into the equipped map. Best-effort (REACT).
+   */
+  async function refreshSignatureState(
+    signature: string | null,
+    equippedUserPropId: number | null = null,
+  ): Promise<void> {
+    if (signature !== null) {
+      authStore.patchProfile({ signature })
+      try {
+        emitProfileSync({ signature })
+      } catch {
+        // Silent — best-effort optimization
+      }
+    }
+
+    const equippedRow = equippedUserPropId !== null
+      ? mallStore.userProps.items.find(p => p.id === equippedUserPropId)
+      : undefined
+    if (equippedRow) {
+      mallStore.setEquippedForType('signature', {
+        id: equippedRow.id,
+        prop_id: equippedRow.prop_id,
+        name: equippedRow.name,
+        asset_url: equippedRow.asset_url,
+      })
+    }
+
+    // Authoritative re-read: the first equip creates the original row; an
+    // unequip's target may be on a page/filter that is not loaded.
+    const { fetchUserProps } = useMallUserProps()
+    await fetchUserProps({}, true)
+  }
+
+  /** Machine-readable error code of a failed call (`errors.error_code` or `meta.error_code`). */
+  function errorCodeOf(error: NormalizedError): string | undefined {
+    if (error.errorCode) return error.errorCode
+    const metaCode = error.meta?.error_code
+    if (typeof metaCode === 'string') return metaCode
+    const data = (error.raw as { response?: { _data?: { errors?: { error_code?: unknown } } } } | undefined)
+      ?.response?._data
+    const bodyCode = data?.errors?.error_code
+    return typeof bodyCode === 'string' ? bodyCode : undefined
+  }
 
   /**
    * Push column-prop change through the audio socket for immediate room propagation.
