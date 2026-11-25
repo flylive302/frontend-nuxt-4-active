@@ -46,6 +46,7 @@ const ORIGINAL_ID = 10
 const MALL_SIG_ID = 11
 const FRAME_ID = 12
 const PRETTY_SIG_ID = 13
+const RARE_SIG_ID = 14
 
 function makeUserProp(overrides: Partial<UserProp> & Pick<UserProp, 'id' | 'type'>): UserProp {
   return {
@@ -81,6 +82,10 @@ function listPayload(equippedId: number) {
         makeUserProp({
           id: PRETTY_SIG_ID, type: 'signature', signature_value: '123456',
           origin: 'pretty_id', is_equipped: equippedId === PRETTY_SIG_ID,
+        }),
+        makeUserProp({
+          id: RARE_SIG_ID, type: 'signature', signature_value: '007',
+          origin: 'rare_id', expires_at: '2026-12-01T00:00:00Z', is_equipped: equippedId === RARE_SIG_ID,
         }),
       ],
       pagination: { next_cursor: null, has_more: false },
@@ -122,7 +127,7 @@ afterEach(() => {
   }
 })
 
-async function setup(opts: { equippedId: number, prettyIdTier?: 6 | 4 | null }) {
+async function setup(opts: { equippedId: number, prettyIdTier?: 6 | 4 | null, plate?: boolean }) {
   const { useMallStore } = await import('../../app/stores/mall')
   const { useAuthStore } = await import('../../app/stores/auth')
   const { useMallUserProps } = await import('../../app/composables/mall/useMallUserProps')
@@ -133,6 +138,7 @@ async function setup(opts: { equippedId: number, prettyIdTier?: 6 | 4 | null }) 
     id: 1,
     signature: opts.equippedId === ORIGINAL_ID ? '8123456' : '777777',
     pretty_id_tier: opts.prettyIdTier ?? null,
+    has_pretty_id_plate: opts.plate ?? opts.prettyIdTier != null,
   } as unknown as BootstrapUser)
   ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useMallUserProps = () => useMallUserProps()
@@ -280,6 +286,7 @@ describe('useMallActions — pretty_id_tier (profile plate)', () => {
     await actions.equipProp(MALL_SIG_ID)
 
     expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(authStore.user?.has_pretty_id_plate).toBe(false)
     expect(syncUser).not.toHaveBeenCalled()
   })
 
@@ -297,6 +304,25 @@ describe('useMallActions — pretty_id_tier (profile plate)', () => {
 
     expect(authStore.user?.signature).toBe('123456')
     expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(authStore.user?.has_pretty_id_plate).toBe(false)
+    expect(syncUser).toHaveBeenCalledTimes(1)
+  })
+
+  it('equipping a Rare ID drops the stale plate at once, then re-reads the user for the real one', async () => {
+    const { authStore, actions } = await setup({ equippedId: ORIGINAL_ID })
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${RARE_SIG_ID}/equip`) {
+        return Promise.resolve({ data: { equipped_prop_id: RARE_SIG_ID, type: 'signature', signature: '007' } })
+      }
+      if (url === '/user/props') return Promise.resolve(listPayload(RARE_SIG_ID))
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    await actions.equipProp(RARE_SIG_ID)
+
+    expect(authStore.user?.signature).toBe('007')
+    expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(authStore.user?.has_pretty_id_plate).toBe(false)
     expect(syncUser).toHaveBeenCalledTimes(1)
   })
 
@@ -316,6 +342,7 @@ describe('useMallActions — pretty_id_tier (profile plate)', () => {
 
     expect(authStore.user?.signature).toBe('8123456')
     expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(authStore.user?.has_pretty_id_plate).toBe(false)
     expect(syncUser).not.toHaveBeenCalled()
   })
 
@@ -326,6 +353,7 @@ describe('useMallActions — pretty_id_tier (profile plate)', () => {
     await actions.equipProp(MALL_SIG_ID)
 
     expect(authStore.user?.pretty_id_tier).toBe(6)
+    expect(authStore.user?.has_pretty_id_plate).toBe(true)
     expect(syncUser).not.toHaveBeenCalled()
   })
 })

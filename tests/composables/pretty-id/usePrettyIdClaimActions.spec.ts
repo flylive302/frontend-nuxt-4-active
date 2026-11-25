@@ -144,7 +144,7 @@ describe('usePrettyIdClaimActions', () => {
       expect(store.celebration).toEqual({ signature: '123456', tier: 6, category: 'mirror' })
       expect(store.claimTarget).toBeNull()
       expect(store.isClaiming).toBe(false)
-      expect(patchProfile).toHaveBeenCalledWith({ signature: '123456', pretty_id_tier: 6 })
+      expect(patchProfile).toHaveBeenCalledWith({ signature: '123456', pretty_id_tier: 6, has_pretty_id_plate: true })
       expect(emitProfileSync).toHaveBeenCalledWith({ signature: '123456' })
       expect(fireConfetti).toHaveBeenCalledTimes(1)
       expect(toastAdd).not.toHaveBeenCalled()
@@ -161,7 +161,7 @@ describe('usePrettyIdClaimActions', () => {
 
       await actions.confirmClaim()
 
-      expect(patchProfile).toHaveBeenCalledWith({ signature: '1234', pretty_id_tier: 4 })
+      expect(patchProfile).toHaveBeenCalledWith({ signature: '1234', pretty_id_tier: 4, has_pretty_id_plate: true })
       expect(emitProfileSync).toHaveBeenCalledWith({ signature: '1234' })
     })
 

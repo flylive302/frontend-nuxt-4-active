@@ -22,6 +22,11 @@ export function isOriginalSignature(userProp: UserPropOrigin): boolean {
   return userProp.origin === 'original_signature'
 }
 
+/** Whether this row is a Rare ID (a temporary Signature, never a Pretty ID). */
+export function isRareId(userProp: UserPropOrigin): boolean {
+  return userProp.origin === 'rare_id'
+}
+
 /** Whether an Unequip button may be shown for this row (equipped, and not the original). */
 export function canUnequipUserProp(userProp: UserPropOrigin & Pick<UserProp, 'is_equipped'>): boolean {
   return userProp.is_equipped && !isOriginalSignature(userProp)

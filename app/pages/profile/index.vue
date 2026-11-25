@@ -163,7 +163,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
 
         <template #signature-badges>
           <div class="w-full flex justify-end items-center gap-1" :class="dataCardAsset ? 'pt-10' : 'pt-2'">
-            <ProfileBadge :vip="authStore?.user?.vip_level" :txt="authStore?.user?.signature || undefined" :pretty-id-tier="authStore?.user?.pretty_id_tier" class="w-8/12" />
+            <ProfileBadge :vip="authStore?.user?.vip_level" :txt="authStore?.user?.signature || undefined" :pretty-id-plate="authStore?.user?.has_pretty_id_plate" class="w-8/12" />
             <img v-if="vip" :src="vipBadgeSrc" class="w-4/12" alt="">
           </div>
         </template>

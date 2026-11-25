@@ -24,9 +24,11 @@ export type PropSourceType = 'purchase' | 'gift' | 'reward' | 'system'
 /**
  * Where a prop comes from. Only `mall` props are sold in the mall; `pretty_id`
  * rows are claimed numbers; `original_signature` is the user's own original
- * Signature, kept as a permanent prop (pretty-id 06).
+ * Signature, kept as a permanent prop (pretty-id 06); `rare_id` is a temporary
+ * Signature (always has `expires_at`, 1-8 digits, leading zeros significant —
+ * keep `signature_value` a string) won in a Pretty ID event (step 2).
  */
-export type PropOrigin = 'mall' | 'pretty_id' | 'original_signature'
+export type PropOrigin = 'mall' | 'pretty_id' | 'original_signature' | 'rare_id'
 
 // ========================================
 // Catalog Types

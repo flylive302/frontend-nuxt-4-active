@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core'
-import type { PrettyIdTier } from '~/types/pretty-id'
 import { withImageKitTransform } from '~/utils/imagekit'
 import { showsPrettyIdPlate } from '~/utils/pretty-id-plate'
 
 const props = withDefaults(defineProps<{
   txt?: string | number
   vip?: number
-  /** Set (6 | 4) while the user wears a Pretty ID: the gold plate replaces the plain badge. */
-  prettyIdTier?: PrettyIdTier | null
+  /** True while the user wears a Pretty ID or a Rare ID: the gold plate replaces the plain badge. */
+  prettyIdPlate?: boolean
 }>(), {
   txt: "UserSignature",
   vip: 0,
-  prettyIdTier: null,
+  prettyIdPlate: false,
 })
 
-const isPlate = computed(() => showsPrettyIdPlate(props.prettyIdTier))
+const isPlate = computed(() => showsPrettyIdPlate(props.prettyIdPlate))
 
 const source = computed(() => String(props.txt))
 const { copy } = useClipboard({ source })

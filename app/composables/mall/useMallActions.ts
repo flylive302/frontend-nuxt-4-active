@@ -350,15 +350,16 @@ export function useMallActions() {
    * reload) and, when `mirrored` (unequip only: the row the server switched to,
    * if it is in the list) is given, mirror it into the equipped map.
    *
-   * `pretty_id_tier` (drives the profile's gold plate) is not in the response
-   * and a user-prop row does not carry it. So it is cleared together with the
-   * signature (exact for an original or mall signature — the plate never shows
-   * next to the wrong number); `reactToSignatureChange` re-reads the user when
-   * the row now worn is a Pretty ID.
+   * `pretty_id_tier` / `has_pretty_id_plate` (drive the profile's gold plate)
+   * are not in the response and a user-prop row does not carry them. So they
+   * are cleared together with the signature (exact for an original or mall
+   * signature — the plate never shows next to the wrong number);
+   * `reactToSignatureChange` re-reads the user when the row now worn is a
+   * Pretty ID or a Rare ID.
    */
   function applySignatureResult(signature: string | null, mirrored: UserProp | undefined): void {
     if (signature !== null) {
-      authStore.patchProfile({ signature, pretty_id_tier: null })
+      authStore.patchProfile({ signature, pretty_id_tier: null, has_pretty_id_plate: false })
     }
 
     if (mirrored) {
@@ -383,7 +384,7 @@ export function useMallActions() {
     try {
       if (signature !== null) {
         emitProfileSyncSafely({ signature })
-        if (worn === undefined || worn.origin === 'pretty_id') void syncUser()
+        if (worn === undefined || worn.origin === 'pretty_id' || worn.origin === 'rare_id') void syncUser()
       }
 
       const { fetchUserProps } = useMallUserProps()

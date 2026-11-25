@@ -7,7 +7,7 @@ import { PROP_TYPE_ICONS, PROP_TYPE_COLORS, PROP_TYPE_LABELS } from '~/constants
 import { useAuthStore } from '~/stores/auth'
 import { useMallStore } from '~/stores/mall'
 import { formatUserPropExpiryLabel, userPropExpiryColorClass } from '~/utils/userPropExpiry'
-import { canUnequipUserProp, isOriginalSignature } from '~/utils/userPropOrigin'
+import { canUnequipUserProp, isOriginalSignature, isRareId } from '~/utils/userPropOrigin'
 
 // ========================================
 // Props & Emits
@@ -59,6 +59,7 @@ const signatureNumber = computed(() =>
   props.userProp?.type === 'signature' ? props.userProp.signature_value : null,
 )
 const isOriginal = computed(() => props.userProp ? isOriginalSignature(props.userProp) : false)
+const isRare = computed(() => props.userProp ? isRareId(props.userProp) : false)
 const showUnequip = computed(() => props.userProp ? canUnequipUserProp(props.userProp) : false)
 
 /** Expiry label + urgency colour (permanent rows read "Permanent" — ADR 0051). */
@@ -140,10 +141,11 @@ function handleClose(): void {
           <!-- Name -->
           <h2 class="text-xl font-bold text-center">{{ userProp.name }}</h2>
 
-          <!-- Signature number + Original label -->
+          <!-- Signature number + Original / Rare ID label -->
           <div v-if="signatureNumber" class="flex items-center justify-center gap-2">
             <span class="text-2xl font-bold tabular-nums tracking-wide">{{ signatureNumber }}</span>
             <UBadge v-if="isOriginal" color="neutral" size="xs" variant="subtle">Original</UBadge>
+            <UBadge v-if="isRare" color="warning" size="xs" variant="subtle">Rare ID</UBadge>
           </div>
 
           <!-- Details -->

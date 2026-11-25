@@ -8,7 +8,7 @@ import { resolveMiceWaveRingColor } from '~/utils/mice-wave-ring-color'
 import { useMallStore } from '~/stores/mall'
 import { withImageKitTransform } from '~/utils/imagekit'
 import { formatUserPropExpiryLabel, userPropExpiryColorClass } from '~/utils/userPropExpiry'
-import { canUnequipUserProp, isOriginalSignature } from '~/utils/userPropOrigin'
+import { canUnequipUserProp, isOriginalSignature, isRareId } from '~/utils/userPropOrigin'
 
 // ========================================
 // Props & Emits
@@ -62,6 +62,7 @@ const signatureNumber = computed(() =>
   props.userProp.type === 'signature' ? props.userProp.signature_value : null,
 )
 const isOriginal = computed(() => isOriginalSignature(props.userProp))
+const isRare = computed(() => isRareId(props.userProp))
 const showUnequip = computed(() => canUnequipUserProp(props.userProp))
 
 /** Expiry label + urgency colour (permanent rows read "Permanent" — ADR 0051). */
@@ -143,11 +144,14 @@ function handleSelect(): void {
         {{ signatureNumber }}
       </p>
 
-      <!-- Name (+ Original label) -->
+      <!-- Name (+ Original / Rare ID label) -->
       <div class="flex items-center gap-1 min-w-0">
         <p class="font-medium text-xs truncate">{{ userProp.name }}</p>
         <UBadge v-if="isOriginal" color="neutral" size="xs" variant="subtle" class="shrink-0">
           Original
+        </UBadge>
+        <UBadge v-if="isRare" color="warning" size="xs" variant="subtle" class="shrink-0">
+          Rare ID
         </UBadge>
       </div>
 

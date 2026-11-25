@@ -95,6 +95,8 @@ export interface UserProfile {
   signature: string
   /** Tier of the Pretty ID this user wears now; `null` for an original / mall signature. */
   pretty_id_tier?: PrettyIdTier | null
+  /** True while this user wears a claimed Pretty ID or a Rare ID (drives the gold plate). */
+  has_pretty_id_plate?: boolean
   avatar: string | null  // Single URL - use Nuxt Image for transforms
   cover_image: string | null
   vip_level: number

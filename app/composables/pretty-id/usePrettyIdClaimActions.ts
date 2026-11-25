@@ -92,7 +92,7 @@ export function usePrettyIdClaimActions() {
       const result = await api.claim(target.signature)
       store.setClaimTarget(null)
       // The claim auto-equips the number: profile shows it (and its plate) without a reload.
-      authStore.patchProfile({ signature: result.signature, pretty_id_tier: result.tier })
+      authStore.patchProfile({ signature: result.signature, pretty_id_tier: result.tier, has_pretty_id_plate: true })
       // REACT
       store.setCelebration({ signature: result.signature, tier: result.tier, category: result.category })
       emitSignatureToRoom(result.signature)
