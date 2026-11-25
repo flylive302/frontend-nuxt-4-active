@@ -6,6 +6,7 @@
  */
 
 import type { EquippedBadge } from '~/types/progression/badge'
+import type { PrettyIdTier } from '~/types/pretty-id'
 
 // ============================================
 // CORE TYPES
@@ -92,6 +93,8 @@ export interface UserProfile {
   id: number
   name: string | null
   signature: string
+  /** Tier of the Pretty ID this user wears now; `null` for an original / mall signature. */
+  pretty_id_tier?: PrettyIdTier | null
   avatar: string | null  // Single URL - use Nuxt Image for transforms
   cover_image: string | null
   vip_level: number

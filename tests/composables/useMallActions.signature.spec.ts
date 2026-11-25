@@ -13,6 +13,8 @@
  *  - the original row has no unequip: refused at the GATE (no request) and a
  *    server 422 `original_signature_locked` maps to the friendly toast
  *  - non-signature props are untouched by the signature path
+ *  - `pretty_id_tier` (profile plate) stays correct: cleared with the signature,
+ *    and the signed-in user is re-read only when the row now worn is a Pretty ID
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -43,6 +45,7 @@ vi.mock('~/utils/logger', () => ({
 const ORIGINAL_ID = 10
 const MALL_SIG_ID = 11
 const FRAME_ID = 12
+const PRETTY_SIG_ID = 13
 
 function makeUserProp(overrides: Partial<UserProp> & Pick<UserProp, 'id' | 'type'>): UserProp {
   return {
@@ -75,6 +78,10 @@ function listPayload(equippedId: number) {
           id: MALL_SIG_ID, type: 'signature', signature_value: '777777',
           is_equipped: equippedId === MALL_SIG_ID,
         }),
+        makeUserProp({
+          id: PRETTY_SIG_ID, type: 'signature', signature_value: '123456',
+          origin: 'pretty_id', is_equipped: equippedId === PRETTY_SIG_ID,
+        }),
       ],
       pagination: { next_cursor: null, has_more: false },
     },
@@ -88,6 +95,7 @@ function listPayload(equippedId: number) {
 let apiMock = vi.fn()
 const toastAdd = vi.fn()
 const emitProfileSync = vi.fn()
+const syncUser = vi.fn().mockResolvedValue(undefined)
 
 beforeEach(() => {
   vi.resetModules()
@@ -95,6 +103,7 @@ beforeEach(() => {
   apiMock = vi.fn()
   toastAdd.mockClear()
   emitProfileSync.mockClear()
+  syncUser.mockClear()
   ;(globalThis as Record<string, unknown>).useApi = () => ({
     api: (...args: unknown[]) => apiMock(...args),
     normalizeError: (e: unknown) => {
@@ -104,22 +113,27 @@ beforeEach(() => {
   })
   ;(globalThis as Record<string, unknown>).useToast = () => ({ add: toastAdd })
   ;(globalThis as Record<string, unknown>).useProfileActions = () => ({ emitProfileSync })
+  ;(globalThis as Record<string, unknown>).useUserSync = () => ({ syncUser })
 })
 
 afterEach(() => {
-  for (const key of ['useApi', 'useToast', 'useProfileActions', 'useMallStore', 'useMallUserProps']) {
+  for (const key of ['useApi', 'useToast', 'useProfileActions', 'useUserSync', 'useMallStore', 'useMallUserProps']) {
     Reflect.deleteProperty(globalThis, key)
   }
 })
 
-async function setup(opts: { equippedId: number }) {
+async function setup(opts: { equippedId: number, prettyIdTier?: 6 | 4 | null }) {
   const { useMallStore } = await import('../../app/stores/mall')
   const { useAuthStore } = await import('../../app/stores/auth')
   const { useMallUserProps } = await import('../../app/composables/mall/useMallUserProps')
 
   const mallStore = useMallStore()
   const authStore = useAuthStore()
-  authStore.setUser({ id: 1, signature: opts.equippedId === ORIGINAL_ID ? '8123456' : '777777' } as unknown as BootstrapUser)
+  authStore.setUser({
+    id: 1,
+    signature: opts.equippedId === ORIGINAL_ID ? '8123456' : '777777',
+    pretty_id_tier: opts.prettyIdTier ?? null,
+  } as unknown as BootstrapUser)
   ;(globalThis as Record<string, unknown>).useMallStore = () => mallStore
   ;(globalThis as Record<string, unknown>).useMallUserProps = () => useMallUserProps()
 
@@ -182,6 +196,70 @@ describe('useMallActions — signature equip', () => {
 
     expect(authStore.user?.signature).toBe('8123456')
     expect(apiMock).not.toHaveBeenCalledWith('/user/props', expect.anything())
+  })
+})
+
+describe('useMallActions — pretty_id_tier (profile plate)', () => {
+  it('equipping a mall signature clears the tier and does not re-read the user', async () => {
+    const { authStore, actions } = await setup({ equippedId: PRETTY_SIG_ID, prettyIdTier: 6 })
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${MALL_SIG_ID}/equip`) {
+        return Promise.resolve({ data: { equipped_prop_id: MALL_SIG_ID, type: 'signature', signature: '777777' } })
+      }
+      if (url === '/user/props') return Promise.resolve(listPayload(MALL_SIG_ID))
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    await actions.equipProp(MALL_SIG_ID)
+
+    expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(syncUser).not.toHaveBeenCalled()
+  })
+
+  it('equipping a Pretty ID drops the stale tier at once, then re-reads the user for the real one', async () => {
+    const { authStore, actions } = await setup({ equippedId: ORIGINAL_ID })
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${PRETTY_SIG_ID}/equip`) {
+        return Promise.resolve({ data: { equipped_prop_id: PRETTY_SIG_ID, type: 'signature', signature: '123456' } })
+      }
+      if (url === '/user/props') return Promise.resolve(listPayload(PRETTY_SIG_ID))
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    await actions.equipProp(PRETTY_SIG_ID)
+
+    expect(authStore.user?.signature).toBe('123456')
+    expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(syncUser).toHaveBeenCalledTimes(1)
+  })
+
+  it('switching back to the original clears the tier without a user re-read', async () => {
+    const { authStore, actions } = await setup({ equippedId: PRETTY_SIG_ID, prettyIdTier: 6 })
+    apiMock.mockImplementation((url: string) => {
+      if (url === `/props/${PRETTY_SIG_ID}/unequip`) {
+        return Promise.resolve({
+          data: { type: 'signature', prop_id: PRETTY_SIG_ID + 100, equipped_prop_id: ORIGINAL_ID, signature: '8123456' },
+        })
+      }
+      if (url === '/user/props') return Promise.resolve(listPayload(ORIGINAL_ID))
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    await actions.unequipProp(PRETTY_SIG_ID)
+
+    expect(authStore.user?.signature).toBe('8123456')
+    expect(authStore.user?.pretty_id_tier).toBeNull()
+    expect(syncUser).not.toHaveBeenCalled()
+  })
+
+  it('a refused equip leaves the tier alone', async () => {
+    const { authStore, actions } = await setup({ equippedId: PRETTY_SIG_ID, prettyIdTier: 6 })
+    apiMock.mockRejectedValue(Object.assign(new Error('Signature taken'), { status: 409 }))
+
+    await actions.equipProp(MALL_SIG_ID)
+
+    expect(authStore.user?.pretty_id_tier).toBe(6)
+    expect(syncUser).not.toHaveBeenCalled()
   })
 })
 

@@ -3,20 +3,22 @@
  * The winged crown badge a Pretty ID is shown in on profiles and in rooms.
  * `width` is the badge width (any CSS length); `fontSize` sizes the number to it.
  */
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   id: string
   width: string
-  /** Font size of the number in px. */
-  fontSize?: number
+  /** Font size of the number: px when a number, otherwise any CSS length (e.g. `14cqw`). */
+  fontSize?: number | string
 }>(), {
   fontSize: 26,
 })
+
+const numFontSize = computed(() => typeof props.fontSize === 'number' ? `${props.fontSize}px` : props.fontSize)
 </script>
 
 <template>
   <span class="pid-badge" :style="{ width }">
     <span class="pid-badge__num">
-      <span class="pid-num pid-gold" :style="{ fontSize: `${fontSize}px` }">{{ id }}</span>
+      <span class="pid-num pid-gold" :style="{ fontSize: numFontSize }">{{ id }}</span>
     </span>
   </span>
 </template>

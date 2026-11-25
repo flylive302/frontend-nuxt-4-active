@@ -29,6 +29,7 @@ export function usePrettyIdClaimActions() {
   const toast = usePrettyIdToast()
   const { loadMe, loadList, runSearch } = usePrettyIdData()
   const { fireConfetti } = usePrettyIdConfetti()
+  const { emitProfileSync } = useProfileActions()
 
   // ========================================
   // Pick → confirm modal
@@ -71,6 +72,15 @@ export function usePrettyIdClaimActions() {
     await loadList()
   }
 
+  /** REACT — tells room participants the new number. Best-effort, like the mall's signature equip. */
+  function emitSignatureToRoom(signature: string): void {
+    try {
+      emitProfileSync({ signature })
+    } catch {
+      // Silent — best-effort optimization
+    }
+  }
+
   async function confirmClaim(): Promise<void> {
     // GATE
     const target = store.claimTarget
@@ -83,7 +93,9 @@ export function usePrettyIdClaimActions() {
       store.setClaimTarget(null)
       // REACT
       store.setCelebration({ signature: result.signature, tier: result.tier, category: result.category })
-      authStore.patchProfile({ signature: result.signature })
+      // The claim auto-equips the number: profile shows it (and its plate) without a reload.
+      authStore.patchProfile({ signature: result.signature, pretty_id_tier: result.tier })
+      emitSignatureToRoom(result.signature)
       void fireConfetti()
       void refreshAfterClaim()
     } catch (err) {

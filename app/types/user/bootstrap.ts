@@ -5,6 +5,7 @@
 import type { Gift } from '../gift/gift'
 import type { EntrySlideConfig } from '~/types/slide'
 import type {Badge, EquippedBadge} from "~/types/progression/badge";
+import type { PrettyIdTier } from '~/types/pretty-id'
 
 // ========================================
 // User Types
@@ -68,6 +69,8 @@ export interface BootstrapUser {
   id: number
   name: string
   signature: string
+  /** Tier of the Pretty ID worn now; `null` for an original / mall signature. Absent on older payloads. */
+  pretty_id_tier?: PrettyIdTier | null
   avatar: string | null
   cover_image: string | null
   frame_id: number | null

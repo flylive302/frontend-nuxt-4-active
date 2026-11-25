@@ -17,6 +17,7 @@ import type {
   PropEquipResponse,
   PropUnequipResponse,
   PropType,
+  UserProp,
 } from '~/types/mall/prop'
 import type { ProfileSyncFields } from '~/types/user/profile-sync'
 import type { NormalizedError } from '~/utils/api/normalizeFetchError'
@@ -58,6 +59,7 @@ export function useMallActions() {
   const mallStore = useMallStore()
   const authStore = useAuthStore()
   const { emitProfileSync } = useProfileActions()
+  const { syncUser } = useUserSync()
 
   // ========================================
   // Purchase
@@ -182,7 +184,7 @@ export function useMallActions() {
       // set. The first equip also creates the user's original-signature row,
       // so the list is re-read (refreshSignatureState).
       if (prop.type === 'signature') {
-        await refreshSignatureState(response?.data?.signature ?? null)
+        await refreshSignatureState(response?.data?.signature ?? null, null, prop)
       }
 
       // Push column prop change to room participants via socket
@@ -337,13 +339,25 @@ export function useMallActions() {
    * re-read My Props so exactly one signature shows equipped. `equippedUserPropId`
    * (unequip only) is the row the server switched to — when it is in the list it
    * is also mirrored into the equipped map. Best-effort (REACT).
+   *
+   * `pretty_id_tier` (drives the profile's gold plate) is not in the equip /
+   * unequip response and a user-prop row does not carry it. So it is cleared
+   * together with the signature (exact for an original or mall signature — the
+   * plate never shows next to the wrong number), and only when the row now worn
+   * is a Pretty ID (or unknown) is the signed-in user re-read to learn its tier.
    */
   async function refreshSignatureState(
     signature: string | null,
     equippedUserPropId: number | null = null,
+    equippedRow: UserProp | undefined = undefined,
   ): Promise<void> {
+    const worn = equippedRow
+      ?? (equippedUserPropId !== null
+        ? mallStore.userProps.items.find(p => p.id === equippedUserPropId)
+        : undefined)
+
     if (signature !== null) {
-      authStore.patchProfile({ signature })
+      authStore.patchProfile({ signature, pretty_id_tier: null })
       try {
         emitProfileSync({ signature })
       } catch {
@@ -351,16 +365,18 @@ export function useMallActions() {
       }
     }
 
-    const equippedRow = equippedUserPropId !== null
-      ? mallStore.userProps.items.find(p => p.id === equippedUserPropId)
-      : undefined
-    if (equippedRow) {
+    if (equippedUserPropId !== null && worn) {
       mallStore.setEquippedForType('signature', {
-        id: equippedRow.id,
-        prop_id: equippedRow.prop_id,
-        name: equippedRow.name,
-        asset_url: equippedRow.asset_url,
+        id: worn.id,
+        prop_id: worn.prop_id,
+        name: worn.name,
+        asset_url: worn.asset_url,
       })
+    }
+
+    // A Pretty ID's tier is only known to the server: re-read the user (best-effort).
+    if (signature !== null && (worn === undefined || worn.origin === 'pretty_id')) {
+      void syncUser()
     }
 
     // Authoritative re-read: the first equip creates the original row; an

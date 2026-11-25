@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core'
+import type { PrettyIdTier } from '~/types/pretty-id'
 import { withImageKitTransform } from '~/utils/imagekit'
+import { showsPrettyIdPlate } from '~/utils/pretty-id-plate'
 
 const props = withDefaults(defineProps<{
   txt?: string | number
   vip?: number
+  /** Set (6 | 4) while the user wears a Pretty ID: the gold plate replaces the plain badge. */
+  prettyIdTier?: PrettyIdTier | null
 }>(), {
   txt: "UserSignature",
   vip: 0,
+  prettyIdTier: null,
 })
+
+const isPlate = computed(() => showsPrettyIdPlate(props.prettyIdTier))
 
 const source = computed(() => String(props.txt))
 const { copy } = useClipboard({ source })
@@ -40,7 +47,13 @@ onBeforeUnmount(() => {
         Copied!
       </span>
     </Transition>
-    <div v-if="vip && vip > 11" class="relative flex items-center justify-center">
+    <LazyProfileSignaturePlate
+      v-if="isPlate"
+      :txt="source"
+      class="cursor-pointer select-none"
+      @click="onCopy()"
+    />
+    <div v-else-if="vip && vip > 11" class="relative flex items-center justify-center">
       <img :src="withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${vip}/pretty_id.png`, { w: 208 })" class="min-w-26" alt="">
       <p class="absolute z-20 top-0 text-xs ml-6 mt-3 font-extrabold">{{txt}}</p>
     </div>

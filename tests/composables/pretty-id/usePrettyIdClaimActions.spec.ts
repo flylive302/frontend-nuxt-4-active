@@ -11,6 +11,7 @@ const toastAdd = vi.fn()
 const navigateToMock = vi.fn()
 const patchProfile = vi.fn()
 const fireConfetti = vi.fn()
+const emitProfileSync = vi.fn()
 
 vi.mock('~/composables/pretty-id/usePrettyIdApi', () => ({
   usePrettyIdApi: () => apiMock,
@@ -30,6 +31,7 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('readonly', readonly)
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 vi.stubGlobal('navigateTo', navigateToMock)
+vi.stubGlobal('useProfileActions', () => ({ emitProfileSync }))
 
 const SIX = makeItem('123456', 'mirror')
 const FOUR = makeItem('1234', 'legend')
@@ -56,6 +58,7 @@ describe('usePrettyIdClaimActions', () => {
     navigateToMock.mockReset()
     patchProfile.mockReset()
     fireConfetti.mockReset()
+    emitProfileSync.mockReset()
   })
 
   function setup(me = makeMe()) {
@@ -141,13 +144,37 @@ describe('usePrettyIdClaimActions', () => {
       expect(store.celebration).toEqual({ signature: '123456', tier: 6, category: 'mirror' })
       expect(store.claimTarget).toBeNull()
       expect(store.isClaiming).toBe(false)
-      expect(patchProfile).toHaveBeenCalledWith({ signature: '123456' })
+      expect(patchProfile).toHaveBeenCalledWith({ signature: '123456', pretty_id_tier: 6 })
+      expect(emitProfileSync).toHaveBeenCalledWith({ signature: '123456' })
       expect(fireConfetti).toHaveBeenCalledTimes(1)
       expect(toastAdd).not.toHaveBeenCalled()
 
       // me is refreshed; the tier now shows its already-claimed panel
       await vi.waitFor(() => expect(store.tierMode).toBe('claimed'))
       expect(apiMock.me).toHaveBeenCalledTimes(1)
+    })
+
+    it('patches the claimed tier: a 4-digit claim wears tier 4', async () => {
+      apiMock.claim.mockResolvedValue(claimResult(FOUR, 4))
+      const { store, actions } = setup()
+      store.setClaimTarget(FOUR)
+
+      await actions.confirmClaim()
+
+      expect(patchProfile).toHaveBeenCalledWith({ signature: '1234', pretty_id_tier: 4 })
+      expect(emitProfileSync).toHaveBeenCalledWith({ signature: '1234' })
+    })
+
+    it('still succeeds when the room sync emit throws', async () => {
+      apiMock.claim.mockResolvedValue(claimResult(SIX, 6))
+      emitProfileSync.mockImplementation(() => { throw new Error('socket down') })
+      const { store, actions } = setup()
+      store.setClaimTarget(SIX)
+
+      await actions.confirmClaim()
+
+      expect(store.celebration).not.toBeNull()
+      expect(toastAdd).not.toHaveBeenCalled()
     })
 
     it('refreshes the list while the tier is still browsable', async () => {
@@ -192,6 +219,7 @@ describe('usePrettyIdClaimActions', () => {
       expect(store.claimTarget).toBeNull()
       expect(store.celebration).toBeNull()
       expect(patchProfile).not.toHaveBeenCalled()
+      expect(emitProfileSync).not.toHaveBeenCalled()
       expect(toastAdd).not.toHaveBeenCalled()
       expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, category: null })
     })
