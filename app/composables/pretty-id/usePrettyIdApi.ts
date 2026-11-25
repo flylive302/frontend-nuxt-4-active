@@ -1,52 +1,49 @@
 /**
  * The Pretty ID API seam.
  *
- * This file is the ONLY place that knows the mock backend exists. Every other
- * Pretty ID composable talks to `usePrettyIdApi()`.
- *
- * Today it is served by ONE lazily created, module-level mock instance
- * (`services/prettyIdMockApi.ts`, localStorage-backed), seeded for the
- * signed-in user. When the Laravel API lands, `usePrettyIdApi` returns a
- * `useApi()`-backed client that maps HTTP error bodies to `PrettyIdApiError`.
- *
- * The returned object resolves the mock on every call (never at setup), so a
- * caller that kept a reference across a sign-out / sign-in talks to the new
- * user's mock, not the old one's.
+ * The ONLY place that knows the `/pretty-id/*` routes. Every other Pretty ID
+ * composable talks to `usePrettyIdApi()`, which unwraps the API envelope and
+ * rejects with a `PrettyIdApiError` (error code mapped from the response).
  */
 
-import { createPrettyIdMockApi } from '~/services/prettyIdMockApi'
-import { useAuthStore } from '~/stores/auth'
-import type { PrettyIdApi, PrettyIdMockProfile } from '~/types/pretty-id'
+import { useApi } from '~/composables/shared/useApi'
+import type {
+  PrettyIdApi,
+  PrettyIdClaimResult,
+  PrettyIdListQuery,
+  PrettyIdListResponse,
+  PrettyIdMe,
+} from '~/types/pretty-id'
+import { toPrettyIdError } from '~/utils/pretty-id-error'
 
-const FALLBACK_USER_ID = 0
-
-interface MockInstance {
-  userId: number
-  api: PrettyIdApi
+interface Envelope<T> {
+  data: T
 }
 
-let instance: MockInstance | null = null
-
-function currentProfile(): PrettyIdMockProfile {
-  return { id: useAuthStore().user?.id ?? FALLBACK_USER_ID }
-}
-
-/** The mock for the signed-in user; rebuilt when the user id changes. */
-function mock(): MockInstance {
-  const profile = currentProfile()
-  if (instance === null || instance.userId !== profile.id) {
-    instance = { userId: profile.id, api: createPrettyIdMockApi(profile) }
-  }
-  return instance
-}
-
-const api: PrettyIdApi = {
-  me: () => mock().api.me(),
-  list: query => mock().api.list(query),
-  search: id => mock().api.search(id),
-  claim: id => mock().api.claim(id),
+/** Query-string params for `GET /pretty-id/ids`; unset filters are left out. */
+function listParams(query: PrettyIdListQuery): Record<string, string | number> {
+  const params: Record<string, string | number> = { tier: query.tier }
+  if (query.category) params.category = query.category
+  if (query.q) params.q = query.q
+  if (query.cursor) params.cursor = query.cursor
+  return params
 }
 
 export function usePrettyIdApi(): PrettyIdApi {
-  return api
+  const { api } = useApi()
+
+  async function call<T>(url: string, options: Parameters<typeof api>[1] = {}): Promise<T> {
+    try {
+      const response = await api<Envelope<T>>(url, options)
+      return response.data
+    } catch (err) {
+      throw toPrettyIdError(err)
+    }
+  }
+
+  return {
+    me: () => call<PrettyIdMe>('/pretty-id/me'),
+    list: query => call<PrettyIdListResponse>('/pretty-id/ids', { query: listParams(query) }),
+    claim: signature => call<PrettyIdClaimResult>('/pretty-id/claim', { method: 'POST', body: { signature } }),
+  }
 }

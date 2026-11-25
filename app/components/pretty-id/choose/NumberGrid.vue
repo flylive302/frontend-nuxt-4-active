@@ -1,8 +1,10 @@
 <script setup lang="ts">
 /**
- * The "Available Pretty IDs · N" heading and the 3-up grid under it: ID cards,
- * a pulsing placeholder grid while the first load is in flight, or the empty
- * text. Emits `pick` — the parent decides what a pick means.
+ * The "Available Pretty IDs · N" heading and the 3-up grid under it: number
+ * cards, a pulsing placeholder grid while the first load is in flight, a retry
+ * after a failed load, or the empty text — plus "Load more" while the server
+ * has another page. Emits `pick` / `load-more` / `retry`; the parent decides
+ * what they mean.
  */
 import type { PrettyIdItem } from '~/types/pretty-id'
 
@@ -12,13 +14,18 @@ import type { PrettyIdItem } from '~/types/pretty-id'
 
 const props = defineProps<{
   items: PrettyIdItem[]
-  /** Count of every available ID matching the filter, not just `items`. */
+  /** Count of every available number matching the filter, not just `items`. */
   total: number
   isLoading: boolean
+  isLoadingMore: boolean
+  isFailed: boolean
+  hasMore: boolean
 }>()
 
 const emit = defineEmits<{
-  pick: [id: string]
+  pick: [item: PrettyIdItem]
+  'load-more': []
+  retry: []
 }>()
 
 // ========================================
@@ -39,7 +46,7 @@ const showSkeleton = computed(() => props.isLoading && props.items.length === 0)
 <template>
   <div>
     <h3 class="pid-head pid-gold mt-3.5 mb-2 text-center text-[14px]">
-      Available Pretty IDs<template v-if="!showSkeleton"> · {{ total }}</template>
+      Available Pretty IDs<template v-if="!showSkeleton && !isFailed"> · {{ total }}</template>
     </h3>
 
     <div v-if="showSkeleton" class="pid-card-grid" role="status" aria-label="Loading IDs">
@@ -54,13 +61,24 @@ const showSkeleton = computed(() => props.isLoading && props.items.length === 0)
     <div v-else-if="items.length > 0" class="pid-card-grid">
       <PrettyIdNumberCard
         v-for="item in items"
-        :id="item.id"
-        :key="item.id"
-        :tier="item.tier"
-        @pick="emit('pick', $event)"
+        :key="item.signature"
+        :signature="item.signature"
+        :category="item.category"
+        @pick="emit('pick', item)"
       />
     </div>
 
-    <p v-else-if="!isLoading" class="pid-empty">No IDs in this category right now.</p>
+    <div v-else-if="isFailed" class="text-center">
+      <p class="pid-empty">Could not load the numbers.</p>
+      <PrettyIdButton size="sm" @click="emit('retry')">Try again</PrettyIdButton>
+    </div>
+
+    <p v-else-if="!isLoading" class="pid-empty">No Pretty IDs available here right now.</p>
+
+    <div v-if="hasMore && items.length > 0" class="mt-3 text-center">
+      <PrettyIdButton size="sm" :disabled="isLoadingMore" @click="emit('load-more')">
+        {{ isLoadingMore ? 'Loading…' : 'Load more' }}
+      </PrettyIdButton>
+    </div>
   </div>
 </template>

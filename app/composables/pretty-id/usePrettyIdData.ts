@@ -1,35 +1,37 @@
 /**
- * Data composable for the Choose / search side of the Pretty ID event.
+ * Data composable for the Choose side of the Pretty ID event.
  *
- * Queries only: `me`, the Choose list (length + tier filter) and the ID search.
- * Results land in `usePrettyIdStore`. Each load handles its own errors (toast +
- * log) and never throws, so callers may fire-and-forget.
+ * Queries only: `me`, the browse list (tier + category, cursor-paged) and the
+ * inline exact search. Results land in `usePrettyIdStore`. Each load handles its
+ * own errors (toast + log) and never throws, so callers may fire-and-forget.
  *
  * Staleness: a response is applied only if the query it answered is still the
- * one in the store, so a fast tier toggle never shows the previous tier's list.
+ * one in the store, so a fast tier / category toggle never shows the previous
+ * query's list.
  */
 
 import { usePrettyIdApi } from '~/composables/pretty-id/usePrettyIdApi'
 import { usePrettyIdToast } from '~/composables/pretty-id/usePrettyIdToast'
-import { PRETTY_ID_ROUTES } from '~/constants/pretty-id'
 import { usePrettyIdStore } from '~/stores/prettyId'
-import type { PrettyIdLength, PrettyIdListQuery, PrettyIdTier } from '~/types/pretty-id'
+import type { PrettyIdCategory, PrettyIdTier } from '~/types/pretty-id'
 import { toPrettyIdError } from '~/utils/pretty-id-error'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[PrettyIdData]')
+
+const DIGITS_ONLY = /^\d+$/
 
 export function usePrettyIdData() {
   const api = usePrettyIdApi()
   const store = usePrettyIdStore()
   const toast = usePrettyIdToast()
 
-  function isCurrentQuery(query: PrettyIdListQuery): boolean {
-    return store.listLength === query.length && store.listTier === query.tier
+  function isCurrentList(tier: PrettyIdTier, category: PrettyIdCategory | null): boolean {
+    return store.activeTier === tier && store.category === category
   }
 
   // ========================================
-  // EXECUTE — queries
+  // EXECUTE — me
   // ========================================
 
   async function loadMe(): Promise<void> {
@@ -48,66 +50,123 @@ export function usePrettyIdData() {
     }
   }
 
-  /** Reloads the Choose list for the store's current length + tier. */
+  /** REACT to a refusal on a browse call: a locked tier means our `me` is stale. */
+  function reactToBrowseError(err: unknown): void {
+    const error = toPrettyIdError(err)
+    toast.error(error.message)
+    if (error.code === 'level_required') void loadMe()
+  }
+
+  // ========================================
+  // EXECUTE — browse list
+  // ========================================
+
+  /** Reloads the first page for the store's active tier + category. Only a browsable tier has a list. */
   async function loadList(): Promise<void> {
-    const query: PrettyIdListQuery = { length: store.listLength, tier: store.listTier }
+    // GATE
+    if (store.tierMode !== 'browse') {
+      store.clearList()
+      store.setListLoading(false)
+      return
+    }
+    const tier = store.activeTier
+    const category = store.category
+
     store.setListLoading(true)
+    store.setListFailed(false)
     try {
-      const response = await api.list(query)
+      const response = await api.list({ tier, category })
       // Stale: the filter changed while this was in flight. The newer load owns the flag.
-      if (!isCurrentQuery(query)) return
-      store.setList(response.items, response.total)
+      if (!isCurrentList(tier, category)) return
+      store.setList(response.items, response.total, response.next_cursor)
     } catch (err) {
-      if (!isCurrentQuery(query)) return
-      toast.error(toPrettyIdError(err).message)
-      log.warn('Failed to load the ID list', { query, err })
+      if (!isCurrentList(tier, category)) return
+      store.setListFailed(true)
+      reactToBrowseError(err)
+      log.warn('Failed to load the ID list', { tier, category, err })
     } finally {
-      if (isCurrentQuery(query)) store.setListLoading(false)
+      if (isCurrentList(tier, category)) store.setListLoading(false)
     }
   }
 
-  async function selectLength(length: PrettyIdLength): Promise<void> {
-    store.setListLength(length)
-    await loadList()
-  }
+  /** Appends the next page of the current list. */
+  async function loadMore(): Promise<void> {
+    // GATE
+    const cursor = store.nextCursor
+    if (cursor === null || store.tierMode !== 'browse' || store.isListLoading || store.isListLoadingMore) return
+    const tier = store.activeTier
+    const category = store.category
 
-  /** Re-selecting the active tier clears the filter. */
-  async function toggleTier(tier: PrettyIdTier): Promise<void> {
-    store.setListTier(store.listTier === tier ? null : tier)
-    await loadList()
-  }
-
-  /** Looks the ID up and publishes it under `q`; a newer search wins. */
-  async function runSearch(q: string): Promise<void> {
-    store.setSearch(q, null)
-    store.setSearching(true)
+    store.setListLoadingMore(true)
     try {
-      const result = await api.search(q)
-      if (store.searchQuery === q) store.setSearch(q, result)
+      const response = await api.list({ tier, category, cursor })
+      // Stale: the filter changed, or a refresh replaced the list this page continued.
+      if (!isCurrentList(tier, category) || store.nextCursor !== cursor) return
+      store.appendList(response.items, response.total, response.next_cursor)
     } catch (err) {
-      if (store.searchQuery !== q) return
-      toast.error(toPrettyIdError(err).message)
-      log.warn('Search failed', { q, err })
+      if (!isCurrentList(tier, category)) return
+      reactToBrowseError(err)
+      log.warn('Failed to load more IDs', { tier, category, cursor, err })
     } finally {
-      if (store.searchQuery === q) store.setSearching(false)
+      store.setListLoadingMore(false)
     }
   }
 
+  /** Switching tier drops the filter, the search and the old list; the page reloads on the tier's new mode. */
+  function selectTier(tier: PrettyIdTier): void {
+    // GATE
+    if (store.activeTier === tier) return
+    // EXECUTE
+    store.setActiveTier(tier)
+    store.setCategory(null)
+    store.setSearch('', 'idle')
+    store.clearList()
+  }
+
+  /** Re-selecting the active category clears the filter. */
+  async function toggleCategory(category: PrettyIdCategory): Promise<void> {
+    store.setCategory(store.category === category ? null : category)
+    await loadList()
+  }
+
   // ========================================
-  // GATE → navigate
+  // EXECUTE — inline exact search
   // ========================================
 
-  /** Search box submit: validates, then opens the search page (which calls `runSearch`). */
-  async function submitSearch(raw: string): Promise<void> {
+  /**
+   * Looks one number up inside the active tier. An empty box clears the search.
+   * Anything that is not an available number of this tier's length is
+   * `unavailable` — never says why (no owners). A newer search wins.
+   */
+  async function runSearch(raw: string): Promise<void> {
     // GATE
     const q = raw.trim()
     if (q === '') {
-      toast.error('Type an ID to search')
+      store.setSearch('', 'idle')
       return
     }
+    if (store.tierMode !== 'browse') return
+    const tier = store.activeTier
+    if (!DIGITS_ONLY.test(q) || q.length !== tier) {
+      store.setSearch(q, 'unavailable')
+      return
+    }
+
     // EXECUTE
-    await navigateTo({ path: PRETTY_ID_ROUTES.search, query: { q } })
+    store.setSearch(q, 'searching')
+    const isCurrentSearch = (): boolean => store.searchQuery === q && store.activeTier === tier
+    try {
+      const response = await api.list({ tier, q })
+      if (!isCurrentSearch()) return
+      const hit = response.items.find(item => item.signature === q) ?? null
+      store.setSearch(q, hit ? 'available' : 'unavailable', hit)
+    } catch (err) {
+      if (!isCurrentSearch()) return
+      store.setSearch(q, 'failed')
+      reactToBrowseError(err)
+      log.warn('Search failed', { q, err })
+    }
   }
 
-  return { loadMe, loadList, selectLength, toggleTier, submitSearch, runSearch }
+  return { loadMe, loadList, loadMore, selectTier, toggleCategory, runSearch }
 }

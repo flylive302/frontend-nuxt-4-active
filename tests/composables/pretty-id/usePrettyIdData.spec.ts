@@ -3,12 +3,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import { computed, readonly, ref } from 'vue'
 import { usePrettyIdData } from '~/composables/pretty-id/usePrettyIdData'
 import { usePrettyIdStore } from '~/stores/prettyId'
+import type { PrettyIdListResponse } from '~/types/pretty-id'
 import { PrettyIdApiError } from '~/utils/pretty-id-error'
-import { createApiMock, resetApiMock } from '../../helpers/prettyIdFixtures'
+import { createApiMock, deferred, makeClaimed, makeItem, makeList, makeMe, resetApiMock } from '../../helpers/prettyIdFixtures'
 
 const apiMock = createApiMock()
 const toastAdd = vi.fn()
-const navigateToMock = vi.fn()
 
 vi.mock('~/composables/pretty-id/usePrettyIdApi', () => ({
   usePrettyIdApi: () => apiMock,
@@ -21,45 +21,41 @@ vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
 vi.stubGlobal('readonly', readonly)
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
-vi.stubGlobal('navigateTo', navigateToMock)
 
 function toastTitles(): string[] {
   return toastAdd.mock.calls.map(([options]) => (options as { title: string }).title)
 }
-
-/** A promise the test settles by hand. */
-function deferred<T>() {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((res) => { resolve = res })
-  return { promise, resolve }
-}
-
-const item = (id: string) => ({ id, tier: 'standard' as const })
 
 describe('usePrettyIdData', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     resetApiMock(apiMock)
     toastAdd.mockReset()
-    navigateToMock.mockReset()
   })
 
-  function setup() {
-    return { store: usePrettyIdStore(), data: usePrettyIdData() }
+  /** A store whose `me` is loaded: 6-digit tier browsable, 4-digit locked. */
+  function setup(me = makeMe()) {
+    const store = usePrettyIdStore()
+    store.setMe(me)
+    return { store, data: usePrettyIdData() }
   }
+
+  // ========================================
+  // me
+  // ========================================
 
   describe('loadMe', () => {
     it('stores me', async () => {
-      const { store, data } = setup()
-      await data.loadMe()
-      expect(store.me?.level).toBe(20)
+      const store = usePrettyIdStore()
+      await usePrettyIdData().loadMe()
+      expect(store.me?.wealth_level).toBe(20)
       expect(store.isMeLoading).toBe(false)
     })
 
     it('flags a failed FIRST load for the retry screen instead of toasting', async () => {
       apiMock.me.mockRejectedValue(new PrettyIdApiError('unknown', 'Server down'))
-      const { store, data } = setup()
-      await data.loadMe()
+      const store = usePrettyIdStore()
+      await usePrettyIdData().loadMe()
       expect(store.me).toBeNull()
       expect(store.isMeFailed).toBe(true)
       expect(store.isMeLoading).toBe(false)
@@ -68,7 +64,8 @@ describe('usePrettyIdData', () => {
 
     it('clears the failed flag once a retry succeeds', async () => {
       apiMock.me.mockRejectedValueOnce(new PrettyIdApiError('unknown', 'Server down'))
-      const { store, data } = setup()
+      const store = usePrettyIdStore()
+      const data = usePrettyIdData()
       await data.loadMe()
       await data.loadMe()
       expect(store.me).not.toBeNull()
@@ -77,7 +74,6 @@ describe('usePrettyIdData', () => {
 
     it('toasts a failed REFRESH and keeps the page on the previous me', async () => {
       const { store, data } = setup()
-      await data.loadMe()
       const loaded = store.me
       apiMock.me.mockRejectedValue(new PrettyIdApiError('unknown', 'Server down'))
       await data.loadMe()
@@ -87,168 +83,304 @@ describe('usePrettyIdData', () => {
     })
   })
 
+  // ========================================
+  // browse list
+  // ========================================
+
   describe('loadList', () => {
-    it('asks for the store length and tier and stores the page and total', async () => {
-      apiMock.list.mockResolvedValue({ items: [item('111111')], total: 812 })
+    it('asks for the active tier and category and stores page, total and cursor', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('111111', 'legend')], { total: 812, next_cursor: 'c2' }))
       const { store, data } = setup()
-      store.setListLength(4)
-      store.setListTier('lucky')
+      store.setCategory('legend')
 
       await data.loadList()
 
-      expect(apiMock.list).toHaveBeenCalledWith({ length: 4, tier: 'lucky' })
-      expect(store.items).toEqual([item('111111')])
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, category: 'legend' })
+      expect(store.items).toEqual([makeItem('111111', 'legend')])
       expect(store.itemsTotal).toBe(812)
+      expect(store.nextCursor).toBe('c2')
+      expect(store.isListLoading).toBe(false)
+      expect(store.isListFailed).toBe(false)
+    })
+
+    it('sends no category when the filter is clear', async () => {
+      const { data } = setup()
+      await data.loadList()
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, category: null })
+    })
+
+    it.each([
+      ['locked', makeMe(), 4],
+      ['claimed', makeMe({}, { six: { claimed: makeClaimed('123456') } }), 6],
+    ] as const)('does not call the API for a %s tier and clears the list', async (_name, me, tier) => {
+      const { store, data } = setup(me)
+      store.setActiveTier(tier)
+      store.setList([makeItem('999999')], 1, null)
+      await data.loadList()
+      expect(apiMock.list).not.toHaveBeenCalled()
+      expect(store.items).toEqual([])
+    })
+
+    it('does not call the API before me has loaded', async () => {
+      const store = usePrettyIdStore()
+      await usePrettyIdData().loadList()
+      expect(apiMock.list).not.toHaveBeenCalled()
       expect(store.isListLoading).toBe(false)
     })
 
     it('drops a response whose query changed while it was in flight', async () => {
-      const slow = deferred<{ items: ReturnType<typeof item>[], total: number }>()
+      const slow = deferred<PrettyIdListResponse>()
       apiMock.list.mockReturnValueOnce(slow.promise)
-      apiMock.list.mockResolvedValueOnce({ items: [item('2222')], total: 2 })
+      apiMock.list.mockResolvedValueOnce(makeList([makeItem('222222', 'mirror')]))
       const { store, data } = setup()
 
-      const stale = data.loadList() // length 6
-      await data.selectLength(4) // newer query resolves first
-      expect(store.items).toEqual([item('2222')])
-      slow.resolve({ items: [item('999999')], total: 1 })
+      const stale = data.loadList() // no category
+      await data.toggleCategory('mirror') // newer query resolves first
+      expect(store.items).toEqual([makeItem('222222', 'mirror')])
+      slow.resolve(makeList([makeItem('999999')]))
       await stale
 
-      expect(store.items).toEqual([item('2222')])
-      expect(store.listLength).toBe(4)
+      expect(store.items).toEqual([makeItem('222222', 'mirror')])
       expect(store.isListLoading).toBe(false)
     })
 
     it('keeps the loading flag on while only a stale response has returned', async () => {
-      const first = deferred<{ items: ReturnType<typeof item>[], total: number }>()
-      const second = deferred<{ items: ReturnType<typeof item>[], total: number }>()
+      const first = deferred<PrettyIdListResponse>()
+      const second = deferred<PrettyIdListResponse>()
       apiMock.list.mockReturnValueOnce(first.promise)
       apiMock.list.mockReturnValueOnce(second.promise)
       const { store, data } = setup()
 
       const stale = data.loadList()
-      const fresh = data.selectLength(4)
-      first.resolve({ items: [], total: 0 })
+      const fresh = data.toggleCategory('lucky')
+      first.resolve(makeList([]))
       await stale
       expect(store.isListLoading).toBe(true)
 
-      second.resolve({ items: [item('1234')], total: 1 })
+      second.resolve(makeList([makeItem('123456')]))
       await fresh
       expect(store.isListLoading).toBe(false)
-      expect(store.items).toEqual([item('1234')])
+      expect(store.items).toEqual([makeItem('123456')])
     })
 
-    it('toasts a failure of the current query', async () => {
-      apiMock.list.mockRejectedValue(new Error('offline'))
+    it('flags a failed load and toasts the reason', async () => {
+      apiMock.list.mockRejectedValue(new PrettyIdApiError('unknown', 'List down'))
       const { store, data } = setup()
       await data.loadList()
-      expect(toastTitles()).toEqual(['Something went wrong. Please try again.'])
+      expect(store.isListFailed).toBe(true)
       expect(store.isListLoading).toBe(false)
+      expect(toastTitles()).toEqual(['List down'])
     })
 
-    it('stays silent about a failure of a query nobody wants any more', async () => {
-      let reject!: (error: unknown) => void
-      apiMock.list.mockReturnValueOnce(new Promise((_, rej) => { reject = rej }))
+    it('refreshes me when the server says the tier is locked', async () => {
+      apiMock.list.mockRejectedValue(new PrettyIdApiError('level_required'))
+      apiMock.me.mockResolvedValue(makeMe({ wealth_level: 5 }, { six: { unlocked: false } }))
       const { store, data } = setup()
+      await data.loadList()
+      expect(apiMock.me).toHaveBeenCalledTimes(1)
+      await vi.waitFor(() => expect(store.tierMode).toBe('locked'))
+    })
+  })
 
-      const stale = data.loadList()
-      await data.selectLength(4)
-      reject(new Error('offline'))
+  describe('loadMore', () => {
+    it('appends the next page with the cursor and follows the new cursor', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('333333')], { total: 3, next_cursor: null }))
+      const { store, data } = setup()
+      store.setCategory('lucky')
+      store.setList([makeItem('111111'), makeItem('222222')], 3, 'c2')
+
+      await data.loadMore()
+
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, category: 'lucky', cursor: 'c2' })
+      expect(store.items.map(item => item.signature)).toEqual(['111111', '222222', '333333'])
+      expect(store.nextCursor).toBeNull()
+      expect(store.isListLoadingMore).toBe(false)
+    })
+
+    it('does nothing without a cursor', async () => {
+      const { store, data } = setup()
+      store.setList([makeItem('111111')], 1, null)
+      await data.loadMore()
+      expect(apiMock.list).not.toHaveBeenCalled()
+    })
+
+    it('ignores a second call while a page is loading', async () => {
+      const slow = deferred<PrettyIdListResponse>()
+      apiMock.list.mockReturnValue(slow.promise)
+      const { store, data } = setup()
+      store.setList([makeItem('111111')], 2, 'c2')
+
+      const first = data.loadMore()
+      await data.loadMore()
+      expect(apiMock.list).toHaveBeenCalledTimes(1)
+      slow.resolve(makeList([makeItem('222222')]))
+      await first
+    })
+
+    it('drops a page that answered a list the user has since filtered away', async () => {
+      const slow = deferred<PrettyIdListResponse>()
+      apiMock.list.mockReturnValueOnce(slow.promise)
+      apiMock.list.mockResolvedValueOnce(makeList([makeItem('444444', 'couple')], { next_cursor: null }))
+      const { store, data } = setup()
+      store.setList([makeItem('111111')], 2, 'c2')
+
+      const stale = data.loadMore()
+      await data.toggleCategory('couple')
+      slow.resolve(makeList([makeItem('222222')]))
       await stale
 
-      expect(toastAdd).not.toHaveBeenCalled()
-      expect(store.isListLoading).toBe(false)
+      expect(store.items).toEqual([makeItem('444444', 'couple')])
+      expect(store.isListLoadingMore).toBe(false)
     })
-  })
 
-  describe('selectLength / toggleTier', () => {
-    it('selectLength sets the length and reloads', async () => {
+    it('toasts a failed page and keeps the list', async () => {
+      apiMock.list.mockRejectedValue(new PrettyIdApiError('unknown', 'Page down'))
       const { store, data } = setup()
-      await data.selectLength(4)
-      expect(store.listLength).toBe(4)
-      expect(apiMock.list).toHaveBeenCalledWith({ length: 4, tier: null })
+      store.setList([makeItem('111111')], 2, 'c2')
+      await data.loadMore()
+      expect(store.items).toEqual([makeItem('111111')])
+      expect(store.isListFailed).toBe(false)
+      expect(store.isListLoadingMore).toBe(false)
+      expect(toastTitles()).toEqual(['Page down'])
     })
+  })
 
-    it('toggleTier selects a tier, switches to another, and clears on re-select', async () => {
+  describe('selectTier / toggleCategory', () => {
+    it('switching tier resets the filter, the search and the old list', () => {
       const { store, data } = setup()
+      store.setCategory('mirror')
+      store.setList([makeItem('111111')], 1, 'c')
+      store.setSearch('111111', 'available', makeItem('111111'))
 
-      await data.toggleTier('lucky')
-      expect(store.listTier).toBe('lucky')
-      expect(apiMock.list).toHaveBeenLastCalledWith({ length: 6, tier: 'lucky' })
+      data.selectTier(4)
 
-      await data.toggleTier('mirror')
-      expect(store.listTier).toBe('mirror')
+      expect(store.activeTier).toBe(4)
+      expect(store.category).toBeNull()
+      expect(store.items).toEqual([])
+      expect(store.searchStatus).toBe('idle')
+      expect(store.searchQuery).toBe('')
+    })
 
-      await data.toggleTier('mirror')
-      expect(store.listTier).toBeNull()
-      expect(apiMock.list).toHaveBeenLastCalledWith({ length: 6, tier: null })
+    it('re-selecting the active tier changes nothing', () => {
+      const { store, data } = setup()
+      store.setList([makeItem('111111')], 1, null)
+      data.selectTier(6)
+      expect(store.items).toHaveLength(1)
+    })
+
+    it('tapping a category filters; tapping the active one clears it', async () => {
+      const { store, data } = setup()
+      await data.toggleCategory('sequence')
+      expect(store.category).toBe('sequence')
+      expect(apiMock.list).toHaveBeenLastCalledWith({ tier: 6, category: 'sequence' })
+      await data.toggleCategory('sequence')
+      expect(store.category).toBeNull()
+      expect(apiMock.list).toHaveBeenLastCalledWith({ tier: 6, category: null })
     })
   })
 
-  describe('submitSearch', () => {
-    it('refuses a blank box with a toast and does not navigate', async () => {
-      const { data } = setup()
-      await data.submitSearch('   ')
-      expect(toastTitles()).toEqual(['Type an ID to search'])
-      expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
-      expect(navigateToMock).not.toHaveBeenCalled()
-    })
-
-    it('opens the search page with the trimmed query', async () => {
-      const { data } = setup()
-      await data.submitSearch('  777777 ')
-      expect(navigateToMock).toHaveBeenCalledWith({ path: '/pretty-id/search', query: { q: '777777' } })
-      expect(toastAdd).not.toHaveBeenCalled()
-    })
-  })
+  // ========================================
+  // search
+  // ========================================
 
   describe('runSearch', () => {
-    const result = (id: string) => ({ id, available: true, reason: null, message: null, tier: 'repeat' as const, suggestions: [] })
-
-    it('clears the old result, then stores the new one', async () => {
-      const pending = deferred<ReturnType<typeof result>>()
-      apiMock.search.mockReturnValue(pending.promise)
+    it('looks the exact number up in the active tier, without the category filter', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('888888', 'legend')]))
       const { store, data } = setup()
-      store.setSearch('111111', result('111111'))
+      store.setCategory('lucky')
 
-      const run = data.runSearch('777777')
-      expect(store.searchQuery).toBe('777777')
-      expect(store.searchResult).toBeNull()
-      expect(store.isSearching).toBe(true)
+      await data.runSearch(' 888888 ')
 
-      pending.resolve(result('777777'))
-      await run
-      expect(store.searchResult?.id).toBe('777777')
-      expect(store.isSearching).toBe(false)
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, q: '888888' })
+      expect(store.searchStatus).toBe('available')
+      expect(store.searchResult).toEqual(makeItem('888888', 'legend'))
+      expect(store.searchQuery).toBe('888888')
     })
 
-    it('drops the answer of a search that was replaced by a newer one', async () => {
-      const older = deferred<ReturnType<typeof result>>()
-      const newer = deferred<ReturnType<typeof result>>()
-      apiMock.search.mockReturnValueOnce(older.promise)
-      apiMock.search.mockReturnValueOnce(newer.promise)
+    it('reports a number the server does not list as unavailable', async () => {
+      apiMock.list.mockResolvedValue(makeList([]))
+      const { store, data } = setup()
+      await data.runSearch('123456')
+      expect(store.searchStatus).toBe('unavailable')
+      expect(store.searchResult).toBeNull()
+    })
+
+    it('treats a returned number that is not the one searched as unavailable', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('999999')]))
+      const { store, data } = setup()
+      await data.runSearch('123456')
+      expect(store.searchStatus).toBe('unavailable')
+    })
+
+    it.each(['12345', '1234567', '12ab56'])('answers %s unavailable without a request', async (q) => {
+      const { store, data } = setup()
+      await data.runSearch(q)
+      expect(apiMock.list).not.toHaveBeenCalled()
+      expect(store.searchStatus).toBe('unavailable')
+      expect(store.searchQuery).toBe(q)
+    })
+
+    it('uses the 4-digit length on the 4-digit tier', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('8888')]))
+      const { store, data } = setup(makeMe({ wealth_level: 40 }, { four: { unlocked: true } }))
+      store.setActiveTier(4)
+      await data.runSearch('8888')
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 4, q: '8888' })
+      expect(store.searchStatus).toBe('available')
+    })
+
+    it('an empty box clears the search', async () => {
+      const { store, data } = setup()
+      store.setSearch('123456', 'unavailable')
+      await data.runSearch('  ')
+      expect(store.searchStatus).toBe('idle')
+      expect(store.searchQuery).toBe('')
+      expect(apiMock.list).not.toHaveBeenCalled()
+    })
+
+    it('does not search a tier that is not browsable', async () => {
+      const { store, data } = setup()
+      store.setActiveTier(4)
+      await data.runSearch('1234')
+      expect(apiMock.list).not.toHaveBeenCalled()
+      expect(store.searchStatus).toBe('idle')
+    })
+
+    it('a newer search wins over a slower earlier one', async () => {
+      const slow = deferred<PrettyIdListResponse>()
+      apiMock.list.mockReturnValueOnce(slow.promise)
+      apiMock.list.mockResolvedValueOnce(makeList([makeItem('222222')]))
       const { store, data } = setup()
 
       const first = data.runSearch('111111')
-      const second = data.runSearch('222222')
-      newer.resolve(result('222222'))
-      await second
-      older.resolve(result('111111'))
+      await data.runSearch('222222')
+      slow.resolve(makeList([makeItem('111111')]))
       await first
 
       expect(store.searchQuery).toBe('222222')
-      expect(store.searchResult?.id).toBe('222222')
-      expect(store.isSearching).toBe(false)
+      expect(store.searchResult).toEqual(makeItem('222222'))
     })
 
-    it('toasts a failure and leaves no result', async () => {
-      apiMock.search.mockRejectedValue(new PrettyIdApiError('invalid', 'Not a valid ID'))
-      const { store, data } = setup()
-      await data.runSearch('abc')
-      expect(toastTitles()).toEqual(['Not a valid ID'])
+    it('drops a search that answered before a tier switch', async () => {
+      const slow = deferred<PrettyIdListResponse>()
+      apiMock.list.mockReturnValueOnce(slow.promise)
+      const { store, data } = setup(makeMe({ wealth_level: 40 }, { four: { unlocked: true } }))
+
+      const pending = data.runSearch('111111')
+      data.selectTier(4)
+      slow.resolve(makeList([makeItem('111111')]))
+      await pending
+
+      expect(store.searchStatus).toBe('idle')
       expect(store.searchResult).toBeNull()
-      expect(store.isSearching).toBe(false)
+    })
+
+    it('marks a failed lookup and toasts', async () => {
+      apiMock.list.mockRejectedValue(new PrettyIdApiError('unknown', 'Lookup down'))
+      const { store, data } = setup()
+      await data.runSearch('123456')
+      expect(store.searchStatus).toBe('failed')
+      expect(toastTitles()).toEqual(['Lookup down'])
     })
   })
-
 })

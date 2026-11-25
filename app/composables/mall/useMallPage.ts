@@ -86,6 +86,9 @@ export function useMallPage() {
   /**
    * Initialize the my-props page.
    *
+   * `preferredType` opens the page on that tab instead of the first one
+   * (the `?type=` query — see pages/mall/my-props.vue).
+   *
    * GATE:    none (always runs on mount)
    * EXECUTE: predict first tab → fetch types + type-filtered user props + equipped, all in parallel
    * REACT:   none (pure data)
@@ -96,9 +99,9 @@ export function useMallPage() {
    * requests together instead of waiting on types first. Each fetch
    * handles its own errors, so one failing never blanks the others.
    */
-  async function initializeUserProps(): Promise<void> {
+  async function initializeUserProps(preferredType?: PropType): Promise<void> {
     const predictedType = PROP_TYPE_ORDER[0]
-    mallStore.setCurrentType(predictedType)
+    mallStore.setCurrentType(preferredType ?? predictedType)
 
     await Promise.all([
       fetchTypes(),
@@ -106,7 +109,8 @@ export function useMallPage() {
       fetchEquipped(),
     ])
 
-    reconcileFirstType(predictedType)
+    // A tab asked for by the caller (e.g. Pretty ID → signature) is not the predicted first one.
+    if (preferredType === undefined) reconcileFirstType(predictedType)
   }
 
   /**

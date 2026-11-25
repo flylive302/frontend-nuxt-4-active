@@ -282,8 +282,7 @@ html {
    The hero is a live SVGA canvas and changes height between tabs (full on
    Choose, compact on the other tab): like the cp wheel, `old` is a frozen frame, so
    it is dropped and the live `new` shown at once — the group still animates the
-   height change. The search sub-page uses the separate
-   `pretty-id-sub` layout, so the marker is never set across that boundary. */
+   height change. */
 :root[data-nav-shell="pretty-id"] .pretty-id-topbar {
     view-transition-name: pretty-id-topbar;
 }

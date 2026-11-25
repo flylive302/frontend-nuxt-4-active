@@ -8,7 +8,7 @@
  */
 
 import { PRETTY_ID_ASSETS } from '~/constants/assets'
-import type { PrettyIdFilterTier } from '~/constants/pretty-id'
+import type { PrettyIdCategory } from '~/types/pretty-id'
 
 const cssUrl = (path: string): string => `url("${path}")`
 
@@ -30,8 +30,8 @@ export const PRETTY_ID_THEME_VARS: Readonly<Record<`--pid-img-${string}`, string
   '--pid-img-hero-plain': cssUrl(PRETTY_ID_ASSETS.heroPlain),
 }
 
-/** Tier → shield art, for the Choose tab filters. */
-export const PRETTY_ID_TIER_SHIELD: Readonly<Record<PrettyIdFilterTier, string>> = {
+/** Category → shield art, for the Choose tab filters. */
+export const PRETTY_ID_CATEGORY_SHIELD: Readonly<Record<PrettyIdCategory, string>> = {
   lucky: PRETTY_ID_ASSETS.shieldLucky,
   sequence: PRETTY_ID_ASSETS.shieldSequence,
   legend: PRETTY_ID_ASSETS.shieldLegend,

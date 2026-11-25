@@ -1,18 +1,13 @@
 <script setup lang="ts">
 /**
- * The Choose ID tab: length chips, tier shields, search box and the grid of
- * claimable IDs. Whole-tab locked below the 6-digit level; the 4-digit list is
- * locked on its own.
+ * The Choose ID tab: a tier switch (6-digit / 4-digit), then for the active
+ * tier ONE of — the locked panel (level progress), the already-claimed panel
+ * (the user's number), or the browse view (category shields, inline exact
+ * search, available count, cursor-paged grid).
  * Mounted by `pages/pretty-id/index.vue` inside the tab layout (which owns the gutter).
  */
-import {
-  PRETTY_ID_LENGTH_SLOT,
-  PRETTY_ID_SLOT_KEYS,
-  PRETTY_ID_SLOT_LABEL,
-  PRETTY_ID_SLOT_LENGTH,
-} from '~/constants/pretty-id'
 import { usePrettyIdStore } from '~/stores/prettyId'
-import type { PrettyIdLength, PrettyIdTier } from '~/types/pretty-id'
+import type { PrettyIdCategory, PrettyIdItem, PrettyIdTier } from '~/types/pretty-id'
 
 // ========================================
 // State
@@ -20,79 +15,101 @@ import type { PrettyIdLength, PrettyIdTier } from '~/types/pretty-id'
 
 const store = usePrettyIdStore()
 
-const sixDigitSlot = computed(() => store.me?.slots.lv17 ?? null)
-/** The slot behind the selected length chip. */
-const listSlot = computed(() => store.me?.slots[PRETTY_ID_LENGTH_SLOT[store.listLength]] ?? null)
-
 // ========================================
 // Composables
 // ========================================
 
-const { loadList, selectLength, toggleTier, submitSearch } = usePrettyIdData()
-const { pickId } = usePrettyIdClaimActions()
+const { loadList, loadMore, selectTier, toggleCategory, runSearch } = usePrettyIdData()
+const { pickItem } = usePrettyIdClaimActions()
+
+// The list loads whenever a browsable tier becomes the active one: on entry once `me`
+// has arrived, on a tier switch, and when a refreshed `me` unlocks the tier.
+watch(
+  () => store.browseTier,
+  (tier) => {
+    if (tier !== null) void loadList()
+  },
+  { immediate: true },
+)
 
 // ========================================
 // Handlers
 // ========================================
 
-function onSelectLength(length: PrettyIdLength): void {
-  void selectLength(length)
+function onSelectTier(tier: PrettyIdTier): void {
+  selectTier(tier)
 }
 
-function onToggleTier(tier: PrettyIdTier): void {
-  void toggleTier(tier)
+function onToggleCategory(category: PrettyIdCategory): void {
+  void toggleCategory(category)
 }
 
 function onSearch(value: string): void {
-  void submitSearch(value)
+  void runSearch(value)
 }
 
-onMounted(() => {
+function onPick(item: PrettyIdItem): void {
+  pickItem(item)
+}
+
+function onLoadMore(): void {
+  void loadMore()
+}
+
+function onRetry(): void {
   void loadList()
-})
+}
 </script>
 
 <template>
   <div>
-    <div v-if="!sixDigitSlot" class="flex justify-center py-10" role="status">
+    <div v-if="store.me === null" class="flex justify-center py-10" role="status">
       <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-(--pid-gold) motion-reduce:animate-none" />
       <span class="sr-only">Loading…</span>
     </div>
 
-    <PrettyIdLocked
-      v-else-if="!sixDigitSlot.unlocked"
-      context="six-digit"
-      :required-level="sixDigitSlot.required_level"
-    />
-
     <template v-else>
-      <div class="mt-1.5 mb-0.5 flex flex-wrap justify-center gap-1.5">
-        <PrettyIdChip
-          v-for="key in PRETTY_ID_SLOT_KEYS"
-          :key="key"
-          :active="store.listLength === PRETTY_ID_SLOT_LENGTH[key]"
-          @click="onSelectLength(PRETTY_ID_SLOT_LENGTH[key])"
-        >
-          {{ PRETTY_ID_SLOT_LABEL[key] }}
-        </PrettyIdChip>
-      </div>
+      <PrettyIdTierSwitch :tiers="store.me.tiers" :active="store.activeTier" @select="onSelectTier" />
 
-      <PrettyIdTierShields :active="store.listTier" @toggle="onToggleTier" />
+      <template v-if="store.activeTierState">
+        <PrettyIdClaimed v-if="store.tierMode === 'claimed' && store.activeTierState.claimed" :claimed="store.activeTierState.claimed" />
 
-      <PrettyIdSearchBar class="mt-2.5" :initial="store.searchQuery" @submit="onSearch" />
+        <PrettyIdLocked
+          v-else-if="store.tierMode === 'locked'"
+          :tier="store.activeTier"
+          :required-level="store.activeTierState.required_level"
+        />
 
-      <PrettyIdLocked
-        v-if="listSlot && !listSlot.unlocked"
-        context="four-digit"
-        :required-level="listSlot.required_level"
-      />
-      <PrettyIdNumberGrid
-        v-else
-        :items="store.items"
-        :total="store.itemsTotal"
-        :is-loading="store.isListLoading"
-        @pick="pickId"
-      />
+        <template v-else-if="store.tierMode === 'browse'">
+          <PrettyIdCategoryShields :active="store.category" @toggle="onToggleCategory" />
+
+          <PrettyIdSearchBar
+            :key="store.activeTier"
+            class="mt-2.5"
+            :digits="store.activeTier"
+            :initial="store.searchQuery"
+            @submit="onSearch"
+          />
+          <PrettyIdSearchOutcome
+            :query="store.searchQuery"
+            :status="store.searchStatus"
+            :result="store.searchResult"
+            @pick="onPick"
+          />
+
+          <PrettyIdNumberGrid
+            :items="store.items"
+            :total="store.itemsTotal"
+            :is-loading="store.isListLoading"
+            :is-loading-more="store.isListLoadingMore"
+            :is-failed="store.isListFailed"
+            :has-more="store.hasMore"
+            @pick="onPick"
+            @load-more="onLoadMore"
+            @retry="onRetry"
+          />
+        </template>
+      </template>
     </template>
   </div>
 </template>

@@ -167,7 +167,7 @@
         font-size: 13px;
     }
 
-    /* Three-up grid of ID cards (Choose list, suggestions). */
+    /* Three-up grid of ID cards (Choose list). */
     .pid .pid-card-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));

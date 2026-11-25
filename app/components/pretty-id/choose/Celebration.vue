@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
- * Full-screen celebration after a claim succeeds: the unlock animation, the
- * new ID letter-spaced in a panel, and "Done" (closes it, no navigation). It REPLACES the screen
+ * Full-screen celebration after a claim succeeds: the tier's unlock animation
+ * (the confetti burst is fired by the claim action), the new number
+ * letter-spaced in a panel, "View in My Props" and "Done" (closes it, stays on
+ * the Choose tab). It REPLACES the screen
  * (a fixed layer over the page) rather than stacking a dialog on it. Shown while
  * `celebration` is set. Mounted once by <PrettyIdShell>, inside the theme root
  * (so the tokens and helper classes apply) — which is why it is not teleported.
  */
 import { PRETTY_ID_ASSETS } from '~/constants/assets'
+import { PRETTY_ID_ELITE_TIER } from '~/constants/pretty-id'
 import { usePrettyIdStore } from '~/stores/prettyId'
 
 // ========================================
@@ -14,26 +17,26 @@ import { usePrettyIdStore } from '~/stores/prettyId'
 // ========================================
 
 const store = usePrettyIdStore()
-const { finishCelebration } = usePrettyIdClaimActions()
+const { finishCelebration, viewInMyProps } = usePrettyIdClaimActions()
 
 const titleId = useId()
 const actionWrap = useTemplateRef<HTMLElement>('actionWrap')
 
 const isOpen = computed(() => store.celebration !== null)
-const isElite = computed(() => store.celebration?.slot === 'lv34')
+const isElite = computed(() => store.celebration?.tier === PRETTY_ID_ELITE_TIER)
 
 const animationSrc = computed(() =>
   isElite.value ? PRETTY_ID_ASSETS.unlockLv34Svga : PRETTY_ID_ASSETS.unlockLv17Svga,
 )
-/** "Elite Lv 34" — the level comes from the slot, never a literal. */
-const eliteLevel = computed(() => store.me?.slots.lv34.required_level ?? null)
+/** "Elite Lv 34" — the level comes from `me`, never a literal. */
+const eliteLevel = computed(() => store.me?.tiers.find(state => state.tier === PRETTY_ID_ELITE_TIER)?.required_level ?? null)
 const title = computed(() => {
   if (!isElite.value) return 'Congratulations!'
   return eliteLevel.value === null ? 'Elite' : `Elite Lv ${eliteLevel.value}`
 })
 const subline = computed(() => (isElite.value ? '4-digit Pretty ID · Diamond Crown' : '6-digit Pretty ID unlocked'))
 const panelTitle = computed(() => (isElite.value ? 'Elite ID' : 'Your new ID'))
-const celebratedId = computed(() => store.celebration?.id ?? '')
+const celebratedId = computed(() => store.celebration?.signature ?? '')
 /** "5 2 0 5 2 0" — the digits stand apart, as in the design. */
 const spacedId = computed(() => celebratedId.value.split('').join(' '))
 
@@ -74,6 +77,16 @@ useBackDismiss(isOpen, finishCelebration)
 function focusAction(): void {
   actionWrap.value?.querySelector('button')?.focus()
 }
+
+/** Focus stays on the two buttons: Tab cycles between them instead of reaching the page behind. */
+function cycleFocus(event: KeyboardEvent): void {
+  const buttons = Array.from(actionWrap.value?.querySelectorAll('button') ?? [])
+  if (buttons.length === 0) return
+  const current = buttons.findIndex(button => button === document.activeElement)
+  const step = event.shiftKey ? -1 : 1
+  const next = current === -1 ? 0 : (current + step + buttons.length) % buttons.length
+  buttons[next]?.focus()
+}
 </script>
 
 <template>
@@ -88,7 +101,7 @@ function focusAction(): void {
       role="dialog"
       aria-modal="true"
       :aria-labelledby="titleId"
-      @keydown.tab.prevent="focusAction"
+      @keydown.tab.prevent="cycleFocus"
     >
       <div class="pid-celebrate mx-auto min-h-full max-w-[480px] px-3 pt-8 pb-10 text-center">
         <div class="pid-accent">
@@ -108,7 +121,8 @@ function focusAction(): void {
           </div>
         </PrettyIdPanel>
 
-        <div ref="actionWrap">
+        <div ref="actionWrap" class="flex flex-wrap items-center justify-center gap-2.5">
+          <PrettyIdButton @click="viewInMyProps">View in My Props</PrettyIdButton>
           <PrettyIdButton @click="finishCelebration">Done</PrettyIdButton>
         </div>
       </div>

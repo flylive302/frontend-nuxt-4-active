@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Shown by <PrettyIdShell> in place of the page when the event's first load
- * failed: without `me` (level and slots) no Pretty ID screen can render.
+ * failed: without `me` (level and tiers) no Pretty ID screen can render.
  * Offers a retry and the way out — the layout's own top bar is not mounted here.
  */
 import { PRETTY_ID_EXIT_ROUTE } from '~/constants/pretty-id'

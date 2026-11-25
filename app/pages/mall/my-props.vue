@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ASSETS } from '~/constants/assets'
+import { PROP_TYPE_ORDER } from '~/constants/mall'
 import { onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 
@@ -47,7 +48,11 @@ useVideoMotionPause(bgVideoRef, () => !!mallStore.selectedUserProp)
 // Lifecycle
 // ========================================
 
-onMounted(() => initializeUserProps())
+// `?type=signature` opens the page on that tab (Pretty ID's "View in My Props").
+const route = useRoute()
+const requestedType = PROP_TYPE_ORDER.find(type => type === route.query.type)
+
+onMounted(() => initializeUserProps(requestedType))
 
 // ========================================
 // Handlers (INTENT — delegate to composables)

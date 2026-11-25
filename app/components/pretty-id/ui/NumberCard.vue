@@ -1,33 +1,33 @@
 <script setup lang="ts">
 /**
- * One claimable ID in a grid: the number on a framed card, with its pattern
- * tier underneath. Emits `pick` — the parent decides what a pick means.
+ * One claimable number: the number on a framed card, with its category
+ * underneath. Emits `pick` — the parent knows which item it is and decides
+ * what a pick means.
  */
-import { PRETTY_ID_TIER_LABEL } from '~/constants/pretty-id'
-import type { PrettyIdTier } from '~/types/pretty-id'
+import { PRETTY_ID_CATEGORY_LABEL } from '~/constants/pretty-id'
+import type { PrettyIdCategory } from '~/types/pretty-id'
 
 const props = defineProps<{
-  id: string
-  /** Omit to show the number alone (e.g. suggestions in the "ID taken" modal). */
-  tier?: PrettyIdTier | null
+  signature: string
+  category: PrettyIdCategory
 }>()
 
 const emit = defineEmits<{
-  pick: [id: string]
+  pick: []
 }>()
 
-const tierLabel = computed(() => (props.tier ? PRETTY_ID_TIER_LABEL[props.tier] : null))
+const categoryLabel = computed(() => PRETTY_ID_CATEGORY_LABEL[props.category])
 </script>
 
 <template>
   <button
     type="button"
     class="pid-idcard"
-    :aria-label="tierLabel ? `Pretty ID ${id}, ${tierLabel}` : `Pretty ID ${id}`"
-    @click="emit('pick', id)"
+    :aria-label="`Pretty ID ${signature}, ${categoryLabel}`"
+    @click="emit('pick')"
   >
-    <span class="pid-num pid-gold pid-idcard__num">{{ id }}</span>
-    <span v-if="tierLabel" class="pid-idcard__tier">{{ tierLabel }}</span>
+    <span class="pid-num pid-gold pid-idcard__num">{{ signature }}</span>
+    <span class="pid-idcard__tier">{{ categoryLabel }}</span>
   </button>
 </template>
 

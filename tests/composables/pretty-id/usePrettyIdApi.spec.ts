@@ -1,79 +1,109 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { usePrettyIdApi } from '~/composables/pretty-id/usePrettyIdApi'
+import { PrettyIdApiError } from '~/utils/pretty-id-error'
 
-// The seam keeps one module-level mock instance, so every test loads a fresh copy of the module.
-const hoisted = vi.hoisted(() => ({
-  user: { value: null as { id: number, name: string, avatar: string | null } | null },
-  createMock: vi.fn(),
+const apiMock = vi.fn()
+
+vi.mock('~/composables/shared/useApi', () => ({
+  useApi: () => ({ api: apiMock }),
 }))
 
-vi.mock('~/stores/auth', () => ({
-  useAuthStore: () => ({ user: hoisted.user.value }),
-}))
-vi.mock('~/services/prettyIdMockApi', () => ({
-  createPrettyIdMockApi: hoisted.createMock,
-}))
-
-function fakeBackend(tag: string) {
-  return { me: vi.fn(async () => tag), list: vi.fn(), search: vi.fn(), claim: vi.fn() }
-}
-
-async function loadSeam() {
-  vi.resetModules()
-  return import('~/composables/pretty-id/usePrettyIdApi')
+/** What ofetch rejects with for an HTTP error: status + parsed body on `response`. */
+function httpError(status: number, errorCode: string | null, message = 'Nope') {
+  return {
+    message,
+    response: {
+      status,
+      _data: { success: false, message, data: null, errors: errorCode ? { error_code: errorCode } : null },
+    },
+  }
 }
 
 describe('usePrettyIdApi seam', () => {
   beforeEach(() => {
-    hoisted.createMock.mockReset()
-    hoisted.createMock.mockImplementation((profile: { id: number }) => fakeBackend(`user-${profile.id}`))
-    hoisted.user.value = { id: 5, name: 'Ana', avatar: 'https://cdn.test/a.png' }
+    apiMock.mockReset()
   })
 
-  it('does not build the mock until it is used', async () => {
-    const { usePrettyIdApi } = await loadSeam()
-    usePrettyIdApi()
-    expect(hoisted.createMock).not.toHaveBeenCalled()
+  describe('me', () => {
+    it('GETs /pretty-id/me and unwraps data', async () => {
+      const me = { wealth_level: 5, tiers: [] }
+      apiMock.mockResolvedValue({ data: me })
+      expect(await usePrettyIdApi().me()).toEqual(me)
+      expect(apiMock).toHaveBeenCalledWith('/pretty-id/me', {})
+    })
   })
 
-  it('seeds the mock with the signed-in user', async () => {
-    const { usePrettyIdApi } = await loadSeam()
-    await usePrettyIdApi().me()
-    expect(hoisted.createMock).toHaveBeenCalledWith({ id: 5 })
+  describe('list', () => {
+    const page = { items: [{ signature: '123456', category: 'lucky' }], total: 1, next_cursor: 'abc' }
+
+    it('GETs /pretty-id/ids with the tier and unwraps data', async () => {
+      apiMock.mockResolvedValue({ data: page })
+      expect(await usePrettyIdApi().list({ tier: 6 })).toEqual(page)
+      expect(apiMock).toHaveBeenCalledWith('/pretty-id/ids', { query: { tier: 6 } })
+    })
+
+    it('sends category, q and cursor when set', async () => {
+      apiMock.mockResolvedValue({ data: page })
+      await usePrettyIdApi().list({ tier: 4, category: 'legend', q: '8888', cursor: 'next' })
+      expect(apiMock).toHaveBeenCalledWith('/pretty-id/ids', {
+        query: { tier: 4, category: 'legend', q: '8888', cursor: 'next' },
+      })
+    })
+
+    it('leaves out a null category, an empty q and a null cursor', async () => {
+      apiMock.mockResolvedValue({ data: page })
+      await usePrettyIdApi().list({ tier: 6, category: null, q: '', cursor: null })
+      expect(apiMock).toHaveBeenCalledWith('/pretty-id/ids', { query: { tier: 6 } })
+    })
   })
 
-  it('falls back to a generic profile when nobody is signed in', async () => {
-    hoisted.user.value = null
-    const { usePrettyIdApi } = await loadSeam()
-    await usePrettyIdApi().me()
-    expect(hoisted.createMock).toHaveBeenCalledWith({ id: 0 })
+  describe('claim', () => {
+    it('POSTs the signature to /pretty-id/claim and unwraps data', async () => {
+      const result = { signature: '123456', tier: 6, category: 'lucky', user_prop_id: 9 }
+      apiMock.mockResolvedValue({ data: result })
+      expect(await usePrettyIdApi().claim('123456')).toEqual(result)
+      expect(apiMock).toHaveBeenCalledWith('/pretty-id/claim', { method: 'POST', body: { signature: '123456' } })
+    })
   })
 
-  it('serves every call from one shared instance', async () => {
-    const { usePrettyIdApi } = await loadSeam()
-    const api = usePrettyIdApi()
-    await api.me()
-    await api.list({ length: 6, tier: null })
-    await usePrettyIdApi().me()
-    expect(hoisted.createMock).toHaveBeenCalledTimes(1)
-  })
+  describe('error mapping', () => {
+    it.each([
+      [403, 'level_required'],
+      [409, 'already_claimed'],
+      [409, 'taken'],
+    ])('maps %i %s onto its code', async (status, code) => {
+      apiMock.mockRejectedValue(httpError(status, code))
+      await expect(usePrettyIdApi().claim('123456')).rejects.toMatchObject({ code })
+    })
 
-  it('forwards arguments to the instance', async () => {
-    const { usePrettyIdApi } = await loadSeam()
-    const api = usePrettyIdApi()
-    await api.claim('123456')
-    const backend = hoisted.createMock.mock.results[0]?.value as ReturnType<typeof fakeBackend>
-    expect(backend.claim).toHaveBeenCalledWith('123456')
-  })
+    it('maps a 422 invalid even though the shared normalizer drops error_code there', async () => {
+      apiMock.mockRejectedValue(httpError(422, 'invalid'))
+      await expect(usePrettyIdApi().claim('12')).rejects.toMatchObject({ code: 'invalid' })
+    })
 
-  it('rebuilds the mock when the signed-in user changes, even for a reference taken earlier', async () => {
-    const { usePrettyIdApi } = await loadSeam()
-    const api = usePrettyIdApi()
-    expect(await api.me()).toBe('user-5')
+    it('maps the browse 403 level_required', async () => {
+      apiMock.mockRejectedValue(httpError(403, 'level_required'))
+      await expect(usePrettyIdApi().list({ tier: 4 })).rejects.toMatchObject({ code: 'level_required' })
+    })
 
-    hoisted.user.value = { id: 6, name: 'Bo', avatar: null }
+    it('maps an unrecognised code to unknown', async () => {
+      apiMock.mockRejectedValue(httpError(409, 'something_else'))
+      await expect(usePrettyIdApi().claim('123456')).rejects.toMatchObject({ code: 'unknown' })
+    })
 
-    expect(await api.me()).toBe('user-6')
-    expect(hoisted.createMock).toHaveBeenCalledTimes(2)
-    expect(hoisted.createMock).toHaveBeenLastCalledWith({ id: 6 })
+    it('maps a response without a code (500) to unknown with the generic message', async () => {
+      apiMock.mockRejectedValue(httpError(500, null, 'Server exploded: SQLSTATE[23000]'))
+      const err = await usePrettyIdApi().me().catch((e: unknown) => e)
+      expect(err).toBeInstanceOf(PrettyIdApiError)
+      expect(err).toMatchObject({ code: 'unknown', message: 'Something went wrong. Please try again.' })
+    })
+
+    it('maps a transport failure to unknown with the connection message', async () => {
+      apiMock.mockRejectedValue(new TypeError('Failed to fetch'))
+      await expect(usePrettyIdApi().me()).rejects.toMatchObject({
+        code: 'unknown',
+        message: 'Network error. Check your connection.',
+      })
+    })
   })
 })

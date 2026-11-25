@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
  * The ID search box: a numeric field on the row frame and a gold SEARCH button.
- * Keeps its own text (digits only) and emits it on submit — the parent decides
- * what a search does.
+ * Keeps its own text (digits only, at most `digits` long) and emits it on
+ * submit — the parent decides what a search does. An empty submit clears it.
  */
-import { PRETTY_ID_SEARCH_MAX_LENGTH } from '~/constants/pretty-id'
 
 // ========================================
 // Config
 // ========================================
 
 const props = defineProps<{
+  /** Digit count of the tier being searched. */
+  digits: number
   /** Text to start with, e.g. the ID currently searched. */
   initial?: string
 }>()
@@ -31,7 +32,7 @@ const NON_DIGITS = /\D/g
 
 const text = ref(props.initial ?? '')
 
-// A new searched ID (back/forward on the result page) replaces whatever was typed.
+// A search set from outside (cleared by a tier switch) replaces whatever was typed.
 watch(() => props.initial, (next) => {
   text.value = next ?? ''
 })
@@ -42,7 +43,7 @@ watch(() => props.initial, (next) => {
 
 function onInput(event: Event): void {
   const input = event.target as HTMLInputElement
-  const digits = input.value.replace(NON_DIGITS, '').slice(0, PRETTY_ID_SEARCH_MAX_LENGTH)
+  const digits = input.value.replace(NON_DIGITS, '').slice(0, props.digits)
   // Written back by hand: when a stripped letter leaves `text` unchanged, Vue sees
   // no change and would leave the letter on screen.
   input.value = digits
@@ -63,9 +64,9 @@ function onSubmit(): void {
       inputmode="numeric"
       autocomplete="off"
       enterkeyhint="search"
-      aria-label="Search a Pretty ID"
-      placeholder="Search an ID, e.g. 888888"
-      :maxlength="PRETTY_ID_SEARCH_MAX_LENGTH"
+      :aria-label="`Search a ${digits}-digit Pretty ID`"
+      :placeholder="`Search a ${digits}-digit ID`"
+      :maxlength="digits"
       @input="onInput"
     >
     <button type="submit" class="pid-search__submit">SEARCH</button>

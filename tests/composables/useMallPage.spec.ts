@@ -211,6 +211,21 @@ describe('useMallPage.initializeUserProps — parallel init', () => {
     expect(mallStore.currentType).toBe('frame')
   })
 
+  it('opens on a preferred tab and keeps it after the types response', async () => {
+    apiMock.mockImplementation((url: string) => {
+      if (url === '/props/types') return Promise.resolve({ data: { types: [{ type: 'frame', label: 'Frames', count: 1 }, { type: 'signature', label: 'Signatures', count: 2 }] } })
+      if (url === '/user/props') return Promise.resolve({ data: { props: [], pagination: { next_cursor: null, has_more: false } } })
+      if (url === '/user/props/equipped') return Promise.resolve({ data: { equipped: { frame: null, signature: null, room_theme: null, chat_bubble: null, entry_animation: null, data_card: null, mice_wave: null, slides: null } } })
+      throw new Error(`unexpected url ${url}`)
+    })
+
+    const { mallStore, page } = await setupComposables()
+    await page.initializeUserProps('signature')
+
+    expect(apiMock).toHaveBeenCalledWith('/user/props', { params: { per_page: 50, status: 'active', type: 'signature' } })
+    expect(mallStore.currentType).toBe('signature')
+  })
+
   it('user-props data is not blanked when the types request fails', async () => {
     apiMock.mockImplementation((url: string) => {
       if (url === '/props/types') return Promise.reject(new Error('types down'))

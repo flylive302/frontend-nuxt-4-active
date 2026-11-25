@@ -1,49 +1,49 @@
 <script setup lang="ts">
 /**
- * The five shield filters of the Choose tab (Lucky, Sequence, Legend, Mirror,
- * Couple). The active one is drawn larger and glows, the rest are dimmed.
- * Emits `toggle` — re-tapping the active shield clears the filter, which is the
- * parent's call.
+ * The five category shield filters of the Choose tab (Lucky, Sequence, Legend,
+ * Mirror, Couple). The active one is drawn larger and glows, the rest are
+ * dimmed. Emits `toggle` — re-tapping the active shield clears the filter,
+ * which is the parent's call.
  */
-import { PRETTY_ID_TIER_FILTERS, PRETTY_ID_TIER_LABEL } from '~/constants/pretty-id'
-import { PRETTY_ID_TIER_SHIELD } from '~/constants/pretty-id-theme'
-import type { PrettyIdTier } from '~/types/pretty-id'
+import { PRETTY_ID_CATEGORIES, PRETTY_ID_CATEGORY_LABEL } from '~/constants/pretty-id'
+import { PRETTY_ID_CATEGORY_SHIELD } from '~/constants/pretty-id-theme'
+import type { PrettyIdCategory } from '~/types/pretty-id'
 
 // ========================================
 // Config
 // ========================================
 
 defineProps<{
-  /** The tier currently filtered on, or `null` for no filter. */
-  active: PrettyIdTier | null
+  /** The category currently filtered on, or `null` for no filter. */
+  active: PrettyIdCategory | null
 }>()
 
 const emit = defineEmits<{
-  toggle: [tier: PrettyIdTier]
+  toggle: [category: PrettyIdCategory]
 }>()
 
 // ========================================
 // State
 // ========================================
 
-const shields = PRETTY_ID_TIER_FILTERS.map(tier => ({
-  tier,
-  src: PRETTY_ID_TIER_SHIELD[tier],
-  label: PRETTY_ID_TIER_LABEL[tier],
+const shields = PRETTY_ID_CATEGORIES.map(category => ({
+  category,
+  src: PRETTY_ID_CATEGORY_SHIELD[category],
+  label: PRETTY_ID_CATEGORY_LABEL[category],
 }))
 </script>
 
 <template>
-  <div class="flex justify-center gap-1 px-1.5 pt-1.5" role="group" aria-label="Filter by pattern">
+  <div class="flex justify-center gap-1 px-1.5 pt-1.5" role="group" aria-label="Filter by category">
     <button
       v-for="shield in shields"
-      :key="shield.tier"
+      :key="shield.category"
       type="button"
       class="pid-shield"
-      :class="{ 'pid-shield--on': active === shield.tier }"
+      :class="{ 'pid-shield--on': active === shield.category }"
       :aria-label="shield.label"
-      :aria-pressed="active === shield.tier"
-      @click="emit('toggle', shield.tier)"
+      :aria-pressed="active === shield.category"
+      @click="emit('toggle', shield.category)"
     >
       <img :src="shield.src" alt="" class="pid-shield__art">
       <b class="pid-shield__label">{{ shield.label.toUpperCase() }}</b>

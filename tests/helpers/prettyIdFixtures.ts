@@ -2,47 +2,56 @@
 // Pretty ID test fixtures
 // ========================================
 // Plain data builders + a vi.fn() stand-in for the `PrettyIdApi` seam. Specs
-// mock `~/composables/pretty-id/usePrettyIdApi` with this, so none of them
-// depend on the real mock backend.
+// mock `~/composables/pretty-id/usePrettyIdApi` with this.
 
 import { vi } from 'vitest'
 import type {
+  PrettyIdCategory,
+  PrettyIdClaimed,
+  PrettyIdItem,
+  PrettyIdListResponse,
   PrettyIdMe,
-  PrettyIdSlot,
-  PrettyIdSlotKey,
+  PrettyIdTier,
+  PrettyIdTierState,
 } from '../../app/types/pretty-id'
 
-/** `PrettyIdMe.server_now` of every fixture; specs pin the device clock to it for a zero offset. */
-export const SERVER_NOW = '2026-11-21T10:00:00.000Z'
+export function makeClaimed(signature: string, category: PrettyIdCategory = 'lucky'): PrettyIdClaimed {
+  return { signature, category, claimed_at: '2026-11-21T10:00:00.000Z' }
+}
 
-export function makeSlot(key: PrettyIdSlotKey, overrides: Partial<PrettyIdSlot> = {}): PrettyIdSlot {
-  const isLv17 = key === 'lv17'
+export function makeTier(tier: PrettyIdTier, overrides: Partial<PrettyIdTierState> = {}): PrettyIdTierState {
   return {
-    key,
-    required_level: isLv17 ? 17 : 34,
-    length: isLv17 ? 6 : 4,
+    tier,
+    required_level: tier === 6 ? 17 : 34,
     unlocked: true,
-    id: null,
+    claimed: null,
     ...overrides,
   }
 }
 
-export interface SlotOverrides {
-  lv17?: Partial<PrettyIdSlot>
-  lv34?: Partial<PrettyIdSlot>
+export interface TierOverrides {
+  six?: Partial<PrettyIdTierState>
+  four?: Partial<PrettyIdTierState>
 }
 
-/** Level 20: the Lv 17 slot is unlocked and empty, the Lv 34 slot is locked. */
-export function makeMe(overrides: Partial<PrettyIdMe> = {}, slots: SlotOverrides = {}): PrettyIdMe {
+/** Level 20: the 6-digit tier is unlocked and unclaimed, the 4-digit tier is locked. */
+export function makeMe(overrides: Partial<PrettyIdMe> = {}, tiers: TierOverrides = {}): PrettyIdMe {
   return {
-    server_now: SERVER_NOW,
-    level: 20,
-    slots: {
-      lv17: makeSlot('lv17', slots.lv17),
-      lv34: makeSlot('lv34', { unlocked: false, ...slots.lv34 }),
-    },
+    wealth_level: 20,
+    tiers: [
+      makeTier(6, tiers.six),
+      makeTier(4, { unlocked: false, ...tiers.four }),
+    ],
     ...overrides,
   }
+}
+
+export function makeItem(signature: string, category: PrettyIdCategory = 'lucky'): PrettyIdItem {
+  return { signature, category }
+}
+
+export function makeList(items: PrettyIdItem[], overrides: Partial<PrettyIdListResponse> = {}): PrettyIdListResponse {
+  return { items, total: items.length, next_cursor: null, ...overrides }
 }
 
 /** One `vi.fn()` per `PrettyIdApi` method. Reset it in `beforeEach` with `resetApiMock`. */
@@ -50,7 +59,6 @@ export function createApiMock() {
   return {
     me: vi.fn(),
     list: vi.fn(),
-    search: vi.fn(),
     claim: vi.fn(),
   }
 }
@@ -61,5 +69,16 @@ export type ApiMock = ReturnType<typeof createApiMock>
 export function resetApiMock(api: ApiMock): void {
   for (const fn of Object.values(api)) fn.mockReset()
   api.me.mockResolvedValue(makeMe())
-  api.list.mockResolvedValue({ items: [], total: 0 })
+  api.list.mockResolvedValue(makeList([]))
+}
+
+/** A promise the test settles by hand. */
+export function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
 }

@@ -1,21 +1,22 @@
 <script setup lang="ts">
 /**
- * The locked state of the Choose tab: the padlock animation,
- * "Pretty ID Locked", and a "Your level" panel showing how far the user is from
- * `requiredLevel`. Copy differs by what is locked (`context`). Reads the user's
- * level from the store.
+ * The locked state of a tier on the Choose tab: the padlock animation,
+ * "Pretty ID Locked", and a "Your level" panel showing how far the user is
+ * from the tier's `required_level` (e.g. "12 / 17"), with a way to level up.
  */
 import { PRETTY_ID_ASSETS } from '~/constants/assets'
+import { PRETTY_ID_ELITE_TIER } from '~/constants/pretty-id'
 import { usePrettyIdStore } from '~/stores/prettyId'
+import type { PrettyIdTier } from '~/types/pretty-id'
 
 // ========================================
 // Config
 // ========================================
 
 const props = defineProps<{
-  /** Level at which this feature unlocks. */
+  tier: PrettyIdTier
+  /** Level at which this tier unlocks. */
   requiredLevel: number
-  context: LockedContext
 }>()
 
 // ========================================
@@ -24,47 +25,30 @@ const props = defineProps<{
 
 const PERCENT = 100
 
-const LINE: Record<LockedContext, (level: number) => string> = {
-  'six-digit': level => `Reach Lv ${level} to unlock your 6-digit Pretty ID`,
-  'four-digit': level => `Reach Lv ${level} to unlock a 4-digit Pretty ID`,
-}
-
-const HINT: Record<LockedContext, string | null> = {
-  // Quotes the Lv 34 threshold, which is server-owned — built from `me` below.
-  'six-digit': null,
-  'four-digit': 'Elite 4-digit IDs come with the diamond crown',
-}
-
-/** Six-digit hint while `me` has not loaded, so there is no Lv 34 threshold to quote yet. */
+/** Hint under the bar for the elite tier itself (nothing higher to point at). */
+const HINT_ELITE = 'Elite 4-digit IDs come with the diamond crown'
+/** Hint while the elite threshold is not known. */
 const HINT_ELITE_FALLBACK = 'Higher levels unlock 4-digit elite IDs'
-
-// ========================================
-// Types
-// ========================================
-
-/** What is locked: the 6-digit list or the 4-digit list. */
-type LockedContext = 'six-digit' | 'four-digit'
 
 // ========================================
 // State
 // ========================================
 
 const store = usePrettyIdStore()
-const { showLevelHelp } = usePrettyIdClaimActions()
+const { openLevelHelp } = usePrettyIdClaimActions()
 
-const eliteLevel = computed(() => store.me?.slots.lv34.required_level ?? null)
+const line = computed(() => `Reach Lv ${props.requiredLevel} to unlock your ${props.tier}-digit Pretty ID`)
 
-const line = computed(() => LINE[props.context](props.requiredLevel))
+const eliteLevel = computed(() => store.me?.tiers.find(state => state.tier === PRETTY_ID_ELITE_TIER)?.required_level ?? null)
 
 const hint = computed(() => {
-  const fixed = HINT[props.context]
-  if (fixed !== null) return fixed
+  if (props.tier === PRETTY_ID_ELITE_TIER) return HINT_ELITE
   return eliteLevel.value === null ? HINT_ELITE_FALLBACK : `Lv ${eliteLevel.value} unlocks 4-digit elite IDs`
 })
 
 const progressPercent = computed(() => {
   if (props.requiredLevel <= 0) return PERCENT
-  return Math.min(PERCENT, (store.level / props.requiredLevel) * PERCENT)
+  return Math.min(PERCENT, (store.wealthLevel / props.requiredLevel) * PERCENT)
 })
 </script>
 
@@ -85,7 +69,7 @@ const progressPercent = computed(() => {
 
     <PrettyIdPanel title="Your level">
       <p class="text-center">
-        <span class="pid-num pid-gold text-[26px]">{{ store.level }} / {{ requiredLevel }}</span>
+        <span class="pid-num pid-gold text-[26px]">{{ store.wealthLevel }} / {{ requiredLevel }}</span>
       </p>
       <div
         class="pid-bar mx-1 my-2.5"
@@ -93,7 +77,7 @@ const progressPercent = computed(() => {
         aria-label="Level progress"
         aria-valuemin="0"
         :aria-valuemax="requiredLevel"
-        :aria-valuenow="store.level"
+        :aria-valuenow="store.wealthLevel"
       >
         <i :style="{ width: `${progressPercent}%` }" />
       </div>
@@ -101,7 +85,7 @@ const progressPercent = computed(() => {
     </PrettyIdPanel>
 
     <div class="text-center">
-      <PrettyIdButton @click="showLevelHelp">How to level up</PrettyIdButton>
+      <PrettyIdButton @click="openLevelHelp">How to level up</PrettyIdButton>
     </div>
   </div>
 </template>

@@ -1,5 +1,5 @@
 // ========================================
-// Pretty ID Store — "me" + Choose / search / claim flow
+// Pretty ID Store — "me" + Choose browse / search / claim flow
 // ========================================
 // State + setters ONLY. API calls, toasts and navigation live in
 // composables/pretty-id. Not persisted.
@@ -7,19 +7,18 @@
 
 import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
-import { PRETTY_ID_SLOT_LENGTH } from '~/constants/pretty-id'
+import { PRETTY_ID_DEFAULT_TIER } from '~/constants/pretty-id'
 import type {
+  PrettyIdCategory,
   PrettyIdCelebration,
   PrettyIdItem,
-  PrettyIdLength,
   PrettyIdMe,
   PrettyIdRaceConflict,
-  PrettyIdSearchResult,
+  PrettyIdSearchStatus,
   PrettyIdTier,
+  PrettyIdTierMode,
+  PrettyIdTierState,
 } from '~/types/pretty-id'
-
-/** The Choose tab opens on the 6-digit (Lv 17) list. */
-const DEFAULT_LIST_LENGTH: PrettyIdLength = PRETTY_ID_SLOT_LENGTH.lv17
 
 /**
  * Read-only view of a state ref. `readonly()` at runtime (writes are rejected);
@@ -40,18 +39,23 @@ export const usePrettyIdStore = defineStore('prettyId', () => {
   /** The last `me` load failed and there is still nothing to show — the event cannot render. */
   const isMeFailed = ref(false)
 
-  const listLength = ref<PrettyIdLength>(DEFAULT_LIST_LENGTH)
-  const listTier = ref<PrettyIdTier | null>(null)
+  const activeTier = ref<PrettyIdTier>(PRETTY_ID_DEFAULT_TIER)
+  const category = ref<PrettyIdCategory | null>(null)
   const items = ref<PrettyIdItem[]>([])
   const itemsTotal = ref(0)
+  const nextCursor = ref<string | null>(null)
   const isListLoading = ref(false)
+  const isListLoadingMore = ref(false)
+  /** The last list load failed (first page) — the grid offers a retry. */
+  const isListFailed = ref(false)
 
   const searchQuery = ref('')
-  const searchResult = ref<PrettyIdSearchResult | null>(null)
-  const isSearching = ref(false)
+  const searchStatus = ref<PrettyIdSearchStatus>('idle')
+  /** The searched number when it is available; `null` otherwise. */
+  const searchResult = ref<PrettyIdItem | null>(null)
 
-  /** The ID shown in the confirm modal. */
-  const claimTarget = ref<string | null>(null)
+  /** The number shown in the confirm modal. */
+  const claimTarget = ref<PrettyIdItem | null>(null)
   const isClaiming = ref(false)
   const raceConflict = ref<PrettyIdRaceConflict | null>(null)
   const celebration = ref<PrettyIdCelebration | null>(null)
@@ -60,7 +64,24 @@ export const usePrettyIdStore = defineStore('prettyId', () => {
   // Computed
   // ========================================
 
-  const level = computed(() => me.value?.level ?? 0)
+  const wealthLevel = computed(() => me.value?.wealth_level ?? 0)
+
+  const activeTierState = computed<PrettyIdTierState | null>(
+    () => me.value?.tiers.find(state => state.tier === activeTier.value) ?? null,
+  )
+
+  /** What the Choose tab shows for the active tier. */
+  const tierMode = computed<PrettyIdTierMode>(() => {
+    const state = activeTierState.value
+    if (state === null) return 'loading'
+    if (state.claimed !== null) return 'claimed'
+    return state.unlocked ? 'browse' : 'locked'
+  })
+
+  /** The tier being browsed, or `null` while the active tier is loading / locked / claimed. */
+  const browseTier = computed<PrettyIdTier | null>(() => (tierMode.value === 'browse' ? activeTier.value : null))
+
+  const hasMore = computed(() => nextCursor.value !== null)
 
   // ========================================
   // Setters
@@ -74,34 +95,60 @@ export const usePrettyIdStore = defineStore('prettyId', () => {
     isMeLoading.value = value
   }
 
-  function setListLength(value: PrettyIdLength): void {
-    listLength.value = value
+  function setMeFailed(value: boolean): void {
+    isMeFailed.value = value
   }
 
-  function setListTier(value: PrettyIdTier | null): void {
-    listTier.value = value
+  function setActiveTier(value: PrettyIdTier): void {
+    activeTier.value = value
   }
 
-  function setList(nextItems: PrettyIdItem[], total: number): void {
+  function setCategory(value: PrettyIdCategory | null): void {
+    category.value = value
+  }
+
+  /** Replaces the list (first page). */
+  function setList(nextItems: PrettyIdItem[], total: number, cursor: string | null): void {
     items.value = nextItems
     itemsTotal.value = total
+    nextCursor.value = cursor
+  }
+
+  /** Appends the next page (a number already listed is skipped); `total` follows the latest response. */
+  function appendList(nextItems: PrettyIdItem[], total: number, cursor: string | null): void {
+    const listed = new Set(items.value.map(item => item.signature))
+    items.value = [...items.value, ...nextItems.filter(item => !listed.has(item.signature))]
+    itemsTotal.value = total
+    nextCursor.value = cursor
+  }
+
+  function clearList(): void {
+    items.value = []
+    itemsTotal.value = 0
+    nextCursor.value = null
+    isListFailed.value = false
   }
 
   function setListLoading(value: boolean): void {
     isListLoading.value = value
   }
 
-  function setSearch(query: string, result: PrettyIdSearchResult | null): void {
+  function setListLoadingMore(value: boolean): void {
+    isListLoadingMore.value = value
+  }
+
+  function setListFailed(value: boolean): void {
+    isListFailed.value = value
+  }
+
+  function setSearch(query: string, status: PrettyIdSearchStatus, result: PrettyIdItem | null = null): void {
     searchQuery.value = query
+    searchStatus.value = status
     searchResult.value = result
   }
 
-  function setSearching(value: boolean): void {
-    isSearching.value = value
-  }
-
-  function setClaimTarget(id: string | null): void {
-    claimTarget.value = id
+  function setClaimTarget(value: PrettyIdItem | null): void {
+    claimTarget.value = value
   }
 
   function setClaiming(value: boolean): void {
@@ -112,10 +159,6 @@ export const usePrettyIdStore = defineStore('prettyId', () => {
     raceConflict.value = value
   }
 
-  function setMeFailed(value: boolean): void {
-    isMeFailed.value = value
-  }
-
   function setCelebration(value: PrettyIdCelebration | null): void {
     celebration.value = value
   }
@@ -124,14 +167,17 @@ export const usePrettyIdStore = defineStore('prettyId', () => {
     me.value = null
     isMeLoading.value = false
     isMeFailed.value = false
-    listLength.value = DEFAULT_LIST_LENGTH
-    listTier.value = null
+    activeTier.value = PRETTY_ID_DEFAULT_TIER
+    category.value = null
     items.value = []
     itemsTotal.value = 0
+    nextCursor.value = null
     isListLoading.value = false
+    isListLoadingMore.value = false
+    isListFailed.value = false
     searchQuery.value = ''
+    searchStatus.value = 'idle'
     searchResult.value = null
-    isSearching.value = false
     claimTarget.value = null
     isClaiming.value = false
     raceConflict.value = null
@@ -142,31 +188,41 @@ export const usePrettyIdStore = defineStore('prettyId', () => {
     me: exposeReadonly(me),
     isMeLoading: readonly(isMeLoading),
     isMeFailed: readonly(isMeFailed),
-    listLength: readonly(listLength),
-    listTier: readonly(listTier),
+    activeTier: readonly(activeTier),
+    category: readonly(category),
     items: exposeReadonly(items),
     itemsTotal: readonly(itemsTotal),
+    nextCursor: readonly(nextCursor),
     isListLoading: readonly(isListLoading),
+    isListLoadingMore: readonly(isListLoadingMore),
+    isListFailed: readonly(isListFailed),
     searchQuery: readonly(searchQuery),
+    searchStatus: readonly(searchStatus),
     searchResult: exposeReadonly(searchResult),
-    isSearching: readonly(isSearching),
-    claimTarget: readonly(claimTarget),
+    claimTarget: exposeReadonly(claimTarget),
     isClaiming: readonly(isClaiming),
     raceConflict: exposeReadonly(raceConflict),
     celebration: exposeReadonly(celebration),
-    level,
+    wealthLevel,
+    activeTierState,
+    tierMode,
+    browseTier,
+    hasMore,
     setMe,
     setMeLoading,
-    setListLength,
-    setListTier,
+    setMeFailed,
+    setActiveTier,
+    setCategory,
     setList,
+    appendList,
+    clearList,
     setListLoading,
+    setListLoadingMore,
+    setListFailed,
     setSearch,
-    setSearching,
     setClaimTarget,
     setClaiming,
     setRaceConflict,
-    setMeFailed,
     setCelebration,
     reset,
   }

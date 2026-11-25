@@ -351,7 +351,3 @@ export const PRETTY_ID_ASSETS = {
   unlockLv17Svga: `${PID_SVGA}/unlock-lv17-accent.svga`,
   unlockLv34Svga: `${PID_SVGA}/unlock-lv34-accent.svga`,
 } as const
-
-/** Placeholder faces for the mock backend's rival users (`av0`–`av8`). Mock-only. */
-export const PRETTY_ID_MOCK_AVATAR_BASE = `${PID}/avatars`
-export const PRETTY_ID_MOCK_AVATAR_COUNT = 9

@@ -1,11 +1,9 @@
 // ========================================
-// Pretty ID event — API contract
+// Pretty ID event — API contract (Step 1)
 // ========================================
 //
-// Shapes exchanged across the Pretty ID API seam (`PrettyIdApi`, resolved by
-// `composables/pretty-id/usePrettyIdApi.ts`). The Choose tab (list, search,
-// claim) is still served by `services/prettyIdMockApi.ts` (localStorage) until
-// the real API replaces it. The auction and My ID features are removed.
+// Shapes exchanged across the Pretty ID API seam (`PrettyIdApi`, implemented by
+// `composables/pretty-id/usePrettyIdApi.ts` over `/pretty-id/*`).
 // Wire format is snake_case.
 //
 // Interfaces only — no runtime code in this file.
@@ -14,20 +12,17 @@
 // Vocabulary
 // ========================================
 
-/** Pattern tier of an ID, strongest first. `standard` is labelled "Classic". */
-export type PrettyIdTier = 'legend' | 'couple' | 'lucky' | 'sequence' | 'mirror' | 'repeat' | 'standard'
+/** Digit count of a claimable Pretty ID — also the id of its level reward: 6 at Lv 17, 4 at Lv 34. */
+export type PrettyIdTier = 6 | 4
 
-/** The two level rewards: a 6-digit ID at Lv 17 and a 4-digit ID at Lv 34. */
-export type PrettyIdSlotKey = 'lv17' | 'lv34'
-
-/** Digit count of a claimable Pretty ID. */
-export type PrettyIdLength = 6 | 4
+/** Pattern category of a number. */
+export type PrettyIdCategory = 'lucky' | 'sequence' | 'legend' | 'mirror' | 'couple'
 
 /** Why a `PrettyIdApi` call was refused. Carried by `PrettyIdApiError.code`. */
 export type PrettyIdErrorCode =
-  | 'taken'
   | 'level_required'
   | 'already_claimed'
+  | 'taken'
   | 'invalid'
   | 'unknown'
 
@@ -35,66 +30,58 @@ export type PrettyIdErrorCode =
 // Me
 // ========================================
 
-export interface PrettyIdSlot {
-  key: PrettyIdSlotKey
+/** The number a user claimed in one tier. */
+export interface PrettyIdClaimed {
+  signature: string
+  category: PrettyIdCategory
+  claimed_at: string
+}
+
+export interface PrettyIdTierState {
+  tier: PrettyIdTier
   required_level: number
-  length: PrettyIdLength
-  /** `level >= required_level`. */
+  /** `wealth_level >= required_level`. */
   unlocked: boolean
   /** The claimed number, or `null` while unclaimed. */
-  id: string | null
+  claimed: PrettyIdClaimed | null
 }
 
 export interface PrettyIdMe {
-  /** Server clock at response time. */
-  server_now: string
-  level: number
-  slots: Record<PrettyIdSlotKey, PrettyIdSlot>
+  wealth_level: number
+  /** Tier 6 first. */
+  tiers: PrettyIdTierState[]
 }
 
 // ========================================
-// Choose / search / claim
+// Browse / search / claim
 // ========================================
 
+/** One available number. */
 export interface PrettyIdItem {
-  id: string
-  tier: PrettyIdTier
+  signature: string
+  category: PrettyIdCategory
 }
 
 export interface PrettyIdListQuery {
-  length: PrettyIdLength
-  tier: PrettyIdTier | null
+  tier: PrettyIdTier
+  category?: PrettyIdCategory | null
+  /** Exact number to look up inside the tier (0 or 1 item back). */
+  q?: string
+  cursor?: string | null
 }
 
 export interface PrettyIdListResponse {
-  /** First page only (`PRETTY_ID_LIST_PAGE_SIZE`). */
   items: PrettyIdItem[]
-  /** Count of every available ID matching the query, not just `items`. */
+  /** Count of every available number matching tier + category, not just `items`. */
   total: number
-}
-
-/**
- * - `taken` — owned by someone; `suggestions` holds free IDs of the same pattern.
- * - `reserved` — blocked/system number.
- * - `auction_only` — 1–99, never claimable, only won at auction.
- * - `invalid` — not a well-formed Pretty ID; `message` says why.
- */
-export type PrettyIdSearchReason = 'taken' | 'reserved' | 'auction_only' | 'invalid'
-
-export interface PrettyIdSearchResult {
-  id: string
-  available: boolean
-  reason: PrettyIdSearchReason | null
-  /** Display-ready explanation for `invalid`; `null` otherwise. */
-  message: string | null
-  tier: PrettyIdTier | null
-  suggestions: PrettyIdItem[]
+  next_cursor: string | null
 }
 
 export interface PrettyIdClaimResult {
-  id: string
-  slot: PrettyIdSlotKey
-  me: PrettyIdMe
+  signature: string
+  tier: PrettyIdTier
+  category: PrettyIdCategory
+  user_prop_id: number
 }
 
 // ========================================
@@ -102,38 +89,35 @@ export interface PrettyIdClaimResult {
 // ========================================
 
 /**
- * Every Pretty ID server interaction. All methods are async and reject with a
- * `PrettyIdApiError` (`utils/pretty-id-error.ts`) on a business refusal.
+ * Every Pretty ID server interaction. All methods are async, unwrap the API
+ * envelope and reject with a `PrettyIdApiError` (`utils/pretty-id-error.ts`).
  */
 export interface PrettyIdApi {
   me(): Promise<PrettyIdMe>
+  /** Browse (`tier` + `category`) and exact search (`q`) share this one call. */
   list(query: PrettyIdListQuery): Promise<PrettyIdListResponse>
-  search(id: string): Promise<PrettyIdSearchResult>
-  /** Rejects `taken` (with `suggestions`), `level_required`, `already_claimed`. */
-  claim(id: string): Promise<PrettyIdClaimResult>
+  /** Rejects `taken`, `level_required`, `already_claimed`, `invalid`. */
+  claim(signature: string): Promise<PrettyIdClaimResult>
 }
 
 // ========================================
 // Client view state (never sent over the wire)
 // ========================================
 
+/** What the active tier's panel shows. */
+export type PrettyIdTierMode = 'loading' | 'locked' | 'claimed' | 'browse'
+
+/** Outcome of the inline exact search. */
+export type PrettyIdSearchStatus = 'idle' | 'searching' | 'available' | 'unavailable' | 'failed'
+
 /** A claim that just succeeded — drives the full-screen celebration overlay. */
 export interface PrettyIdCelebration {
-  id: string
-  slot: PrettyIdSlotKey
+  signature: string
+  tier: PrettyIdTier
+  category: PrettyIdCategory
 }
 
-/** The ID was taken between pick and confirm — drives the "ID taken" modal. */
+/** The number was taken between pick and confirm — drives the "just taken" modal. */
 export interface PrettyIdRaceConflict {
-  id: string
-  suggestions: PrettyIdItem[]
-}
-
-// ========================================
-// Mock-only (deleted with the mock when the real API lands)
-// ========================================
-
-/** Identity the mock is seeded for — taken from the signed-in user. */
-export interface PrettyIdMockProfile {
-  id: number
+  signature: string
 }
