@@ -15,11 +15,10 @@ import { usePrettyIdToast } from '~/composables/pretty-id/usePrettyIdToast'
 import { usePrettyIdStore } from '~/stores/prettyId'
 import type { PrettyIdCategory, PrettyIdTier } from '~/types/pretty-id'
 import { toPrettyIdError } from '~/utils/pretty-id-error'
+import { isSignatureText } from '~/utils/pretty-id-signature'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[PrettyIdData]')
-
-const DIGITS_ONLY = /^\d+$/
 
 export function usePrettyIdData() {
   const api = usePrettyIdApi()
@@ -134,20 +133,22 @@ export function usePrettyIdData() {
   // ========================================
 
   /**
-   * Looks one number up inside the active tier. An empty box clears the search.
-   * Anything that is not an available number of this tier's length is
+   * Looks one ID up inside the active tier (letters A–Z and digits 0–9, case-
+   * insensitive; the query is sent and compared UPPERCASE). An empty box clears
+   * the search. Anything that is not an available ID of this tier's length is
    * `unavailable` — never says why (no owners). A newer search wins.
    */
   async function runSearch(raw: string): Promise<void> {
     // GATE
-    const q = raw.trim()
+    const trimmed = raw.trim()
+    const q = trimmed.toUpperCase()
     if (q === '') {
       store.setSearch('', 'idle')
       return
     }
     if (store.tierMode !== 'browse') return
     const tier = store.activeTier
-    if (!DIGITS_ONLY.test(q) || q.length !== tier) {
+    if (!isSignatureText(trimmed) || q.length !== tier) {
       store.setSearch(q, 'unavailable')
       return
     }

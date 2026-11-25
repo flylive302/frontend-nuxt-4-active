@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The Choose ID tab: a tier switch (6-digit / 4-digit), then for the active
+ * The Choose ID tab: a tier switch (6-character / 4-character), then for the active
  * tier ONE of — the locked panel (level progress), the already-claimed panel
  * (the user's number), or the browse view (category shields, inline exact
  * search, available count, cursor-paged grid).
@@ -78,7 +78,7 @@ function onRetry(): void {
           <PrettyIdSearchBar
             :key="store.activeTier"
             class="mt-2.5"
-            :digits="store.activeTier"
+            :length="store.activeTier"
             :initial="store.searchQuery"
             @submit="onSearch"
           />

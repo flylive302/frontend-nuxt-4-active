@@ -108,7 +108,14 @@ function handleAvatarClick() {
           </div>
         </div>
         <div class="flex items-center gap-0.5 ">
-          <ProfileBadge :txt="user.signature" :vip="user.vip_level" class="shrink-0 max-w-24" />
+          <!-- The gold plate sizes itself to its box (container query), so it needs a definite width here. -->
+          <ProfileBadge
+            :txt="user.signature"
+            :vip="user.vip_level"
+            :pretty-id-plate="user.has_pretty_id_plate"
+            class="shrink-0"
+            :class="user.has_pretty_id_plate ? 'w-20' : 'max-w-24'"
+          />
           <!-- Level badges are height-constrained and wide (aspect ~2.8-3.2), so they size by `h-`, not `w-` -->
           <img v-if="wealthLevel.badge" :src="levelBadgeSrc(wealthLevel.badge.image_url, 20)" class="h-5" alt="users wealth badge" >
           <img v-if="charmLevel.badge" :src="levelBadgeSrc(charmLevel.badge.image_url, 16)" class="h-4 ml-1" alt="users charm badge" >

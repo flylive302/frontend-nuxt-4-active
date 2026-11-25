@@ -26,9 +26,9 @@ const props = defineProps<{
 const PERCENT = 100
 
 /** Hint under the bar for the elite tier itself (nothing higher to point at). */
-const HINT_ELITE = 'Elite 4-digit IDs come with the diamond crown'
+const HINT_ELITE = 'Elite 4-character IDs come with the diamond crown'
 /** Hint while the elite threshold is not known. */
-const HINT_ELITE_FALLBACK = 'Higher levels unlock 4-digit elite IDs'
+const HINT_ELITE_FALLBACK = 'Higher levels unlock 4-character elite IDs'
 
 // ========================================
 // State
@@ -37,13 +37,13 @@ const HINT_ELITE_FALLBACK = 'Higher levels unlock 4-digit elite IDs'
 const store = usePrettyIdStore()
 const { openLevelHelp } = usePrettyIdClaimActions()
 
-const line = computed(() => `Reach Lv ${props.requiredLevel} to unlock your ${props.tier}-digit Pretty ID`)
+const line = computed(() => `Reach Lv ${props.requiredLevel} to unlock your ${props.tier}-character Pretty ID`)
 
 const eliteLevel = computed(() => store.me?.tiers.find(state => state.tier === PRETTY_ID_ELITE_TIER)?.required_level ?? null)
 
 const hint = computed(() => {
   if (props.tier === PRETTY_ID_ELITE_TIER) return HINT_ELITE
-  return eliteLevel.value === null ? HINT_ELITE_FALLBACK : `Lv ${eliteLevel.value} unlocks 4-digit elite IDs`
+  return eliteLevel.value === null ? HINT_ELITE_FALLBACK : `Lv ${eliteLevel.value} unlocks 4-character elite IDs`
 })
 
 const progressPercent = computed(() => {

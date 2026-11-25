@@ -12,7 +12,7 @@
 // Vocabulary
 // ========================================
 
-/** Digit count of a claimable Pretty ID — also the id of its level reward: 6 at Lv 17, 4 at Lv 34. */
+/** Character count of a claimable Pretty ID (letters A–Z and digits 0–9) — also the id of its level reward: 6 at Lv 17, 4 at Lv 34. */
 export type PrettyIdTier = 6 | 4
 
 /** Pattern category of a number. */

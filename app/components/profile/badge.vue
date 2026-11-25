@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
       class="cursor-pointer select-none"
       @click="onCopy()"
     />
-    <div v-else-if="vip && vip > 11" class="relative flex items-center justify-center">
+    <div v-else-if="vip && vip > 11" class="relative flex items-center justify-center cursor-pointer select-none" @click="onCopy()">
       <img :src="withImageKitTransform(`https://ik.imagekit.io/flylive/vip/${vip}/pretty_id.png`, { w: 208 })" class="min-w-26" alt="">
       <p class="absolute z-20 top-0 text-xs ml-6 mt-3 font-extrabold">{{txt}}</p>
     </div>

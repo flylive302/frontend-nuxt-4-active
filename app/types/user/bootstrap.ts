@@ -33,6 +33,8 @@ export interface MinimalUser {
   gender: string | null
   date_of_birth: string | null
   vip_level: number
+  /** Wears a Pretty ID or Rare ID (gold plate). Sent only by endpoints that load it (user search). */
+  has_pretty_id_plate?: boolean
   equipped_badges?: EquippedBadge[]
 }
 

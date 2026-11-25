@@ -36,13 +36,13 @@ export const PRETTY_ID_THEME_COLOR = '#1a0828'
 // Tiers
 // ========================================
 
-/** Both tiers, in tier-switch order (6-digit first). */
+/** Both tiers, in tier-switch order (6-character first). */
 export const PRETTY_ID_TIERS: readonly PrettyIdTier[] = [6, 4]
 
 /** The tier the Choose tab opens on. */
 export const PRETTY_ID_DEFAULT_TIER: PrettyIdTier = 6
 
-/** The 4-digit tier gets the "Elite" celebration. */
+/** The 4-character tier gets the "Elite" celebration. */
 export const PRETTY_ID_ELITE_TIER: PrettyIdTier = 4
 
 // ========================================

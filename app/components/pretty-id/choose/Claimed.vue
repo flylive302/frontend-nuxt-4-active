@@ -21,7 +21,7 @@ const props = defineProps<{
 const { viewInMyProps } = usePrettyIdClaimActions()
 
 const categoryLabel = computed(() => PRETTY_ID_CATEGORY_LABEL[props.claimed.category])
-/** "5 2 0 5 2 0" — the digits stand apart, as in the celebration. */
+/** "5 2 0 5 2 0" — the characters stand apart, as in the celebration. */
 const spacedNumber = computed(() => props.claimed.signature.split('').join(' '))
 </script>
 

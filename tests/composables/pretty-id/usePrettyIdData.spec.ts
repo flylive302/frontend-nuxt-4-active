@@ -313,15 +313,35 @@ describe('usePrettyIdData', () => {
       expect(store.searchStatus).toBe('unavailable')
     })
 
-    it.each(['12345', '1234567', '12ab56'])('answers %s unavailable without a request', async (q) => {
+    it.each(['12345', '1234567', '12-456', '12 456', 'ab\u00dfcd'])('answers %s unavailable without a request', async (q) => {
       const { store, data } = setup()
       await data.runSearch(q)
       expect(apiMock.list).not.toHaveBeenCalled()
       expect(store.searchStatus).toBe('unavailable')
-      expect(store.searchQuery).toBe(q)
+      expect(store.searchQuery).toBe(q.toUpperCase())
     })
 
-    it('uses the 4-digit length on the 4-digit tier', async () => {
+    it('accepts mixed case and sends / compares the UPPERCASE query', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('AB12CD', 'legend')]))
+      const { store, data } = setup()
+
+      await data.runSearch(' ab12cD ')
+
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, q: 'AB12CD' })
+      expect(store.searchQuery).toBe('AB12CD')
+      expect(store.searchStatus).toBe('available')
+      expect(store.searchResult).toEqual(makeItem('AB12CD', 'legend'))
+    })
+
+    it('keeps leading zeros significant (007ABC is not 7ABC)', async () => {
+      apiMock.list.mockResolvedValue(makeList([makeItem('7ABC00')]))
+      const { store, data } = setup()
+      await data.runSearch('007abc')
+      expect(apiMock.list).toHaveBeenCalledWith({ tier: 6, q: '007ABC' })
+      expect(store.searchStatus).toBe('unavailable')
+    })
+
+    it('uses the 4-character length on the 4-character tier', async () => {
       apiMock.list.mockResolvedValue(makeList([makeItem('8888')]))
       const { store, data } = setup(makeMe({ wealth_level: 40 }, { four: { unlocked: true } }))
       store.setActiveTier(4)

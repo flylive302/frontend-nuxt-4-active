@@ -34,10 +34,10 @@ const title = computed(() => {
   if (!isElite.value) return 'Congratulations!'
   return eliteLevel.value === null ? 'Elite' : `Elite Lv ${eliteLevel.value}`
 })
-const subline = computed(() => (isElite.value ? '4-digit Pretty ID · Diamond Crown' : '6-digit Pretty ID unlocked'))
+const subline = computed(() => (isElite.value ? '4-character Pretty ID · Diamond Crown' : '6-character Pretty ID unlocked'))
 const panelTitle = computed(() => (isElite.value ? 'Elite ID' : 'Your new ID'))
 const celebratedId = computed(() => store.celebration?.signature ?? '')
-/** "5 2 0 5 2 0" — the digits stand apart, as in the design. */
+/** "5 2 0 5 2 0" — the characters stand apart, as in the design. */
 const spacedId = computed(() => celebratedId.value.split('').join(' '))
 
 // ========================================

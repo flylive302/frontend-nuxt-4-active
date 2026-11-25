@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The tier switch: one chip per level reward ("6-digit · Lv 17" / "4-digit ·
+ * The tier switch: one chip per level reward ("6-character · Lv 17" / "4-character ·
  * Lv 34"). The levels come from the server's `me`, never from literals here.
  * Emits `select` — the parent decides what switching means.
  */
@@ -28,7 +28,7 @@ const emit = defineEmits<{
       :active="active === state.tier"
       @click="emit('select', state.tier)"
     >
-      {{ state.tier }}-digit · Lv {{ state.required_level }}
+      {{ state.tier }}-character · Lv {{ state.required_level }}
     </PrettyIdChip>
   </div>
 </template>

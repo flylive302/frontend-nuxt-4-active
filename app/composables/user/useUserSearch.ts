@@ -101,6 +101,7 @@ export function useUserSearch() {
         data_card_id: u.data_card_id,
         mice_wave_id: u.mice_wave_id,
         vip_level: u.vip_level,
+        has_pretty_id_plate: u.has_pretty_id_plate,
         slides_id: u.slides_id,
       }))
 

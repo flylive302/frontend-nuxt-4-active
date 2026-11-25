@@ -1,17 +1,20 @@
 <script setup lang="ts">
 /**
- * The ID search box: a numeric field on the row frame and a gold SEARCH button.
- * Keeps its own text (digits only, at most `digits` long) and emits it on
- * submit — the parent decides what a search does. An empty submit clears it.
+ * The ID search box: a text field on the row frame and a gold SEARCH button.
+ * Keeps its own text (letters A–Z and digits 0–9, shown UPPERCASE as typed, at
+ * most `length` long) and emits it on submit — the parent decides what a search
+ * does. An empty submit clears it.
  */
+
+import { normalizeSignatureInput } from '~/utils/pretty-id-signature'
 
 // ========================================
 // Config
 // ========================================
 
 const props = defineProps<{
-  /** Digit count of the tier being searched. */
-  digits: number
+  /** Character count of the tier being searched. */
+  length: number
   /** Text to start with, e.g. the ID currently searched. */
   initial?: string
 }>()
@@ -19,12 +22,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   submit: [value: string]
 }>()
-
-// ========================================
-// Constants
-// ========================================
-
-const NON_DIGITS = /\D/g
 
 // ========================================
 // State
@@ -43,11 +40,11 @@ watch(() => props.initial, (next) => {
 
 function onInput(event: Event): void {
   const input = event.target as HTMLInputElement
-  const digits = input.value.replace(NON_DIGITS, '').slice(0, props.digits)
-  // Written back by hand: when a stripped letter leaves `text` unchanged, Vue sees
-  // no change and would leave the letter on screen.
-  input.value = digits
-  text.value = digits
+  const next = normalizeSignatureInput(input.value, props.length)
+  // Written back by hand: when a stripped symbol leaves `text` unchanged, Vue sees
+  // no change and would leave the symbol on screen.
+  input.value = next
+  text.value = next
 }
 
 function onSubmit(): void {
@@ -61,12 +58,15 @@ function onSubmit(): void {
       :value="text"
       class="pid-search__input"
       type="text"
-      inputmode="numeric"
+      inputmode="text"
+      autocapitalize="characters"
+      autocorrect="off"
+      spellcheck="false"
       autocomplete="off"
       enterkeyhint="search"
-      :aria-label="`Search a ${digits}-digit Pretty ID`"
-      :placeholder="`Search a ${digits}-digit ID`"
-      :maxlength="digits"
+      :aria-label="`Search a ${length}-character Pretty ID`"
+      :placeholder="`Search a ${length}-character ID`"
+      :maxlength="length"
       @input="onInput"
     >
     <button type="submit" class="pid-search__submit">SEARCH</button>
