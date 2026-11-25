@@ -11,30 +11,12 @@
 // (persisted catalog) and a background revalidate refreshes the flag.
 // A failed or timed-out bootstrap counts as off.
 import { PRETTY_ID_GATE_WAIT_MS } from '~/constants/bootstrap'
+import { awaitBootstrapSettled } from '~/utils/await-bootstrap-settled'
 
 export default defineNuxtRouteMiddleware(async () => {
   const bootstrapStore = useBootstrapStore()
 
-  if (bootstrapStore.phase === 'idle' || bootstrapStore.phase === 'loading') {
-    await new Promise<void>((resolve) => {
-      let stop: () => void = () => {}
-      const timer = setTimeout(() => {
-        stop()
-        resolve()
-      }, PRETTY_ID_GATE_WAIT_MS)
-      stop = watch(
-        () => bootstrapStore.phase,
-        (phase) => {
-          if (phase === 'complete' || phase === 'error') {
-            clearTimeout(timer)
-            stop()
-            resolve()
-          }
-        },
-        { immediate: true },
-      )
-    })
-  }
+  await awaitBootstrapSettled(bootstrapStore, PRETTY_ID_GATE_WAIT_MS)
 
   if (!bootstrapStore.prettyIdEnabled) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found', fatal: true })

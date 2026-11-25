@@ -13,7 +13,10 @@ import type { PrettyIdCategory, PrettyIdTier } from '~/types/pretty-id'
 // ========================================
 
 export const PRETTY_ID_ROUTES = {
-  choose: '/pretty-id',
+  /** Entry-only: redirects to the landing tab (utils/pretty-id-tabs.ts). Link here to "enter the event". */
+  entry: '/pretty-id',
+  /** The Choose ID tab. A stable path that never redirects, so back-navigation lands here untouched. */
+  choose: '/pretty-id/choose',
   auction: '/pretty-id/auction',
 } as const
 
@@ -22,16 +25,6 @@ export const PRETTY_ID_LEVELS_ROUTE = '/levels/wealth'
 
 /** Outside the event: My Props, opened on the signature tab ("View in My Props"). */
 export const PRETTY_ID_MY_PROPS_ROUTE = { path: '/mall/my-props', query: { type: 'signature' } } as const
-
-/**
- * Tab bar under the hero, in on-screen left → right order. The order is
- * load-bearing: plugins/nav-direction.client.ts derives the slide direction
- * between sibling tabs from it.
- */
-export const PRETTY_ID_TABS = [
-  { to: PRETTY_ID_ROUTES.choose, label: 'Choose ID' },
-  { to: PRETTY_ID_ROUTES.auction, label: 'Rare Auction' },
-] as const
 
 /** Where the top-bar back button leaves the event from a tab page. */
 export const PRETTY_ID_EXIT_ROUTE = '/'

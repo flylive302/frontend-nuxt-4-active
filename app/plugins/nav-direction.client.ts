@@ -10,25 +10,27 @@
  * automatic with zero per-page config, and every new page just works.
  *
  * Sibling TAB navigations are a `push` in BOTH directions, which history cannot
- * tell apart, so their spatial left→right order is looked up in TAB_GROUPS.
+ * tell apart, so their spatial left→right order is looked up in tabGroups().
  * These mirror the on-screen left→right order of a tab bar's links — the NavAlt
  * `first-link` / `second-link` pairs, plus the NavHomeFooter home/discover pair.
  * Add a row here whenever a new linked tab bar is introduced.
  */
 
 import { CP_EVENT_TABS } from '~/constants/cp-event'
-import { PRETTY_ID_TABS } from '~/constants/pretty-id'
 import { RECHARGE_TABS } from '~/constants/recharge'
+import { prettyIdTabs } from '~/utils/pretty-id-tabs'
 
 // Paths are compared trailing-slash-insensitively (see stripSlash).
-const TAB_GROUPS: string[][] = [
+// A function, not a constant: the Pretty ID tab order depends on the server's
+// `auction_enabled` flag, so it is resolved per navigation from the bootstrap store.
+const tabGroups = (): string[][] => [
   ['/', '/discover-all-events'],
   ['/mall', '/mall/my-props'],
   ['/coins/request', '/coins/exchange'],
   ['/levels/wealth', '/levels/charm'],
   CP_EVENT_TABS.map(tab => tab.to),
   RECHARGE_TABS.map(tab => tab.to),
-  PRETTY_ID_TABS.map(tab => tab.to),
+  prettyIdTabs(useBootstrapStore().prettyIdAuctionEnabled).map(tab => tab.to),
 ]
 
 const stripSlash = (p: string): string => (p.length > 1 ? p.replace(/\/+$/, '') : p)
@@ -47,7 +49,7 @@ export default defineNuxtPlugin(() => {
     const fromPath = stripSlash(from.path)
 
     // Tab bars: spatial order wins (both directions are a forward push).
-    const group = TAB_GROUPS.find(g => g.includes(toPath) && g.includes(fromPath))
+    const group = tabGroups().find(g => g.includes(toPath) && g.includes(fromPath))
     if (group) {
       root.dataset.nav = group.indexOf(toPath) > group.indexOf(fromPath) ? 'forward' : 'back'
       return

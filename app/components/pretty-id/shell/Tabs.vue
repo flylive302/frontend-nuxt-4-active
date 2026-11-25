@@ -1,16 +1,21 @@
 <script setup lang="ts">
 /**
- * Choose ID / Rare Auction — two plaque links under the hero. Real
+ * Choose ID / Rare Auction (order follows the auction flag) — two plaque links under the hero. Real
  * routes, so the active tab comes from the router and the phone's back button
  * walks the tabs like any other navigation.
  */
-import { PRETTY_ID_TABS } from '~/constants/pretty-id'
+import { prettyIdTabs } from '~/utils/pretty-id-tabs'
+
+const bootstrapStore = useBootstrapStore()
+
+/** Auction live → Rare Auction first; otherwise Choose ID first. */
+const tabs = computed(() => prettyIdTabs(bootstrapStore.prettyIdAuctionEnabled))
 </script>
 
 <template>
   <nav aria-label="Pretty ID tabs" class="pid-tabs">
     <NuxtLink
-      v-for="tab in PRETTY_ID_TABS"
+      v-for="tab in tabs"
       v-slot="{ isExactActive, href, navigate }"
       :key="tab.to"
       :to="tab.to"

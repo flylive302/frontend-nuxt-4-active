@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, createApp } from 'vue'
 import { BOOTSTRAP_SHAPE_VERSION, CP_BOOTSTRAP_DEFAULTS, PRETTY_ID_BOOTSTRAP_DEFAULTS } from '../../app/constants/bootstrap'
 import type { LevelConfig } from '../../app/types/user/bootstrap'
 
@@ -236,7 +236,7 @@ describe('useBootstrapStore prettyId block', () => {
     const store = useBootstrapStore()
     store.setConfig({ ...baseConfig, pretty_id: { enabled: true } })
     expect(store.prettyIdEnabled).toBe(true)
-    expect(store.prettyIdConfig).toEqual({ enabled: true })
+    expect(store.prettyIdConfig).toEqual({ enabled: true, auction_enabled: false })
   })
 
   it('turns off again when a later payload flips or drops the block', async () => {
@@ -248,6 +248,67 @@ describe('useBootstrapStore prettyId block', () => {
     store.setConfig({ ...baseConfig, pretty_id: { enabled: true } })
     store.setConfig(baseConfig)
     expect(store.prettyIdEnabled).toBe(false)
+  })
+
+  it('defaults the auction to off', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    expect(PRETTY_ID_BOOTSTRAP_DEFAULTS.auction_enabled).toBe(false)
+    expect(store.prettyIdAuctionEnabled).toBe(false)
+  })
+
+  it('hydrates auction_enabled on', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({ ...baseConfig, pretty_id: { enabled: true, auction_enabled: true } })
+    expect(store.prettyIdAuctionEnabled).toBe(true)
+    expect(store.prettyIdConfig).toEqual({ enabled: true, auction_enabled: true })
+  })
+
+  it('hydrates a legacy payload without auction_enabled as auction off', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({ ...baseConfig, pretty_id: { enabled: true } })
+    expect(store.prettyIdEnabled).toBe(true)
+    expect(store.prettyIdAuctionEnabled).toBe(false)
+  })
+
+  it('treats a persisted pre-update catalog (no auction_enabled key) as auction off', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    // What pinia-persistedstate restores verbatim from an old localStorage entry.
+    store.prettyIdConfig = { enabled: true }
+    expect(store.prettyIdEnabled).toBe(true)
+    expect(store.prettyIdAuctionEnabled).toBe(false)
+  })
+
+  it('keeps the auction off when the event is off, even if auction_enabled is true', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({ ...baseConfig, pretty_id: { enabled: false, auction_enabled: true } })
+    expect(store.prettyIdAuctionEnabled).toBe(false)
+  })
+
+  it('resets the auction to off on invalidateConfig("all") and reset()', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    const store = useBootstrapStore()
+    store.setConfig({ ...baseConfig, pretty_id: { enabled: true, auction_enabled: true } })
+    store.invalidateConfig('all')
+    expect(store.prettyIdAuctionEnabled).toBe(false)
+    store.setConfig({ ...baseConfig, pretty_id: { enabled: true, auction_enabled: true } })
+    store.reset()
+    expect(store.prettyIdAuctionEnabled).toBe(false)
+  })
+
+  it('persists prettyIdConfig', async () => {
+    const { useBootstrapStore } = await import('../../app/stores/bootstrap')
+    let persist: unknown
+    const pinia = createPinia()
+    createApp({}).use(pinia) // plugins only run once the pinia is installed on an app
+    pinia.use(({ options }) => { persist = (options as { persist?: unknown }).persist })
+    setActivePinia(pinia)
+    useBootstrapStore()
+    expect(persist).toMatchObject({ pick: expect.arrayContaining(['prettyIdConfig']) })
   })
 
   it('resets to off on invalidateConfig("all") and reset()', async () => {

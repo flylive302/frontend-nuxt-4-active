@@ -4,7 +4,7 @@
  * tier ONE of — the locked panel (level progress), the already-claimed panel
  * (the user's number), or the browse view (category shields, inline exact
  * search, available count, cursor-paged grid).
- * Mounted by `pages/pretty-id/index.vue` inside the tab layout (which owns the gutter).
+ * Mounted by `pages/pretty-id/choose.vue` inside the tab layout (which owns the gutter).
  */
 import { usePrettyIdStore } from '~/stores/prettyId'
 import type { PrettyIdCategory, PrettyIdItem, PrettyIdTier } from '~/types/pretty-id'

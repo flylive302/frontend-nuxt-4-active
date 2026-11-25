@@ -83,6 +83,11 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   /** Whether the Pretty ID event is switched on. */
   const prettyIdEnabled = computed(() => prettyIdConfig.value.enabled === true)
 
+  /** Whether the Rare Auction is live: needs the event itself AND its own switch on. */
+  const prettyIdAuctionEnabled = computed(
+    () => prettyIdConfig.value.enabled === true && prettyIdConfig.value.auction_enabled === true,
+  )
+
   /**
    * Whether the persisted catalog can render this open before any request:
    * written by a client of the current shape, with levels present. Anything
@@ -311,6 +316,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     isReady,
     cpEnabled,
     prettyIdEnabled,
+    prettyIdAuctionEnabled,
     hasUsableCache,
     badgeMap,
     sortedWealthLevels,

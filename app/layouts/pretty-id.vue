@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Layout of the two Pretty ID tabs (/pretty-id, /pretty-id/auction): top bar,
+ * Layout of the two Pretty ID tabs (/pretty-id/choose, /pretty-id/auction): top bar,
  * hero and tab row stay mounted while only the <slot/> swaps.
  */
 import { PRETTY_ID_EXIT_ROUTE, PRETTY_ID_ROUTES } from '~/constants/pretty-id'

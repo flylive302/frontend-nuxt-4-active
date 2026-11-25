@@ -34,6 +34,7 @@ export const CP_BOOTSTRAP_DEFAULTS = {
  */
 export const PRETTY_ID_BOOTSTRAP_DEFAULTS = {
   enabled: false,
+  auction_enabled: false,
 } as const
 
 /** Longest the Pretty ID route gate waits for a cold-start bootstrap before treating the event as off. */

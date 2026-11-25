@@ -71,6 +71,8 @@ export interface BootstrapUser {
   signature: string
   /** Tier of the Pretty ID worn now; `null` for an original / mall signature. Absent on older payloads. */
   pretty_id_tier?: PrettyIdTier | null
+  /** True while the user wears a claimed Pretty ID or a Rare ID (drives the gold plate). Absent on older payloads. */
+  has_pretty_id_plate?: boolean
   avatar: string | null
   cover_image: string | null
   frame_id: number | null
@@ -306,6 +308,8 @@ export interface BootstrapConfig {
  */
 export interface PrettyIdBootstrapConfig {
   enabled: boolean
+  /** Rare Auction switch (Step 2). Absent on older servers / persisted catalogs → off. */
+  auction_enabled?: boolean
 }
 
 /**
