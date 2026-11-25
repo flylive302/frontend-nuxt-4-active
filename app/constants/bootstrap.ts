@@ -28,5 +28,16 @@ export const CP_BOOTSTRAP_DEFAULTS = {
   frame_female: 28,
 } as const
 
+/**
+ * Pretty ID event config used while the server has not sent a `pretty_id`
+ * block (older server, fresh install, discarded catalog). Off by default.
+ */
+export const PRETTY_ID_BOOTSTRAP_DEFAULTS = {
+  enabled: false,
+} as const
+
+/** Longest the Pretty ID route gate waits for a cold-start bootstrap before treating the event as off. */
+export const PRETTY_ID_GATE_WAIT_MS = 8000
+
 /** Longest the CP route gate waits for a cold-start bootstrap before treating CP as off. */
 export const CP_GATE_WAIT_MS = 8000

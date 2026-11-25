@@ -8,11 +8,12 @@ import type {
   BootstrapConfig,
   CpBootstrapConfig,
   LevelConfig,
+  PrettyIdBootstrapConfig,
   VipLevel,
 } from '~/types/user/bootstrap'
 import type { Gift } from '~/types/gift/gift'
 import type { Badge } from "~/types/progression/badge";
-import { BOOTSTRAP_SHAPE_VERSION, CP_BOOTSTRAP_DEFAULTS } from '~/constants/bootstrap'
+import { BOOTSTRAP_SHAPE_VERSION, CP_BOOTSTRAP_DEFAULTS, PRETTY_ID_BOOTSTRAP_DEFAULTS } from '~/constants/bootstrap'
 
 // ========================================
 // Store Definition
@@ -48,6 +49,10 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
   // otherwise (absent block, older server, fresh install).
   const cpConfig = ref<CpBootstrapConfig>({ ...CP_BOOTSTRAP_DEFAULTS })
 
+  // Pretty ID event flag. Defaults to off until the server says otherwise
+  // (absent block, older server, fresh install).
+  const prettyIdConfig = ref<PrettyIdBootstrapConfig>({ ...PRETTY_ID_BOOTSTRAP_DEFAULTS })
+
   /**
    * Validator from the last 200 of `/bootstrap`, verbatim (the edge serves the
    * weak `W/` form; the server weak-compares) — sent back as `If-None-Match`.
@@ -74,6 +79,9 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
 
   /** Whether the CP Event is switched on. */
   const cpEnabled = computed(() => cpConfig.value.enabled === true)
+
+  /** Whether the Pretty ID event is switched on. */
+  const prettyIdEnabled = computed(() => prettyIdConfig.value.enabled === true)
 
   /**
    * Whether the persisted catalog can render this open before any request:
@@ -191,6 +199,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vipLevels.value = newConfig.vip_levels ?? []
     gamesEnabled.value = newConfig.games_enabled ?? false
     cpConfig.value = { ...CP_BOOTSTRAP_DEFAULTS, ...(newConfig.cp ?? {}) }
+    prettyIdConfig.value = { ...PRETTY_ID_BOOTSTRAP_DEFAULTS, ...(newConfig.pretty_id ?? {}) }
     shapeVersion.value = BOOTSTRAP_SHAPE_VERSION
   }
 
@@ -242,6 +251,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vipLevels.value = []
     gamesEnabled.value = null
     cpConfig.value = { ...CP_BOOTSTRAP_DEFAULTS }
+    prettyIdConfig.value = { ...PRETTY_ID_BOOTSTRAP_DEFAULTS }
     etag.value = null
     shapeVersion.value = null
   }
@@ -292,6 +302,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     vipLevels,
     gamesEnabled,
     cpConfig,
+    prettyIdConfig,
     etag,
     shapeVersion,
 
@@ -299,6 +310,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
     phase,
     isReady,
     cpEnabled,
+    prettyIdEnabled,
     hasUsableCache,
     badgeMap,
     sortedWealthLevels,
@@ -337,6 +349,7 @@ export const useBootstrapStore = defineStore('bootstrap', () => {
       'vipLevels',
       'gamesEnabled',
       'cpConfig',
+      'prettyIdConfig',
       'etag',
       'shapeVersion',
     ],

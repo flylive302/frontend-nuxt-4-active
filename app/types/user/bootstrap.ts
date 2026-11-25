@@ -294,6 +294,15 @@ export interface BootstrapConfig {
   games_enabled?: boolean
   /** CP Event flag + public settings. Sent uncached; absent from older servers. */
   cp?: CpBootstrapConfig
+  /** Pretty ID event switch. Sent uncached; absent from older servers. */
+  pretty_id?: PrettyIdBootstrapConfig
+}
+
+/**
+ * Pretty ID block of the bootstrap config.
+ */
+export interface PrettyIdBootstrapConfig {
+  enabled: boolean
 }
 
 /**

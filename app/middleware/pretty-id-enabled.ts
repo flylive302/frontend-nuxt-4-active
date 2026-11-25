@@ -2,16 +2,41 @@
 // Pretty ID Event Gate
 // ========================================
 //
-// GATE. Pretty ID pages 404 unless the build was made with
-// `NUXT_PUBLIC_PRETTY_ID_ENABLED=true` (`runtimeConfig.public.prettyIdEnabled`).
+// GATE. Pretty ID pages 404 while the server's `pretty_id.enabled` flag is off.
 //
-// The event currently runs on a mock backend (services/prettyIdMockApi.ts):
-// balances, auctions and winners are fabricated on the device. The flag is
-// therefore unset — off — in every build that reaches real users, so an event
-// banner pointing at /pretty-id cannot show them fake data. When the real API
-// ships, this becomes a server flag read from bootstrap, like `cp-enabled`.
-export default defineNuxtRouteMiddleware(() => {
-  if (!useRuntimeConfig().public.prettyIdEnabled) {
+// Cold deep link: route middleware runs before `/bootstrap` has answered, so
+// the store still holds the off defaults. Reading it then would 404 an enabled
+// event. We wait for bootstrap to settle (`complete` | `error`), bounded so a
+// dead backend cannot hang navigation. A warm open is `complete` immediately
+// (persisted catalog) and a background revalidate refreshes the flag.
+// A failed or timed-out bootstrap counts as off.
+import { PRETTY_ID_GATE_WAIT_MS } from '~/constants/bootstrap'
+
+export default defineNuxtRouteMiddleware(async () => {
+  const bootstrapStore = useBootstrapStore()
+
+  if (bootstrapStore.phase === 'idle' || bootstrapStore.phase === 'loading') {
+    await new Promise<void>((resolve) => {
+      let stop: () => void = () => {}
+      const timer = setTimeout(() => {
+        stop()
+        resolve()
+      }, PRETTY_ID_GATE_WAIT_MS)
+      stop = watch(
+        () => bootstrapStore.phase,
+        (phase) => {
+          if (phase === 'complete' || phase === 'error') {
+            clearTimeout(timer)
+            stop()
+            resolve()
+          }
+        },
+        { immediate: true },
+      )
+    })
+  }
+
+  if (!bootstrapStore.prettyIdEnabled) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found', fatal: true })
   }
 })
