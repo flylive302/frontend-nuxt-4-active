@@ -8,16 +8,24 @@ import { formatCoins } from '~/utils/currency'
 import { useBalanceStore } from '~/stores/balance'
 
 const props = defineProps<{
-  /** Where the back button goes (the tab pages leave the event). */
-  backTo: string
+  /**
+   * Fixed destination for the back button (tab pages leave the event).
+   * Omit on sub-pages: back then pops history.
+   */
+  backTo?: string
 }>()
 
 const balanceStore = useBalanceStore()
+const { goBack } = usePrettyIdBack()
 
 const coinsLabel = computed(() => formatCoins(balanceStore.coinsNumber))
 
 function onBack(): void {
-  void navigateTo(props.backTo)
+  if (props.backTo) {
+    void navigateTo(props.backTo)
+    return
+  }
+  goBack()
 }
 </script>
 

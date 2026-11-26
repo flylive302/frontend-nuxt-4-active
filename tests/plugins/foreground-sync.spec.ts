@@ -99,6 +99,38 @@ describe('foreground-sync plugin', () => {
     expect(userSync.syncUser).toHaveBeenCalledTimes(2)
   })
 
+  it('emits the app-foreground signal on every foreground, even inside the resync debounce', async () => {
+    const userSync = createMockUserSync()
+    const inboxReconcile = createMockInboxReconcile()
+    setupNuxtMocks({ authStore: createMockAuthStore(), userSync, inboxReconcile })
+    const { onAppForeground } = await import('../../app/services/appForeground')
+    const listener = vi.fn()
+    const off = onAppForeground(listener)
+
+    await loadPlugin()
+    fakeDocument.fireVisibilityChange(false)
+    fakeDocument.fireVisibilityChange(true)
+    fakeDocument.fireVisibilityChange(false)
+
+    expect(userSync.syncUser).toHaveBeenCalledTimes(1) // debounced...
+    expect(listener).toHaveBeenCalledTimes(2) // ...but subscribers see both foregrounds
+    off()
+  })
+
+  it('does not emit the app-foreground signal for a logged-out user or when going hidden', async () => {
+    setupNuxtMocks({ authStore: createMockAuthStore({ token: null }), userSync: createMockUserSync(), inboxReconcile: createMockInboxReconcile() })
+    const { onAppForeground } = await import('../../app/services/appForeground')
+    const listener = vi.fn()
+    const off = onAppForeground(listener)
+
+    await loadPlugin()
+    fakeDocument.fireVisibilityChange(false)
+    fakeDocument.fireVisibilityChange(true)
+
+    expect(listener).not.toHaveBeenCalled()
+    off()
+  })
+
   it('going hidden does not trigger a sync', async () => {
     const userSync = createMockUserSync()
     const inboxReconcile = createMockInboxReconcile()

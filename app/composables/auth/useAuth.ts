@@ -205,6 +205,8 @@ export function useAuthActions() {
       useBadgesStore().reset()
       // CP store holds viewer-specific data (myPair, partner-only can_break/points).
       useCpStore().reset()
+      // Rare Auction store holds the viewer's own `me` rows (entered / disqualified).
+      usePrettyIdAuctionStore().reset()
       authStore.logout()
       // REACT
       await navigateTo('/log-in')

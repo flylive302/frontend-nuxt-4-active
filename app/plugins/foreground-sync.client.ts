@@ -19,6 +19,7 @@
 
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
+import { emitAppForeground } from '~/services/appForeground'
 import { createLogger } from '~/utils/logger'
 
 const log = createLogger('[ForegroundSync]')
@@ -34,6 +35,10 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   function onForeground(): void {
     if (!authStore.token) return
+
+    // Subscribers (e.g. the Rare Auction polling) get EVERY real foreground, so
+    // this goes before the debounce below, which only throttles the resyncs.
+    emitAppForeground()
 
     const now = Date.now()
     if (now - lastSyncAt < DEBOUNCE_MS) return
