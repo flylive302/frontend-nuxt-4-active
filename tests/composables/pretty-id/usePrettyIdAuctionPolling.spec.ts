@@ -13,6 +13,7 @@ import {
   makeList,
   makeMe,
   makeSnapshot,
+  makeUser,
   resetAuctionApiMock,
   SERVER_NOW_MS,
 } from '../../helpers/prettyIdAuctionFixtures'
@@ -39,7 +40,7 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('readonly', readonly)
 vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 
-const { usePrettyIdAuctionPagePolling, usePrettyIdAuctionsPolling } = await import(
+const { isPrettyIdDisqualificationSeen, usePrettyIdAuctionPagePolling, usePrettyIdAuctionsPolling } = await import(
   '~/composables/pretty-id/usePrettyIdAuctionPolling'
 )
 
@@ -410,3 +411,30 @@ describe('Rare Auction polling', () => {
   })
 })
 
+describe('isPrettyIdDisqualificationSeen (pretty-id-step2 11)', () => {
+  const leader = makeUser(10)
+
+  it('is false for an ordinary outbid (leader changes, bidder count grows or stays)', () => {
+    const before = makeSnapshot({ leader, bidder_count: 1, price_floor: 1_000 })
+    const after = makeSnapshot({ leader: makeUser(7), bidder_count: 2, price_floor: 1_100 })
+    expect(isPrettyIdDisqualificationSeen(before, after)).toBe(false)
+  })
+
+  it('is true when the bidder count drops (anyone disqualified)', () => {
+    const before = makeSnapshot({ leader, bidder_count: 2, price_floor: 1_100 })
+    const after = makeSnapshot({ leader, bidder_count: 1, price_floor: 1_100 })
+    expect(isPrettyIdDisqualificationSeen(before, after)).toBe(true)
+  })
+
+  it('is true when a live auction loses its leader but keeps a price floor', () => {
+    const before = makeSnapshot({ leader, bidder_count: 2, price_floor: 1_100 })
+    const after = makeSnapshot({ leader: null, bidder_count: 2, price_floor: 1_000 })
+    expect(isPrettyIdDisqualificationSeen(before, after)).toBe(true)
+  })
+
+  it('is false on the first load and once the auction is not live', () => {
+    const after = makeSnapshot({ leader: null, bidder_count: 1, price_floor: 1_000 })
+    expect(isPrettyIdDisqualificationSeen(undefined, after)).toBe(false)
+    expect(isPrettyIdDisqualificationSeen(makeSnapshot({ leader, bidder_count: 1 }), makeSnapshot({ state: 'ended', leader: null, bidder_count: 1, price_floor: 1_000 }))).toBe(false)
+  })
+})

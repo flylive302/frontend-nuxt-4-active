@@ -10,6 +10,7 @@
  */
 import { usePrettyIdAuctionStore } from '~/stores/prettyIdAuction'
 import { formatCoins } from '~/utils/currency'
+import { PRETTY_ID_DISQUALIFIED_MESSAGE, PRETTY_ID_TOP_BID_REMOVED_MESSAGE } from '~/utils/pretty-id-auction-error'
 
 // Config
 const props = defineProps<{
@@ -21,6 +22,8 @@ const store = usePrettyIdAuctionStore()
 const { status, retry } = usePrettyIdAuctionPagePolling(() => props.auctionId)
 /** Live, but the end has passed: the server already refuses bids, so no entry or bid controls. */
 const isFinalizing = usePrettyIdAuctionFinalizing(() => store.snapshots[props.auctionId])
+/** Live, bids on the board, but nobody leads: the top bidder was removed. */
+const isTopBidRemoved = usePrettyIdAuctionTopBidRemoved(() => store.snapshots[props.auctionId])
 
 // State
 const auction = computed(() => store.snapshots[props.auctionId])
@@ -35,8 +38,8 @@ const result = computed(() => auction.value?.result ?? null)
   <div v-else-if="auction">
     <PrettyIdPanel title="Rare ID">
       <PrettyIdAuctionSummary :auction="auction" />
-      <p v-if="myStanding?.disqualified && auction.state !== 'live'" class="pid-body pid-small mt-2 text-center">
-        You were removed from this auction.
+      <p v-if="myStanding?.disqualified && (auction.state !== 'live' || isFinalizing)" class="pid-body pid-small mt-2 text-center" role="status">
+        {{ PRETTY_ID_DISQUALIFIED_MESSAGE }}
       </p>
     </PrettyIdPanel>
 
@@ -44,6 +47,10 @@ const result = computed(() => auction.value?.result ?? null)
 
     <PrettyIdPanel v-if="auction.state === 'live' && auction.leader" title="Leading">
       <PrettyIdAuctionLeader :leader="auction.leader" />
+    </PrettyIdPanel>
+
+    <PrettyIdPanel v-else-if="isTopBidRemoved && !isFinalizing && !myStanding?.disqualified" title="Leading">
+      <p class="pid-body text-center" role="status">{{ PRETTY_ID_TOP_BID_REMOVED_MESSAGE }}</p>
     </PrettyIdPanel>
 
     <PrettyIdPanel v-if="auction.state === 'ended'" title="Result">

@@ -11,6 +11,7 @@ import { PrettyIdAuctionApiError } from '~/utils/pretty-id-auction-error'
 import { deferred } from '../../helpers/prettyIdFixtures'
 import {
   createAuctionApiMock,
+  makeBid,
   makeBidResult,
   makeMe,
   makeSnapshot,
@@ -199,6 +200,34 @@ describe('usePrettyIdAuctionBidActions', () => {
       snapshot.value = makeSnapshot({ id: ID, min_next_bid: 130_000 })
       await nextTick()
       expect(bidStore.draft).toBe('500000')
+    })
+
+    it('after the leader was removed (leader null, floor set) the minimum is the server min_next_bid', () => {
+      const { actions, bidStore } = setup({
+        snapshot: { leader: null, price_floor: 120_000, min_next_bid: 130_000, top_bids: [makeBid(120_000, makeUser(5))] },
+      })
+      expect(actions.isLeading(ID)).toBe(false)
+      expect(actions.canBid(ID)).toBe(true)
+      expect(bidStore.draft).toBe('130000')
+      expect(actions.isDraftValid(ID)).toBe(true)
+      actions.setDraftText(ID, '129999')
+      expect(actions.isDraftValid(ID)).toBe(false)
+    })
+
+    it('after every bid was removed (leader null, floor null) the minimum is the opening bid from the server', () => {
+      const { actions, bidStore } = setup({ snapshot: { leader: null, price_floor: null, min_next_bid: 100_000 } })
+      expect(bidStore.draft).toBe('100000')
+      expect(actions.isDraftValid(ID)).toBe(true)
+      actions.setDraftText(ID, '99999')
+      expect(actions.isDraftValid(ID)).toBe(false)
+    })
+
+    it('a former leader may bid again once the leader slot is empty', () => {
+      const { actions, auctionStore } = setup({ snapshot: { leader: makeUser(ME_ID), min_next_bid: 110_000 } })
+      expect(actions.canBid(ID)).toBe(false)
+      auctionStore.setSnapshot(makeSnapshot({ id: ID, leader: null, price_floor: 90_000, min_next_bid: 100_000 }))
+      expect(actions.canBid(ID)).toBe(true)
+      expect(actions.isDraftValid(ID)).toBe(true)
     })
 
     it('a chip raises the field by its amount', () => {

@@ -17,10 +17,16 @@ import { readErrorCode } from '~/utils/api/readErrorCode'
 const NOT_FOUND_STATUS = 404
 const UNKNOWN_MESSAGE = 'Something went wrong. Please try again.'
 
+/** The one line every disqualified viewer reads (page note and refusal toast). The entry fee is kept. */
+export const PRETTY_ID_DISQUALIFIED_MESSAGE = 'You were disqualified from this auction. Your entry fee is not returned.'
+
+/** Live, nobody leads, yet bids remain: the top bidder was removed (pretty-id-step2 11). */
+export const PRETTY_ID_TOP_BID_REMOVED_MESSAGE = 'Top bid removed — bid again to lead.'
+
 const MESSAGES: Record<PrettyIdAuctionErrorCode, string> = {
   not_found: 'This auction was not found.',
   staff_not_allowed: 'Staff accounts can watch but not take part.',
-  disqualified: 'You were disqualified from this auction.',
+  disqualified: PRETTY_ID_DISQUALIFIED_MESSAGE,
   auction_not_live: 'This auction is not live right now.',
   auction_ended: 'This auction has ended.',
   already_entered: 'You have already entered this auction.',

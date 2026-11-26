@@ -15,7 +15,7 @@ function httpError(status: number, errorCode?: string) {
 describe('toPrettyIdAuctionError', () => {
   it.each([
     ['staff_not_allowed', 403, 'Staff accounts can watch but not take part.'],
-    ['disqualified', 403, 'You were disqualified from this auction.'],
+    ['disqualified', 403, 'You were disqualified from this auction. Your entry fee is not returned.'],
     ['auction_not_live', 409, 'This auction is not live right now.'],
     ['already_entered', 409, 'You have already entered this auction.'],
     ['insufficient_coins', 422, 'Not enough coins to pay the entry fee.'],

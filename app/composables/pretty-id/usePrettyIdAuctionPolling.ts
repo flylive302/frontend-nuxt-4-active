@@ -14,7 +14,7 @@ import { usePrettyIdAuctionData } from '~/composables/pretty-id/usePrettyIdAucti
 import { usePrettyIdPoll } from '~/composables/pretty-id/usePrettyIdPoll'
 import { PRETTY_ID_AUCTION_POLL_SLOW_MS, PRETTY_ID_AUCTION_TAB_POLL_MS } from '~/constants/pretty-id-auction'
 import { usePrettyIdAuctionStore } from '~/stores/prettyIdAuction'
-import type { PrettyIdAuctionLoadStatus } from '~/types/pretty-id-auction'
+import type { PrettyIdAuctionLoadStatus, PrettyIdAuctionSnapshot } from '~/types/pretty-id-auction'
 import { nextPrettyIdAuctionPollDelayMs } from '~/utils/pretty-id-auction'
 
 export interface PrettyIdAuctionPagePolling {
@@ -28,9 +28,24 @@ export interface PrettyIdAuctionPagePolling {
 }
 
 /**
+ * GATE (pure): between two polls of one auction, did a disqualification happen? Only a
+ * disqualification lowers the bidder count or leaves a live auction with a price but no
+ * leader, so an ordinary bid never triggers the extra `me` read.
+ */
+export function isPrettyIdDisqualificationSeen(
+  before: Pick<PrettyIdAuctionSnapshot, 'bidder_count' | 'leader'> | undefined,
+  after: Pick<PrettyIdAuctionSnapshot, 'state' | 'bidder_count' | 'leader' | 'price_floor'> | undefined,
+): boolean {
+  if (before === undefined || after === undefined) return false
+  if (after.bidder_count < before.bidder_count) return true
+  return after.state === 'live' && before.leader !== null && after.leader === null && after.price_floor !== null
+}
+
+/**
  * Keeps one auction fresh: 60 s, then 3 s in the final hour to the actual end
  * (through extensions), stopping once it has ended or been cancelled.
- * `me` is fetched once per id on open, never by the timer.
+ * `me` is fetched once per id on open, and again when a poll shows a
+ * disqualification (it may be this viewer's); never on a plain timer tick.
  */
 export function usePrettyIdAuctionPagePolling(auctionId: MaybeRefOrGetter<number>): PrettyIdAuctionPagePolling {
   const { loadAuction, loadAuctionMe } = usePrettyIdAuctionData()
@@ -39,9 +54,13 @@ export function usePrettyIdAuctionPagePolling(auctionId: MaybeRefOrGetter<number
 
   async function load(isFirst: boolean): Promise<void> {
     const id = toValue(auctionId)
+    const before = store.snapshotById(id)
     const outcome = await loadAuction(id, { quiet: !isFirst })
     // The id may have moved on while this was in flight; only the current id reports.
     if (toValue(auctionId) !== id) return
+    // Someone was disqualified (pretty-id-step2 11): it may be this viewer, whose own
+    // standing is otherwise only read on open, so read it again once.
+    if (outcome === 'ok' && isPrettyIdDisqualificationSeen(before, store.snapshotById(id))) void loadAuctionMe(id)
     if (outcome === 'ok') status.value = 'ready'
     else if (outcome === 'not_found') status.value = 'not_found'
     else if (store.snapshotById(id) === undefined) status.value = 'error'

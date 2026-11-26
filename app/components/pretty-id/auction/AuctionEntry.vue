@@ -9,6 +9,7 @@ import { usePrettyIdAuctionEnterActions } from '~/composables/pretty-id/usePrett
 import { usePrettyIdAuctionStore } from '~/stores/prettyIdAuction'
 import type { PrettyIdAuctionSnapshot } from '~/types/pretty-id-auction'
 import { formatCoins } from '~/utils/currency'
+import { PRETTY_ID_DISQUALIFIED_MESSAGE } from '~/utils/pretty-id-auction-error'
 
 // Config
 const props = defineProps<{
@@ -26,7 +27,7 @@ const me = computed(() => store.myStanding[props.auction.id])
 <template>
   <PrettyIdPanel v-if="me" title="Your entry">
     <p v-if="me.disqualified" class="pid-body text-center" role="status">
-      You were disqualified from this auction.
+      {{ PRETTY_ID_DISQUALIFIED_MESSAGE }}
     </p>
 
     <PrettyIdAuctionBidArea v-else-if="me.entered && me.may_bid" :auction="auction" />
