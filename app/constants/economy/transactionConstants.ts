@@ -6,7 +6,7 @@
 // ========================================
 
 import type { IapStore } from '~/types/economy/iap'
-import type { TransactionType, TransactionTypeFilter } from '~/types/economy/wallet'
+import type { RareIdTransactionType, TransactionType, TransactionTypeFilter } from '~/types/economy/wallet'
 
 // ========================================
 // Display Labels
@@ -36,6 +36,9 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   game_win: 'Game Win',
   lucky_payout: 'Lucky Cashback',
   rare_id_entry_fee: 'Rare ID Auction Entry',
+  rare_id_bid_hold: 'Rare ID Bid Held',
+  rare_id_bid_refund: 'Rare ID Bid Refund',
+  rare_id_entry_refund: 'Rare ID Entry Refund',
   manual_adjustment: 'Balance Adjustment',
   diamond_deduction: 'Diamonds Sold',
   diamond_to_coin_conversion: 'Diamonds Converted',
@@ -60,6 +63,21 @@ export const STORE_PURCHASE_LABELS: Record<IapStore, string> = {
 export const STORE_REFUND_LABELS: Record<IapStore, string> = {
   apple: 'Refunded by App Store',
   google: 'Refunded by Google Play',
+}
+
+// ========================================
+// Rare ID auction labels (rare_id_*)
+// ========================================
+// The backend's stored `description` already names the Rare ID. These are the
+// fallback when it is empty: getTransactionLabel() builds
+// "Rare ID <metadata.rare_id> <suffix>" so the row still names the Rare ID.
+
+/** Suffix after "Rare ID <id>", keyed by transaction type. */
+export const RARE_ID_LABEL_SUFFIXES: Record<RareIdTransactionType, string> = {
+  rare_id_entry_fee: 'auction entry fee',
+  rare_id_bid_hold: 'bid',
+  rare_id_bid_refund: 'bid refund',
+  rare_id_entry_refund: 'entry fee refund',
 }
 
 // ========================================
@@ -90,6 +108,9 @@ export const TRANSACTION_TYPE_COLORS: Record<TransactionType, string> = {
   game_win: 'text-violet-300',
   lucky_payout: 'text-yellow-400',
   rare_id_entry_fee: 'text-fuchsia-400',
+  rare_id_bid_hold: 'text-fuchsia-400',
+  rare_id_bid_refund: 'text-fuchsia-300',
+  rare_id_entry_refund: 'text-fuchsia-300',
   manual_adjustment: 'text-neutral-400',
   diamond_deduction: 'text-secondary-200',
   diamond_to_coin_conversion: 'text-secondary-200',

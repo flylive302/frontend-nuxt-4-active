@@ -7,8 +7,7 @@
 <script setup lang="ts">
 import type { Transaction, BalanceSnapshot } from '~/types/economy/wallet'
 import { ASSETS } from '~/constants/assets'
-import { TRANSACTION_TYPE_LABELS } from '~/constants/economy/transactionConstants'
-import { isPositiveTransaction, getOtherPartyDisplay, getTransactionLabel } from '~/utils/economy/transactionHelpers'
+import { isPositiveTransaction, getOtherPartyDisplay, getTransactionHeadline, isRareIdTransaction } from '~/utils/economy/transactionHelpers'
 import { formatCurrency } from '~/utils/currency'
 import { withImageKitTransform } from '~/utils/imagekit'
 
@@ -39,23 +38,13 @@ const formattedTime = computed(() =>
   }),
 )
 
-/** True for the two IAP ledger types, where the store-specific label
- * (e.g. "Coin pack (App Store)") must win over the backend's generic
- * description/title so the buyer sees which store they paid. */
-const isStoreTransaction = computed(
-  () => props.transaction.type === 'store_purchase' || props.transaction.type === 'store_refund',
-)
+/** Primary line: store-specific label for IAP rows, the description (or a
+ * Rare ID label) for auction rows, else description, title, type label. */
+const headline = computed(() => getTransactionHeadline(props.transaction))
 
-/** Primary line: store-specific label for IAP rows, else the perspective-aware
- * sentence from the API, else the type label. */
-const headline = computed(() =>
-  isStoreTransaction.value
-    ? getTransactionLabel(props.transaction)
-    : props.transaction.description
-      || props.transaction.title
-      || TRANSACTION_TYPE_LABELS[props.transaction.type]
-      || 'Transaction',
-)
+/** Rare ID auction sentences end with the ID ("…for Rare ID 7 auction"), so they
+ * wrap to two lines instead of truncating the ID away at phone width. */
+const headlineClamp = computed(() => (isRareIdTransaction(props.transaction) ? 'line-clamp-2' : 'truncate'))
 
 /** Secondary line: counterparty and room, joined with a dot. */
 const subline = computed(() => {
@@ -143,7 +132,7 @@ function copyId(event: Event): void {
       </div>
 
       <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-bold leading-tight">{{ headline }}</p>
+        <p class="text-sm font-bold leading-tight" :class="headlineClamp">{{ headline }}</p>
         <p class="truncate text-xs leading-tight text-muted">
           {{ formattedTime }}<template v-if="subline"> · {{ subline }}</template>
         </p>

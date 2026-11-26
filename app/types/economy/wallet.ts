@@ -93,10 +93,16 @@ export type TransactionType =
   | 'game_win'
   | 'lucky_payout'
   | 'rare_id_entry_fee'
+  | 'rare_id_bid_hold'
+  | 'rare_id_bid_refund'
+  | 'rare_id_entry_refund'
   | 'manual_adjustment'
   | 'diamond_deduction'
   | 'diamond_to_coin_conversion'
   | 'diamond_handover'
+
+/** The four Rare ID auction ledger types (entry fee, bid hold, and their refunds). */
+export type RareIdTransactionType = Extract<TransactionType, `rare_id_${string}`>
 
 /**
  * Filter options for transaction history.
@@ -145,6 +151,8 @@ export interface TransactionMetadata {
   store?: IapStore
   /** `store_purchase` / `store_refund` only — e.g. `iap_apple`, `iap_google`. */
   channel?: string
+  /** Rare ID auction rows only — the auction's Rare ID (text, may have leading zeros). */
+  rare_id?: string
   [key: string]: unknown
 }
 
