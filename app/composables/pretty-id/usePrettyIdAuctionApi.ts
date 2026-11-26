@@ -15,6 +15,8 @@ import type {
   PrettyIdAuctionMe,
   PrettyIdAuctionSnapshot,
   PrettyIdAuctionUnseenWin,
+  PrettyIdAuctionWeeklyRecord,
+  PrettyIdAuctionWinnersBoard,
   PrettyIdAuctionWinSeenResult,
 } from '~/types/pretty-id-auction'
 import { toPrettyIdAuctionError } from '~/utils/pretty-id-auction-error'
@@ -36,6 +38,12 @@ export function usePrettyIdAuctionApi(): PrettyIdAuctionApi {
     }
   }
 
+  /** `/pretty-id/auctions/<path>` with an optional `?month=YYYY-MM` (omitted = the current month). */
+  function historyUrl(path: 'winners' | 'weekly', month: string | undefined): string {
+    const base = `/pretty-id/auctions/${path}`
+    return month === undefined ? base : `${base}?month=${encodeURIComponent(month)}`
+  }
+
   return {
     auctions: () => call<PrettyIdAuctionList>('/pretty-id/auctions'),
     auction: id => call<PrettyIdAuctionSnapshot>(`/pretty-id/auctions/${id}`),
@@ -44,5 +52,7 @@ export function usePrettyIdAuctionApi(): PrettyIdAuctionApi {
     bid: (id, amount) => call<PrettyIdAuctionBidResult>(`/pretty-id/auctions/${id}/bid`, { method: 'POST', body: { amount } }),
     unseenWins: () => call<PrettyIdAuctionUnseenWin[]>('/pretty-id/auctions/wins/unseen'),
     markWinSeen: id => call<PrettyIdAuctionWinSeenResult>(`/pretty-id/auctions/wins/${id}/seen`, { method: 'POST' }),
+    winners: month => call<PrettyIdAuctionWinnersBoard>(historyUrl('winners', month)),
+    weekly: month => call<PrettyIdAuctionWeeklyRecord>(historyUrl('weekly', month)),
   }
 }

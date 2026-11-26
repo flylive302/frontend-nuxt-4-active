@@ -7,13 +7,15 @@ import {
   parsePrettyIdBidAmount,
   sanitizePrettyIdBidText,
   nextPrettyIdAuctionPollDelayMs,
+  prettyIdAuctionCardRoute,
   prettyIdAuctionRoute,
   prettyIdClockOffset,
   prettyIdProfileRoute,
   prettyIdRareFontPx,
   prettyIdRareWinView,
+  prettyIdWinnerProfileRoute,
 } from '~/utils/pretty-id-auction'
-import { HOUR, iso, makeCard, MINUTE, SERVER_NOW_MS } from '../helpers/prettyIdAuctionFixtures'
+import { HOUR, iso, makeCard, makeHistoryWinner, MINUTE, SERVER_NOW_MS } from '../helpers/prettyIdAuctionFixtures'
 
 describe('nextPrettyIdAuctionPollDelayMs', () => {
   const NOW = SERVER_NOW_MS
@@ -112,6 +114,42 @@ describe('prettyIdAuctionRoute / prettyIdProfileRoute', () => {
     expect(prettyIdProfileRoute('ABC123')).toBe('/profile/ABC123')
     expect(prettyIdProfileRoute(null)).toBeNull()
     expect(prettyIdProfileRoute('')).toBeNull()
+  })
+})
+
+describe('prettyIdAuctionCardRoute', () => {
+  it('sends a live or upcoming card to its auction page', () => {
+    expect(prettyIdAuctionCardRoute(makeCard({ id: 12, state: 'live' }))).toBe('/pretty-id/auction/12')
+    expect(prettyIdAuctionCardRoute(makeCard({ id: 13, state: 'upcoming' }))).toBe('/pretty-id/auction/13')
+  })
+
+  it('sends an ended card to the Weekly Record of the PKT month it ended in', () => {
+    expect(prettyIdAuctionCardRoute(makeCard({ state: 'ended', ends_at: '2026-10-15T10:00:00.000Z' })))
+      .toEqual({ path: '/pretty-id/weekly', query: { month: '2026-10' } })
+  })
+
+  it('uses the PKT month at a month edge, not the UTC one', () => {
+    // 20:00 UTC on 31 Oct is already 1 Nov in Pakistan.
+    expect(prettyIdAuctionCardRoute(makeCard({ state: 'ended', ends_at: '2026-10-31T20:00:00.000Z' })))
+      .toEqual({ path: '/pretty-id/weekly', query: { month: '2026-11' } })
+  })
+
+  it('falls back to the current month when the end time is unreadable', () => {
+    expect(prettyIdAuctionCardRoute(makeCard({ state: 'ended', ends_at: 'soon' }))).toEqual({ path: '/pretty-id/weekly' })
+  })
+})
+
+describe('prettyIdWinnerProfileRoute', () => {
+  it('opens the profile by Signature', () => {
+    expect(prettyIdWinnerProfileRoute(makeHistoryWinner({ id: 7, signature: 'SIG7' }))).toBe('/profile/SIG7')
+  })
+
+  it('has no link for a deleted account (no id), even if a Signature is left', () => {
+    expect(prettyIdWinnerProfileRoute(makeHistoryWinner({ id: null, signature: 'SIG7' }))).toBeNull()
+  })
+
+  it('has no link without a Signature', () => {
+    expect(prettyIdWinnerProfileRoute(makeHistoryWinner({ id: 7, signature: null }))).toBeNull()
   })
 })
 

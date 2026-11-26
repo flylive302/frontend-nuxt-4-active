@@ -12,6 +12,9 @@ import type {
   PrettyIdAuctionMe,
   PrettyIdAuctionSnapshot,
   PrettyIdAuctionUnseenWin,
+  PrettyIdAuctionWeeklyRecord,
+  PrettyIdAuctionWinnerEntry,
+  PrettyIdAuctionWinnersBoard,
 } from '~/types/pretty-id-auction'
 
 /**
@@ -51,6 +54,15 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
   const isCheckingWins = ref(false)
   /** The Rare ID win being celebrated app-wide; `null` when none is on screen. */
   const winCelebration = ref<PrettyIdAuctionUnseenWin | null>(null)
+
+  /** Big Winners of the month last loaded; `null` until the first load. Kept while the next month loads. */
+  const winners = ref<PrettyIdAuctionWinnersBoard | null>(null)
+  const isWinnersLoading = ref(false)
+  /** The winner shown in the bottom sheet. */
+  const selectedWinner = ref<PrettyIdAuctionWinnerEntry | null>(null)
+  /** Weekly Record of the month last loaded; `null` until the first load. */
+  const weekly = ref<PrettyIdAuctionWeeklyRecord | null>(null)
+  const isWeeklyLoading = ref(false)
 
   // ========================================
   // Setters
@@ -107,6 +119,26 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     winCelebration.value = value
   }
 
+  function setWinners(value: PrettyIdAuctionWinnersBoard | null): void {
+    winners.value = value
+  }
+
+  function setWinnersLoading(value: boolean): void {
+    isWinnersLoading.value = value
+  }
+
+  function setSelectedWinner(value: PrettyIdAuctionWinnerEntry | null): void {
+    selectedWinner.value = value
+  }
+
+  function setWeekly(value: PrettyIdAuctionWeeklyRecord | null): void {
+    weekly.value = value
+  }
+
+  function setWeeklyLoading(value: boolean): void {
+    isWeeklyLoading.value = value
+  }
+
   function reset(): void {
     auctions.value = []
     isAuctionsLoading.value = false
@@ -118,6 +150,11 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     shownWinIds.value = new Set()
     isCheckingWins.value = false
     winCelebration.value = null
+    winners.value = null
+    isWinnersLoading.value = false
+    selectedWinner.value = null
+    weekly.value = null
+    isWeeklyLoading.value = false
   }
 
   return {
@@ -130,6 +167,11 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     clockOffsetMs: readonly(clockOffsetMs),
     isCheckingWins: readonly(isCheckingWins),
     winCelebration: exposeReadonly(winCelebration),
+    winners: exposeReadonly(winners),
+    isWinnersLoading: readonly(isWinnersLoading),
+    selectedWinner: exposeReadonly(selectedWinner),
+    weekly: exposeReadonly(weekly),
+    isWeeklyLoading: readonly(isWeeklyLoading),
     setAuctions,
     setAuctionsLoading,
     setAuctionsFailed,
@@ -142,6 +184,11 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     hasShownWin,
     setCheckingWins,
     setWinCelebration,
+    setWinners,
+    setWinnersLoading,
+    setSelectedWinner,
+    setWeekly,
+    setWeeklyLoading,
     reset,
   }
 })

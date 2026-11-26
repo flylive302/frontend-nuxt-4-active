@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePrettyIdAuctionApi } from '~/composables/pretty-id/usePrettyIdAuctionApi'
 import { PrettyIdAuctionApiError } from '~/utils/pretty-id-auction-error'
-import { makeBidResult, makeEnterResult, makeList, makeMe, makeSnapshot } from '../../helpers/prettyIdAuctionFixtures'
+import { makeBidResult, makeEnterResult, makeList, makeMe, makeSnapshot, makeWeeklyRecord, makeWinnersBoard } from '../../helpers/prettyIdAuctionFixtures'
 
 const apiMock = vi.fn()
 
@@ -65,6 +65,35 @@ describe('usePrettyIdAuctionApi seam', () => {
     apiMock.mockResolvedValue({ data: { auction_id: 5, seen: true } })
     expect(await usePrettyIdAuctionApi().markWinSeen(5)).toEqual({ auction_id: 5, seen: true })
     expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/wins/5/seen', { method: 'POST' })
+  })
+
+  it('GETs /pretty-id/auctions/winners with no query for the current month and unwraps data', async () => {
+    const board = makeWinnersBoard()
+    apiMock.mockResolvedValue({ data: board })
+    expect(await usePrettyIdAuctionApi().winners()).toEqual(board)
+    expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/winners')
+  })
+
+  it('GETs /pretty-id/auctions/winners?month= for a given month', async () => {
+    apiMock.mockResolvedValue({ data: makeWinnersBoard({ month: '2026-10' }) })
+    await usePrettyIdAuctionApi().winners('2026-10')
+    expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/winners?month=2026-10')
+  })
+
+  it('GETs /pretty-id/auctions/weekly (with ?month= when given) and unwraps data', async () => {
+    const record = makeWeeklyRecord({ total_winning_bids: 42_500 })
+    apiMock.mockResolvedValue({ data: record })
+    expect(await usePrettyIdAuctionApi().weekly()).toEqual(record)
+    expect(apiMock).toHaveBeenLastCalledWith('/pretty-id/auctions/weekly')
+
+    await usePrettyIdAuctionApi().weekly('2026-09')
+    expect(apiMock).toHaveBeenLastCalledWith('/pretty-id/auctions/weekly?month=2026-09')
+  })
+
+  it('maps a 404 on the history routes to not_found', async () => {
+    apiMock.mockRejectedValue(httpError(404))
+    await expect(usePrettyIdAuctionApi().winners()).rejects.toMatchObject({ code: 'not_found' })
+    await expect(usePrettyIdAuctionApi().weekly('2026-10')).rejects.toMatchObject({ code: 'not_found' })
   })
 
   it('maps a 404 on the wins routes to not_found', async () => {

@@ -15,7 +15,13 @@ import {
 } from '~/constants/pretty-id-auction'
 import { PRETTY_ID_ROUTES } from '~/constants/pretty-id'
 import { formatPrettyIdDays } from '~/utils/pretty-id-format'
-import type { PrettyIdAuctionCard, PrettyIdAuctionState, PrettyIdAuctionUnseenWin } from '~/types/pretty-id-auction'
+import { prettyIdHistoryRoute, prettyIdPktMonth } from '~/utils/pretty-id-history'
+import type {
+  PrettyIdAuctionCard,
+  PrettyIdAuctionHistoryWinner,
+  PrettyIdAuctionState,
+  PrettyIdAuctionUnseenWin,
+} from '~/types/pretty-id-auction'
 
 export interface PrettyIdAuctionTiming {
   state: PrettyIdAuctionState
@@ -34,6 +40,16 @@ export function parsePrettyIdAuctionId(raw: unknown): number | null {
 /** The page of one auction. */
 export function prettyIdAuctionRoute(id: number): string {
   return `${PRETTY_ID_ROUTES.auction}/${id}`
+}
+
+/**
+ * Where a tap on an auction card goes: an ended auction to the Weekly Record of the PKT month it
+ * ended in (the current month when its end time is unreadable), anything else to its auction page.
+ */
+export function prettyIdAuctionCardRoute(card: Pick<PrettyIdAuctionCard, 'id' | 'state' | 'ends_at'>): ReturnType<typeof prettyIdHistoryRoute> | string {
+  return card.state === 'ended'
+    ? prettyIdHistoryRoute('weekly', prettyIdPktMonth(card.ends_at))
+    : prettyIdAuctionRoute(card.id)
 }
 
 /**
@@ -108,6 +124,11 @@ export function prettyIdRareFontPx(rareId: string, sizes: { max: number; min: nu
 /** A user's profile page, or `null` when they have no Signature to open it by. */
 export function prettyIdProfileRoute(signature: string | null): string | null {
   return signature ? `/profile/${encodeURIComponent(signature)}` : null
+}
+
+/** A history winner's profile page, or `null` when there is none (a deleted account has no id; no Signature, nothing to open it by). */
+export function prettyIdWinnerProfileRoute(winner: Pick<PrettyIdAuctionHistoryWinner, 'id' | 'signature'>): string | null {
+  return winner.id === null ? null : prettyIdProfileRoute(winner.signature)
 }
 
 // ========================================

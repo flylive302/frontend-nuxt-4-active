@@ -10,10 +10,15 @@ import type {
   PrettyIdAuctionBidResult,
   PrettyIdAuctionCard,
   PrettyIdAuctionEnterResult,
+  PrettyIdAuctionHistoryWinner,
   PrettyIdAuctionList,
   PrettyIdAuctionMe,
   PrettyIdAuctionSnapshot,
   PrettyIdAuctionUser,
+  PrettyIdAuctionWeeklyRecord,
+  PrettyIdAuctionWeeklyRow,
+  PrettyIdAuctionWinnerEntry,
+  PrettyIdAuctionWinnersBoard,
 } from '../../app/types/pretty-id-auction'
 
 /** Fixed "server now" used by the builders (ISO, ms precision). */
@@ -101,6 +106,8 @@ export function createAuctionApiMock() {
     bid: vi.fn(),
     unseenWins: vi.fn(),
     markWinSeen: vi.fn(),
+    winners: vi.fn(),
+    weekly: vi.fn(),
   }
 }
 
@@ -116,4 +123,46 @@ export function resetAuctionApiMock(api: AuctionApiMock): void {
   api.bid.mockResolvedValue(makeBidResult())
   api.unseenWins.mockResolvedValue([])
   api.markWinSeen.mockResolvedValue({ auction_id: 1, seen: true })
+  api.winners.mockResolvedValue(makeWinnersBoard())
+  api.weekly.mockResolvedValue(makeWeeklyRecord())
+}
+
+// ----------------------------------------
+// History pages (Big Winners, Weekly Record)
+// ----------------------------------------
+
+export function makeHistoryWinner(overrides: Partial<PrettyIdAuctionHistoryWinner> = {}): PrettyIdAuctionHistoryWinner {
+  return { id: 7, name: 'User 7', avatar: null, signature: 'SIG7', ...overrides }
+}
+
+export function makeWinnerEntry(overrides: Partial<PrettyIdAuctionWinnerEntry> = {}): PrettyIdAuctionWinnerEntry {
+  return {
+    auction_id: 1,
+    rare_id: '007',
+    winning_bid: 250_000,
+    ended_at: '2026-11-20T09:00:00.000Z',
+    winner: makeHistoryWinner(),
+    ...overrides,
+  }
+}
+
+export function makeWinnersBoard(overrides: Partial<PrettyIdAuctionWinnersBoard> = {}): PrettyIdAuctionWinnersBoard {
+  return { month: '2026-11', months: ['2026-11', '2026-10'], winners: [], ...overrides }
+}
+
+export function makeWeeklyRow(overrides: Partial<PrettyIdAuctionWeeklyRow> = {}): PrettyIdAuctionWeeklyRow {
+  return {
+    auction_id: 1,
+    rare_id: '007',
+    winner: makeHistoryWinner(),
+    winning_bid: 250_000,
+    bidder_count: 3,
+    keep_days: 7,
+    ended_at: '2026-11-20T09:00:00.000Z',
+    ...overrides,
+  }
+}
+
+export function makeWeeklyRecord(overrides: Partial<PrettyIdAuctionWeeklyRecord> = {}): PrettyIdAuctionWeeklyRecord {
+  return { month: '2026-11', months: ['2026-11', '2026-10'], total_winning_bids: 0, weeks: [], ...overrides }
 }

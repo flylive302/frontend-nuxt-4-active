@@ -139,6 +139,73 @@ export interface PrettyIdAuctionWinSeenResult {
   seen: true
 }
 
+// ----------------------------------------
+// History pages (pretty-id-step2 12): Big Winners + Weekly Record
+// ----------------------------------------
+//
+// One PKT (Asia/Karachi) month per call; `month` and `months` are `YYYY-MM`.
+// `months` lists the months that have finished auctions, newest first, and
+// always includes the current one. Cancelled auctions are on neither page.
+
+/**
+ * The winner on a history row. `id` is `null` for a winner whose account is gone
+ * (the name is then a placeholder): no profile link is drawn.
+ */
+export interface PrettyIdAuctionHistoryWinner {
+  id: number | null
+  name: string
+  avatar: string | null
+  /** What the profile is opened by (`/profile/:signature`); `null` when there is no profile. */
+  signature: string | null
+}
+
+/** One winning auction on Big Winners. */
+export interface PrettyIdAuctionWinnerEntry {
+  auction_id: number
+  rare_id: string
+  winning_bid: number
+  /** The auction's actual end. */
+  ended_at: string
+  winner: PrettyIdAuctionHistoryWinner
+}
+
+/** `GET /pretty-id/auctions/winners?month=YYYY-MM`: winners newest first. */
+export interface PrettyIdAuctionWinnersBoard {
+  month: string
+  months: string[]
+  winners: PrettyIdAuctionWinnerEntry[]
+}
+
+/** One finished auction on the Weekly Record. */
+export interface PrettyIdAuctionWeeklyRow {
+  auction_id: number
+  rare_id: string
+  /** `null` = ended with no winner. */
+  winner: PrettyIdAuctionHistoryWinner | null
+  /** `null` when there is no winner. */
+  winning_bid: number | null
+  bidder_count: number
+  keep_days: number
+  ended_at: string
+}
+
+/** A Monday-start week clipped to its month; `starts_on` / `ends_on` are PKT dates (`YYYY-MM-DD`). */
+export interface PrettyIdAuctionWeeklyWeek {
+  starts_on: string
+  ends_on: string
+  /** Newest first. */
+  auctions: PrettyIdAuctionWeeklyRow[]
+}
+
+/** `GET /pretty-id/auctions/weekly?month=YYYY-MM`: weeks newest first, empty weeks omitted. */
+export interface PrettyIdAuctionWeeklyRecord {
+  month: string
+  months: string[]
+  /** Sum of the month's winning bids (no-winner and cancelled auctions add nothing). */
+  total_winning_bids: number
+  weeks: PrettyIdAuctionWeeklyWeek[]
+}
+
 /** The auction API seam (`usePrettyIdAuctionApi`). Rejects with `PrettyIdAuctionApiError`. */
 export interface PrettyIdAuctionApi {
   auctions: () => Promise<PrettyIdAuctionList>
@@ -150,4 +217,8 @@ export interface PrettyIdAuctionApi {
   unseenWins: () => Promise<PrettyIdAuctionUnseenWin[]>
   /** Idempotent. 404 when the caller is not that auction's winner. */
   markWinSeen: (id: number) => Promise<PrettyIdAuctionWinSeenResult>
+  /** Big Winners of a PKT month (`YYYY-MM`); omitted = the current month. */
+  winners: (month?: string) => Promise<PrettyIdAuctionWinnersBoard>
+  /** Weekly Record of a PKT month (`YYYY-MM`); omitted = the current month. */
+  weekly: (month?: string) => Promise<PrettyIdAuctionWeeklyRecord>
 }

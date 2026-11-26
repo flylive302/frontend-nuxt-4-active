@@ -4,10 +4,14 @@
  * first), then Upcoming (starting soonest first), then the recently ended, in
  * the order the server sends them. Mounted by <PrettyIdAuctionTab> only while
  * the auction switch is on; the refetching is `usePrettyIdAuctionsPolling`
- * (called there), and a tap on a card just navigates to its page.
+ * (called there), and a tap on a card just navigates: live and upcoming cards to their
+ * auction page, an ended one to the Weekly Record of the month it ended in. Two chips open
+ * Big Winners and the Weekly Record.
  */
 import { usePrettyIdAuctionStore } from '~/stores/prettyIdAuction'
-import { groupPrettyIdAuctions, prettyIdAuctionRoute } from '~/utils/pretty-id-auction'
+import type { PrettyIdAuctionCard } from '~/types/pretty-id-auction'
+import { groupPrettyIdAuctions, prettyIdAuctionCardRoute } from '~/utils/pretty-id-auction'
+import { prettyIdHistoryRoute } from '~/utils/pretty-id-history'
 
 // Config
 const emit = defineEmits<{
@@ -34,14 +38,23 @@ const isSkeletonShown = computed(() => store.isAuctionsLoading && !store.isAucti
 const isFailed = computed(() => store.isAuctionsFailed && !store.isAuctionsLoading)
 
 // Handlers
-function openAuction(auctionId: number): void {
-  void navigateTo(prettyIdAuctionRoute(auctionId))
+function openAuction(auction: PrettyIdAuctionCard): void {
+  void navigateTo(prettyIdAuctionCardRoute(auction))
+}
+
+function openHistory(kind: 'winners' | 'weekly'): void {
+  void navigateTo(prettyIdHistoryRoute(kind))
 }
 </script>
 
 <template>
   <PrettyIdPanel title="Rare ID Auction">
     <PrettyIdAuctionAlertsToggle />
+
+    <nav class="my-2 flex flex-wrap justify-center gap-2" aria-label="Auction history">
+      <PrettyIdChip @click="openHistory('winners')">Big Winners</PrettyIdChip>
+      <PrettyIdChip @click="openHistory('weekly')">Weekly Record</PrettyIdChip>
+    </nav>
 
     <div v-if="isSkeletonShown" aria-busy="true">
       <div

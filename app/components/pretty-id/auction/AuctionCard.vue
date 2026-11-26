@@ -4,8 +4,8 @@
  * state. Live: countdown to the actual end ("Finalizing…" once it has passed)
  * and the top bid. Upcoming: countdown
  * to the start and the terms (entry fee, opening bid, keep-period). Ended: the
- * closing bid. A single tap target; it emits `open` and the parent decides where
- * that goes.
+ * closing bid. A single tap target; it emits `open` with its auction and the parent decides
+ * where that goes.
  */
 import type { PrettyIdAuctionCard } from '~/types/pretty-id-auction'
 import { formatCoins } from '~/utils/currency'
@@ -18,7 +18,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  open: [auctionId: number]
+  open: [auction: PrettyIdAuctionCard]
 }>()
 
 // Constants
@@ -56,7 +56,7 @@ const label = computed(() => {
     type="button"
     class="pid-acard cursor-pointer transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--pid-gold) active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
     :aria-label="label"
-    @click="emit('open', auction.id)"
+    @click="emit('open', auction)"
   >
     <span class="pid-acard__id">
       <span class="pid-num pid-gold" :style="{ fontSize: rareIdFontSize }">{{ auction.rare_id }}</span>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, readonly, ref } from 'vue'
-import { makeCard, makeMe, makeSnapshot } from '../helpers/prettyIdAuctionFixtures'
+import { makeCard, makeMe, makeSnapshot, makeWeeklyRecord, makeWinnerEntry, makeWinnersBoard } from '../helpers/prettyIdAuctionFixtures'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
@@ -70,6 +70,47 @@ describe('prettyIdAuction store', () => {
     expect(store.clockOffsetMs).toBe(-7_500)
   })
 
+  it('starts with no winners board, weekly record or selected winner', async () => {
+    const store = await makeStore()
+    expect(store.winners).toBeNull()
+    expect(store.weekly).toBeNull()
+    expect(store.selectedWinner).toBeNull()
+    expect(store.isWinnersLoading).toBe(false)
+    expect(store.isWeeklyLoading).toBe(false)
+  })
+
+  it('setWinners replaces the board and keeps its months', async () => {
+    const store = await makeStore()
+    store.setWinners(makeWinnersBoard({ month: '2026-11', winners: [makeWinnerEntry({ auction_id: 2 })] }))
+    store.setWinners(makeWinnersBoard({ month: '2026-10', months: ['2026-11', '2026-10', '2026-09'] }))
+    expect(store.winners?.month).toBe('2026-10')
+    expect(store.winners?.months).toEqual(['2026-11', '2026-10', '2026-09'])
+    expect(store.winners?.winners).toEqual([])
+  })
+
+  it('setWeekly replaces the record and keeps the total', async () => {
+    const store = await makeStore()
+    store.setWeekly(makeWeeklyRecord({ total_winning_bids: 1_000 }))
+    store.setWeekly(makeWeeklyRecord({ month: '2026-10', total_winning_bids: 42_500 }))
+    expect(store.weekly?.month).toBe('2026-10')
+    expect(store.weekly?.total_winning_bids).toBe(42_500)
+  })
+
+  it('the history loading flags and the selected winner flip independently', async () => {
+    const store = await makeStore()
+    store.setWinnersLoading(true)
+    expect(store.isWinnersLoading).toBe(true)
+    expect(store.isWeeklyLoading).toBe(false)
+    store.setWeeklyLoading(true)
+    expect(store.isWeeklyLoading).toBe(true)
+
+    const entry = makeWinnerEntry({ auction_id: 8 })
+    store.setSelectedWinner(entry)
+    expect(store.selectedWinner).toEqual(entry)
+    store.setSelectedWinner(null)
+    expect(store.selectedWinner).toBeNull()
+  })
+
   it('reset clears everything', async () => {
     const store = await makeStore()
     store.setAuctions([makeCard()])
@@ -77,6 +118,11 @@ describe('prettyIdAuction store', () => {
     store.setMyStanding(1, makeMe())
     store.setClockOffsetMs(500)
     store.setAuctionsFailed(true)
+    store.setWinners(makeWinnersBoard())
+    store.setWeekly(makeWeeklyRecord())
+    store.setSelectedWinner(makeWinnerEntry())
+    store.setWinnersLoading(true)
+    store.setWeeklyLoading(true)
     store.reset()
     expect(store.auctions).toEqual([])
     expect(store.isAuctionsLoaded).toBe(false)
@@ -84,5 +130,10 @@ describe('prettyIdAuction store', () => {
     expect(store.snapshotById(1)).toBeUndefined()
     expect(store.myStandingById(1)).toBeUndefined()
     expect(store.clockOffsetMs).toBe(0)
+    expect(store.winners).toBeNull()
+    expect(store.weekly).toBeNull()
+    expect(store.selectedWinner).toBeNull()
+    expect(store.isWinnersLoading).toBe(false)
+    expect(store.isWeeklyLoading).toBe(false)
   })
 })

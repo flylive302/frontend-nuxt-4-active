@@ -18,6 +18,10 @@ export const PRETTY_ID_ROUTES = {
   /** The Choose ID tab. A stable path that never redirects, so back-navigation lands here untouched. */
   choose: '/pretty-id/choose',
   auction: '/pretty-id/auction',
+  /** Big Winners: finished auctions with a winner, by month. Auction-switch gated. */
+  winners: '/pretty-id/winners',
+  /** Weekly Record: every finished auction by week, by month. Auction-switch gated. */
+  weekly: '/pretty-id/weekly',
 } as const
 
 /** Outside the event: the wealth levels page ("How to level up"). */
