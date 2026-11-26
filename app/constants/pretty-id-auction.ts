@@ -40,3 +40,16 @@ export const PRETTY_ID_AUCTION_CLOCK_TICK_MS = 1_000
 
 /** Bidders listed on the auction page (the server sends at most this many). */
 export const PRETTY_ID_AUCTION_BIDDERS_SHOWN = 8
+
+// ========================================
+// Bidding
+// ========================================
+
+/** Quick-add chips raise the bid field by these many coins (PRD story 16: +50K, +100K, +500K). */
+export const PRETTY_ID_AUCTION_BID_CHIPS: readonly number[] = [50_000, 100_000, 500_000]
+
+/** A bid above this many times the current minimum gets a red warning in the confirm dialog. */
+export const PRETTY_ID_AUCTION_BID_WARN_MULTIPLE = 10
+
+/** The bid field takes at most this many digits (keeps every amount a safe integer). */
+export const PRETTY_ID_AUCTION_BID_MAX_DIGITS = 12

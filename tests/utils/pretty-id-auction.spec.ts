@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   parsePrettyIdAuctionId,
   groupPrettyIdAuctions,
+  isPrettyIdBidSuspicious,
+  parsePrettyIdBidAmount,
+  sanitizePrettyIdBidText,
   nextPrettyIdAuctionPollDelayMs,
   prettyIdAuctionRoute,
   prettyIdClockOffset,
@@ -133,4 +136,35 @@ describe('parsePrettyIdAuctionId', () => {
       expect(parsePrettyIdAuctionId(raw)).toBeNull()
     },
   )
+})
+
+describe('bid amount helpers', () => {
+  it.each([
+    ['2,500,000', '2500000'],
+    ['abc', ''],
+    ['', ''],
+    ['0012', '12'],
+    ['1.5', '15'],
+    ['9'.repeat(20), '9'.repeat(12)],
+  ])('sanitizePrettyIdBidText(%j) keeps %j', (raw, kept) => {
+    expect(sanitizePrettyIdBidText(raw)).toBe(kept)
+  })
+
+  it.each([
+    ['100000', 100_000],
+    ['1', 1],
+    ['', null],
+    ['0', null],
+    ['12a', null],
+    ['-5', null],
+    ['1.5', null],
+  ])('parsePrettyIdBidAmount(%j) is %j', (text, amount) => {
+    expect(parsePrettyIdBidAmount(text)).toBe(amount)
+  })
+
+  it('warns only above ten times the minimum (exactly ten times is fine)', () => {
+    expect(isPrettyIdBidSuspicious(1_000_000, 100_000)).toBe(false)
+    expect(isPrettyIdBidSuspicious(1_000_001, 100_000)).toBe(true)
+    expect(isPrettyIdBidSuspicious(100_000, 100_000)).toBe(false)
+  })
 })

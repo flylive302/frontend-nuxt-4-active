@@ -89,15 +89,30 @@ export interface PrettyIdAuctionEnterResult extends PrettyIdAuctionMe {
 }
 
 /**
+ * `POST /pretty-id/auctions/{id}/bid` success: the fresh public snapshot (same shape as
+ * `GET /pretty-id/auctions/{id}`, including `server_now`) and the bidder's new coin balance.
+ */
+export interface PrettyIdAuctionBidResult {
+  auction: PrettyIdAuctionSnapshot
+  /** The bidder's coin balance after the hold. */
+  coins: number
+}
+
+/**
  * Why an auction call was refused: a 404 (unknown id, or the auction switch is off), one of the
- * `errors.error_code` refusals of `enter`, or anything else.
+ * `errors.error_code` refusals of `enter` / `bid`, or anything else.
  */
 export type PrettyIdAuctionErrorCode =
   | 'not_found'
   | 'staff_not_allowed'
   | 'disqualified'
   | 'auction_not_live'
+  | 'auction_ended'
   | 'already_entered'
+  | 'entry_required'
+  | 'already_highest'
+  | 'bid_too_low'
+  | 'invalid'
   | 'insufficient_coins'
   | 'unknown'
 
@@ -113,4 +128,5 @@ export interface PrettyIdAuctionApi {
   auction: (id: number) => Promise<PrettyIdAuctionSnapshot>
   auctionMe: (id: number) => Promise<PrettyIdAuctionMe>
   enter: (id: number) => Promise<PrettyIdAuctionEnterResult>
+  bid: (id: number, amount: number) => Promise<PrettyIdAuctionBidResult>
 }

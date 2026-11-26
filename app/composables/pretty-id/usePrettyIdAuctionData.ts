@@ -119,5 +119,5 @@ export function usePrettyIdAuctionData() {
     }
   }
 
-  return { loadAuctions, loadAuction, loadAuctionMe }
+  return { loadAuctions, loadAuction, loadAuctionMe, applySnapshot }
 }

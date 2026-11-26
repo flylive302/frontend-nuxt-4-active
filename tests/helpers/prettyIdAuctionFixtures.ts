@@ -7,6 +7,7 @@
 import { vi } from 'vitest'
 import type {
   PrettyIdAuctionBid,
+  PrettyIdAuctionBidResult,
   PrettyIdAuctionCard,
   PrettyIdAuctionEnterResult,
   PrettyIdAuctionList,
@@ -86,6 +87,10 @@ export function makeEnterResult(overrides: Partial<PrettyIdAuctionEnterResult> =
   return { entered: true, disqualified: false, may_bid: true, fee_paid: 5_000, coins: 95_000, ...overrides }
 }
 
+export function makeBidResult(overrides: Partial<PrettyIdAuctionBidResult> = {}): PrettyIdAuctionBidResult {
+  return { auction: makeSnapshot(), coins: 90_000, ...overrides }
+}
+
 /** One `vi.fn()` per `PrettyIdAuctionApi` method. Reset it in `beforeEach` with `resetAuctionApiMock`. */
 export function createAuctionApiMock() {
   return {
@@ -93,6 +98,7 @@ export function createAuctionApiMock() {
     auction: vi.fn(),
     auctionMe: vi.fn(),
     enter: vi.fn(),
+    bid: vi.fn(),
   }
 }
 
@@ -105,4 +111,5 @@ export function resetAuctionApiMock(api: AuctionApiMock): void {
   api.auction.mockResolvedValue(makeSnapshot())
   api.auctionMe.mockResolvedValue(makeMe())
   api.enter.mockResolvedValue(makeEnterResult())
+  api.bid.mockResolvedValue(makeBidResult())
 }

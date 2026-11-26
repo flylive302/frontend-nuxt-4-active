@@ -9,6 +9,7 @@
 import { useApi } from '~/composables/shared/useApi'
 import type {
   PrettyIdAuctionApi,
+  PrettyIdAuctionBidResult,
   PrettyIdAuctionEnterResult,
   PrettyIdAuctionList,
   PrettyIdAuctionMe,
@@ -38,5 +39,6 @@ export function usePrettyIdAuctionApi(): PrettyIdAuctionApi {
     auction: id => call<PrettyIdAuctionSnapshot>(`/pretty-id/auctions/${id}`),
     auctionMe: id => call<PrettyIdAuctionMe>(`/pretty-id/auctions/${id}/me`),
     enter: id => call<PrettyIdAuctionEnterResult>(`/pretty-id/auctions/${id}/enter`, { method: 'POST' }),
+    bid: (id, amount) => call<PrettyIdAuctionBidResult>(`/pretty-id/auctions/${id}/bid`, { method: 'POST', body: { amount } }),
   }
 }

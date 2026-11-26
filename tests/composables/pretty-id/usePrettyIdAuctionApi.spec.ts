@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePrettyIdAuctionApi } from '~/composables/pretty-id/usePrettyIdAuctionApi'
 import { PrettyIdAuctionApiError } from '~/utils/pretty-id-auction-error'
-import { makeEnterResult, makeList, makeMe, makeSnapshot } from '../../helpers/prettyIdAuctionFixtures'
+import { makeBidResult, makeEnterResult, makeList, makeMe, makeSnapshot } from '../../helpers/prettyIdAuctionFixtures'
 
 const apiMock = vi.fn()
 
@@ -45,6 +45,21 @@ describe('usePrettyIdAuctionApi seam', () => {
     apiMock.mockResolvedValue({ data: result })
     expect(await usePrettyIdAuctionApi().enter(42)).toEqual(result)
     expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/42/enter', { method: 'POST' })
+  })
+
+  it('POSTs /pretty-id/auctions/{id}/bid with { amount } and unwraps data', async () => {
+    const result = makeBidResult({ coins: 12_345 })
+    apiMock.mockResolvedValue({ data: result })
+    expect(await usePrettyIdAuctionApi().bid(42, 250_000)).toEqual(result)
+    expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/42/bid', { method: 'POST', body: { amount: 250_000 } })
+  })
+
+  it('maps a bid refusal to its error_code and carries min_next_bid on bid_too_low', async () => {
+    apiMock.mockRejectedValue({
+      message: 'Too low',
+      response: { status: 409, _data: { status: 'error', message: 'Too low', data: null, errors: { error_code: 'bid_too_low', min_next_bid: 150_000 } } },
+    })
+    await expect(usePrettyIdAuctionApi().bid(1, 1)).rejects.toMatchObject({ code: 'bid_too_low', minNextBid: 150_000 })
   })
 
   it('maps an enter refusal to its error_code', async () => {

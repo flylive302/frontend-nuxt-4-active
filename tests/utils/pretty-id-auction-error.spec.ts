@@ -19,10 +19,28 @@ describe('toPrettyIdAuctionError', () => {
     ['auction_not_live', 409, 'This auction is not live right now.'],
     ['already_entered', 409, 'You have already entered this auction.'],
     ['insufficient_coins', 422, 'Not enough coins to pay the entry fee.'],
+    ['auction_ended', 409, 'This auction has ended.'],
+    ['entry_required', 403, 'Pay the entry fee to bid.'],
+    ['already_highest', 409, 'You are already the highest bidder.'],
+    ['bid_too_low', 409, 'Someone bid first. Your bid is now too low.'],
+    ['invalid', 422, 'Enter a whole number of coins.'],
   ])('maps error_code %s (HTTP %i) to its code and message', (code, status, message) => {
     const error = toPrettyIdAuctionError(httpError(status, code))
     expect(error).toBeInstanceOf(PrettyIdAuctionApiError)
     expect(error).toMatchObject({ code, message })
+  })
+
+  it('reads min_next_bid off a bid_too_low refusal', () => {
+    const body = { status: 'error', message: 'x', data: null, errors: { error_code: 'bid_too_low', min_next_bid: 200_000 } }
+    const error = toPrettyIdAuctionError({ message: 'x', response: { status: 409, _data: body } })
+    expect(error).toMatchObject({ code: 'bid_too_low', minNextBid: 200_000 })
+  })
+
+  it.each([[0], [-5], [1.5], ['200000'], [undefined]])('ignores a bad min_next_bid (%s)', (value) => {
+    const body = { errors: { error_code: 'bid_too_low', min_next_bid: value } }
+    const error = toPrettyIdAuctionError({ message: 'x', response: { status: 409, _data: body } })
+    expect(error.code).toBe('bid_too_low')
+    expect(error.minNextBid).toBeUndefined()
   })
 
   it('maps a 404 to not_found by status alone (no error_code)', () => {

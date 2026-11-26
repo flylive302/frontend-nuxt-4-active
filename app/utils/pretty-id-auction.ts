@@ -6,6 +6,8 @@
 // without timers: callers pass SERVER time (`Date.now() + clockOffsetMs`).
 
 import {
+  PRETTY_ID_AUCTION_BID_MAX_DIGITS,
+  PRETTY_ID_AUCTION_BID_WARN_MULTIPLE,
   PRETTY_ID_AUCTION_FAST_WINDOW_MS,
   PRETTY_ID_AUCTION_POLL_FAST_MS,
   PRETTY_ID_AUCTION_POLL_SLOW_MS,
@@ -90,4 +92,25 @@ export function prettyIdRareFontPx(rareId: string, sizes: { max: number; min: nu
 /** A user's profile page, or `null` when they have no Signature to open it by. */
 export function prettyIdProfileRoute(signature: string | null): string | null {
   return signature ? `/profile/${encodeURIComponent(signature)}` : null
+}
+
+// ========================================
+// Bid amounts
+// ========================================
+
+/** What a typed bid keeps: digits only, no leading zeros, capped in length. `''` when nothing usable is left. */
+export function sanitizePrettyIdBidText(raw: string): string {
+  return raw.replace(/\D/g, '').replace(/^0+/, '').slice(0, PRETTY_ID_AUCTION_BID_MAX_DIGITS)
+}
+
+/** The whole-coin amount in a bid field's text, or `null` when it is empty / not a positive whole number. */
+export function parsePrettyIdBidAmount(text: string): number | null {
+  if (!/^\d+$/.test(text)) return null
+  const amount = Number(text)
+  return Number.isSafeInteger(amount) && amount > 0 ? amount : null
+}
+
+/** True when a bid is more than ten times the current minimum: likely a typo, the dialog warns in red. */
+export function isPrettyIdBidSuspicious(amount: number, minNextBid: number): boolean {
+  return amount > minNextBid * PRETTY_ID_AUCTION_BID_WARN_MULTIPLE
 }

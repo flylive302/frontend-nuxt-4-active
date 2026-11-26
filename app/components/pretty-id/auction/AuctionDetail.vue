@@ -2,8 +2,8 @@
 /**
  * One auction, view only: summary (Rare ID, countdown, terms), the leader and
  * the bidders, or the result once ended. Mounted by <PrettyIdAuctionView> for a
- * valid id; polls the auction while it is on screen. Entering is in
- * <PrettyIdAuctionEntry>; bidding arrives with ticket 07.
+ * valid id; polls the auction while it is on screen. Entering and
+ * bidding are in <PrettyIdAuctionEntry> (-> <PrettyIdAuctionBidArea>).
  *
  * `status` tells "no such auction" (404) from "could not load": only the first
  * shows the not-found view, the second offers a retry.
