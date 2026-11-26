@@ -26,6 +26,9 @@ export const PRETTY_ID_LEVELS_ROUTE = '/levels/wealth'
 /** Outside the event: My Props, opened on the signature tab ("View in My Props"). */
 export const PRETTY_ID_MY_PROPS_ROUTE = { path: '/mall/my-props', query: { type: 'signature' } } as const
 
+/** Outside the event: the Buy coins page ("Top up" when the entry fee is more than the balance). */
+export const PRETTY_ID_TOP_UP_ROUTE = '/coins/request'
+
 /** Where the top-bar back button leaves the event from a tab page. */
 export const PRETTY_ID_EXIT_ROUTE = '/'
 

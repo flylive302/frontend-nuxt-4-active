@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePrettyIdAuctionApi } from '~/composables/pretty-id/usePrettyIdAuctionApi'
 import { PrettyIdAuctionApiError } from '~/utils/pretty-id-auction-error'
-import { makeList, makeMe, makeSnapshot } from '../../helpers/prettyIdAuctionFixtures'
+import { makeEnterResult, makeList, makeMe, makeSnapshot } from '../../helpers/prettyIdAuctionFixtures'
 
 const apiMock = vi.fn()
 
@@ -38,6 +38,26 @@ describe('usePrettyIdAuctionApi seam', () => {
     apiMock.mockResolvedValue({ data: me })
     expect(await usePrettyIdAuctionApi().auctionMe(42)).toEqual(me)
     expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/42/me')
+  })
+
+  it('POSTs /pretty-id/auctions/{id}/enter with no body and unwraps data', async () => {
+    const result = makeEnterResult({ fee_paid: 5_000, coins: 95_000 })
+    apiMock.mockResolvedValue({ data: result })
+    expect(await usePrettyIdAuctionApi().enter(42)).toEqual(result)
+    expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/42/enter', { method: 'POST' })
+  })
+
+  it('maps an enter refusal to its error_code', async () => {
+    apiMock.mockRejectedValue({
+      message: 'Not enough coins',
+      response: { status: 422, _data: { status: 'error', message: 'Not enough coins', data: null, errors: { error_code: 'insufficient_coins' } } },
+    })
+    await expect(usePrettyIdAuctionApi().enter(1)).rejects.toMatchObject({ code: 'insufficient_coins' })
+  })
+
+  it('maps an HTTP 404 on enter to not_found', async () => {
+    apiMock.mockRejectedValue(httpError(404))
+    await expect(usePrettyIdAuctionApi().enter(1)).rejects.toMatchObject({ code: 'not_found' })
   })
 
   describe('error mapping', () => {

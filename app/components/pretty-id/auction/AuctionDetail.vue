@@ -2,8 +2,8 @@
 /**
  * One auction, view only: summary (Rare ID, countdown, terms), the leader and
  * the bidders, or the result once ended. Mounted by <PrettyIdAuctionView> for a
- * valid id; polls the auction while it is on screen. Entering and bidding
- * arrive with later tickets (06, 07).
+ * valid id; polls the auction while it is on screen. Entering is in
+ * <PrettyIdAuctionEntry>; bidding arrives with ticket 07.
  *
  * `status` tells "no such auction" (404) from "could not load": only the first
  * shows the not-found view, the second offers a retry.
@@ -33,10 +33,12 @@ const result = computed(() => auction.value?.result ?? null)
   <div v-else-if="auction">
     <PrettyIdPanel title="Rare ID">
       <PrettyIdAuctionSummary :auction="auction" />
-      <p v-if="myStanding?.disqualified" class="pid-body pid-small mt-2 text-center">
+      <p v-if="myStanding?.disqualified && auction.state !== 'live'" class="pid-body pid-small mt-2 text-center">
         You were removed from this auction.
       </p>
     </PrettyIdPanel>
+
+    <PrettyIdAuctionEntry v-if="auction.state === 'live'" :auction="auction" />
 
     <PrettyIdPanel v-if="auction.state === 'live' && auction.leader" title="Leading">
       <PrettyIdAuctionLeader :leader="auction.leader" />

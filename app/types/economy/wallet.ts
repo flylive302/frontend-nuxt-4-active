@@ -92,6 +92,7 @@ export type TransactionType =
   | 'game_bet'
   | 'game_win'
   | 'lucky_payout'
+  | 'rare_id_entry_fee'
   | 'manual_adjustment'
   | 'diamond_deduction'
   | 'diamond_to_coin_conversion'

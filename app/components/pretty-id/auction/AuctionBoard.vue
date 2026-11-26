@@ -41,6 +41,8 @@ function openAuction(auctionId: number): void {
 
 <template>
   <PrettyIdPanel title="Rare ID Auction">
+    <PrettyIdAuctionAlertsToggle />
+
     <div v-if="isSkeletonShown" aria-busy="true">
       <div
         v-for="n in SKELETON_COUNT"

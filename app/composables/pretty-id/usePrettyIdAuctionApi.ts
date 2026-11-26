@@ -9,6 +9,7 @@
 import { useApi } from '~/composables/shared/useApi'
 import type {
   PrettyIdAuctionApi,
+  PrettyIdAuctionEnterResult,
   PrettyIdAuctionList,
   PrettyIdAuctionMe,
   PrettyIdAuctionSnapshot,
@@ -22,9 +23,10 @@ interface Envelope<T> {
 export function usePrettyIdAuctionApi(): PrettyIdAuctionApi {
   const { api } = useApi()
 
-  async function call<T>(url: string): Promise<T> {
+  async function call<T>(url: string, options?: Parameters<typeof api>[1]): Promise<T> {
     try {
-      const response = await api<Envelope<T>>(url)
+      // The no-options call stays `api(url)`: reads are asserted that way in the seam spec.
+      const response = await (options === undefined ? api<Envelope<T>>(url) : api<Envelope<T>>(url, options))
       return response.data
     } catch (err) {
       throw toPrettyIdAuctionError(err)
@@ -35,5 +37,6 @@ export function usePrettyIdAuctionApi(): PrettyIdAuctionApi {
     auctions: () => call<PrettyIdAuctionList>('/pretty-id/auctions'),
     auction: id => call<PrettyIdAuctionSnapshot>(`/pretty-id/auctions/${id}`),
     auctionMe: id => call<PrettyIdAuctionMe>(`/pretty-id/auctions/${id}/me`),
+    enter: id => call<PrettyIdAuctionEnterResult>(`/pretty-id/auctions/${id}/enter`, { method: 'POST' }),
   }
 }
