@@ -35,18 +35,28 @@ const searchQuery = ref('')
 const { users, loading, error, hasMore, searchUsers, loadMore } = useUserSearch()
 
 // ========================================
+// Constants
+// ========================================
+
+/**
+ * Search is an exact Signature match on the server, so one character is a real query:
+ * Rare IDs can be a single character (e.g. "7").
+ */
+const MIN_SEARCH_LENGTH = 1
+
+// ========================================
 // Debounced Search
 // ========================================
 
 const debouncedSearch = useDebounceFn((query: string) => {
-  if (!query || query.length < 2) {
+  if (!query || query.length < MIN_SEARCH_LENGTH) {
     return
   }
   void searchUsers(query)
 }, 300)
 
 watch(searchQuery, (query) => {
-  if (!query || query.length < 2) {
+  if (!query || query.length < MIN_SEARCH_LENGTH) {
     void searchUsers('', true)
     return
   }
@@ -61,7 +71,7 @@ watch(searchQuery, (query) => {
  * Load the next page of search results.
  */
 function handleLoadMore(): void {
-  if (!searchQuery.value || searchQuery.value.length < 2) return
+  if (!searchQuery.value || searchQuery.value.length < MIN_SEARCH_LENGTH) return
   void loadMore(searchQuery.value)
 }
 
@@ -104,13 +114,8 @@ watch(open, (isOpen) => {
           </div>
 
           <!-- Empty State -->
-          <div v-else-if="searchQuery.length >= 2 && users.length === 0 && !loading" class="text-center py-8 text-muted">
+          <div v-else-if="searchQuery.length >= MIN_SEARCH_LENGTH && users.length === 0 && !loading" class="text-center py-8 text-muted">
             <slot name="empty">No users found</slot>
-          </div>
-
-          <!-- Hint State -->
-          <div v-else-if="searchQuery.length > 0 && searchQuery.length < 2" class="text-center py-4 text-muted text-sm">
-            Type at least 2 characters to search
           </div>
 
           <!-- Results List -->

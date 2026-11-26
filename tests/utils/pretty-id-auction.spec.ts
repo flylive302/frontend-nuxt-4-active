@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   parsePrettyIdAuctionId,
   groupPrettyIdAuctions,
+  isPrettyIdAuctionFinalizing,
   isPrettyIdBidSuspicious,
   parsePrettyIdBidAmount,
   sanitizePrettyIdBidText,
@@ -10,6 +11,7 @@ import {
   prettyIdClockOffset,
   prettyIdProfileRoute,
   prettyIdRareFontPx,
+  prettyIdRareWinView,
 } from '~/utils/pretty-id-auction'
 import { HOUR, iso, makeCard, MINUTE, SERVER_NOW_MS } from '../helpers/prettyIdAuctionFixtures'
 
@@ -166,5 +168,49 @@ describe('bid amount helpers', () => {
     expect(isPrettyIdBidSuspicious(1_000_000, 100_000)).toBe(false)
     expect(isPrettyIdBidSuspicious(1_000_001, 100_000)).toBe(true)
     expect(isPrettyIdBidSuspicious(100_000, 100_000)).toBe(false)
+  })
+})
+
+describe('isPrettyIdAuctionFinalizing', () => {
+  const live = (endsInMs: number) => ({ state: 'live' as const, ends_at: iso(endsInMs) })
+
+  it('is false before the end', () => {
+    expect(isPrettyIdAuctionFinalizing(live(1), SERVER_NOW_MS)).toBe(false)
+    expect(isPrettyIdAuctionFinalizing(live(HOUR), SERVER_NOW_MS)).toBe(false)
+  })
+
+  it('is true at the end and after it while still live', () => {
+    expect(isPrettyIdAuctionFinalizing(live(0), SERVER_NOW_MS)).toBe(true)
+    expect(isPrettyIdAuctionFinalizing(live(-30_000), SERVER_NOW_MS)).toBe(true)
+    expect(isPrettyIdAuctionFinalizing(live(-5 * MINUTE), SERVER_NOW_MS)).toBe(true)
+  })
+
+  it('is false once the auction is ended or cancelled, even past the end', () => {
+    expect(isPrettyIdAuctionFinalizing({ state: 'ended', ends_at: iso(-MINUTE) }, SERVER_NOW_MS)).toBe(false)
+    expect(isPrettyIdAuctionFinalizing({ state: 'cancelled', ends_at: iso(-MINUTE) }, SERVER_NOW_MS)).toBe(false)
+  })
+
+  it('is false for an upcoming auction', () => {
+    expect(isPrettyIdAuctionFinalizing({ state: 'upcoming', ends_at: iso(-MINUTE) }, SERVER_NOW_MS)).toBe(false)
+  })
+
+  it('is false when the end is not a date', () => {
+    expect(isPrettyIdAuctionFinalizing({ state: 'live', ends_at: 'soon' }, SERVER_NOW_MS)).toBe(false)
+  })
+})
+
+describe('prettyIdRareWinView', () => {
+  it('words the win celebration: Rare ID, spaced number, keep-period', () => {
+    expect(prettyIdRareWinView({ rare_id: '0777', keep_days: 7 })).toEqual({
+      title: 'Congratulations!',
+      subline: 'You won Rare ID 0777',
+      spacedId: '0 7 7 7',
+      keepLine: 'Yours for 7 days',
+      idLabel: 'Rare ID 0777',
+    })
+  })
+
+  it('uses the singular for one day', () => {
+    expect(prettyIdRareWinView({ rare_id: '1', keep_days: 1 }).keepLine).toBe('Yours for 1 day')
   })
 })

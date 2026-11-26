@@ -3,7 +3,8 @@
  * Top panel of an auction page: the Rare ID, then the facts for its state.
  * Upcoming: countdown to the start plus the terms (entry fee, opening bid,
  * minimum raise, keep-period). Live: countdown to the actual end, the top bid,
- * the lowest bid that would take the lead, and the same terms. Ended /
+ * the lowest bid that would take the lead, and the same terms; once the end has
+ * passed it reads "Finalizing…" until the result is settled. Ended /
  * cancelled: the state itself.
  */
 import type { PrettyIdAuctionSnapshot } from '~/types/pretty-id-auction'
@@ -18,6 +19,10 @@ const props = defineProps<{
 
 // Constants
 const RARE_ID_FONT = { max: 72, min: 36 }
+
+// Composables
+/** Live, but the end has passed: bids are refused, the result is being settled. */
+const isFinalizing = usePrettyIdAuctionFinalizing(() => props.auction)
 
 // State
 const rareIdFontSize = computed(() => `${prettyIdRareFontPx(props.auction.rare_id, RARE_ID_FONT)}px`)
@@ -35,12 +40,11 @@ const facts = computed<Array<[string, string]>>(() => {
   ]
   if (state === 'upcoming') return terms
   if (state === 'live') {
-    return [
-      ['Top bid', topBid.value === null ? '—' : formatCoins(topBid.value)],
-      ['Next bid from', formatCoins(props.auction.min_next_bid)],
-      ['Bidders', String(props.auction.bidder_count)],
-      ...terms,
-    ]
+    const rows: Array<[string, string]> = [['Top bid', topBid.value === null ? '—' : formatCoins(topBid.value)]]
+    // No next bid to offer once the end has passed.
+    if (!isFinalizing.value) rows.push(['Next bid from', formatCoins(props.auction.min_next_bid)])
+    rows.push(['Bidders', String(props.auction.bidder_count)], ...terms)
+    return rows
   }
   return []
 })
@@ -55,6 +59,7 @@ const facts = computed<Array<[string, string]>>(() => {
         <div class="pid-body pid-small pid-muted">Starts in</div>
         <div class="text-[22px]"><PrettyIdCountdown :to="auction.starts_at" /></div>
       </template>
+      <div v-else-if="isFinalizing" class="pid-num pid-gold text-[22px]" role="status">Finalizing…</div>
       <template v-else-if="auction.state === 'live'">
         <div class="pid-body pid-small pid-muted">Ends in</div>
         <div class="text-[22px]"><PrettyIdCountdown :to="auction.ends_at" /></div>

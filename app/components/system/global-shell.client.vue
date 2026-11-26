@@ -24,6 +24,10 @@ const showMiniPlayer = computed(() =>
 
 useRoomLifecycle()
 
+// A Rare Auction won while away: congratulate on open, login and foreground (the overlay is below).
+usePrettyIdUnseenWinsLifecycle()
+const winStore = usePrettyIdAuctionStore()
+
 const { init: initWakeLock } = useWakeLock()
 initWakeLock()
 
@@ -45,5 +49,7 @@ initMediaSession()
     <SystemOtaUpdateToast />
 
     <SlideOverlayLayer />
+
+    <LazyPrettyIdWinCelebration v-if="winStore.winCelebration" />
   </div>
 </template>

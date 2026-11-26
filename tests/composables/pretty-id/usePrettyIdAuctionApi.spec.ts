@@ -54,6 +54,25 @@ describe('usePrettyIdAuctionApi seam', () => {
     expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/42/bid', { method: 'POST', body: { amount: 250_000 } })
   })
 
+  it('GETs /pretty-id/auctions/wins/unseen and unwraps data', async () => {
+    const wins = [{ auction_id: 5, rare_id: '777', winning_bid: 250_000, won_at: '2026-11-26T09:00:00.000Z', expires_at: '2026-12-03T09:00:00.000Z', keep_days: 7 }]
+    apiMock.mockResolvedValue({ data: wins })
+    expect(await usePrettyIdAuctionApi().unseenWins()).toEqual(wins)
+    expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/wins/unseen')
+  })
+
+  it('POSTs /pretty-id/auctions/wins/{id}/seen with no body and unwraps data', async () => {
+    apiMock.mockResolvedValue({ data: { auction_id: 5, seen: true } })
+    expect(await usePrettyIdAuctionApi().markWinSeen(5)).toEqual({ auction_id: 5, seen: true })
+    expect(apiMock).toHaveBeenCalledWith('/pretty-id/auctions/wins/5/seen', { method: 'POST' })
+  })
+
+  it('maps a 404 on the wins routes to not_found', async () => {
+    apiMock.mockRejectedValue(httpError(404))
+    await expect(usePrettyIdAuctionApi().unseenWins()).rejects.toMatchObject({ code: 'not_found' })
+    await expect(usePrettyIdAuctionApi().markWinSeen(5)).rejects.toMatchObject({ code: 'not_found' })
+  })
+
   it('maps a bid refusal to its error_code and carries min_next_bid on bid_too_low', async () => {
     apiMock.mockRejectedValue({
       message: 'Too low',

@@ -13,6 +13,8 @@ import { prettyIdProfileRoute } from '~/utils/pretty-id-auction'
 const props = defineProps<{
   /** Highest first, as the auction delivers them. */
   bids: PrettyIdAuctionBid[]
+  /** The auction is over: an empty board reads "No bids", not "No bids yet". */
+  ended?: boolean
 }>()
 
 // Constants
@@ -29,7 +31,7 @@ function openProfile(bid: PrettyIdAuctionBid): void {
 </script>
 
 <template>
-  <p v-if="shown.length === 0" class="pid-empty">No bids yet</p>
+  <p v-if="shown.length === 0" class="pid-empty">{{ props.ended ? 'No bids' : 'No bids yet' }}</p>
 
   <template v-else>
     <PrettyIdRow

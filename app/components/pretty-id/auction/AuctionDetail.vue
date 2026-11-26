@@ -19,6 +19,8 @@ const props = defineProps<{
 // Composables
 const store = usePrettyIdAuctionStore()
 const { status, retry } = usePrettyIdAuctionPagePolling(() => props.auctionId)
+/** Live, but the end has passed: the server already refuses bids, so no entry or bid controls. */
+const isFinalizing = usePrettyIdAuctionFinalizing(() => store.snapshots[props.auctionId])
 
 // State
 const auction = computed(() => store.snapshots[props.auctionId])
@@ -38,7 +40,7 @@ const result = computed(() => auction.value?.result ?? null)
       </p>
     </PrettyIdPanel>
 
-    <PrettyIdAuctionEntry v-if="auction.state === 'live'" :auction="auction" />
+    <PrettyIdAuctionEntry v-if="auction.state === 'live' && !isFinalizing" :auction="auction" />
 
     <PrettyIdPanel v-if="auction.state === 'live' && auction.leader" title="Leading">
       <PrettyIdAuctionLeader :leader="auction.leader" />
@@ -52,12 +54,12 @@ const result = computed(() => auction.value?.result ?? null)
             for <b class="pid-num pid-gold">{{ formatCoins(result.winning_bid) }}</b>
           </template>
         </template>
-        <template v-else>Ended with no winner</template>
+        <template v-else>No winner</template>
       </div>
     </PrettyIdPanel>
 
     <PrettyIdPanel v-if="auction.state !== 'cancelled'" title="Bidders">
-      <PrettyIdAuctionBidders :bids="auction.top_bids" />
+      <PrettyIdAuctionBidders :bids="auction.top_bids" :ended="auction.state === 'ended'" />
     </PrettyIdPanel>
   </div>
 

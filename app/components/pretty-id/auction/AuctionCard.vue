@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * One auction on the Rare Auction tab: the Rare ID, then what matters for its
- * state. Live: countdown to the actual end and the top bid. Upcoming: countdown
+ * state. Live: countdown to the actual end ("Finalizing…" once it has passed)
+ * and the top bid. Upcoming: countdown
  * to the start and the terms (entry fee, opening bid, keep-period). Ended: the
  * closing bid. A single tap target; it emits `open` and the parent decides where
  * that goes.
@@ -22,6 +23,10 @@ const emit = defineEmits<{
 
 // Constants
 const RARE_ID_FONT = { max: 38, min: 20 }
+
+// Composables
+/** Live, but the end has passed: the result is being settled. */
+const isFinalizing = usePrettyIdAuctionFinalizing(() => props.auction)
 
 // State
 const isLive = computed(() => props.auction.state === 'live')
@@ -59,8 +64,11 @@ const label = computed(() => {
 
     <span class="pid-acard__info pid-body pid-small">
       <template v-if="isLive">
-        <span class="pid-muted">Ends in</span>
-        <PrettyIdCountdown :to="auction.ends_at" />
+        <span v-if="isFinalizing" class="pid-num pid-gold" role="status">Finalizing…</span>
+        <template v-else>
+          <span class="pid-muted">Ends in</span>
+          <PrettyIdCountdown :to="auction.ends_at" />
+        </template>
         <span>Top bid · {{ topBidLine }}</span>
         <span class="pid-muted">{{ bidderLine }}</span>
       </template>

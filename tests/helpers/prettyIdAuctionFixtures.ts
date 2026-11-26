@@ -99,6 +99,8 @@ export function createAuctionApiMock() {
     auctionMe: vi.fn(),
     enter: vi.fn(),
     bid: vi.fn(),
+    unseenWins: vi.fn(),
+    markWinSeen: vi.fn(),
   }
 }
 
@@ -112,4 +114,6 @@ export function resetAuctionApiMock(api: AuctionApiMock): void {
   api.auctionMe.mockResolvedValue(makeMe())
   api.enter.mockResolvedValue(makeEnterResult())
   api.bid.mockResolvedValue(makeBidResult())
+  api.unseenWins.mockResolvedValue([])
+  api.markWinSeen.mockResolvedValue({ auction_id: 1, seen: true })
 }

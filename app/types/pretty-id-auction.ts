@@ -122,6 +122,23 @@ export type PrettyIdAuctionLoadStatus = 'loading' | 'ready' | 'not_found' | 'err
 /** How a load of one auction ended. */
 export type PrettyIdAuctionLoadOutcome = 'ok' | 'not_found' | 'error'
 
+/** One Rare Auction the viewer won and has not been congratulated on yet (`GET auctions/wins/unseen`). */
+export interface PrettyIdAuctionUnseenWin {
+  auction_id: number
+  rare_id: string
+  winning_bid: number
+  /** The auction's actual end, not the time the win was settled. */
+  won_at: string
+  expires_at: string
+  keep_days: number
+}
+
+/** `POST auctions/wins/{id}/seen`. */
+export interface PrettyIdAuctionWinSeenResult {
+  auction_id: number
+  seen: true
+}
+
 /** The auction API seam (`usePrettyIdAuctionApi`). Rejects with `PrettyIdAuctionApiError`. */
 export interface PrettyIdAuctionApi {
   auctions: () => Promise<PrettyIdAuctionList>
@@ -129,4 +146,8 @@ export interface PrettyIdAuctionApi {
   auctionMe: (id: number) => Promise<PrettyIdAuctionMe>
   enter: (id: number) => Promise<PrettyIdAuctionEnterResult>
   bid: (id: number, amount: number) => Promise<PrettyIdAuctionBidResult>
+  /** Oldest first, usually 0 or 1. A 404 (auction switch off) rejects with `not_found`. */
+  unseenWins: () => Promise<PrettyIdAuctionUnseenWin[]>
+  /** Idempotent. 404 when the caller is not that auction's winner. */
+  markWinSeen: (id: number) => Promise<PrettyIdAuctionWinSeenResult>
 }

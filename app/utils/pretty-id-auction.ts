@@ -14,7 +14,8 @@ import {
   PRETTY_ID_AUCTION_START_SLACK_MS,
 } from '~/constants/pretty-id-auction'
 import { PRETTY_ID_ROUTES } from '~/constants/pretty-id'
-import type { PrettyIdAuctionCard, PrettyIdAuctionState } from '~/types/pretty-id-auction'
+import { formatPrettyIdDays } from '~/utils/pretty-id-format'
+import type { PrettyIdAuctionCard, PrettyIdAuctionState, PrettyIdAuctionUnseenWin } from '~/types/pretty-id-auction'
 
 export interface PrettyIdAuctionTiming {
   state: PrettyIdAuctionState
@@ -42,6 +43,21 @@ export function prettyIdAuctionRoute(id: number): string {
 export function prettyIdClockOffset(serverNowIso: string, deviceNowMs: number): number | null {
   const server = Date.parse(serverNowIso)
   return Number.isNaN(server) ? null : server - deviceNowMs
+}
+
+/**
+ * True while the auction is still `live` on the server but its actual end has
+ * passed on the server-adjusted clock: bids are already refused, the per-minute
+ * settlement job has not run yet. The UI shows "Finalizing…" instead of a
+ * countdown and hides the entry / bid controls.
+ */
+export function isPrettyIdAuctionFinalizing(
+  timing: Pick<PrettyIdAuctionTiming, 'state' | 'ends_at'>,
+  serverNowMs: number,
+): boolean {
+  if (timing.state !== 'live') return false
+  const endsAt = Date.parse(timing.ends_at)
+  return !Number.isNaN(endsAt) && serverNowMs >= endsAt
 }
 
 /**
@@ -113,4 +129,31 @@ export function parsePrettyIdBidAmount(text: string): number | null {
 /** True when a bid is more than ten times the current minimum: likely a typo, the dialog warns in red. */
 export function isPrettyIdBidSuspicious(amount: number, minNextBid: number): boolean {
   return amount > minNextBid * PRETTY_ID_AUCTION_BID_WARN_MULTIPLE
+}
+
+// ========================================
+// Win celebration copy
+// ========================================
+
+export interface PrettyIdRareWinView {
+  title: string
+  /** "You won Rare ID 777". */
+  subline: string
+  /** The Rare ID with its characters apart, as the claim celebration shows its number. */
+  spacedId: string
+  /** "Yours for 7 days". */
+  keepLine: string
+  /** Screen-reader label of the number. */
+  idLabel: string
+}
+
+/** The words of the win celebration for one unseen win. */
+export function prettyIdRareWinView(win: Pick<PrettyIdAuctionUnseenWin, 'rare_id' | 'keep_days'>): PrettyIdRareWinView {
+  return {
+    title: 'Congratulations!',
+    subline: `You won Rare ID ${win.rare_id}`,
+    spacedId: win.rare_id.split('').join(' '),
+    keepLine: `Yours for ${formatPrettyIdDays(win.keep_days)}`,
+    idLabel: `Rare ID ${win.rare_id}`,
+  }
 }

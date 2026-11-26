@@ -7,7 +7,12 @@
 
 import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
-import type { PrettyIdAuctionCard, PrettyIdAuctionMe, PrettyIdAuctionSnapshot } from '~/types/pretty-id-auction'
+import type {
+  PrettyIdAuctionCard,
+  PrettyIdAuctionMe,
+  PrettyIdAuctionSnapshot,
+  PrettyIdAuctionUnseenWin,
+} from '~/types/pretty-id-auction'
 
 /**
  * Read-only view of a state ref. `readonly()` at runtime (writes are rejected);
@@ -39,6 +44,13 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
 
   /** `serverNow - Date.now()` as of the last response. Add to `Date.now()` for server time. */
   const clockOffsetMs = ref(0)
+
+  /** Auction ids whose win was already celebrated this session: the same win is never shown twice. */
+  const shownWinIds = ref<Set<number>>(new Set())
+  /** An unseen-wins request is in flight: overlapping checks do not double-fetch. */
+  const isCheckingWins = ref(false)
+  /** The Rare ID win being celebrated app-wide; `null` when none is on screen. */
+  const winCelebration = ref<PrettyIdAuctionUnseenWin | null>(null)
 
   // ========================================
   // Setters
@@ -79,6 +91,22 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     clockOffsetMs.value = value
   }
 
+  function markWinShown(auctionId: number): void {
+    shownWinIds.value = new Set([...shownWinIds.value, auctionId])
+  }
+
+  function hasShownWin(auctionId: number): boolean {
+    return shownWinIds.value.has(auctionId)
+  }
+
+  function setCheckingWins(value: boolean): void {
+    isCheckingWins.value = value
+  }
+
+  function setWinCelebration(value: PrettyIdAuctionUnseenWin | null): void {
+    winCelebration.value = value
+  }
+
   function reset(): void {
     auctions.value = []
     isAuctionsLoading.value = false
@@ -87,6 +115,9 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     snapshots.value = {}
     myStanding.value = {}
     clockOffsetMs.value = 0
+    shownWinIds.value = new Set()
+    isCheckingWins.value = false
+    winCelebration.value = null
   }
 
   return {
@@ -97,6 +128,8 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     snapshots: exposeReadonly(snapshots),
     myStanding: exposeReadonly(myStanding),
     clockOffsetMs: readonly(clockOffsetMs),
+    isCheckingWins: readonly(isCheckingWins),
+    winCelebration: exposeReadonly(winCelebration),
     setAuctions,
     setAuctionsLoading,
     setAuctionsFailed,
@@ -105,6 +138,10 @@ export const usePrettyIdAuctionStore = defineStore('prettyIdAuction', () => {
     setMyStanding,
     myStandingById,
     setClockOffsetMs,
+    markWinShown,
+    hasShownWin,
+    setCheckingWins,
+    setWinCelebration,
     reset,
   }
 })

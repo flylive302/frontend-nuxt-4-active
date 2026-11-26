@@ -14,6 +14,8 @@ import type {
   PrettyIdAuctionList,
   PrettyIdAuctionMe,
   PrettyIdAuctionSnapshot,
+  PrettyIdAuctionUnseenWin,
+  PrettyIdAuctionWinSeenResult,
 } from '~/types/pretty-id-auction'
 import { toPrettyIdAuctionError } from '~/utils/pretty-id-auction-error'
 
@@ -40,5 +42,7 @@ export function usePrettyIdAuctionApi(): PrettyIdAuctionApi {
     auctionMe: id => call<PrettyIdAuctionMe>(`/pretty-id/auctions/${id}/me`),
     enter: id => call<PrettyIdAuctionEnterResult>(`/pretty-id/auctions/${id}/enter`, { method: 'POST' }),
     bid: (id, amount) => call<PrettyIdAuctionBidResult>(`/pretty-id/auctions/${id}/bid`, { method: 'POST', body: { amount } }),
+    unseenWins: () => call<PrettyIdAuctionUnseenWin[]>('/pretty-id/auctions/wins/unseen'),
+    markWinSeen: id => call<PrettyIdAuctionWinSeenResult>(`/pretty-id/auctions/wins/${id}/seen`, { method: 'POST' }),
   }
 }
