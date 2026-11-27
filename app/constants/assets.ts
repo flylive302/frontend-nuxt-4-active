@@ -83,7 +83,7 @@ export const ASSETS = {
   COIN_ICON: '/images/ui/coin-icon.webp',
   /** Reward-hero coin icon for `w-14`/`w-20`/`w-24` renders (56-96 CSS px) at 2x DPR. */
   COIN_ICON_LARGE: '/images/ui/coin-icon-large.webp',
-  /** Full-bleed heroes on /coins/request and /coins/exchange (`min-w-full`, 412 CSS px). w-1024 matches the charm/wealth heroes below. */
+  /** Full-bleed hero on /coins/exchange (`min-w-full`, 412 CSS px); HERO_TERTIARY is no longer rendered (coins page redesign, 2026-11-27). w-1024 matches the charm/wealth heroes below. */
   HERO_SECONDARY: '/images/ui/hero-secondary.webp',
   HERO_TERTIARY: '/images/ui/hero-tertiary.webp',
   /**

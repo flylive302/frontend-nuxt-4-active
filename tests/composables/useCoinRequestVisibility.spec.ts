@@ -1,6 +1,7 @@
 // ========================================
 // useCoinRequestVisibility Composable Tests
 // ========================================
+// Web no longer shows the claim flow (web buys on the recharge portal).
 // Fail-closed rule (ticket 08): on Android native, the reseller "claim
 // coins" UI may show ONLY once the backend has definitively confirmed
 // (404) the Google catalog is off. Loading/error/available must hide it.
@@ -39,10 +40,10 @@ afterEach(() => {
 })
 
 describe('useCoinRequestVisibility', () => {
-  it('web (storeFor null): always shown', () => {
+  it('web (storeFor null): hidden — web buys on the recharge portal instead', () => {
     storeForMock.mockReturnValue(null)
     const { showCoinRequests } = useCoinRequestVisibility()
-    expect(showCoinRequests.value).toBe(true)
+    expect(showCoinRequests.value).toBe(false)
   })
 
   it('iOS native: always hidden, even if catalogDisabled were somehow true', () => {
@@ -65,5 +66,27 @@ describe('useCoinRequestVisibility', () => {
     coinPacksStore.catalogDisabled = true
     const { showCoinRequests } = useCoinRequestVisibility()
     expect(showCoinRequests.value).toBe(true)
+  })
+
+  describe('showRechargePortal', () => {
+    it('web (storeFor null): shown', () => {
+      storeForMock.mockReturnValue(null)
+      const { showRechargePortal } = useCoinRequestVisibility()
+      expect(showRechargePortal).toBe(true)
+    })
+
+    it('iOS native: hidden (App Store 3.1.1 — no outside-purchase link)', () => {
+      isIosNativeMock.mockReturnValue(true)
+      storeForMock.mockReturnValue('apple')
+      const { showRechargePortal } = useCoinRequestVisibility()
+      expect(showRechargePortal).toBe(false)
+    })
+
+    it('Android native: hidden, even when the Google catalog is confirmed disabled', () => {
+      storeForMock.mockReturnValue('google')
+      coinPacksStore.catalogDisabled = true
+      const { showRechargePortal } = useCoinRequestVisibility()
+      expect(showRechargePortal).toBe(false)
+    })
   })
 })

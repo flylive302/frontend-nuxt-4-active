@@ -241,7 +241,7 @@ const { isVisible: headerVisible } = useDeferredVisibility(headerRef, true)
         :signature="authStore.user?.signature"
       />
 
-      <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Balance" />
+      <NavProfileItem to="/coins/request" icon="i-lucide-coins" txt="Wallet" />
       <NavProfileItem to="/mall/" icon="i-lucide-store" txt="Mall" />
       <NavProfileItem to="/levels/wealth" icon="i-lucide-arrow-up-wide-narrow" txt="Levels" />
       <NavProfileItem to="/badges" icon="i-lucide-award" txt="Badges" />

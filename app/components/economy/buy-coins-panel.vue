@@ -2,17 +2,18 @@
 <!-- Native "Buy Coins" panel — binding only. Pipeline lives in useCoinPurchase. -->
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { formatCurrency } from '~/utils/currency'
+import { ASSETS } from '~/constants/assets'
 import { useCoinPurchase } from '~/composables/economy/useCoinPurchase'
 
 const store = useCoinPacksStore()
 // The store's `transactionUpdated` listener is app-wide (plugins/iap-restore.client.ts), not per panel.
 const { load, buy, restorePending } = useCoinPurchase()
-const { syncUser } = useUserSync()
 
+// Sole owner of the catalog load on /coins/request — the page no longer calls
+// `load()` too (that double-fetched and flashed the skeleton twice). The page
+// mounts this panel unconditionally on native, so `catalogDisabled` (which
+// gates the Android claim flow) still resolves. Balance sync is the page's job.
 onMounted(async () => {
-  // balance is in-memory (lucky-tap-balance-store); refresh from server on open so a money page never shows a stale number.
-  void syncUser()
   await load()
   // Silent safety net — the app-level plugin already restores on boot/login/
   // foreground; this just catches the panel being opened without one of
@@ -23,10 +24,10 @@ onMounted(async () => {
 
 <template>
   <section v-if="store.status !== 'unavailable'">
-    <h2 class="text-lg font-bold mb-3"><span class="text-success">Buy</span> Coins</h2>
+    <h2 class="mb-3 text-xl font-bold text-white">Buy coins</h2>
 
-    <div v-if="store.status === 'loading' || store.status === 'idle'" class="grid grid-cols-2 gap-3">
-      <USkeleton v-for="n in 4" :key="n" class="h-24 rounded-xl" />
+    <div v-if="store.status === 'loading' || store.status === 'idle'" class="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">
+      <USkeleton v-for="n in 6" :key="n" class="h-36 rounded-2xl" />
     </div>
 
     <template v-else>
@@ -55,34 +56,46 @@ onMounted(async () => {
         class="mb-3"
       />
 
-      <div v-if="store.packsWithPrices.length > 0" class="grid grid-cols-2 gap-3">
-        <button
-          v-for="{ pack, product } in store.packsWithPrices"
+      <ul v-if="store.packsWithPrices.length > 0" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <li
+          v-for="({ pack, product }, index) in store.packsWithPrices"
           :key="pack.id"
-          type="button"
-          class="flex flex-col items-center gap-1 rounded-xl border border-tertiary/30 p-4 disabled:opacity-50"
-          :disabled="store.status === 'purchasing'"
-          @click="buy(pack.product_id)"
+          class="pack-enter"
+          :style="{ '--i': index }"
         >
-          <UIcon
-            v-if="store.status === 'purchasing' && store.activeProductId === pack.product_id"
-            name="i-lucide-loader-2"
-            class="size-6 animate-spin"
-          />
-          <template v-else>
-            <UIcon name="i-streamline-ultimate-color-accounting-coins" class="size-6" />
-            <span class="font-semibold">{{ formatCurrency(pack.coins) }}</span>
-            <span class="text-sm text-muted">{{ pack.name }}</span>
-            <span class="font-bold">{{ product.priceString }}</span>
-          </template>
-        </button>
-      </div>
+          <button
+            type="button"
+            class="pack group flex h-full w-full flex-col items-center gap-2 rounded-2xl bg-neutral-900/85 px-3 pt-4 pb-3 ring-1 ring-tertiary/20 transition-[transform,box-shadow] duration-200 ease-out hover:ring-tertiary/50 hover:shadow-[0_10px_24px_-12px_var(--ui-color-tertiary-500)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tertiary"
+            :disabled="store.status === 'purchasing'"
+            :aria-label="`Buy ${pack.coins.toLocaleString('en-US')} coins for ${product.priceString}`"
+            @click="buy(pack.product_id)"
+          >
+            <img :src="ASSETS.COIN_ICON" width="40" height="40" alt="" decoding="async" class="size-10">
+            <span class="text-2xl font-extrabold tabular-nums leading-none text-white">
+              {{ pack.coins.toLocaleString('en-US') }}
+            </span>
+            <span class="text-xs text-neutral-400 line-clamp-1">{{ pack.name }}</span>
+            <span class="mt-1 flex h-9 w-full items-center justify-center rounded-full bg-tertiary text-sm font-bold text-inverted">
+              <UIcon
+                v-if="store.status === 'purchasing' && store.activeProductId === pack.product_id"
+                name="i-lucide-loader-2"
+                class="size-5 animate-spin"
+              />
+              <template v-else>{{ product.priceString }}</template>
+            </span>
+          </button>
+        </li>
+      </ul>
+
+      <p v-else-if="store.status !== 'failed'" class="rounded-2xl bg-neutral-900/85 p-4 text-sm text-neutral-300 ring-1 ring-white/10">
+        No coin packs are available right now. Please try again later.
+      </p>
 
       <UButton
         variant="link"
         color="tertiary"
         size="sm"
-        class="mt-2"
+        class="mt-2 min-h-11"
         :loading="store.isRestoring"
         :disabled="store.status === 'purchasing' || store.isRestoring"
         @click="restorePending('manual')"
@@ -92,3 +105,27 @@ onMounted(async () => {
     </template>
   </section>
 </template>
+
+<style scoped>
+/* Packs rise in one after another — a short cascade, from an already-visible state. */
+.pack-enter {
+  animation: pack-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes pack-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pack-enter {
+    animation: none;
+  }
+  .pack {
+    transition: none;
+  }
+}
+</style>
